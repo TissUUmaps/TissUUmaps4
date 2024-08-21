@@ -1,4 +1,46 @@
+import OpenSeadragon from "openseadragon";
+import { useEffect } from "react";
+
 export default function ViewerPanel() {
+  useEffect(() => {
+    let viewer: OpenSeadragon.Viewer | null = OpenSeadragon({
+      id: "ISS_viewer",
+      prefixUrl: "js/openseadragon/images/", // TODO OpenSeadragon prefixUrl
+      navigatorSizeRatio: 0.15,
+      wrapHorizontal: false,
+      showNavigator: true,
+      navigatorPosition: "BOTTOM_LEFT",
+      animationTime: 0.0,
+      blendTime: 0,
+      minZoomImageRatio: 0.9,
+      maxZoomPixelRatio: 30,
+      immediateRender: false,
+      zoomPerClick: 1.0,
+      constrainDuringPan: true,
+      visibilityRatio: 0.5,
+      showNavigationControl: false,
+      maxImageCacheCount: 2000,
+      imageSmoothingEnabled: false,
+      preserveImageSizeOnResize: true,
+      imageLoaderLimit: 50,
+      gestureSettingsUnknown: {
+        flickEnabled: false,
+      },
+      gestureSettingsTouch: {
+        flickEnabled: false,
+      },
+      gestureSettingsPen: {
+        flickEnabled: false,
+      },
+      // debouncePanEvents: false,
+    });
+
+    return () => {
+      viewer!.destroy();
+      viewer = null;
+    };
+  }, []);
+
   return (
     <div className="col px-0 position-relative" id="ISS_viewer_container">
       <a
