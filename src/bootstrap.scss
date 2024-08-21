@@ -1,0 +1,17 @@
+// Default bootstrap colors override
+$primary: #ad1d28;
+$secondary: #a5565c;
+//$success:   #1daa9f;
+//$info:      #1daa9f;
+//$warning:   #1daa9f;
+//$danger:    #9f1daa;
+//$light:     #1daa9f;
+$dark: #911821;
+
+// IMPORTS
+@import "../node_modules/bootstrap/scss/bootstrap";
+@import "../node_modules/bootstrap/scss/functions";
+@import "../node_modules/bootstrap/scss/variables";
+@import "../node_modules/bootstrap/scss/reboot";
+@import "../node_modules/bootstrap/scss/type";
+@import "../node_modules/bootstrap/scss/grid";

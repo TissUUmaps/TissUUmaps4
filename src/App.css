@@ -1,0 +1,216 @@
+html,
+body {
+  height: 100%;
+}
+
+html {
+  overflow: hidden;
+}
+
+.ISS_menu {
+  border-left: 1px solid var(--bs-dark);
+}
+
+#ISS_markers {
+  overflow-y: auto;
+}
+
+#markers-regions-div {
+  overflow-y: auto;
+}
+
+#ISS_marker_info {
+  z-index: 19;
+  pointer-events: none;
+}
+
+.range-label {
+  width: 30px;
+  display: inline-block;
+}
+
+.openseadragon-canvas svg {
+  z-index: 13;
+}
+
+.navigator {
+  z-index: 14;
+}
+
+#ISS_globalmarkersize {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 13;
+  text-align: center;
+}
+
+#piechartLegend {
+  left: 10px;
+  top: 10px;
+  overflow-y: auto;
+  max-height: 55vh;
+  z-index: 13;
+}
+
+.marker_table {
+  user-select: none;
+  font-size: 13px;
+}
+
+.marker_table td {
+  vertical-align: middle;
+}
+
+.transition_background td {
+  transition: background-color 2s;
+  transition-timing-function: ease-in;
+}
+
+#ISS_collapse_btn {
+  border-radius: 5px 0 0 5px;
+  width: inherit;
+  /* Height of the collapsing button */
+  line-height: inherit;
+  padding: 0px;
+  font-size: 12px;
+  /* Important to always be above any other UI item */
+  z-index: 100;
+}
+
+.floating-menu-btn {
+  display: block;
+  position: absolute;
+  z-index: 100;
+  top: 10px;
+  left: 10px;
+  border-radius: 50%;
+  line-height: normal;
+  cursor: pointer;
+  zoom: 0.8;
+  width: fit-content;
+}
+
+.regions_table {
+  user-select: none;
+  font-size: 13px;
+}
+
+.regions_table td {
+  vertical-align: middle;
+}
+
+#image-overlay-table {
+  user-select: none;
+  font-size: 13px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.accordion-button {
+  padding: 0.5rem 1.25rem;
+}
+
+#main-tabs-menu {
+  background-color: white;
+}
+
+#messagebox_modal {
+  z-index: 10000;
+}
+
+.progress-bar {
+  transition: width 0s ease !important;
+}
+
+/* Add submenus to navbar: */
+/* ============ desktop view ============ */
+@media all and (min-width: 992px) {
+  .dropdown-menu li {
+    position: relative;
+  }
+  .dropdown-menu .dropdown-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: -7px;
+  }
+  .dropdown-menu .dropdown-submenu-left {
+    right: 100%;
+    left: auto;
+  }
+
+  .dropdown-menu > li:hover {
+    background-color: #f1f1f1;
+  }
+  .dropdown-menu > li:hover > .dropdown-submenu {
+    display: block;
+  }
+}
+/* ============ desktop view .end ============ */
+
+/* ============ small devices ============ */
+@media (max-width: 991px) {
+  .dropdown-menu .dropdown-menu {
+    margin-left: 0.7rem;
+    margin-right: 0.7rem;
+    margin-bottom: 0.5rem;
+  }
+}
+/* ============ small devices .end ============ */
+
+/* *** Navbar *** */
+.navbar-dark {
+  background-color: var(--bs-primary);
+}
+
+/* *** Viewer */
+.ISS_viewer {
+  background-color: white;
+}
+
+/* All the overlays over the viewer inherit this class. */
+.viewer-layer {
+  background-color: rgba(255, 255, 255, 0.7);
+  opacity: 100%;
+  border-radius: 0.3rem;
+  color: black;
+}
+
+/* *** Side menu *** */
+.displayregion {
+  border: 1px solid var(--bs-dark) !important;
+}
+
+.ISS_menu {
+  background-color: white;
+}
+
+/* Sliders in the side menu (image layer in particular) */
+.overlay-slider {
+  width: 100px;
+}
+
+/* *** Collapsing button *** */
+#ISS_collapser {
+  right: 0px;
+  width: 12px;
+  /* Height of the collapsing button */
+  line-height: 30vh;
+}
+
+.renderOptionContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.renderOption {
+  display: flex;
+  flex-direction: row;
+}
+
+.tm-accordion-collapse {
+  margin: 10px;
+}
