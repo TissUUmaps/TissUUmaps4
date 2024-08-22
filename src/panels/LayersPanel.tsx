@@ -1,4 +1,4 @@
-export default function ImagePanel() {
+export default function LayersPanel() {
   return (
     <div className="panel panel-default">
       <div className="panel-body">

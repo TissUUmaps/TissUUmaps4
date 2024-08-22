@@ -10,7 +10,7 @@ export type ProjectActions = {};
 export type ProjectSlice = ProjectState & ProjectActions;
 
 const initialProjectState: ProjectState = {
-  images: [],
+  layers: [],
   points: [],
   shapes: [],
 };

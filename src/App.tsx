@@ -3,7 +3,7 @@ import { useTissUUmapsStore } from "./stores/tissUUmapsStore";
 import MenuPanel from "./panels/MenuPanel";
 import ViewerPanel from "./panels/ViewerPanel";
 import ProjectPanel from "./panels/ProjectPanel";
-import ImagePanel from "./panels/ImagePanel";
+import LayersPanel from "./panels/LayersPanel";
 import PointsPanel from "./panels/PointsPanel";
 import ShapesPanel from "./panels/ShapesPanel";
 
@@ -92,7 +92,7 @@ export default function App() {
                   className="nav-link"
                   id="title-tab-image"
                 >
-                  Image
+                  Layers
                 </button>
               </li>
               <li className="nav-item">
@@ -135,7 +135,7 @@ export default function App() {
                 <ProjectPanel />
               </div>
               <div className="tab-pane" id="image-gui">
-                <ImagePanel />
+                <LayersPanel />
               </div>
               <div className="tab-pane" id="markers-iss-gui">
                 <PointsPanel />
