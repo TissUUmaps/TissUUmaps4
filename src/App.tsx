@@ -1,5 +1,3 @@
-import { useCallback, useEffect } from "react";
-import { useTissUUmapsStore } from "./stores/tissUUmapsStore";
 import MenuPanel from "./panels/MenuPanel";
 import ViewerPanel from "./panels/ViewerPanel";
 import ProjectPanel from "./panels/ProjectPanel";
@@ -10,23 +8,6 @@ import ShapesPanel from "./panels/ShapesPanel";
 import "./App.css";
 
 export default function App() {
-  const setAppLoaded = useTissUUmapsStore((state) => state.setAppLoaded);
-
-  const loadApp = useCallback(() => {
-    setAppLoaded(true);
-  }, [setAppLoaded]);
-
-  const destroyApp = useCallback(() => {
-    setAppLoaded(false);
-  }, [setAppLoaded]);
-
-  useEffect(() => {
-    loadApp();
-    return () => {
-      destroyApp();
-    };
-  }, [loadApp, destroyApp]);
-
   return (
     <div
       id="main-ui"

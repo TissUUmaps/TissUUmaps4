@@ -1,45 +1,36 @@
 import OpenSeadragon from "openseadragon";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
+
+import Layer from "../model/layer";
+import useProjectStore from "../stores/projectStore";
+import OpenSeadragonUtils from "../utils/OpenSeadragonUtils";
 
 export default function ViewerPanel() {
-  useEffect(() => {
-    let viewer: OpenSeadragon.Viewer | null = OpenSeadragon({
-      id: "ISS_viewer",
-      prefixUrl: "js/openseadragon/images/", // TODO OpenSeadragon prefixUrl
-      navigatorSizeRatio: 0.15,
-      wrapHorizontal: false,
-      showNavigator: true,
-      navigatorPosition: "BOTTOM_LEFT",
-      animationTime: 0.0,
-      blendTime: 0,
-      minZoomImageRatio: 0.9,
-      maxZoomPixelRatio: 30,
-      immediateRender: false,
-      zoomPerClick: 1.0,
-      constrainDuringPan: true,
-      visibilityRatio: 0.5,
-      showNavigationControl: false,
-      maxImageCacheCount: 2000,
-      imageSmoothingEnabled: false,
-      preserveImageSizeOnResize: true,
-      imageLoaderLimit: 50,
-      gestureSettingsUnknown: {
-        flickEnabled: false,
-      },
-      gestureSettingsTouch: {
-        flickEnabled: false,
-      },
-      gestureSettingsPen: {
-        flickEnabled: false,
-      },
-      // debouncePanEvents: false,
-    });
+  const layers = useProjectStore((state) => state.layers);
+  const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
+  const viewerLayersRef = useRef<Layer[]>([]);
 
-    return () => {
-      viewer!.destroy();
-      viewer = null;
-    };
+  // callback refs are called before useEffect, so we can use one to create the viewer
+  const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
+    if (viewerRef.current) {
+      viewerRef.current.destroy();
+      viewerRef.current = null;
+      viewerLayersRef.current = [];
+    }
+    if (viewerElement) {
+      viewerRef.current = OpenSeadragonUtils.createViewer(viewerElement);
+      viewerLayersRef.current = [];
+    }
   }, []);
+
+  // update the viewer when the layers change
+  useEffect(() => {
+    if (viewerRef.current) {
+      const oldLayers = [...viewerLayersRef.current];
+      OpenSeadragonUtils.updateLayers(viewerRef.current, oldLayers, layers);
+      viewerLayersRef.current = [...layers];
+    }
+  }, [layers]);
 
   return (
     <div className="col px-0 position-relative" id="ISS_viewer_container">
@@ -57,7 +48,11 @@ export default function ViewerPanel() {
       </a>
       {/* The id is what OSD will look for to draw the viewer, the class is our own css to stylize
           The ID will give the prefix for all the objects related to the viewer in this case ISS */}
-      <div id="ISS_viewer" className="ISS_viewer h-100"></div>
+      <div
+        ref={setViewerRef}
+        id="ISS_viewer"
+        className="ISS_viewer h-100"
+      ></div>
       {/* Global marker size slider */}
       <div id="ISS_globalmarkersize" className="d-none px-1 mx-1 viewer-layer">
         <label className="form-label" htmlFor="ISS_globalmarkersize_text">

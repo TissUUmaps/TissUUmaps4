@@ -1,9 +1,9 @@
-import Layers from "./layers";
-import Points from "./points";
-import Shapes from "./shapes";
+import Layer from "./layer";
+// import Points from "./points";
+// import Shapes from "./shapes";
 
 export default interface Project {
-  layers: Layers[];
-  points: Points[];
-  shapes: Shapes[];
+  layers: Layer[];
+  // points: Points[];
+  // shapes: Shapes[];
 }
