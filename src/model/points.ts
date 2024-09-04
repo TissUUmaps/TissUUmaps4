@@ -19,7 +19,7 @@ export enum PointSettingSource {
 
 export interface PointsSettingsPreset {
   name: string;
-  profile?: string; // TODO: profile ID type
+  profile: string | null; // TODO: profile ID type
   variables: string[];
   targetSettings: PointSetting[];
 }
