@@ -4,14 +4,14 @@ export interface PointsDataProvider {
   getData(variable: string): any; // TODO: define return type
 }
 
-export enum PointSetting {
+export enum PointsSetting {
   Color,
   Shape,
   Size,
   // ... TODO: add more settings
 }
 
-export enum PointSettingSource {
+export enum PointsSettingSource {
   Value,
   ValueVariable,
   CategoryVariable,
@@ -21,12 +21,12 @@ export interface PointsSettingsPreset {
   name: string;
   profile: string | null; // TODO: profile ID type
   variables: string[];
-  targetSettings: PointSetting[];
+  targetSettings: PointsSetting[];
 }
 
 export interface PointsSettingsProfile {
   name: string;
-  colorSource: PointSettingSource;
+  colorSource: PointsSettingSource;
   colorValue: string;
   colorValueVariable: string;
   colorCategoryVariable: string;
@@ -37,7 +37,7 @@ export interface PointsSettings {
   profiles: PointsSettingsProfile[];
   selectedProfile: string; // TODO: profile ID type
   selectedGroupByVariable: string;
-  allVariablesTargetSettings: PointSetting[];
+  allVariablesTargetSettings: PointsSetting[];
 }
 
 export interface Points {
