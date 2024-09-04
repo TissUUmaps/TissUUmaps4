@@ -1,14 +1,14 @@
-export interface ShapesDataProvider {
+export interface ImageDataProvider {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getData(): any; // TODO: define return type
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ShapesSettings {}
+export interface ImageSettings {}
 
-export interface Shapes {
-  dataProvider: ShapesDataProvider;
-  settings: ShapesSettings;
+export interface Image {
+  dataProvider: ImageDataProvider;
+  settings: ImageSettings;
 }
 
-export default Shapes;
+export default Image;

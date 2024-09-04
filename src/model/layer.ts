@@ -1,12 +1,13 @@
-export default interface Layer {
-  name: string; // image name
-  tileSource: string; // image URL
-  x: number; // x-position in pixels
-  y: number; // y-position in pixels
-  rotation: number; // rotation in degrees
-  flip: boolean; // flip horizontally
-  scale: number; // factor for converting pixels to viewport coordinates
-  opacity: number; // alpha value
-  visible: boolean; // visibility
-  // TODO clip {x,y,w,h}
+import Image from "./image";
+import Shapes from "./shapes";
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface LayerSettings {}
+
+export interface Layer {
+  images: Image[];
+  shapes: Shapes[];
+  settings: LayerSettings;
 }
+
+export default Layer;
