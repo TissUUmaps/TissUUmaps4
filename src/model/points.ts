@@ -1,5 +1,5 @@
-type PointsSettingValueVariable = { valueVariable: string };
-type PointsSettingGroupVariable = { groupVariable: string };
+type PointsSettingValuesVariable = { valuesVariable: string };
+type PointsSettingGroupsVariable = { groupsVariable: string };
 
 export interface PointsSettingsPreset {
   name: string;
@@ -33,26 +33,29 @@ export interface PointsGroupSettings {
 export interface PointsSettingsProfile {
   name: string;
   pos: {
-    x: PointsSettingValueVariable;
-    y: PointsSettingValueVariable;
-    layer?: string | PointsSettingValueVariable | PointsSettingGroupVariable;
+    x: PointsSettingValuesVariable;
+    y: PointsSettingValuesVariable;
+    layer?: string | PointsSettingValuesVariable | PointsSettingGroupsVariable;
   }[];
   color:
     | { r: number; g: number; b: number; a?: number }
-    | PointsSettingValueVariable
-    | PointsSettingGroupVariable;
-  shape: string | PointsSettingValueVariable | PointsSettingGroupVariable; // TODO: define shape type
-  size: number | PointsSettingValueVariable | PointsSettingGroupVariable;
-  visibility: boolean | PointsSettingValueVariable | PointsSettingGroupVariable;
-  zorder: number | PointsSettingValueVariable | PointsSettingGroupVariable;
+    | PointsSettingValuesVariable
+    | PointsSettingGroupsVariable;
+  shape: string | PointsSettingValuesVariable | PointsSettingGroupsVariable; // TODO: define shape type
+  size: number | PointsSettingValuesVariable | PointsSettingGroupsVariable;
+  visibility:
+    | boolean
+    | PointsSettingValuesVariable
+    | PointsSettingGroupsVariable;
+  zorder: number | PointsSettingValuesVariable | PointsSettingGroupsVariable;
   groupsSettings: {
-    [groupVariable: string]: { [group: string]: PointsGroupSettings };
+    [groupsVariable: string]: { [group: string]: PointsGroupSettings };
   };
 }
 
 export const defaultPointsSettingsProfile: PointsSettingsProfile = {
   name: "New profile",
-  pos: [{ x: { valueVariable: "x" }, y: { valueVariable: "y" } }],
+  pos: [{ x: { valuesVariable: "x" }, y: { valuesVariable: "y" } }],
   color: { r: 1, g: 1, b: 1 },
   shape: "circle", // TODO: default shape
   size: 5, // TODO: default size
@@ -65,7 +68,7 @@ export interface PointsSettings {
   presets: PointsSettingsPreset[];
   profiles: PointsSettingsProfile[];
   selectedProfile?: string;
-  selectedGroupVariable?: string;
+  selectedGroupsVariable?: string;
 }
 
 export const defaultPointsSettings: PointsSettings = {
