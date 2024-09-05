@@ -48,7 +48,7 @@ export interface PointsSettingsProfile {
     | PointsSettingValuesVariable
     | PointsSettingGroupsVariable;
   zorder: number | PointsSettingValuesVariable | PointsSettingGroupsVariable;
-  groupsSettings: {
+  groupSettings: {
     [groupsVariable: string]: { [group: string]: PointsGroupSettings };
   };
 }
@@ -61,7 +61,7 @@ export const defaultPointsSettingsProfile: PointsSettingsProfile = {
   size: 5, // TODO: default size
   visibility: true,
   zorder: 0, // TODO: default zorder
-  groupsSettings: {},
+  groupSettings: {},
 };
 
 export interface PointsSettings {
