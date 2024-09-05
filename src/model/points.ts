@@ -1,60 +1,80 @@
-export interface PointsDataProvider {
-  getVariables(): string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getData(variable: string): any; // TODO: define return type
-}
-
-export enum PointsSetting {
-  Color,
-  Shape,
-  Size,
-  // ... TODO: add more settings
-}
+type PointsSettingValueVariable = { valueVariable: string };
+type PointsSettingGroupVariable = { groupVariable: string };
 
 export interface PointsSettingsPreset {
   name: string;
-  profile: string | null; // TODO: profile ID type
   variables: string[];
-  targetSettings: PointsSetting[];
+  setsColor: boolean;
+  setsShape: boolean;
+  setsSize: boolean;
+  setsVisibility: boolean;
+  setsZOrder: boolean;
+  targetProfile?: string;
 }
 
 export const defaultPointsSettingsPreset: PointsSettingsPreset = {
   name: "New preset",
-  profile: null,
   variables: [],
-  targetSettings: [],
+  setsColor: false,
+  setsShape: false,
+  setsSize: false,
+  setsVisibility: false,
+  setsZOrder: false,
 };
 
-export type PointsSettingValueVariable = { valueVariable: string };
-export type PointsSettingCategoryVariable = { categoryVariable: string };
+export interface PointsGroupSettings {
+  color?: string;
+  shape?: string;
+  size?: number;
+  visibility?: boolean;
+  zorder?: number;
+}
 
 export interface PointsSettingsProfile {
   name: string;
-  color: string | PointsSettingValueVariable | PointsSettingCategoryVariable;
+  pos: {
+    x: PointsSettingValueVariable;
+    y: PointsSettingValueVariable;
+    layer?: string | PointsSettingValueVariable | PointsSettingGroupVariable;
+  }[];
+  color:
+    | { r: number; g: number; b: number; a?: number }
+    | PointsSettingValueVariable
+    | PointsSettingGroupVariable;
+  shape: string | PointsSettingValueVariable | PointsSettingGroupVariable; // TODO: define shape type
+  size: number | PointsSettingValueVariable | PointsSettingGroupVariable;
+  visibility: boolean | PointsSettingValueVariable | PointsSettingGroupVariable;
+  zorder: number | PointsSettingValueVariable | PointsSettingGroupVariable;
+  groupsSettings: {
+    [groupVariable: string]: { [group: string]: PointsGroupSettings };
+  };
 }
 
 export const defaultPointsSettingsProfile: PointsSettingsProfile = {
   name: "New profile",
-  color: "#000000",
+  pos: [{ x: { valueVariable: "x" }, y: { valueVariable: "y" } }],
+  color: { r: 1, g: 1, b: 1 },
+  shape: "circle", // TODO: default shape
+  size: 5, // TODO: default size
+  visibility: true,
+  zorder: 0, // TODO: default zorder
+  groupsSettings: {},
 };
 
 export interface PointsSettings {
   presets: PointsSettingsPreset[];
   profiles: PointsSettingsProfile[];
-  selectedProfile: string; // TODO: profile ID type
-  selectedGroupByVariable?: string;
-  allVariablesTargetSettings: PointsSetting[];
+  selectedProfile?: string;
+  selectedGroupVariable?: string;
 }
 
 export const defaultPointsSettings: PointsSettings = {
   presets: [],
   profiles: [{ ...defaultPointsSettingsProfile }],
-  selectedProfile: defaultPointsSettingsProfile.name, // TODO: profile ID
-  allVariablesTargetSettings: [],
 };
 
 export interface Points {
-  dataProvider: PointsDataProvider;
+  data: { type: string; config: unknown };
   settings: PointsSettings;
 }
 
