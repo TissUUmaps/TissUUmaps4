@@ -1,7 +1,11 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ImageSettings {}
+export interface ImageSettings {
+  visbility: boolean;
+  // TODO: filters
+}
 
-export const defaultImageSettings: ImageSettings = {};
+export const defaultImageSettings: ImageSettings = {
+  visbility: true,
+};
 
 export interface Image {
   data: { type: string; config: unknown };
