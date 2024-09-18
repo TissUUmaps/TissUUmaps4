@@ -1,18 +1,30 @@
 import Image from "./image";
-import Shapes from "./shapes";
 
+/** Layer settings */
 export interface LayerSettings {
-  /** layer origin in world coordinates */
+  /** Layer origin, in world coordinates */
   origin: { x: number; y: number };
 
-  /** layer scale, translating layer coordinates (e.g., pixels) to world coordinates */
+  /** Layer scale, translating data coordinates (e.g., pixels) to world coordinates */
   scale: number;
 
-  /** reflection along the x axis */
+  /** Reflection along the x axis */
   flipx: boolean;
 
-  /** rotation angle, in degrees */
+  /** Rotation angle, in degrees */
   rotation: number;
+}
+
+/** A named group of objects (e.g., images, points, shapes) that share the same data coordinate system (positioned in world coordinate system, unbounded) */
+export default interface Layer {
+  /** Human-readable layer name */
+  name: string;
+
+  /** Images of this layer (mapping: image key -> image) */
+  images: Map<string, Image>;
+
+  /** Layer settings */
+  settings: LayerSettings;
 }
 
 export const defaultLayerSettings: LayerSettings = {
@@ -21,11 +33,3 @@ export const defaultLayerSettings: LayerSettings = {
   flipx: false,
   rotation: 0,
 };
-
-export interface Layer {
-  images: Image[];
-  shapes: Shapes[];
-  settings: LayerSettings;
-}
-
-export default Layer;

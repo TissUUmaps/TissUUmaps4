@@ -1,1 +1,13 @@
-{}
+{
+  "importOrder": [
+    "^@assets/(.*)$",
+    "^@model/(.*)$",
+    "^@stores/(.*)$",
+    "^@utils/(.*)$",
+    "^@components/(.*)$",
+    "^[./]"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true,
+  "plugins": ["@trivago/prettier-plugin-sort-imports"]
+}

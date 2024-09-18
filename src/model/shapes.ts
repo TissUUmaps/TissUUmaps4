@@ -1,11 +1,17 @@
+/** Shape cloud settings */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ShapesSettings {}
 
-export const defaultShapesSettings: ShapesSettings = {};
+/** A named collection of shapes (a.k.a. shape cloud) */
+export default interface Shapes {
+  /** Human-readable shape cloud name */
+  name: string;
 
-export interface Shapes {
+  /** Data provider configuration */
   data: { type: string; config: unknown };
+
+  /** Shape cloud settings */
   settings: ShapesSettings;
 }
 
-export default Shapes;
+export const defaultShapesSettings: ShapesSettings = {};

@@ -1,3 +1,4 @@
+// TODO implement LayersPanel
 export default function LayersPanel() {
   return (
     <div className="panel panel-default">

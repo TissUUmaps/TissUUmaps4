@@ -1,24 +1,46 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
-import Project from "../model/project";
+import { defaultPointsSettings } from "../model/points";
+import Project, { defaultProjectSettings } from "../model/project";
 
 export type ProjectState = Project;
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type ProjectActions = {};
+export type ProjectActions = {
+  setActivePointsSettingsProfile: (
+    pointsKey: string,
+    activeProfileKey: string,
+  ) => void;
+};
 
 export type ProjectStore = ProjectState & ProjectActions;
 
 const initialProjectState: ProjectState = {
-  layers: [],
-  // points: [],
-  // shapes: [],
+  name: "New project",
+  layers: new Map(),
+  allPoints: new Map([
+    [
+      "dummy",
+      {
+        name: "My points",
+        data: { type: "hdf5", config: {} },
+        settings: { ...defaultPointsSettings },
+      },
+    ],
+  ]), // TODO remove dummy data
+  allShapes: new Map(),
+  settings: defaultProjectSettings,
 };
 
 const useProjectStore = create<ProjectStore>()(
-  immer(() => ({
+  immer((set) => ({
     ...initialProjectState,
+    // FIXME use immer correctly in setActivePointsSettingsProfile
+    setActivePointsSettingsProfile: (pointsKey, activeProfileKey) =>
+      set((state) => {
+        const points = state.allPoints.get(pointsKey)!;
+        points.settings.activeProfileKey = activeProfileKey;
+      }),
   })),
 );
 

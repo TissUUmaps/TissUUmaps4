@@ -1,10 +1,11 @@
 import logo from "../assets/logo_40.png";
 
-export default function MenuPanel() {
+// TODO implement Menu
+export default function Menu() {
   return (
     <nav
       id="main-navbar"
-      className="navbar navbar-expand-lg navbar-light border-bottom border-dark flex-shrink-0" // TODO  {% if isStandalone %}d-none{% endif %}
+      className="navbar navbar-expand-lg navbar-light border-bottom border-dark flex-shrink-0" // FIXME {% if isStandalone %}d-none{% endif %}
     >
       <div className="container-fluid">
         <a

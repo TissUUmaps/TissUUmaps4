@@ -1,11 +1,10 @@
-import MenuPanel from "./panels/MenuPanel";
-import ViewerPanel from "./panels/ViewerPanel";
-import ProjectPanel from "./panels/ProjectPanel";
-import LayersPanel from "./panels/LayersPanel";
-import PointsPanel from "./panels/PointsPanel";
-import ShapesPanel from "./panels/ShapesPanel";
-
 import "./App.css";
+import Menu from "./components/Menu";
+import Viewer from "./components/Viewer";
+import LayersPanel from "./components/layers/LayersPanel";
+import PointsPanel from "./components/points/PointsPanel";
+import ProjectPanel from "./components/project/ProjectPanel";
+import ShapesPanel from "./components/shapes/ShapesPanel";
 
 export default function App() {
   return (
@@ -13,10 +12,10 @@ export default function App() {
       id="main-ui"
       className="container-fluid px-0 d-flex flex-column vh-100 overflow-hidden"
     >
-      <MenuPanel />
+      <Menu />
 
       <div className="row mx-0 flex-grow-1 overflow-hidden">
-        <ViewerPanel />
+        <Viewer />
 
         <div
           id="ISS_menu"
