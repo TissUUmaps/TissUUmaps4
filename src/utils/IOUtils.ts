@@ -62,6 +62,9 @@ export default class IOUtils {
     type: string,
     factory: ImageProviderFactory,
   ): void {
+    if (IOUtils.imageProviderFactories.has(type)) {
+      console.warn(`Image provider already registered: ${type}; replacing`);
+    }
     IOUtils.imageProviderFactories.set(type, factory);
   }
 
@@ -69,6 +72,9 @@ export default class IOUtils {
     type: string,
     factory: PointsProviderFactory,
   ): void {
+    if (IOUtils.pointsProviderFactories.has(type)) {
+      console.warn(`Points provider already registered: ${type}; replacing`);
+    }
     IOUtils.pointsProviderFactories.set(type, factory);
   }
 
@@ -76,6 +82,9 @@ export default class IOUtils {
     type: string,
     factory: ShapesProviderFactory,
   ): void {
+    if (IOUtils.shapesProviderFactories.has(type)) {
+      console.warn(`Shapes provider already registered: ${type}; replacing`);
+    }
     IOUtils.shapesProviderFactories.set(type, factory);
   }
 
