@@ -11,12 +11,10 @@ export type SharedStoreSliceCreator<T> = StateCreator<
   T
 >;
 
-export type SharedState = AppSlice & ProjectSlice;
-
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type SharedActions = {};
 
-export type SharedStore = SharedState & SharedActions;
+export type SharedStore = AppSlice & ProjectSlice & SharedActions;
 
 const useSharedStore = create<SharedStore>()(
   immer((set, get, store) => ({
