@@ -1,13 +1,13 @@
 import Points from "../../model/points";
 
 interface PointsQuicksetPanelProps {
-  pointsKey: string;
+  pointsId: string;
   points: Points;
 }
 
 export default function PointsQuicksetPanel({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  pointsKey,
+  pointsId,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   points,
 }: PointsQuicksetPanelProps) {

@@ -15,7 +15,9 @@ export default function App() {
       <Menu />
 
       <div className="row mx-0 flex-grow-1 overflow-hidden">
-        <Viewer />
+        <div className="col px-0 position-relative">
+          <Viewer />
+        </div>
 
         <div
           id="ISS_menu"

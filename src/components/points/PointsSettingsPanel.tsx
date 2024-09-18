@@ -4,34 +4,35 @@ import Points, {
   isPointGroupsVariable,
   isPointValuesVariable,
 } from "../../model/points";
-import useProjectStore from "../../stores/projectStore";
+import useSharedStore from "../../store/sharedStore";
 
 interface PointsSettingsPanelProps {
-  pointsKey: string;
+  pointsId: string;
   points: Points;
 }
 
 export default function PointsSettingsPanel({
-  pointsKey,
+  pointsId,
   points,
 }: PointsSettingsPanelProps) {
-  const activeProfile = points.settings.profiles.get(
-    points.settings.activeProfileKey,
-  )!;
-  const setActiveProfile = useProjectStore(
+  const activeProfile =
+    points.settings.profiles[points.settings.activeProfileId];
+  const setActiveProfile = useSharedStore(
     (state) => state.setActivePointsSettingsProfile,
   );
   return (
     <div>
       <Form.Select
-        value={points.settings.activeProfileKey}
-        onChange={(e) => setActiveProfile(pointsKey, e.target.value)}
+        value={points.settings.activeProfileId}
+        onChange={(e) => setActiveProfile(pointsId, e.target.value)}
       >
-        {[...points.settings.profiles].map(([profileKey, profile]) => (
-          <option key={profileKey} value={profileKey}>
-            {profile.name}
-          </option>
-        ))}
+        {Object.entries(points.settings.profiles).map(
+          ([profileId, profile]) => (
+            <option key={profileId} value={profileId}>
+              {profile.name}
+            </option>
+          ),
+        )}
       </Form.Select>
       <div>
         <legend>Size</legend>

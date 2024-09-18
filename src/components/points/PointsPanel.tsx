@@ -2,17 +2,17 @@ import { useState } from "react";
 import { Button, Collapse, Tab, Tabs } from "react-bootstrap";
 
 import Points from "../../model/points";
-import useProjectStore from "../../stores/projectStore";
+import useSharedStore from "../../store/sharedStore";
 import PointsGroupsPanel from "./PointsGroupsPanel";
 import PointsQuicksetPanel from "./PointsQuicksetPanel";
 import PointsSettingsPanel from "./PointsSettingsPanel";
 
 interface PointsPanelItemProps {
-  pointsKey: string;
+  pointsId: string;
   points: Points;
 }
 
-function PointsPanelItem({ pointsKey, points }: PointsPanelItemProps) {
+function PointsPanelItem({ pointsId, points }: PointsPanelItemProps) {
   const [quicksetPanelOpen, setQuicksetPanelOpen] = useState(true);
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
   const [groupsPanelOpen, setGroupsPanelOpen] = useState(true);
@@ -23,7 +23,7 @@ function PointsPanelItem({ pointsKey, points }: PointsPanelItemProps) {
           Quickset
         </Button>
         <Collapse in={quicksetPanelOpen}>
-          <PointsQuicksetPanel pointsKey={pointsKey} points={points} />
+          <PointsQuicksetPanel pointsId={pointsId} points={points} />
         </Collapse>
       </div>
       <div>
@@ -31,7 +31,7 @@ function PointsPanelItem({ pointsKey, points }: PointsPanelItemProps) {
           Settings
         </Button>
         <Collapse in={settingsPanelOpen}>
-          <PointsSettingsPanel pointsKey={pointsKey} points={points} />
+          <PointsSettingsPanel pointsId={pointsId} points={points} />
         </Collapse>
       </div>
       <div>
@@ -39,7 +39,7 @@ function PointsPanelItem({ pointsKey, points }: PointsPanelItemProps) {
           Groups
         </Button>
         <Collapse in={groupsPanelOpen}>
-          <PointsGroupsPanel pointsKey={pointsKey} points={points} />
+          <PointsGroupsPanel pointsId={pointsId} points={points} />
         </Collapse>
       </div>
     </div>
@@ -47,12 +47,12 @@ function PointsPanelItem({ pointsKey, points }: PointsPanelItemProps) {
 }
 
 export default function PointsPanel() {
-  const allPoints = useProjectStore((state) => state.allPoints);
+  const allPoints = useSharedStore((state) => state.allPoints);
   return (
     <Tabs>
-      {[...allPoints].map(([pointsKey, points]) => (
-        <Tab key={pointsKey} title={points.name}>
-          <PointsPanelItem pointsKey={pointsKey} points={points} />
+      {Object.entries(allPoints).map(([pointsId, points]) => (
+        <Tab key={pointsId} title={points.name}>
+          <PointsPanelItem pointsId={pointsId} points={points} />
         </Tab>
       ))}
     </Tabs>

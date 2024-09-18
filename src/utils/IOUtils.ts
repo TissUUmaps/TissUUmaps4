@@ -23,44 +23,38 @@ export default class IOUtils {
   private static shapesProviderFactories: Map<string, ShapesProviderFactory> =
     new Map();
 
-  public static registerImageProviderFactory(
+  static registerImageProviderFactory(
     type: string,
     imageProviderFactory: ImageProviderFactory,
   ): void {
     IOUtils.imageProviderFactories.set(type, imageProviderFactory);
   }
 
-  public static registerPointsProviderFactory(
+  static registerPointsProviderFactory(
     type: string,
     pointsProviderFactory: PointsProviderFactory,
   ): void {
     IOUtils.pointsProviderFactories.set(type, pointsProviderFactory);
   }
 
-  public static registerShapesProviderFactory(
+  static registerShapesProviderFactory(
     type: string,
     shapesProviderFactory: ShapesProviderFactory,
   ): void {
     IOUtils.shapesProviderFactories.set(type, shapesProviderFactory);
   }
 
-  public static getImageProvider(type: string, config: unknown): ImageProvider {
+  static getImageProvider(type: string, config: unknown): ImageProvider {
     const imageProviderFactory = IOUtils.imageProviderFactories.get(type)!;
     return imageProviderFactory(config);
   }
 
-  public static getPointsProvider(
-    type: string,
-    config: unknown,
-  ): PointsProvider {
+  static getPointsProvider(type: string, config: unknown): PointsProvider {
     const pointsProviderFactory = IOUtils.pointsProviderFactories.get(type)!;
     return pointsProviderFactory(config);
   }
 
-  public static getShapesProvider(
-    type: string,
-    config: unknown,
-  ): ShapesProvider {
+  static getShapesProvider(type: string, config: unknown): ShapesProvider {
     const shapesProviderFactory = IOUtils.shapesProviderFactories.get(type)!;
     return shapesProviderFactory(config);
   }

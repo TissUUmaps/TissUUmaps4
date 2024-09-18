@@ -20,8 +20,8 @@ export default interface Layer {
   /** Human-readable layer name */
   name: string;
 
-  /** Images of this layer (mapping: image key -> image) */
-  images: Map<string, Image>;
+  /** Images of this layer */
+  images: { [imageId: string]: Image };
 
   /** Layer settings */
   settings: LayerSettings;

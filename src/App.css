@@ -167,7 +167,7 @@ html {
 }
 
 /* *** Viewer */
-.ISS_viewer {
+#viewer {
   background-color: white;
 }
 

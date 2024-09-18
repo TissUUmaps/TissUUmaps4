@@ -92,20 +92,22 @@ export interface PointsSettingsProfile {
   /** Point drawing order  */
   zorder: PointZOrder | PointValuesVariable | PointGroupsVariable;
 
-  /** Point group settings (mapping: groups variable -> group -> settings) */
-  groupSettings: Map<string, Map<string, PointsGroupSettings>>;
+  /** Point group settings */
+  groupSettings: {
+    [groupsVariable: string]: { [group: string]: PointsGroupSettings };
+  };
 }
 
 /** Point cloud settings */
 export interface PointsSettings {
-  /** Presets (mapping: preset key -> preset) */
-  presets: Map<string, PointsSettingsPreset>;
+  /** Presets */
+  presets: { [presetId: string]: PointsSettingsPreset };
 
-  /** Profiles (mapping: profile key -> profile) */
-  profiles: Map<string, PointsSettingsProfile>;
+  /** Profiles */
+  profiles: { [profileId: string]: PointsSettingsProfile };
 
   /** ID of the active profile */
-  activeProfileKey: string;
+  activeProfileId: string;
 
   /** Selected groups variable */
   selectedGroupsVariable?: string;
@@ -143,13 +145,13 @@ export const defaultPointsSettingsProfile: PointsSettingsProfile = {
   size: 5, // TODO default points size
   visibility: true,
   zorder: 0, // TODO default points zorder
-  groupSettings: new Map(),
+  groupSettings: {},
 };
 
 export const defaultPointsSettings: PointsSettings = {
-  presets: new Map(),
-  profiles: new Map([
-    [DEFAULT_POINTS_SETTINGS_PROFILE_ID, { ...defaultPointsSettingsProfile }],
-  ]),
-  activeProfileKey: DEFAULT_POINTS_SETTINGS_PROFILE_ID,
+  presets: {},
+  profiles: {
+    DEFAULT_POINTS_SETTINGS_PROFILE_ID: { ...defaultPointsSettingsProfile },
+  },
+  activeProfileId: DEFAULT_POINTS_SETTINGS_PROFILE_ID,
 };
