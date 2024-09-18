@@ -8,7 +8,7 @@ export default class OpenSeadragonUtils {
     });
   }
 
-  static destroyViewer(viewer: OpenSeadragon.Viewer) {
+  static destroyViewer(viewer: OpenSeadragon.Viewer): void {
     viewer.destroy();
   }
 }

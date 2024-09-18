@@ -1,19 +1,54 @@
+export type ImageData = {
+  name: string;
+  tileSource: unknown;
+};
+
 export interface ImageProvider {
-  getData(): unknown; // TODO define image data type
+  getData(): ImageData;
 }
+
+export type ImageProviderConfig = unknown;
+
+export type ImageProviderFactory = (
+  config: ImageProviderConfig,
+) => ImageProvider;
+
+type TypedArray =
+  | Int8Array
+  | Uint8Array
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array
+  | BigInt64Array
+  | BigUint64Array;
+export type PointsData = { [variable: string]: TypedArray | string[] };
 
 export interface PointsProvider {
   getVariables(): string[];
-  getData(variable: string): unknown; // TODO define points data type
+  getData(variable: string): PointsData;
 }
+
+export type PointsProviderConfig = unknown;
+
+export type PointsProviderFactory = (
+  config: PointsProviderConfig,
+) => PointsProvider;
+
+type GeoJSON = object;
+export type ShapesData = GeoJSON;
 
 export interface ShapesProvider {
-  getData(): unknown; // TODO define shapes data type
+  getData(): ShapesData;
 }
 
-export type ImageProviderFactory = (config: unknown) => ImageProvider;
-export type PointsProviderFactory = (config: unknown) => PointsProvider;
-export type ShapesProviderFactory = (config: unknown) => ShapesProvider;
+export type ShapesProviderConfig = unknown;
+
+export type ShapesProviderFactory = (
+  config: ShapesProviderConfig,
+) => ShapesProvider;
 
 export default class IOUtils {
   private static imageProviderFactories: Map<string, ImageProviderFactory> =
@@ -25,37 +60,55 @@ export default class IOUtils {
 
   static registerImageProviderFactory(
     type: string,
-    imageProviderFactory: ImageProviderFactory,
+    factory: ImageProviderFactory,
   ): void {
-    IOUtils.imageProviderFactories.set(type, imageProviderFactory);
+    IOUtils.imageProviderFactories.set(type, factory);
   }
 
   static registerPointsProviderFactory(
     type: string,
-    pointsProviderFactory: PointsProviderFactory,
+    factory: PointsProviderFactory,
   ): void {
-    IOUtils.pointsProviderFactories.set(type, pointsProviderFactory);
+    IOUtils.pointsProviderFactories.set(type, factory);
   }
 
   static registerShapesProviderFactory(
     type: string,
-    shapesProviderFactory: ShapesProviderFactory,
+    factory: ShapesProviderFactory,
   ): void {
-    IOUtils.shapesProviderFactories.set(type, shapesProviderFactory);
+    IOUtils.shapesProviderFactories.set(type, factory);
   }
 
-  static getImageProvider(type: string, config: unknown): ImageProvider {
-    const imageProviderFactory = IOUtils.imageProviderFactories.get(type)!;
-    return imageProviderFactory(config);
+  static getImageProvider(
+    type: string,
+    config: ImageProviderConfig,
+  ): ImageProvider {
+    const factory = IOUtils.imageProviderFactories.get(type);
+    if (!factory) {
+      throw new Error(`Image provider not supported: ${type}`);
+    }
+    return factory(config);
   }
 
-  static getPointsProvider(type: string, config: unknown): PointsProvider {
-    const pointsProviderFactory = IOUtils.pointsProviderFactories.get(type)!;
-    return pointsProviderFactory(config);
+  static getPointsProvider(
+    type: string,
+    config: PointsProviderConfig,
+  ): PointsProvider {
+    const factory = IOUtils.pointsProviderFactories.get(type);
+    if (!factory) {
+      throw new Error(`Points provider not supported: ${type}`);
+    }
+    return factory(config);
   }
 
-  static getShapesProvider(type: string, config: unknown): ShapesProvider {
-    const shapesProviderFactory = IOUtils.shapesProviderFactories.get(type)!;
-    return shapesProviderFactory(config);
+  static getShapesProvider(
+    type: string,
+    config: ShapesProviderConfig,
+  ): ShapesProvider {
+    const factory = IOUtils.shapesProviderFactories.get(type);
+    if (!factory) {
+      throw new Error(`Shapes provider not supported: ${type}`);
+    }
+    return factory(config);
   }
 }

@@ -1,3 +1,5 @@
+import { ImageProviderConfig } from "../utils/IOUtils";
+
 /** Image settings */
 export interface ImageSettings {
   /** Visibiliy of the image */
@@ -12,7 +14,7 @@ export default interface Image {
   name: string;
 
   /** Data provider configuration */
-  data: { type: string; config: unknown };
+  data: { type: string; config: ImageProviderConfig };
 
   /** Image settings */
   settings: ImageSettings;

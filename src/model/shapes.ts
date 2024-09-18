@@ -1,4 +1,6 @@
 /** Shape cloud settings */
+import { ShapesProviderConfig } from "../utils/IOUtils";
+
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ShapesSettings {}
 
@@ -8,7 +10,7 @@ export default interface Shapes {
   name: string;
 
   /** Data provider configuration */
-  data: { type: string; config: unknown };
+  data: { type: string; config: ShapesProviderConfig };
 
   /** Shape cloud settings */
   settings: ShapesSettings;

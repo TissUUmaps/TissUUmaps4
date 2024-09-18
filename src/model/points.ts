@@ -1,3 +1,5 @@
+import { PointsProviderConfig } from "../utils/IOUtils";
+
 type PointPosition = {
   x: PointValuesVariable;
   y: PointValuesVariable;
@@ -119,7 +121,7 @@ export default interface Points {
   name: string;
 
   /** Data provider configuration */
-  data: { type: string; config: unknown };
+  data: { type: string; config: PointsProviderConfig };
 
   /** Point cloud settings */
   settings: PointsSettings;
