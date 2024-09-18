@@ -26,7 +26,7 @@ export default class OpenSeadragonUtils {
     viewer: OpenSeadragon.Viewer,
     viewerState: ViewerState,
     layers: { [layerId: string]: Layer },
-  ): ViewerState {
+  ): void {
     for (const layerId of Object.keys(viewerState.layers)) {
       for (const imageId of Object.keys(viewerState.layers[layerId].images)) {
         if (
@@ -63,7 +63,6 @@ export default class OpenSeadragonUtils {
         }
       }
     }
-    return viewerState;
   }
 
   static destroyViewer(viewer: OpenSeadragon.Viewer): void {
