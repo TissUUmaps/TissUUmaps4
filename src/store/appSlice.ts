@@ -1,26 +1,21 @@
+import { ViewerState } from "../utils/OpenSeadragonUtils";
 import { SharedStoreSliceCreator } from "./sharedStore";
 
 export type AppState = {
-  osd: {
-    [layerId: string]: {
-      dummyTiledImageIndex: number;
-      dirty: boolean;
-      images: {
-        [imageId: string]: { tiledImageIndex: number; dirty: boolean };
-      };
-    };
-  };
+  viewerState: ViewerState;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type AppActions = {};
+export type AppActions = {
+  setViewerState: (viewerState: ViewerState) => void;
+};
 
 export type AppSlice = AppState & AppActions;
 
 const initialAppState: AppState = {
-  osd: {},
+  viewerState: {},
 };
 
-export const createAppSlice: SharedStoreSliceCreator<AppSlice> = () => ({
+export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (set) => ({
   ...initialAppState,
+  setViewerState: (viewerState) => set({ viewerState: viewerState }),
 });
