@@ -67,10 +67,10 @@ export default class OrderedMap<K, V> implements Map<K, V> {
   }
 
   set(key: K, value: V): this {
-    this.data.set(key, value);
     if (!this.data.has(key)) {
       this.order.push(key);
     }
+    this.data.set(key, value);
     return this;
   }
 
@@ -97,11 +97,18 @@ export default class OrderedMap<K, V> implements Map<K, V> {
   splice(start: number, deleteCount?: number, ...items: [K, V][]): [K, V][] {
     let deletedKeys: K[];
     if (deleteCount !== undefined) {
-      deletedKeys = this.order.splice(
+      const newOrder = [...this.order];
+      deletedKeys = newOrder.splice(
         start,
         deleteCount,
         ...items.map(([key]) => key),
       );
+      for (const [key] of items) {
+        if (this.data.has(key) && !deletedKeys.includes(key)) {
+          throw new Error("Items contain existing key");
+        }
+      }
+      this.order = newOrder;
     } else {
       deletedKeys = this.order.splice(start);
     }

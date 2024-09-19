@@ -39,7 +39,7 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
     set((draft) => {
       const points = draft.allPoints.get(pointsId);
       if (!points) {
-        throw Error(`Points not found: ${pointsId}`);
+        throw new Error(`Points not found: ${pointsId}`);
       }
       points.settings.activeProfileId = activeProfileId;
     }),
