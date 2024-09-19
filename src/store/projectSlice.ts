@@ -41,6 +41,6 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
         throw Error(`Points not found: ${pointsId}`);
       }
       points.settings.activeProfileId = activeProfileId;
-      state.allPoints = new Map(state.allPoints).set(pointsId, points);
+      state.allPoints = new Map(state.allPoints).set(pointsId, points); // TODO is map creation necessary?
     }),
 });
