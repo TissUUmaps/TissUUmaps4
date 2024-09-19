@@ -1,4 +1,4 @@
-import OrderedMap from "../utils/OrderedMap";
+import SpliceableMap from "../utils/SpliceableMap";
 
 type TypedArray =
   | Int8Array
@@ -127,10 +127,10 @@ export type PointsSettingsProfile = {
 /** Point cloud settings */
 export type PointsSettings = {
   /** Presets (map: preset ID -> preset) */
-  presets: OrderedMap<string, PointsSettingsPreset>;
+  presets: SpliceableMap<string, PointsSettingsPreset>;
 
   /** Profiles (map: profile ID -> profile) */
-  profiles: OrderedMap<string, PointsSettingsProfile>;
+  profiles: SpliceableMap<string, PointsSettingsProfile>;
 
   /** ID of the active profile */
   activeProfileId: string;
@@ -175,8 +175,8 @@ export const defaultPointsSettingsProfile: PointsSettingsProfile = {
 };
 
 export const defaultPointsSettings: PointsSettings = {
-  presets: new OrderedMap(),
-  profiles: new OrderedMap([
+  presets: new SpliceableMap(),
+  profiles: new SpliceableMap([
     [DEFAULT_POINTS_SETTINGS_PROFILE_ID, { ...defaultPointsSettingsProfile }],
   ]),
   activeProfileId: DEFAULT_POINTS_SETTINGS_PROFILE_ID,

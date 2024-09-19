@@ -1,4 +1,4 @@
-import OrderedMap from "../utils/OrderedMap";
+import SpliceableMap from "../utils/SpliceableMap";
 import Image from "./image";
 
 /** Layer settings */
@@ -22,7 +22,7 @@ export type Layer = {
   name: string;
 
   /** Images of this layer (map: image ID -> image) */
-  images: OrderedMap<string, Image>;
+  images: SpliceableMap<string, Image>;
 
   /** Layer settings */
   settings: LayerSettings;

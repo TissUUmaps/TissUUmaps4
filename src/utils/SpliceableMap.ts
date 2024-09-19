@@ -1,4 +1,4 @@
-export default class OrderedMap<K, V> implements Map<K, V> {
+export default class SpliceableMap<K, V> implements Map<K, V> {
   private data: Map<K, V> = new Map();
   private order: K[] = [];
 
@@ -82,16 +82,6 @@ export default class OrderedMap<K, V> implements Map<K, V> {
 
   [Symbol.iterator](): IterableIterator<[K, V]> {
     return this.entries();
-  }
-
-  // array-inspired functions
-
-  at(index: number): K | undefined {
-    return this.order.at(index);
-  }
-
-  indexOf(key: K, fromIndex?: number): number {
-    return this.order.indexOf(key, fromIndex);
   }
 
   splice(start: number, deleteCount?: number, ...items: [K, V][]): [K, V][] {

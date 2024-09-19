@@ -1,6 +1,6 @@
 import { defaultPointsSettings } from "../model/points";
 import Project, { defaultProjectSettings } from "../model/project";
-import OrderedMap from "../utils/OrderedMap";
+import SpliceableMap from "../utils/SpliceableMap";
 import { SharedStoreSliceCreator } from "./sharedStore";
 
 export type ProjectState = Project;
@@ -16,8 +16,8 @@ export type ProjectSlice = ProjectState & ProjectActions;
 
 const initialProjectState: ProjectState = {
   name: "New project",
-  layers: new OrderedMap(),
-  allPoints: new OrderedMap([
+  layers: new SpliceableMap(),
+  allPoints: new SpliceableMap([
     [
       "dummy",
       {
@@ -27,7 +27,7 @@ const initialProjectState: ProjectState = {
       },
     ],
   ]), // TODO remove dummy data
-  allShapes: new OrderedMap(),
+  allShapes: new SpliceableMap(),
   settings: defaultProjectSettings,
 };
 
