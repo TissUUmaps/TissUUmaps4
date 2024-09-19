@@ -1,4 +1,4 @@
-import SpliceableMap from "../utils/SpliceableMap";
+import OrderedMap from "../utils/OrderedMap";
 import Layer from "./layer";
 import Points from "./points";
 import Shapes from "./shapes";
@@ -13,13 +13,13 @@ export type Project = {
   name: string;
 
   /** Layers (map: layer ID -> layer) */
-  layers: SpliceableMap<string, Layer>;
+  layers: OrderedMap<string, Layer>;
 
   /** Points (map: points ID -> points) */
-  allPoints: SpliceableMap<string, Points>;
+  allPoints: OrderedMap<string, Points>;
 
   /** Shapes (map: shapes ID -> shapes) */
-  allShapes: SpliceableMap<string, Shapes>;
+  allShapes: OrderedMap<string, Shapes>;
 
   /** Project settings */
   settings: ProjectSettings;
