@@ -25,11 +25,11 @@ export default class SpliceableMap<K, V> implements Map<K, V> {
   }
 
   delete(key: K): boolean {
-    const existed = this.data.delete(key);
-    if (existed) {
+    const deleted = this.data.delete(key);
+    if (deleted) {
       this.order = this.order.filter((k) => k !== key);
     }
-    return existed;
+    return deleted;
   }
 
   *entries(): IterableIterator<[K, V]> {
@@ -40,7 +40,7 @@ export default class SpliceableMap<K, V> implements Map<K, V> {
   }
 
   forEach(
-    callbackfn: (value: V, key: K, map: Map<K, V>) => void,
+    callbackfn: (value: V, key: K, map: this) => void,
     thisArg: unknown,
   ): void {
     if (thisArg) {
