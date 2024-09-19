@@ -36,7 +36,6 @@ export default function Viewer() {
 
   useEffect(() => {
     if (viewerRef.current) {
-      const viewer = viewerRef.current;
       // delete old TiledImage instances
       const oldTiledImageInfos: TiledImageInfo[] = [];
       for (const oldTiledImageInfo of viewerState.tiledImageInfos) {
@@ -46,7 +45,7 @@ export default function Viewer() {
           oldTiledImageInfos.push(oldTiledImageInfo);
         } else {
           OpenSeadragonUtils.deleteTiledImage(
-            viewer,
+            viewerRef.current,
             oldTiledImageInfos.length,
           );
         }
@@ -63,7 +62,7 @@ export default function Viewer() {
           let tiledImageInfo: TiledImageInfo;
           if (oldTiledImageIndex == -1) {
             OpenSeadragonUtils.createTiledImage(
-              viewer,
+              viewerRef.current,
               tiledImageInfos.length,
               "", // TODO load image
             );
@@ -72,21 +71,21 @@ export default function Viewer() {
             tiledImageInfo = oldTiledImageInfos.at(oldTiledImageIndex)!;
             if (oldTiledImageIndex !== tiledImageInfos.length) {
               OpenSeadragonUtils.moveTiledImage(
-                viewer,
+                viewerRef.current,
                 oldTiledImageIndex,
                 tiledImageInfos.length,
               );
             }
             if (image.reload) {
               OpenSeadragonUtils.createTiledImage(
-                viewer,
+                viewerRef.current,
                 tiledImageInfos.length,
                 "", // TODO load image
                 true,
               );
             } else if (image.update) {
               OpenSeadragonUtils.updateTiledImage(
-                viewer,
+                viewerRef.current,
                 tiledImageInfos.length,
               );
             }
