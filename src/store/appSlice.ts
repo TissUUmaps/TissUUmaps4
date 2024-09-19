@@ -12,7 +12,7 @@ export type AppActions = {
 export type AppSlice = AppState & AppActions;
 
 const initialAppState: AppState = {
-  viewerState: {},
+  viewerState: { layers: {} },
 };
 
 export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (set) => ({

@@ -1,7 +1,5 @@
 import OpenSeadragon from "openseadragon";
 
-import Layer from "../model/layer";
-
 export type ViewerState = {
   layers: {
     [layerId: string]: {
@@ -22,50 +20,81 @@ export default class OpenSeadragonUtils {
     });
   }
 
-  static updateViewer(
-    viewer: OpenSeadragon.Viewer,
-    viewerState: ViewerState,
-    layers: { [layerId: string]: Layer },
-  ): void {
-    for (const layerId of Object.keys(viewerState.layers)) {
-      for (const imageId of Object.keys(viewerState.layers[layerId].images)) {
-        if (
-          !(layerId in layers) ||
-          viewerState.layers[layerId].dirty ||
-          !(imageId in layers[layerId].images) ||
-          viewerState.layers[layerId].images[imageId].dirty
-        ) {
-          // TODO delete image TiledImage
-          delete viewerState.layers[layerId].images[imageId];
-        }
-      }
-      if (!(layerId in layers) || viewerState.layers[layerId].dirty) {
-        // TODO delete dummy TiledImage
-        delete viewerState.layers[layerId];
-      }
-    }
-    for (const layerId of Object.keys(layers)) {
-      if (!(layerId in viewerState.layers)) {
-        const dummyTiledImageIndex = -1; // TODO create dummy TiledImage
-        viewerState.layers[layerId] = {
-          dummyTiledImageIndex: dummyTiledImageIndex,
-          dirty: false,
-          images: {},
-        };
-      }
-      for (const imageId of Object.keys(layers[layerId].images)) {
-        if (!(imageId in viewerState.layers[layerId].images)) {
-          const tiledImageIndex = -1; // TODO create image TiledImage
-          viewerState.layers[layerId].images[imageId] = {
-            tiledImageIndex: tiledImageIndex,
-            dirty: false,
-          };
-        }
-      }
-    }
-  }
+  // static updateViewer(
+  //   viewer: OpenSeadragon.Viewer,
+  //   viewerState: ViewerState,
+  //   layers: { [layerId: string]: Layer },
+  // ): void {
+  //   for (const layerId of Object.keys(viewerState.layers)) {
+  //     for (const imageId of Object.keys(viewerState.layers[layerId].images)) {
+  //       if (
+  //         !(layerId in layers) ||
+  //         viewerState.layers[layerId].dirty ||
+  //         !(imageId in layers[layerId].images) ||
+  //         viewerState.layers[layerId].images[imageId].dirty
+  //       ) {
+  //         // TODO delete image TiledImage
+  //         delete viewerState.layers[layerId].images[imageId];
+  //       }
+  //     }
+  //     if (!(layerId in layers) || viewerState.layers[layerId].dirty) {
+  //       // TODO delete dummy TiledImage
+  //       delete viewerState.layers[layerId];
+  //     }
+  //   }
+  //   for (const layerId of Object.keys(layers)) {
+  //     if (!(layerId in viewerState.layers)) {
+  //       const dummyTiledImageIndex = -1; // TODO create dummy TiledImage
+  //       viewerState.layers[layerId] = {
+  //         dummyTiledImageIndex: dummyTiledImageIndex,
+  //         dirty: false,
+  //         images: {},
+  //       };
+  //     }
+  //     for (const imageId of Object.keys(layers[layerId].images)) {
+  //       if (!(imageId in viewerState.layers[layerId].images)) {
+  //         const tiledImageIndex = -1; // TODO create image TiledImage
+  //         viewerState.layers[layerId].images[imageId] = {
+  //           tiledImageIndex: tiledImageIndex,
+  //           dirty: false,
+  //         };
+  //       }
+  //     }
+  //   }
+  // }
 
   static destroyViewer(viewer: OpenSeadragon.Viewer): void {
     viewer.destroy();
   }
+
+  // static getTiledImageIndex(
+  //   viewerState: ViewerState,
+  //   layerId: string,
+  //   imageId?: string,
+  // ): number {}
+
+  // static getModelIndices(
+  //   viewerState: ViewerState,
+  //   tiledImageIndex: number,
+  // ): {
+  //   layerId: string;
+  //   imageId?: string;
+  // } {}
+
+  // static insertTiledImage(
+  //   viewer: OpenSeadragon.Viewer,
+  //   viewerState: ViewerState,
+  //   layerId: string,
+  //   imageId: string | undefined,
+  //   tileSource: OpenSeadragon.TiledImageOptions,
+  // ): OpenSeadragon.TiledImage {
+  //   const index = OpenSeadragonUtils.getTiledImageIndex(
+  //     viewerState,
+  //     layerId,
+  //     imageId,
+  //   );
+  //   viewer.addTiledImage({ tileSource: tileSource, index: index }); // TODO other options
+
+  //   return viewer.world.getItemAt(index);
+  // }
 }

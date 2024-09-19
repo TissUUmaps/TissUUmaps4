@@ -24,7 +24,7 @@ export default function Viewer() {
   // asynchronously update the viewer upon changes in the desired viewer state
   useEffect(() => {
     if (viewerRef.current) {
-      OpenSeadragonUtils.updateViewer(viewerRef.current, viewerState, layers);
+      // OpenSeadragonUtils.updateViewer(viewerRef.current, viewerState, layers);
       setViewerState(viewerState); // viewerState has been updated in-place
     }
   }, [viewerState, layers, setViewerState]);

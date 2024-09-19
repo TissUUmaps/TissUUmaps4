@@ -102,11 +102,11 @@ export interface PointsSettingsProfile {
 
 /** Point cloud settings */
 export interface PointsSettings {
-  /** Presets */
-  presets: { [presetId: string]: PointsSettingsPreset };
+  /** Presets (map: preset ID -> preset) */
+  presets: Map<string, PointsSettingsPreset>;
 
-  /** Profiles */
-  profiles: { [profileId: string]: PointsSettingsProfile };
+  /** Profiles (map: profile ID -> profile) */
+  profiles: Map<string, PointsSettingsProfile>;
 
   /** ID of the active profile */
   activeProfileId: string;
@@ -151,9 +151,9 @@ export const defaultPointsSettingsProfile: PointsSettingsProfile = {
 };
 
 export const defaultPointsSettings: PointsSettings = {
-  presets: {},
-  profiles: {
-    DEFAULT_POINTS_SETTINGS_PROFILE_ID: { ...defaultPointsSettingsProfile },
-  },
+  presets: new Map(),
+  profiles: new Map([
+    [DEFAULT_POINTS_SETTINGS_PROFILE_ID, { ...defaultPointsSettingsProfile }],
+  ]),
   activeProfileId: DEFAULT_POINTS_SETTINGS_PROFILE_ID,
 };

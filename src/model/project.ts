@@ -11,14 +11,14 @@ export default interface Project {
   /** Human-readable project name */
   name: string;
 
-  /** Layers */
-  layers: { [layerId: string]: Layer };
+  /** Layers (map: layer ID -> layer) */
+  layers: Map<string, Layer>;
 
-  /** Points */
-  allPoints: { [pointsId: string]: Points };
+  /** Points (map: points ID -> points) */
+  allPoints: Map<string, Points>;
 
-  /** Shapes */
-  allShapes: { [shapesId: string]: Shapes };
+  /** Shapes (map: shapes ID -> shapes) */
+  allShapes: Map<string, Shapes>;
 
   /** Project settings */
   settings: ProjectSettings;
