@@ -1,100 +1,47 @@
-import OpenSeadragon from "openseadragon";
-
-export type ViewerState = {
-  layers: {
-    [layerId: string]: {
-      dummyTiledImageIndex: number;
-      dirty: boolean;
-      images: {
-        [imageId: string]: { tiledImageIndex: number; dirty: boolean };
-      };
-    };
-  };
-};
+import { Viewer } from "openseadragon";
 
 export default class OpenSeadragonUtils {
-  static createViewer(viewerElement: HTMLDivElement): OpenSeadragon.Viewer {
-    return new OpenSeadragon.Viewer({
+  static createViewer(viewerElement: HTMLElement): Viewer {
+    return new Viewer({
       element: viewerElement,
       // TODO OpenSeadragon viewer options
     });
   }
 
-  // static updateViewer(
-  //   viewer: OpenSeadragon.Viewer,
-  //   viewerState: ViewerState,
-  //   layers: { [layerId: string]: Layer },
-  // ): void {
-  //   for (const layerId of Object.keys(viewerState.layers)) {
-  //     for (const imageId of Object.keys(viewerState.layers[layerId].images)) {
-  //       if (
-  //         !(layerId in layers) ||
-  //         viewerState.layers[layerId].dirty ||
-  //         !(imageId in layers[layerId].images) ||
-  //         viewerState.layers[layerId].images[imageId].dirty
-  //       ) {
-  //         // TODO delete image TiledImage
-  //         delete viewerState.layers[layerId].images[imageId];
-  //       }
-  //     }
-  //     if (!(layerId in layers) || viewerState.layers[layerId].dirty) {
-  //       // TODO delete dummy TiledImage
-  //       delete viewerState.layers[layerId];
-  //     }
-  //   }
-  //   for (const layerId of Object.keys(layers)) {
-  //     if (!(layerId in viewerState.layers)) {
-  //       const dummyTiledImageIndex = -1; // TODO create dummy TiledImage
-  //       viewerState.layers[layerId] = {
-  //         dummyTiledImageIndex: dummyTiledImageIndex,
-  //         dirty: false,
-  //         images: {},
-  //       };
-  //     }
-  //     for (const imageId of Object.keys(layers[layerId].images)) {
-  //       if (!(imageId in viewerState.layers[layerId].images)) {
-  //         const tiledImageIndex = -1; // TODO create image TiledImage
-  //         viewerState.layers[layerId].images[imageId] = {
-  //           tiledImageIndex: tiledImageIndex,
-  //           dirty: false,
-  //         };
-  //       }
-  //     }
-  //   }
-  // }
-
-  static destroyViewer(viewer: OpenSeadragon.Viewer): void {
-    viewer.destroy();
+  static createTiledImage(
+    viewer: Viewer,
+    tiledImageIndex: number,
+    tileSource: string | object,
+    replace?: boolean,
+  ): void {
+    viewer.addTiledImage({
+      tileSource: tileSource,
+      index: tiledImageIndex,
+      replace: replace,
+    });
   }
 
-  // static getTiledImageIndex(
-  //   viewerState: ViewerState,
-  //   layerId: string,
-  //   imageId?: string,
-  // ): number {}
+  static moveTiledImage(
+    viewer: Viewer,
+    oldTiledImageIndex: number,
+    newTiledImageIndex: number,
+  ): void {
+    const tiledImage = viewer.world.getItemAt(oldTiledImageIndex);
+    viewer.world.setItemIndex(tiledImage, newTiledImageIndex);
+  }
 
-  // static getModelIndices(
-  //   viewerState: ViewerState,
-  //   tiledImageIndex: number,
-  // ): {
-  //   layerId: string;
-  //   imageId?: string;
-  // } {}
+  static updateTiledImage(viewer: Viewer, tiledImageIndex: number): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const tiledImage = viewer.world.getItemAt(tiledImageIndex);
+    // TODO update tiledImage
+  }
 
-  // static insertTiledImage(
-  //   viewer: OpenSeadragon.Viewer,
-  //   viewerState: ViewerState,
-  //   layerId: string,
-  //   imageId: string | undefined,
-  //   tileSource: OpenSeadragon.TiledImageOptions,
-  // ): OpenSeadragon.TiledImage {
-  //   const index = OpenSeadragonUtils.getTiledImageIndex(
-  //     viewerState,
-  //     layerId,
-  //     imageId,
-  //   );
-  //   viewer.addTiledImage({ tileSource: tileSource, index: index }); // TODO other options
+  static deleteTiledImage(viewer: Viewer, tiledImageIndex: number): void {
+    const tiledImage = viewer.world.getItemAt(tiledImageIndex);
+    viewer.world.removeItem(tiledImage);
+  }
 
-  //   return viewer.world.getItemAt(index);
-  // }
+  static destroyViewer(viewer: Viewer): void {
+    viewer.destroy();
+  }
 }

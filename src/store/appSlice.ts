@@ -1,18 +1,15 @@
 import { ImageProviderFactory } from "../model/image";
 import { PointsProviderFactory } from "../model/points";
 import { ShapesProviderFactory } from "../model/shapes";
-import { ViewerState } from "../utils/OpenSeadragonUtils";
 import { SharedStoreSliceCreator } from "./sharedStore";
 
 export type AppState = {
-  viewerState: ViewerState;
   imageProviderFactories: Map<string, ImageProviderFactory>;
   pointsProviderFactories: Map<string, PointsProviderFactory>;
   shapesProviderFactories: Map<string, ShapesProviderFactory>;
 };
 
 export type AppActions = {
-  setViewerState: (viewerState: ViewerState) => void;
   registerImageProvider: (type: string, factory: ImageProviderFactory) => void;
   registerPointsProvider: (
     type: string,
@@ -27,7 +24,6 @@ export type AppActions = {
 export type AppSlice = AppState & AppActions;
 
 const initialAppState: AppState = {
-  viewerState: { layers: {} },
   imageProviderFactories: new Map(),
   pointsProviderFactories: new Map(),
   shapesProviderFactories: new Map(),
@@ -35,7 +31,6 @@ const initialAppState: AppState = {
 
 export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (set) => ({
   ...initialAppState,
-  setViewerState: (viewerState) => set({ viewerState: viewerState }),
   registerImageProvider: (type, factory) =>
     set((draft) => {
       if (draft.imageProviderFactories.has(type)) {

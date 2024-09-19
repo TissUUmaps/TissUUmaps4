@@ -31,6 +31,9 @@ export type Image = {
 
   /** Image settings */
   settings: ImageSettings;
+
+  update?: boolean;
+  reload?: boolean;
 };
 
 export const defaultImageSettings: ImageSettings = {
