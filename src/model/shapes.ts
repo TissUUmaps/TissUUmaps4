@@ -1,11 +1,22 @@
-/** Shape cloud settings */
-import { ShapesProviderConfig } from "../utils/IOUtils";
+type GeoJSON = object;
+export type ShapesData = GeoJSON;
 
+export interface ShapesProvider {
+  getData(): ShapesData;
+}
+
+export type ShapesProviderFactory = (
+  config: ShapesProviderConfig,
+) => ShapesProvider;
+
+export type ShapesProviderConfig = unknown;
+
+/** Shape cloud settings */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ShapesSettings {}
+export type ShapesSettings = {};
 
 /** A named collection of shapes (a.k.a. shape cloud) */
-export default interface Shapes {
+export type Shapes = {
   /** Human-readable shape cloud name */
   name: string;
 
@@ -14,6 +25,8 @@ export default interface Shapes {
 
   /** Shape cloud settings */
   settings: ShapesSettings;
-}
+};
 
 export const defaultShapesSettings: ShapesSettings = {};
+
+export default Shapes;

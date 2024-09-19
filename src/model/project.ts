@@ -4,10 +4,10 @@ import Shapes from "./shapes";
 
 /** Project settings */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ProjectSettings {}
+export type ProjectSettings = {};
 
 /** A named TissUUmaps project */
-export default interface Project {
+export type Project = {
   /** Human-readable project name */
   name: string;
 
@@ -22,6 +22,8 @@ export default interface Project {
 
   /** Project settings */
   settings: ProjectSettings;
-}
+};
 
 export const defaultProjectSettings: ProjectSettings = {};
+
+export default Project;

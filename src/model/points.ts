@@ -1,4 +1,26 @@
-import { PointsProviderConfig } from "../utils/IOUtils";
+type TypedArray =
+  | Int8Array
+  | Uint8Array
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array
+  | BigInt64Array
+  | BigUint64Array;
+export type PointsData = { [variable: string]: TypedArray | string[] };
+
+export interface PointsProvider {
+  getVariables(): string[];
+  getData(variable: string): PointsData;
+}
+
+export type PointsProviderFactory = (
+  config: PointsProviderConfig,
+) => PointsProvider;
+
+export type PointsProviderConfig = unknown;
 
 type PointPosition = {
   x: PointValuesVariable;
@@ -27,7 +49,7 @@ export function isPointGroupsVariable(
 }
 
 /** A named list of variables that can be used to jointly set multiple settings */
-export interface PointsSettingsPreset {
+export type PointsSettingsPreset = {
   /** Human-readable preset name */
   name: string;
 
@@ -51,10 +73,10 @@ export interface PointsSettingsPreset {
 
   /** Target profile for updating the settings (when undefined, the settings are applied to the currently selected profile) */
   targetProfile?: string;
-}
+};
 
 /** Settings applied to a specific subset of points resulting from a group-by operation  */
-export interface PointsGroupSettings {
+export type PointsGroupSettings = {
   /** Point color, or undefined if not specified for this group */
   color?: PointColor;
 
@@ -69,10 +91,10 @@ export interface PointsGroupSettings {
 
   /** Point drawing order, or undefined if not specified for this group */
   zorder?: PointZOrder;
-}
+};
 
 /** A named set of point cloud settings */
-export interface PointsSettingsProfile {
+export type PointsSettingsProfile = {
   /** Human-readable profile name */
   name: string;
 
@@ -98,10 +120,10 @@ export interface PointsSettingsProfile {
   groupSettings: {
     [groupsVariable: string]: { [group: string]: PointsGroupSettings };
   };
-}
+};
 
 /** Point cloud settings */
-export interface PointsSettings {
+export type PointsSettings = {
   /** Presets (map: preset ID -> preset) */
   presets: Map<string, PointsSettingsPreset>;
 
@@ -113,10 +135,10 @@ export interface PointsSettings {
 
   /** Selected groups variable */
   selectedGroupsVariable?: string;
-}
+};
 
 /** A named collection of points (a.k.a. point cloud) */
-export default interface Points {
+export type Points = {
   /** Human-readable point cloud name  */
   name: string;
 
@@ -125,7 +147,7 @@ export default interface Points {
 
   /** Point cloud settings */
   settings: PointsSettings;
-}
+};
 
 const DEFAULT_POINTS_SETTINGS_PROFILE_ID = "default";
 
@@ -157,3 +179,5 @@ export const defaultPointsSettings: PointsSettings = {
   ]),
   activeProfileId: DEFAULT_POINTS_SETTINGS_PROFILE_ID,
 };
+
+export default Points;

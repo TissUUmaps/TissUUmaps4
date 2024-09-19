@@ -1,7 +1,7 @@
 import Image from "./image";
 
 /** Layer settings */
-export interface LayerSettings {
+export type LayerSettings = {
   /** Layer origin, in world coordinates */
   origin: { x: number; y: number };
 
@@ -13,10 +13,10 @@ export interface LayerSettings {
 
   /** Rotation angle, in degrees */
   rotation: number;
-}
+};
 
 /** A named group of objects (e.g., images, points, shapes) that share the same data coordinate system (positioned in world coordinate system, unbounded) */
-export default interface Layer {
+export type Layer = {
   /** Human-readable layer name */
   name: string;
 
@@ -25,7 +25,7 @@ export default interface Layer {
 
   /** Layer settings */
   settings: LayerSettings;
-}
+};
 
 export const defaultLayerSettings: LayerSettings = {
   origin: { x: 0, y: 0 },
@@ -33,3 +33,5 @@ export const defaultLayerSettings: LayerSettings = {
   flipx: false,
   rotation: 0,
 };
+
+export default Layer;
