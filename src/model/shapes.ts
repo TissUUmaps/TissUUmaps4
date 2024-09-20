@@ -1,15 +1,14 @@
 type GeoJSON = object;
-export type ShapesData = GeoJSON;
 
-export interface ShapesProvider {
-  getData(): ShapesData;
+export interface ShapesReader {
+  getData(): GeoJSON;
 }
 
-export type ShapesProviderOptions = unknown;
+export type ShapesReaderOptions = object;
 
-export type ShapesProviderFactory = (
-  options: ShapesProviderOptions,
-) => ShapesProvider;
+export type ShapesReaderFactory = (
+  options: ShapesReaderOptions,
+) => ShapesReader;
 
 /** Shape cloud settings */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -20,8 +19,8 @@ export type Shapes = {
   /** Human-readable shape cloud name */
   name: string;
 
-  /** Data provider configuration */
-  data: { type: string; options: ShapesProviderOptions };
+  /** Shapes reader configuration */
+  data: { type: string; options: ShapesReaderOptions };
 
   /** Shape cloud settings */
   settings: ShapesSettings;

@@ -1,56 +1,50 @@
 import {
-  ImageProvider,
-  ImageProviderFactory,
-  ImageProviderOptions,
+  ImageReader,
+  ImageReaderFactory,
+  ImageReaderOptions,
 } from "../model/image";
 import {
-  PointsProvider,
-  PointsProviderFactory,
-  PointsProviderOptions,
+  PointsReader,
+  PointsReaderFactory,
+  PointsReaderOptions,
 } from "../model/points";
 import {
-  ShapesProvider,
-  ShapesProviderFactory,
-  ShapesProviderOptions,
+  ShapesReader,
+  ShapesReaderFactory,
+  ShapesReaderOptions,
 } from "../model/shapes";
 import { SharedStoreSliceCreator } from "./sharedStore";
 
 export type AppState = {
-  imageProviderFactories: Map<string, ImageProviderFactory>;
-  pointsProviderFactories: Map<string, PointsProviderFactory>;
-  shapesProviderFactories: Map<string, ShapesProviderFactory>;
+  imageReaderFactories: Map<string, ImageReaderFactory>;
+  pointsReaderFactories: Map<string, PointsReaderFactory>;
+  shapesReaderFactories: Map<string, ShapesReaderFactory>;
 };
 
 export type AppActions = {
-  registerImageProvider: (type: string, factory: ImageProviderFactory) => void;
-  registerPointsProvider: (
+  registerImageReader: (type: string, factory: ImageReaderFactory) => void;
+  registerPointsReader: (type: string, factory: PointsReaderFactory) => void;
+  registerShapesReader: (type: string, factory: ShapesReaderFactory) => void;
+  createImageReader: (
     type: string,
-    factory: PointsProviderFactory,
-  ) => void;
-  registerShapesProvider: (
+    options: ImageReaderOptions,
+  ) => ImageReader | undefined;
+  createPointsReader: (
     type: string,
-    factory: ShapesProviderFactory,
-  ) => void;
-  getImageProvider: (
+    options: PointsReaderOptions,
+  ) => PointsReader | undefined;
+  createShapesReader: (
     type: string,
-    options: ImageProviderOptions,
-  ) => ImageProvider | undefined;
-  getPointsProvider: (
-    type: string,
-    options: PointsProviderOptions,
-  ) => PointsProvider | undefined;
-  getShapesProvider: (
-    type: string,
-    options: ShapesProviderOptions,
-  ) => ShapesProvider | undefined;
+    options: ShapesReaderOptions,
+  ) => ShapesReader | undefined;
 };
 
 export type AppSlice = AppState & AppActions;
 
 const initialAppState: AppState = {
-  imageProviderFactories: new Map(),
-  pointsProviderFactories: new Map(),
-  shapesProviderFactories: new Map(),
+  imageReaderFactories: new Map(),
+  pointsReaderFactories: new Map(),
+  shapesReaderFactories: new Map(),
 };
 
 export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
@@ -58,43 +52,43 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
   get,
 ) => ({
   ...initialAppState,
-  registerImageProvider: (type, factory) =>
+  registerImageReader: (type, factory) =>
     set((draft) => {
-      if (draft.imageProviderFactories.has(type)) {
-        console.warn(`Image provider already registered: ${type}`);
+      if (draft.imageReaderFactories.has(type)) {
+        console.warn(`Image reader already registered: ${type}`);
       }
-      draft.imageProviderFactories.set(type, factory);
+      draft.imageReaderFactories.set(type, factory);
     }),
-  registerPointsProvider: (type, factory) =>
+  registerPointsReader: (type, factory) =>
     set((draft) => {
-      if (draft.pointsProviderFactories.has(type)) {
-        console.warn(`Points provider already registered: ${type}`);
+      if (draft.pointsReaderFactories.has(type)) {
+        console.warn(`Points reader already registered: ${type}`);
       }
-      draft.pointsProviderFactories.set(type, factory);
+      draft.pointsReaderFactories.set(type, factory);
     }),
-  registerShapesProvider: (type, factory) =>
+  registerShapesReader: (type, factory) =>
     set((draft) => {
-      if (draft.shapesProviderFactories.has(type)) {
-        console.warn(`Shapes provider already registered: ${type}`);
+      if (draft.shapesReaderFactories.has(type)) {
+        console.warn(`Shapes reader already registered: ${type}`);
       }
-      draft.shapesProviderFactories.set(type, factory);
+      draft.shapesReaderFactories.set(type, factory);
     }),
-  getImageProvider: (type, options) => {
-    const factory = get().imageProviderFactories.get(type);
+  createImageReader: (type, options) => {
+    const factory = get().imageReaderFactories.get(type);
     if (!factory) {
       return undefined;
     }
     return factory(options);
   },
-  getPointsProvider: (type, options) => {
-    const factory = get().pointsProviderFactories.get(type);
+  createPointsReader: (type, options) => {
+    const factory = get().pointsReaderFactories.get(type);
     if (!factory) {
       return undefined;
     }
     return factory(options);
   },
-  getShapesProvider: (type, options) => {
-    const factory = get().shapesProviderFactories.get(type);
+  createShapesReader: (type, options) => {
+    const factory = get().shapesReaderFactories.get(type);
     if (!factory) {
       return undefined;
     }

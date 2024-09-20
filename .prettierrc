@@ -2,7 +2,7 @@
   "importOrder": [
     "^@assets/(.*)$",
     "^@model/(.*)$",
-    "^@stores/(.*)$",
+    "^@store/(.*)$",
     "^@utils/(.*)$",
     "^@components/(.*)$",
     "^[./]"

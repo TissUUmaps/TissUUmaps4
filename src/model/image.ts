@@ -1,19 +1,14 @@
-export type ImageData = {
-  name: string;
-  width: number;
-  height: number;
-  tileSource: string | object;
-};
+export type TileSourceDef = string | object;
 
-export interface ImageProvider {
-  getData(): ImageData;
+export interface ImageReader {
+  getWidth(): number;
+  getHeight(): number;
+  getTileSource(): TileSourceDef;
 }
 
-export type ImageProviderOptions = unknown;
+export type ImageReaderOptions = object;
 
-export type ImageProviderFactory = (
-  options: ImageProviderOptions,
-) => ImageProvider;
+export type ImageReaderFactory = (options: ImageReaderOptions) => ImageReader;
 
 /** Image settings */
 export type ImageSettings = {
@@ -31,8 +26,8 @@ export type Image = {
   /** Human-readable image name */
   name: string;
 
-  /** Data provider configuration */
-  data: { type: string; options: ImageProviderOptions };
+  /** Image reader configuration */
+  data: { type: string; options: ImageReaderOptions };
 
   /** Image settings */
   settings: ImageSettings;

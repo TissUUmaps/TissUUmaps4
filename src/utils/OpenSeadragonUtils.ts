@@ -1,6 +1,6 @@
 import { Point, Viewer } from "openseadragon";
 
-import Image, { ImageData } from "../model/image";
+import Image from "../model/image";
 import Layer from "../model/layer";
 
 export default class OpenSeadragonUtils {
@@ -18,16 +18,17 @@ export default class OpenSeadragonUtils {
     index: number,
     layer: Layer,
     image: Image,
-    imageData: ImageData,
+    width: number,
+    tileSource: string | object,
     replace?: boolean,
   ): void {
     viewer.addTiledImage({
-      tileSource: imageData.tileSource,
+      tileSource: tileSource,
       index: index,
       replace: replace,
       x: layer.settings.x,
       y: layer.settings.y,
-      width: imageData.width * layer.settings.scale,
+      width: width * layer.settings.scale,
       opacity:
         layer.settings.visibility && image.settings.visbility
           ? layer.settings.opacity * image.settings.opacity

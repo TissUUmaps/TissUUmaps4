@@ -9,18 +9,17 @@ type TypedArray =
   | Float64Array
   | BigInt64Array
   | BigUint64Array;
-export type PointsData = { [variable: string]: TypedArray | string[] };
 
-export interface PointsProvider {
+export interface PointsReader {
   getVariables(): string[];
-  getData(variable: string): PointsData;
+  getValues(variable: string): TypedArray;
 }
 
-export type PointsProviderOptions = unknown;
+export type PointsReaderOptions = object;
 
-export type PointsProviderFactory = (
-  options: PointsProviderOptions,
-) => PointsProvider;
+export type PointsReaderFactory = (
+  options: PointsReaderOptions,
+) => PointsReader;
 
 type PointPosition = {
   x: PointValuesVariable;
@@ -142,8 +141,8 @@ export type Points = {
   /** Human-readable point cloud name  */
   name: string;
 
-  /** Data provider configuration */
-  data: { type: string; options: PointsProviderOptions };
+  /** Points reader configuration */
+  data: { type: string; options: PointsReaderOptions };
 
   /** Point cloud settings */
   settings: PointsSettings;

@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import "./App.css";
 import Menu from "./components/Menu";
 import Viewer from "./components/Viewer";
@@ -5,8 +7,43 @@ import LayersPanel from "./components/layers/LayersPanel";
 import PointsPanel from "./components/points/PointsPanel";
 import ProjectPanel from "./components/project/ProjectPanel";
 import ShapesPanel from "./components/shapes/ShapesPanel";
+import useSharedStore from "./store/sharedStore";
 
 export default function App() {
+  const registerImageReader = useSharedStore(
+    (state) => state.registerImageReader,
+  );
+  const registerPointsReader = useSharedStore(
+    (state) => state.registerPointsReader,
+  );
+  const registerShapesReader = useSharedStore(
+    (state) => state.registerShapesReader,
+  );
+
+  // register image readers
+  useEffect(() => {
+    // TODO register image readers
+    return () => {
+      // TODO deregister image readers
+    };
+  }, [registerImageReader]);
+
+  // register points readers
+  useEffect(() => {
+    // TODO register points readers
+    return () => {
+      // TODO deregister points readers
+    };
+  }, [registerPointsReader]);
+
+  // register shapes readers
+  useEffect(() => {
+    // TODO register shapes readers
+    return () => {
+      // TODO deregister shapes readers
+    };
+  }, [registerShapesReader]);
+
   return (
     <div
       id="main-ui"

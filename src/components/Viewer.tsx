@@ -17,7 +17,7 @@ type ViewerState = {
 export default function Viewer() {
   const viewerState = useRef<ViewerState | null>(null);
   const layers = useSharedStore((state) => state.layers);
-  const getImageProvider = useSharedStore((state) => state.getImageProvider);
+  const createImageReader = useSharedStore((state) => state.createImageReader);
 
   // use a ref callback for instantiating the OpenSeadragon viewer
   // https://react.dev/reference/react-dom/components/common#ref-callback
@@ -63,21 +63,22 @@ export default function Viewer() {
           );
           if (oldTiledImageIndex === -1) {
             // create new TiledImage instance
-            const imageProvider = getImageProvider(
+            const imageReader = createImageReader(
               image.data.type,
               image.data.options,
             );
-            if (imageProvider) {
+            if (imageReader) {
               OpenSeadragonUtils.createTiledImage(
                 viewerState.current.viewer,
                 tiledImageSources.length,
                 layer,
                 image,
-                imageProvider.getData(),
+                imageReader.getWidth(),
+                imageReader.getTileSource(),
               );
               tiledImageSources.push({ layerId: layerId, imageId: imageId });
             } else {
-              console.warn(`Image provider not found: ${image.data.type}`);
+              console.warn(`Image reader not found: ${image.data.type}`);
             }
           } else {
             // update existing TiledImage instance
@@ -101,7 +102,7 @@ export default function Viewer() {
       }
       viewerState.current.tiledImageSources = tiledImageSources;
     }
-  }, [layers, getImageProvider]);
+  }, [layers, createImageReader]);
 
   // TODO global marker size slider
   // <div id="ISS_globalmarkersize" className="d-none px-1 mx-1 viewer-layer">
