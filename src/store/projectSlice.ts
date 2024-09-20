@@ -17,7 +17,6 @@ export type ProjectActions = {
     imageIndex?: number,
   ) => void;
   deleteImage: (layerId: string, imageId: string) => void;
-  cleanImages: () => void;
   setActivePointsSettingsProfile: (
     pointsId: string,
     activeProfileId: string,
@@ -34,11 +33,11 @@ const initialProjectState: ProjectState = {
       "dummy",
       {
         name: "My points",
-        data: { type: "hdf5", config: {} },
+        data: { type: "hdf5", options: {} },
         settings: { ...defaultPointsSettings },
       },
     ],
-  ]), // TODO remove dummy data
+  ]), // TODO remove dummy points
   allShapes: new Map(),
   settings: defaultProjectSettings,
 };
@@ -90,15 +89,6 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
         throw new Error(`Layer not found: ${layerId}`);
       }
       layer.images.delete(imageId);
-    }),
-  cleanImages: () =>
-    set((draft) => {
-      for (const [, layer] of draft.layers) {
-        for (const [, image] of layer.images) {
-          image.update = false;
-          image.reload = false;
-        }
-      }
     }),
   setActivePointsSettingsProfile: (pointsId, activeProfileId) =>
     set((draft) => {

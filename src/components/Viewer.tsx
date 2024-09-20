@@ -15,10 +15,7 @@ type ViewerState = {
 
 export default function Viewer() {
   const layers = useSharedStore((state) => state.layers);
-  const cleanImages = useSharedStore((state) => state.cleanImages);
-  const createImageProvider = useSharedStore(
-    (state) => state.createImageProvider,
-  );
+  const getImageProvider = useSharedStore((state) => state.getImageProvider);
 
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
   const [viewerState, setViewerState] = useState<ViewerState>({
@@ -38,7 +35,6 @@ export default function Viewer() {
 
   useEffect(() => {
     if (viewerRef.current) {
-      // delete old TiledImage instances
       const oldTiledImageInfos: TiledImageInfo[] = [];
       for (const oldTiledImageInfo of viewerState.tiledImageInfos) {
         const layer = layers.get(oldTiledImageInfo.layerId);
@@ -52,7 +48,6 @@ export default function Viewer() {
           );
         }
       }
-      // create, move and/or update TiledImage instances
       const tiledImageInfos: TiledImageInfo[] = [];
       for (const [layerId, layer] of layers) {
         for (const [imageId, image] of layer.images) {
@@ -61,23 +56,23 @@ export default function Viewer() {
               oldTiledImageInfo.layerId === layerId &&
               oldTiledImageInfo.imageId === imageId,
           );
-          let tiledImageInfo: TiledImageInfo;
           if (oldTiledImageIndex === -1) {
-            const imageProvider = createImageProvider(
+            const imageProvider = getImageProvider(
               image.data.type,
               image.data.options,
             );
-            const imageData = imageProvider!.getData(); // FIXME handle missing provider
-            OpenSeadragonUtils.createTiledImage(
-              viewerRef.current,
-              tiledImageInfos.length,
-              layer,
-              image,
-              imageData, // FIXME handle missing provider
-            );
-            tiledImageInfo = { layerId: layerId, imageId: imageId };
+            if (imageProvider) {
+              OpenSeadragonUtils.createTiledImage(
+                viewerRef.current,
+                tiledImageInfos.length,
+                layer,
+                image,
+                imageProvider.getData(),
+              );
+              tiledImageInfos.push({ layerId: layerId, imageId: imageId });
+            }
           } else {
-            tiledImageInfo = oldTiledImageInfos.at(oldTiledImageIndex)!;
+            const tiledImageInfo = oldTiledImageInfos.at(oldTiledImageIndex)!;
             if (oldTiledImageIndex !== tiledImageInfos.length) {
               OpenSeadragonUtils.moveTiledImage(
                 viewerRef.current,
@@ -85,36 +80,19 @@ export default function Viewer() {
                 tiledImageInfos.length,
               );
             }
-            if (image.reload) {
-              const imageProvider = createImageProvider(
-                image.data.type,
-                image.data.options,
-              );
-              const imageData = imageProvider!.getData(); // FIXME handle missing provider
-              OpenSeadragonUtils.createTiledImage(
-                viewerRef.current,
-                tiledImageInfos.length,
-                layer,
-                image,
-                imageData,
-                true,
-              );
-            } else if (image.update) {
-              OpenSeadragonUtils.updateTiledImage(
-                viewerRef.current,
-                tiledImageInfos.length,
-                layer,
-                image,
-              );
-            }
+            OpenSeadragonUtils.updateTiledImage(
+              viewerRef.current,
+              tiledImageInfos.length,
+              layer,
+              image,
+            );
+            tiledImageInfos.push(tiledImageInfo);
           }
-          tiledImageInfos.push(tiledImageInfo);
         }
       }
       setViewerState({ tiledImageInfos: tiledImageInfos });
-      cleanImages();
     }
-  }, [layers, viewerState, setViewerState, createImageProvider, cleanImages]);
+  }, [layers, viewerState, setViewerState, getImageProvider]);
 
   // TODO global marker size slider
   // <div id="ISS_globalmarkersize" className="d-none px-1 mx-1 viewer-layer">

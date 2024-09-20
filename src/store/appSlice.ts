@@ -31,15 +31,15 @@ export type AppActions = {
     type: string,
     factory: ShapesProviderFactory,
   ) => void;
-  createImageProvider: (
+  getImageProvider: (
     type: string,
     options: ImageProviderOptions,
   ) => ImageProvider | undefined;
-  createPointsProvider: (
+  getPointsProvider: (
     type: string,
     options: PointsProviderOptions,
   ) => PointsProvider | undefined;
-  createShapesProvider: (
+  getShapesProvider: (
     type: string,
     options: ShapesProviderOptions,
   ) => ShapesProvider | undefined;
@@ -79,21 +79,21 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
       }
       draft.shapesProviderFactories.set(type, factory);
     }),
-  createImageProvider: (type, options) => {
+  getImageProvider: (type, options) => {
     const factory = get().imageProviderFactories.get(type);
     if (!factory) {
       return undefined;
     }
     return factory(options);
   },
-  createPointsProvider: (type, options) => {
+  getPointsProvider: (type, options) => {
     const factory = get().pointsProviderFactories.get(type);
     if (!factory) {
       return undefined;
     }
     return factory(options);
   },
-  createShapesProvider: (type, options) => {
+  getShapesProvider: (type, options) => {
     const factory = get().shapesProviderFactories.get(type);
     if (!factory) {
       return undefined;

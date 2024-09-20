@@ -7,7 +7,9 @@ export default class OpenSeadragonUtils {
   static createViewer(viewerElement: HTMLElement): Viewer {
     return new Viewer({
       element: viewerElement,
-      // TODO Viewer options
+      showNavigator: true,
+      showNavigationControl: false,
+      imageSmoothingEnabled: false,
     });
   }
 
