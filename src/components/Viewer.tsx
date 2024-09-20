@@ -1,5 +1,5 @@
 import OpenSeadragon from "openseadragon";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import useSharedStore from "../store/sharedStore";
 import OpenSeadragonUtils from "../utils/OpenSeadragonUtils";
@@ -9,35 +9,42 @@ type TiledImageInfo = {
   imageId: string;
 };
 
+type Viewer = {
+  viewer: OpenSeadragon.Viewer;
+  tiledImageInfos: TiledImageInfo[];
+};
+
 export default function Viewer() {
+  const viewerRef = useRef<Viewer | null>(null);
+
   const layers = useSharedStore((state) => state.layers);
   const getImageProvider = useSharedStore((state) => state.getImageProvider);
-
-  const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
-  const [tiledImageInfos, setTiledImageInfos] = useState<TiledImageInfo[]>([]);
 
   // callback refs are always called before useEffect
   const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
     if (viewerRef.current) {
-      OpenSeadragonUtils.destroyViewer(viewerRef.current);
+      OpenSeadragonUtils.destroyViewer(viewerRef.current.viewer);
       viewerRef.current = null;
     }
     if (viewerElement) {
-      viewerRef.current = OpenSeadragonUtils.createViewer(viewerElement);
+      viewerRef.current = {
+        viewer: OpenSeadragonUtils.createViewer(viewerElement),
+        tiledImageInfos: [],
+      };
     }
   }, []);
 
   useEffect(() => {
     if (viewerRef.current) {
       const oldTiledImageInfos: TiledImageInfo[] = [];
-      for (const oldTiledImageInfo of tiledImageInfos) {
+      for (const oldTiledImageInfo of viewerRef.current.tiledImageInfos) {
         const layer = layers.get(oldTiledImageInfo.layerId);
         const image = layer?.images.get(oldTiledImageInfo.imageId);
         if (layer && image) {
           oldTiledImageInfos.push(oldTiledImageInfo);
         } else {
           OpenSeadragonUtils.deleteTiledImage(
-            viewerRef.current,
+            viewerRef.current.viewer,
             oldTiledImageInfos.length,
           );
         }
@@ -57,7 +64,7 @@ export default function Viewer() {
             );
             if (imageProvider) {
               OpenSeadragonUtils.createTiledImage(
-                viewerRef.current,
+                viewerRef.current.viewer,
                 newTiledImageInfos.length,
                 layer,
                 image,
@@ -69,13 +76,13 @@ export default function Viewer() {
             const tiledImageInfo = oldTiledImageInfos.at(oldTiledImageIndex)!;
             if (oldTiledImageIndex !== newTiledImageInfos.length) {
               OpenSeadragonUtils.moveTiledImage(
-                viewerRef.current,
+                viewerRef.current.viewer,
                 oldTiledImageIndex,
                 newTiledImageInfos.length,
               );
             }
             OpenSeadragonUtils.updateTiledImage(
-              viewerRef.current,
+              viewerRef.current.viewer,
               newTiledImageInfos.length,
               layer,
               image,
@@ -84,9 +91,9 @@ export default function Viewer() {
           }
         }
       }
-      setTiledImageInfos(newTiledImageInfos);
+      viewerRef.current.tiledImageInfos = newTiledImageInfos;
     }
-  }, [layers, tiledImageInfos, setTiledImageInfos, getImageProvider]);
+  }, [layers, getImageProvider]);
 
   // TODO global marker size slider
   // <div id="ISS_globalmarkersize" className="d-none px-1 mx-1 viewer-layer">
@@ -109,5 +116,5 @@ export default function Viewer() {
   //   />
   // </div>
 
-  return <div ref={setViewerRef} id="viewer" />; // className="h-100"
+  return <div ref={setViewerRef} id="viewer" className="h-100" />;
 }

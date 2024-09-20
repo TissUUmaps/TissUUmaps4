@@ -1,3 +1,10 @@
+/* *** Viewer */
+#viewer {
+  background-color: white;
+}
+
+/* TODO EVERYTHING THAT FOLLOWS NEEDS TO BE CHECKED */
+
 html,
 body {
   height: 100%;
@@ -164,11 +171,6 @@ html {
 /* *** Navbar *** */
 .navbar-dark {
   background-color: var(--bs-primary);
-}
-
-/* *** Viewer */
-#viewer {
-  background-color: white;
 }
 
 /* All the overlays over the viewer inherit this class. */
