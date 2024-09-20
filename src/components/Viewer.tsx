@@ -59,7 +59,7 @@ export default function Viewer() {
               oldTiledImageInfo.imageId === imageId,
           );
           let tiledImageInfo: TiledImageInfo;
-          if (oldTiledImageIndex == -1) {
+          if (oldTiledImageIndex === -1) {
             OpenSeadragonUtils.createTiledImage(
               viewerRef.current,
               tiledImageInfos.length,
