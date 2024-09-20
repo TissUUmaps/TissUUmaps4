@@ -5,6 +5,7 @@ import Points, {
   isPointValuesVariable,
 } from "../../model/points";
 import useSharedStore from "../../store/sharedStore";
+import MapUtils from "../../utils/MapUtils";
 
 interface PointsSettingsPanelProps {
   pointsId: string;
@@ -27,7 +28,7 @@ export default function PointsSettingsPanel({
         value={points.settings.activeProfileId}
         onChange={(e) => setActiveProfile(pointsId, e.target.value)}
       >
-        {[...points.settings.profiles].map(([profileId, profile]) => (
+        {MapUtils.map(points.settings.profiles, (profileId, profile) => (
           <option key={profileId} value={profileId}>
             {profile.name}
           </option>

@@ -2,7 +2,7 @@ import Image from "../model/image";
 import Layer from "../model/layer";
 import { defaultPointsSettings } from "../model/points";
 import Project, { defaultProjectSettings } from "../model/project";
-import OrderedMap from "../utils/OrderedMap";
+import MapUtils from "../utils/MapUtils";
 import { SharedStoreSliceCreator } from "./sharedStore";
 
 export type ProjectState = Project;
@@ -28,8 +28,8 @@ export type ProjectSlice = ProjectState & ProjectActions;
 
 const initialProjectState: ProjectState = {
   name: "New project",
-  layers: new OrderedMap(),
-  allPoints: new OrderedMap([
+  layers: new Map(),
+  allPoints: new Map([
     [
       "dummy",
       {
@@ -39,7 +39,7 @@ const initialProjectState: ProjectState = {
       },
     ],
   ]), // TODO remove dummy data
-  allShapes: new OrderedMap(),
+  allShapes: new Map(),
   settings: defaultProjectSettings,
 };
 
@@ -49,16 +49,17 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
   ...initialProjectState,
   setLayer: (layerId, layer, layerIndex) =>
     set((draft) => {
-      const layers = new OrderedMap(draft.layers);
-      if (layers.has(layerId)) {
-        layers.delete(layerId);
+      if (draft.layers.has(layerId)) {
+        draft.layers.delete(layerId);
       }
       if (layerIndex !== undefined) {
-        layers.splice(layerIndex, 0, [layerId, layer]);
+        draft.layers = MapUtils.splice(draft.layers, layerIndex, 0, [
+          layerId,
+          layer,
+        ]);
       } else {
-        layers.set(layerId, layer);
+        draft.layers.set(layerId, layer);
       }
-      draft.layers = layers;
     }),
   deleteLayer: (layerId) =>
     set((draft) => {
@@ -70,16 +71,17 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
       if (!layer) {
         throw new Error(`Layer not found: ${layerId}`);
       }
-      const images = new OrderedMap(layer.images);
-      if (images.has(imageId)) {
-        images.delete(imageId);
+      if (layer.images.has(imageId)) {
+        layer.images.delete(imageId);
       }
       if (imageIndex !== undefined) {
-        images.splice(imageIndex, 0, [imageId, image]);
+        layer.images = MapUtils.splice(layer.images, imageIndex, 0, [
+          imageId,
+          image,
+        ]);
       } else {
-        images.set(imageId, image);
+        layer.images.set(imageId, image);
       }
-      layer.images = images;
     }),
   deleteLayerImage: (layerId, imageId) =>
     set((draft) => {

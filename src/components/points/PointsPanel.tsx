@@ -3,6 +3,7 @@ import { Button, Collapse, Tab, Tabs } from "react-bootstrap";
 
 import Points from "../../model/points";
 import useSharedStore from "../../store/sharedStore";
+import MapUtils from "../../utils/MapUtils";
 import PointsGroupsPanel from "./PointsGroupsPanel";
 import PointsQuicksetPanel from "./PointsQuicksetPanel";
 import PointsSettingsPanel from "./PointsSettingsPanel";
@@ -50,7 +51,7 @@ export default function PointsPanel() {
   const allPoints = useSharedStore((state) => state.allPoints);
   return (
     <Tabs>
-      {[...allPoints].map(([pointsId, points]) => (
+      {MapUtils.map(allPoints, (pointsId, points) => (
         <Tab key={pointsId} title={points.name}>
           <PointsPanelItem pointsId={pointsId} points={points} />
         </Tab>

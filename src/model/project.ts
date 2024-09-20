@@ -1,4 +1,3 @@
-import OrderedMap from "../utils/OrderedMap";
 import Layer from "./layer";
 import Points from "./points";
 import Shapes from "./shapes";
@@ -13,13 +12,13 @@ export type Project = {
   name: string;
 
   /** Layers (map: layer ID -> layer) */
-  layers: OrderedMap<string, Layer>;
+  layers: Map<string, Layer>;
 
   /** Points (map: points ID -> points) */
-  allPoints: OrderedMap<string, Points>;
+  allPoints: Map<string, Points>;
 
   /** Shapes (map: shapes ID -> shapes) */
-  allShapes: OrderedMap<string, Shapes>;
+  allShapes: Map<string, Shapes>;
 
   /** Project settings */
   settings: ProjectSettings;

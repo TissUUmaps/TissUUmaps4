@@ -1,5 +1,3 @@
-import OrderedMap from "../utils/OrderedMap";
-
 type TypedArray =
   | Int8Array
   | Uint8Array
@@ -127,10 +125,10 @@ export type PointsSettingsProfile = {
 /** Point cloud settings */
 export type PointsSettings = {
   /** Presets (map: preset ID -> preset) */
-  presets: OrderedMap<string, PointsSettingsPreset>;
+  presets: Map<string, PointsSettingsPreset>;
 
   /** Profiles (map: profile ID -> profile) */
-  profiles: OrderedMap<string, PointsSettingsProfile>;
+  profiles: Map<string, PointsSettingsProfile>;
 
   /** ID of the active profile */
   activeProfileId: string;
@@ -175,8 +173,8 @@ export const defaultPointsSettingsProfile: PointsSettingsProfile = {
 };
 
 export const defaultPointsSettings: PointsSettings = {
-  presets: new OrderedMap(),
-  profiles: new OrderedMap([
+  presets: new Map(),
+  profiles: new Map([
     [DEFAULT_POINTS_SETTINGS_PROFILE_ID, { ...defaultPointsSettingsProfile }],
   ]),
   activeProfileId: DEFAULT_POINTS_SETTINGS_PROFILE_ID,
