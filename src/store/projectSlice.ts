@@ -10,14 +10,14 @@ export type ProjectState = Project;
 export type ProjectActions = {
   setLayer: (layerId: string, layer: Layer, layerIndex?: number) => void;
   deleteLayer: (layerId: string) => void;
-  setLayerImage: (
+  setImage: (
     layerId: string,
     imageId: string,
     image: Image,
     imageIndex?: number,
   ) => void;
-  deleteLayerImage: (layerId: string, imageId: string) => void;
-  markLayerImagesClean: () => void;
+  deleteImage: (layerId: string, imageId: string) => void;
+  cleanImages: () => void;
   setActivePointsSettingsProfile: (
     pointsId: string,
     activeProfileId: string,
@@ -65,7 +65,7 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
     set((draft) => {
       draft.layers.delete(layerId);
     }),
-  setLayerImage: (layerId, imageId, image, imageIndex) =>
+  setImage: (layerId, imageId, image, imageIndex) =>
     set((draft) => {
       const layer = draft.layers.get(layerId);
       if (!layer) {
@@ -83,7 +83,7 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
         layer.images.set(imageId, image);
       }
     }),
-  deleteLayerImage: (layerId, imageId) =>
+  deleteImage: (layerId, imageId) =>
     set((draft) => {
       const layer = draft.layers.get(layerId);
       if (!layer) {
@@ -91,7 +91,7 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
       }
       layer.images.delete(imageId);
     }),
-  markLayerImagesClean: () =>
+  cleanImages: () =>
     set((draft) => {
       for (const [, layer] of draft.layers) {
         for (const [, image] of layer.images) {

@@ -15,13 +15,12 @@ type ViewerState = {
 
 export default function Viewer() {
   const layers = useSharedStore((state) => state.layers);
+  const cleanImages = useSharedStore((state) => state.cleanImages);
+
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
   const [viewerState, setViewerState] = useState<ViewerState>({
     tiledImageInfos: [],
   });
-  const markLayerImagesClean = useSharedStore(
-    (state) => state.markLayerImagesClean,
-  );
 
   // callback refs are always called before useEffect
   const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
@@ -94,9 +93,9 @@ export default function Viewer() {
         }
       }
       setViewerState({ tiledImageInfos: tiledImageInfos });
-      markLayerImagesClean();
+      cleanImages();
     }
-  }, [layers, viewerState, setViewerState, markLayerImagesClean]);
+  }, [layers, viewerState, setViewerState, cleanImages]);
 
   // TODO global marker size slider
   // <div id="ISS_globalmarkersize" className="d-none px-1 mx-1 viewer-layer">
