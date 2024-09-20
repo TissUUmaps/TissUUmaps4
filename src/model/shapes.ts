@@ -5,11 +5,11 @@ export interface ShapesProvider {
   getData(): ShapesData;
 }
 
-export type ShapesProviderFactory = (
-  config: ShapesProviderConfig,
-) => ShapesProvider;
+export type ShapesProviderOptions = unknown;
 
-export type ShapesProviderConfig = unknown;
+export type ShapesProviderFactory = (
+  options: ShapesProviderOptions,
+) => ShapesProvider;
 
 /** Shape cloud settings */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -21,7 +21,7 @@ export type Shapes = {
   name: string;
 
   /** Data provider configuration */
-  data: { type: string; config: ShapesProviderConfig };
+  data: { type: string; options: ShapesProviderOptions };
 
   /** Shape cloud settings */
   settings: ShapesSettings;

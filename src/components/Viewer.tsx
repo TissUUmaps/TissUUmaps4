@@ -16,6 +16,9 @@ type ViewerState = {
 export default function Viewer() {
   const layers = useSharedStore((state) => state.layers);
   const cleanImages = useSharedStore((state) => state.cleanImages);
+  const createImageProvider = useSharedStore(
+    (state) => state.createImageProvider,
+  );
 
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
   const [viewerState, setViewerState] = useState<ViewerState>({
@@ -60,10 +63,17 @@ export default function Viewer() {
           );
           let tiledImageInfo: TiledImageInfo;
           if (oldTiledImageIndex === -1) {
+            const imageProvider = createImageProvider(
+              image.data.type,
+              image.data.options,
+            );
+            const imageData = imageProvider!.getData(); // FIXME handle missing provider
             OpenSeadragonUtils.createTiledImage(
               viewerRef.current,
               tiledImageInfos.length,
-              "", // TODO load image
+              layer,
+              image,
+              imageData, // FIXME handle missing provider
             );
             tiledImageInfo = { layerId: layerId, imageId: imageId };
           } else {
@@ -76,16 +86,25 @@ export default function Viewer() {
               );
             }
             if (image.reload) {
+              const imageProvider = createImageProvider(
+                image.data.type,
+                image.data.options,
+              );
+              const imageData = imageProvider!.getData(); // FIXME handle missing provider
               OpenSeadragonUtils.createTiledImage(
                 viewerRef.current,
                 tiledImageInfos.length,
-                "", // TODO load image
+                layer,
+                image,
+                imageData,
                 true,
               );
             } else if (image.update) {
               OpenSeadragonUtils.updateTiledImage(
                 viewerRef.current,
                 tiledImageInfos.length,
+                layer,
+                image,
               );
             }
           }
@@ -95,7 +114,7 @@ export default function Viewer() {
       setViewerState({ tiledImageInfos: tiledImageInfos });
       cleanImages();
     }
-  }, [layers, viewerState, setViewerState, cleanImages]);
+  }, [layers, viewerState, setViewerState, createImageProvider, cleanImages]);
 
   // TODO global marker size slider
   // <div id="ISS_globalmarkersize" className="d-none px-1 mx-1 viewer-layer">

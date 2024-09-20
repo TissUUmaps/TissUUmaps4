@@ -1,6 +1,18 @@
-import { ImageProviderFactory } from "../model/image";
-import { PointsProviderFactory } from "../model/points";
-import { ShapesProviderFactory } from "../model/shapes";
+import {
+  ImageProvider,
+  ImageProviderFactory,
+  ImageProviderOptions,
+} from "../model/image";
+import {
+  PointsProvider,
+  PointsProviderFactory,
+  PointsProviderOptions,
+} from "../model/points";
+import {
+  ShapesProvider,
+  ShapesProviderFactory,
+  ShapesProviderOptions,
+} from "../model/shapes";
 import { SharedStoreSliceCreator } from "./sharedStore";
 
 export type AppState = {
@@ -19,6 +31,18 @@ export type AppActions = {
     type: string,
     factory: ShapesProviderFactory,
   ) => void;
+  createImageProvider: (
+    type: string,
+    options: ImageProviderOptions,
+  ) => ImageProvider | undefined;
+  createPointsProvider: (
+    type: string,
+    options: PointsProviderOptions,
+  ) => PointsProvider | undefined;
+  createShapesProvider: (
+    type: string,
+    options: ShapesProviderOptions,
+  ) => ShapesProvider | undefined;
 };
 
 export type AppSlice = AppState & AppActions;
@@ -29,7 +53,10 @@ const initialAppState: AppState = {
   shapesProviderFactories: new Map(),
 };
 
-export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (set) => ({
+export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
+  set,
+  get,
+) => ({
   ...initialAppState,
   registerImageProvider: (type, factory) =>
     set((draft) => {
@@ -52,4 +79,25 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (set) => ({
       }
       draft.shapesProviderFactories.set(type, factory);
     }),
+  createImageProvider: (type, options) => {
+    const factory = get().imageProviderFactories.get(type);
+    if (!factory) {
+      return undefined;
+    }
+    return factory(options);
+  },
+  createPointsProvider: (type, options) => {
+    const factory = get().pointsProviderFactories.get(type);
+    if (!factory) {
+      return undefined;
+    }
+    return factory(options);
+  },
+  createShapesProvider: (type, options) => {
+    const factory = get().shapesProviderFactories.get(type);
+    if (!factory) {
+      return undefined;
+    }
+    return factory(options);
+  },
 });

@@ -2,17 +2,26 @@ import Image from "./image";
 
 /** Layer settings */
 export type LayerSettings = {
-  /** Layer origin, in world coordinates */
-  origin: { x: number; y: number };
+  /** Layer x-origin, in world coordinates */
+  x: number;
+
+  /** Layer y-origin, in world coordinates */
+  y: number;
 
   /** Layer scale, translating data coordinates (e.g., pixels) to world coordinates */
   scale: number;
 
-  /** Reflection along the x axis */
-  flipx: boolean;
+  /** Visibility */
+  visibility: boolean;
+
+  /** Opacity, between 0 and 1 */
+  opacity: number;
 
   /** Rotation angle, in degrees */
   rotation: number;
+
+  /** Reflection along the x axis */
+  flipx: boolean;
 };
 
 /** A named group of objects (e.g., images, points, shapes) that share the same data coordinate system (positioned in world coordinate system, unbounded) */
@@ -28,10 +37,13 @@ export type Layer = {
 };
 
 export const defaultLayerSettings: LayerSettings = {
-  origin: { x: 0, y: 0 },
+  x: 0,
+  y: 0,
   scale: 1,
-  flipx: false,
+  visibility: true,
+  opacity: 1.0,
   rotation: 0,
+  flipx: false,
 };
 
 export default Layer;

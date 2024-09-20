@@ -16,11 +16,11 @@ export interface PointsProvider {
   getData(variable: string): PointsData;
 }
 
-export type PointsProviderFactory = (
-  config: PointsProviderConfig,
-) => PointsProvider;
+export type PointsProviderOptions = unknown;
 
-export type PointsProviderConfig = unknown;
+export type PointsProviderFactory = (
+  options: PointsProviderOptions,
+) => PointsProvider;
 
 type PointPosition = {
   x: PointValuesVariable;
@@ -143,7 +143,7 @@ export type Points = {
   name: string;
 
   /** Data provider configuration */
-  data: { type: string; config: PointsProviderConfig };
+  data: { type: string; options: PointsProviderOptions };
 
   /** Point cloud settings */
   settings: PointsSettings;

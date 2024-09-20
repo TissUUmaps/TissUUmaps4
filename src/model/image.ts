@@ -1,22 +1,27 @@
-export type ImageProviderConfig = unknown;
-
 export type ImageData = {
   name: string;
-  tileSource: unknown;
+  width: number;
+  height: number;
+  tileSource: string | object;
 };
 
 export interface ImageProvider {
   getData(): ImageData;
 }
 
+export type ImageProviderOptions = unknown;
+
 export type ImageProviderFactory = (
-  config: ImageProviderConfig,
+  options: ImageProviderOptions,
 ) => ImageProvider;
 
 /** Image settings */
 export type ImageSettings = {
-  /** Visibiliy of the image */
+  /** Visibility */
   visbility: boolean;
+
+  /** Opacity, between 0 and 1 */
+  opacity: number;
 
   // TODO implement filters
 };
@@ -27,7 +32,7 @@ export type Image = {
   name: string;
 
   /** Data provider configuration */
-  data: { type: string; config: ImageProviderConfig };
+  data: { type: string; options: ImageProviderOptions };
 
   /** Image settings */
   settings: ImageSettings;
@@ -38,6 +43,7 @@ export type Image = {
 
 export const defaultImageSettings: ImageSettings = {
   visbility: true,
+  opacity: 1.0,
 };
 
 export default Image;
