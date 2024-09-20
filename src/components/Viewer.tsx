@@ -76,6 +76,8 @@ export default function Viewer() {
                 imageProvider.getData(),
               );
               tiledImageSources.push({ layerId: layerId, imageId: imageId });
+            } else {
+              console.warn(`Image provider not found: ${image.data.type}`);
             }
           } else {
             // update existing TiledImage instance
