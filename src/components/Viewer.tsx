@@ -9,25 +9,25 @@ type TiledImageInfo = {
   imageId: string;
 };
 
-type Viewer = {
+type ViewerState = {
   viewer: OpenSeadragon.Viewer;
   tiledImageInfos: TiledImageInfo[];
 };
 
 export default function Viewer() {
-  const viewerRef = useRef<Viewer | null>(null);
+  const viewerState = useRef<ViewerState | null>(null);
 
   const layers = useSharedStore((state) => state.layers);
   const getImageProvider = useSharedStore((state) => state.getImageProvider);
 
   // callback refs are always called before useEffect
-  const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
-    if (viewerRef.current) {
-      OpenSeadragonUtils.destroyViewer(viewerRef.current.viewer);
-      viewerRef.current = null;
+  const setViewerState = useCallback((viewerElement: HTMLDivElement | null) => {
+    if (viewerState.current) {
+      OpenSeadragonUtils.destroyViewer(viewerState.current.viewer);
+      viewerState.current = null;
     }
     if (viewerElement) {
-      viewerRef.current = {
+      viewerState.current = {
         viewer: OpenSeadragonUtils.createViewer(viewerElement),
         tiledImageInfos: [],
       };
@@ -35,16 +35,16 @@ export default function Viewer() {
   }, []);
 
   useEffect(() => {
-    if (viewerRef.current) {
+    if (viewerState.current) {
       const oldTiledImageInfos: TiledImageInfo[] = [];
-      for (const oldTiledImageInfo of viewerRef.current.tiledImageInfos) {
+      for (const oldTiledImageInfo of viewerState.current.tiledImageInfos) {
         const layer = layers.get(oldTiledImageInfo.layerId);
         const image = layer?.images.get(oldTiledImageInfo.imageId);
         if (layer && image) {
           oldTiledImageInfos.push(oldTiledImageInfo);
         } else {
           OpenSeadragonUtils.deleteTiledImage(
-            viewerRef.current.viewer,
+            viewerState.current.viewer,
             oldTiledImageInfos.length,
           );
         }
@@ -64,7 +64,7 @@ export default function Viewer() {
             );
             if (imageProvider) {
               OpenSeadragonUtils.createTiledImage(
-                viewerRef.current.viewer,
+                viewerState.current.viewer,
                 newTiledImageInfos.length,
                 layer,
                 image,
@@ -76,13 +76,13 @@ export default function Viewer() {
             const tiledImageInfo = oldTiledImageInfos.at(oldTiledImageIndex)!;
             if (oldTiledImageIndex !== newTiledImageInfos.length) {
               OpenSeadragonUtils.moveTiledImage(
-                viewerRef.current.viewer,
+                viewerState.current.viewer,
                 oldTiledImageIndex,
                 newTiledImageInfos.length,
               );
             }
             OpenSeadragonUtils.updateTiledImage(
-              viewerRef.current.viewer,
+              viewerState.current.viewer,
               newTiledImageInfos.length,
               layer,
               image,
@@ -91,7 +91,7 @@ export default function Viewer() {
           }
         }
       }
-      viewerRef.current.tiledImageInfos = newTiledImageInfos;
+      viewerState.current.tiledImageInfos = newTiledImageInfos;
     }
   }, [layers, getImageProvider]);
 
@@ -116,5 +116,5 @@ export default function Viewer() {
   //   />
   // </div>
 
-  return <div ref={setViewerRef} id="viewer" className="h-100" />;
+  return <div ref={setViewerState} id="viewer" className="h-100" />;
 }
