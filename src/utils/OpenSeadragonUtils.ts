@@ -1,4 +1,4 @@
-import { Point, Viewer } from "openseadragon";
+import { Point, TiledImage, Viewer } from "openseadragon";
 
 import Image from "../model/image";
 import Layer from "../model/layer";
@@ -18,23 +18,33 @@ export default class OpenSeadragonUtils {
     index: number,
     layer: Layer,
     image: Image,
-    width: number,
     tileSource: string | object,
+    success: (event: Event) => void,
     replace?: boolean,
   ): void {
+    if (index < 0 || index > viewer.world.getItemCount()) {
+      throw new Error(`Index out of bounds: ${index}`);
+    }
     viewer.addTiledImage({
       tileSource: tileSource,
       index: index,
       replace: replace,
       x: layer.settings.x,
       y: layer.settings.y,
-      width: width * layer.settings.scale,
       opacity:
         layer.settings.visibility && image.settings.visbility
           ? layer.settings.opacity * image.settings.opacity
           : 0,
       degrees: layer.settings.rotation,
       flipped: layer.settings.flipx,
+      success: (event) => {
+        // update width & height
+        const e = event as unknown as { item: TiledImage };
+        const contentSize = e.item.getContentSize();
+        e.item.setWidth(contentSize.x * layer.settings.scale);
+        e.item.setHeight(contentSize.y * layer.settings.scale);
+        success(event);
+      },
     });
   }
 
@@ -43,6 +53,12 @@ export default class OpenSeadragonUtils {
     oldIndex: number,
     newIndex: number,
   ): void {
+    if (oldIndex < 0 || oldIndex >= viewer.world.getItemCount()) {
+      throw new Error(`Old index out of bounds: ${oldIndex}`);
+    }
+    if (newIndex < 0 || newIndex >= viewer.world.getItemCount()) {
+      throw new Error(`New index out of bounds: ${newIndex}`);
+    }
     const tiledImage = viewer.world.getItemAt(oldIndex);
     viewer.world.setItemIndex(tiledImage, newIndex);
   }
@@ -53,6 +69,9 @@ export default class OpenSeadragonUtils {
     layer: Layer,
     image: Image,
   ): void {
+    if (index < 0 || index >= viewer.world.getItemCount()) {
+      throw new Error(`Index out of bounds: ${index}`);
+    }
     const tiledImage = viewer.world.getItemAt(index);
     const bounds = tiledImage.getBounds();
     if (bounds.x !== layer.settings.x || bounds.y !== layer.settings.y) {
@@ -74,6 +93,9 @@ export default class OpenSeadragonUtils {
   }
 
   static deleteTiledImage(viewer: Viewer, index: number): void {
+    if (index < 0 || index >= viewer.world.getItemCount()) {
+      throw new Error(`Index out of bounds: ${index}`);
+    }
     const tiledImage = viewer.world.getItemAt(index);
     viewer.world.removeItem(tiledImage);
   }

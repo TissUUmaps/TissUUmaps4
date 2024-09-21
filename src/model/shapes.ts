@@ -1,13 +1,15 @@
-type GeoJSON = object;
+export type GeoJSON = object;
 
 export interface ShapesReader {
   getData(): GeoJSON;
 }
 
-export type ShapesReaderOptions = object;
+export interface ShapesReaderOptions<T extends string> {
+  type: T;
+}
 
 export type ShapesReaderFactory = (
-  options: ShapesReaderOptions,
+  options: ShapesReaderOptions<string>,
 ) => ShapesReader;
 
 /** Shape cloud settings */
@@ -20,7 +22,7 @@ export type Shapes = {
   name: string;
 
   /** Shapes reader configuration */
-  data: { type: string; options: ShapesReaderOptions };
+  data: ShapesReaderOptions<string>;
 
   /** Shape cloud settings */
   settings: ShapesSettings;

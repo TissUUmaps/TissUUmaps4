@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.3",
-    "geotiff-tilesource": "^2.0.2",
     "immer": "^10.1.1",
     "openseadragon": "^4.1.1",
     "react": "^18.3.1",

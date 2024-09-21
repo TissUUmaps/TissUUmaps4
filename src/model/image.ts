@@ -1,14 +1,18 @@
-export type TileSourceDef = string | object;
+import { TileSource } from "openseadragon";
+
+export type TileSourceSpec = object;
 
 export interface ImageReader {
-  getWidth(): number;
-  getHeight(): number;
-  getTileSource(): TileSourceDef;
+  getTileSource(): string | TileSourceSpec | TileSource;
 }
 
-export type ImageReaderOptions = object;
+export interface ImageReaderOptions<T extends string> {
+  type: T;
+}
 
-export type ImageReaderFactory = (options: ImageReaderOptions) => ImageReader;
+export type ImageReaderFactory = (
+  options: ImageReaderOptions<string>,
+) => ImageReader;
 
 /** Image settings */
 export type ImageSettings = {
@@ -27,7 +31,7 @@ export type Image = {
   name: string;
 
   /** Image reader configuration */
-  data: { type: string; options: ImageReaderOptions };
+  data: ImageReaderOptions<string>;
 
   /** Image settings */
   settings: ImageSettings;

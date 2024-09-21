@@ -38,9 +38,12 @@ const initialProjectState: ProjectState = {
             {
               name: "My image",
               data: {
-                type: "geotiff",
-                options: {
-                  url: "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif",
+                type: "default",
+                tileSource: {
+                  type: "image",
+                  url: "https://openseadragon.github.io/example-images/grand-canyon-landscape-overlooking.jpg",
+                  crossOriginPolicy: "Anonymous",
+                  ajaxWithCredentials: false,
                 },
               },
               settings: {
@@ -67,7 +70,7 @@ const initialProjectState: ProjectState = {
       "dummy",
       {
         name: "My points",
-        data: { type: "hdf5", options: {} },
+        data: { type: "hdf5" },
         settings: { ...defaultPointsSettings },
       },
     ],

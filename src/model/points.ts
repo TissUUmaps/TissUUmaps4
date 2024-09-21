@@ -1,4 +1,4 @@
-type TypedArray =
+export type TypedArray =
   | Int8Array
   | Uint8Array
   | Int16Array
@@ -15,10 +15,12 @@ export interface PointsReader {
   getValues(variable: string): TypedArray;
 }
 
-export type PointsReaderOptions = object;
+export interface PointsReaderOptions<T extends string> {
+  type: T;
+}
 
 export type PointsReaderFactory = (
-  options: PointsReaderOptions,
+  options: PointsReaderOptions<string>,
 ) => PointsReader;
 
 type PointPosition = {
@@ -142,7 +144,7 @@ export type Points = {
   name: string;
 
   /** Points reader configuration */
-  data: { type: string; options: PointsReaderOptions };
+  data: PointsReaderOptions<string>;
 
   /** Point cloud settings */
   settings: PointsSettings;

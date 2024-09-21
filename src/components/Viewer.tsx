@@ -7,6 +7,10 @@ import OpenSeadragonUtils from "../utils/OpenSeadragonUtils";
 type TiledImageSource = {
   layerId: string;
   imageId: string;
+  preLoadIndex: number;
+  postLoadIndex: number;
+  postLoadUpdate?: boolean;
+  loaded: boolean;
 };
 
 type ViewerState = {
@@ -15,19 +19,20 @@ type ViewerState = {
 };
 
 export default function Viewer() {
-  const viewerState = useRef<ViewerState | null>(null);
+  const viewerStateRef = useRef<ViewerState | null>(null);
   const layers = useSharedStore((state) => state.layers);
   const createImageReader = useSharedStore((state) => state.createImageReader);
 
   // use a ref callback for instantiating the OpenSeadragon viewer
   // https://react.dev/reference/react-dom/components/common#ref-callback
   const setViewerState = useCallback((viewerElement: HTMLDivElement | null) => {
-    if (viewerState.current) {
-      OpenSeadragonUtils.destroyViewer(viewerState.current.viewer);
-      viewerState.current = null;
+    const viewerState = viewerStateRef.current;
+    if (viewerState) {
+      OpenSeadragonUtils.destroyViewer(viewerState.viewer);
+      viewerStateRef.current = null;
     }
     if (viewerElement) {
-      viewerState.current = {
+      viewerStateRef.current = {
         viewer: OpenSeadragonUtils.createViewer(viewerElement),
         tiledImageSources: [],
       };
@@ -35,25 +40,26 @@ export default function Viewer() {
   }, []);
 
   // update the OpenSeadragon viewer upon image/layer changes
-  // note: ref callbacks are executed before useEffect hooks
+  // (note: ref callbacks are executed before useEffect hooks)
   useEffect(() => {
-    if (viewerState.current) {
+    const viewerState = viewerStateRef.current;
+    if (viewerState) {
       // delete old TiledImage instances
       const oldTiledImageSources: TiledImageSource[] = [];
-      for (const oldTiledImageSource of viewerState.current.tiledImageSources) {
+      for (const oldTiledImageSource of viewerState.tiledImageSources) {
         const layer = layers.get(oldTiledImageSource.layerId);
         const image = layer?.images.get(oldTiledImageSource.imageId);
         if (layer && image) {
           oldTiledImageSources.push(oldTiledImageSource);
         } else {
           OpenSeadragonUtils.deleteTiledImage(
-            viewerState.current.viewer,
+            viewerState.viewer,
             oldTiledImageSources.length,
           );
         }
       }
       // create/update TiledImage instances
-      const tiledImageSources: TiledImageSource[] = [];
+      const newTiledImageSources: TiledImageSource[] = [];
       for (const [layerId, layer] of layers) {
         for (const [imageId, image] of layer.images) {
           const oldTiledImageIndex = oldTiledImageSources.findIndex(
@@ -63,44 +69,77 @@ export default function Viewer() {
           );
           if (oldTiledImageIndex === -1) {
             // create new TiledImage instance
-            const imageReader = createImageReader(
-              image.data.type,
-              image.data.options,
-            );
+            const imageReader = createImageReader(image.data);
             if (imageReader) {
+              const newTiledImageSource: TiledImageSource = {
+                layerId: layerId,
+                imageId: imageId,
+                preLoadIndex: newTiledImageSources.length,
+                postLoadIndex: newTiledImageSources.length,
+                loaded: false,
+              };
               OpenSeadragonUtils.createTiledImage(
-                viewerState.current.viewer,
-                tiledImageSources.length,
+                viewerState.viewer,
+                newTiledImageSources.length,
                 layer,
                 image,
-                imageReader.getWidth(),
                 imageReader.getTileSource(),
+                () => {
+                  if (
+                    newTiledImageSource.preLoadIndex !==
+                    newTiledImageSource.postLoadIndex
+                  ) {
+                    OpenSeadragonUtils.moveTiledImage(
+                      viewerState.viewer,
+                      newTiledImageSource.preLoadIndex,
+                      newTiledImageSource.postLoadIndex,
+                    );
+                  }
+                  if (newTiledImageSource.postLoadUpdate) {
+                    OpenSeadragonUtils.updateTiledImage(
+                      viewerState.viewer,
+                      newTiledImageSource.postLoadIndex,
+                      layer,
+                      image,
+                    );
+                  }
+                  newTiledImageSource.loaded = true;
+                },
               );
-              tiledImageSources.push({ layerId: layerId, imageId: imageId });
+              newTiledImageSources.push(newTiledImageSource);
             } else {
-              console.warn(`Image reader not found: ${image.data.type}`);
+              console.warn(`Unsupported image data type: ${image.data.type}`);
             }
           } else {
             // update existing TiledImage instance
-            const tiledImageSource = oldTiledImageSources[oldTiledImageIndex];
-            if (oldTiledImageIndex !== tiledImageSources.length) {
-              OpenSeadragonUtils.moveTiledImage(
-                viewerState.current.viewer,
-                oldTiledImageIndex,
-                tiledImageSources.length,
-              );
+            const oldTiledImageSource =
+              oldTiledImageSources[oldTiledImageIndex];
+            if (oldTiledImageIndex !== newTiledImageSources.length) {
+              if (oldTiledImageSource.loaded) {
+                OpenSeadragonUtils.moveTiledImage(
+                  viewerState.viewer,
+                  oldTiledImageIndex,
+                  newTiledImageSources.length,
+                );
+              } else {
+                oldTiledImageSource.postLoadIndex = newTiledImageSources.length;
+              }
             }
-            OpenSeadragonUtils.updateTiledImage(
-              viewerState.current.viewer,
-              tiledImageSources.length,
-              layer,
-              image,
-            );
-            tiledImageSources.push(tiledImageSource);
+            if (oldTiledImageSource.loaded) {
+              OpenSeadragonUtils.updateTiledImage(
+                viewerState.viewer,
+                newTiledImageSources.length,
+                layer,
+                image,
+              );
+            } else {
+              oldTiledImageSource.postLoadUpdate = true;
+            }
+            newTiledImageSources.push(oldTiledImageSource);
           }
         }
       }
-      viewerState.current.tiledImageSources = tiledImageSources;
+      viewerState.tiledImageSources = newTiledImageSources;
     }
   }, [layers, createImageReader]);
 

@@ -7,9 +7,15 @@ import LayersPanel from "./components/layers/LayersPanel";
 import PointsPanel from "./components/points/PointsPanel";
 import ProjectPanel from "./components/project/ProjectPanel";
 import ShapesPanel from "./components/shapes/ShapesPanel";
+import DefaultImageReader, {
+  DEFAULT_IMAGE_READER_TYPE,
+  DefaultImageReaderOptions,
+} from "./readers/DefaultImageReader";
 import useSharedStore from "./store/sharedStore";
 
 export default function App() {
+  const initialized = useSharedStore((state) => state.initialized);
+  const setInitialized = useSharedStore((state) => state.setInitialized);
   const registerImageReader = useSharedStore(
     (state) => state.registerImageReader,
   );
@@ -19,30 +25,46 @@ export default function App() {
   const registerShapesReader = useSharedStore(
     (state) => state.registerShapesReader,
   );
+  const unregisterImageReader = useSharedStore(
+    (state) => state.unregisterImageReader,
+  );
+  const unregisterPointsReader = useSharedStore(
+    (state) => state.unregisterPointsReader,
+  );
+  const unregisterShapesReader = useSharedStore(
+    (state) => state.unregisterShapesReader,
+  );
 
-  // register image readers
   useEffect(() => {
-    // TODO register image readers
+    registerImageReader(
+      DEFAULT_IMAGE_READER_TYPE,
+      (options) => new DefaultImageReader(options as DefaultImageReaderOptions),
+    );
+    setInitialized(true);
     return () => {
-      // TODO deregister image readers
+      setInitialized(false);
+      unregisterImageReader(DEFAULT_IMAGE_READER_TYPE);
     };
-  }, [registerImageReader]);
+  }, [
+    setInitialized,
+    registerImageReader,
+    unregisterImageReader,
+    registerPointsReader,
+    unregisterPointsReader,
+    registerShapesReader,
+    unregisterShapesReader,
+  ]);
 
-  // register points readers
-  useEffect(() => {
-    // TODO register points readers
-    return () => {
-      // TODO deregister points readers
-    };
-  }, [registerPointsReader]);
-
-  // register shapes readers
-  useEffect(() => {
-    // TODO register shapes readers
-    return () => {
-      // TODO deregister shapes readers
-    };
-  }, [registerShapesReader]);
+  if (!initialized) {
+    return (
+      <div
+        className="flex items-center justify-center"
+        style={{ width: "100vw", height: "100vh" }}
+      >
+        <p>Initializing...</p>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -16,32 +16,35 @@ import {
 import { SharedStoreSliceCreator } from "./sharedStore";
 
 export type AppState = {
+  initialized: boolean;
   imageReaderFactories: Map<string, ImageReaderFactory>;
   pointsReaderFactories: Map<string, PointsReaderFactory>;
   shapesReaderFactories: Map<string, ShapesReaderFactory>;
 };
 
 export type AppActions = {
+  setInitialized: (initialized: boolean) => void;
   registerImageReader: (type: string, factory: ImageReaderFactory) => void;
   registerPointsReader: (type: string, factory: PointsReaderFactory) => void;
   registerShapesReader: (type: string, factory: ShapesReaderFactory) => void;
+  unregisterImageReader: (type: string) => void;
+  unregisterPointsReader: (type: string) => void;
+  unregisterShapesReader: (type: string) => void;
   createImageReader: (
-    type: string,
-    options: ImageReaderOptions,
+    options: ImageReaderOptions<string>,
   ) => ImageReader | undefined;
   createPointsReader: (
-    type: string,
-    options: PointsReaderOptions,
+    options: PointsReaderOptions<string>,
   ) => PointsReader | undefined;
   createShapesReader: (
-    type: string,
-    options: ShapesReaderOptions,
+    options: ShapesReaderOptions<string>,
   ) => ShapesReader | undefined;
 };
 
 export type AppSlice = AppState & AppActions;
 
 const initialAppState: AppState = {
+  initialized: false,
   imageReaderFactories: new Map(),
   pointsReaderFactories: new Map(),
   shapesReaderFactories: new Map(),
@@ -52,6 +55,7 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
   get,
 ) => ({
   ...initialAppState,
+  setInitialized: (initialized) => set({ initialized: initialized }),
   registerImageReader: (type, factory) =>
     set((draft) => {
       if (draft.imageReaderFactories.has(type)) {
@@ -73,25 +77,34 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
       }
       draft.shapesReaderFactories.set(type, factory);
     }),
-  createImageReader: (type, options) => {
-    const factory = get().imageReaderFactories.get(type);
-    if (!factory) {
-      return undefined;
+  unregisterImageReader: (type) =>
+    set((draft) => {
+      draft.imageReaderFactories.delete(type);
+    }),
+  unregisterPointsReader: (type) =>
+    set((draft) => {
+      draft.pointsReaderFactories.delete(type);
+    }),
+  unregisterShapesReader: (type) =>
+    set((draft) => {
+      draft.shapesReaderFactories.delete(type);
+    }),
+  createImageReader: (options) => {
+    const factory = get().imageReaderFactories.get(options.type);
+    if (factory) {
+      return factory(options);
     }
-    return factory(options);
   },
-  createPointsReader: (type, options) => {
-    const factory = get().pointsReaderFactories.get(type);
-    if (!factory) {
-      return undefined;
+  createPointsReader: (options) => {
+    const factory = get().pointsReaderFactories.get(options.type);
+    if (factory) {
+      return factory(options);
     }
-    return factory(options);
   },
-  createShapesReader: (type, options) => {
-    const factory = get().shapesReaderFactories.get(type);
-    if (!factory) {
-      return undefined;
+  createShapesReader: (options) => {
+    const factory = get().shapesReaderFactories.get(options.type);
+    if (factory) {
+      return factory(options);
     }
-    return factory(options);
   },
 });
