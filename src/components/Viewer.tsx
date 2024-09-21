@@ -21,7 +21,7 @@ type ViewerState = {
 export default function Viewer() {
   const viewerStateRef = useRef<ViewerState | null>(null);
   const layers = useSharedStore((state) => state.layers);
-  const createImageReader = useSharedStore((state) => state.createImageReader);
+  const getImageReader = useSharedStore((state) => state.getImageReader);
 
   // use a ref callback for instantiating the OpenSeadragon viewer
   // https://react.dev/reference/react-dom/components/common#ref-callback
@@ -69,7 +69,7 @@ export default function Viewer() {
           );
           if (oldTiledImageIndex === -1) {
             // create new TiledImage instance
-            const imageReader = createImageReader(image.data);
+            const imageReader = getImageReader(image.data);
             if (imageReader) {
               const newTiledImageState: TiledImageState = {
                 layerId: layerId,
@@ -145,7 +145,7 @@ export default function Viewer() {
       }
       viewerState.tiledImageStates = newTiledImageStates;
     }
-  }, [layers, createImageReader]);
+  }, [layers, getImageReader]);
 
   // TODO global marker size slider
   // <div id="ISS_globalmarkersize" className="d-none px-1 mx-1 viewer-layer">

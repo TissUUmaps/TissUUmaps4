@@ -30,13 +30,13 @@ export type AppActions = {
   unregisterImageReader: (type: string) => void;
   unregisterPointsReader: (type: string) => void;
   unregisterShapesReader: (type: string) => void;
-  createImageReader: (
+  getImageReader: (
     options: ImageReaderOptions<string>,
   ) => ImageReader | undefined;
-  createPointsReader: (
+  getPointsReader: (
     options: PointsReaderOptions<string>,
   ) => PointsReader | undefined;
-  createShapesReader: (
+  getShapesReader: (
     options: ShapesReaderOptions<string>,
   ) => ShapesReader | undefined;
 };
@@ -89,19 +89,19 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
     set((draft) => {
       draft.shapesReaderFactories.delete(type);
     }),
-  createImageReader: (options) => {
+  getImageReader: (options) => {
     const factory = get().imageReaderFactories.get(options.type);
     if (factory) {
       return factory(options);
     }
   },
-  createPointsReader: (options) => {
+  getPointsReader: (options) => {
     const factory = get().pointsReaderFactories.get(options.type);
     if (factory) {
       return factory(options);
     }
   },
-  createShapesReader: (options) => {
+  getShapesReader: (options) => {
     const factory = get().shapesReaderFactories.get(options.type);
     if (factory) {
       return factory(options);
