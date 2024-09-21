@@ -39,7 +39,7 @@ export default function Viewer() {
     }
   }, []);
 
-  // update the OpenSeadragon viewer upon image/layer changes
+  // refresh the OpenSeadragon viewer upon image/layer changes
   // (note: ref callbacks are executed before useEffect hooks)
   useEffect(() => {
     const viewerState = viewerStateRef.current;
@@ -85,6 +85,7 @@ export default function Viewer() {
                 image,
                 imageReader.getTileSource(),
                 () => {
+                  // if necessary, move new TiledImage instance
                   if (
                     newTiledImageSource.preLoadIndex !==
                     newTiledImageSource.postLoadIndex
@@ -95,6 +96,7 @@ export default function Viewer() {
                       newTiledImageSource.postLoadIndex,
                     );
                   }
+                  // if necessary, update new TiledImage instance
                   if (newTiledImageSource.postLoadUpdate) {
                     OpenSeadragonUtils.updateTiledImage(
                       viewerState.viewer,
@@ -111,9 +113,9 @@ export default function Viewer() {
               console.warn(`Unsupported image data type: ${image.data.type}`);
             }
           } else {
-            // update existing TiledImage instance
             const oldTiledImageSource =
               oldTiledImageSources[oldTiledImageIndex];
+            // if necessary, move existing TiledImage instance
             if (oldTiledImageIndex !== newTiledImageSources.length) {
               if (oldTiledImageSource.loaded) {
                 OpenSeadragonUtils.moveTiledImage(
@@ -122,9 +124,11 @@ export default function Viewer() {
                   newTiledImageSources.length,
                 );
               } else {
+                // delay move until TiledImage has been loaded
                 oldTiledImageSource.postLoadIndex = newTiledImageSources.length;
               }
             }
+            // update existing TiledImage instance
             if (oldTiledImageSource.loaded) {
               OpenSeadragonUtils.updateTiledImage(
                 viewerState.viewer,
@@ -133,6 +137,7 @@ export default function Viewer() {
                 image,
               );
             } else {
+              // delay update until TiledImage has been loaded
               oldTiledImageSource.postLoadUpdate = true;
             }
             newTiledImageSources.push(oldTiledImageSource);
