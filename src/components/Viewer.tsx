@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import useSharedStore from "../store/sharedStore";
 import OpenSeadragonUtils from "../utils/OpenSeadragonUtils";
 
-type TiledImageSource = {
+type TiledImageState = {
   layerId: string;
   imageId: string;
   preLoadIndex: number;
@@ -15,7 +15,7 @@ type TiledImageSource = {
 
 type ViewerState = {
   viewer: OpenSeadragon.Viewer;
-  tiledImageSources: TiledImageSource[];
+  tiledImageStates: TiledImageState[];
 };
 
 export default function Viewer() {
@@ -34,7 +34,7 @@ export default function Viewer() {
     if (viewerElement) {
       viewerStateRef.current = {
         viewer: OpenSeadragonUtils.createViewer(viewerElement),
-        tiledImageSources: [],
+        tiledImageStates: [],
       };
     }
   }, []);
@@ -45,106 +45,105 @@ export default function Viewer() {
     const viewerState = viewerStateRef.current;
     if (viewerState) {
       // delete old TiledImage instances
-      const oldTiledImageSources: TiledImageSource[] = [];
-      for (const oldTiledImageSource of viewerState.tiledImageSources) {
-        const layer = layers.get(oldTiledImageSource.layerId);
-        const image = layer?.images.get(oldTiledImageSource.imageId);
+      const oldTiledImageStates: TiledImageState[] = [];
+      for (const oldTiledImageState of viewerState.tiledImageStates) {
+        const layer = layers.get(oldTiledImageState.layerId);
+        const image = layer?.images.get(oldTiledImageState.imageId);
         if (layer && image) {
-          oldTiledImageSources.push(oldTiledImageSource);
+          oldTiledImageStates.push(oldTiledImageState);
         } else {
           OpenSeadragonUtils.deleteTiledImage(
             viewerState.viewer,
-            oldTiledImageSources.length,
+            oldTiledImageStates.length,
           );
         }
       }
       // create/update TiledImage instances
-      const newTiledImageSources: TiledImageSource[] = [];
+      const newTiledImageStates: TiledImageState[] = [];
       for (const [layerId, layer] of layers) {
         for (const [imageId, image] of layer.images) {
-          const oldTiledImageIndex = oldTiledImageSources.findIndex(
-            (oldTiledImageSource) =>
-              oldTiledImageSource.layerId === layerId &&
-              oldTiledImageSource.imageId === imageId,
+          const oldTiledImageIndex = oldTiledImageStates.findIndex(
+            (oldTiledImageState) =>
+              oldTiledImageState.layerId === layerId &&
+              oldTiledImageState.imageId === imageId,
           );
           if (oldTiledImageIndex === -1) {
             // create new TiledImage instance
             const imageReader = createImageReader(image.data);
             if (imageReader) {
-              const newTiledImageSource: TiledImageSource = {
+              const newTiledImageState: TiledImageState = {
                 layerId: layerId,
                 imageId: imageId,
-                preLoadIndex: newTiledImageSources.length,
-                postLoadIndex: newTiledImageSources.length,
+                preLoadIndex: newTiledImageStates.length,
+                postLoadIndex: newTiledImageStates.length,
                 loaded: false,
               };
               OpenSeadragonUtils.createTiledImage(
                 viewerState.viewer,
-                newTiledImageSources.length,
+                newTiledImageStates.length,
                 layer,
                 image,
                 imageReader.getTileSource(),
                 () => {
                   // if necessary, move new TiledImage instance
                   if (
-                    newTiledImageSource.preLoadIndex !==
-                    newTiledImageSource.postLoadIndex
+                    newTiledImageState.preLoadIndex !==
+                    newTiledImageState.postLoadIndex
                   ) {
                     OpenSeadragonUtils.moveTiledImage(
                       viewerState.viewer,
-                      newTiledImageSource.preLoadIndex,
-                      newTiledImageSource.postLoadIndex,
+                      newTiledImageState.preLoadIndex,
+                      newTiledImageState.postLoadIndex,
                     );
                   }
                   // if necessary, update new TiledImage instance
-                  if (newTiledImageSource.postLoadUpdate) {
+                  if (newTiledImageState.postLoadUpdate) {
                     OpenSeadragonUtils.updateTiledImage(
                       viewerState.viewer,
-                      newTiledImageSource.postLoadIndex,
+                      newTiledImageState.postLoadIndex,
                       layer,
                       image,
                     );
                   }
-                  newTiledImageSource.loaded = true;
+                  newTiledImageState.loaded = true;
                 },
               );
-              newTiledImageSources.push(newTiledImageSource);
+              newTiledImageStates.push(newTiledImageState);
             } else {
               console.warn(`Unsupported image data type: ${image.data.type}`);
             }
           } else {
-            const oldTiledImageSource =
-              oldTiledImageSources[oldTiledImageIndex];
+            const oldTiledImageState = oldTiledImageStates[oldTiledImageIndex];
             // if necessary, move existing TiledImage instance
-            if (oldTiledImageIndex !== newTiledImageSources.length) {
-              if (oldTiledImageSource.loaded) {
+            if (oldTiledImageIndex !== newTiledImageStates.length) {
+              if (oldTiledImageState.loaded) {
                 OpenSeadragonUtils.moveTiledImage(
                   viewerState.viewer,
                   oldTiledImageIndex,
-                  newTiledImageSources.length,
+                  newTiledImageStates.length,
                 );
               } else {
                 // delay move until TiledImage has been loaded
-                oldTiledImageSource.postLoadIndex = newTiledImageSources.length;
+                oldTiledImageState.postLoadIndex = newTiledImageStates.length;
               }
             }
             // update existing TiledImage instance
-            if (oldTiledImageSource.loaded) {
+            if (oldTiledImageState.loaded) {
               OpenSeadragonUtils.updateTiledImage(
                 viewerState.viewer,
-                newTiledImageSources.length,
+                newTiledImageStates.length,
                 layer,
                 image,
               );
             } else {
               // delay update until TiledImage has been loaded
-              oldTiledImageSource.postLoadUpdate = true;
+              oldTiledImageState.postLoadUpdate = true;
             }
-            newTiledImageSources.push(oldTiledImageSource);
+            newTiledImageStates.push(oldTiledImageState);
           }
         }
       }
-      viewerState.tiledImageSources = newTiledImageSources;
+      viewerState.tiledImageStates = newTiledImageStates;
     }
   }, [layers, createImageReader]);
 
