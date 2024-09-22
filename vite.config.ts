@@ -4,6 +4,5 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: process.env.BASE_URL || "", // use relative URLs by default
   plugins: [react(), viteSingleFile()],
 });
