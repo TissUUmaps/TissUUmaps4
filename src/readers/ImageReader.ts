@@ -1,9 +1,9 @@
 import { TileSource } from "openseadragon";
 
-export type TileSourceSpec = object;
+export type TileSourceSpec = string | object;
 
 export default interface ImageReader {
-  getTileSource(): string | TileSourceSpec | TileSource;
+  getTileSource(): TileSource | TileSourceSpec;
 }
 
 export interface ImageReaderOptions<T extends string> {
