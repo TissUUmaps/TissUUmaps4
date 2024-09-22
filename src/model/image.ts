@@ -1,21 +1,10 @@
-import { TileSource } from "openseadragon";
-
-export type TileSourceSpec = object;
-
-export interface ImageReader {
-  getTileSource(): string | TileSourceSpec | TileSource;
-}
-
-export interface ImageReaderOptions<T extends string> {
-  type: T;
-}
-
-export type ImageReaderFactory = (
-  options: ImageReaderOptions<string>,
-) => ImageReader;
+import { ImageReaderOptions } from "../readers/ImageReader";
 
 /** Image settings */
 export type ImageSettings = {
+  /** Physical pixel size, in arbitrary unit */
+  pixelSize: number;
+
   /** Visibility */
   visbility: boolean;
 
@@ -38,6 +27,7 @@ export type Image = {
 };
 
 export const defaultImageSettings: ImageSettings = {
+  pixelSize: 1.0,
   visbility: true,
   opacity: 1.0,
 };

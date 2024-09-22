@@ -1,42 +1,49 @@
-import {
-  ImageReader,
-  ImageReaderFactory,
-  ImageReaderOptions,
-} from "../model/image";
-import {
-  PointsReader,
-  PointsReaderFactory,
-  PointsReaderOptions,
-} from "../model/points";
-import {
-  ShapesReader,
-  ShapesReaderFactory,
-  ShapesReaderOptions,
-} from "../model/shapes";
+import ImageReader, { ImageReaderOptions } from "../readers/ImageReader";
+import PointsReader, { PointsReaderOptions } from "../readers/PointsReader";
+import ShapesReader, { ShapesReaderOptions } from "../readers/ShapesReader";
 import { SharedStoreSliceCreator } from "./sharedStore";
+
+type ImageReaderFactory<T extends string> = (
+  options: ImageReaderOptions<T>,
+) => ImageReader;
+type PointsReaderFactory<T extends string> = (
+  options: PointsReaderOptions<T>,
+) => PointsReader;
+type ShapesReaderFactory<T extends string> = (
+  options: ShapesReaderOptions<T>,
+) => ShapesReader;
 
 export type AppState = {
   initialized: boolean;
-  imageReaderFactories: Map<string, ImageReaderFactory>;
-  pointsReaderFactories: Map<string, PointsReaderFactory>;
-  shapesReaderFactories: Map<string, ShapesReaderFactory>;
+  imageReaderFactories: Map<string, ImageReaderFactory<string>>;
+  pointsReaderFactories: Map<string, PointsReaderFactory<string>>;
+  shapesReaderFactories: Map<string, ShapesReaderFactory<string>>;
 };
 
 export type AppActions = {
   setInitialized: (initialized: boolean) => void;
-  registerImageReader: (type: string, factory: ImageReaderFactory) => void;
-  registerPointsReader: (type: string, factory: PointsReaderFactory) => void;
-  registerShapesReader: (type: string, factory: ShapesReaderFactory) => void;
+  registerImageReader: (
+    type: string,
+    factory: ImageReaderFactory<string>,
+  ) => void;
+  registerPointsReader: (
+    type: string,
+    factory: PointsReaderFactory<string>,
+  ) => void;
+  registerShapesReader: (
+    type: string,
+    factory: ShapesReaderFactory<string>,
+  ) => void;
   unregisterImageReader: (type: string) => void;
   unregisterPointsReader: (type: string) => void;
   unregisterShapesReader: (type: string) => void;
-  getImageReader: (
+  createImageReader: (
     options: ImageReaderOptions<string>,
   ) => ImageReader | undefined;
-  getPointsReader: (
+  createPointsReader: (
     options: PointsReaderOptions<string>,
   ) => PointsReader | undefined;
-  getShapesReader: (
+  createShapesReader: (
     options: ShapesReaderOptions<string>,
   ) => ShapesReader | undefined;
 };
@@ -89,19 +96,19 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
     set((draft) => {
       draft.shapesReaderFactories.delete(type);
     }),
-  getImageReader: (options) => {
+  createImageReader: (options) => {
     const factory = get().imageReaderFactories.get(options.type);
     if (factory) {
       return factory(options);
     }
   },
-  getPointsReader: (options) => {
+  createPointsReader: (options) => {
     const factory = get().pointsReaderFactories.get(options.type);
     if (factory) {
       return factory(options);
     }
   },
-  getShapesReader: (options) => {
+  createShapesReader: (options) => {
     const factory = get().shapesReaderFactories.get(options.type);
     if (factory) {
       return factory(options);

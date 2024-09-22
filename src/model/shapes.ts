@@ -1,16 +1,4 @@
-export type GeoJSON = object;
-
-export interface ShapesReader {
-  getData(): GeoJSON;
-}
-
-export interface ShapesReaderOptions<T extends string> {
-  type: T;
-}
-
-export type ShapesReaderFactory = (
-  options: ShapesReaderOptions<string>,
-) => ShapesReader;
+import { ShapesReaderOptions } from "../readers/ShapesReader";
 
 /** Shape cloud settings */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

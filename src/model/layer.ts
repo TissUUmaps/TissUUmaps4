@@ -2,13 +2,13 @@ import Image from "./image";
 
 /** Layer settings */
 export type LayerSettings = {
-  /** Layer x-origin, in world coordinates */
+  /** X-origin, in world coordinates */
   x: number;
 
-  /** Layer y-origin, in world coordinates */
+  /** Y-origin, in world coordinates */
   y: number;
 
-  /** Layer scale, translating data coordinates (e.g., pixels) to world coordinates */
+  /** Scale factor, converting physical coordinates to world coordinates */
   scale: number;
 
   /** Visibility */

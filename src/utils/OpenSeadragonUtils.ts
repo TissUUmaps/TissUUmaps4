@@ -41,8 +41,10 @@ export default class OpenSeadragonUtils {
         // update width & height
         const e = event as unknown as { item: TiledImage };
         const contentSize = e.item.getContentSize();
-        e.item.setWidth(contentSize.x * layer.settings.scale);
-        e.item.setHeight(contentSize.y * layer.settings.scale);
+        const physicalWidth = contentSize.x * image.settings.pixelSize;
+        const physicalHeight = contentSize.y * image.settings.pixelSize;
+        e.item.setWidth(physicalWidth * layer.settings.scale);
+        e.item.setHeight(physicalHeight * layer.settings.scale);
         success(event);
       },
     });

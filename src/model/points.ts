@@ -1,53 +1,51 @@
-export type TypedArray =
-  | Int8Array
-  | Uint8Array
-  | Int16Array
-  | Uint16Array
-  | Int32Array
-  | Uint32Array
-  | Float32Array
-  | Float64Array
-  | BigInt64Array
-  | BigUint64Array;
+import { PointsReaderOptions } from "../readers/PointsReader";
 
-export interface PointsReader {
-  getVariables(): string[];
-  getValues(variable: string): TypedArray;
-}
-
-export interface PointsReaderOptions<T extends string> {
-  type: T;
-}
-
-export type PointsReaderFactory = (
-  options: PointsReaderOptions<string>,
-) => PointsReader;
-
-type PointPosition = {
-  x: PointValuesVariable;
-  y: PointValuesVariable;
-  layer?: string | PointValuesVariable | PointGroupsVariable;
-};
 type PointColor = { r: number; g: number; b: number; a?: number };
 type PointShape = string; // TODO define point shape type
 type PointSize = number;
 type PointVisibility = boolean;
 type PointZOrder = number;
 
-export type PointValuesVariable = { valuesVariable: string };
-export type PointGroupsVariable = { groupsVariable: string };
+/** A variable that holds values */
+export type PointValuesVariable = {
+  /** Variable name */
+  valuesVariable: string;
+};
 
+/** A variable that holds group names */
+export type PointGroupsVariable = {
+  /** Variable name */
+  groupsVariable: string;
+};
+
+/** Returns true if the variable holds values, false otherwise */
 export function isPointValuesVariable(
   variable: unknown,
 ): variable is PointValuesVariable {
   return (variable as PointValuesVariable).valuesVariable !== undefined;
 }
 
+/** Returns true if the variable holds group names, false otherwise */
 export function isPointGroupsVariable(
   variable: unknown,
 ): variable is PointGroupsVariable {
   return (variable as PointGroupsVariable).groupsVariable !== undefined;
 }
+
+/** Source of point positions */
+export type PointPositionsSource = {
+  /** Variable holding X coordinates */
+  x: PointValuesVariable;
+
+  /** Variable holding Y coordinates */
+  y: PointValuesVariable;
+
+  /** Scale factor (e.g. pixel size, UMAP scale), converting data coordinates (e.g. pixel coordinates, UMAP coordinates) to physical coordinates (arbitrary unit) */
+  scale: number;
+
+  /** Target layer for display (defaults to the first layer if not specified) */
+  layer?: string | PointValuesVariable | PointGroupsVariable;
+};
 
 /** A named list of variables that can be used to jointly set multiple settings */
 export type PointsSettingsPreset = {
@@ -99,8 +97,8 @@ export type PointsSettingsProfile = {
   /** Human-readable profile name */
   name: string;
 
-  /** Point position (multiple sources possible for showing different aspects of data, e.g. spatial coordinates in one layer and UMAP coordinates in another) */
-  pos: PointPosition[];
+  /** Point position sources (allow multiple sources for showing different aspects of data, e.g. spatial coordinates in one layer and UMAP coordinates in another) */
+  pos: PointPositionsSource[];
 
   /** Point color */
   color: PointColor | PointValuesVariable | PointGroupsVariable;
@@ -150,8 +148,6 @@ export type Points = {
   settings: PointsSettings;
 };
 
-const DEFAULT_POINTS_SETTINGS_PROFILE_ID = "default";
-
 export const defaultPointsSettingsPreset: PointsSettingsPreset = {
   name: "New preset",
   variables: [],
@@ -164,7 +160,7 @@ export const defaultPointsSettingsPreset: PointsSettingsPreset = {
 
 export const defaultPointsSettingsProfile: PointsSettingsProfile = {
   name: "New Profile",
-  pos: [{ x: { valuesVariable: "x" }, y: { valuesVariable: "y" } }],
+  pos: [{ x: { valuesVariable: "x" }, y: { valuesVariable: "y" }, scale: 1.0 }],
   color: { r: 1, g: 1, b: 1 },
   shape: "circle", // TODO default points shape
   size: 5, // TODO default points size
@@ -173,6 +169,7 @@ export const defaultPointsSettingsProfile: PointsSettingsProfile = {
   groupSettings: {},
 };
 
+const DEFAULT_POINTS_SETTINGS_PROFILE_ID = "default";
 export const defaultPointsSettings: PointsSettings = {
   presets: new Map(),
   profiles: new Map([

@@ -1,8 +1,4 @@
-import {
-  ImageReader,
-  ImageReaderOptions,
-  TileSourceSpec,
-} from "../model/image";
+import ImageReader, { ImageReaderOptions, TileSourceSpec } from "./ImageReader";
 
 export const DEFAULT_IMAGE_READER_TYPE = "default";
 
