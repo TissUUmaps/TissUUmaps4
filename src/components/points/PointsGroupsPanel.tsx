@@ -5,11 +5,7 @@ interface PointsGroupsPanelProps {
   points: Points;
 }
 
-export default function PointsGroupsPanel({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  pointsId,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  points,
-}: PointsGroupsPanelProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function PointsGroupsPanel(_props: PointsGroupsPanelProps) {
   return <></>; // TODO implement points groups panel
 }

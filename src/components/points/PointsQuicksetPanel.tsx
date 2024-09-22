@@ -5,11 +5,7 @@ interface PointsQuicksetPanelProps {
   points: Points;
 }
 
-export default function PointsQuicksetPanel({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  pointsId,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  points,
-}: PointsQuicksetPanelProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function PointsQuicksetPanel(_props: PointsQuicksetPanelProps) {
   return <></>; // TODO implement PointsQuicksetPanel
 }
