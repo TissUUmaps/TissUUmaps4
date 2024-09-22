@@ -19,8 +19,7 @@ export default class OpenSeadragonUtils {
     layer: Layer,
     image: Image,
     tileSource: string | object,
-    success: (tiledImage: TiledImage) => void,
-    replace?: boolean,
+    success?: (tiledImage: TiledImage) => void,
   ): void {
     if (index < 0 || index > viewer.world.getItemCount()) {
       throw new Error(`Index out of bounds: ${index}`);
@@ -28,7 +27,6 @@ export default class OpenSeadragonUtils {
     viewer.addTiledImage({
       tileSource: tileSource,
       index: index,
-      replace: replace,
       x: layer.settings.x,
       y: layer.settings.y,
       opacity:
@@ -46,7 +44,9 @@ export default class OpenSeadragonUtils {
         e.item.setWidth(physicalWidth * layer.settings.scale);
         e.item.setHeight(physicalHeight * layer.settings.scale);
         viewer.viewport.fitBounds(e.item.getBounds());
-        success(e.item);
+        if (success) {
+          success(e.item);
+        }
       },
     });
   }
