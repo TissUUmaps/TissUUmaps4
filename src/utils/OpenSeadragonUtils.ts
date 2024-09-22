@@ -38,13 +38,14 @@ export default class OpenSeadragonUtils {
       degrees: layer.settings.rotation,
       flipped: layer.settings.flipx,
       success: (event) => {
-        // update width & height
+        // update width and height
         const e = event as unknown as { item: TiledImage };
         const contentSize = e.item.getContentSize();
         const physicalWidth = contentSize.x * image.settings.pixelSize;
         const physicalHeight = contentSize.y * image.settings.pixelSize;
         e.item.setWidth(physicalWidth * layer.settings.scale);
         e.item.setHeight(physicalHeight * layer.settings.scale);
+        viewer.viewport.fitBounds(e.item.getBounds());
         success(event);
       },
     });
