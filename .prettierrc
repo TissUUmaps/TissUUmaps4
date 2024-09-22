@@ -1,10 +1,13 @@
 {
   "importOrder": [
-    "^@assets/(.*)$",
     "^@model/(.*)$",
     "^@store/(.*)$",
+    "^@readers/(.*)$",
     "^@utils/(.*)$",
+
+    "^@assets/(.*)$",
     "^@components/(.*)$",
+
     "^[./]"
   ],
   "importOrderSeparation": true,
