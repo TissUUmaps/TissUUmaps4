@@ -3,9 +3,9 @@ import Layer from "../model/layer";
 import { defaultPointsSettings } from "../model/points";
 import Project, { defaultProjectSettings } from "../model/project";
 import {
-  DEFAULT_IMAGE_READER_TYPE,
-  DefaultImageReaderOptions,
-} from "../readers/DefaultImageReader";
+  TILE_SOURCE_IMAGE_READER_TYPE,
+  TileSourceImageReaderOptions,
+} from "../readers/TileSourceImageReader";
 import MapUtils from "../utils/MapUtils";
 import { SharedStoreSliceCreator } from "./sharedStore";
 
@@ -42,14 +42,14 @@ const initialProjectState: ProjectState = {
             {
               name: "My image",
               data: {
-                type: DEFAULT_IMAGE_READER_TYPE,
+                type: TILE_SOURCE_IMAGE_READER_TYPE,
                 tileSource: {
                   type: "image",
                   url: "https://openseadragon.github.io/example-images/grand-canyon-landscape-overlooking.jpg",
                   crossOriginPolicy: "Anonymous",
                   ajaxWithCredentials: false,
                 },
-              } as DefaultImageReaderOptions,
+              } as TileSourceImageReaderOptions,
               settings: { ...defaultImageSettings },
             },
           ],

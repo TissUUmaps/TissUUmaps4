@@ -2,17 +2,17 @@ import { TileSource } from "openseadragon";
 
 import ImageReader, { ImageReaderOptions, TileSourceSpec } from "./ImageReader";
 
-export const DEFAULT_IMAGE_READER_TYPE = "default";
+export const TILE_SOURCE_IMAGE_READER_TYPE = "tileSource";
 
-export interface DefaultImageReaderOptions
-  extends ImageReaderOptions<typeof DEFAULT_IMAGE_READER_TYPE> {
+export interface TileSourceImageReaderOptions
+  extends ImageReaderOptions<typeof TILE_SOURCE_IMAGE_READER_TYPE> {
   tileSource: TileSourceSpec;
 }
 
-export default class DefaultImageReader implements ImageReader {
+export default class TileSourceImageReader implements ImageReader {
   private tileSource: TileSourceSpec;
 
-  constructor(options: DefaultImageReaderOptions) {
+  constructor(options: TileSourceImageReaderOptions) {
     this.tileSource = options.tileSource;
   }
 

@@ -7,10 +7,10 @@ import LayersPanel from "./components/layers/LayersPanel";
 import PointsPanel from "./components/points/PointsPanel";
 import ProjectPanel from "./components/project/ProjectPanel";
 import ShapesPanel from "./components/shapes/ShapesPanel";
-import DefaultImageReader, {
-  DEFAULT_IMAGE_READER_TYPE,
-  DefaultImageReaderOptions,
-} from "./readers/DefaultImageReader";
+import TileSourceImageReader, {
+  TILE_SOURCE_IMAGE_READER_TYPE,
+  TileSourceImageReaderOptions,
+} from "./readers/TileSourceImageReader";
 import useSharedStore from "./store/sharedStore";
 
 export default function App() {
@@ -37,13 +37,14 @@ export default function App() {
 
   useEffect(() => {
     registerImageReader(
-      DEFAULT_IMAGE_READER_TYPE,
-      (options) => new DefaultImageReader(options as DefaultImageReaderOptions),
+      TILE_SOURCE_IMAGE_READER_TYPE,
+      (options) =>
+        new TileSourceImageReader(options as TileSourceImageReaderOptions),
     );
     setInitialized(true);
     return () => {
       setInitialized(false);
-      unregisterImageReader(DEFAULT_IMAGE_READER_TYPE);
+      unregisterImageReader(TILE_SOURCE_IMAGE_READER_TYPE);
     };
   }, [
     setInitialized,
