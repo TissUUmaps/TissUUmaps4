@@ -12,7 +12,7 @@ export type TypedArray =
 
 export default interface PointsReader {
   getVariables(): string[];
-  getValues(variable: string): TypedArray;
+  read(variable: string): Promise<TypedArray>;
 }
 
 export interface PointsReaderOptions<T extends string> {
