@@ -19,7 +19,7 @@ export default class OpenSeadragonUtils {
     layer: Layer,
     image: Image,
     tileSource: string | object,
-    success: (event: Event) => void,
+    success: (tiledImage: TiledImage) => void,
     replace?: boolean,
   ): void {
     if (index < 0 || index > viewer.world.getItemCount()) {
@@ -46,7 +46,7 @@ export default class OpenSeadragonUtils {
         e.item.setWidth(physicalWidth * layer.settings.scale);
         e.item.setHeight(physicalHeight * layer.settings.scale);
         viewer.viewport.fitBounds(e.item.getBounds());
-        success(event);
+        success(e.item);
       },
     });
   }
