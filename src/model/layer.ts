@@ -1,7 +1,8 @@
-import Image from "./image";
+/** A named group of objects (e.g., images, points, shapes) that share the same data coordinate system (positioned in world coordinate system, unbounded) */
+export type Layer = {
+  /** Human-readable layer name */
+  name: string;
 
-/** Layer settings */
-export type LayerSettings = {
   /** X-origin, in world coordinates */
   x: number;
 
@@ -24,19 +25,7 @@ export type LayerSettings = {
   flipx: boolean;
 };
 
-/** A named group of objects (e.g., images, points, shapes) that share the same data coordinate system (positioned in world coordinate system, unbounded) */
-export type Layer = {
-  /** Human-readable layer name */
-  name: string;
-
-  /** Images of this layer (map: image ID -> image) */
-  images: Map<string, Image>;
-
-  /** Layer settings */
-  settings: LayerSettings;
-};
-
-export const defaultLayerSettings: LayerSettings = {
+export const layerDefaults: Omit<Layer, "name"> = {
   x: 0,
   y: 0,
   scale: 1,

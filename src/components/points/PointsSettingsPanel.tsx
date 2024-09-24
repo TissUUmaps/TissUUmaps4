@@ -16,41 +16,39 @@ export default function PointsSettingsPanel({
   pointsId,
   points,
 }: PointsSettingsPanelProps) {
-  const activeProfile = points.settings.profiles.get(
-    points.settings.activeProfileId,
-  );
-  const setActiveProfile = useSharedStore(
-    (state) => state.setActivePointsSettingsProfile,
+  const activeSettings = points.settings.get(points.activeSettingsId);
+  const setActiveSettings = useSharedStore(
+    (state) => state.setActivePointsSettings,
   );
   return (
     <div>
       <Form.Select
-        value={points.settings.activeProfileId}
-        onChange={(e) => setActiveProfile(pointsId, e.target.value)}
+        value={points.activeSettingsId}
+        onChange={(e) => setActiveSettings(pointsId, e.target.value)}
       >
-        {MapUtils.map(points.settings.profiles, (profileId, profile) => (
-          <option key={profileId} value={profileId}>
-            {profile.name}
+        {MapUtils.map(points.settings, (settingsId, settings) => (
+          <option key={settingsId} value={settingsId}>
+            {settings.name}
           </option>
         ))}
       </Form.Select>
-      {activeProfile && (
+      {activeSettings && (
         <div>
           <legend>Size</legend>
           <input
             id="sizeValue"
             type="radio"
             checked={
-              !isPointValuesVariable(activeProfile.size) &&
-              !isPointGroupsVariable(activeProfile.size)
+              !isPointValuesVariable(activeSettings.size) &&
+              !isPointGroupsVariable(activeSettings.size)
             }
           />
           <label htmlFor="sizeValue">Value:</label>
-          <input type="number" value={activeProfile.size as number} readOnly />
+          <input type="number" value={activeSettings.size as number} readOnly />
           <input
             id="sizeValuesVariable"
             type="radio"
-            checked={isPointValuesVariable(activeProfile.size)}
+            checked={isPointValuesVariable(activeSettings.size)}
             readOnly
           />
           <label htmlFor="sizeValuesVariable">From data:</label>
@@ -58,7 +56,7 @@ export default function PointsSettingsPanel({
           <input
             id="sizeGroupsVariable"
             type="radio"
-            checked={isPointGroupsVariable(activeProfile.size)}
+            checked={isPointGroupsVariable(activeSettings.size)}
             readOnly
           />
           <label htmlFor="sizeGroupsVariable">By group:</label>

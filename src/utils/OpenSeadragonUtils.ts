@@ -2,6 +2,16 @@ import { Point, TiledImage, Viewer } from "openseadragon";
 
 import Image from "../model/image";
 import Layer from "../model/layer";
+import ImageReader, { ImageReaderOptions } from "../readers/ImageReader";
+
+export type TiledImageInfo = {
+  layerId: string;
+  imageId: string;
+  preLoadIndex: number;
+  postLoadIndex: number;
+  postLoadUpdate?: boolean;
+  loaded: boolean;
+};
 
 export default class OpenSeadragonUtils {
   static createViewer(viewerElement: HTMLElement): Viewer {
@@ -13,97 +23,145 @@ export default class OpenSeadragonUtils {
     });
   }
 
-  static createTiledImage(
+  static destroyViewer(viewer: Viewer): void {
+    viewer.destroy();
+  }
+
+  static updateViewer(
     viewer: Viewer,
-    index: number,
-    layer: Layer,
-    image: Image,
-    tileSource: string | object,
-    success?: (tiledImage: TiledImage) => void,
-  ): void {
-    if (index < 0 || index > viewer.world.getItemCount()) {
-      throw new Error(`Index out of bounds: ${index}`);
+    tiledImageInfos: TiledImageInfo[],
+    layers: Map<string, Layer>,
+    images: Map<string, Image>,
+    imageReaderFactory: (
+      options: ImageReaderOptions<string>,
+    ) => ImageReader | undefined,
+  ): TiledImageInfo[] {
+    // delete old TiledImages
+    const oldTiledImageInfos: TiledImageInfo[] = [];
+    for (const oldTiledImageInfo of tiledImageInfos) {
+      const layer = layers.get(oldTiledImageInfo.layerId);
+      const image = images.get(oldTiledImageInfo.imageId);
+      if (layer && image && image.layers.includes(oldTiledImageInfo.layerId)) {
+        oldTiledImageInfos.push(oldTiledImageInfo);
+      } else {
+        const oldTiledImage = viewer.world.getItemAt(oldTiledImageInfos.length);
+        viewer.world.removeItem(oldTiledImage);
+      }
     }
-    viewer.addTiledImage({
-      tileSource: tileSource,
-      index: index,
-      x: layer.settings.x,
-      y: layer.settings.y,
-      opacity:
-        layer.settings.visibility && image.settings.visbility
-          ? layer.settings.opacity * image.settings.opacity
-          : 0,
-      degrees: layer.settings.rotation,
-      flipped: layer.settings.flipx,
-      success: (event) => {
-        // update width and height
-        const e = event as unknown as { item: TiledImage };
-        const contentSize = e.item.getContentSize();
-        const physicalWidth = contentSize.x * image.settings.pixelSize;
-        const physicalHeight = contentSize.y * image.settings.pixelSize;
-        e.item.setWidth(physicalWidth * layer.settings.scale);
-        e.item.setHeight(physicalHeight * layer.settings.scale);
-        viewer.viewport.fitBounds(e.item.getBounds());
-        if (success) {
-          success(e.item);
+    // create/update TiledImages
+    const newTiledImageInfos: TiledImageInfo[] = [];
+    for (const [layerId, layer] of layers) {
+      for (const [imageId, image] of images) {
+        if (image.layers.includes(layerId)) {
+          const oldTiledImageIndex = oldTiledImageInfos.findIndex(
+            (oldTiledImageInfo) =>
+              oldTiledImageInfo.layerId === layerId &&
+              oldTiledImageInfo.imageId === imageId,
+          );
+          if (oldTiledImageIndex === -1) {
+            // create new TiledImages
+            const imageReader = imageReaderFactory(image.data);
+            if (imageReader) {
+              const newTiledImageInfo: TiledImageInfo = {
+                layerId: layerId,
+                imageId: imageId,
+                preLoadIndex: newTiledImageInfos.length,
+                postLoadIndex: newTiledImageInfos.length,
+                loaded: false,
+              };
+              viewer.addTiledImage({
+                tileSource: imageReader.getTileSource(),
+                index: newTiledImageInfos.length,
+                x: layer.x,
+                y: layer.y,
+                opacity:
+                  layer.visibility && image.visbility
+                    ? layer.opacity * image.opacity
+                    : 0,
+                degrees: layer.rotation,
+                flipped: layer.flipx,
+                success: (event) => {
+                  // update TiledImage width and height
+                  const e = event as unknown as { item: TiledImage };
+                  const contentSize = e.item.getContentSize();
+                  const physicalWidth = contentSize.x * image.pixelSize;
+                  const physicalHeight = contentSize.y * image.pixelSize;
+                  e.item.setWidth(physicalWidth * layer.scale);
+                  e.item.setHeight(physicalHeight * layer.scale);
+                  viewer.viewport.fitBounds(e.item.getBounds());
+                  // if necessary, execute delayed move of new TiledImage
+                  if (
+                    newTiledImageInfo.preLoadIndex !==
+                    newTiledImageInfo.postLoadIndex
+                  ) {
+                    viewer.world.setItemIndex(
+                      e.item,
+                      newTiledImageInfo.postLoadIndex,
+                    );
+                  }
+                  // if necessary, execute delayed update of new TiledImage
+                  if (newTiledImageInfo.postLoadUpdate) {
+                    OpenSeadragonUtils.updateTiledImage(e.item, layer, image);
+                  }
+                  // mark TiledImage as loaded
+                  newTiledImageInfo.loaded = true;
+                },
+              });
+              newTiledImageInfos.push(newTiledImageInfo);
+            } else {
+              console.warn(`Unsupported image data type: ${image.data.type}`);
+            }
+          } else {
+            const oldTiledImageInfo = oldTiledImageInfos[oldTiledImageIndex];
+            // if necessary, move existing TiledImage
+            if (oldTiledImageIndex !== newTiledImageInfos.length) {
+              if (oldTiledImageInfo.loaded) {
+                const oldTiledImage =
+                  viewer.world.getItemAt(oldTiledImageIndex);
+                viewer.world.setItemIndex(
+                  oldTiledImage,
+                  newTiledImageInfos.length,
+                );
+              } else {
+                // delay move until TiledImage has been loaded
+                oldTiledImageInfo.postLoadIndex = newTiledImageInfos.length;
+              }
+            }
+            // update existing TiledImage
+            if (oldTiledImageInfo.loaded) {
+              const oldTiledImage = viewer.world.getItemAt(oldTiledImageIndex);
+              OpenSeadragonUtils.updateTiledImage(oldTiledImage, layer, image);
+            } else {
+              // delay update until TiledImage has been loaded
+              oldTiledImageInfo.postLoadUpdate = true;
+            }
+            newTiledImageInfos.push(oldTiledImageInfo);
+          }
         }
-      },
-    });
+      }
+    }
+    return newTiledImageInfos;
   }
 
-  static moveTiledImage(
-    viewer: Viewer,
-    oldIndex: number,
-    newIndex: number,
-  ): void {
-    if (oldIndex < 0 || oldIndex >= viewer.world.getItemCount()) {
-      throw new Error(`Old index out of bounds: ${oldIndex}`);
-    }
-    if (newIndex < 0 || newIndex >= viewer.world.getItemCount()) {
-      throw new Error(`New index out of bounds: ${newIndex}`);
-    }
-    const tiledImage = viewer.world.getItemAt(oldIndex);
-    viewer.world.setItemIndex(tiledImage, newIndex);
-  }
-
-  static updateTiledImage(
-    viewer: Viewer,
-    index: number,
+  private static updateTiledImage(
+    tiledImage: TiledImage,
     layer: Layer,
     image: Image,
   ): void {
-    if (index < 0 || index >= viewer.world.getItemCount()) {
-      throw new Error(`Index out of bounds: ${index}`);
-    }
-    const tiledImage = viewer.world.getItemAt(index);
     const bounds = tiledImage.getBounds();
-    if (bounds.x !== layer.settings.x || bounds.y !== layer.settings.y) {
-      tiledImage.setPosition(new Point(layer.settings.x, layer.settings.y));
+    if (bounds.x !== layer.x || bounds.y !== layer.y) {
+      tiledImage.setPosition(new Point(layer.x, layer.y));
     }
     const opacity =
-      layer.settings.visibility && image.settings.visbility
-        ? layer.settings.opacity * image.settings.opacity
-        : 0;
+      layer.visibility && image.visbility ? layer.opacity * image.opacity : 0;
     if (tiledImage.getOpacity() !== opacity) {
       tiledImage.setOpacity(opacity);
     }
-    if (tiledImage.getRotation() !== layer.settings.rotation) {
-      tiledImage.setRotation(layer.settings.rotation);
+    if (tiledImage.getRotation() !== layer.rotation) {
+      tiledImage.setRotation(layer.rotation);
     }
-    if (tiledImage.getFlip() !== layer.settings.flipx) {
-      tiledImage.setFlip(layer.settings.flipx);
+    if (tiledImage.getFlip() !== layer.flipx) {
+      tiledImage.setFlip(layer.flipx);
     }
-  }
-
-  static deleteTiledImage(viewer: Viewer, index: number): void {
-    if (index < 0 || index >= viewer.world.getItemCount()) {
-      throw new Error(`Index out of bounds: ${index}`);
-    }
-    const tiledImage = viewer.world.getItemAt(index);
-    viewer.world.removeItem(tiledImage);
-  }
-
-  static destroyViewer(viewer: Viewer): void {
-    viewer.destroy();
   }
 }

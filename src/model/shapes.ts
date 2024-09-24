@@ -1,21 +1,17 @@
 import { ShapesReaderOptions } from "../readers/ShapesReader";
 
-/** Shape cloud settings */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type ShapesSettings = {};
-
 /** A named collection of shapes (a.k.a. shape cloud) */
 export type Shapes = {
   /** Human-readable shape cloud name */
   name: string;
 
+  /** Layers in which to show the shapes */
+  layers: string[];
+
   /** Shapes reader configuration */
   data: ShapesReaderOptions<string>;
-
-  /** Shape cloud settings */
-  settings: ShapesSettings;
 };
 
-export const defaultShapesSettings: ShapesSettings = {};
+export const shapesDefaults: Omit<Shapes, "name" | "layers" | "data"> = {};
 
 export default Shapes;

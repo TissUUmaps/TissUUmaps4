@@ -1,10 +1,7 @@
+import Image from "./image";
 import Layer from "./layer";
 import Points from "./points";
 import Shapes from "./shapes";
-
-/** Project settings */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type ProjectSettings = {};
 
 /** A named TissUUmaps project */
 export type Project = {
@@ -14,16 +11,21 @@ export type Project = {
   /** Layers (map: layer ID -> layer) */
   layers: Map<string, Layer>;
 
+  /** Images (map: image ID -> image) */
+  images: Map<string, Image>;
+
   /** Points (map: points ID -> points) */
-  allPoints: Map<string, Points>;
+  points: Map<string, Points>;
 
   /** Shapes (map: shapes ID -> shapes) */
-  allShapes: Map<string, Shapes>;
-
-  /** Project settings */
-  settings: ProjectSettings;
+  shapes: Map<string, Shapes>;
 };
 
-export const defaultProjectSettings: ProjectSettings = {};
+export const projectDefaults: Omit<Project, "name"> = {
+  layers: new Map(),
+  images: new Map(),
+  points: new Map(),
+  shapes: new Map(),
+};
 
 export default Project;

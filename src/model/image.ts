@@ -1,7 +1,16 @@
 import { ImageReaderOptions } from "../readers/ImageReader";
 
-/** Image settings */
-export type ImageSettings = {
+/** A named two-dimensional single-channel single-timepoint grayscale or RGB image */
+export type Image = {
+  /** Human-readable image name */
+  name: string;
+
+  /** Layers in which to show the image */
+  layers: string[];
+
+  /** Image reader configuration */
+  data: ImageReaderOptions<string>;
+
   /** Physical pixel size, in arbitrary unit */
   pixelSize: number;
 
@@ -10,23 +19,9 @@ export type ImageSettings = {
 
   /** Opacity, between 0 and 1 */
   opacity: number;
-
-  // TODO implement filters
 };
 
-/** A named two-dimensional single-channel single-timepoint grayscale or RGB image */
-export type Image = {
-  /** Human-readable image name */
-  name: string;
-
-  /** Image reader configuration */
-  data: ImageReaderOptions<string>;
-
-  /** Image settings */
-  settings: ImageSettings;
-};
-
-export const defaultImageSettings: ImageSettings = {
+export const imageDefaults: Omit<Image, "name" | "layers" | "data"> = {
   pixelSize: 1.0,
   visbility: true,
   opacity: 1.0,

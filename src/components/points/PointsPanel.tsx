@@ -48,10 +48,10 @@ function PointsPanelItem({ pointsId, points }: PointsPanelItemProps) {
 }
 
 export default function PointsPanel() {
-  const allPoints = useSharedStore((state) => state.allPoints);
+  const pointsCollection = useSharedStore((state) => state.points);
   return (
     <Tabs>
-      {MapUtils.map(allPoints, (pointsId, points) => (
+      {MapUtils.map(pointsCollection, (pointsId, points) => (
         <Tab key={pointsId} title={points.name}>
           <PointsPanelItem pointsId={pointsId} points={points} />
         </Tab>

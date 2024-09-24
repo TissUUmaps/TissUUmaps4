@@ -1,7 +1,8 @@
-import Image, { defaultImageSettings } from "../model/image";
-import Layer from "../model/layer";
-import { defaultPointsSettings } from "../model/points";
-import Project, { defaultProjectSettings } from "../model/project";
+import Image, { imageDefaults } from "../model/image";
+import Layer, { layerDefaults } from "../model/layer";
+import { pointsDefaults } from "../model/points";
+import Project from "../model/project";
+import { shapesDefaults } from "../model/shapes";
 import {
   TILE_SOURCE_IMAGE_READER_TYPE,
   TileSourceImageReaderOptions,
@@ -14,17 +15,9 @@ export type ProjectState = Project;
 export type ProjectActions = {
   setLayer: (layerId: string, layer: Layer, layerIndex?: number) => void;
   deleteLayer: (layerId: string) => void;
-  setImage: (
-    layerId: string,
-    imageId: string,
-    image: Image,
-    imageIndex?: number,
-  ) => void;
-  deleteImage: (layerId: string, imageId: string) => void;
-  setActivePointsSettingsProfile: (
-    pointsId: string,
-    activeProfileId: string,
-  ) => void;
+  setImage: (imageId: string, image: Image, imageIndex?: number) => void;
+  deleteImage: (imageId: string) => void;
+  setActivePointsSettings: (pointsId: string, activeSettingsId: string) => void;
 };
 
 export type ProjectSlice = ProjectState & ProjectActions;
@@ -36,48 +29,50 @@ const initialProjectState: ProjectState = {
       "dummy",
       {
         name: "My layer",
-        images: new Map([
-          [
-            "dummy",
-            {
-              name: "My image",
-              data: {
-                type: TILE_SOURCE_IMAGE_READER_TYPE,
-                tileSource: {
-                  type: "image",
-                  url: "https://openseadragon.github.io/example-images/grand-canyon-landscape-overlooking.jpg",
-                  crossOriginPolicy: "Anonymous",
-                  ajaxWithCredentials: false,
-                },
-              } as TileSourceImageReaderOptions,
-              settings: { ...defaultImageSettings },
-            },
-          ],
-        ]),
-        settings: {
-          x: 0,
-          y: 0,
-          scale: 1.0,
-          visibility: true,
-          opacity: 1.0,
-          rotation: 0,
-          flipx: false,
-        },
+        ...layerDefaults,
       },
     ],
   ]), // TODO remove dummy layer
-  allPoints: new Map([
+  images: new Map([
+    [
+      "dummy",
+      {
+        name: "My image",
+        layers: ["dummy"],
+        data: {
+          type: TILE_SOURCE_IMAGE_READER_TYPE,
+          tileSource: {
+            type: "image",
+            url: "https://openseadragon.github.io/example-images/grand-canyon-landscape-overlooking.jpg",
+            crossOriginPolicy: "Anonymous",
+            ajaxWithCredentials: false,
+          },
+        } as TileSourceImageReaderOptions,
+        ...imageDefaults,
+      },
+    ],
+  ]), // TODO remove dummy image
+  points: new Map([
     [
       "dummy",
       {
         name: "My points",
         data: { type: "hdf5" },
-        settings: { ...defaultPointsSettings },
+        ...pointsDefaults,
       },
     ],
   ]), // TODO remove dummy points
-  allShapes: new Map(),
-  settings: defaultProjectSettings,
+  shapes: new Map([
+    [
+      "dummy",
+      {
+        name: "My shapes",
+        layers: ["dummy"],
+        data: { type: "geojson" },
+        ...shapesDefaults,
+      },
+    ], // TODO remove dummy shapes
+  ]),
 };
 
 export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
@@ -102,38 +97,30 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
     set((draft) => {
       draft.layers.delete(layerId);
     }),
-  setImage: (layerId, imageId, image, imageIndex) =>
+  setImage: (imageId, image, imageIndex) =>
     set((draft) => {
-      const layer = draft.layers.get(layerId);
-      if (!layer) {
-        throw new Error(`Layer not found: ${layerId}`);
-      }
-      if (layer.images.has(imageId)) {
-        layer.images.delete(imageId);
+      if (draft.images.has(imageId)) {
+        draft.images.delete(imageId);
       }
       if (imageIndex !== undefined) {
-        layer.images = MapUtils.splice(layer.images, imageIndex, 0, [
+        draft.images = MapUtils.splice(draft.images, imageIndex, 0, [
           imageId,
           image,
         ]);
       } else {
-        layer.images.set(imageId, image);
+        draft.images.set(imageId, image);
       }
     }),
-  deleteImage: (layerId, imageId) =>
+  deleteImage: (imageId) =>
     set((draft) => {
-      const layer = draft.layers.get(layerId);
-      if (!layer) {
-        throw new Error(`Layer not found: ${layerId}`);
-      }
-      layer.images.delete(imageId);
+      draft.images.delete(imageId);
     }),
-  setActivePointsSettingsProfile: (pointsId, activeProfileId) =>
+  setActivePointsSettings: (pointsId, activeSettingsId) =>
     set((draft) => {
-      const points = draft.allPoints.get(pointsId);
+      const points = draft.points.get(pointsId);
       if (!points) {
         throw new Error(`Points not found: ${pointsId}`);
       }
-      points.settings.activeProfileId = activeProfileId;
+      points.activeSettingsId = activeSettingsId;
     }),
 });

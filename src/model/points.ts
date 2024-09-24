@@ -32,23 +32,8 @@ export function isPointGroupsVariable(
   return (variable as PointGroupsVariable).groupsVariable !== undefined;
 }
 
-/** Source of point positions */
-export type PointPositionsSource = {
-  /** Variable holding X coordinates */
-  x: PointValuesVariable;
-
-  /** Variable holding Y coordinates */
-  y: PointValuesVariable;
-
-  /** Scale factor (e.g. pixel size, UMAP scale), converting data coordinates (e.g. pixel coordinates, UMAP coordinates) to physical coordinates (arbitrary unit) */
-  scale: number;
-
-  /** Target layer for display (defaults to the first layer if not specified) */
-  layer?: string | PointValuesVariable | PointGroupsVariable;
-};
-
 /** A named list of variables that can be used to jointly set multiple settings */
-export type PointsSettingsPreset = {
+export type PointsPreset = {
   /** Human-readable preset name */
   name: string;
 
@@ -70,8 +55,8 @@ export type PointsSettingsPreset = {
   /** True if the point drawing order is set to the selected variable, False otherwise */
   setsZOrder: boolean;
 
-  /** Target profile for updating the settings (when undefined, the settings are applied to the currently selected profile) */
-  targetProfile?: string;
+  /** Target settings ID (when undefined, the preset is applied to the currently active settings) */
+  targetSettingsId?: string;
 };
 
 /** Settings applied to a specific subset of points resulting from a group-by operation  */
@@ -92,13 +77,28 @@ export type PointsGroupSettings = {
   zorder?: PointZOrder;
 };
 
+/** Settings defining the source of point positions */
+export type PointsPositionSettings = {
+  /** Variable holding X coordinates */
+  x: PointValuesVariable;
+
+  /** Variable holding Y coordinates */
+  y: PointValuesVariable;
+
+  /** Scale factor (e.g. pixel size, UMAP scale), converting data coordinates (e.g. pixel coordinates, UMAP coordinates) to physical coordinates (arbitrary unit) */
+  scale: number;
+
+  /** Target layer for display (defaults to the first layer if not specified) */
+  layer?: string | PointValuesVariable | PointGroupsVariable;
+};
+
 /** A named set of point cloud settings */
-export type PointsSettingsProfile = {
-  /** Human-readable profile name */
+export type PointsSettings = {
+  /** Human-readable settings name */
   name: string;
 
   /** Point position sources (allow multiple sources for showing different aspects of data, e.g. spatial coordinates in one layer and UMAP coordinates in another) */
-  pos: PointPositionsSource[];
+  pos: PointsPositionSettings[];
 
   /** Point color */
   color: PointColor | PointValuesVariable | PointGroupsVariable;
@@ -121,21 +121,6 @@ export type PointsSettingsProfile = {
   };
 };
 
-/** Point cloud settings */
-export type PointsSettings = {
-  /** Presets (map: preset ID -> preset) */
-  presets: Map<string, PointsSettingsPreset>;
-
-  /** Profiles (map: profile ID -> profile) */
-  profiles: Map<string, PointsSettingsProfile>;
-
-  /** ID of the active profile */
-  activeProfileId: string;
-
-  /** Selected groups variable */
-  selectedGroupsVariable?: string;
-};
-
 /** A named collection of points (a.k.a. point cloud) */
 export type Points = {
   /** Human-readable point cloud name  */
@@ -144,38 +129,44 @@ export type Points = {
   /** Points reader configuration */
   data: PointsReaderOptions<string>;
 
-  /** Point cloud settings */
-  settings: PointsSettings;
+  /** Presets (map: preset ID -> preset) */
+  presets: Map<string, PointsPreset>;
+
+  /** Settings (map: settings ID -> settings) */
+  settings: Map<string, PointsSettings>;
+
+  /** Active settings ID */
+  activeSettingsId: string;
+
+  /** Selected groups variable */
+  selectedGroupsVariable?: string;
 };
 
-export const defaultPointsSettingsPreset: PointsSettingsPreset = {
-  name: "New preset",
-  variables: [],
-  setsColor: false,
-  setsShape: false,
-  setsSize: false,
-  setsVisibility: false,
-  setsZOrder: false,
-};
-
-export const defaultPointsSettingsProfile: PointsSettingsProfile = {
-  name: "New Profile",
-  pos: [{ x: { valuesVariable: "x" }, y: { valuesVariable: "y" }, scale: 1.0 }],
-  color: { r: 1, g: 1, b: 1 },
-  shape: "circle", // TODO default points shape
-  size: 5, // TODO default points size
-  visibility: true,
-  zorder: 0, // TODO default points zorder
-  groupSettings: {},
-};
-
-const DEFAULT_POINTS_SETTINGS_PROFILE_ID = "default";
-export const defaultPointsSettings: PointsSettings = {
+const DEFAULT_POINTS_SETTINGS_ID = "default";
+export const pointsDefaults: Omit<Points, "name" | "data"> = {
   presets: new Map(),
-  profiles: new Map([
-    [DEFAULT_POINTS_SETTINGS_PROFILE_ID, { ...defaultPointsSettingsProfile }],
+  settings: new Map([
+    [
+      DEFAULT_POINTS_SETTINGS_ID,
+      {
+        name: "New Settings",
+        pos: [
+          {
+            x: { valuesVariable: "x" },
+            y: { valuesVariable: "y" },
+            scale: 1.0,
+          },
+        ],
+        color: { r: 0, g: 0, b: 0 },
+        shape: "circle", // TODO default points shape
+        size: 5, // TODO default points size
+        visibility: true,
+        zorder: 0, // TODO default points zorder
+        groupSettings: {},
+      },
+    ],
   ]),
-  activeProfileId: DEFAULT_POINTS_SETTINGS_PROFILE_ID,
+  activeSettingsId: DEFAULT_POINTS_SETTINGS_ID,
 };
 
 export default Points;
