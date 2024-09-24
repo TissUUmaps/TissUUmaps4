@@ -7,3 +7,7 @@ export default interface ShapesReader {
 export interface ShapesReaderOptions<T extends string> {
   type: T;
 }
+
+export type ShapesReaderFactory<T extends string> = (
+  options: ShapesReaderOptions<T>,
+) => ShapesReader | undefined;

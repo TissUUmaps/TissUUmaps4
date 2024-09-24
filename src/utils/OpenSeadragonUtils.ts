@@ -2,7 +2,7 @@ import { Point, TiledImage, Viewer } from "openseadragon";
 
 import Image from "../model/image";
 import Layer from "../model/layer";
-import ImageReader, { ImageReaderOptions } from "../readers/ImageReader";
+import { ImageReaderFactory } from "../readers/ImageReader";
 
 export type TiledImageInfo = {
   layerId: string;
@@ -23,18 +23,12 @@ export default class OpenSeadragonUtils {
     });
   }
 
-  static destroyViewer(viewer: Viewer): void {
-    viewer.destroy();
-  }
-
   static updateViewer(
     viewer: Viewer,
     tiledImageInfos: TiledImageInfo[],
     layers: Map<string, Layer>,
     images: Map<string, Image>,
-    imageReaderFactory: (
-      options: ImageReaderOptions<string>,
-    ) => ImageReader | undefined,
+    imageReaderFactory: ImageReaderFactory<string>,
   ): TiledImageInfo[] {
     // delete old TiledImages
     const oldTiledImageInfos: TiledImageInfo[] = [];
@@ -59,7 +53,7 @@ export default class OpenSeadragonUtils {
               oldTiledImageInfo.imageId === imageId,
           );
           if (oldTiledImageIndex === -1) {
-            // create new TiledImages
+            // create new TiledImage
             const imageReader = imageReaderFactory(image.data);
             if (imageReader) {
               const newTiledImageInfo: TiledImageInfo = {
@@ -69,70 +63,37 @@ export default class OpenSeadragonUtils {
                 postLoadIndex: newTiledImageInfos.length,
                 loaded: false,
               };
-              viewer.addTiledImage({
-                tileSource: imageReader.getTileSource(),
-                index: newTiledImageInfos.length,
-                x: layer.x,
-                y: layer.y,
-                opacity:
-                  layer.visibility && image.visbility
-                    ? layer.opacity * image.opacity
-                    : 0,
-                degrees: layer.rotation,
-                flipped: layer.flipx,
-                success: (event) => {
-                  // update TiledImage width and height
-                  const e = event as unknown as { item: TiledImage };
-                  const contentSize = e.item.getContentSize();
-                  const physicalWidth = contentSize.x * image.pixelSize;
-                  const physicalHeight = contentSize.y * image.pixelSize;
-                  e.item.setWidth(physicalWidth * layer.scale);
-                  e.item.setHeight(physicalHeight * layer.scale);
-                  viewer.viewport.fitBounds(e.item.getBounds());
-                  // if necessary, execute delayed move of new TiledImage
-                  if (
-                    newTiledImageInfo.preLoadIndex !==
-                    newTiledImageInfo.postLoadIndex
-                  ) {
-                    viewer.world.setItemIndex(
-                      e.item,
-                      newTiledImageInfo.postLoadIndex,
-                    );
-                  }
-                  // if necessary, execute delayed update of new TiledImage
-                  if (newTiledImageInfo.postLoadUpdate) {
-                    OpenSeadragonUtils.updateTiledImage(e.item, layer, image);
-                  }
-                  // mark TiledImage as loaded
-                  newTiledImageInfo.loaded = true;
-                },
-              });
+              OpenSeadragonUtils.createTiledImage(
+                viewer,
+                layer,
+                image,
+                imageReader.getTileSource(),
+                newTiledImageInfo,
+              );
               newTiledImageInfos.push(newTiledImageInfo);
             } else {
               console.warn(`Unsupported image data type: ${image.data.type}`);
             }
           } else {
+            // update existing TiledImage
             const oldTiledImageInfo = oldTiledImageInfos[oldTiledImageIndex];
-            // if necessary, move existing TiledImage
             if (oldTiledImageIndex !== newTiledImageInfos.length) {
               if (oldTiledImageInfo.loaded) {
-                const oldTiledImage =
-                  viewer.world.getItemAt(oldTiledImageIndex);
                 viewer.world.setItemIndex(
-                  oldTiledImage,
+                  viewer.world.getItemAt(oldTiledImageIndex),
                   newTiledImageInfos.length,
                 );
               } else {
-                // delay move until TiledImage has been loaded
                 oldTiledImageInfo.postLoadIndex = newTiledImageInfos.length;
               }
             }
-            // update existing TiledImage
             if (oldTiledImageInfo.loaded) {
-              const oldTiledImage = viewer.world.getItemAt(oldTiledImageIndex);
-              OpenSeadragonUtils.updateTiledImage(oldTiledImage, layer, image);
+              OpenSeadragonUtils.updateTiledImage(
+                viewer.world.getItemAt(oldTiledImageIndex),
+                layer,
+                image,
+              );
             } else {
-              // delay update until TiledImage has been loaded
               oldTiledImageInfo.postLoadUpdate = true;
             }
             newTiledImageInfos.push(oldTiledImageInfo);
@@ -141,6 +102,43 @@ export default class OpenSeadragonUtils {
       }
     }
     return newTiledImageInfos;
+  }
+
+  private static createTiledImage(
+    viewer: Viewer,
+    layer: Layer,
+    image: Image,
+    tileSource: string | object,
+    tiledImageInfo: TiledImageInfo,
+  ): void {
+    viewer.addTiledImage({
+      tileSource: tileSource,
+      index: tiledImageInfo.preLoadIndex,
+      x: layer.x,
+      y: layer.y,
+      opacity:
+        layer.visibility && image.visbility ? layer.opacity * image.opacity : 0,
+      degrees: layer.rotation,
+      flipped: layer.flipx,
+      success: (event) => {
+        // update width and height
+        const e = event as unknown as { item: TiledImage };
+        const contentSize = e.item.getContentSize();
+        const physicalWidth = contentSize.x * image.pixelSize;
+        const physicalHeight = contentSize.y * image.pixelSize;
+        e.item.setWidth(physicalWidth * layer.scale);
+        e.item.setHeight(physicalHeight * layer.scale);
+        viewer.viewport.fitBounds(e.item.getBounds());
+        // if necessary, perform delayed update
+        if (tiledImageInfo.preLoadIndex !== tiledImageInfo.postLoadIndex) {
+          viewer.world.setItemIndex(e.item, tiledImageInfo.postLoadIndex);
+        }
+        if (tiledImageInfo.postLoadUpdate) {
+          OpenSeadragonUtils.updateTiledImage(e.item, layer, image);
+        }
+        tiledImageInfo.loaded = true;
+      },
+    });
   }
 
   private static updateTiledImage(

@@ -9,3 +9,7 @@ export default interface ImageReader {
 export interface ImageReaderOptions<T extends string> {
   type: T;
 }
+
+export type ImageReaderFactory<T extends string> = (
+  options: ImageReaderOptions<T>,
+) => ImageReader | undefined;

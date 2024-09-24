@@ -18,3 +18,7 @@ export default interface PointsReader {
 export interface PointsReaderOptions<T extends string> {
   type: T;
 }
+
+export type PointsReaderFactory<T extends string> = (
+  options: PointsReaderOptions<T>,
+) => PointsReader | undefined;

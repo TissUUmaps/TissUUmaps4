@@ -22,7 +22,7 @@ export default function Viewer() {
   const setViewerState = useCallback((viewerElement: HTMLDivElement | null) => {
     const viewerState = viewerStateRef.current;
     if (viewerState) {
-      OpenSeadragonUtils.destroyViewer(viewerState.viewer);
+      viewerState.viewer.destroy();
       viewerStateRef.current = null;
     }
     if (viewerElement) {

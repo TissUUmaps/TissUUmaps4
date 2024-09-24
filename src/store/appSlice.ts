@@ -1,17 +1,7 @@
-import ImageReader, { ImageReaderOptions } from "../readers/ImageReader";
-import PointsReader, { PointsReaderOptions } from "../readers/PointsReader";
-import ShapesReader, { ShapesReaderOptions } from "../readers/ShapesReader";
+import { ImageReaderFactory } from "../readers/ImageReader";
+import { PointsReaderFactory } from "../readers/PointsReader";
+import { ShapesReaderFactory } from "../readers/ShapesReader";
 import { SharedStoreSliceCreator } from "./sharedStore";
-
-type ImageReaderFactory<T extends string> = (
-  options: ImageReaderOptions<T>,
-) => ImageReader;
-type PointsReaderFactory<T extends string> = (
-  options: PointsReaderOptions<T>,
-) => PointsReader;
-type ShapesReaderFactory<T extends string> = (
-  options: ShapesReaderOptions<T>,
-) => ShapesReader;
 
 export type AppState = {
   initialized: boolean;
@@ -37,15 +27,9 @@ export type AppActions = {
   unregisterImageReader: (type: string) => void;
   unregisterPointsReader: (type: string) => void;
   unregisterShapesReader: (type: string) => void;
-  createImageReader: (
-    options: ImageReaderOptions<string>,
-  ) => ImageReader | undefined;
-  createPointsReader: (
-    options: PointsReaderOptions<string>,
-  ) => PointsReader | undefined;
-  createShapesReader: (
-    options: ShapesReaderOptions<string>,
-  ) => ShapesReader | undefined;
+  createImageReader: ImageReaderFactory<string>;
+  createPointsReader: PointsReaderFactory<string>;
+  createShapesReader: ShapesReaderFactory<string>;
 };
 
 export type AppSlice = AppState & AppActions;
