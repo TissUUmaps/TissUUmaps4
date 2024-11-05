@@ -5,9 +5,11 @@ import useSharedStore from "../store/sharedStore";
 import OpenSeadragonUtils, {
   TiledImageInfo,
 } from "../utils/OpenSeadragonUtils";
+import WebGLUtils from "../utils/WebGLUtils";
 
 type ViewerState = {
   viewer: OpenSeadragon.Viewer;
+  pointsOverlay: HTMLCanvasElement;
   tiledImageInfos: TiledImageInfo[];
 };
 
@@ -15,25 +17,32 @@ export default function Viewer() {
   const viewerStateRef = useRef<ViewerState | null>(null);
   const layers = useSharedStore((state) => state.layers);
   const images = useSharedStore((state) => state.images);
+  const points = useSharedStore((state) => state.points);
   const createImageReader = useSharedStore((state) => state.createImageReader);
 
   // use a ref callback for instantiating the OpenSeadragon viewer
   // https://react.dev/reference/react-dom/components/common#ref-callback
-  const setViewerState = useCallback((viewerElement: HTMLDivElement | null) => {
+  const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
     const viewerState = viewerStateRef.current;
     if (viewerState) {
-      viewerState.viewer.destroy();
+      WebGLUtils.destroyPointsOverlay(viewerState.pointsOverlay);
+      OpenSeadragonUtils.destroyViewer(viewerState.viewer);
       viewerStateRef.current = null;
     }
     if (viewerElement) {
+      const viewer = OpenSeadragonUtils.createViewer(viewerElement);
+      const pointsOverlay = WebGLUtils.createPointsOverlay(
+        viewer.drawer.canvas,
+      );
       viewerStateRef.current = {
-        viewer: OpenSeadragonUtils.createViewer(viewerElement),
+        viewer: viewer,
+        pointsOverlay: pointsOverlay,
         tiledImageInfos: [],
       };
     }
   }, []);
 
-  // refresh the OpenSeadragon viewer upon image/layer changes
+  // refresh the OpenSeadragon viewer upon layer/image changes
   // (note: ref callbacks are executed before useEffect hooks)
   useEffect(() => {
     const viewerState = viewerStateRef.current;
@@ -47,6 +56,15 @@ export default function Viewer() {
       );
     }
   }, [layers, images, createImageReader]);
+
+  // refresh the WebGL points overlay upon layer/points changes
+  // (note: ref callbacks are executed before useEffect hooks)
+  useEffect(() => {
+    const viewerState = viewerStateRef.current;
+    if (viewerState) {
+      // TODO
+    }
+  }, [layers, points]);
 
   // TODO global marker size slider
   // <div id="ISS_globalmarkersize" className="d-none px-1 mx-1 viewer-layer">
@@ -69,5 +87,5 @@ export default function Viewer() {
   //   />
   // </div>
 
-  return <div ref={setViewerState} id="viewer" className="h-100" />;
+  return <div ref={setViewerRef} className="h-100" />;
 }

@@ -23,6 +23,10 @@ export default class OpenSeadragonUtils {
     });
   }
 
+  static destroyViewer(viewer: Viewer) {
+    viewer.destroy();
+  }
+
   static updateViewer(
     viewer: Viewer,
     tiledImageInfos: TiledImageInfo[],
