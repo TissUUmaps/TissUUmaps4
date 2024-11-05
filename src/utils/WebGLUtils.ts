@@ -2,7 +2,8 @@ export default class WebGLUtils {
   static createPointsOverlay(
     viewerCanvas: HTMLCanvasElement | HTMLElement,
   ): HTMLCanvasElement {
-    // https://github.com/TissUUmaps/TissUUmaps/blob/0c1d1fba6746f7fbf2313711827438bed2381717/tissuumaps/static/js/utils/glUtils.js#L1991-L1997
+    // TODO potentially replace with a more modern approach (e.g. OpenSeadragon overlays)
+
     const pointsOverlay = document.createElement("canvas");
     pointsOverlay.width = 1; // TODO necessary?
     pointsOverlay.height = 1; // TODO necessary?
@@ -12,8 +13,6 @@ export default class WebGLUtils {
     pointsOverlay.style.zIndex = "12"; // TODO necessary?
     pointsOverlay.style.pointerEvents = "none"; // TODO necessary?
 
-    // TODO https://github.com/TissUUmaps/TissUUmaps/blob/0c1d1fba6746f7fbf2313711827438bed2381717/tissuumaps/static/js/utils/glUtils.js#L2608-L2668
-    //
     // canvas.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
     // canvas.addEventListener("webglcontextrestored", glUtils.restoreLostContext, false);
     //
@@ -71,7 +70,7 @@ export default class WebGLUtils {
   }
 
   static destroyPointsOverlay(pointsOverlay: HTMLCanvasElement) {
-    // TODO
+    // TODO clean up WebGL context
     pointsOverlay.remove();
   }
 }
