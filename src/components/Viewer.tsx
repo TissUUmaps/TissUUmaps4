@@ -9,7 +9,7 @@ import WebGLUtils from "../utils/WebGLUtils";
 
 type ViewerState = {
   viewer: OpenSeadragon.Viewer;
-  pointsOverlay: HTMLCanvasElement;
+  pointsCanvas: HTMLCanvasElement;
   tiledImageInfos: TiledImageInfo[];
 };
 
@@ -25,18 +25,16 @@ export default function Viewer() {
   const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
     const viewerState = viewerStateRef.current;
     if (viewerState) {
-      WebGLUtils.destroyPointsOverlay(viewerState.pointsOverlay);
+      WebGLUtils.destroyPointsCanvas(viewerState.pointsCanvas);
       OpenSeadragonUtils.destroyViewer(viewerState.viewer);
       viewerStateRef.current = null;
     }
     if (viewerElement) {
       const viewer = OpenSeadragonUtils.createViewer(viewerElement);
-      const pointsOverlay = WebGLUtils.createPointsOverlay(
-        viewer.drawer.canvas,
-      );
+      const pointsCanvas = WebGLUtils.createPointsCanvas(viewer.drawer.canvas);
       viewerStateRef.current = {
         viewer: viewer,
-        pointsOverlay: pointsOverlay,
+        pointsCanvas: pointsCanvas,
         tiledImageInfos: [],
       };
     }
@@ -57,7 +55,7 @@ export default function Viewer() {
     }
   }, [layers, images, createImageReader]);
 
-  // refresh the WebGL points overlay upon layer/points changes
+  // refresh the WebGL points canvas upon layer/points changes
   // (note: ref callbacks are executed before useEffect hooks)
   useEffect(() => {
     const viewerState = viewerStateRef.current;

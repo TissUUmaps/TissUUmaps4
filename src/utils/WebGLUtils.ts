@@ -1,17 +1,17 @@
 export default class WebGLUtils {
-  static createPointsOverlay(
+  static createPointsCanvas(
     viewerCanvas: HTMLCanvasElement | HTMLElement,
   ): HTMLCanvasElement {
     // TODO potentially replace with a more modern approach (e.g. OpenSeadragon overlays)
 
-    const pointsOverlay = document.createElement("canvas");
-    pointsOverlay.width = 1; // TODO necessary?
-    pointsOverlay.height = 1; // TODO necessary?
-    pointsOverlay.style.position = "relative";
-    pointsOverlay.style.width = "100%";
-    pointsOverlay.style.height = "100%";
-    pointsOverlay.style.zIndex = "12"; // TODO necessary?
-    pointsOverlay.style.pointerEvents = "none"; // TODO necessary?
+    const pointsCanvas = document.createElement("canvas");
+    pointsCanvas.width = 1; // TODO necessary?
+    pointsCanvas.height = 1; // TODO necessary?
+    pointsCanvas.style.position = "relative";
+    pointsCanvas.style.width = "100%";
+    pointsCanvas.style.height = "100%";
+    pointsCanvas.style.zIndex = "12"; // TODO necessary?
+    pointsCanvas.style.pointerEvents = "none"; // TODO necessary?
 
     // canvas.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
     // canvas.addEventListener("webglcontextrestored", glUtils.restoreLostContext, false);
@@ -34,7 +34,7 @@ export default class WebGLUtils {
     //   glUtils._useInstancing = false;
     // }
 
-    viewerCanvas.appendChild(pointsOverlay);
+    viewerCanvas.appendChild(pointsCanvas);
 
     // this._programs["markers"] = this._loadShaderProgram(gl, this._markersVS, this._markersFS);
     // this._programs["markers_instanced"] = this._loadShaderProgram(gl, this._markersVS, this._markersFS, "#define USE_INSTANCING\n");
@@ -66,11 +66,11 @@ export default class WebGLUtils {
     // glUtils._initialized = true;
     // glUtils.resize();  // Force initial resize to OSD canvas size
 
-    return pointsOverlay;
+    return pointsCanvas;
   }
 
-  static destroyPointsOverlay(pointsOverlay: HTMLCanvasElement) {
+  static destroyPointsCanvas(pointsCanvas: HTMLCanvasElement) {
     // TODO clean up WebGL context
-    pointsOverlay.remove();
+    pointsCanvas.remove();
   }
 }
