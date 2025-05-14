@@ -29,4 +29,20 @@ export default class MapUtils {
     }
     return new Map(entries);
   }
+
+  static cloneAndSet<K, V>(
+    map: Map<K, V>,
+    key: K,
+    value: V,
+    index?: number,
+  ): Map<K, V> {
+    map = new Map(map);
+    if (index !== undefined) {
+      map.delete(key);
+      map = MapUtils.splice(map, index, 0, [key, value]);
+    } else {
+      map.set(key, value);
+    }
+    return map;
+  }
 }

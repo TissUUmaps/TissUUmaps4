@@ -1,5 +1,5 @@
-// TODO implement ShapesPanel
-export default function ShapesPanel() {
+// TODO implement ShapesCollectionPanel
+export default function ShapesCollectionPanel() {
   return (
     <div className="panel panel-default">
       <div className="panel-body">

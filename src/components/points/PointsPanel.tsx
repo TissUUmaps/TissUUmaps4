@@ -1,61 +1,40 @@
 import { useState } from "react";
-import { Button, Collapse, Tab, Tabs } from "react-bootstrap";
+import { Button, Collapse } from "react-bootstrap";
 
-import Points from "../../model/points";
-import useSharedStore from "../../store/sharedStore";
-import MapUtils from "../../utils/MapUtils";
-import PointsGroupsPanel from "./PointsGroupsPanel";
-import PointsQuicksetPanel from "./PointsQuicksetPanel";
-import PointsSettingsPanel from "./PointsSettingsPanel";
+import { PointsModel } from "../../models/points";
+import PointsGroupSettingsPanel from "./PointsGroupSettingsPanel";
+import PointsLayerConfigsPanel from "./PointsLayerConfigsPanel";
 
-interface PointsPanelItemProps {
+interface PointsPanelProps {
   pointsId: string;
-  points: Points;
+  points: PointsModel;
 }
 
-function PointsPanelItem({ pointsId, points }: PointsPanelItemProps) {
-  const [quicksetPanelOpen, setQuicksetPanelOpen] = useState(true);
-  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
-  const [groupsPanelOpen, setGroupsPanelOpen] = useState(true);
+export default function PointsPanel({ pointsId, points }: PointsPanelProps) {
+  const [layerConfigsPanelOpen, setLayerConfigsPanelOpen] = useState(true);
+  const [groupSettingsPanelOpen, setGroupSettingsPanelOpen] = useState(true);
   return (
     <div>
       <div>
-        <Button onClick={() => setQuicksetPanelOpen(!quicksetPanelOpen)}>
-          Quickset
-        </Button>
-        <Collapse in={quicksetPanelOpen}>
-          <PointsQuicksetPanel pointsId={pointsId} points={points} />
-        </Collapse>
-      </div>
-      <div>
-        <Button onClick={() => setSettingsPanelOpen(!settingsPanelOpen)}>
+        <Button
+          onClick={() => setLayerConfigsPanelOpen(!layerConfigsPanelOpen)}
+        >
           Settings
         </Button>
-        <Collapse in={settingsPanelOpen}>
-          <PointsSettingsPanel pointsId={pointsId} points={points} />
+        <Collapse in={layerConfigsPanelOpen}>
+          <PointsLayerConfigsPanel pointsId={pointsId} points={points} />
         </Collapse>
       </div>
       <div>
-        <Button onClick={() => setGroupsPanelOpen(!groupsPanelOpen)}>
+        <Button
+          onClick={() => setGroupSettingsPanelOpen(!groupSettingsPanelOpen)}
+        >
           Groups
         </Button>
-        <Collapse in={groupsPanelOpen}>
-          <PointsGroupsPanel pointsId={pointsId} points={points} />
+        <Collapse in={groupSettingsPanelOpen}>
+          <PointsGroupSettingsPanel pointsId={pointsId} points={points} />
         </Collapse>
       </div>
     </div>
-  );
-}
-
-export default function PointsPanel() {
-  const pointsCollection = useSharedStore((state) => state.points);
-  return (
-    <Tabs>
-      {MapUtils.map(pointsCollection, (pointsId, points) => (
-        <Tab key={pointsId} title={points.name}>
-          <PointsPanelItem pointsId={pointsId} points={points} />
-        </Tab>
-      ))}
-    </Tabs>
   );
 }

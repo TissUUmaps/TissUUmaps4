@@ -1,16 +1,17 @@
 import OpenSeadragon from "openseadragon";
 import { useCallback, useEffect, useRef } from "react";
 
-import useSharedStore from "../store/sharedStore";
+import { ImageModel } from "../models/image";
+import { useSharedStore } from "../stores/sharedStore";
 import OpenSeadragonUtils, {
-  TiledImageInfo,
+  TiledImageState,
 } from "../utils/OpenSeadragonUtils";
 import WebGLUtils from "../utils/WebGLUtils";
 
 type ViewerState = {
   viewer: OpenSeadragon.Viewer;
   pointsCanvas: HTMLCanvasElement;
-  tiledImageInfos: TiledImageInfo[];
+  tiledImageStates: TiledImageState[];
 };
 
 export default function Viewer() {
@@ -18,7 +19,9 @@ export default function Viewer() {
   const layers = useSharedStore((state) => state.layers);
   const images = useSharedStore((state) => state.images);
   const points = useSharedStore((state) => state.points);
-  const createImageReader = useSharedStore((state) => state.createImageReader);
+  const createImageDataSource = useSharedStore(
+    (state) => state.createImageDataSource,
+  );
 
   // use a ref callback for instantiating the OpenSeadragon viewer
   // https://react.dev/reference/react-dom/components/common#ref-callback
@@ -35,7 +38,7 @@ export default function Viewer() {
       viewerStateRef.current = {
         viewer: viewer,
         pointsCanvas: pointsCanvas,
-        tiledImageInfos: [],
+        tiledImageStates: [],
       };
     }
   }, []);
@@ -45,15 +48,15 @@ export default function Viewer() {
   useEffect(() => {
     const viewerState = viewerStateRef.current;
     if (viewerState) {
-      viewerState.tiledImageInfos = OpenSeadragonUtils.updateViewer(
+      viewerState.tiledImageStates = OpenSeadragonUtils.updateViewer(
         viewerState.viewer,
-        viewerState.tiledImageInfos,
+        images ?? new Map<string, ImageModel>(),
         layers,
-        images,
-        createImageReader,
+        viewerState.tiledImageStates,
+        createImageDataSource,
       );
     }
-  }, [layers, images, createImageReader]);
+  }, [layers, images, createImageDataSource]);
 
   // refresh the WebGL points canvas upon layer/points changes
   // (note: ref callbacks are executed before useEffect hooks)

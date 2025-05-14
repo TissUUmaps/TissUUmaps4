@@ -3,57 +3,52 @@ import { useEffect } from "react";
 import "./App.css";
 import Menu from "./components/Menu";
 import Viewer from "./components/Viewer";
-import LayersPanel from "./components/layers/LayersPanel";
-import PointsPanel from "./components/points/PointsPanel";
+import LayersCollectionPanel from "./components/layers/LayersCollectionPanel";
+import PointsCollectionPanel from "./components/points/PointsCollectionPanel";
 import ProjectPanel from "./components/project/ProjectPanel";
-import ShapesPanel from "./components/shapes/ShapesPanel";
-import TileSourceImageReader, {
-  TILE_SOURCE_IMAGE_READER_TYPE,
-  TileSourceImageReaderOptions,
-} from "./readers/TileSourceImageReader";
-import useSharedStore from "./store/sharedStore";
+import ShapesCollectionPanel from "./components/shapes/ShapesCollectionPanel";
+import {
+  TILESOURCE_IMAGE_DATA_SOURCE,
+  TileSourceImageDataSource,
+  TileSourceImageDataSourceOptions,
+} from "./datasources/tilesource";
+import { useSharedStore } from "./stores/sharedStore";
 
 export default function App() {
   const initialized = useSharedStore((state) => state.initialized);
   const setInitialized = useSharedStore((state) => state.setInitialized);
-  const registerImageReader = useSharedStore(
-    (state) => state.registerImageReader,
+  const registerImageDataSource = useSharedStore(
+    (state) => state.registerImageDataSource,
   );
-  const registerPointsReader = useSharedStore(
-    (state) => state.registerPointsReader,
+  const registerLabelsDataSource = useSharedStore(
+    (state) => state.registerLabelsDataSource,
   );
-  const registerShapesReader = useSharedStore(
-    (state) => state.registerShapesReader,
+  const registerPointsDataSource = useSharedStore(
+    (state) => state.registerPointsDataSource,
   );
-  const unregisterImageReader = useSharedStore(
-    (state) => state.unregisterImageReader,
-  );
-  const unregisterPointsReader = useSharedStore(
-    (state) => state.unregisterPointsReader,
-  );
-  const unregisterShapesReader = useSharedStore(
-    (state) => state.unregisterShapesReader,
+  const registerShapesDataSource = useSharedStore(
+    (state) => state.registerShapesDataSource,
   );
 
   useEffect(() => {
-    registerImageReader(
-      TILE_SOURCE_IMAGE_READER_TYPE,
+    registerImageDataSource(
+      TILESOURCE_IMAGE_DATA_SOURCE,
       (options) =>
-        new TileSourceImageReader(options as TileSourceImageReaderOptions),
+        new TileSourceImageDataSource(
+          options as TileSourceImageDataSourceOptions,
+        ),
     );
     setInitialized(true);
     return () => {
       setInitialized(false);
-      unregisterImageReader(TILE_SOURCE_IMAGE_READER_TYPE);
+      // unregisterImageReader(TILE_SOURCE_IMAGE_READER_TYPE); // TODO
     };
   }, [
     setInitialized,
-    registerImageReader,
-    unregisterImageReader,
-    registerPointsReader,
-    unregisterPointsReader,
-    registerShapesReader,
-    unregisterShapesReader,
+    registerImageDataSource,
+    registerLabelsDataSource,
+    registerPointsDataSource,
+    registerShapesDataSource,
   ]);
 
   if (!initialized) {
@@ -177,13 +172,13 @@ export default function App() {
                 <ProjectPanel />
               </div>
               <div className="tab-pane" id="image-gui">
-                <LayersPanel />
+                <LayersCollectionPanel />
               </div>
               <div className="tab-pane" id="markers-iss-gui">
-                <PointsPanel />
+                <PointsCollectionPanel />
               </div>
               <div className="tab-pane" id="markers-regions-gui">
-                <ShapesPanel />
+                <ShapesCollectionPanel />
               </div>
               {/* TODO plugins panel
               <div className="tab-pane" id="plugins-gui">

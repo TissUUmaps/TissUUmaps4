@@ -1,5 +1,5 @@
-// TODO implement LayersPanel
-export default function LayersPanel() {
+// TODO implement LayersCollectionPanel
+export default function LayersCollectionPanel() {
   return (
     <div className="panel panel-default">
       <div className="panel-body">

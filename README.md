@@ -1,1 +1,1 @@
-# TissUUmaps-web
+# TissUUmaps
