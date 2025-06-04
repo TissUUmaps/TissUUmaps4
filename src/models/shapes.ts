@@ -1,14 +1,14 @@
 import {
-  DataDataSourceModel,
-  DataGroupSettingsModel,
-  DataLayerConfigModel,
-  GroupableDataModel,
+  GroupSettingsModelBase,
+  TableDataSourceModelBase,
+  TableLayerConfigModelBase,
+  TableModelBase,
 } from "./base";
 import { Color, GroupsColumn, ValuesColumn } from "./types";
 
 /** A 2D shape cloud */
 export interface ShapesModel
-  extends GroupableDataModel<
+  extends TableModelBase<
     ShapesDataSourceModel<string>,
     ShapesLayerConfigModel,
     ShapesGroupSettingsModel
@@ -26,16 +26,16 @@ export interface ShapesModel
 /** A data source for 2D shape clouds */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ShapesDataSourceModel<T extends string>
-  extends DataDataSourceModel<T> {}
+  extends TableDataSourceModelBase<T> {}
 
 /** A layer-specific display configuration for 2D shape clouds */
-export interface ShapesLayerConfigModel extends DataLayerConfigModel {
+export interface ShapesLayerConfigModel extends TableLayerConfigModelBase {
   /** Column containing shape geometries (GeoJSON Geometry objects) */
   shapeGeometry: ValuesColumn;
 }
 
 /** A group-specific display configuration for 2D shape clouds */
-export interface ShapesGroupSettingsModel extends DataGroupSettingsModel {
+export interface ShapesGroupSettingsModel extends GroupSettingsModelBase {
   /** Shape color, or undefined if not specified for this group */
   shapeColor?: Color;
 

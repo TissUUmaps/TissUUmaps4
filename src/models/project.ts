@@ -1,4 +1,4 @@
-import { Model } from "./base";
+import { ModelBase } from "./base";
 import { ImageModel } from "./image";
 import { LabelsModel } from "./labels";
 import { LayerModel } from "./layer";
@@ -6,7 +6,7 @@ import { PointsModel } from "./points";
 import { ShapesModel } from "./shapes";
 
 /** A project */
-export interface ProjectModel extends Model {
+export interface ProjectModel extends ModelBase {
   /** Name */
   name: string;
 

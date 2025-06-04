@@ -1,18 +1,25 @@
 import {
-  DataDataSourceModel,
-  DataGroupSettingsModel,
-  GroupableDataModel,
-  StaticDataLayerConfigModel,
+  GroupSettingsModelBase,
+  PixelsDataSourceModelBase,
+  PixelsLayerConfigModelBase,
+  PixelsModelBase,
+  TableDataSourceModelBase,
+  TableLayerConfigModelBase,
+  TableModelBase,
 } from "./base";
 import { Color, GroupsColumn, ValuesColumn } from "./types";
 
 /** A 2D labels mask */
 export interface LabelsModel
-  extends GroupableDataModel<
-    LabelsDataSourceModel<string>,
-    LabelsLayerConfigModel,
-    LabelsGroupSettingsModel
-  > {
+  extends PixelsModelBase<
+      LabelsDataSourceModel<string>,
+      LabelsLayerConfigModel
+    >,
+    TableModelBase<
+      LabelsDataSourceModel<string>,
+      LabelsLayerConfigModel,
+      LabelsGroupSettingsModel
+    > {
   /** Color for all labels, or column containing label-wise colors/group names (defaults to random) */
   labelColor?: Color | ValuesColumn | GroupsColumn;
 
@@ -24,16 +31,22 @@ export interface LabelsModel
 }
 
 /** A data source for 2D labels masks */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+
 export interface LabelsDataSourceModel<T extends string>
-  extends DataDataSourceModel<T> {}
+  extends PixelsDataSourceModelBase<T>,
+    TableDataSourceModelBase<T> {}
 
 /** A layer-specific display configuration for 2D labels masks */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface LabelsLayerConfigModel extends StaticDataLayerConfigModel {}
+
+export interface LabelsLayerConfigModel
+  extends PixelsLayerConfigModelBase,
+    TableLayerConfigModelBase {
+  /** Layer ID */
+  layerId: string;
+}
 
 /** A group-specific display configuration for 2D labels masks */
-export interface LabelsGroupSettingsModel extends DataGroupSettingsModel {
+export interface LabelsGroupSettingsModel extends GroupSettingsModelBase {
   /** Label color, or undefined if not specified for this group */
   labelColor?: Color;
 

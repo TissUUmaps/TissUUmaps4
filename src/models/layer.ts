@@ -1,8 +1,8 @@
-import { Model } from "./base";
+import { ModelBase } from "./base";
 import { Transform } from "./types";
 
 /** A named group of data (e.g., image, labels, points, shapes) sharing the same (e.g. physical) coordinate system */
-export interface LayerModel extends Model {
+export interface LayerModel extends ModelBase {
   /** Name */
   name: string;
 
