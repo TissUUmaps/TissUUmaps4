@@ -1,16 +1,17 @@
-import { TableSourceModelBase } from "../models/base";
-import { PointsSourceModel } from "../models/points";
-import { ShapesSourceModel } from "../models/shapes";
+import { TableDataSourceModelBase } from "../models/base";
+import { PointsDataSourceModel } from "../models/points";
+import { ShapesDataSourceModel } from "../models/shapes";
 import {
   GeoJSONGeometry,
-  PointsSourceBase,
-  ShapesSourceBase,
-  TableSourceBase,
+  PointsDataSourceBase,
+  ShapesDataSourceBase,
+  TableDataSourceBase,
   TypedArray,
 } from "./base";
 
-abstract class ParquetSource<TConfig extends TableSourceModelBase<string>>
-  implements TableSourceBase<TConfig>
+abstract class ParquetDataSourceBase<
+  TConfig extends TableDataSourceModelBase<string>,
+> implements TableDataSourceBase<TConfig>
 {
   private config: TConfig;
 
@@ -39,11 +40,11 @@ abstract class ParquetSource<TConfig extends TableSourceModelBase<string>>
   }
 }
 
-export const PARQUET_POINTS_SOURCE = "parquet-points";
+export const PARQUET_POINTS_DATA_SOURCE = "parquet";
 
-export class ParquetPointsSource
-  extends ParquetSource<ParquetPointsSourceModel>
-  implements PointsSourceBase<ParquetPointsSourceModel>
+export class ParquetPointsDataSource
+  extends ParquetDataSourceBase<ParquetPointsDataSourceModel>
+  implements PointsDataSourceBase<ParquetPointsDataSourceModel>
 {
   loadPointIDs(): Promise<TypedArray> {
     throw new Error("Method not implemented."); // TODO
@@ -60,14 +61,14 @@ export class ParquetPointsSource
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ParquetPointsSourceModel
-  extends PointsSourceModel<typeof PARQUET_POINTS_SOURCE> {}
+export interface ParquetPointsDataSourceModel
+  extends PointsDataSourceModel<typeof PARQUET_POINTS_DATA_SOURCE> {}
 
-export const PARQUET_SHAPES_SOURCE = "parquet-shapes";
+export const PARQUET_SHAPES_DATA_SOURCE = "parquet";
 
-export class ParquetShapesSource
-  extends ParquetSource<ParquetShapesSourceModel>
-  implements ShapesSourceBase<ParquetShapesSourceModel>
+export class ParquetShapesDataSource
+  extends ParquetDataSourceBase<ParquetShapesDataSourceModel>
+  implements ShapesDataSourceBase<ParquetShapesDataSourceModel>
 {
   loadShapeIDs(): Promise<TypedArray> {
     throw new Error("Method not implemented."); // TODO
@@ -79,5 +80,5 @@ export class ParquetShapesSource
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ParquetShapesSourceModel
-  extends ShapesSourceModel<typeof PARQUET_SHAPES_SOURCE> {}
+export interface ParquetShapesDataSourceModel
+  extends ShapesDataSourceModel<typeof PARQUET_SHAPES_DATA_SOURCE> {}

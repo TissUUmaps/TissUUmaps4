@@ -1,22 +1,25 @@
-import { PixelsSourceModelBase, TableSourceModelBase } from "../models/base";
-import { ImageSourceModel } from "../models/image";
-import { LabelsSourceModel } from "../models/labels";
-import { PointsSourceModel } from "../models/points";
 import {
-  ImageSourceBase,
-  LabelsSourceBase,
-  PixelsSourceBase,
-  PointsSourceBase,
-  TableSourceBase,
+  PixelsDataSourceModelBase,
+  TableDataSourceModelBase,
+} from "../models/base";
+import { ImageDataSourceModel } from "../models/image";
+import { LabelsDataSourceModel } from "../models/labels";
+import { PointsDataSourceModel } from "../models/points";
+import {
+  ImageDataSourceBase,
+  LabelsDataSourceBase,
+  PixelsDataSourceBase,
+  PointsDataSourceBase,
+  TableDataSourceBase,
   TileSourceSpec,
   TypedArray,
 } from "./base";
 
-abstract class HDF5Source<
-    TConfig extends PixelsSourceModelBase<string> &
-      TableSourceModelBase<string>,
+abstract class HDF5DataSourceBase<
+    TConfig extends PixelsDataSourceModelBase<string> &
+      TableDataSourceModelBase<string>,
   >
-  implements PixelsSourceBase<TConfig>, TableSourceBase<TConfig>
+  implements PixelsDataSourceBase<TConfig>, TableDataSourceBase<TConfig>
 {
   private config: TConfig;
 
@@ -45,11 +48,11 @@ abstract class HDF5Source<
   }
 }
 
-export const HDF5_IMAGE_SOURCE = "hdf5-image";
+export const HDF5_IMAGE_DATA_SOURCE = "hdf5";
 
-export class HDF5ImageSource
-  extends HDF5Source<HDF5ImageSourceModel>
-  implements ImageSourceBase<HDF5ImageSourceModel>
+export class HDF5ImageDataSource
+  extends HDF5DataSourceBase<HDF5ImageDataSourceModel>
+  implements ImageDataSourceBase<HDF5ImageDataSourceModel>
 {
   getImage(): TileSourceSpec {
     throw new Error("Method not implemented."); // TODO
@@ -57,14 +60,14 @@ export class HDF5ImageSource
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface HDF5ImageSourceModel
-  extends ImageSourceModel<typeof HDF5_IMAGE_SOURCE> {}
+export interface HDF5ImageDataSourceModel
+  extends ImageDataSourceModel<typeof HDF5_IMAGE_DATA_SOURCE> {}
 
-export const HDF5_LABELS_SOURCE = "hdf5-labels";
+export const HDF5_LABELS_DATA_SOURCE = "hdf5";
 
-export class HDF5LabelsSource
-  extends HDF5Source<HDF5LabelsSourceModel>
-  implements LabelsSourceBase<HDF5LabelsSourceModel>
+export class HDF5LabelsDataSource
+  extends HDF5DataSourceBase<HDF5LabelsDataSourceModel>
+  implements LabelsDataSourceBase<HDF5LabelsDataSourceModel>
 {
   async loadLabelIDs(): Promise<TypedArray> {
     return await this.loadColumn(this.getConfig().labelIDsCol);
@@ -75,16 +78,16 @@ export class HDF5LabelsSource
   }
 }
 
-export interface HDF5LabelsSourceModel
-  extends LabelsSourceModel<typeof HDF5_LABELS_SOURCE> {
+export interface HDF5LabelsDataSourceModel
+  extends LabelsDataSourceModel<typeof HDF5_LABELS_DATA_SOURCE> {
   labelIDsCol: string;
 }
 
-export const HDF5_POINTS_SOURCE = "hdf5-points";
+export const HDF5_POINTS_DATA_SOURCE = "hdf5";
 
-export class HDF5PointsSource
-  extends HDF5Source<HDF5PointsSourceModel>
-  implements PointsSourceBase<HDF5PointsSourceModel>
+export class HDF5PointsDataSource
+  extends HDF5DataSourceBase<HDF5PointsDataSourceModel>
+  implements PointsDataSourceBase<HDF5PointsDataSourceModel>
 {
   async loadPointIDs(): Promise<TypedArray> {
     return await this.loadColumn(this.getConfig().pointIDsCol);
@@ -104,8 +107,8 @@ export class HDF5PointsSource
   }
 }
 
-export interface HDF5PointsSourceModel
-  extends PointsSourceModel<typeof HDF5_POINTS_SOURCE> {
+export interface HDF5PointsDataSourceModel
+  extends PointsDataSourceModel<typeof HDF5_POINTS_DATA_SOURCE> {
   pointIDsCol: string;
   defaultXValuesCol?: string;
   defaultYValuesCol?: string;

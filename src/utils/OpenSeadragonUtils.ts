@@ -1,10 +1,10 @@
 import { Point, TiledImage, Viewer } from "openseadragon";
 
-import { ImageSourceBase } from "../datasources/base";
+import { ImageDataSourceBase } from "../datasources/base";
 import {
+  ImageDataSourceModel,
   ImageLayerConfigModel,
   ImageModel,
-  ImageSourceModel,
 } from "../models/image";
 import { LayerModel } from "../models/layer";
 import TransformUtils from "./TransformUtils";
@@ -30,9 +30,9 @@ export default class OpenSeadragonUtils {
     images: Map<string, ImageModel>,
     layers: Map<string, LayerModel>,
     tiledImageStates: TiledImageState[],
-    imageSourceFactory: (
-      config: ImageSourceModel<string>,
-    ) => ImageSourceBase<ImageSourceModel<string>> | undefined,
+    imageDataSourceFactory: (
+      config: ImageDataSourceModel<string>,
+    ) => ImageDataSourceBase<ImageDataSourceModel<string>> | undefined,
   ): TiledImageState[] {
     // delete old TiledImages
     const existingTiledImageStates: TiledImageState[] = [];
@@ -71,8 +71,8 @@ export default class OpenSeadragonUtils {
             );
             if (existingTiledImageIndex === -1) {
               // create new TiledImage
-              const imageSource = imageSourceFactory(image.dataSource);
-              if (imageSource) {
+              const imageDataSource = imageDataSourceFactory(image.dataSource);
+              if (imageDataSource) {
                 const newTiledImageState: TiledImageState = {
                   imageId: imageId,
                   layerConfigId: imageLayerConfigId,
@@ -85,7 +85,7 @@ export default class OpenSeadragonUtils {
                   image,
                   layer,
                   imageLayerConfig,
-                  imageSource.getImage(),
+                  imageDataSource.getImage(),
                   newTiledImageState,
                 );
                 newTiledImageStates.push(newTiledImageState);

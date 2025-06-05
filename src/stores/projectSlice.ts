@@ -1,4 +1,4 @@
-import { TileSourceSourceModel } from "../datasources/tilesource";
+import { OpenSeadragonImageDataSourceModel } from "../datasources/openseadragon";
 import { ImageModel } from "../models/image";
 import { LabelsModel } from "../models/labels";
 import { LayerModel } from "../models/layer";
@@ -103,14 +103,14 @@ const initialProjectState: ProjectState = {
       {
         name: "Dummy image",
         dataSource: {
-          type: "tilesource",
+          type: "openseadragon",
           tileSource: {
             type: "image",
             url: "https://openseadragon.github.io/example-images/grand-canyon-landscape-overlooking.jpg",
             crossOriginPolicy: "Anonymous",
             ajaxWithCredentials: false,
           },
-        } as TileSourceSourceModel,
+        } as OpenSeadragonImageDataSourceModel,
         layerConfigs: new Map([["dummy", { layerId: "dummy" }]]),
       },
     ],

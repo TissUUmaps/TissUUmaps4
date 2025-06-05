@@ -1,15 +1,15 @@
 import {
+  TableDataSourceModelBase,
   TableGroupSettingsModelBase,
   TableLayerConfigModelBase,
   TableModelBase,
-  TableSourceModelBase,
 } from "./base";
 import { Color, GroupsColumn, Shape, ValuesColumn } from "./types";
 
 /** A 2D point cloud */
 export interface PointsModel
   extends TableModelBase<
-    PointsSourceModel<string>,
+    PointsDataSourceModel<string>,
     PointsLayerConfigModel,
     PointsGroupSettingsModel
   > {
@@ -31,8 +31,8 @@ export interface PointsModel
 
 /** A data source for 2D point clouds */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface PointsSourceModel<T extends string>
-  extends TableSourceModelBase<T> {}
+export interface PointsDataSourceModel<T extends string>
+  extends TableDataSourceModelBase<T> {}
 
 /** A layer-specific display configuration for 2D point clouds */
 export interface PointsLayerConfigModel extends TableLayerConfigModelBase {

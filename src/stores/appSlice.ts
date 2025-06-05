@@ -1,48 +1,48 @@
 import {
-  ImageSourceBase,
-  LabelsSourceBase,
-  PointsSourceBase,
-  ShapesSourceBase,
+  ImageDataSourceBase,
+  LabelsDataSourceBase,
+  PointsDataSourceBase,
+  ShapesDataSourceBase,
 } from "../datasources/base";
-import { ImageSourceModel } from "../models/image";
-import { LabelsSourceModel } from "../models/labels";
-import { PointsSourceModel } from "../models/points";
-import { ShapesSourceModel } from "../models/shapes";
+import { ImageDataSourceModel } from "../models/image";
+import { LabelsDataSourceModel } from "../models/labels";
+import { PointsDataSourceModel } from "../models/points";
+import { ShapesDataSourceModel } from "../models/shapes";
 import { SharedStoreSliceCreator } from "./sharedStore";
 
-type ImageSourceFactory = (
-  config: ImageSourceModel<string>,
-) => ImageSourceBase<ImageSourceModel<string>> | undefined;
-type LabelsSourceFactory = (
-  config: LabelsSourceModel<string>,
-) => LabelsSourceBase<LabelsSourceModel<string>> | undefined;
-type PointsSourceFactory = (
-  config: PointsSourceModel<string>,
-) => PointsSourceBase<PointsSourceModel<string>> | undefined;
-type ShapesSourceFactory = (
-  config: ShapesSourceModel<string>,
-) => ShapesSourceBase<ShapesSourceModel<string>> | undefined;
+type ImageDataSourceFactory = (
+  config: ImageDataSourceModel<string>,
+) => ImageDataSourceBase<ImageDataSourceModel<string>> | undefined;
+type LabelsDataSourceFactory = (
+  config: LabelsDataSourceModel<string>,
+) => LabelsDataSourceBase<LabelsDataSourceModel<string>> | undefined;
+type PointsDataSourceFactory = (
+  config: PointsDataSourceModel<string>,
+) => PointsDataSourceBase<PointsDataSourceModel<string>> | undefined;
+type ShapesDataSourceFactory = (
+  config: ShapesDataSourceModel<string>,
+) => ShapesDataSourceBase<ShapesDataSourceModel<string>> | undefined;
 
 export type AppSlice = AppState & AppActions;
 
 export type AppState = {
   initialized: boolean;
-  imageSourceFactories: Map<string, ImageSourceFactory>;
-  labelsSourceFactories: Map<string, LabelsSourceFactory>;
-  pointsSourceFactories: Map<string, PointsSourceFactory>;
-  shapesSourceFactories: Map<string, ShapesSourceFactory>;
+  imageDataSourceFactories: Map<string, ImageDataSourceFactory>;
+  labelsDataSourceFactories: Map<string, LabelsDataSourceFactory>;
+  pointsDataSourceFactories: Map<string, PointsDataSourceFactory>;
+  shapesDataSourceFactories: Map<string, ShapesDataSourceFactory>;
 };
 
 export type AppActions = {
   setInitialized: (initialized: boolean) => void;
-  registerImageSource: (type: string, f: ImageSourceFactory) => void;
-  registerLabelsSource: (type: string, f: LabelsSourceFactory) => void;
-  registerPointsSource: (type: string, f: PointsSourceFactory) => void;
-  registerShapesSource: (type: string, f: ShapesSourceFactory) => void;
-  createImageSource: ImageSourceFactory;
-  createLabelsSource: LabelsSourceFactory;
-  createPointsSource: PointsSourceFactory;
-  createShapesSource: ShapesSourceFactory;
+  registerImageDataSource: (type: string, f: ImageDataSourceFactory) => void;
+  registerLabelsDataSource: (type: string, f: LabelsDataSourceFactory) => void;
+  registerPointsDataSource: (type: string, f: PointsDataSourceFactory) => void;
+  registerShapesDataSource: (type: string, f: ShapesDataSourceFactory) => void;
+  createImageDataSource: ImageDataSourceFactory;
+  createLabelsDataSource: LabelsDataSourceFactory;
+  createPointsDataSource: PointsDataSourceFactory;
+  createShapesDataSource: ShapesDataSourceFactory;
 };
 
 export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
@@ -51,54 +51,54 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
 ) => ({
   ...initialAppState,
   setInitialized: (initialized) => set({ initialized: initialized }),
-  registerImageSource: (type, f) =>
+  registerImageDataSource: (type, f) =>
     set((draft) => {
-      if (draft.imageSourceFactories.has(type)) {
+      if (draft.imageDataSourceFactories.has(type)) {
         console.warn(`Image data source already registered: ${type}`);
       }
-      draft.imageSourceFactories.set(type, f);
+      draft.imageDataSourceFactories.set(type, f);
     }),
-  registerLabelsSource: (type, f) =>
+  registerLabelsDataSource: (type, f) =>
     set((draft) => {
-      if (draft.labelsSourceFactories.has(type)) {
+      if (draft.labelsDataSourceFactories.has(type)) {
         console.warn(`Labels data source already registered: ${type}`);
       }
-      draft.labelsSourceFactories.set(type, f);
+      draft.labelsDataSourceFactories.set(type, f);
     }),
-  registerPointsSource: (type, f) =>
+  registerPointsDataSource: (type, f) =>
     set((draft) => {
-      if (draft.pointsSourceFactories.has(type)) {
+      if (draft.pointsDataSourceFactories.has(type)) {
         console.warn(`Points data source already registered: ${type}`);
       }
-      draft.pointsSourceFactories.set(type, f);
+      draft.pointsDataSourceFactories.set(type, f);
     }),
-  registerShapesSource: (type, f) =>
+  registerShapesDataSource: (type, f) =>
     set((draft) => {
-      if (draft.shapesSourceFactories.has(type)) {
+      if (draft.shapesDataSourceFactories.has(type)) {
         console.warn(`Shapes data source already registered: ${type}`);
       }
-      draft.shapesSourceFactories.set(type, f);
+      draft.shapesDataSourceFactories.set(type, f);
     }),
-  createImageSource: (config) => {
-    const f = get().imageSourceFactories.get(config.type);
+  createImageDataSource: (config) => {
+    const f = get().imageDataSourceFactories.get(config.type);
     if (f) {
       return f(config);
     }
   },
-  createLabelsSource: (config) => {
-    const f = get().labelsSourceFactories.get(config.type);
+  createLabelsDataSource: (config) => {
+    const f = get().labelsDataSourceFactories.get(config.type);
     if (f) {
       return f(config);
     }
   },
-  createPointsSource: (config) => {
-    const f = get().pointsSourceFactories.get(config.type);
+  createPointsDataSource: (config) => {
+    const f = get().pointsDataSourceFactories.get(config.type);
     if (f) {
       return f(config);
     }
   },
-  createShapesSource: (config) => {
-    const f = get().shapesSourceFactories.get(config.type);
+  createShapesDataSource: (config) => {
+    const f = get().shapesDataSourceFactories.get(config.type);
     if (f) {
       return f(config);
     }
@@ -107,8 +107,8 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
 
 const initialAppState: AppState = {
   initialized: false,
-  imageSourceFactories: new Map(),
-  labelsSourceFactories: new Map(),
-  pointsSourceFactories: new Map(),
-  shapesSourceFactories: new Map(),
+  imageDataSourceFactories: new Map(),
+  labelsDataSourceFactories: new Map(),
+  pointsDataSourceFactories: new Map(),
+  shapesDataSourceFactories: new Map(),
 };

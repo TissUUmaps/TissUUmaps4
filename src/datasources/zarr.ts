@@ -1,22 +1,25 @@
-import { PixelsSourceModelBase, TableSourceModelBase } from "../models/base";
-import { ImageSourceModel } from "../models/image";
-import { LabelsSourceModel } from "../models/labels";
-import { PointsSourceModel } from "../models/points";
 import {
-  ImageSourceBase,
-  LabelsSourceBase,
-  PixelsSourceBase,
-  PointsSourceBase,
-  TableSourceBase,
+  PixelsDataSourceModelBase,
+  TableDataSourceModelBase,
+} from "../models/base";
+import { ImageDataSourceModel } from "../models/image";
+import { LabelsDataSourceModel } from "../models/labels";
+import { PointsDataSourceModel } from "../models/points";
+import {
+  ImageDataSourceBase,
+  LabelsDataSourceBase,
+  PixelsDataSourceBase,
+  PointsDataSourceBase,
+  TableDataSourceBase,
   TileSourceSpec,
   TypedArray,
 } from "./base";
 
-abstract class ZarrSource<
-    TConfig extends PixelsSourceModelBase<string> &
-      TableSourceModelBase<string>,
+abstract class ZarrDataSourceBase<
+    TConfig extends PixelsDataSourceModelBase<string> &
+      TableDataSourceModelBase<string>,
   >
-  implements PixelsSourceBase<TConfig>, TableSourceBase<TConfig>
+  implements PixelsDataSourceBase<TConfig>, TableDataSourceBase<TConfig>
 {
   private config: TConfig;
 
@@ -45,11 +48,11 @@ abstract class ZarrSource<
   }
 }
 
-export const ZARR_IMAGE_SOURCE = "zarr-image";
+export const ZARR_IMAGE_DATA_SOURCE = "zarr";
 
-export class ZarrImageSource
-  extends ZarrSource<ZarrImageSourceModel>
-  implements ImageSourceBase<ZarrImageSourceModel>
+export class ZarrImageDataSource
+  extends ZarrDataSourceBase<ZarrImageDataSourceModel>
+  implements ImageDataSourceBase<ZarrImageDataSourceModel>
 {
   getImage(): TileSourceSpec {
     throw new Error("Method not implemented."); // TODO
@@ -57,14 +60,14 @@ export class ZarrImageSource
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ZarrImageSourceModel
-  extends ImageSourceModel<typeof ZARR_IMAGE_SOURCE> {}
+export interface ZarrImageDataSourceModel
+  extends ImageDataSourceModel<typeof ZARR_IMAGE_DATA_SOURCE> {}
 
-export const ZARR_LABELS_SOURCE = "zarr-labels";
+export const ZARR_LABELS_DATA_SOURCE = "zarr";
 
-export class ZarrLabelsSource
-  extends ZarrSource<ZarrLabelsSourceModel>
-  implements LabelsSourceBase<ZarrLabelsSourceModel>
+export class ZarrLabelsDataSource
+  extends ZarrDataSourceBase<ZarrLabelsDataSourceModel>
+  implements LabelsDataSourceBase<ZarrLabelsDataSourceModel>
 {
   async loadLabelIDs(): Promise<TypedArray> {
     return await this.loadColumn(this.getConfig().labelIDsCol);
@@ -75,16 +78,16 @@ export class ZarrLabelsSource
   }
 }
 
-export interface ZarrLabelsSourceModel
-  extends LabelsSourceModel<typeof ZARR_LABELS_SOURCE> {
+export interface ZarrLabelsDataSourceModel
+  extends LabelsDataSourceModel<typeof ZARR_LABELS_DATA_SOURCE> {
   labelIDsCol: string;
 }
 
-export const ZARR_POINTS_SOURCE = "zarr-points";
+export const ZARR_POINTS_DATA_SOURCE = "zarr";
 
-export class ZarrPointsSource
-  extends ZarrSource<ZarrPointsSourceModel>
-  implements PointsSourceBase<ZarrPointsSourceModel>
+export class ZarrPointsDataSource
+  extends ZarrDataSourceBase<ZarrPointsDataSourceModel>
+  implements PointsDataSourceBase<ZarrPointsDataSourceModel>
 {
   async loadPointIDs(): Promise<TypedArray> {
     return await this.loadColumn(this.getConfig().pointIDsCol);
@@ -104,8 +107,8 @@ export class ZarrPointsSource
   }
 }
 
-export interface ZarrPointsSourceModel
-  extends PointsSourceModel<typeof ZARR_POINTS_SOURCE> {
+export interface ZarrPointsDataSourceModel
+  extends PointsDataSourceModel<typeof ZARR_POINTS_DATA_SOURCE> {
   pointIDsCol: string;
   defaultXValuesCol?: string;
   defaultYValuesCol?: string;

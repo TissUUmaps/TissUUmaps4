@@ -8,44 +8,47 @@ import PointsCollectionPanel from "./components/points/PointsCollectionPanel";
 import ProjectPanel from "./components/project/ProjectPanel";
 import ShapesCollectionPanel from "./components/shapes/ShapesCollectionPanel";
 import {
-  TILESOURCE_SOURCE,
-  TileSourceSource,
-  TileSourceSourceModel,
-} from "./datasources/tilesource";
+  OPENSEADRAGON_IMAGE_DATA_SOURCE,
+  OpenSeadragonImageDataSource,
+  OpenSeadragonImageDataSourceModel,
+} from "./datasources/openseadragon";
 import { useSharedStore } from "./stores/sharedStore";
 
 export default function App() {
   const initialized = useSharedStore((state) => state.initialized);
   const setInitialized = useSharedStore((state) => state.setInitialized);
-  const registerImageSource = useSharedStore(
-    (state) => state.registerImageSource,
+  const registerImageDataSource = useSharedStore(
+    (state) => state.registerImageDataSource,
   );
-  const registerLabelsSource = useSharedStore(
-    (state) => state.registerLabelsSource,
+  const registerLabelsDataSource = useSharedStore(
+    (state) => state.registerLabelsDataSource,
   );
-  const registerPointsSource = useSharedStore(
-    (state) => state.registerPointsSource,
+  const registerPointsDataSource = useSharedStore(
+    (state) => state.registerPointsDataSource,
   );
-  const registerShapesSource = useSharedStore(
-    (state) => state.registerShapesSource,
+  const registerShapesDataSource = useSharedStore(
+    (state) => state.registerShapesDataSource,
   );
 
   useEffect(() => {
-    registerImageSource(
-      TILESOURCE_SOURCE,
-      (options) => new TileSourceSource(options as TileSourceSourceModel),
+    registerImageDataSource(
+      OPENSEADRAGON_IMAGE_DATA_SOURCE,
+      (options) =>
+        new OpenSeadragonImageDataSource(
+          options as OpenSeadragonImageDataSourceModel,
+        ),
     );
     setInitialized(true);
     return () => {
       setInitialized(false);
-      // unregisterImageSource(TILESOURCE_SOURCE); // TODO
+      // unregisterImageDataSource(TILESOURCE_DATA_SOURCE); // TODO
     };
   }, [
     setInitialized,
-    registerImageSource,
-    registerLabelsSource,
-    registerPointsSource,
-    registerShapesSource,
+    registerImageDataSource,
+    registerLabelsDataSource,
+    registerPointsDataSource,
+    registerShapesDataSource,
   ]);
 
   if (!initialized) {

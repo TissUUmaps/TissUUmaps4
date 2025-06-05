@@ -1,19 +1,22 @@
 import {
+  PixelsDataSourceModelBase,
   PixelsLayerConfigModelBase,
   PixelsModelBase,
-  PixelsSourceModelBase,
+  TableDataSourceModelBase,
   TableGroupSettingsModelBase,
   TableLayerConfigModelBase,
   TableModelBase,
-  TableSourceModelBase,
 } from "./base";
 import { Color, GroupsColumn, ValuesColumn } from "./types";
 
 /** A 2D labels mask */
 export interface LabelsModel
-  extends PixelsModelBase<LabelsSourceModel<string>, LabelsLayerConfigModel>,
+  extends PixelsModelBase<
+      LabelsDataSourceModel<string>,
+      LabelsLayerConfigModel
+    >,
     TableModelBase<
-      LabelsSourceModel<string>,
+      LabelsDataSourceModel<string>,
       LabelsLayerConfigModel,
       LabelsGroupSettingsModel
     > {
@@ -29,9 +32,9 @@ export interface LabelsModel
 
 /** A data source for 2D labels masks */
 
-export interface LabelsSourceModel<T extends string>
-  extends PixelsSourceModelBase<T>,
-    TableSourceModelBase<T> {}
+export interface LabelsDataSourceModel<T extends string>
+  extends PixelsDataSourceModelBase<T>,
+    TableDataSourceModelBase<T> {}
 
 /** A layer-specific display configuration for 2D labels masks */
 
