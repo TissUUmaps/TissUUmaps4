@@ -19,9 +19,7 @@ export default function Viewer() {
   const layers = useSharedStore((state) => state.layers);
   const images = useSharedStore((state) => state.images);
   const points = useSharedStore((state) => state.points);
-  const createImageDataSource = useSharedStore(
-    (state) => state.createImageDataSource,
-  );
+  const createImageSource = useSharedStore((state) => state.createImageSource);
 
   // use a ref callback for instantiating the OpenSeadragon viewer
   // https://react.dev/reference/react-dom/components/common#ref-callback
@@ -53,10 +51,10 @@ export default function Viewer() {
         images ?? new Map<string, ImageModel>(),
         layers,
         viewerState.tiledImageStates,
-        createImageDataSource,
+        createImageSource,
       );
     }
-  }, [layers, images, createImageDataSource]);
+  }, [layers, images, createImageSource]);
 
   // refresh the WebGL points canvas upon layer/points changes
   // (note: ref callbacks are executed before useEffect hooks)

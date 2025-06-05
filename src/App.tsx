@@ -8,47 +8,44 @@ import PointsCollectionPanel from "./components/points/PointsCollectionPanel";
 import ProjectPanel from "./components/project/ProjectPanel";
 import ShapesCollectionPanel from "./components/shapes/ShapesCollectionPanel";
 import {
-  TILESOURCE_IMAGE_DATA_SOURCE,
-  TileSourceImageDataSource,
-  TileSourceImageDataSourceOptions,
+  TILESOURCE_SOURCE,
+  TileSourceSource,
+  TileSourceSourceModel,
 } from "./datasources/tilesource";
 import { useSharedStore } from "./stores/sharedStore";
 
 export default function App() {
   const initialized = useSharedStore((state) => state.initialized);
   const setInitialized = useSharedStore((state) => state.setInitialized);
-  const registerImageDataSource = useSharedStore(
-    (state) => state.registerImageDataSource,
+  const registerImageSource = useSharedStore(
+    (state) => state.registerImageSource,
   );
-  const registerLabelsDataSource = useSharedStore(
-    (state) => state.registerLabelsDataSource,
+  const registerLabelsSource = useSharedStore(
+    (state) => state.registerLabelsSource,
   );
-  const registerPointsDataSource = useSharedStore(
-    (state) => state.registerPointsDataSource,
+  const registerPointsSource = useSharedStore(
+    (state) => state.registerPointsSource,
   );
-  const registerShapesDataSource = useSharedStore(
-    (state) => state.registerShapesDataSource,
+  const registerShapesSource = useSharedStore(
+    (state) => state.registerShapesSource,
   );
 
   useEffect(() => {
-    registerImageDataSource(
-      TILESOURCE_IMAGE_DATA_SOURCE,
-      (options) =>
-        new TileSourceImageDataSource(
-          options as TileSourceImageDataSourceOptions,
-        ),
+    registerImageSource(
+      TILESOURCE_SOURCE,
+      (options) => new TileSourceSource(options as TileSourceSourceModel),
     );
     setInitialized(true);
     return () => {
       setInitialized(false);
-      // unregisterImageReader(TILE_SOURCE_IMAGE_READER_TYPE); // TODO
+      // unregisterImageSource(TILESOURCE_SOURCE); // TODO
     };
   }, [
     setInitialized,
-    registerImageDataSource,
-    registerLabelsDataSource,
-    registerPointsDataSource,
-    registerShapesDataSource,
+    registerImageSource,
+    registerLabelsSource,
+    registerPointsSource,
+    registerShapesSource,
   ]);
 
   if (!initialized) {

@@ -1,10 +1,10 @@
 import { Point, TiledImage, Viewer } from "openseadragon";
 
-import { ImageDataSource } from "../datasources/base";
+import { ImageSourceBase } from "../datasources/base";
 import {
-  ImageDataSourceModel,
   ImageLayerConfigModel,
   ImageModel,
+  ImageSourceModel,
 } from "../models/image";
 import { LayerModel } from "../models/layer";
 import TransformUtils from "./TransformUtils";
@@ -30,9 +30,9 @@ export default class OpenSeadragonUtils {
     images: Map<string, ImageModel>,
     layers: Map<string, LayerModel>,
     tiledImageStates: TiledImageState[],
-    imageDataSourceFactory: (
-      config: ImageDataSourceModel<string>,
-    ) => ImageDataSource | undefined,
+    imageSourceFactory: (
+      config: ImageSourceModel<string>,
+    ) => ImageSourceBase<ImageSourceModel<string>> | undefined,
   ): TiledImageState[] {
     // delete old TiledImages
     const existingTiledImageStates: TiledImageState[] = [];
@@ -71,8 +71,8 @@ export default class OpenSeadragonUtils {
             );
             if (existingTiledImageIndex === -1) {
               // create new TiledImage
-              const imageDataSource = imageDataSourceFactory(image.dataSource);
-              if (imageDataSource) {
+              const imageSource = imageSourceFactory(image.dataSource);
+              if (imageSource) {
                 const newTiledImageState: TiledImageState = {
                   imageId: imageId,
                   layerConfigId: imageLayerConfigId,
@@ -85,13 +85,13 @@ export default class OpenSeadragonUtils {
                   image,
                   layer,
                   imageLayerConfig,
-                  imageDataSource.getImage(),
+                  imageSource.getImage(),
                   newTiledImageState,
                 );
                 newTiledImageStates.push(newTiledImageState);
               } else {
                 console.warn(
-                  `Unsupported image data source type: ${image.dataSource.type}`,
+                  `Unsupported image source type: ${image.dataSource.type}`,
                 );
               }
             } else {

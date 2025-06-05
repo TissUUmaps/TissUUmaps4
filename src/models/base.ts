@@ -4,10 +4,10 @@ import { Transform, ValuesColumn } from "./types";
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ModelBase {}
 
-/** Base interface for all entity (e.g., image, labels, points, shapes) models  */
-export interface EntityModelBase<
-  TDataSource extends TableDataSourceModelBase<string>,
-  TLayerConfig extends TableLayerConfigModelBase,
+/** Base interface for all data (e.g., image, labels, points, shapes) models  */
+export interface DataModelBase<
+  TDataSource extends DataSourceModelBase<string>,
+  TLayerConfig extends DataLayerConfigModelBase,
 > extends ModelBase {
   /** Name */
   name: string;
@@ -25,59 +25,59 @@ export interface EntityModelBase<
   opacity?: number;
 }
 
-/** Base interface for all pixels entity (e.g., image, labels) models */
+/** Base interface for all pixels (e.g., image, labels) models */
 export interface PixelsModelBase<
-  TDataSource extends PixelsDataSourceModelBase<string>,
+  TDataSource extends PixelsSourceModelBase<string>,
   TLayerConfig extends PixelsLayerConfigModelBase,
-> extends EntityModelBase<TDataSource, TLayerConfig> {
+> extends DataModelBase<TDataSource, TLayerConfig> {
   /** Physical pixel size, applied before any transformation (defaults to 1) */
   pixelSize?: number;
 }
 
-/** Base interface for all table entity (e.g. labels, points, shapes) models */
+/** Base interface for all table (e.g. labels, points, shapes) models */
 export interface TableModelBase<
-  TDataSource extends TableDataSourceModelBase<string>,
+  TDataSource extends TableSourceModelBase<string>,
   TLayerConfig extends TableLayerConfigModelBase,
-  TGroupSettings extends GroupSettingsModelBase,
-> extends EntityModelBase<TDataSource, TLayerConfig> {
+  TGroupSettings extends TableGroupSettingsModelBase,
+> extends DataModelBase<TDataSource, TLayerConfig> {
   /** Group settings (groupVar => group => settings) */
   groupSettings?: Map<string, Map<string, TGroupSettings>>;
 }
 
-/** Base interface for all data sources */
+/** Base interface for all data (e.g., image, labels, points, shapes) source models */
 export interface DataSourceModelBase<T extends string> extends ModelBase {
   /** Data source type */
   type: T;
 }
 
-/** Base interface for all pixels (e.g., image, labels) data sources */
+/** Base interface for all pixels (e.g., image, labels) source models */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface PixelsDataSourceModelBase<T extends string>
+export interface PixelsSourceModelBase<T extends string>
   extends DataSourceModelBase<T> {}
 
-/** Base interface for all table (e.g. labels, points, shapes) data sources */
+/** Base interface for all table (e.g. labels, points, shapes) source models */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface TableDataSourceModelBase<T extends string>
+export interface TableSourceModelBase<T extends string>
   extends DataSourceModelBase<T> {}
 
-/** Base interface for all layer configurations */
-export interface LayerConfigModelBase extends ModelBase {
+/** Base interface for all data (e.g., image, labels, points, shapes) layer configuration models */
+export interface DataLayerConfigModelBase extends ModelBase {
   /** Transformation from data space to layer (e.g. physical) space */
   tf2layer?: Transform;
 }
 
-/** Base interface for all pixels (e.g., image, labels) layer configurations */
-export interface PixelsLayerConfigModelBase extends LayerConfigModelBase {
+/** Base interface for all pixels (e.g., image, labels) layer configuration models */
+export interface PixelsLayerConfigModelBase extends DataLayerConfigModelBase {
   /** Layer ID */
   layerId: string;
 }
 
-/** Base interface for all table (e.g., labels, points, shapes) layer configurations */
-export interface TableLayerConfigModelBase extends LayerConfigModelBase {
+/** Base interface for all table (e.g., labels, points, shapes) layer configuration models */
+export interface TableLayerConfigModelBase extends DataLayerConfigModelBase {
   /** Layer ID for all items, or column containing item-wise layer IDs */
   layerId: string | ValuesColumn;
 }
 
 /** Base interface for all data group settings */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface GroupSettingsModelBase extends ModelBase {}
+export interface TableGroupSettingsModelBase extends ModelBase {}

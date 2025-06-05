@@ -1,28 +1,19 @@
-import { ImageDataSourceModel } from "../models/image";
-import { ImageDataSource, TileSourceSpec, TypedArray } from "./base";
+import { ImageSourceModel } from "../models/image";
+import { ImageSourceBase, TileSourceSpec } from "./base";
 
-export const TILESOURCE_IMAGE_DATA_SOURCE = "tilesource";
+export const TILESOURCE_SOURCE = "tilesource";
 
-export class TileSourceImageDataSource implements ImageDataSource {
-  private config: TileSourceImageDataSourceOptions;
+export class TileSourceSource
+  implements ImageSourceBase<TileSourceSourceModel>
+{
+  private config: TileSourceSourceModel;
 
-  constructor(config: TileSourceImageDataSourceOptions) {
+  constructor(config: TileSourceSourceModel) {
     this.config = config;
   }
 
-  getValuesColumns(): string[] {
-    return [];
-  }
-
-  getGroupsColumns(): string[] {
-    return [];
-  }
-
-  loadColumn(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _col: string,
-  ): Promise<TypedArray> {
-    throw new Error("Method not supported.");
+  getConfig(): TileSourceSourceModel {
+    return this.config;
   }
 
   getImage(): TileSourceSpec {
@@ -30,7 +21,7 @@ export class TileSourceImageDataSource implements ImageDataSource {
   }
 }
 
-export interface TileSourceImageDataSourceOptions
-  extends ImageDataSourceModel<typeof TILESOURCE_IMAGE_DATA_SOURCE> {
+export interface TileSourceSourceModel
+  extends ImageSourceModel<typeof TILESOURCE_SOURCE> {
   tileSource: TileSourceSpec;
 }

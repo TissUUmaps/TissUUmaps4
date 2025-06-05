@@ -1,3 +1,13 @@
+import {
+  DataSourceModelBase,
+  PixelsSourceModelBase,
+  TableSourceModelBase,
+} from "../models/base";
+import { ImageSourceModel } from "../models/image";
+import { LabelsSourceModel } from "../models/labels";
+import { PointsSourceModel } from "../models/points";
+import { ShapesSourceModel } from "../models/shapes";
+
 export type TypedArray =
   | Int8Array
   | Uint8Array
@@ -14,27 +24,43 @@ export type TileSourceSpec = string | object;
 
 export type GeoJSONGeometry = object;
 
-export interface DataSource {
-  getValuesColumns(): string[];
-  getGroupsColumns(): string[];
+export interface DataSourceBase<TConfig extends DataSourceModelBase<string>> {
+  getConfig(): TConfig;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface PixelsSourceBase<TConfig extends PixelsSourceModelBase<string>>
+  extends DataSourceBase<TConfig> {}
+
+export interface TableSourceBase<TConfig extends TableSourceModelBase<string>>
+  extends DataSourceBase<TConfig> {
+  getColumns(values: boolean, groups: boolean): string[];
   loadColumn(col: string): Promise<TypedArray>;
 }
 
-export interface ImageDataSource extends DataSource {
+export interface ImageSourceBase<TConfig extends ImageSourceModel<string>>
+  extends PixelsSourceBase<TConfig> {
   getImage(): TileSourceSpec;
 }
 
-export interface LabelsDataSource extends DataSource {
-  getLabels(): TileSourceSpec;
+export interface LabelsSourceBase<TConfig extends LabelsSourceModel<string>>
+  extends PixelsSourceBase<TConfig>,
+    TableSourceBase<TConfig> {
+  loadLabelIDs(): Promise<TypedArray>;
+  getLabelImage(): TileSourceSpec;
 }
 
-export interface PointsDataSource extends DataSource {
-  loadPoints(
-    xValuesCol: string,
-    yValuesCol: string,
+export interface PointsSourceBase<TConfig extends PointsSourceModel<string>>
+  extends TableSourceBase<TConfig> {
+  loadPointIDs(): Promise<TypedArray>;
+  loadPointPositions(
+    xValuesCol?: string,
+    yValuesCol?: string,
   ): Promise<[TypedArray, TypedArray]>;
 }
 
-export interface ShapesDataSource extends DataSource {
-  loadShapes(): Promise<GeoJSONGeometry[]>;
+export interface ShapesSourceBase<TConfig extends ShapesSourceModel<string>>
+  extends TableSourceBase<TConfig> {
+  loadShapeIDs(): Promise<TypedArray>;
+  loadShapeGeometries(): Promise<GeoJSONGeometry[]>;
 }

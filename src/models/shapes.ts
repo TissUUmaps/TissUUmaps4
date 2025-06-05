@@ -1,15 +1,15 @@
 import {
-  GroupSettingsModelBase,
-  TableDataSourceModelBase,
+  TableGroupSettingsModelBase,
   TableLayerConfigModelBase,
   TableModelBase,
+  TableSourceModelBase,
 } from "./base";
 import { Color, GroupsColumn, ValuesColumn } from "./types";
 
 /** A 2D shape cloud */
 export interface ShapesModel
   extends TableModelBase<
-    ShapesDataSourceModel<string>,
+    ShapesSourceModel<string>,
     ShapesLayerConfigModel,
     ShapesGroupSettingsModel
   > {
@@ -25,8 +25,8 @@ export interface ShapesModel
 
 /** A data source for 2D shape clouds */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ShapesDataSourceModel<T extends string>
-  extends TableDataSourceModelBase<T> {}
+export interface ShapesSourceModel<T extends string>
+  extends TableSourceModelBase<T> {}
 
 /** A layer-specific display configuration for 2D shape clouds */
 export interface ShapesLayerConfigModel extends TableLayerConfigModelBase {
@@ -35,7 +35,7 @@ export interface ShapesLayerConfigModel extends TableLayerConfigModelBase {
 }
 
 /** A group-specific display configuration for 2D shape clouds */
-export interface ShapesGroupSettingsModel extends GroupSettingsModelBase {
+export interface ShapesGroupSettingsModel extends TableGroupSettingsModelBase {
   /** Shape color, or undefined if not specified for this group */
   shapeColor?: Color;
 

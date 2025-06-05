@@ -1,4 +1,4 @@
-import { TileSourceImageDataSourceOptions } from "../datasources/tilesource";
+import { TileSourceSourceModel } from "../datasources/tilesource";
 import { ImageModel } from "../models/image";
 import { LabelsModel } from "../models/labels";
 import { LayerModel } from "../models/layer";
@@ -110,7 +110,7 @@ const initialProjectState: ProjectState = {
             crossOriginPolicy: "Anonymous",
             ajaxWithCredentials: false,
           },
-        } as TileSourceImageDataSourceOptions,
+        } as TileSourceSourceModel,
         layerConfigs: new Map([["dummy", { layerId: "dummy" }]]),
       },
     ],
