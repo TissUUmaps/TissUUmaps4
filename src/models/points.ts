@@ -1,50 +1,50 @@
 import {
-  TableDataSourceModelBase,
-  TableGroupSettingsModelBase,
-  TableLayerConfigModelBase,
-  TableModelBase,
+  DataSourceModelBase,
+  GroupSettingsModelBase,
+  LayerConfigModelBase,
+  ObjectDataModelBase,
 } from "./base";
-import { Color, GroupsColumn, Shape, ValuesColumn } from "./types";
+import { Color, Shape, TableGroupsColumn, TableValuesColumn } from "./types";
 
 /** A 2D point cloud */
 export interface PointsModel
-  extends TableModelBase<
+  extends ObjectDataModelBase<
     PointsDataSourceModel<string>,
     PointsLayerConfigModel,
     PointsGroupSettingsModel
   > {
   /** Size for all points, or column containing point-wise sizes/group names (defaults to 1) */
-  pointSize?: number | ValuesColumn | GroupsColumn;
+  pointSize?: number | TableValuesColumn | TableGroupsColumn;
 
   /** Shape for all points, or column containing point-wise shapes/group names (defaults to "circle") */
-  pointShape?: Shape | ValuesColumn | GroupsColumn;
+  pointShape?: Shape | TableValuesColumn | TableGroupsColumn;
 
   /** Color for all points, or column containing point-wise colors/group names (defaults to random) */
-  pointColor?: Color | ValuesColumn | GroupsColumn;
+  pointColor?: Color | TableValuesColumn | TableGroupsColumn;
 
   /** Visibility for all points, or column containing point-wise visibilities/group names (defaults to true) */
-  pointVisibility?: boolean | ValuesColumn | GroupsColumn;
+  pointVisibility?: boolean | TableValuesColumn | TableGroupsColumn;
 
   /** Opacity for all points, between 0 and 1, or column containing point-wise opacities/group names (defaults to 1) */
-  pointOpacity?: number | ValuesColumn | GroupsColumn;
+  pointOpacity?: number | TableValuesColumn | TableGroupsColumn;
 }
 
 /** A data source for 2D point clouds */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface PointsDataSourceModel<T extends string>
-  extends TableDataSourceModelBase<T> {}
+  extends DataSourceModelBase<T> {}
 
 /** A layer-specific display configuration for 2D point clouds */
-export interface PointsLayerConfigModel extends TableLayerConfigModelBase {
+export interface PointsLayerConfigModel extends LayerConfigModelBase {
   /** Column containing point-wise X coordinates */
-  pointPosX: ValuesColumn;
+  pointPosX: TableValuesColumn;
 
   /** Column containing point-wise Y coordinates */
-  pointPosY: ValuesColumn;
+  pointPosY: TableValuesColumn;
 }
 
 /** A group-specific display configuration for 2D point clouds */
-export interface PointsGroupSettingsModel extends TableGroupSettingsModelBase {
+export interface PointsGroupSettingsModel extends GroupSettingsModelBase {
   /** Point size, or undefined if not specified for this group */
   pointSize?: number;
 

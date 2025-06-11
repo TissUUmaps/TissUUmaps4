@@ -1,8 +1,9 @@
 {
   "importOrder": [
-    "^@model/(.*)$",
-    "^@store/(.*)$",
+    "^@models/(.*)$",
+    "^@stores/(.*)$",
     "^@readers/(.*)$",
+    "^@datasources/(.*)$",
     "^@utils/(.*)$",
 
     "^@assets/(.*)$",

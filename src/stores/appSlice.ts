@@ -39,6 +39,10 @@ export type AppActions = {
   registerLabelsDataSource: (type: string, f: LabelsDataSourceFactory) => void;
   registerPointsDataSource: (type: string, f: PointsDataSourceFactory) => void;
   registerShapesDataSource: (type: string, f: ShapesDataSourceFactory) => void;
+  deregisterImageDataSource: (type: string) => void;
+  deregisterLabelsDataSource: (type: string) => void;
+  deregisterPointsDataSource: (type: string) => void;
+  deregisterShapesDataSource: (type: string) => void;
   createImageDataSource: ImageDataSourceFactory;
   createLabelsDataSource: LabelsDataSourceFactory;
   createPointsDataSource: PointsDataSourceFactory;
@@ -78,6 +82,34 @@ export const createAppSlice: SharedStoreSliceCreator<AppSlice> = (
         console.warn(`Shapes data source already registered: ${type}`);
       }
       draft.shapesDataSourceFactories.set(type, f);
+    }),
+  deregisterImageDataSource: (type) =>
+    set((draft) => {
+      if (!draft.imageDataSourceFactories.has(type)) {
+        console.warn(`Image data source not registered: ${type}`);
+      }
+      draft.imageDataSourceFactories.delete(type);
+    }),
+  deregisterLabelsDataSource: (type) =>
+    set((draft) => {
+      if (!draft.labelsDataSourceFactories.has(type)) {
+        console.warn(`Labels data source not registered: ${type}`);
+      }
+      draft.labelsDataSourceFactories.delete(type);
+    }),
+  deregisterPointsDataSource: (type) =>
+    set((draft) => {
+      if (!draft.pointsDataSourceFactories.has(type)) {
+        console.warn(`Points data source not registered: ${type}`);
+      }
+      draft.pointsDataSourceFactories.delete(type);
+    }),
+  deregisterShapesDataSource: (type) =>
+    set((draft) => {
+      if (!draft.shapesDataSourceFactories.has(type)) {
+        console.warn(`Shapes data source not registered: ${type}`);
+      }
+      draft.shapesDataSourceFactories.delete(type);
     }),
   createImageDataSource: (config) => {
     const f = get().imageDataSourceFactories.get(config.type);

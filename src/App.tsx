@@ -29,19 +29,33 @@ export default function App() {
   const registerShapesDataSource = useSharedStore(
     (state) => state.registerShapesDataSource,
   );
+  const deregisterImageDataSource = useSharedStore(
+    (state) => state.deregisterImageDataSource,
+  );
+  const deregisterLabelsDataSource = useSharedStore(
+    (state) => state.deregisterLabelsDataSource,
+  );
+  const deregisterPointsDataSource = useSharedStore(
+    (state) => state.deregisterPointsDataSource,
+  );
+  const deregisterShapesDataSource = useSharedStore(
+    (state) => state.deregisterShapesDataSource,
+  );
 
   useEffect(() => {
+    // TODO register all data sources
     registerImageDataSource(
       OPENSEADRAGON_IMAGE_DATA_SOURCE,
-      (options) =>
+      (config) =>
         new OpenSeadragonImageDataSource(
-          options as OpenSeadragonImageDataSourceModel,
+          config as OpenSeadragonImageDataSourceModel,
         ),
     );
     setInitialized(true);
     return () => {
       setInitialized(false);
-      // unregisterImageDataSource(TILESOURCE_DATA_SOURCE); // TODO
+      // TODO deregister all data sources
+      deregisterImageDataSource(OPENSEADRAGON_IMAGE_DATA_SOURCE);
     };
   }, [
     setInitialized,
@@ -49,6 +63,10 @@ export default function App() {
     registerLabelsDataSource,
     registerPointsDataSource,
     registerShapesDataSource,
+    deregisterImageDataSource,
+    deregisterLabelsDataSource,
+    deregisterPointsDataSource,
+    deregisterShapesDataSource,
   ]);
 
   if (!initialized) {

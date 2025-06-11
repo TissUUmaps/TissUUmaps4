@@ -4,6 +4,7 @@ import { LabelsModel } from "./labels";
 import { LayerModel } from "./layer";
 import { PointsModel } from "./points";
 import { ShapesModel } from "./shapes";
+import { TableModel } from "./table";
 
 /** A project */
 export interface ProjectModel extends ModelBase {
@@ -24,4 +25,7 @@ export interface ProjectModel extends ModelBase {
 
   /** Shapes (shapes ID -> shapes) */
   shapes?: Map<string, ShapesModel>;
+
+  /** Tables (table ID -> table) */
+  tables?: Map<string, TableModel>;
 }
