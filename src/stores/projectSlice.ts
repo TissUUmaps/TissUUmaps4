@@ -1,40 +1,42 @@
-import { OpenSeadragonImageDataSourceModel } from "../datasources/openseadragon";
-import { ImageModel } from "../models/image";
-import { LabelsModel } from "../models/labels";
-import { LayerModel } from "../models/layer";
-import { PointsModel } from "../models/points";
-import { ProjectModel } from "../models/project";
-import { ShapesModel } from "../models/shapes";
+import { IImageModel } from "../models/image";
+import { ILabelsModel } from "../models/labels";
+import { ILayerModel } from "../models/layer";
+import { IPointsModel } from "../models/points";
+import { IProjectModel } from "../models/project";
+import { IShapesModel } from "../models/shapes";
+import { ITableModel } from "../models/table";
 import MapUtils from "../utils/MapUtils";
 import { SharedStoreSliceCreator } from "./sharedStore";
 
 export type ProjectSlice = ProjectState & ProjectActions;
 
-export type ProjectState = ProjectModel;
+export type ProjectState = IProjectModel;
 
 export type ProjectActions = {
-  setLayer: (layerId: string, layer: LayerModel, layerIndex?: number) => void;
+  setLayer: (layerId: string, layer: ILayerModel, layerIndex?: number) => void;
   deleteLayer: (layerId: string) => void;
-  setImage: (imageId: string, image: ImageModel, imageIndex?: number) => void;
+  setImage: (imageId: string, image: IImageModel, imageIndex?: number) => void;
   deleteImage: (imageId: string) => void;
   setLabels: (
     labelsId: string,
-    labels: LabelsModel,
+    labels: ILabelsModel,
     labelsIndex?: number,
   ) => void;
   deleteLabels: (labelsId: string) => void;
   setPoints: (
     pointsId: string,
-    points: PointsModel,
+    points: IPointsModel,
     pointsIndex?: number,
   ) => void;
   deletePoints: (pointsId: string) => void;
   setShapes: (
     shapesId: string,
-    shapes: ShapesModel,
+    shapes: IShapesModel,
     shapesIndex?: number,
   ) => void;
   deleteShapes: (shapesId: string) => void;
+  setTable: (tableId: string, table: ITableModel, tableIndex?: number) => void;
+  deleteTable: (tableId: string) => void;
 };
 
 export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
@@ -44,13 +46,13 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
   setLayer: (layerId, layer, layerIndex) =>
     set((draft) => {
       draft.layers = MapUtils.cloneAndSet(
-        draft.layers,
+        draft.layers ?? new Map(),
         layerId,
         layer,
         layerIndex,
       );
     }),
-  deleteLayer: (layerId) => set((draft) => draft.layers.delete(layerId)),
+  deleteLayer: (layerId) => set((draft) => draft.layers?.delete(layerId)),
   setImage: (imageId, image, imageIndex) =>
     set((draft) => {
       draft.images = MapUtils.cloneAndSet(
@@ -91,28 +93,18 @@ export const createProjectSlice: SharedStoreSliceCreator<ProjectSlice> = (
       );
     }),
   deleteShapes: (shapesId) => set((draft) => draft.shapes?.delete(shapesId)),
+  setTable: (tableId, table, tableIndex) =>
+    set((draft) => {
+      draft.tables = MapUtils.cloneAndSet(
+        draft.tables ?? new Map(),
+        tableId,
+        table,
+        tableIndex,
+      );
+    }),
+  deleteTable: (tableId) => set((draft) => draft.tables?.delete(tableId)),
 });
 
-// TODO remove dummy data
 const initialProjectState: ProjectState = {
-  name: "Dummy project",
-  layers: new Map([["dummy", { name: "Dummy layer" }]]),
-  images: new Map([
-    [
-      "dummy",
-      {
-        name: "Dummy image",
-        dataSource: {
-          type: "openseadragon",
-          tileSource: {
-            type: "image",
-            url: "https://openseadragon.github.io/example-images/grand-canyon-landscape-overlooking.jpg",
-            crossOriginPolicy: "Anonymous",
-            ajaxWithCredentials: false,
-          },
-        } as OpenSeadragonImageDataSourceModel,
-        layerConfigs: new Map([["dummy", { layerId: "dummy" }]]),
-      },
-    ],
-  ]),
+  name: "New project",
 };

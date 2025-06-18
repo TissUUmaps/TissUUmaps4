@@ -1,24 +1,24 @@
-import { TableGroupsColumn, TableValuesColumn, Transform } from "./types";
+import { TableValuesColumn, Transform } from "./types";
 
 /** Base interface for all models */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ModelBase {}
+export interface IModel {}
 
 /** Base interface for all data models */
-export interface DataModelBase<TDataSource extends DataSourceModelBase<string>>
-  extends ModelBase {
+export interface IDataModel<TDataSourceModel extends IDataSourceModel<string>>
+  extends IModel {
   /** Name */
   name: string;
 
   /** Data source */
-  dataSource: TDataSource;
+  dataSource: TDataSourceModel;
 }
 
 /** Base interface for all rendered data models  */
-export interface RenderedDataModelBase<
-  TDataSource extends DataSourceModelBase<string>,
-  TLayerConfig extends LayerConfigModelBase,
-> extends DataModelBase<TDataSource> {
+export interface IRenderedDataModel<
+  TDataSourceModel extends IDataSourceModel<string>,
+  TLayerConfigModel extends ILayerConfigModel,
+> extends IDataModel<TDataSourceModel> {
   /** Visibility (defaults to true) */
   visibility?: boolean;
 
@@ -26,36 +26,36 @@ export interface RenderedDataModelBase<
   opacity?: number;
 
   /** Layer configurations (layer configuration ID -> layer configuration) */
-  layerConfigs: Map<string, TLayerConfig>;
+  layerConfigs: Map<string, TLayerConfigModel>;
 }
 
 /** Base interface for all pixel data models */
-export interface PixelDataModelBase<
-  TDataSource extends DataSourceModelBase<string>,
-  TLayerConfig extends LayerConfigModelBase,
-> extends RenderedDataModelBase<TDataSource, TLayerConfig> {
+export interface IPixelDataModel<
+  TDataSourceModel extends IDataSourceModel<string>,
+  TLayerConfigModel extends ILayerConfigModel,
+> extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {
   /** Physical pixel size, applied before any transformation (defaults to 1) */
   pixelSize?: number;
 }
 
 /** Base interface for all object data models */
-export interface ObjectDataModelBase<
-  TDataSource extends DataSourceModelBase<string>,
-  TLayerConfig extends LayerConfigModelBase,
-  TGroupSettings extends GroupSettingsModelBase,
-> extends RenderedDataModelBase<TDataSource, TLayerConfig> {
+export interface IObjectDataModel<
+  TDataSourceModel extends IDataSourceModel<string>,
+  TLayerConfigModel extends ILayerConfigModel,
+  TGroupSettingsModel extends IGroupSettingsModel,
+> extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {
   /** Group settings (groupVar => group => settings) */
-  groupSettings?: Map<TableGroupsColumn, Map<object, TGroupSettings>>;
+  groupSettings?: Map<string, Map<string, TGroupSettingsModel>>;
 }
 
 /** Base interface for all data source models */
-export interface DataSourceModelBase<TType extends string> extends ModelBase {
+export interface IDataSourceModel<TType extends string> extends IModel {
   /** Data source type */
   type: TType;
 }
 
 /** Base interface for all layer configuration models */
-export interface LayerConfigModelBase extends ModelBase {
+export interface ILayerConfigModel extends IModel {
   /** Layer ID for all items, or column containing item-wise layer IDs */
   layerId: string | TableValuesColumn;
 
@@ -65,4 +65,4 @@ export interface LayerConfigModelBase extends ModelBase {
 
 /** Base interface for all table group settings models */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface GroupSettingsModelBase extends ModelBase {}
+export interface IGroupSettingsModel extends IModel {}

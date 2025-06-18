@@ -1,13 +1,13 @@
 import { IPointsModel } from "../../models/points";
 
-type PointsGroupSettingsPanelProps = {
+type PointsSettingsPanelProps = {
   pointsId: string;
   points: IPointsModel;
 };
 
-export default function PointsGroupSettingsPanel(
+export default function PointsSettingsPanel(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _props: PointsGroupSettingsPanelProps,
+  _props: PointsSettingsPanelProps,
 ) {
   return <></>;
 }

@@ -1,40 +1,20 @@
-import { useState } from "react";
-import { Button, Collapse } from "react-bootstrap";
-
-import { PointsModel } from "../../models/points";
+import { IPointsModel } from "../../models/points";
 import PointsGroupSettingsPanel from "./PointsGroupSettingsPanel";
-import PointsLayerConfigsPanel from "./PointsLayerConfigsPanel";
+import PointsSettingsPanel from "./PointsSettingsPanel";
 
-interface PointsPanelProps {
+type PointsPanelProps = {
   pointsId: string;
-  points: PointsModel;
-}
+  points: IPointsModel;
+};
 
-export default function PointsPanel({ pointsId, points }: PointsPanelProps) {
-  const [layerConfigsPanelOpen, setLayerConfigsPanelOpen] = useState(true);
-  const [groupSettingsPanelOpen, setGroupSettingsPanelOpen] = useState(true);
+export default function PointsPanel(props: PointsPanelProps) {
   return (
-    <div>
-      <div>
-        <Button
-          onClick={() => setLayerConfigsPanelOpen(!layerConfigsPanelOpen)}
-        >
-          Settings
-        </Button>
-        <Collapse in={layerConfigsPanelOpen}>
-          <PointsLayerConfigsPanel pointsId={pointsId} points={points} />
-        </Collapse>
-      </div>
-      <div>
-        <Button
-          onClick={() => setGroupSettingsPanelOpen(!groupSettingsPanelOpen)}
-        >
-          Groups
-        </Button>
-        <Collapse in={groupSettingsPanelOpen}>
-          <PointsGroupSettingsPanel pointsId={pointsId} points={points} />
-        </Collapse>
-      </div>
-    </div>
+    <>
+      <PointsSettingsPanel pointsId={props.pointsId} points={props.points} />
+      <PointsGroupSettingsPanel
+        pointsId={props.pointsId}
+        points={props.points}
+      />
+    </>
   );
 }

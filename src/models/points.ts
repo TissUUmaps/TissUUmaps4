@@ -1,17 +1,17 @@
 import {
-  DataSourceModelBase,
-  GroupSettingsModelBase,
-  LayerConfigModelBase,
-  ObjectDataModelBase,
+  IDataSourceModel,
+  IGroupSettingsModel,
+  ILayerConfigModel,
+  IObjectDataModel,
 } from "./base";
 import { Color, Shape, TableGroupsColumn, TableValuesColumn } from "./types";
 
 /** A 2D point cloud */
-export interface PointsModel
-  extends ObjectDataModelBase<
-    PointsDataSourceModel<string>,
-    PointsLayerConfigModel,
-    PointsGroupSettingsModel
+export interface IPointsModel
+  extends IObjectDataModel<
+    IPointsDataSourceModel<string>,
+    IPointsLayerConfigModel,
+    IPointsGroupSettingsModel
   > {
   /** Size for all points, or column containing point-wise sizes/group names (defaults to 1) */
   pointSize?: number | TableValuesColumn | TableGroupsColumn;
@@ -31,11 +31,11 @@ export interface PointsModel
 
 /** A data source for 2D point clouds */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface PointsDataSourceModel<T extends string>
-  extends DataSourceModelBase<T> {}
+export interface IPointsDataSourceModel<TType extends string>
+  extends IDataSourceModel<TType> {}
 
 /** A layer-specific display configuration for 2D point clouds */
-export interface PointsLayerConfigModel extends LayerConfigModelBase {
+export interface IPointsLayerConfigModel extends ILayerConfigModel {
   /** Column containing point-wise X coordinates */
   pointPosX: TableValuesColumn;
 
@@ -44,7 +44,7 @@ export interface PointsLayerConfigModel extends LayerConfigModelBase {
 }
 
 /** A group-specific display configuration for 2D point clouds */
-export interface PointsGroupSettingsModel extends GroupSettingsModelBase {
+export interface IPointsGroupSettingsModel extends IGroupSettingsModel {
   /** Point size, or undefined if not specified for this group */
   pointSize?: number;
 

@@ -1,17 +1,17 @@
 import {
-  DataSourceModelBase,
-  GroupSettingsModelBase,
-  LayerConfigModelBase,
-  ObjectDataModelBase,
+  IDataSourceModel,
+  IGroupSettingsModel,
+  ILayerConfigModel,
+  IObjectDataModel,
 } from "./base";
 import { Color, TableGroupsColumn, TableValuesColumn } from "./types";
 
 /** A 2D shape cloud */
-export interface ShapesModel
-  extends ObjectDataModelBase<
-    ShapesDataSourceModel<string>,
-    ShapesLayerConfigModel,
-    ShapesGroupSettingsModel
+export interface IShapesModel
+  extends IObjectDataModel<
+    IShapesDataSourceModel<string>,
+    IShapesLayerConfigModel,
+    IShapesGroupSettingsModel
   > {
   /** Color for all shapes, or a column containing shape-wise colors/group names (defaults to random) */
   shapeColor?: Color | TableValuesColumn | TableGroupsColumn;
@@ -25,15 +25,15 @@ export interface ShapesModel
 
 /** A data source for 2D shape clouds */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ShapesDataSourceModel<T extends string>
-  extends DataSourceModelBase<T> {}
+export interface IShapesDataSourceModel<TType extends string>
+  extends IDataSourceModel<TType> {}
 
 /** A layer-specific display configuration for 2D shape clouds */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ShapesLayerConfigModel extends LayerConfigModelBase {}
+export interface IShapesLayerConfigModel extends ILayerConfigModel {}
 
 /** A group-specific display configuration for 2D shape clouds */
-export interface ShapesGroupSettingsModel extends GroupSettingsModelBase {
+export interface IShapesGroupSettingsModel extends IGroupSettingsModel {
   /** Shape color, or undefined if not specified for this group */
   shapeColor?: Color;
 

@@ -1,31 +1,31 @@
-import { ModelBase } from "./base";
-import { ImageModel } from "./image";
-import { LabelsModel } from "./labels";
-import { LayerModel } from "./layer";
-import { PointsModel } from "./points";
-import { ShapesModel } from "./shapes";
-import { TableModel } from "./table";
+import { IModel } from "./base";
+import { IImageModel } from "./image";
+import { ILabelsModel } from "./labels";
+import { ILayerModel } from "./layer";
+import { IPointsModel } from "./points";
+import { IShapesModel } from "./shapes";
+import { ITableModel } from "./table";
 
 /** A project */
-export interface ProjectModel extends ModelBase {
+export interface IProjectModel extends IModel {
   /** Name */
   name: string;
 
   /** Layers (layer ID -> layer) */
-  layers: Map<string, LayerModel>;
+  layers?: Map<string, ILayerModel>;
 
   /** Images (image ID -> image) */
-  images?: Map<string, ImageModel>;
+  images?: Map<string, IImageModel>;
 
   /** Labels (labels ID -> labels) */
-  labels?: Map<string, LabelsModel>;
+  labels?: Map<string, ILabelsModel>;
 
   /** Points (points ID -> points) */
-  points?: Map<string, PointsModel>;
+  points?: Map<string, IPointsModel>;
 
   /** Shapes (shapes ID -> shapes) */
-  shapes?: Map<string, ShapesModel>;
+  shapes?: Map<string, IShapesModel>;
 
   /** Tables (table ID -> table) */
-  tables?: Map<string, TableModel>;
+  tables?: Map<string, ITableModel>;
 }

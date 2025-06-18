@@ -1,12 +1,11 @@
-import { DataModelBase, DataSourceModelBase } from "./base";
+import { IDataModel, IDataSourceModel } from "./base";
 
-/** A 2D raster image */
-export interface TableModel
-  extends DataModelBase<TableDataSourceModel<string>> {
+/** A table */
+export interface ITableModel extends IDataModel<ITableDataSourceModel<string>> {
   idCol: string;
 }
 
-/** A data source for 2D raster images */
+/** A data source for tables */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface TableDataSourceModel<T extends string>
-  extends DataSourceModelBase<T> {}
+export interface ITableDataSourceModel<TType extends string>
+  extends IDataSourceModel<TType> {}
