@@ -3,8 +3,8 @@ import { IData, IDataLoader } from "./base";
 import { IntArray, TypedArray, UintArray } from "./types";
 
 export interface ITableData extends IData {
-  index: IntArray | UintArray;
-  columns: string[];
+  readonly columns: string[];
+  readonly index: IntArray | UintArray;
   getData(column: string): string[] | TypedArray;
 }
 

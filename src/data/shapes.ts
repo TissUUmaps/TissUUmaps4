@@ -3,8 +3,8 @@ import { IData, IDataLoader } from "./base";
 import { GeoJSONGeometry, IntArray, UintArray } from "./types";
 
 export interface IShapesData extends IData {
-  shapes: IntArray | UintArray;
-  geometries: GeoJSONGeometry[];
+  readonly shapeIds: IntArray | UintArray;
+  readonly shapeGeometries: GeoJSONGeometry[];
 }
 
 export interface IShapesDataLoader extends IDataLoader {

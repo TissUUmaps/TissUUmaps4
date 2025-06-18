@@ -3,8 +3,8 @@ import { IData, IDataLoader } from "./base";
 import { CustomTileSource, IntArray, UintArray } from "./types";
 
 export interface ILabelsData extends IData {
-  labels: IntArray | UintArray;
-  tileSource: string | CustomTileSource;
+  readonly labelIds: IntArray | UintArray;
+  readonly labelsTileSource: string | CustomTileSource;
 }
 
 export interface ILabelsDataLoader extends IDataLoader {

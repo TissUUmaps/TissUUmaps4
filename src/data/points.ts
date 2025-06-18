@@ -3,9 +3,9 @@ import { IData, IDataLoader } from "./base";
 import { IntArray, TypedArray, UintArray } from "./types";
 
 export interface IPointsData extends IData {
-  points: IntArray | UintArray;
-  dimensions: string[];
-  getCoordinates(dimension: string): TypedArray;
+  readonly dimensions: string[];
+  readonly pointIds: IntArray | UintArray;
+  getPointCoordinates(dimension: string): TypedArray;
 }
 
 export interface IPointsDataLoader extends IDataLoader {
