@@ -7,17 +7,18 @@ export type ProjectSliceState = {
 };
 
 export type ProjectSliceActions = {
-  setProjectName: (name: string) => void;
+  setProjectName: (projectName: string) => void;
 };
 
 export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
   set,
 ) => ({
   ...initialProjectSliceState,
-  setProjectName: (name) =>
+  setProjectName: (projectName) => {
     set((draft) => {
-      draft.projectName = name;
-    }),
+      draft.projectName = projectName;
+    });
+  },
 });
 
 const initialProjectSliceState: ProjectSliceState = {

@@ -4,18 +4,18 @@ import { BoundStoreStateCreator } from "./boundStore";
 
 export type LayerSlice = LayerSliceState & LayerSliceActions;
 
-export interface LayerSliceState {
+export type LayerSliceState = {
   layers: Map<string, ILayerModel>;
-}
+};
 
-export interface LayerSliceActions {
+export type LayerSliceActions = {
   setLayer: (layerId: string, layer: ILayerModel, layerIndex?: number) => void;
   deleteLayer: (layerId: string) => void;
-}
+};
 
 export const createLayerSlice: BoundStoreStateCreator<LayerSlice> = (set) => ({
   ...initialLayerSliceState,
-  setLayer: (layerId, layer, layerIndex) =>
+  setLayer: (layerId, layer, layerIndex) => {
     set((draft) => {
       draft.layers = MapUtils.cloneAndSet(
         draft.layers,
@@ -23,8 +23,11 @@ export const createLayerSlice: BoundStoreStateCreator<LayerSlice> = (set) => ({
         layer,
         layerIndex,
       );
-    }),
-  deleteLayer: (layerId) => set((draft) => draft.layers.delete(layerId)),
+    });
+  },
+  deleteLayer: (layerId) => {
+    set((draft) => draft.layers.delete(layerId));
+  },
 });
 
 const initialLayerSliceState: LayerSliceState = {
