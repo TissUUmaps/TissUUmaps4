@@ -1,9 +1,9 @@
-import { useSharedStore } from "../../stores/sharedStore";
+import { useBoundStore } from "../../stores/boundStore";
 import MapUtils from "../../utils/MapUtils";
 import ImagePanel from "./ImagePanel";
 
 export default function ImageCollectionPanel() {
-  const images = useSharedStore((state) => state.images);
+  const images = useBoundStore((state) => state.images);
   return (
     <>
       {images &&

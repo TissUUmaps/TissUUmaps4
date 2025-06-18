@@ -4,7 +4,6 @@ import {
   DockviewReadyEvent,
   IDockviewPanelHeaderProps,
 } from "dockview-react";
-import { useEffect } from "react";
 
 import "./App.css";
 import ProjectPanel from "./components/ProjectPanel";
@@ -14,18 +13,17 @@ import LabelsCollectionPanel from "./components/labels/LabelsCollectionPanel";
 import PointsCollectionPanel from "./components/points/PointsCollectionPanel";
 import ShapesCollectionPanel from "./components/shapes/ShapesCollectionPanel";
 import TableCollectionPanel from "./components/tables/TableCollectionPanel";
-import { useSharedStore } from "./stores/sharedStore";
 
 export default function App() {
-  const initialized = useSharedStore((state) => state.initialized);
-  const setInitialized = useSharedStore((state) => state.setInitialized);
+  // const initialized = useBoundStore((state) => state.initialized);
+  // const setInitialized = useBoundStore((state) => state.setInitialized);
 
-  useEffect(() => {
-    setInitialized(true);
-    return () => {
-      setInitialized(false);
-    };
-  }, [setInitialized]);
+  // useEffect(() => {
+  //   setInitialized(true);
+  //   return () => {
+  //     setInitialized(false);
+  //   };
+  // }, [setInitialized]);
 
   const dockviewComponents = {
     viewerPanel: () => <ViewerPanel />,
@@ -92,13 +90,13 @@ export default function App() {
     projectPanel.api.setActive();
   }
 
-  if (!initialized) {
-    return (
-      <div className="w-screen h-screen overflow-hidden flex items-center justify-center">
-        <p>Initializing...</p>
-      </div>
-    );
-  }
+  // if (!initialized) {
+  //   return (
+  //     <div className="w-screen h-screen overflow-hidden flex items-center justify-center">
+  //       <p>Initializing...</p>
+  //     </div>
+  //   );
+  // }
   return (
     <div className="w-screen h-screen overflow-hidden">
       <DockviewReact

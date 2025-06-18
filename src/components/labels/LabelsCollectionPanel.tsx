@@ -1,9 +1,9 @@
-import { useSharedStore } from "../../stores/sharedStore";
+import { useBoundStore } from "../../stores/boundStore";
 import MapUtils from "../../utils/MapUtils";
 import LabelsPanel from "./LabelsPanel";
 
 export default function LabelsCollectionPanel() {
-  const labels = useSharedStore((state) => state.labels);
+  const labels = useBoundStore((state) => state.labels);
   return (
     <>
       {labels &&

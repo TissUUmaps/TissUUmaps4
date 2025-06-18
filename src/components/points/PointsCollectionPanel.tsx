@@ -1,9 +1,9 @@
-import { useSharedStore } from "../../stores/sharedStore";
+import { useBoundStore } from "../../stores/boundStore";
 import MapUtils from "../../utils/MapUtils";
 import PointsPanel from "./PointsPanel";
 
 export default function PointsCollectionPanel() {
-  const points = useSharedStore((state) => state.points);
+  const points = useBoundStore((state) => state.points);
   return (
     <>
       {points &&

@@ -1,9 +1,9 @@
-import { useSharedStore } from "../../stores/sharedStore";
+import { useBoundStore } from "../../stores/boundStore";
 import MapUtils from "../../utils/MapUtils";
 import TablePanel from "./TablePanel";
 
 export default function TableCollectionPanel() {
-  const tables = useSharedStore((state) => state.tables);
+  const tables = useBoundStore((state) => state.tables);
   return (
     <>
       {tables &&

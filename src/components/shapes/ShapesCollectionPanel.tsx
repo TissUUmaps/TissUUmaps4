@@ -1,9 +1,9 @@
-import { useSharedStore } from "../../stores/sharedStore";
+import { useBoundStore } from "../../stores/boundStore";
 import MapUtils from "../../utils/MapUtils";
 import ShapesPanel from "./ShapesPanel";
 
 export default function ShapesCollectionPanel() {
-  const shapes = useSharedStore((state) => state.shapes);
+  const shapes = useBoundStore((state) => state.shapes);
   return (
     <>
       {shapes &&

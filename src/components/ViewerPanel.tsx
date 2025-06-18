@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 
-import { useSharedStore } from "../stores/sharedStore";
+import { useBoundStore } from "../stores/boundStore";
 import OpenSeadragonUtils from "../utils/OpenSeadragonUtils";
 import WebGLUtils from "../utils/WebGLUtils";
 
@@ -13,11 +13,11 @@ type ViewerState = {
 
 export default function ViewerPanel() {
   const viewerStateRef = useRef<ViewerState | null>(null);
-  const layers = useSharedStore((state) => state.layers);
-  const images = useSharedStore((state) => state.images);
-  const labels = useSharedStore((state) => state.labels);
-  const points = useSharedStore((state) => state.points);
-  const shapes = useSharedStore((state) => state.shapes);
+  const layers = useBoundStore((state) => state.layers);
+  const images = useBoundStore((state) => state.images);
+  const labels = useBoundStore((state) => state.labels);
+  const points = useBoundStore((state) => state.points);
+  const shapes = useBoundStore((state) => state.shapes);
 
   // use a ref callback for instantiating the OpenSeadragon viewer
   // https://react.dev/reference/react-dom/components/common#ref-callback
