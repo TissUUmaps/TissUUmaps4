@@ -5,9 +5,11 @@ import { IntArray, TypedArray, UintArray } from "./types";
 export interface ITableData extends IData {
   readonly columns: string[];
   readonly index: IntArray | UintArray;
-  getData(column: string): string[] | TypedArray;
+  getColumnData(column: string): string[] | TypedArray;
 }
 
-export interface ITableDataLoader extends IDataLoader {
-  loadTable: (dataSource: ITableDataSourceModel<string>) => Promise<ITableData>;
+export interface ITableDataLoader<
+  TTableDataSourceModel extends ITableDataSourceModel<string>,
+> extends IDataLoader {
+  loadTable: (dataSource: TTableDataSourceModel) => Promise<ITableData>;
 }

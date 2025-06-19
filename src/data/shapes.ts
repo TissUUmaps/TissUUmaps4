@@ -7,8 +7,8 @@ export interface IShapesData extends IData {
   readonly shapeGeometries: GeoJSONGeometry[];
 }
 
-export interface IShapesDataLoader extends IDataLoader {
-  loadShapes: (
-    dataSource: IShapesDataSourceModel<string>,
-  ) => Promise<IShapesData>;
+export interface IShapesDataLoader<
+  TShapesDataSourceModel extends IShapesDataSourceModel<string>,
+> extends IDataLoader {
+  loadShapes: (dataSource: TShapesDataSourceModel) => Promise<IShapesData>;
 }

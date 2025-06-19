@@ -8,8 +8,8 @@ export interface IPointsData extends IData {
   getPointCoordinates(dimension: string): TypedArray;
 }
 
-export interface IPointsDataLoader extends IDataLoader {
-  loadPoints: (
-    dataSource: IPointsDataSourceModel<string>,
-  ) => Promise<IPointsData>;
+export interface IPointsDataLoader<
+  TPointsDataSourceModel extends IPointsDataSourceModel<string>,
+> extends IDataLoader {
+  loadPoints: (dataSource: TPointsDataSourceModel) => Promise<IPointsData>;
 }

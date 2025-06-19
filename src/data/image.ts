@@ -3,9 +3,11 @@ import { IData, IDataLoader } from "./base";
 import { CustomTileSource } from "./types";
 
 export interface IImageData extends IData {
-  readonly imageTileSource: string | CustomTileSource;
+  readonly tileSource: string | CustomTileSource;
 }
 
-export interface IImageDataLoader extends IDataLoader {
-  loadImage: (dataSource: IImageDataSourceModel<string>) => Promise<IImageData>;
+export interface IImageDataLoader<
+  TImageDataSourceModel extends IImageDataSourceModel<string>,
+> extends IDataLoader {
+  loadImage: (dataSource: TImageDataSourceModel) => Promise<IImageData>;
 }

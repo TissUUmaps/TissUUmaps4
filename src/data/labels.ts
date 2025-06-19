@@ -4,11 +4,11 @@ import { CustomTileSource, IntArray, UintArray } from "./types";
 
 export interface ILabelsData extends IData {
   readonly labelIds: IntArray | UintArray;
-  readonly labelsTileSource: string | CustomTileSource;
+  readonly tileSource: string | CustomTileSource;
 }
 
-export interface ILabelsDataLoader extends IDataLoader {
-  loadLabels: (
-    dataSource: ILabelsDataSourceModel<string>,
-  ) => Promise<ILabelsData>;
+export interface ILabelsDataLoader<
+  TLabelsDataSourceModel extends ILabelsDataSourceModel<string>,
+> extends IDataLoader {
+  loadLabels: (dataSource: TLabelsDataSourceModel) => Promise<ILabelsData>;
 }
