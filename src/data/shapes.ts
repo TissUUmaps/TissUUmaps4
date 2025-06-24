@@ -4,7 +4,7 @@ import { GeoJSONGeometry } from "./types";
 
 export interface IShapesData extends IData {
   getIds(): number[];
-  getGeometries(): GeoJSONGeometry[];
+  loadGeometries(): Promise<GeoJSONGeometry[]>;
 }
 
 export interface IShapesDataLoader<

@@ -2,9 +2,11 @@ import { IImageData, IImageDataLoader } from "../data/image";
 import { ICustomTileSource } from "../data/types";
 import { IImageDataSourceModel } from "../models/image";
 
+// TODO Allow for local image files
+
 export const OPENSEADRAGON_IMAGE_DATA_SOURCE = "openseadragon";
 
-export interface OpenSeadragonImageDataSourceModel
+export interface IOpenSeadragonImageDataSourceModel
   extends IImageDataSourceModel<typeof OPENSEADRAGON_IMAGE_DATA_SOURCE> {
   tileSource: string;
 }
@@ -27,25 +29,20 @@ export class OpenSeadragonImageData implements IImageData {
 
 export class OpenSeadragonImageDataLoader
   implements
-    IImageDataLoader<OpenSeadragonImageDataSourceModel, OpenSeadragonImageData>
+    IImageDataLoader<IOpenSeadragonImageDataSourceModel, OpenSeadragonImageData>
 {
-  private readonly dataSource: OpenSeadragonImageDataSourceModel;
-  private readonly projectDir: FileSystemDirectoryHandle | undefined;
+  private readonly dataSource: IOpenSeadragonImageDataSourceModel;
 
-  constructor(
-    dataSource: OpenSeadragonImageDataSourceModel,
-    projectDir?: FileSystemDirectoryHandle,
-  ) {
+  constructor(dataSource: IOpenSeadragonImageDataSourceModel) {
     this.dataSource = dataSource;
-    this.projectDir = projectDir;
   }
 
-  getDataSource(): OpenSeadragonImageDataSourceModel {
+  getDataSource(): IOpenSeadragonImageDataSourceModel {
     return this.dataSource;
   }
 
   getProjectDir(): FileSystemDirectoryHandle | undefined {
-    return this.projectDir;
+    return undefined;
   }
 
   loadImage(): Promise<OpenSeadragonImageData> {

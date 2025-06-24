@@ -4,7 +4,7 @@ import { IData, IDataLoader } from "./base";
 export interface ITableData extends IData {
   getIndex(): number[];
   getColumns(): string[];
-  getColumnData(column: string): unknown[];
+  loadColumnData(column: string): Promise<unknown[]>;
 }
 
 export interface ITableDataLoader<

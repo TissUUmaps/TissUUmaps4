@@ -12,9 +12,11 @@ enum SampleFormat {
   UNDEFINED = 4,
 }
 
+// TODO GeoTIFFImageDataLoader
+
 export const GEOTIFF_LABELS_DATA_SOURCE = "geotiff";
 
-export interface GeoTIFFLabelsDataSourceModel
+export interface IGeoTIFFLabelsDataSourceModel
   extends ILabelsDataSourceModel<typeof GEOTIFF_LABELS_DATA_SOURCE> {
   tiffFile?: string;
   tiffUrl?: string;
@@ -83,20 +85,20 @@ export class GeoTIFFLabelsData implements ILabelsData {
 }
 
 export class GeoTIFFLabelsDataLoader
-  implements ILabelsDataLoader<GeoTIFFLabelsDataSourceModel, GeoTIFFLabelsData>
+  implements ILabelsDataLoader<IGeoTIFFLabelsDataSourceModel, GeoTIFFLabelsData>
 {
-  private readonly dataSource: GeoTIFFLabelsDataSourceModel;
+  private readonly dataSource: IGeoTIFFLabelsDataSourceModel;
   private readonly projectDir: FileSystemDirectoryHandle | undefined;
 
   constructor(
-    dataSource: GeoTIFFLabelsDataSourceModel,
+    dataSource: IGeoTIFFLabelsDataSourceModel,
     projectDir?: FileSystemDirectoryHandle,
   ) {
     this.dataSource = dataSource;
     this.projectDir = projectDir;
   }
 
-  getDataSource(): GeoTIFFLabelsDataSourceModel {
+  getDataSource(): IGeoTIFFLabelsDataSourceModel {
     return this.dataSource;
   }
 

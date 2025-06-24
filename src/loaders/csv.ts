@@ -5,7 +5,7 @@ import { ITableDataSourceModel } from "../models/table";
 
 export const CSV_TABLE_DATA_SOURCE = "csv";
 
-export interface CSVTableDataSourceModel
+export interface ICSVTableDataSourceModel
   extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
   csvFile?: string;
   csvUrl?: string;
@@ -53,26 +53,29 @@ export class CSVTableData implements ITableData {
     return this.columns;
   }
 
-  getColumnData(column: string): unknown[] {
-    return this.data.map((row) => row[column]);
+  loadColumnData(column: string): Promise<unknown[]> {
+    if (!this.columns.includes(column)) {
+      throw new Error(`Column "${column}" does not exist.`);
+    }
+    return Promise.resolve(this.data.map((row) => row[column]));
   }
 }
 
 export class CSVTableDataLoader
-  implements ITableDataLoader<CSVTableDataSourceModel, CSVTableData>
+  implements ITableDataLoader<ICSVTableDataSourceModel, CSVTableData>
 {
-  private readonly dataSource: CSVTableDataSourceModel;
+  private readonly dataSource: ICSVTableDataSourceModel;
   private readonly projectDir: FileSystemDirectoryHandle | undefined;
 
   constructor(
-    dataSource: CSVTableDataSourceModel,
+    dataSource: ICSVTableDataSourceModel,
     projectDir?: FileSystemDirectoryHandle,
   ) {
     this.dataSource = dataSource;
     this.projectDir = projectDir;
   }
 
-  getDataSource(): CSVTableDataSourceModel {
+  getDataSource(): ICSVTableDataSourceModel {
     return this.dataSource;
   }
 
@@ -84,7 +87,10 @@ export class CSVTableDataLoader
     const results = await this.loadCSV();
     const data = results.data as Record<string, unknown>[];
     const index = data.map((row) => row[this.dataSource.index] as number);
-    return new CSVTableData(index, results.meta.fields!, data);
+    const columns = results.meta.fields!.filter(
+      (field) => field !== this.dataSource.index,
+    );
+    return new CSVTableData(index, columns, data);
   }
 
   private async loadCSV(): Promise<Papa.ParseResult<unknown>> {
