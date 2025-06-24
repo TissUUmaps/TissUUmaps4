@@ -1,5 +1,5 @@
 import { ITableData, ITableDataLoader } from "../data/table";
-import { ITableModel } from "../models/table";
+import { ITableDataSourceModel, ITableModel } from "../models/table";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
@@ -8,7 +8,10 @@ export type TableSlice = TableSliceState & TableSliceActions;
 export type TableSliceState = {
   tables: Map<string, ITableModel>;
   tableData: Map<string, ITableData>;
-  tableDataLoaders: Map<string, ITableDataLoader>;
+  tableDataLoaders: Map<
+    string,
+    ITableDataLoader<ITableDataSourceModel<string>>
+  >;
 };
 
 export type TableSliceActions = {
@@ -17,7 +20,7 @@ export type TableSliceActions = {
   deleteTable: (tableId: string) => void;
   registerTableDataLoader: (
     tableDataSourceType: string,
-    tableDataLoader: ITableDataLoader,
+    tableDataLoader: ITableDataLoader<ITableDataSourceModel<string>>,
   ) => void;
   unregisterTableDataLoader: (tableDataSourceType: string) => void;
 };
@@ -90,5 +93,8 @@ export const createTableSlice: BoundStoreStateCreator<TableSlice> = (
 const initialTableSliceState: TableSliceState = {
   tables: new Map<string, ITableModel>(),
   tableData: new Map<string, ITableData>(),
-  tableDataLoaders: new Map<string, ITableDataLoader>(),
+  tableDataLoaders: new Map<
+    string,
+    ITableDataLoader<ITableDataSourceModel<string>>
+  >(),
 };

@@ -1,5 +1,5 @@
 import { IImageData, IImageDataLoader } from "../data/image";
-import { IImageModel } from "../models/image";
+import { IImageDataSourceModel, IImageModel } from "../models/image";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
@@ -8,7 +8,10 @@ export type ImageSlice = ImageSliceState & ImageSliceActions;
 export type ImageSliceState = {
   images: Map<string, IImageModel>;
   imageData: Map<string, IImageData>;
-  imageDataLoaders: Map<string, IImageDataLoader>;
+  imageDataLoaders: Map<
+    string,
+    IImageDataLoader<IImageDataSourceModel<string>>
+  >;
 };
 
 export type ImageSliceActions = {
@@ -17,7 +20,7 @@ export type ImageSliceActions = {
   deleteImage: (imageId: string) => void;
   registerImageDataLoader: (
     imageDataSourceType: string,
-    imageDataLoader: IImageDataLoader,
+    imageDataLoader: IImageDataLoader<IImageDataSourceModel<string>>,
   ) => void;
   unregisterImageDataLoader: (imageDataSourceType: string) => void;
 };
@@ -91,5 +94,8 @@ export const createImageSlice: BoundStoreStateCreator<ImageSlice> = (
 const initialImageSliceState: ImageSliceState = {
   images: new Map<string, IImageModel>(),
   imageData: new Map<string, IImageData>(),
-  imageDataLoaders: new Map<string, IImageDataLoader>(),
+  imageDataLoaders: new Map<
+    string,
+    IImageDataLoader<IImageDataSourceModel<string>>
+  >(),
 };

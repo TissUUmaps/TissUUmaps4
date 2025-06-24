@@ -22,5 +22,5 @@
 
     "allowJs": true
   },
-  "include": ["eslint.config.js", "vite.config.ts", "src"]
+  "include": ["vite.config.ts", "src"]
 }

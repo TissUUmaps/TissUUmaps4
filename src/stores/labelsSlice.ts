@@ -1,5 +1,5 @@
 import { ILabelsData, ILabelsDataLoader } from "../data/labels";
-import { ILabelsModel } from "../models/labels";
+import { ILabelsDataSourceModel, ILabelsModel } from "../models/labels";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
@@ -8,7 +8,10 @@ export type LabelsSlice = LabelsSliceState & LabelsSliceActions;
 export type LabelsSliceState = {
   labels: Map<string, ILabelsModel>;
   labelsData: Map<string, ILabelsData>;
-  labelsDataLoaders: Map<string, ILabelsDataLoader>;
+  labelsDataLoaders: Map<
+    string,
+    ILabelsDataLoader<ILabelsDataSourceModel<string>>
+  >;
 };
 
 export type LabelsSliceActions = {
@@ -21,7 +24,7 @@ export type LabelsSliceActions = {
   deleteLabels: (labelsId: string) => void;
   registerLabelsDataLoader: (
     labelsDataSourceType: string,
-    labelsDataLoader: ILabelsDataLoader,
+    labelsDataLoader: ILabelsDataLoader<ILabelsDataSourceModel<string>>,
   ) => void;
   unregisterLabelsDataLoader: (labelsDataSourceType: string) => void;
 };
@@ -96,5 +99,8 @@ export const createLabelsSlice: BoundStoreStateCreator<LabelsSlice> = (
 const initialLabelsSliceState: LabelsSliceState = {
   labels: new Map<string, ILabelsModel>(),
   labelsData: new Map<string, ILabelsData>(),
-  labelsDataLoaders: new Map<string, ILabelsDataLoader>(),
+  labelsDataLoaders: new Map<
+    string,
+    ILabelsDataLoader<ILabelsDataSourceModel<string>>
+  >(),
 };

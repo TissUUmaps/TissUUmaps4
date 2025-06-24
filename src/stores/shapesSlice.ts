@@ -1,5 +1,5 @@
 import { IShapesData, IShapesDataLoader } from "../data/shapes";
-import { IShapesModel } from "../models/shapes";
+import { IShapesDataSourceModel, IShapesModel } from "../models/shapes";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
@@ -8,7 +8,10 @@ export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
 export type ShapesSliceState = {
   shapes: Map<string, IShapesModel>;
   shapesData: Map<string, IShapesData>;
-  shapesDataLoaders: Map<string, IShapesDataLoader>;
+  shapesDataLoaders: Map<
+    string,
+    IShapesDataLoader<IShapesDataSourceModel<string>>
+  >;
 };
 
 export type ShapesSliceActions = {
@@ -21,7 +24,7 @@ export type ShapesSliceActions = {
   deleteShapes: (shapesId: string) => void;
   registerShapesDataLoader: (
     shapesDataSourceType: string,
-    shapesDataLoader: IShapesDataLoader,
+    shapesDataLoader: IShapesDataLoader<IShapesDataSourceModel<string>>,
   ) => void;
   unregisterShapesDataLoader: (shapesDataSourceType: string) => void;
 };
@@ -96,5 +99,8 @@ export const createShapesSlice: BoundStoreStateCreator<ShapesSlice> = (
 const initialShapesSliceState: ShapesSliceState = {
   shapes: new Map<string, IShapesModel>(),
   shapesData: new Map<string, IShapesData>(),
-  shapesDataLoaders: new Map<string, IShapesDataLoader>(),
+  shapesDataLoaders: new Map<
+    string,
+    IShapesDataLoader<IShapesDataSourceModel<string>>
+  >(),
 };

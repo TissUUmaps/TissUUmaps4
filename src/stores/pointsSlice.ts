@@ -1,5 +1,5 @@
 import { IPointsData, IPointsDataLoader } from "../data/points";
-import { IPointsModel } from "../models/points";
+import { IPointsDataSourceModel, IPointsModel } from "../models/points";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
@@ -8,7 +8,10 @@ export type PointsSlice = PointsSliceState & PointsSliceActions;
 export type PointsSliceState = {
   points: Map<string, IPointsModel>;
   pointsData: Map<string, IPointsData>;
-  pointsDataLoaders: Map<string, IPointsDataLoader>;
+  pointsDataLoaders: Map<
+    string,
+    IPointsDataLoader<IPointsDataSourceModel<string>>
+  >;
 };
 
 export type PointsSliceActions = {
@@ -21,7 +24,7 @@ export type PointsSliceActions = {
   deletePoints: (pointsId: string) => void;
   registerPointsDataLoader: (
     pointsDataSourceType: string,
-    pointsDataLoader: IPointsDataLoader,
+    pointsDataLoader: IPointsDataLoader<IPointsDataSourceModel<string>>,
   ) => void;
   unregisterPointsDataLoader: (pointsDataSourceType: string) => void;
 };
@@ -96,5 +99,8 @@ export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
 const initialPointsSliceState: PointsSliceState = {
   points: new Map<string, IPointsModel>(),
   pointsData: new Map<string, IPointsData>(),
-  pointsDataLoaders: new Map<string, IPointsDataLoader>(),
+  pointsDataLoaders: new Map<
+    string,
+    IPointsDataLoader<IPointsDataSourceModel<string>>
+  >(),
 };
