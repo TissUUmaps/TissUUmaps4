@@ -3,7 +3,7 @@ import { IData, IDataLoader } from "./base";
 import { ICustomTileSource } from "./types";
 
 export interface IImageData extends IData {
-  readonly tileSource: string | ICustomTileSource;
+  getTileSource(): string | ICustomTileSource;
 }
 
 export interface IImageDataLoader<

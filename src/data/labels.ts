@@ -1,10 +1,20 @@
 import { ILabelsDataSourceModel } from "../models/labels";
 import { IData, IDataLoader } from "./base";
-import { ICustomTileSource, IntArray, UintArray } from "./types";
+import { UintArray } from "./types";
 
 export interface ILabelsData extends IData {
-  readonly labelIds: IntArray | UintArray;
-  readonly tileSource: string | ICustomTileSource;
+  getWidth(level?: number): number;
+  getHeight(level?: number): number;
+  getLevelCount(): number;
+  getLevelScale(level: number): number;
+  getTileWidth(level: number): number | undefined;
+  getTileHeight(level: number): number | undefined;
+  loadTile(
+    level: number,
+    x: number,
+    y: number,
+    abortSignal?: AbortSignal,
+  ): Promise<UintArray>;
 }
 
 export interface ILabelsDataLoader<
