@@ -3,6 +3,8 @@ import { ITableData } from "../data/table";
 import { TypedArray } from "../data/types";
 import { IPointsDataSourceModel } from "../models/points";
 
+// TODO TableShapesDataLoader
+
 export const TABLE_POINTS_DATA_SOURCE = "table";
 
 export interface ITablePointsDataSourceModel
