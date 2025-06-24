@@ -1,10 +1,8 @@
-import { GeoTIFFImage, Pool, fromUrl } from "geotiff";
+import GeoTIFF, { GeoTIFFImage, Pool, fromBlob, fromUrl } from "geotiff";
 
 import { ILabelsData, ILabelsDataLoader } from "../data/labels";
 import { UintArray } from "../data/types";
 import { ILabelsDataSourceModel } from "../models/labels";
-
-export const GEOTIFF_LABELS_DATA_SOURCE = "geotiff";
 
 // https://github.com/geotiffjs/geotiff.js/issues/445
 enum SampleFormat {
@@ -14,9 +12,12 @@ enum SampleFormat {
   UNDEFINED = 4,
 }
 
+export const GEOTIFF_LABELS_DATA_SOURCE = "geotiff";
+
 export interface GeoTIFFLabelsDataSourceModel
   extends ILabelsDataSourceModel<typeof GEOTIFF_LABELS_DATA_SOURCE> {
-  url: string;
+  file?: string;
+  url?: string;
   tileWidth?: number;
   tileHeight?: number;
 }
@@ -29,7 +30,7 @@ export class GeoTIFFLabelsData implements ILabelsData {
   private readonly tileHeight?: number;
 
   constructor(images: GeoTIFFImage[], tileWidth?: number, tileHeight?: number) {
-    this.images = images.sort((a, b) => b.getWidth() - a.getWidth());
+    this.images = images;
     this.tileWidth = tileWidth;
     this.tileHeight = tileHeight;
   }
@@ -82,15 +83,34 @@ export class GeoTIFFLabelsData implements ILabelsData {
 }
 
 export class GeoTIFFLabelsDataLoader
-  implements ILabelsDataLoader<GeoTIFFLabelsDataSourceModel>
+  implements ILabelsDataLoader<GeoTIFFLabelsDataSourceModel, GeoTIFFLabelsData>
 {
-  async loadLabels(
+  protected readonly dataSource: GeoTIFFLabelsDataSourceModel;
+  protected readonly projectDir: FileSystemDirectoryHandle | undefined;
+
+  constructor(
     dataSource: GeoTIFFLabelsDataSourceModel,
-  ): Promise<ILabelsData> {
-    const tiff = await fromUrl(dataSource.url);
+    projectDir?: FileSystemDirectoryHandle,
+  ) {
+    this.dataSource = dataSource;
+    this.projectDir = projectDir;
+  }
+
+  getDataSource(): GeoTIFFLabelsDataSourceModel {
+    return this.dataSource;
+  }
+
+  getProjectDir(): FileSystemDirectoryHandle | undefined {
+    return this.projectDir;
+  }
+
+  async loadLabels(abortSignal?: AbortSignal): Promise<GeoTIFFLabelsData> {
+    const tiff = await this.loadGeoTIFF(abortSignal);
     const imageCount = await tiff.getImageCount();
     if (imageCount <= 0) {
-      throw new Error(`No images found in the TIFF file: ${dataSource.url}`);
+      throw new Error(
+        `No images found in TIFF file: ${this.dataSource.url || this.dataSource.file}`,
+      );
     }
     const imagePromises = [];
     for (let i = 0; i < imageCount; i++) {
@@ -116,9 +136,24 @@ export class GeoTIFFLabelsDataLoader
     }
     const images = await Promise.all(imagePromises);
     return new GeoTIFFLabelsData(
-      images,
-      dataSource.tileWidth,
-      dataSource.tileHeight,
+      images.sort((a, b) => b.getWidth() - a.getWidth()),
+      this.dataSource.tileWidth,
+      this.dataSource.tileHeight,
     );
+  }
+
+  private async loadGeoTIFF(abortSignal?: AbortSignal): Promise<GeoTIFF> {
+    if (this.dataSource.url !== undefined) {
+      return await fromUrl(this.dataSource.url, abortSignal);
+    }
+    if (this.dataSource.file !== undefined) {
+      if (this.projectDir === undefined) {
+        throw new Error("Project directory is required to load local files.");
+      }
+      const fh = await this.projectDir.getFileHandle(this.dataSource.file);
+      const file = await fh.getFile();
+      return await fromBlob(file, abortSignal);
+    }
+    throw new Error("Either 'url' or 'file' must be provided.");
   }
 }

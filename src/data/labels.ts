@@ -19,6 +19,7 @@ export interface ILabelsData extends IData {
 
 export interface ILabelsDataLoader<
   TLabelsDataSourceModel extends ILabelsDataSourceModel<string>,
-> extends IDataLoader {
-  loadLabels: (dataSource: TLabelsDataSourceModel) => Promise<ILabelsData>;
+  TLabelsData extends ILabelsData,
+> extends IDataLoader<TLabelsDataSourceModel> {
+  loadLabels: (abortSignal?: AbortSignal) => Promise<TLabelsData>;
 }

@@ -1,15 +1,16 @@
 import { ITableDataSourceModel } from "../models/table";
 import { IData, IDataLoader } from "./base";
-import { IntArray, TypedArray, UintArray } from "./types";
+import { TypedArray, UintArray } from "./types";
 
 export interface ITableData extends IData {
-  readonly columns: string[];
-  readonly index: IntArray | UintArray;
-  getColumnData(column: string): string[] | TypedArray;
+  getIndex(): UintArray;
+  getColumns(): string[];
+  loadColumnData(column: string): Promise<string[] | TypedArray>;
 }
 
 export interface ITableDataLoader<
   TTableDataSourceModel extends ITableDataSourceModel<string>,
-> extends IDataLoader {
-  loadTable: (dataSource: TTableDataSourceModel) => Promise<ITableData>;
+  TTableData extends ITableData,
+> extends IDataLoader<TTableDataSourceModel> {
+  loadTable: (abortSignal?: AbortSignal) => Promise<TTableData>;
 }

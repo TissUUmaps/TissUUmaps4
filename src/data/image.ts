@@ -8,6 +8,7 @@ export interface IImageData extends IData {
 
 export interface IImageDataLoader<
   TImageDataSourceModel extends IImageDataSourceModel<string>,
-> extends IDataLoader {
-  loadImage: (dataSource: TImageDataSourceModel) => Promise<IImageData>;
+  TImageData extends IImageData,
+> extends IDataLoader<TImageDataSourceModel> {
+  loadImage: (abortSignal?: AbortSignal) => Promise<TImageData>;
 }

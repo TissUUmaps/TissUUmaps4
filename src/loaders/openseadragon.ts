@@ -22,11 +22,30 @@ export class OpenSeadragonImageData implements IImageData {
 }
 
 export class OpenSeadragonImageDataLoader
-  implements IImageDataLoader<OpenSeadragonImageDataSourceModel>
+  implements
+    IImageDataLoader<OpenSeadragonImageDataSourceModel, OpenSeadragonImageData>
 {
-  loadImage(
+  private readonly dataSource: OpenSeadragonImageDataSourceModel;
+  private readonly projectDir: FileSystemDirectoryHandle | undefined;
+
+  constructor(
     dataSource: OpenSeadragonImageDataSourceModel,
-  ): Promise<IImageData> {
-    return Promise.resolve(new OpenSeadragonImageData(dataSource.tileSource));
+    projectDir?: FileSystemDirectoryHandle,
+  ) {
+    this.dataSource = dataSource;
+    this.projectDir = projectDir;
+  }
+
+  getDataSource(): OpenSeadragonImageDataSourceModel {
+    return this.dataSource;
+  }
+
+  getProjectDir(): FileSystemDirectoryHandle | undefined {
+    return this.projectDir;
+  }
+
+  loadImage(): Promise<OpenSeadragonImageData> {
+    const imageData = new OpenSeadragonImageData(this.dataSource.tileSource);
+    return Promise.resolve(imageData);
   }
 }
