@@ -1,9 +1,9 @@
 import { IPointsDataSourceModel } from "../models/points";
 import { IData, IDataLoader } from "./base";
-import { TypedArray, UintArray } from "./types";
+import { TypedArray } from "./types";
 
 export interface IPointsData extends IData {
-  getIds(): UintArray;
+  getIds(): number[];
   getDimensions(): string[];
   loadCoordinates(dimension: string): Promise<TypedArray>;
 }
@@ -12,5 +12,5 @@ export interface IPointsDataLoader<
   TPointsDataSourceModel extends IPointsDataSourceModel<string>,
   TPointsData extends IPointsData,
 > extends IDataLoader<TPointsDataSourceModel> {
-  loadPoints: (abortSignal?: AbortSignal) => Promise<TPointsData>;
+  loadPoints: () => Promise<TPointsData>;
 }
