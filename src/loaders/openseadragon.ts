@@ -16,6 +16,10 @@ export class OpenSeadragonImageData implements IImageData {
     this.tileSource = tileSource;
   }
 
+  getChannels(): string[] | undefined {
+    return undefined;
+  }
+
   getTileSource(): string | ICustomTileSource {
     return this.tileSource;
   }

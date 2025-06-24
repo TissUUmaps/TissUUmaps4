@@ -3,12 +3,17 @@ import { IData, IDataLoader } from "./base";
 import { ICustomTileSource } from "./types";
 
 export interface IImageData extends IData {
-  getTileSource(): string | ICustomTileSource;
+  getChannels(): string[] | undefined;
+  getTileSource(channel?: string): string | ICustomTileSource;
 }
 
 export interface IImageDataLoader<
   TImageDataSourceModel extends IImageDataSourceModel<string>,
   TImageData extends IImageData,
 > extends IDataLoader<TImageDataSourceModel> {
-  loadImage: (abortSignal?: AbortSignal) => Promise<TImageData>;
+  loadImage: (
+    t?: number,
+    z?: number,
+    abortSignal?: AbortSignal,
+  ) => Promise<TImageData>;
 }
