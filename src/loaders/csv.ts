@@ -1,122 +1,91 @@
-import Papa from "papaparse";
+import {
+  ParseLocalConfig,
+  ParseRemoteConfig,
+  ParseResult,
+  parse,
+} from "papaparse";
 
-import { ITableData, ITableDataLoader } from "../data/table";
+import { ITableData, TableDataLoaderBase } from "../data/table";
 import { ITableDataSourceModel } from "../models/table";
 
 export const CSV_TABLE_DATA_SOURCE = "csv";
 
 export interface ICSVTableDataSourceModel
   extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
-  csvFile?: string;
   csvUrl?: string;
-  index: string;
-  config?:
-    | Pick<
-        Papa.ParseConfig,
-        | "delimiter"
-        | "newline"
-        | "quoteChar"
-        | "escapeChar"
-        | "preview"
-        | "comments"
-        | "skipEmptyLines"
-        | "delimitersToGuess"
-        | "skipFirstNLines"
-      >
-    | Pick<
-        Papa.ParseRemoteConfig,
-        "downloadRequestHeaders" | "downloadRequestBody" | "withCredentials"
-      >
-    | Pick<Papa.ParseLocalConfig, "encoding">;
+  csvFile?: string;
+  idColumn: string;
+  config?: Partial<ParseRemoteConfig | ParseLocalConfig>;
 }
 
 export class CSVTableData implements ITableData {
-  private readonly index: number[];
+  private readonly ids: number[];
   private readonly columns: string[];
-  private readonly data: Record<string, unknown>[];
+  private readonly records: Record<string, unknown>[];
 
   constructor(
-    index: number[],
+    ids: number[],
     columns: string[],
-    data: Record<string, unknown>[],
+    records: Record<string, unknown>[],
   ) {
-    this.index = index;
+    this.ids = ids;
     this.columns = columns;
-    this.data = data;
+    this.records = records;
   }
 
-  getIndex(): number[] {
-    return this.index;
+  getIds(): number[] {
+    return this.ids;
   }
 
   getColumns(): string[] {
     return this.columns;
   }
 
-  loadColumnData(column: string): Promise<unknown[]> {
+  loadColumnData<T>(column: string): Promise<T[]> {
     if (!this.columns.includes(column)) {
       throw new Error(`Column "${column}" does not exist.`);
     }
-    return Promise.resolve(this.data.map((row) => row[column]));
+    const data = this.records.map((row) => row[column] as T);
+    return Promise.resolve(data);
   }
 }
 
-export class CSVTableDataLoader
-  implements ITableDataLoader<ICSVTableDataSourceModel, CSVTableData>
-{
-  private readonly dataSource: ICSVTableDataSourceModel;
-  private readonly projectDir: FileSystemDirectoryHandle | undefined;
-
-  constructor(
-    dataSource: ICSVTableDataSourceModel,
-    projectDir?: FileSystemDirectoryHandle,
-  ) {
-    this.dataSource = dataSource;
-    this.projectDir = projectDir;
-  }
-
-  getDataSource(): ICSVTableDataSourceModel {
-    return this.dataSource;
-  }
-
-  getProjectDir(): FileSystemDirectoryHandle | undefined {
-    return this.projectDir;
-  }
-
+export class CSVTableDataLoader extends TableDataLoaderBase<
+  ICSVTableDataSourceModel,
+  CSVTableData
+> {
   async loadTable(): Promise<CSVTableData> {
     const results = await this.loadCSV();
-    const data = results.data as Record<string, unknown>[];
-    const index = data.map((row) => row[this.dataSource.index] as number);
-    const columns = results.meta.fields!.filter(
-      (field) => field !== this.dataSource.index,
-    );
-    return new CSVTableData(index, columns, data);
+    const records = results.data as Record<string, unknown>[];
+    const ids = records.map((row) => row[this.dataSource.idColumn] as number);
+    const columns = results.meta.fields as string[];
+    return new CSVTableData(ids, columns, records);
   }
 
-  private async loadCSV(): Promise<Papa.ParseResult<unknown>> {
+  private async loadCSV(): Promise<ParseResult<unknown>> {
     if (this.dataSource.csvUrl !== undefined) {
-      return await new Promise<Papa.ParseResult<unknown>>((resolve, reject) =>
-        Papa.parse(this.dataSource.csvUrl!, {
+      return await new Promise<ParseResult<unknown>>((resolve, reject) =>
+        parse(this.dataSource.csvUrl!, {
           ...this.dataSource.config,
-          header: true,
+          download: true,
           dynamicTyping: true,
+          header: true,
           complete: resolve,
           error: reject,
-          download: true,
         }),
       );
     }
     if (this.dataSource.csvFile !== undefined) {
-      if (this.projectDir === undefined) {
+      if (this.projectDir === null) {
         throw new Error("Project directory is required to load local files.");
       }
       const fh = await this.projectDir.getFileHandle(this.dataSource.csvFile);
       const file = await fh.getFile();
-      return await new Promise<Papa.ParseResult<unknown>>((resolve, reject) =>
-        Papa.parse(file, {
+      return await new Promise<ParseResult<unknown>>((resolve, reject) =>
+        parse(file, {
           ...this.dataSource.config,
-          header: true,
           dynamicTyping: true,
+          header: true,
           complete: resolve,
           error: reject,
         }),

@@ -1,5 +1,6 @@
 import { IPointsDataSourceModel } from "../models/points";
-import { IData, IDataLoader } from "./base";
+import { DataLoaderBase, IData, IDataLoader } from "./base";
+import { ITableData } from "./table";
 import { TypedArray } from "./types";
 
 export interface IPointsData extends IData {
@@ -8,9 +9,28 @@ export interface IPointsData extends IData {
   loadCoordinates(dimension: string): Promise<TypedArray>;
 }
 
-export interface IPointsDataLoader<
-  TPointsDataSourceModel extends IPointsDataSourceModel<string>,
-  TPointsData extends IPointsData,
-> extends IDataLoader<TPointsDataSourceModel> {
-  loadPoints: () => Promise<TPointsData>;
+export interface IPointsDataLoader<TPointsData extends IPointsData>
+  extends IDataLoader {
+  loadPoints(): Promise<TPointsData>;
+}
+
+export abstract class PointsDataLoaderBase<
+    TPointsDataSourceModel extends IPointsDataSourceModel<string>,
+    TPointsData extends IPointsData,
+  >
+  extends DataLoaderBase<TPointsDataSourceModel>
+  implements IPointsDataLoader<TPointsData>
+{
+  protected readonly getTableData: (tableId: string) => ITableData;
+
+  constructor(
+    dataSource: TPointsDataSourceModel,
+    projectDir: FileSystemDirectoryHandle | null,
+    getTableData: (tableId: string) => ITableData,
+  ) {
+    super(dataSource, projectDir);
+    this.getTableData = getTableData;
+  }
+
+  abstract loadPoints(): Promise<TPointsData>;
 }

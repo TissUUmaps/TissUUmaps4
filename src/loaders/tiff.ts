@@ -1,8 +1,10 @@
 import GeoTIFF, { GeoTIFFImage, Pool, fromBlob, fromUrl } from "geotiff";
 
-import { ILabelsData, ILabelsDataLoader } from "../data/labels";
+import { ILabelsData, LabelsDataLoaderBase } from "../data/labels";
 import { UintArray } from "../data/types";
 import { ILabelsDataSourceModel } from "../models/labels";
+
+const POOL = new Pool();
 
 // https://github.com/geotiffjs/geotiff.js/issues/445
 enum SampleFormat {
@@ -12,53 +14,51 @@ enum SampleFormat {
   UNDEFINED = 4,
 }
 
-// TODO GeoTIFFImageDataLoader
+// TODO TIFFImageDataLoader
 
-export const GEOTIFF_LABELS_DATA_SOURCE = "geotiff";
+export const TIFF_LABELS_DATA_SOURCE = "tiff";
 
-export interface IGeoTIFFLabelsDataSourceModel
-  extends ILabelsDataSourceModel<typeof GEOTIFF_LABELS_DATA_SOURCE> {
-  tiffFile?: string;
+export interface ITIFFLabelsDataSourceModel
+  extends ILabelsDataSourceModel<typeof TIFF_LABELS_DATA_SOURCE> {
   tiffUrl?: string;
+  tiffFile?: string;
   tileWidth?: number;
   tileHeight?: number;
 }
 
-export class GeoTIFFLabelsData implements ILabelsData {
-  private static readonly SHARED_POOL = new Pool();
-
-  private readonly images: GeoTIFFImage[];
+export class TIFFLabelsData implements ILabelsData {
+  private readonly levels: GeoTIFFImage[];
   private readonly tileWidth?: number;
   private readonly tileHeight?: number;
 
-  constructor(images: GeoTIFFImage[], tileWidth?: number, tileHeight?: number) {
-    this.images = images;
+  constructor(levels: GeoTIFFImage[], tileWidth?: number, tileHeight?: number) {
+    this.levels = levels;
     this.tileWidth = tileWidth;
     this.tileHeight = tileHeight;
   }
 
   getWidth(level?: number): number {
-    return this.images[level || 0].getWidth();
+    return this.levels[level || 0].getWidth();
   }
 
   getHeight(level?: number): number {
-    return this.images[level || 0].getHeight();
+    return this.levels[level || 0].getHeight();
   }
 
   getLevelCount(): number {
-    return this.images.length;
+    return this.levels.length;
   }
 
   getLevelScale(level: number): number {
-    return this.images[0].getWidth() / this.images[level].getWidth();
+    return this.levels[0].getWidth() / this.levels[level].getWidth();
   }
 
   getTileWidth(level: number): number | undefined {
-    return this.tileWidth || this.images[level].getTileWidth();
+    return this.tileWidth || this.levels[level].getTileWidth();
   }
 
   getTileHeight(level: number): number | undefined {
-    return this.tileHeight || this.images[level].getTileHeight();
+    return this.tileHeight || this.levels[level].getTileHeight();
   }
 
   async loadTile(
@@ -67,9 +67,8 @@ export class GeoTIFFLabelsData implements ILabelsData {
     y: number,
     abortSignal?: AbortSignal,
   ): Promise<UintArray> {
-    const image = this.images[level];
-    const sharedPool = GeoTIFFLabelsData.SHARED_POOL;
-    const tile = await image.getTileOrStrip(x, y, 0, sharedPool, abortSignal);
+    const image = this.levels[level];
+    const tile = await image.getTileOrStrip(x, y, 0, POOL, abortSignal);
     const bitsPerSample = image.getBitsPerSample(0) as number;
     switch (bitsPerSample) {
       case 8:
@@ -84,35 +83,15 @@ export class GeoTIFFLabelsData implements ILabelsData {
   }
 }
 
-export class GeoTIFFLabelsDataLoader
-  implements ILabelsDataLoader<IGeoTIFFLabelsDataSourceModel, GeoTIFFLabelsData>
-{
-  private readonly dataSource: IGeoTIFFLabelsDataSourceModel;
-  private readonly projectDir: FileSystemDirectoryHandle | undefined;
-
-  constructor(
-    dataSource: IGeoTIFFLabelsDataSourceModel,
-    projectDir?: FileSystemDirectoryHandle,
-  ) {
-    this.dataSource = dataSource;
-    this.projectDir = projectDir;
-  }
-
-  getDataSource(): IGeoTIFFLabelsDataSourceModel {
-    return this.dataSource;
-  }
-
-  getProjectDir(): FileSystemDirectoryHandle | undefined {
-    return this.projectDir;
-  }
-
-  async loadLabels(abortSignal?: AbortSignal): Promise<GeoTIFFLabelsData> {
+export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
+  ITIFFLabelsDataSourceModel,
+  TIFFLabelsData
+> {
+  async loadLabels(abortSignal?: AbortSignal): Promise<TIFFLabelsData> {
     const tiff = await this.loadTIFF(abortSignal);
     const imageCount = await tiff.getImageCount();
     if (imageCount <= 0) {
-      throw new Error(
-        `No images found in TIFF file: ${this.dataSource.tiffUrl || this.dataSource.tiffFile}`,
-      );
+      throw new Error("No images found in the TIFF file.");
     }
     const imagePromises = [];
     for (let i = 0; i < imageCount; i++) {
@@ -137,8 +116,9 @@ export class GeoTIFFLabelsDataLoader
       imagePromises.push(imagePromise);
     }
     const images = await Promise.all(imagePromises);
-    return new GeoTIFFLabelsData(
-      images.sort((a, b) => b.getWidth() - a.getWidth()),
+    const levels = images.sort((a, b) => b.getWidth() - a.getWidth());
+    return new TIFFLabelsData(
+      levels,
       this.dataSource.tileWidth,
       this.dataSource.tileHeight,
     );
@@ -149,7 +129,7 @@ export class GeoTIFFLabelsDataLoader
       return await fromUrl(this.dataSource.tiffUrl, abortSignal);
     }
     if (this.dataSource.tiffFile !== undefined) {
-      if (this.projectDir === undefined) {
+      if (this.projectDir === null) {
         throw new Error("Project directory is required to load local files.");
       }
       const fh = await this.projectDir.getFileHandle(this.dataSource.tiffFile);

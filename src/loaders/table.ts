@@ -1,4 +1,4 @@
-import { IPointsData, IPointsDataLoader } from "../data/points";
+import { IPointsData, PointsDataLoaderBase } from "../data/points";
 import { ITableData } from "../data/table";
 import { TypedArray } from "../data/types";
 import { IPointsDataSourceModel } from "../models/points";
@@ -23,7 +23,7 @@ export class TablePointsData implements IPointsData {
   }
 
   getIds(): number[] {
-    return this.tableData.getIndex();
+    return this.tableData.getIds();
   }
 
   getDimensions(): string[] {
@@ -36,30 +36,13 @@ export class TablePointsData implements IPointsData {
   }
 }
 
-export class TablePointsDataLoader
-  implements IPointsDataLoader<ITablePointsDataSourceModel, IPointsData>
-{
-  private readonly dataSource: ITablePointsDataSourceModel;
-  private readonly loadTable: (column: string) => Promise<ITableData>;
-
-  constructor(
-    dataSource: ITablePointsDataSourceModel,
-    loadTable: (tableId: string) => Promise<ITableData>,
-  ) {
-    this.dataSource = dataSource;
-    this.loadTable = loadTable;
-  }
-
-  getDataSource(): ITablePointsDataSourceModel {
-    return this.dataSource;
-  }
-
-  getProjectDir(): FileSystemDirectoryHandle | undefined {
-    return undefined;
-  }
-
-  async loadPoints(): Promise<IPointsData> {
-    const tableData = await this.loadTable(this.dataSource.tableId);
-    return new TablePointsData(tableData, this.dataSource.columns);
+export class TablePointsDataLoader extends PointsDataLoaderBase<
+  ITablePointsDataSourceModel,
+  IPointsData
+> {
+  loadPoints(): Promise<IPointsData> {
+    const tableData = this.getTableData(this.dataSource.tableId);
+    const pointsData = new TablePointsData(tableData, this.dataSource.columns);
+    return Promise.resolve(pointsData);
   }
 }

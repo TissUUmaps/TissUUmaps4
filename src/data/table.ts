@@ -1,15 +1,23 @@
 import { ITableDataSourceModel } from "../models/table";
-import { IData, IDataLoader } from "./base";
+import { DataLoaderBase, IData, IDataLoader } from "./base";
 
 export interface ITableData extends IData {
-  getIndex(): number[];
+  getIds(): number[];
   getColumns(): string[];
-  loadColumnData(column: string): Promise<unknown[]>;
+  loadColumnData<T>(column: string): Promise<T[]>;
 }
 
-export interface ITableDataLoader<
-  TTableDataSourceModel extends ITableDataSourceModel<string>,
-  TTableData extends ITableData,
-> extends IDataLoader<TTableDataSourceModel> {
-  loadTable: () => Promise<TTableData>;
+export interface ITableDataLoader<TTableData extends ITableData>
+  extends IDataLoader {
+  loadTable(): Promise<TTableData>;
+}
+
+export abstract class TableDataLoaderBase<
+    TTableDataSourceModel extends ITableDataSourceModel<string>,
+    TTableData extends ITableData,
+  >
+  extends DataLoaderBase<TTableDataSourceModel>
+  implements ITableDataLoader<TTableData>
+{
+  abstract loadTable(): Promise<TTableData>;
 }

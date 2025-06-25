@@ -1,9 +1,9 @@
 import { IDataModel, IDataSourceModel } from "./base";
 
 /** A table */
-export interface ITableModel extends IDataModel<ITableDataSourceModel<string>> {
-  idCol: string;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ITableModel
+  extends IDataModel<ITableDataSourceModel<string>> {}
 
 /** A data source for tables */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

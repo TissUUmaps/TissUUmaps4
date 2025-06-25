@@ -1,5 +1,5 @@
 import { IImageDataSourceModel } from "../models/image";
-import { IData, IDataLoader } from "./base";
+import { DataLoaderBase, IData, IDataLoader } from "./base";
 import { ICustomTileSource } from "./types";
 
 export interface IImageData extends IData {
@@ -7,13 +7,17 @@ export interface IImageData extends IData {
   getTileSource(channel?: string): string | ICustomTileSource;
 }
 
-export interface IImageDataLoader<
-  TImageDataSourceModel extends IImageDataSourceModel<string>,
-  TImageData extends IImageData,
-> extends IDataLoader<TImageDataSourceModel> {
-  loadImage: (
-    t?: number,
-    z?: number,
-    abortSignal?: AbortSignal,
-  ) => Promise<TImageData>;
+export interface IImageDataLoader<TImageData extends IImageData>
+  extends IDataLoader {
+  loadImage(abortSignal?: AbortSignal): Promise<TImageData>;
+}
+
+export abstract class ImageDataLoaderBase<
+    TImageDataSourceModel extends IImageDataSourceModel<string>,
+    TImageData extends IImageData,
+  >
+  extends DataLoaderBase<TImageDataSourceModel>
+  implements IImageDataLoader<TImageData>
+{
+  abstract loadImage(abortSignal?: AbortSignal): Promise<TImageData>;
 }

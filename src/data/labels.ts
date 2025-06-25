@@ -1,5 +1,5 @@
 import { ILabelsDataSourceModel } from "../models/labels";
-import { IData, IDataLoader } from "./base";
+import { DataLoaderBase, IData, IDataLoader } from "./base";
 import { UintArray } from "./types";
 
 export interface ILabelsData extends IData {
@@ -17,9 +17,17 @@ export interface ILabelsData extends IData {
   ): Promise<UintArray>;
 }
 
-export interface ILabelsDataLoader<
-  TLabelsDataSourceModel extends ILabelsDataSourceModel<string>,
-  TLabelsData extends ILabelsData,
-> extends IDataLoader<TLabelsDataSourceModel> {
-  loadLabels: (abortSignal?: AbortSignal) => Promise<TLabelsData>;
+export interface ILabelsDataLoader<TLabelsData extends ILabelsData>
+  extends IDataLoader {
+  loadLabels(abortSignal?: AbortSignal): Promise<TLabelsData>;
+}
+
+export abstract class LabelsDataLoaderBase<
+    TLabelsDataSourceModel extends ILabelsDataSourceModel<string>,
+    TLabelsData extends ILabelsData,
+  >
+  extends DataLoaderBase<TLabelsDataSourceModel>
+  implements ILabelsDataLoader<TLabelsData>
+{
+  abstract loadLabels(abortSignal?: AbortSignal): Promise<TLabelsData>;
 }
