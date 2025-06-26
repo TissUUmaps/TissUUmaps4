@@ -15,8 +15,7 @@ export const PARQUET_TABLE_DATA_SOURCE = "parquet";
 
 export interface IParquetTableDataSourceModel
   extends ITableDataSourceModel<typeof PARQUET_TABLE_DATA_SOURCE> {
-  parquetUrl?: string;
-  parquetFile?: string;
+  parquetFile: { url: string } | { path: string };
   idColumn: string;
   headers?: { [headerName: string]: string };
 }
@@ -63,7 +62,7 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
   ParquetTableData
 > {
   async loadTable(): Promise<ParquetTableData> {
-    const buffer = await this.loadParquet();
+    const buffer = await this.loadParquetFile();
     const metadata = await parquetMetadataAsync(buffer);
     const idArray = await parquetReadColumn({
       file: buffer,
@@ -76,27 +75,23 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
     return new ParquetTableData(ids, columns, buffer, metadata);
   }
 
-  private async loadParquet(): Promise<AsyncBuffer> {
-    if (this.dataSource.parquetUrl !== undefined) {
-      let requestInit: RequestInit | undefined = undefined;
+  private async loadParquetFile(): Promise<AsyncBuffer> {
+    if ("url" in this.dataSource.parquetFile) {
+      let requestInit = undefined;
       if (this.dataSource.headers !== undefined) {
         requestInit = { headers: this.dataSource.headers };
       }
       return await asyncBufferFromUrl({
-        url: this.dataSource.parquetUrl,
+        url: this.dataSource.parquetFile.url,
         requestInit: requestInit,
       });
     }
-    if (this.dataSource.parquetFile !== undefined) {
-      if (this.projectDir === null) {
-        throw new Error("Project directory is required to load local files.");
-      }
-      const fh = await this.projectDir.getFileHandle(
-        this.dataSource.parquetFile,
-      );
-      const file = await fh.getFile();
-      return await file.arrayBuffer();
+    if (this.projectDir === null) {
+      throw new Error("Project directory is required to load local files.");
     }
-    throw new Error("No Parquet source specified (parquetUrl or parquetFile).");
+    const path = this.dataSource.parquetFile.path;
+    const fh = await this.projectDir.getFileHandle(path);
+    const file = await fh.getFile();
+    return await file.arrayBuffer();
   }
 }

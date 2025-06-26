@@ -20,18 +20,21 @@ export const TIFF_LABELS_DATA_SOURCE = "tiff";
 
 export interface ITIFFLabelsDataSourceModel
   extends ILabelsDataSourceModel<typeof TIFF_LABELS_DATA_SOURCE> {
-  tiffUrl?: string;
-  tiffFile?: string;
+  tiffFile: { url: string } | { path: string };
   tileWidth?: number;
   tileHeight?: number;
 }
 
 export class TIFFLabelsData implements ILabelsData {
   private readonly levels: GeoTIFFImage[];
-  private readonly tileWidth?: number;
-  private readonly tileHeight?: number;
+  private readonly tileWidth: number | null;
+  private readonly tileHeight: number | null;
 
-  constructor(levels: GeoTIFFImage[], tileWidth?: number, tileHeight?: number) {
+  constructor(
+    levels: GeoTIFFImage[],
+    tileWidth: number | null,
+    tileHeight: number | null,
+  ) {
     this.levels = levels;
     this.tileWidth = tileWidth;
     this.tileHeight = tileHeight;
@@ -88,7 +91,7 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
   TIFFLabelsData
 > {
   async loadLabels(abortSignal?: AbortSignal): Promise<TIFFLabelsData> {
-    const tiff = await this.loadTIFF(abortSignal);
+    const tiff = await this.loadTIFFFile(abortSignal);
     const imageCount = await tiff.getImageCount();
     if (imageCount <= 0) {
       throw new Error("No images found in the TIFF file.");
@@ -116,26 +119,23 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
       imagePromises.push(imagePromise);
     }
     const images = await Promise.all(imagePromises);
-    const levels = images.sort((a, b) => b.getWidth() - a.getWidth());
     return new TIFFLabelsData(
-      levels,
-      this.dataSource.tileWidth,
-      this.dataSource.tileHeight,
+      images.sort((a, b) => b.getWidth() - a.getWidth()),
+      this.dataSource.tileWidth ?? null,
+      this.dataSource.tileHeight ?? null,
     );
   }
 
-  private async loadTIFF(abortSignal?: AbortSignal): Promise<GeoTIFF> {
-    if (this.dataSource.tiffUrl !== undefined) {
-      return await fromUrl(this.dataSource.tiffUrl, abortSignal);
+  private async loadTIFFFile(abortSignal?: AbortSignal): Promise<GeoTIFF> {
+    if ("url" in this.dataSource.tiffFile) {
+      return await fromUrl(this.dataSource.tiffFile.url, abortSignal);
     }
-    if (this.dataSource.tiffFile !== undefined) {
-      if (this.projectDir === null) {
-        throw new Error("Project directory is required to load local files.");
-      }
-      const fh = await this.projectDir.getFileHandle(this.dataSource.tiffFile);
-      const file = await fh.getFile();
-      return await fromBlob(file, abortSignal);
+    if (this.projectDir === null) {
+      throw new Error("Project directory is required to load local files.");
     }
-    throw new Error("No TIFF source specified (tiffUrl or tiffFile).");
+    const path = this.dataSource.tiffFile.path;
+    const fh = await this.projectDir.getFileHandle(path);
+    const file = await fh.getFile();
+    return await fromBlob(file, abortSignal);
   }
 }

@@ -15,9 +15,9 @@ export interface ITablePointsDataSourceModel
 
 export class TablePointsData implements IPointsData {
   private readonly tableData: ITableData;
-  private readonly columns?: string[];
+  private readonly columns: string[] | null;
 
-  constructor(tableData: ITableData, columns?: string[]) {
+  constructor(tableData: ITableData, columns: string[] | null) {
     this.tableData = tableData;
     this.columns = columns;
   }
@@ -41,8 +41,10 @@ export class TablePointsDataLoader extends PointsDataLoaderBase<
   IPointsData
 > {
   loadPoints(): Promise<IPointsData> {
-    const tableData = this.getTableData(this.dataSource.tableId);
-    const pointsData = new TablePointsData(tableData, this.dataSource.columns);
+    const pointsData = new TablePointsData(
+      this.getTableData(this.dataSource.tableId),
+      this.dataSource.columns ?? null,
+    );
     return Promise.resolve(pointsData);
   }
 }

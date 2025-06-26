@@ -12,8 +12,7 @@ export const CSV_TABLE_DATA_SOURCE = "csv";
 
 export interface ICSVTableDataSourceModel
   extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
-  csvUrl?: string;
-  csvFile?: string;
+  csvFile: { url: string } | { path: string };
   idColumn: string;
   config?: Partial<ParseRemoteConfig | ParseLocalConfig>;
 }
@@ -55,17 +54,18 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   CSVTableData
 > {
   async loadTable(): Promise<CSVTableData> {
-    const results = await this.loadCSV();
-    const records = results.data as Record<string, unknown>[];
+    const parseResult = await this.loadCSVFile();
+    const records = parseResult.data as Record<string, unknown>[];
     const ids = records.map((row) => row[this.dataSource.idColumn] as number);
-    const columns = results.meta.fields as string[];
+    const columns = parseResult.meta.fields as string[];
     return new CSVTableData(ids, columns, records);
   }
 
-  private async loadCSV(): Promise<ParseResult<unknown>> {
-    if (this.dataSource.csvUrl !== undefined) {
+  private async loadCSVFile(): Promise<ParseResult<unknown>> {
+    if ("url" in this.dataSource.csvFile) {
+      const url = this.dataSource.csvFile.url;
       return await new Promise<ParseResult<unknown>>((resolve, reject) =>
-        parse(this.dataSource.csvUrl!, {
+        parse(url, {
           ...this.dataSource.config,
           download: true,
           dynamicTyping: true,
@@ -75,22 +75,20 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
         }),
       );
     }
-    if (this.dataSource.csvFile !== undefined) {
-      if (this.projectDir === null) {
-        throw new Error("Project directory is required to load local files.");
-      }
-      const fh = await this.projectDir.getFileHandle(this.dataSource.csvFile);
-      const file = await fh.getFile();
-      return await new Promise<ParseResult<unknown>>((resolve, reject) =>
-        parse(file, {
-          ...this.dataSource.config,
-          dynamicTyping: true,
-          header: true,
-          complete: resolve,
-          error: reject,
-        }),
-      );
+    if (this.projectDir === null) {
+      throw new Error("Project directory is required to load local files.");
     }
-    throw new Error("No CSV source specified (csvUrl or csvFile).");
+    const path = this.dataSource.csvFile.path;
+    const fh = await this.projectDir.getFileHandle(path);
+    const file = await fh.getFile();
+    return await new Promise<ParseResult<unknown>>((resolve, reject) =>
+      parse(file, {
+        ...this.dataSource.config,
+        dynamicTyping: true,
+        header: true,
+        complete: resolve,
+        error: reject,
+      }),
+    );
   }
 }
