@@ -1,10 +1,4 @@
-import {
-  AsyncBuffer,
-  FileMetaData,
-  asyncBufferFromUrl,
-  parquetMetadataAsync,
-  parquetSchema,
-} from "hyparquet";
+import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
@@ -23,14 +17,14 @@ export interface IParquetTableDataSourceModel
 export class ParquetTableData implements ITableData {
   private readonly ids: number[];
   private readonly columns: string[];
-  private readonly buffer: AsyncBuffer;
-  private readonly metadata: FileMetaData;
+  private readonly buffer: hyparquet.AsyncBuffer;
+  private readonly metadata: hyparquet.FileMetaData;
 
   constructor(
     ids: number[],
     columns: string[],
-    buffer: AsyncBuffer,
-    metadata: FileMetaData,
+    buffer: hyparquet.AsyncBuffer,
+    metadata: hyparquet.FileMetaData,
   ) {
     this.ids = ids;
     this.columns = columns;
@@ -63,7 +57,7 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
 > {
   async loadTable(): Promise<ParquetTableData> {
     const buffer = await this.loadParquetFile();
-    const metadata = await parquetMetadataAsync(buffer);
+    const metadata = await hyparquet.parquetMetadataAsync(buffer);
     const idArray = await parquetReadColumn({
       file: buffer,
       columns: [this.dataSource.idColumn],
@@ -71,17 +65,18 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
       compressors: compressors,
     });
     const ids = Array.from(idArray) as number[];
-    const columns = parquetSchema(metadata).children.map((c) => c.element.name);
+    const columnSchema = hyparquet.parquetSchema(metadata);
+    const columns = columnSchema.children.map((c) => c.element.name);
     return new ParquetTableData(ids, columns, buffer, metadata);
   }
 
-  private async loadParquetFile(): Promise<AsyncBuffer> {
+  private async loadParquetFile(): Promise<hyparquet.AsyncBuffer> {
     if ("url" in this.dataSource.parquetFile) {
       let requestInit = undefined;
       if (this.dataSource.headers !== undefined) {
         requestInit = { headers: this.dataSource.headers };
       }
-      return await asyncBufferFromUrl({
+      return await hyparquet.asyncBufferFromUrl({
         url: this.dataSource.parquetFile.url,
         requestInit: requestInit,
       });

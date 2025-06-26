@@ -1,10 +1,10 @@
-import GeoTIFF, { GeoTIFFImage, Pool, fromBlob, fromUrl } from "geotiff";
+import * as geotiff from "geotiff";
 
 import { ILabelsData, LabelsDataLoaderBase } from "../data/labels";
 import { UintArray } from "../data/types";
 import { ILabelsDataSourceModel } from "../models/labels";
 
-const POOL = new Pool();
+const POOL = new geotiff.Pool();
 
 // https://github.com/geotiffjs/geotiff.js/issues/445
 enum SampleFormat {
@@ -26,12 +26,12 @@ export interface ITIFFLabelsDataSourceModel
 }
 
 export class TIFFLabelsData implements ILabelsData {
-  private readonly levels: GeoTIFFImage[];
+  private readonly levels: geotiff.GeoTIFFImage[];
   private readonly tileWidth: number | null;
   private readonly tileHeight: number | null;
 
   constructor(
-    levels: GeoTIFFImage[],
+    levels: geotiff.GeoTIFFImage[],
     tileWidth: number | null,
     tileHeight: number | null,
   ) {
@@ -126,9 +126,11 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
     );
   }
 
-  private async loadTIFFFile(abortSignal?: AbortSignal): Promise<GeoTIFF> {
+  private async loadTIFFFile(
+    abortSignal?: AbortSignal,
+  ): Promise<geotiff.GeoTIFF> {
     if ("url" in this.dataSource.tiffFile) {
-      return await fromUrl(this.dataSource.tiffFile.url, abortSignal);
+      return await geotiff.fromUrl(this.dataSource.tiffFile.url, abortSignal);
     }
     if (this.projectDir === null) {
       throw new Error("Project directory is required to load local files.");
@@ -136,6 +138,6 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
     const path = this.dataSource.tiffFile.path;
     const fh = await this.projectDir.getFileHandle(path);
     const file = await fh.getFile();
-    return await fromBlob(file, abortSignal);
+    return await geotiff.fromBlob(file, abortSignal);
   }
 }

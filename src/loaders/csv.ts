@@ -1,9 +1,4 @@
-import {
-  ParseLocalConfig,
-  ParseRemoteConfig,
-  ParseResult,
-  parse,
-} from "papaparse";
+import * as papaparse from "papaparse";
 
 import { ITableData, TableDataLoaderBase } from "../data/table";
 import { ITableDataSourceModel } from "../models/table";
@@ -14,7 +9,9 @@ export interface ICSVTableDataSourceModel
   extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
   csvFile: { url: string } | { path: string };
   idColumn: string;
-  config?: Partial<ParseRemoteConfig | ParseLocalConfig>;
+  parseConfig?: Partial<
+    papaparse.ParseRemoteConfig | papaparse.ParseLocalConfig
+  >;
 }
 
 export class CSVTableData implements ITableData {
@@ -61,18 +58,19 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
     return new CSVTableData(ids, columns, records);
   }
 
-  private async loadCSVFile(): Promise<ParseResult<unknown>> {
+  private async loadCSVFile(): Promise<papaparse.ParseResult<unknown>> {
     if ("url" in this.dataSource.csvFile) {
       const url = this.dataSource.csvFile.url;
-      return await new Promise<ParseResult<unknown>>((resolve, reject) =>
-        parse(url, {
-          ...this.dataSource.config,
-          download: true,
-          dynamicTyping: true,
-          header: true,
-          complete: resolve,
-          error: reject,
-        }),
+      return await new Promise<papaparse.ParseResult<unknown>>(
+        (resolve, reject) =>
+          papaparse.parse(url, {
+            ...this.dataSource.parseConfig,
+            download: true,
+            dynamicTyping: true,
+            header: true,
+            complete: resolve,
+            error: reject,
+          }),
       );
     }
     if (this.projectDir === null) {
@@ -81,14 +79,15 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
     const path = this.dataSource.csvFile.path;
     const fh = await this.projectDir.getFileHandle(path);
     const file = await fh.getFile();
-    return await new Promise<ParseResult<unknown>>((resolve, reject) =>
-      parse(file, {
-        ...this.dataSource.config,
-        dynamicTyping: true,
-        header: true,
-        complete: resolve,
-        error: reject,
-      }),
+    return await new Promise<papaparse.ParseResult<unknown>>(
+      (resolve, reject) =>
+        papaparse.parse(file, {
+          ...this.dataSource.parseConfig,
+          dynamicTyping: true,
+          header: true,
+          complete: resolve,
+          error: reject,
+        }),
     );
   }
 }

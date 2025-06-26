@@ -3,7 +3,7 @@ import { DataLoaderBase, IData, IDataLoader } from "./base";
 import { ICustomTileSource } from "./types";
 
 export interface IImageData extends IData {
-  getChannels(): string[] | undefined;
+  getChannels(): string[] | null;
   getTileSource(channel?: string): string | ICustomTileSource;
 }
 

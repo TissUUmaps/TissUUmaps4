@@ -10,19 +10,16 @@ export interface IDefaultImageDataSourceModel
 }
 
 export class DefaultImageData implements IImageData {
-  private readonly tileSource: string | ICustomTileSource;
-  private readonly isObjectUrl: boolean;
+  private readonly tileSource: string;
+  private readonly objectUrl: string | null;
 
-  constructor(
-    tileSource: string | ICustomTileSource,
-    isObjectUrl: boolean = false,
-  ) {
+  constructor(tileSource: string, objectUrl: string | null) {
     this.tileSource = tileSource;
-    this.isObjectUrl = isObjectUrl;
+    this.objectUrl = objectUrl;
   }
 
-  getChannels(): string[] | undefined {
-    return undefined;
+  getChannels(): string[] | null {
+    return null;
   }
 
   getTileSource(): string | ICustomTileSource {
@@ -30,8 +27,8 @@ export class DefaultImageData implements IImageData {
   }
 
   destroy(): void {
-    if (this.isObjectUrl) {
-      URL.revokeObjectURL(this.tileSource as string);
+    if (this.objectUrl) {
+      URL.revokeObjectURL(this.objectUrl);
     }
   }
 }
@@ -41,8 +38,13 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
   DefaultImageData
 > {
   async loadImage(): Promise<DefaultImageData> {
+    const [tileSource, objectUrl] = await this.loadTileSource();
+    return new DefaultImageData(tileSource, objectUrl);
+  }
+
+  private async loadTileSource(): Promise<[string, string | null]> {
     if ("url" in this.dataSource.tileSource) {
-      return new DefaultImageData(this.dataSource.tileSource.url);
+      return [this.dataSource.tileSource.url, null];
     }
     if (this.projectDir === null) {
       throw new Error("Project directory is required to load local files.");
@@ -51,6 +53,6 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
     const fh = await this.projectDir.getFileHandle(path);
     const file = await fh.getFile();
     const objectUrl = URL.createObjectURL(file);
-    return new DefaultImageData(objectUrl, true);
+    return [objectUrl, objectUrl];
   }
 }
