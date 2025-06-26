@@ -1,7 +1,8 @@
 import { IDataSourceModel } from "../models/base";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface IData {}
+export interface IData {
+  destroy?: () => void;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IDataLoader {}
