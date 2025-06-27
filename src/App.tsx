@@ -4,6 +4,7 @@ import {
   DockviewReadyEvent,
   IDockviewPanelHeaderProps,
 } from "dockview-react";
+import { useEffect } from "react";
 
 import "./App.css";
 import ProjectPanel from "./components/ProjectPanel";
@@ -13,8 +14,20 @@ import LabelsCollectionPanel from "./components/labels/LabelsCollectionPanel";
 import PointsCollectionPanel from "./components/points/PointsCollectionPanel";
 import ShapesCollectionPanel from "./components/shapes/ShapesCollectionPanel";
 import TableCollectionPanel from "./components/tables/TableCollectionPanel";
+import { useBoundStore } from "./stores/boundStore";
+
+declare global {
+  interface Window {
+    tissuumaps: typeof useBoundStore;
+  }
+}
 
 export default function App() {
+  // make the store available to plugins
+  useEffect(() => {
+    window.tissuumaps = useBoundStore;
+  }, []);
+
   // const initialized = useBoundStore((state) => state.initialized);
   // const setInitialized = useBoundStore((state) => state.setInitialized);
 
