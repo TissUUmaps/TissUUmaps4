@@ -84,6 +84,8 @@ export class TIFFLabelsData implements ILabelsData {
         throw new Error(`Unsupported bits per sample: ${bitsPerSample}`);
     }
   }
+
+  destroy(): void {}
 }
 
 export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<

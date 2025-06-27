@@ -44,6 +44,8 @@ export class CSVTableData implements ITableData {
     const data = this.records.map((row) => row[column] as T);
     return Promise.resolve(data);
   }
+
+  destroy(): void {}
 }
 
 export class CSVTableDataLoader extends TableDataLoaderBase<

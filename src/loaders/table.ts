@@ -34,6 +34,8 @@ export class TablePointsData implements IPointsData {
     const coords = await this.tableData.loadColumnData(dimension);
     return Float32Array.from(coords);
   }
+
+  destroy(): void {}
 }
 
 export class TablePointsDataLoader extends PointsDataLoaderBase<

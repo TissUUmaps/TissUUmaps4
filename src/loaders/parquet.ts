@@ -49,6 +49,8 @@ export class ParquetTableData implements ITableData {
     });
     return Array.from(data) as T[];
   }
+
+  destroy(): void {}
 }
 
 export class ParquetTableDataLoader extends TableDataLoaderBase<
