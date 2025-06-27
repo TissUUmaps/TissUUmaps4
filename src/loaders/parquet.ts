@@ -9,7 +9,7 @@ export const PARQUET_TABLE_DATA_SOURCE = "parquet";
 
 export interface IParquetTableDataSourceModel
   extends ITableDataSourceModel<typeof PARQUET_TABLE_DATA_SOURCE> {
-  parquetFile: { url: string } | { path: string };
+  parquetFile: { url: string } | { localPath: string };
   idColumn: string;
   headers?: { [headerName: string]: string };
 }
@@ -84,7 +84,7 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
     if (this.projectDir === null) {
       throw new Error("Project directory is required to load local files.");
     }
-    const path = this.dataSource.parquetFile.path;
+    const path = this.dataSource.parquetFile.localPath;
     const fh = await this.projectDir.getFileHandle(path);
     const file = await fh.getFile();
     return await file.arrayBuffer();

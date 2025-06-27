@@ -7,7 +7,7 @@ export const CSV_TABLE_DATA_SOURCE = "csv";
 
 export interface ICSVTableDataSourceModel
   extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
-  csvFile: { url: string } | { path: string };
+  csvFile: { url: string } | { localPath: string };
   idColumn: string;
   parseConfig?: Partial<
     papaparse.ParseRemoteConfig | papaparse.ParseLocalConfig
@@ -76,7 +76,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
     if (this.projectDir === null) {
       throw new Error("Project directory is required to load local files.");
     }
-    const path = this.dataSource.csvFile.path;
+    const path = this.dataSource.csvFile.localPath;
     const fh = await this.projectDir.getFileHandle(path);
     const file = await fh.getFile();
     return await new Promise<papaparse.ParseResult<unknown>>(

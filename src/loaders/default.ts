@@ -6,7 +6,7 @@ export const DEFAULT_IMAGE_DATA_SOURCE = "default";
 
 export interface IDefaultImageDataSourceModel
   extends IImageDataSourceModel<typeof DEFAULT_IMAGE_DATA_SOURCE> {
-  tileSource: { url: string } | { path: string };
+  tileSource: { url: string } | { localPath: string };
 }
 
 export class DefaultImageData implements IImageData {
@@ -49,7 +49,7 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
     if (this.projectDir === null) {
       throw new Error("Project directory is required to load local files.");
     }
-    const path = this.dataSource.tileSource.path;
+    const path = this.dataSource.tileSource.localPath;
     const fh = await this.projectDir.getFileHandle(path);
     const file = await fh.getFile();
     const objectUrl = URL.createObjectURL(file);

@@ -20,7 +20,7 @@ export const TIFF_LABELS_DATA_SOURCE = "tiff";
 
 export interface ITIFFLabelsDataSourceModel
   extends ILabelsDataSourceModel<typeof TIFF_LABELS_DATA_SOURCE> {
-  tiffFile: { url: string } | { path: string };
+  tiffFile: { url: string } | { localPath: string };
   tileWidth?: number;
   tileHeight?: number;
 }
@@ -135,7 +135,7 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
     if (this.projectDir === null) {
       throw new Error("Project directory is required to load local files.");
     }
-    const path = this.dataSource.tiffFile.path;
+    const path = this.dataSource.tiffFile.localPath;
     const fh = await this.projectDir.getFileHandle(path);
     const file = await fh.getFile();
     return await geotiff.fromBlob(file, abortSignal);
