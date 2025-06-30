@@ -12,13 +12,13 @@ export abstract class DataLoaderBase<
 > implements IDataLoader
 {
   protected readonly dataSource: TDataSourceModel;
-  protected readonly projectDir: FileSystemDirectoryHandle | null;
+  protected readonly workspace: FileSystemDirectoryHandle | null;
 
   constructor(
     dataSource: TDataSourceModel,
     projectDir: FileSystemDirectoryHandle | null,
   ) {
     this.dataSource = dataSource;
-    this.projectDir = projectDir;
+    this.workspace = projectDir;
   }
 }

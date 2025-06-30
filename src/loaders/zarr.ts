@@ -12,8 +12,7 @@ export const ZARR_LABELS_DATA_SOURCE = "zarr";
 
 export interface IZarrLabelsDataSourceModel
   extends ILabelsDataSourceModel<typeof ZARR_LABELS_DATA_SOURCE> {
-  zarr: { url: string } | { localPath: string };
-  path?: string;
+  zarrPath?: string;
   hasLevels?: boolean;
   fetchStoreOptions?: {
     overrides?: RequestInit;
@@ -100,18 +99,20 @@ export class ZarrLabelsDataLoader extends LabelsDataLoaderBase<
   }
 
   private async loadZarr(): Promise<zarrita.AsyncReadable> {
-    if ("url" in this.dataSource.zarr) {
+    if (this.dataSource.path !== undefined && this.workspace !== null) {
+      const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      const file = await fh.getFile();
+      return ZipFileStore.fromBlob(file);
+    }
+    if (this.dataSource.url !== undefined) {
       return new zarrita.FetchStore(
-        this.dataSource.zarr.url,
+        this.dataSource.url,
         this.dataSource.fetchStoreOptions,
       );
     }
-    if (this.projectDir === null) {
-      throw new Error("Project directory is required to load local files.");
+    if (this.dataSource.path !== undefined) {
+      throw new Error("An open workspace is required to open local-only data.");
     }
-    const path = this.dataSource.zarr.localPath;
-    const fh = await this.projectDir.getFileHandle(path);
-    const file = await fh.getFile();
-    return ZipFileStore.fromBlob(file);
+    throw new Error("A URL or workspace path is required to load data.");
   }
 }

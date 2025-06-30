@@ -9,7 +9,6 @@ export const PARQUET_TABLE_DATA_SOURCE = "parquet";
 
 export interface IParquetTableDataSourceModel
   extends ITableDataSourceModel<typeof PARQUET_TABLE_DATA_SOURCE> {
-  parquetFile: { url: string } | { localPath: string };
   idColumn: string;
   headers?: { [headerName: string]: string };
 }
@@ -73,22 +72,24 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
   }
 
   private async loadParquetFile(): Promise<hyparquet.AsyncBuffer> {
-    if ("url" in this.dataSource.parquetFile) {
+    if (this.dataSource.path !== undefined && this.workspace !== null) {
+      const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      const file = await fh.getFile();
+      return await file.arrayBuffer();
+    }
+    if (this.dataSource.url !== undefined) {
       let requestInit = undefined;
       if (this.dataSource.headers !== undefined) {
         requestInit = { headers: this.dataSource.headers };
       }
       return await hyparquet.asyncBufferFromUrl({
-        url: this.dataSource.parquetFile.url,
+        url: this.dataSource.url,
         requestInit: requestInit,
       });
     }
-    if (this.projectDir === null) {
-      throw new Error("Project directory is required to load local files.");
+    if (this.dataSource.path !== undefined) {
+      throw new Error("An open workspace is required to open local-only data.");
     }
-    const path = this.dataSource.parquetFile.localPath;
-    const fh = await this.projectDir.getFileHandle(path);
-    const file = await fh.getFile();
-    return await file.arrayBuffer();
+    throw new Error("A URL or workspace path is required to load data.");
   }
 }

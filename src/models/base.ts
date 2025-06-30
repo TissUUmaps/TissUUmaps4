@@ -52,6 +52,12 @@ export interface IObjectDataModel<
 export interface IDataSourceModel<TType extends string> extends IModel {
   /** Data source type */
   type: TType;
+
+  /** Remote URL (absolute or relative to TissUUmaps root) */
+  url?: string;
+
+  /** Local path (relative to workspace root) */
+  path?: string;
 }
 
 /** Base interface for all layer configuration models */

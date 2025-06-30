@@ -7,7 +7,6 @@ export const CSV_TABLE_DATA_SOURCE = "csv";
 
 export interface ICSVTableDataSourceModel
   extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
-  csvFile: { url: string } | { localPath: string };
   idColumn: string;
   parseConfig?: Partial<
     papaparse.ParseRemoteConfig | papaparse.ParseLocalConfig
@@ -61,8 +60,22 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   }
 
   private async loadCSVFile(): Promise<papaparse.ParseResult<unknown>> {
-    if ("url" in this.dataSource.csvFile) {
-      const url = this.dataSource.csvFile.url;
+    if (this.dataSource.path !== undefined && this.workspace !== null) {
+      const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      const file = await fh.getFile();
+      return await new Promise<papaparse.ParseResult<unknown>>(
+        (resolve, reject) =>
+          papaparse.parse(file, {
+            ...this.dataSource.parseConfig,
+            dynamicTyping: true,
+            header: true,
+            complete: resolve,
+            error: reject,
+          }),
+      );
+    }
+    if (this.dataSource.url !== undefined) {
+      const url = this.dataSource.url;
       return await new Promise<papaparse.ParseResult<unknown>>(
         (resolve, reject) =>
           papaparse.parse(url, {
@@ -75,21 +88,9 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
           }),
       );
     }
-    if (this.projectDir === null) {
-      throw new Error("Project directory is required to load local files.");
+    if (this.dataSource.path !== undefined) {
+      throw new Error("An open workspace is required to open local-only data.");
     }
-    const path = this.dataSource.csvFile.localPath;
-    const fh = await this.projectDir.getFileHandle(path);
-    const file = await fh.getFile();
-    return await new Promise<papaparse.ParseResult<unknown>>(
-      (resolve, reject) =>
-        papaparse.parse(file, {
-          ...this.dataSource.parseConfig,
-          dynamicTyping: true,
-          header: true,
-          complete: resolve,
-          error: reject,
-        }),
-    );
+    throw new Error("A URL or workspace path is required to load data.");
   }
 }

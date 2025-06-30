@@ -20,7 +20,6 @@ export const TIFF_LABELS_DATA_SOURCE = "tiff";
 
 export interface ITIFFLabelsDataSourceModel
   extends ILabelsDataSourceModel<typeof TIFF_LABELS_DATA_SOURCE> {
-  tiffFile: { url: string } | { localPath: string };
   tileWidth?: number;
   tileHeight?: number;
 }
@@ -131,15 +130,17 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
   private async loadTIFFFile(
     abortSignal?: AbortSignal,
   ): Promise<geotiff.GeoTIFF> {
-    if ("url" in this.dataSource.tiffFile) {
-      return await geotiff.fromUrl(this.dataSource.tiffFile.url, abortSignal);
+    if (this.dataSource.path !== undefined && this.workspace !== null) {
+      const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      const file = await fh.getFile();
+      return await geotiff.fromBlob(file, abortSignal);
     }
-    if (this.projectDir === null) {
-      throw new Error("Project directory is required to load local files.");
+    if (this.dataSource.url !== undefined) {
+      return await geotiff.fromUrl(this.dataSource.url, abortSignal);
     }
-    const path = this.dataSource.tiffFile.localPath;
-    const fh = await this.projectDir.getFileHandle(path);
-    const file = await fh.getFile();
-    return await geotiff.fromBlob(file, abortSignal);
+    if (this.dataSource.path !== undefined) {
+      throw new Error("An open workspace is required to open local-only data.");
+    }
+    throw new Error("A URL or workspace path is required to load data.");
   }
 }

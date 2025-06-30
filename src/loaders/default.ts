@@ -4,10 +4,9 @@ import { IImageDataSourceModel } from "../models/image";
 
 export const DEFAULT_IMAGE_DATA_SOURCE = "default";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IDefaultImageDataSourceModel
-  extends IImageDataSourceModel<typeof DEFAULT_IMAGE_DATA_SOURCE> {
-  tileSource: { url: string } | { localPath: string };
-}
+  extends IImageDataSourceModel<typeof DEFAULT_IMAGE_DATA_SOURCE> {}
 
 export class DefaultImageData implements IImageData {
   private readonly tileSource: string;
@@ -43,16 +42,18 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
   }
 
   private async loadTileSource(): Promise<[string, string | null]> {
-    if ("url" in this.dataSource.tileSource) {
-      return [this.dataSource.tileSource.url, null];
+    if (this.dataSource.path !== undefined && this.workspace !== null) {
+      const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      const file = await fh.getFile();
+      const objectUrl = URL.createObjectURL(file);
+      return [objectUrl, objectUrl];
     }
-    if (this.projectDir === null) {
-      throw new Error("Project directory is required to load local files.");
+    if (this.dataSource.url !== undefined) {
+      return [this.dataSource.url, null];
     }
-    const path = this.dataSource.tileSource.localPath;
-    const fh = await this.projectDir.getFileHandle(path);
-    const file = await fh.getFile();
-    const objectUrl = URL.createObjectURL(file);
-    return [objectUrl, objectUrl];
+    if (this.dataSource.path !== undefined) {
+      throw new Error("An open workspace is required to open local-only data.");
+    }
+    throw new Error("A URL or workspace path is required to load data.");
   }
 }

@@ -9,6 +9,8 @@ export const TABLE_POINTS_DATA_SOURCE = "table";
 
 export interface ITablePointsDataSourceModel
   extends IPointsDataSourceModel<typeof TABLE_POINTS_DATA_SOURCE> {
+  url: undefined; // Table data does not use a URL
+  path: undefined; // Table data does not use a path
   tableId: string;
   columns?: string[];
 }
