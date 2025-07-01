@@ -3,17 +3,11 @@ export type Transform = {
   /** Scale factor (defaults to 1) */
   scale?: number;
 
-  /** Rotation, in degrees (defaults to 0) */
-  rotation?: number;
+  /** Translation in the x direction (defaults to 0) */
+  x?: number;
 
-  /** Translation (defaults to 0 for x and y) */
-  translation?: {
-    /** Translation in the x direction */
-    x: number;
-
-    /** Translation in the y direction */
-    y: number;
-  };
+  /** Translation in the y direction (defaults to 0) */
+  y?: number;
 };
 
 /** A color in RGB(A) format */

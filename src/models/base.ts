@@ -25,6 +25,12 @@ export interface IRenderedDataModel<
   /** Opacity, between 0 and 1 (defaults to 1) */
   opacity?: number;
 
+  /** Rotation, in degrees (defaults to 0) */
+  degrees?: number;
+
+  /** Horizontal reflection (defaults to false) */
+  flipped?: boolean;
+
   /** Layer configurations (layer configuration ID -> layer configuration) */
   layerConfigs: Map<string, TLayerConfigModel>;
 }
@@ -34,11 +40,8 @@ export interface IPixelDataModel<
   TDataSourceModel extends IDataSourceModel<string>,
   TLayerConfigModel extends ILayerConfigModel,
 > extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {
-  /** Physical pixel size, applied before any transformation (defaults to 1) */
+  /** Physical pixel size (defaults to 1) */
   pixelSize?: number;
-
-  /** Horizontal reflection, applied before any transformation (defaults to false) */
-  flip?: boolean;
 }
 
 /** Base interface for all object data models */
