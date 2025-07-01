@@ -36,6 +36,9 @@ export interface IPixelDataModel<
 > extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {
   /** Physical pixel size, applied before any transformation (defaults to 1) */
   pixelSize?: number;
+
+  /** Horizontal reflection, applied before any transformation (defaults to false) */
+  flip?: boolean;
 }
 
 /** Base interface for all object data models */

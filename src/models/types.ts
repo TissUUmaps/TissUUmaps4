@@ -1,5 +1,11 @@
 /** A 2D similarity transformation */
 export type Transform = {
+  /** Scale factor (defaults to 1) */
+  scale?: number;
+
+  /** Rotation, in degrees (defaults to 0) */
+  rotation?: number;
+
   /** Translation (defaults to 0 for x and y) */
   translation?: {
     /** Translation in the x direction */
@@ -8,15 +14,6 @@ export type Transform = {
     /** Translation in the y direction */
     y: number;
   };
-
-  /** Rotation, in degrees (defaults to 0) */
-  rotation?: number;
-
-  /** Scale factor (defaults to 1) */
-  scale?: number;
-
-  /** Horizontal reflection (defaults to false) */
-  flip?: boolean;
 };
 
 /** A color in RGB(A) format */
