@@ -1,9 +1,5 @@
-import pickingFragmentShader from "shaders/picking.frag?raw";
-import pickingVertexShader from "shaders/picking.vert?raw";
-import pointEdgesFragmentShader from "shaders/pointEdges.frag?raw";
-import pointEdgesVertexShader from "shaders/pointEdges.vert?raw";
-import pointMarkersFragmentShader from "shaders/pointMarkers.frag?raw";
-import pointMarkersVertexShader from "shaders/pointMarkers.vert?raw";
+import pointsFragmentShader from "shaders/points.frag?raw";
+import pointsVertexShader from "shaders/points.vert?raw";
 import shapesFragmentShader from "shaders/shapes.frag?raw";
 import shapesVertexShader from "shaders/shapes.vert?raw";
 
@@ -26,83 +22,45 @@ export default class WebGLController {
   private readonly canvas: HTMLCanvasElement;
   private readonly gl: WebGL2RenderingContext;
 
-  private readonly directPointMarkersShaderProgram: WebGLProgram;
-  private readonly instancedPointMarkersShaderProgram: WebGLProgram;
-  private readonly pointEdgesShaderProgram: WebGLProgram;
+  private readonly directPointsShaderProgram: WebGLProgram;
+  private readonly instancedPointsShaderProgram: WebGLProgram;
   private readonly shapesShaderProgram: WebGLProgram;
-  private readonly pickingShaderProgram: WebGLProgram;
-
-  private readonly useInstancing: boolean;
 
   constructor(parent: HTMLElement) {
+    // original function: glUtils.init
     this.parent = parent;
     this.canvas = this.createCanvas(this.parent);
     this.gl = this.getWebGL2Context(this.canvas);
-
-    this.directPointMarkersShaderProgram = this.loadShaderProgram(
-      pointMarkersVertexShader,
-      pointMarkersFragmentShader,
+    this.directPointsShaderProgram = this.loadShaderProgram(
+      pointsVertexShader,
+      pointsFragmentShader,
     );
-    this.instancedPointMarkersShaderProgram = this.loadShaderProgram(
-      pointMarkersVertexShader,
-      pointMarkersFragmentShader,
+    this.instancedPointsShaderProgram = this.loadShaderProgram(
+      pointsVertexShader,
+      pointsFragmentShader,
       "#define USE_INSTANCING",
-    );
-    this.pointEdgesShaderProgram = this.loadShaderProgram(
-      pointEdgesVertexShader,
-      pointEdgesFragmentShader,
     );
     this.shapesShaderProgram = this.loadShaderProgram(
       shapesVertexShader,
       shapesFragmentShader,
     );
-    this.pickingShaderProgram = this.loadShaderProgram(
-      pickingVertexShader,
-      pickingFragmentShader,
-    );
-
-    // Enable instancing if the HW point size limit is not large enough.
-    // Note that direct drawing (default) should be faster in most cases.
-    const aliasedPointSizeRange = this.gl.getParameter(
-      this.gl.ALIASED_POINT_SIZE_RANGE,
-    ) as Float32Array;
-    this.useInstancing = aliasedPointSizeRange[1] < 1023;
-
-    // this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
-    // this._buffers["quad"] = this._createQuad(gl);
-    // this._buffers["transformUBO"] = this._createUniformBuffer(gl);
-    // this._textures["regionLUT"] = this._createRegionLUTTexture(gl, glUtils._regionMaxNumRegions);
-    // this._vaos["empty"] = gl.createVertexArray();
-
-    // this._createColorbarCanvas();  // The colorbar is drawn separately in a 2D-canvas
-
-    // glUtils.updateMarkerScale();
-    // document.getElementById("ISS_globalmarkersize_text").addEventListener("input", glUtils.updateMarkerScale);
-    // document.getElementById("ISS_globalmarkersize_text").addEventListener("input", glUtils.draw);
-
-    // tmapp["hideSVGMarkers"] = true;
-    // tmapp["ISS_viewer"].removeHandler('resize', glUtils.resizeAndDraw);
-    // tmapp["ISS_viewer"].addHandler('resize', glUtils.resizeAndDraw);
-    // tmapp["ISS_viewer"].removeHandler('open', glUtils.draw);
-    // tmapp["ISS_viewer"].addHandler('open', glUtils.draw);
-    // tmapp["ISS_viewer"].removeHandler('viewport-change', glUtils.draw);
-    // tmapp["ISS_viewer"].addHandler('viewport-change', glUtils.draw);
-    // tmapp["ISS_viewer"].removeHandler('canvas-click', glUtils.pick);
-    // tmapp["ISS_viewer"].addHandler('canvas-click', glUtils.pick);
-
-    // glUtils.resize();  // Force initial resize to OSD canvas size
+    // TODO
   }
 
   private createCanvas(parent: HTMLElement): HTMLCanvasElement {
+    // original function glUtils.init / glUtils._createMarkerWebGLCanvas
     const canvas = document.createElement("canvas");
     canvas.width = 1;
     canvas.height = 1;
+
     // TODO
     // canvas.style =
     //   "position:relative; pointer-events:none; z-index: 12; width: 100%; height: 100%";
     // canvas.addEventListener("webglcontextlost", function(e) { e.preventDefault(); }, false);
     // canvas.addEventListener("webglcontextrestored", glUtils.restoreLostContext, false);
-    // Place marker canvas under the OSD canvas. Doing this also enables proper compositing with the minimap and other OSD elements.
+
+    // Place marker canvas under the parent (OpenSeadragon) canvas to enable
+    // proper compositing with the minimap and other OpenSeadragon elements.
     parent.appendChild(canvas);
     return canvas;
   }
@@ -180,11 +138,9 @@ export default class WebGLController {
   ): void {}
 
   destroy() {
-    this.gl.deleteProgram(this.directPointMarkersShaderProgram);
-    this.gl.deleteProgram(this.instancedPointMarkersShaderProgram);
-    this.gl.deleteProgram(this.pointEdgesShaderProgram);
+    this.gl.deleteProgram(this.directPointsShaderProgram);
+    this.gl.deleteProgram(this.instancedPointsShaderProgram);
     this.gl.deleteProgram(this.shapesShaderProgram);
-    this.gl.deleteProgram(this.pickingShaderProgram);
     this.parent.removeChild(this.canvas);
   }
 }
