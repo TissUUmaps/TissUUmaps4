@@ -9,101 +9,6 @@ import { ILayerModel } from "../models/layer";
 import { IPointsModel } from "../models/points";
 import { IShapesModel } from "../models/shapes";
 
-class WebGLContext {
-  private static readonly _SHADER_PREPROCESSOR = "#version 300 es";
-  private static readonly _GL_OPTIONS: WebGLContextAttributes = {
-    antialias: false,
-    preserveDrawingBuffer: true,
-  };
-
-  private readonly _gl: WebGL2RenderingContext;
-  private readonly _directPointsShaderProgram: WebGLProgram;
-  private readonly _instancedPointsShaderProgram: WebGLProgram;
-  private readonly _shapesShaderProgram: WebGLProgram;
-
-  constructor(canvas: HTMLCanvasElement) {
-    this._gl = this._getWebGL2Context(canvas);
-    this._directPointsShaderProgram = this._loadShaderProgram(
-      pointsVertexShader,
-      pointsFragmentShader,
-    );
-    this._instancedPointsShaderProgram = this._loadShaderProgram(
-      pointsVertexShader,
-      pointsFragmentShader,
-      "#define USE_INSTANCING",
-    );
-    this._shapesShaderProgram = this._loadShaderProgram(
-      shapesVertexShader,
-      shapesFragmentShader,
-    );
-  }
-
-  destroy() {
-    this._gl.deleteProgram(this._directPointsShaderProgram);
-    this._gl.deleteProgram(this._instancedPointsShaderProgram);
-    this._gl.deleteProgram(this._shapesShaderProgram);
-  }
-
-  private _getWebGL2Context(canvas: HTMLCanvasElement): WebGL2RenderingContext {
-    const context = canvas.getContext("webgl2", WebGLContext._GL_OPTIONS);
-    if (context === null) {
-      throw new Error("WebGL 2.0 is not supported by your browser.");
-    }
-    return context;
-  }
-
-  private _loadShaderProgram(
-    vertexSource: string,
-    fragmentSource: string,
-    header?: string,
-  ): WebGLProgram {
-    if (header) {
-      vertexSource = vertexSource.replace(
-        `${WebGLContext._SHADER_PREPROCESSOR}\n`,
-        `${WebGLContext._SHADER_PREPROCESSOR}\n${header}\n`,
-      );
-      fragmentSource = fragmentSource.replace(
-        `${WebGLContext._SHADER_PREPROCESSOR}\n`,
-        `${WebGLContext._SHADER_PREPROCESSOR}\n${header}\n`,
-      );
-    }
-    const vertexShader = this._gl.createShader(this._gl.VERTEX_SHADER);
-    if (vertexShader === null) {
-      throw new Error("Failed to create vertex shader.");
-    }
-    this._gl.shaderSource(vertexShader, vertexSource);
-    this._gl.compileShader(vertexShader);
-    if (!this._gl.getShaderParameter(vertexShader, this._gl.COMPILE_STATUS)) {
-      throw new Error(
-        `Vertex shader compilation failed: ${this._gl.getShaderInfoLog(vertexShader)}`,
-      );
-    }
-    const fragmentShader = this._gl.createShader(this._gl.FRAGMENT_SHADER);
-    if (fragmentShader === null) {
-      throw new Error("Failed to create fragment shader.");
-    }
-    this._gl.shaderSource(fragmentShader, fragmentSource);
-    this._gl.compileShader(fragmentShader);
-    if (!this._gl.getShaderParameter(fragmentShader, this._gl.COMPILE_STATUS)) {
-      throw new Error(
-        `Fragment shader compilation failed: ${this._gl.getShaderInfoLog(fragmentShader)}`,
-      );
-    }
-    const program = this._gl.createProgram();
-    this._gl.attachShader(program, vertexShader);
-    this._gl.attachShader(program, fragmentShader);
-    this._gl.linkProgram(program);
-    this._gl.deleteShader(vertexShader); // clean up shaders after linking
-    this._gl.deleteShader(fragmentShader); // clean up shaders after linking
-    if (!this._gl.getProgramParameter(program, this._gl.LINK_STATUS)) {
-      throw new Error(
-        `Shader program linking failed: ${this._gl.getProgramInfoLog(program)}`,
-      );
-    }
-    return program;
-  }
-}
-
 export default class WebGLController {
   private readonly _parent: HTMLElement;
   private readonly _canvas: HTMLCanvasElement;
@@ -198,5 +103,100 @@ export default class WebGLController {
     // proper compositing with the minimap and other OpenSeadragon elements.
     parent.appendChild(canvas);
     return canvas;
+  }
+}
+
+class WebGLContext {
+  private static readonly _SHADER_PREPROCESSOR = "#version 300 es";
+  private static readonly _GL_OPTIONS: WebGLContextAttributes = {
+    antialias: false,
+    preserveDrawingBuffer: true,
+  };
+
+  private readonly _gl: WebGL2RenderingContext;
+  private readonly _directPointsShaderProgram: WebGLProgram;
+  private readonly _instancedPointsShaderProgram: WebGLProgram;
+  private readonly _shapesShaderProgram: WebGLProgram;
+
+  constructor(canvas: HTMLCanvasElement) {
+    this._gl = this._getWebGL2Context(canvas);
+    this._directPointsShaderProgram = this._loadShaderProgram(
+      pointsVertexShader,
+      pointsFragmentShader,
+    );
+    this._instancedPointsShaderProgram = this._loadShaderProgram(
+      pointsVertexShader,
+      pointsFragmentShader,
+      "#define USE_INSTANCING",
+    );
+    this._shapesShaderProgram = this._loadShaderProgram(
+      shapesVertexShader,
+      shapesFragmentShader,
+    );
+  }
+
+  destroy() {
+    this._gl.deleteProgram(this._directPointsShaderProgram);
+    this._gl.deleteProgram(this._instancedPointsShaderProgram);
+    this._gl.deleteProgram(this._shapesShaderProgram);
+  }
+
+  private _getWebGL2Context(canvas: HTMLCanvasElement): WebGL2RenderingContext {
+    const context = canvas.getContext("webgl2", WebGLContext._GL_OPTIONS);
+    if (context === null) {
+      throw new Error("WebGL 2.0 is not supported by your browser.");
+    }
+    return context;
+  }
+
+  private _loadShaderProgram(
+    vertexSource: string,
+    fragmentSource: string,
+    header?: string,
+  ): WebGLProgram {
+    if (header) {
+      vertexSource = vertexSource.replace(
+        `${WebGLContext._SHADER_PREPROCESSOR}\n`,
+        `${WebGLContext._SHADER_PREPROCESSOR}\n${header}\n`,
+      );
+      fragmentSource = fragmentSource.replace(
+        `${WebGLContext._SHADER_PREPROCESSOR}\n`,
+        `${WebGLContext._SHADER_PREPROCESSOR}\n${header}\n`,
+      );
+    }
+    const vertexShader = this._gl.createShader(this._gl.VERTEX_SHADER);
+    if (vertexShader === null) {
+      throw new Error("Failed to create vertex shader.");
+    }
+    this._gl.shaderSource(vertexShader, vertexSource);
+    this._gl.compileShader(vertexShader);
+    if (!this._gl.getShaderParameter(vertexShader, this._gl.COMPILE_STATUS)) {
+      throw new Error(
+        `Vertex shader compilation failed: ${this._gl.getShaderInfoLog(vertexShader)}`,
+      );
+    }
+    const fragmentShader = this._gl.createShader(this._gl.FRAGMENT_SHADER);
+    if (fragmentShader === null) {
+      throw new Error("Failed to create fragment shader.");
+    }
+    this._gl.shaderSource(fragmentShader, fragmentSource);
+    this._gl.compileShader(fragmentShader);
+    if (!this._gl.getShaderParameter(fragmentShader, this._gl.COMPILE_STATUS)) {
+      throw new Error(
+        `Fragment shader compilation failed: ${this._gl.getShaderInfoLog(fragmentShader)}`,
+      );
+    }
+    const program = this._gl.createProgram();
+    this._gl.attachShader(program, vertexShader);
+    this._gl.attachShader(program, fragmentShader);
+    this._gl.linkProgram(program);
+    this._gl.deleteShader(vertexShader); // clean up shaders after linking
+    this._gl.deleteShader(fragmentShader); // clean up shaders after linking
+    if (!this._gl.getProgramParameter(program, this._gl.LINK_STATUS)) {
+      throw new Error(
+        `Shader program linking failed: ${this._gl.getProgramInfoLog(program)}`,
+      );
+    }
+    return program;
   }
 }

@@ -8,26 +8,6 @@ import { IImageModel } from "../models/image";
 import { ILabelsModel } from "../models/labels";
 import { ILayerModel } from "../models/layer";
 
-type BaseTiledImageState = {
-  loaded?: boolean;
-  imageWidth?: number;
-  imageHeight?: number;
-  deferredIndex?: number;
-  deferredUpdate?: boolean;
-};
-
-type ImageTiledImageState = BaseTiledImageState & {
-  imageId: string;
-  layerConfigId: string;
-};
-
-type LabelsTiledImageState = BaseTiledImageState & {
-  labelsId: string;
-  layerConfigId: string;
-};
-
-type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
-
 export default class OpenSeadragonController {
   private readonly _viewer: Viewer;
   private readonly _tiledImageStates: TiledImageState[] = [];
@@ -347,3 +327,23 @@ export default class OpenSeadragonController {
     return visibility ? opacity : 0;
   }
 }
+
+type BaseTiledImageState = {
+  loaded?: boolean;
+  imageWidth?: number;
+  imageHeight?: number;
+  deferredIndex?: number;
+  deferredUpdate?: boolean;
+};
+
+type ImageTiledImageState = BaseTiledImageState & {
+  imageId: string;
+  layerConfigId: string;
+};
+
+type LabelsTiledImageState = BaseTiledImageState & {
+  labelsId: string;
+  layerConfigId: string;
+};
+
+type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
