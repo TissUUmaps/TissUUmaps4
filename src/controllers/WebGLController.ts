@@ -1,11 +1,11 @@
-import edgesFragmentShader from "shaders/edgesFragmentShader?raw";
-import edgesVertexShader from "shaders/edgesVertexShader?raw";
-import markersFragmentShader from "shaders/markersFragmentShader?raw";
-import markersVertexShader from "shaders/markersVertexShader?raw";
-import pickingFragmentShader from "shaders/pickingFragmentShader?raw";
-import pickingVertexShader from "shaders/pickingVertexShader?raw";
-import regionsFragmentShader from "shaders/regionsFragmentShader?raw";
-import regionsVertexShader from "shaders/regionsVertexShader?raw";
+import pickingFragmentShader from "shaders/picking.frag?raw";
+import pickingVertexShader from "shaders/picking.vert?raw";
+import pointEdgesFragmentShader from "shaders/pointEdges.frag?raw";
+import pointEdgesVertexShader from "shaders/pointEdges.vert?raw";
+import pointMarkersFragmentShader from "shaders/pointMarkers.frag?raw";
+import pointMarkersVertexShader from "shaders/pointMarkers.vert?raw";
+import shapesFragmentShader from "shaders/shapes.frag?raw";
+import shapesVertexShader from "shaders/shapes.vert?raw";
 
 import { IPointsData } from "../data/points";
 import { IShapesData } from "../data/shapes";
@@ -26,11 +26,11 @@ export default class WebGLController {
   private readonly canvas: HTMLCanvasElement;
   private readonly gl: WebGL2RenderingContext;
 
-  private readonly edgesShaderProgram: WebGLProgram;
-  private readonly directMarkersShaderProgram: WebGLProgram;
-  private readonly instancedMarkersShaderProgram: WebGLProgram;
+  private readonly directPointMarkersShaderProgram: WebGLProgram;
+  private readonly instancedPointMarkersShaderProgram: WebGLProgram;
+  private readonly pointEdgesShaderProgram: WebGLProgram;
+  private readonly shapesShaderProgram: WebGLProgram;
   private readonly pickingShaderProgram: WebGLProgram;
-  private readonly regionsShaderProgram: WebGLProgram;
 
   private readonly useInstancing: boolean;
 
@@ -39,26 +39,26 @@ export default class WebGLController {
     this.canvas = this.createCanvas(this.parent);
     this.gl = this.getWebGL2Context(this.canvas);
 
-    this.edgesShaderProgram = this.loadShaderProgram(
-      edgesVertexShader,
-      edgesFragmentShader,
+    this.directPointMarkersShaderProgram = this.loadShaderProgram(
+      pointMarkersVertexShader,
+      pointMarkersFragmentShader,
     );
-    this.directMarkersShaderProgram = this.loadShaderProgram(
-      markersVertexShader,
-      markersFragmentShader,
-    );
-    this.instancedMarkersShaderProgram = this.loadShaderProgram(
-      markersVertexShader,
-      markersFragmentShader,
+    this.instancedPointMarkersShaderProgram = this.loadShaderProgram(
+      pointMarkersVertexShader,
+      pointMarkersFragmentShader,
       "#define USE_INSTANCING",
+    );
+    this.pointEdgesShaderProgram = this.loadShaderProgram(
+      pointEdgesVertexShader,
+      pointEdgesFragmentShader,
+    );
+    this.shapesShaderProgram = this.loadShaderProgram(
+      shapesVertexShader,
+      shapesFragmentShader,
     );
     this.pickingShaderProgram = this.loadShaderProgram(
       pickingVertexShader,
       pickingFragmentShader,
-    );
-    this.regionsShaderProgram = this.loadShaderProgram(
-      regionsVertexShader,
-      regionsFragmentShader,
     );
 
     // Enable instancing if the HW point size limit is not large enough.
@@ -180,11 +180,11 @@ export default class WebGLController {
   ): void {}
 
   destroy() {
-    this.gl.deleteProgram(this.edgesShaderProgram);
-    this.gl.deleteProgram(this.directMarkersShaderProgram);
-    this.gl.deleteProgram(this.instancedMarkersShaderProgram);
+    this.gl.deleteProgram(this.directPointMarkersShaderProgram);
+    this.gl.deleteProgram(this.instancedPointMarkersShaderProgram);
+    this.gl.deleteProgram(this.pointEdgesShaderProgram);
+    this.gl.deleteProgram(this.shapesShaderProgram);
     this.gl.deleteProgram(this.pickingShaderProgram);
-    this.gl.deleteProgram(this.regionsShaderProgram);
     this.parent.removeChild(this.canvas);
   }
 }
