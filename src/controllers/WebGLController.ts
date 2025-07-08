@@ -25,7 +25,6 @@ export default class WebGLController {
   private readonly shapesShaderProgram: WebGLProgram;
 
   constructor(parent: HTMLElement) {
-    // original function: glUtils.init
     this.parent = parent;
     this.canvas = this.createCanvas(this.parent);
     this.gl = this.getWebGL2Context(this.canvas);
@@ -42,11 +41,58 @@ export default class WebGLController {
       shapesVertexShader,
       shapesFragmentShader,
     );
+
     // TODO
+
+    // // Get HW capabilities from WebGL context
+    // glUtils._caps[gl.MAX_TEXTURE_SIZE] = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    // glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] = gl.getParameter(
+    //   gl.ALIASED_POINT_SIZE_RANGE,
+    // );
+    // console.assert(
+    //   glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] instanceof Float32Array,
+    // );
+
+    // // Disable instanced marker drawing by default if the HW point size limit
+    // // is large enough. Should be faster in most cases, and we can still
+    // // temporarily switch to instanced drawing during viewport captures to
+    // // avoid the HW point size limit.
+    // if (glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE][1] >= 1023) {
+    //   glUtils._useInstancing = false;
+    // }
+
+    // this._textures["shapeAtlas"] = this._loadTextureFromImageURL(
+    //   gl,
+    //   glUtils._markershapes,
+    // );
+    // this._buffers["quad"] = this._createQuad(gl);
+    // this._buffers["transformUBO"] = this._createUniformBuffer(gl);
+    // this._textures["regionLUT"] = this._createRegionLUTTexture(
+    //   gl,
+    //   glUtils._regionMaxNumRegions,
+    // );
+    // this._vaos["empty"] = gl.createVertexArray();
+
+    // glUtils.updateMarkerScale();
+    // document
+    //   .getElementById("ISS_globalmarkersize_text")
+    //   .addEventListener("input", glUtils.updateMarkerScale);
+    // document
+    //   .getElementById("ISS_globalmarkersize_text")
+    //   .addEventListener("input", glUtils.draw);
+
+    // tmapp["hideSVGMarkers"] = true;
+    // tmapp["ISS_viewer"].removeHandler("resize", glUtils.resizeAndDraw);
+    // tmapp["ISS_viewer"].addHandler("resize", glUtils.resizeAndDraw);
+    // tmapp["ISS_viewer"].removeHandler("open", glUtils.draw);
+    // tmapp["ISS_viewer"].addHandler("open", glUtils.draw);
+    // tmapp["ISS_viewer"].removeHandler("viewport-change", glUtils.draw);
+    // tmapp["ISS_viewer"].addHandler("viewport-change", glUtils.draw);
+
+    // glUtils.resize(); // Force initial resize to OSD canvas size
   }
 
   private createCanvas(parent: HTMLElement): HTMLCanvasElement {
-    // original function glUtils.init / glUtils._createMarkerWebGLCanvas
     const canvas = document.createElement("canvas");
     canvas.width = 1;
     canvas.height = 1;
