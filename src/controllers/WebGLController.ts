@@ -12,10 +12,8 @@ import { IShapesModel } from "../models/shapes";
 export default class WebGLController {
   private static readonly SHADER_PREPROCESSOR = "#version 300 es";
   private static readonly GL_OPTIONS: WebGLContextAttributes = {
-    // TODO
-    // antialias: false,
-    // premultipliedAlpha: true,
-    // preserveDrawingBuffer: true,
+    antialias: false,
+    preserveDrawingBuffer: true,
   };
 
   private readonly parent: HTMLElement;
