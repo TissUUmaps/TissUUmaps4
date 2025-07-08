@@ -14,5 +14,7 @@ export interface IImageDataSourceModel<TType extends string>
   extends IDataSourceModel<TType> {}
 
 /** A layer-specific display configuration for 2D raster images */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface IImageLayerConfigModel extends ILayerConfigModel {}
+export interface IImageLayerConfigModel extends ILayerConfigModel {
+  /** Layer ID */
+  layerId: string;
+}

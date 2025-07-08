@@ -34,8 +34,10 @@ export interface ILabelsDataSourceModel<TType extends string>
   extends IDataSourceModel<TType> {}
 
 /** A layer-specific display configuration for 2D labels masks */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ILabelsLayerConfigModel extends ILayerConfigModel {}
+export interface ILabelsLayerConfigModel extends ILayerConfigModel {
+  /** Layer ID */
+  layerId: string;
+}
 
 /** A group-specific display configuration for 2D labels masks */
 export interface ILabelsGroupSettingsModel extends IGroupSettingsModel {
