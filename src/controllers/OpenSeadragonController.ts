@@ -1,4 +1,4 @@
-import { Point, TiledImage, Viewer } from "openseadragon";
+import { Drawer, Point, TiledImage, Viewer } from "openseadragon";
 
 import { IImageData } from "../data/image";
 import { ILabelsData } from "../data/labels";
@@ -28,7 +28,7 @@ type LabelsTiledImageState = BaseTiledImageState & {
 
 type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
 
-export class ViewerController {
+export default class OpenSeadragonController {
   private readonly viewer: Viewer;
   private readonly tiledImageStates: TiledImageState[] = [];
 
@@ -223,7 +223,7 @@ export class ViewerController {
       index: newTiledImageIndex,
       degrees: imageOrLabels.degrees ?? 0,
       flipped: imageOrLabels.flipped ?? false,
-      opacity: ViewerController.calculateOpacity(layer, imageOrLabels),
+      opacity: OpenSeadragonController.calculateOpacity(layer, imageOrLabels),
       success: (event) => {
         const newTiledImage = (event as unknown as { item: TiledImage }).item;
         newTiledImageState.imageWidth = newTiledImage.getContentSize().x;
@@ -278,7 +278,10 @@ export class ViewerController {
     if (tiledImage.getFlip() !== flipped) {
       tiledImage.setFlip(flipped);
     }
-    const opacity = ViewerController.calculateOpacity(layer, imageOrLabels);
+    const opacity = OpenSeadragonController.calculateOpacity(
+      layer,
+      imageOrLabels,
+    );
     if (tiledImage.getOpacity() !== opacity) {
       tiledImage.setOpacity(opacity);
     }
@@ -336,6 +339,10 @@ export class ViewerController {
       (layer.visibility ?? true) && (imageOrLabels.visibility ?? true);
     const opacity = (layer.opacity ?? 1) * (imageOrLabels.opacity ?? 1);
     return visibility ? opacity : 0;
+  }
+
+  getDrawer(): Drawer {
+    return this.viewer.drawer;
   }
 
   destroy(): void {
