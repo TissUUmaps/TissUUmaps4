@@ -1,13 +1,15 @@
 import { IModel } from "./base";
-import { Transform } from "./types";
 
 /** A named group of data (e.g., image, labels, points, shapes) sharing the same (e.g. physical) coordinate system */
 export interface ILayerModel extends IModel {
   /** Name */
   name: string;
 
-  /** Transformation from layer (e.g. physical) space to world space */
-  tf2world?: Transform;
+  /** Scale factor, converts from physical/layer space to world space (defaults to 1) */
+  scale?: number;
+
+  /** Translation, in world coordinates (defaults to 0) */
+  translation?: { x: number; y: number };
 
   /** Visibility (defaults to true) */
   visibility?: boolean;

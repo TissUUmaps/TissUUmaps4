@@ -1,15 +1,3 @@
-/** A 2D similarity transformation */
-export type Transform = {
-  /** Scale factor (defaults to 1) */
-  scale?: number;
-
-  /** Translation in the x direction (defaults to 0) */
-  x?: number;
-
-  /** Translation in the y direction (defaults to 0) */
-  y?: number;
-};
-
 /** A color in RGB(A) format */
 export type Color = {
   /** Red component, between 0 and 255 */

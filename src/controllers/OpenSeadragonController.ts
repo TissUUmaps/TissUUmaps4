@@ -221,8 +221,8 @@ export default class OpenSeadragonController {
     this.viewer.addTiledImage({
       tileSource: createTileSource(),
       index: newTiledImageIndex,
-      degrees: imageOrLabels.degrees ?? 0,
-      flipped: imageOrLabels.flipped ?? false,
+      degrees: layerConfig.rotation ?? 0,
+      flipped: layerConfig.flipped ?? false,
       opacity: OpenSeadragonController.calculateOpacity(layer, imageOrLabels),
       success: (event) => {
         const newTiledImage = (event as unknown as { item: TiledImage }).item;
@@ -250,7 +250,6 @@ export default class OpenSeadragonController {
         } else {
           this.updateTiledImagePositionAndSize(
             layer,
-            imageOrLabels,
             layerConfig,
             newTiledImage,
             newTiledImageState,
@@ -270,11 +269,11 @@ export default class OpenSeadragonController {
     tiledImage: TiledImage,
     tiledImageState: TiledImageState,
   ): void {
-    const degrees = imageOrLabels.degrees ?? 0;
+    const degrees = layerConfig.rotation ?? 0;
     if (tiledImage.getRotation() !== degrees) {
       tiledImage.setRotation(degrees, true);
     }
-    const flipped = imageOrLabels.flipped ?? false;
+    const flipped = layerConfig.flipped ?? false;
     if (tiledImage.getFlip() !== flipped) {
       tiledImage.setFlip(flipped);
     }
@@ -287,7 +286,6 @@ export default class OpenSeadragonController {
     }
     this.updateTiledImagePositionAndSize(
       layer,
-      imageOrLabels,
       layerConfig,
       tiledImage,
       tiledImageState,
@@ -296,7 +294,6 @@ export default class OpenSeadragonController {
 
   private updateTiledImagePositionAndSize(
     layer: ILayerModel,
-    imageOrLabels: IImageModel | ILabelsModel,
     layerConfig: ILayerConfigModel,
     tiledImage: TiledImage,
     tiledImageState: TiledImageState,
@@ -304,23 +301,23 @@ export default class OpenSeadragonController {
     let x = 0;
     let y = 0;
     let width = tiledImageState.imageWidth!;
-    if (imageOrLabels.pixelSize !== undefined) {
-      width *= imageOrLabels.pixelSize;
+    if (layerConfig.scale !== undefined) {
+      x *= layerConfig.scale;
+      y *= layerConfig.scale;
+      width *= layerConfig.scale;
     }
-    for (const tf of [layerConfig.tf2layer, layer.tf2world]) {
-      if (tf !== undefined) {
-        if (tf.scale !== undefined) {
-          x *= tf.scale;
-          y *= tf.scale;
-          width *= tf.scale;
-        }
-        if (tf.x !== undefined) {
-          x += tf.x;
-        }
-        if (tf.y !== undefined) {
-          y += tf.y;
-        }
-      }
+    if (layerConfig.translation !== undefined) {
+      x += layerConfig.translation.x;
+      y += layerConfig.translation.y;
+    }
+    if (layer.scale !== undefined) {
+      x *= layer.scale;
+      y *= layer.scale;
+      width *= layer.scale;
+    }
+    if (layer.translation !== undefined) {
+      x += layer.translation.x;
+      y += layer.translation.y;
     }
     const bounds = tiledImage.getBounds();
     if (bounds.x !== x || bounds.y !== y) {

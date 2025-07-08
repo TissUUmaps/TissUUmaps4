@@ -1,8 +1,8 @@
 import {
   IDataSourceModel,
-  IGroupSettingsModel,
   ILayerConfigModel,
   IObjectDataModel,
+  IObjectGroupSettingsModel,
   IPixelDataModel,
 } from "./base";
 import { Color, TableGroupsColumn, TableValuesColumn } from "./types";
@@ -40,7 +40,7 @@ export interface ILabelsLayerConfigModel extends ILayerConfigModel {
 }
 
 /** A group-specific display configuration for 2D labels masks */
-export interface ILabelsGroupSettingsModel extends IGroupSettingsModel {
+export interface ILabelsGroupSettingsModel extends IObjectGroupSettingsModel {
   /** Label color, or undefined if not specified for this group */
   labelColor?: Color;
 

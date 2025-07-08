@@ -1,8 +1,8 @@
 import {
   IDataSourceModel,
-  IGroupSettingsModel,
   ILayerConfigModel,
   IObjectDataModel,
+  IObjectGroupSettingsModel,
 } from "./base";
 import { Color, TableGroupsColumn, TableValuesColumn } from "./types";
 
@@ -33,7 +33,7 @@ export interface IShapesDataSourceModel<TType extends string>
 export interface IShapesLayerConfigModel extends ILayerConfigModel {}
 
 /** A group-specific display configuration for 2D shape clouds */
-export interface IShapesGroupSettingsModel extends IGroupSettingsModel {
+export interface IShapesGroupSettingsModel extends IObjectGroupSettingsModel {
   /** Shape color, or undefined if not specified for this group */
   shapeColor?: Color;
 

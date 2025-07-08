@@ -1,8 +1,8 @@
 import {
   IDataSourceModel,
-  IGroupSettingsModel,
   ILayerConfigModel,
   IObjectDataModel,
+  IObjectGroupSettingsModel,
 } from "./base";
 import { Color, Shape, TableGroupsColumn, TableValuesColumn } from "./types";
 
@@ -44,7 +44,7 @@ export interface IPointsLayerConfigModel extends ILayerConfigModel {
 }
 
 /** A group-specific display configuration for 2D point clouds */
-export interface IPointsGroupSettingsModel extends IGroupSettingsModel {
+export interface IPointsGroupSettingsModel extends IObjectGroupSettingsModel {
   /** Point size, or undefined if not specified for this group */
   pointSize?: number;
 

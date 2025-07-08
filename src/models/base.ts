@@ -1,4 +1,4 @@
-import { TableValuesColumn, Transform } from "./types";
+import { TableValuesColumn } from "./types";
 
 /** Base interface for all models */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -25,30 +25,22 @@ export interface IRenderedDataModel<
   /** Opacity, between 0 and 1 (defaults to 1) */
   opacity?: number;
 
-  /** Rotation, in degrees (defaults to 0) */
-  degrees?: number;
-
-  /** Horizontal reflection (defaults to false) */
-  flipped?: boolean;
-
   /** Layer configurations (layer configuration ID -> layer configuration) */
   layerConfigs: Map<string, TLayerConfigModel>;
 }
 
 /** Base interface for all pixel data models */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IPixelDataModel<
   TDataSourceModel extends IDataSourceModel<string>,
   TLayerConfigModel extends ILayerConfigModel,
-> extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {
-  /** Physical pixel size (defaults to 1) */
-  pixelSize?: number;
-}
+> extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {}
 
 /** Base interface for all object data models */
 export interface IObjectDataModel<
   TDataSourceModel extends IDataSourceModel<string>,
   TLayerConfigModel extends ILayerConfigModel,
-  TGroupSettingsModel extends IGroupSettingsModel,
+  TGroupSettingsModel extends IObjectGroupSettingsModel,
 > extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {
   /** Group settings (groupVar => group => settings) */
   groupSettings?: Map<string, Map<string, TGroupSettingsModel>>;
@@ -71,10 +63,19 @@ export interface ILayerConfigModel extends IModel {
   /** Layer ID for all items, or column containing item-wise layer IDs */
   layerId: string | TableValuesColumn;
 
-  /** Transformation from data space to layer (e.g. physical) space */
-  tf2layer?: Transform;
+  /** Scale factor, converts from data space to physical/layer space (defaults to 1) */
+  scale: number;
+
+  /** Horizontal reflection, before rotation (defaults to false) */
+  flipped?: boolean;
+
+  /** Rotation around center (images/labels) or origin (points/shapes), in degrees (defaults to 0) */
+  rotation?: number;
+
+  /** Translation, in physical/layer coordinates (defaults to 0) */
+  translation?: { x: number; y: number };
 }
 
-/** Base interface for all table group settings models */
+/** Base interface for all object group settings models */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface IGroupSettingsModel extends IModel {}
+export interface IObjectGroupSettingsModel extends IModel {}
