@@ -1,6 +1,7 @@
-import { IImageData, ImageDataLoaderBase } from "../data/image";
-import { ICustomTileSource } from "../data/types";
-import { IImageDataSourceModel } from "../models/image";
+import { IImageDataSourceModel } from "../../models/image";
+import { IImageData } from "../image";
+import { ICustomTileSource } from "../types";
+import { ImageDataLoaderBase } from "./base";
 
 export const DEFAULT_IMAGE_DATA_SOURCE = "default";
 

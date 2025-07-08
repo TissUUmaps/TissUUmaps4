@@ -2,8 +2,9 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import { ITableData, TableDataLoaderBase } from "../data/table";
-import { ITableDataSourceModel } from "../models/table";
+import { ITableDataSourceModel } from "../../models/table";
+import { ITableData } from "../table";
+import { TableDataLoaderBase } from "./base";
 
 export const PARQUET_TABLE_DATA_SOURCE = "parquet";
 

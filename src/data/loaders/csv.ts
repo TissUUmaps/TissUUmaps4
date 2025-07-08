@@ -1,7 +1,8 @@
 import * as papaparse from "papaparse";
 
-import { ITableData, TableDataLoaderBase } from "../data/table";
-import { ITableDataSourceModel } from "../models/table";
+import { ITableDataSourceModel } from "../../models/table";
+import { ITableData } from "../table";
+import { TableDataLoaderBase } from "./base";
 
 export const CSV_TABLE_DATA_SOURCE = "csv";
 

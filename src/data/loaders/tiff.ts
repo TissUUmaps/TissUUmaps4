@@ -1,8 +1,9 @@
 import * as geotiff from "geotiff";
 
-import { ILabelsData, LabelsDataLoaderBase } from "../data/labels";
-import { UintArray } from "../data/types";
-import { ILabelsDataSourceModel } from "../models/labels";
+import { ILabelsDataSourceModel } from "../../models/labels";
+import { ILabelsData } from "../labels";
+import { UintArray } from "../types";
+import { LabelsDataLoaderBase } from "./base";
 
 const POOL = new geotiff.Pool();
 

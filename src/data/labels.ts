@@ -1,5 +1,4 @@
-import { ILabelsDataSourceModel } from "../models/labels";
-import { DataLoaderBase, IData, IDataLoader } from "./base";
+import { IData, IDataLoader } from "./base";
 import { UintArray } from "./types";
 
 export interface ILabelsData extends IData {
@@ -20,14 +19,4 @@ export interface ILabelsData extends IData {
 export interface ILabelsDataLoader<TLabelsData extends ILabelsData>
   extends IDataLoader {
   loadLabels(abortSignal?: AbortSignal): Promise<TLabelsData>;
-}
-
-export abstract class LabelsDataLoaderBase<
-    TLabelsDataSourceModel extends ILabelsDataSourceModel<string>,
-    TLabelsData extends ILabelsData,
-  >
-  extends DataLoaderBase<TLabelsDataSourceModel>
-  implements ILabelsDataLoader<TLabelsData>
-{
-  abstract loadLabels(abortSignal?: AbortSignal): Promise<TLabelsData>;
 }

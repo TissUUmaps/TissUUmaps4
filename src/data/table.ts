@@ -1,5 +1,4 @@
-import { ITableDataSourceModel } from "../models/table";
-import { DataLoaderBase, IData, IDataLoader } from "./base";
+import { IData, IDataLoader } from "./base";
 
 export interface ITableData extends IData {
   getIds(): number[];
@@ -10,14 +9,4 @@ export interface ITableData extends IData {
 export interface ITableDataLoader<TTableData extends ITableData>
   extends IDataLoader {
   loadTable(): Promise<TTableData>;
-}
-
-export abstract class TableDataLoaderBase<
-    TTableDataSourceModel extends ITableDataSourceModel<string>,
-    TTableData extends ITableData,
-  >
-  extends DataLoaderBase<TTableDataSourceModel>
-  implements ITableDataLoader<TTableData>
-{
-  abstract loadTable(): Promise<TTableData>;
 }

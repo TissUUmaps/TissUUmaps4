@@ -1,7 +1,8 @@
-import { IPointsData, PointsDataLoaderBase } from "../data/points";
-import { ITableData } from "../data/table";
-import { TypedArray } from "../data/types";
-import { IPointsDataSourceModel } from "../models/points";
+import { IPointsDataSourceModel } from "../../models/points";
+import { IPointsData } from "../points";
+import { ITableData } from "../table";
+import { TypedArray } from "../types";
+import { PointsDataLoaderBase } from "./base";
 
 // TODO TableShapesDataLoader
 
