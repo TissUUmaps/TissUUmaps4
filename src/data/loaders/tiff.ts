@@ -26,42 +26,42 @@ export interface ITIFFLabelsDataSourceModel
 }
 
 export class TIFFLabelsData implements ILabelsData {
-  private readonly levels: geotiff.GeoTIFFImage[];
-  private readonly tileWidth: number | null;
-  private readonly tileHeight: number | null;
+  private readonly _levels: geotiff.GeoTIFFImage[];
+  private readonly _tileWidth: number | null;
+  private readonly _tileHeight: number | null;
 
   constructor(
     levels: geotiff.GeoTIFFImage[],
     tileWidth: number | null,
     tileHeight: number | null,
   ) {
-    this.levels = levels;
-    this.tileWidth = tileWidth;
-    this.tileHeight = tileHeight;
+    this._levels = levels;
+    this._tileWidth = tileWidth;
+    this._tileHeight = tileHeight;
   }
 
   getWidth(level?: number): number {
-    return this.levels[level || 0].getWidth();
+    return this._levels[level || 0].getWidth();
   }
 
   getHeight(level?: number): number {
-    return this.levels[level || 0].getHeight();
+    return this._levels[level || 0].getHeight();
   }
 
   getLevelCount(): number {
-    return this.levels.length;
+    return this._levels.length;
   }
 
   getLevelScale(level: number): number {
-    return this.levels[0].getWidth() / this.levels[level].getWidth();
+    return this._levels[0].getWidth() / this._levels[level].getWidth();
   }
 
   getTileWidth(level: number): number | undefined {
-    return this.tileWidth || this.levels[level].getTileWidth();
+    return this._tileWidth || this._levels[level].getTileWidth();
   }
 
   getTileHeight(level: number): number | undefined {
-    return this.tileHeight || this.levels[level].getTileHeight();
+    return this._tileHeight || this._levels[level].getTileHeight();
   }
 
   async loadTile(
@@ -70,7 +70,7 @@ export class TIFFLabelsData implements ILabelsData {
     y: number,
     abortSignal?: AbortSignal,
   ): Promise<UintArray> {
-    const image = this.levels[level];
+    const image = this._levels[level];
     const tile = await image.getTileOrStrip(x, y, 0, POOL, abortSignal);
     const bitsPerSample = image.getBitsPerSample(0) as number;
     switch (bitsPerSample) {
@@ -93,7 +93,7 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
   TIFFLabelsData
 > {
   async loadLabels(abortSignal?: AbortSignal): Promise<TIFFLabelsData> {
-    const tiff = await this.loadTIFFFile(abortSignal);
+    const tiff = await this._loadTIFFFile(abortSignal);
     const imageCount = await tiff.getImageCount();
     if (imageCount <= 0) {
       throw new Error("No images found in the TIFF file.");
@@ -128,7 +128,7 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
     );
   }
 
-  private async loadTIFFFile(
+  private async _loadTIFFFile(
     abortSignal?: AbortSignal,
   ): Promise<geotiff.GeoTIFF> {
     if (this.dataSource.path !== undefined && this.workspace !== null) {

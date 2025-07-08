@@ -15,10 +15,10 @@ export interface IParquetTableDataSourceModel
 }
 
 export class ParquetTableData implements ITableData {
-  private readonly ids: number[];
-  private readonly columns: string[];
-  private readonly buffer: hyparquet.AsyncBuffer;
-  private readonly metadata: hyparquet.FileMetaData;
+  private readonly _ids: number[];
+  private readonly _columns: string[];
+  private readonly _buffer: hyparquet.AsyncBuffer;
+  private readonly _metadata: hyparquet.FileMetaData;
 
   constructor(
     ids: number[],
@@ -26,25 +26,25 @@ export class ParquetTableData implements ITableData {
     buffer: hyparquet.AsyncBuffer,
     metadata: hyparquet.FileMetaData,
   ) {
-    this.ids = ids;
-    this.columns = columns;
-    this.buffer = buffer;
-    this.metadata = metadata;
+    this._ids = ids;
+    this._columns = columns;
+    this._buffer = buffer;
+    this._metadata = metadata;
   }
 
   getIds(): number[] {
-    return this.ids;
+    return this._ids;
   }
 
   getColumns(): string[] {
-    return this.columns;
+    return this._columns;
   }
 
   async loadColumnData<T>(column: string): Promise<T[]> {
     const data = await parquetReadColumn({
-      file: this.buffer,
+      file: this._buffer,
       columns: [column],
-      metadata: this.metadata,
+      metadata: this._metadata,
       compressors: compressors,
     });
     return Array.from(data) as T[];
@@ -58,7 +58,7 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
   ParquetTableData
 > {
   async loadTable(): Promise<ParquetTableData> {
-    const buffer = await this.loadParquetFile();
+    const buffer = await this._loadParquetFile();
     const metadata = await hyparquet.parquetMetadataAsync(buffer);
     const idArray = await parquetReadColumn({
       file: buffer,
@@ -72,7 +72,7 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
     return new ParquetTableData(ids, columns, buffer, metadata);
   }
 
-  private async loadParquetFile(): Promise<hyparquet.AsyncBuffer> {
+  private async _loadParquetFile(): Promise<hyparquet.AsyncBuffer> {
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       const file = await fh.getFile();

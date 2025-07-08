@@ -10,12 +10,12 @@ export interface IDefaultImageDataSourceModel
   extends IImageDataSourceModel<typeof DEFAULT_IMAGE_DATA_SOURCE> {}
 
 export class DefaultImageData implements IImageData {
-  private readonly tileSource: string;
-  private readonly objectUrl: string | null;
+  private readonly _tileSource: string;
+  private readonly _objectUrl: string | null;
 
   constructor(tileSource: string, objectUrl: string | null) {
-    this.tileSource = tileSource;
-    this.objectUrl = objectUrl;
+    this._tileSource = tileSource;
+    this._objectUrl = objectUrl;
   }
 
   getChannels(): string[] | null {
@@ -23,12 +23,12 @@ export class DefaultImageData implements IImageData {
   }
 
   getTileSource(): string | ICustomTileSource {
-    return this.tileSource;
+    return this._tileSource;
   }
 
   destroy(): void {
-    if (this.objectUrl) {
-      URL.revokeObjectURL(this.objectUrl);
+    if (this._objectUrl) {
+      URL.revokeObjectURL(this._objectUrl);
     }
   }
 }
@@ -38,11 +38,11 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
   DefaultImageData
 > {
   async loadImage(): Promise<DefaultImageData> {
-    const [tileSource, objectUrl] = await this.loadTileSource();
+    const [tileSource, objectUrl] = await this._loadTileSource();
     return new DefaultImageData(tileSource, objectUrl);
   }
 
-  private async loadTileSource(): Promise<[string, string | null]> {
+  private async _loadTileSource(): Promise<[string, string | null]> {
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       const file = await fh.getFile();

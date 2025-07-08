@@ -15,33 +15,33 @@ export interface ICSVTableDataSourceModel
 }
 
 export class CSVTableData implements ITableData {
-  private readonly ids: number[];
-  private readonly columns: string[];
-  private readonly records: Record<string, unknown>[];
+  private readonly _ids: number[];
+  private readonly _columns: string[];
+  private readonly _records: Record<string, unknown>[];
 
   constructor(
     ids: number[],
     columns: string[],
     records: Record<string, unknown>[],
   ) {
-    this.ids = ids;
-    this.columns = columns;
-    this.records = records;
+    this._ids = ids;
+    this._columns = columns;
+    this._records = records;
   }
 
   getIds(): number[] {
-    return this.ids;
+    return this._ids;
   }
 
   getColumns(): string[] {
-    return this.columns;
+    return this._columns;
   }
 
   loadColumnData<T>(column: string): Promise<T[]> {
-    if (!this.columns.includes(column)) {
+    if (!this._columns.includes(column)) {
       throw new Error(`Column "${column}" does not exist.`);
     }
-    const data = this.records.map((row) => row[column] as T);
+    const data = this._records.map((row) => row[column] as T);
     return Promise.resolve(data);
   }
 
@@ -53,14 +53,14 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   CSVTableData
 > {
   async loadTable(): Promise<CSVTableData> {
-    const parseResult = await this.loadCSVFile();
+    const parseResult = await this._loadCSVFile();
     const records = parseResult.data as Record<string, unknown>[];
     const ids = records.map((row) => row[this.dataSource.idColumn] as number);
     const columns = parseResult.meta.fields as string[];
     return new CSVTableData(ids, columns, records);
   }
 
-  private async loadCSVFile(): Promise<papaparse.ParseResult<unknown>> {
+  private async _loadCSVFile(): Promise<papaparse.ParseResult<unknown>> {
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       const file = await fh.getFile();

@@ -22,25 +22,25 @@ export interface IZarrLabelsDataSourceModel
 }
 
 export class ZarrLabelsData implements ILabelsData {
-  private static readonly X_AXIS = 1;
-  private static readonly Y_AXIS = 0;
+  private static readonly _X_AXIS = 1;
+  private static readonly _Y_AXIS = 0;
 
-  private readonly arrays: zarrita.Array<zarrita.DataType>[];
+  private readonly _arrays: zarrita.Array<zarrita.DataType>[];
 
   constructor(arrays: zarrita.Array<zarrita.DataType>[]) {
-    this.arrays = arrays;
+    this._arrays = arrays;
   }
 
   getWidth(level?: number): number {
-    return this.arrays[level || 0].shape[ZarrLabelsData.X_AXIS];
+    return this._arrays[level || 0].shape[ZarrLabelsData._X_AXIS];
   }
 
   getHeight(level?: number): number {
-    return this.arrays[level || 0].shape[ZarrLabelsData.Y_AXIS];
+    return this._arrays[level || 0].shape[ZarrLabelsData._Y_AXIS];
   }
 
   getLevelCount(): number {
-    return this.arrays.length;
+    return this._arrays.length;
   }
 
   getLevelScale(level: number): number {
@@ -72,7 +72,7 @@ export class ZarrLabelsDataLoader extends LabelsDataLoaderBase<
   ZarrLabelsData
 > {
   async loadLabels(): Promise<ZarrLabelsData> {
-    const store = await this.loadZarr();
+    const store = await this._loadZarr();
     const root = await zarrita.open(store);
     let labelsNode: zarrita.Location<zarrita.Readable> = root;
     if (this.dataSource.path !== undefined) {
@@ -99,7 +99,7 @@ export class ZarrLabelsDataLoader extends LabelsDataLoaderBase<
     return new ZarrLabelsData(arrays);
   }
 
-  private async loadZarr(): Promise<zarrita.AsyncReadable> {
+  private async _loadZarr(): Promise<zarrita.AsyncReadable> {
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       const file = await fh.getFile();

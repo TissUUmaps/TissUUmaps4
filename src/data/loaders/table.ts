@@ -17,24 +17,24 @@ export interface ITablePointsDataSourceModel
 }
 
 export class TablePointsData implements IPointsData {
-  private readonly tableData: ITableData;
-  private readonly columns: string[] | null;
+  private readonly _tableData: ITableData;
+  private readonly _columns: string[] | null;
 
   constructor(tableData: ITableData, columns: string[] | null) {
-    this.tableData = tableData;
-    this.columns = columns;
+    this._tableData = tableData;
+    this._columns = columns;
   }
 
   getIds(): number[] {
-    return this.tableData.getIds();
+    return this._tableData.getIds();
   }
 
   getDimensions(): string[] {
-    return this.columns || this.tableData.getColumns();
+    return this._columns || this._tableData.getColumns();
   }
 
   async loadCoordinates(dimension: string): Promise<TypedArray> {
-    const coords = await this.tableData.loadColumnData(dimension);
+    const coords = await this._tableData.loadColumnData(dimension);
     return Float32Array.from(coords);
   }
 
