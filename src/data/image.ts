@@ -1,9 +1,8 @@
 import { IData, IDataLoader } from "./base";
-import { ICustomTileSource } from "./types";
+import { ICustomTileSource, TileSourceConfig } from "./types";
 
 export interface IImageData extends IData {
-  getChannels(): string[] | null;
-  getTileSource(channel?: string): string | ICustomTileSource;
+  getTileSource(): string | TileSourceConfig | ICustomTileSource;
 }
 
 export interface IImageDataLoader<TImageData extends IImageData>

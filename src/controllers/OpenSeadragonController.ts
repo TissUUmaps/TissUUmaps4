@@ -2,7 +2,7 @@ import { Drawer, Point, TiledImage, Viewer } from "openseadragon";
 
 import { IImageData } from "../data/image";
 import { ILabelsData } from "../data/labels";
-import { ICustomTileSource } from "../data/types";
+import { ICustomTileSource, TileSourceConfig } from "../data/types";
 import { ILayerConfigModel } from "../models/base";
 import { IImageModel } from "../models/image";
 import { ILabelsModel } from "../models/labels";
@@ -81,8 +81,12 @@ export default class OpenSeadragonController {
         }
       }
       if (!keepTiledImage) {
-        const tiledImage = this._viewer.world.getItemAt(i);
-        this._viewer.world.removeItem(tiledImage);
+        if (tiledImageState.loaded) {
+          const tiledImage = this._viewer.world.getItemAt(i);
+          this._viewer.world.removeItem(tiledImage);
+        } else {
+          tiledImageState.deferredDelete = true;
+        }
         this._tiledImageStates.splice(i, 1);
         i--;
       }
@@ -160,7 +164,7 @@ export default class OpenSeadragonController {
     currentTiledImageIndex: number,
     desiredTiledImageIndex: number,
     createTiledImageState: () => TiledImageState,
-    createTileSource: () => string | ICustomTileSource,
+    createTileSource: () => string | TileSourceConfig | ICustomTileSource,
   ): void {
     if (currentTiledImageIndex === -1) {
       this._createTiledImage(
@@ -204,7 +208,7 @@ export default class OpenSeadragonController {
     layerConfig: ILayerConfigModel,
     newTiledImageIndex: number,
     createTiledImageState: () => TiledImageState,
-    createTileSource: () => string | ICustomTileSource,
+    createTileSource: () => string | TileSourceConfig | ICustomTileSource,
   ): void {
     const newTiledImageState = createTiledImageState();
     this._viewer.addTiledImage({
@@ -246,6 +250,10 @@ export default class OpenSeadragonController {
         }
         this._viewer.viewport.fitBounds(newTiledImage.getBounds(), true);
         newTiledImageState.loaded = true;
+        if (newTiledImageState.deferredDelete) {
+          this._viewer.world.removeItem(newTiledImage);
+          newTiledImageState.deferredDelete = undefined;
+        }
       },
     });
     this._tiledImageStates.splice(newTiledImageIndex, 0, newTiledImageState);
@@ -334,6 +342,7 @@ type BaseTiledImageState = {
   imageHeight?: number;
   deferredIndex?: number;
   deferredUpdate?: boolean;
+  deferredDelete?: boolean;
 };
 
 type ImageTiledImageState = BaseTiledImageState & {

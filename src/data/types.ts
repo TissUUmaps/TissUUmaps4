@@ -1,3 +1,5 @@
+export type TileSourceConfig = object;
+
 export interface ICustomTileSource {
   getTileUrl(level: number, x: number, y: number): string | (() => string);
 }

@@ -64,7 +64,7 @@ export interface ILayerConfigModel extends IModel {
   layerId: string | TableValuesColumn;
 
   /** Scale factor, converts from data space to physical/layer space (defaults to 1) */
-  scale: number;
+  scale?: number;
 
   /** Horizontal reflection, before rotation (defaults to false) */
   flipped?: boolean;

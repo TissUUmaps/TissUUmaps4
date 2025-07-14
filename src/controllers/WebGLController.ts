@@ -1,13 +1,12 @@
-import pointsFragmentShader from "shaders/points.frag?raw";
-import pointsVertexShader from "shaders/points.vert?raw";
-import shapesFragmentShader from "shaders/shapes.frag?raw";
-import shapesVertexShader from "shaders/shapes.vert?raw";
-
 import { IPointsData } from "../data/points";
 import { IShapesData } from "../data/shapes";
 import { ILayerModel } from "../models/layer";
 import { IPointsModel } from "../models/points";
 import { IShapesModel } from "../models/shapes";
+import pointsFragmentShader from "./shaders/points.frag?raw";
+import pointsVertexShader from "./shaders/points.vert?raw";
+import shapesFragmentShader from "./shaders/shapes.frag?raw";
+import shapesVertexShader from "./shaders/shapes.vert?raw";
 
 export default class WebGLController {
   private readonly _parent: HTMLElement;
@@ -82,7 +81,7 @@ export default class WebGLController {
     _shapesData: Map<string, IShapesData>,
   ): void {}
 
-  destroy() {
+  destroy(): void {
     this._context.destroy();
     this._parent.removeChild(this._canvas);
   }
@@ -119,7 +118,11 @@ class WebGLContext {
   private readonly _shapesShaderProgram: WebGLProgram;
 
   constructor(canvas: HTMLCanvasElement) {
-    this._gl = this._getWebGL2Context(canvas);
+    const gl = canvas.getContext("webgl2", WebGLContext._GL_OPTIONS);
+    if (gl === null) {
+      throw new Error("WebGL 2.0 is not supported by the browser.");
+    }
+    this._gl = gl;
     this._directPointsShaderProgram = this._loadShaderProgram(
       pointsVertexShader,
       pointsFragmentShader,
@@ -135,18 +138,10 @@ class WebGLContext {
     );
   }
 
-  destroy() {
+  destroy(): void {
     this._gl.deleteProgram(this._directPointsShaderProgram);
     this._gl.deleteProgram(this._instancedPointsShaderProgram);
     this._gl.deleteProgram(this._shapesShaderProgram);
-  }
-
-  private _getWebGL2Context(canvas: HTMLCanvasElement): WebGL2RenderingContext {
-    const context = canvas.getContext("webgl2", WebGLContext._GL_OPTIONS);
-    if (context === null) {
-      throw new Error("WebGL 2.0 is not supported by your browser.");
-    }
-    return context;
   }
 
   private _loadShaderProgram(

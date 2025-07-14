@@ -1,28 +1,25 @@
 import { IImageDataSourceModel } from "../../models/image";
 import { IImageData } from "../image";
-import { ICustomTileSource } from "../types";
+import { ICustomTileSource, TileSourceConfig } from "../types";
 import { ImageDataLoaderBase } from "./base";
 
 export const DEFAULT_IMAGE_DATA_SOURCE = "default";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IDefaultImageDataSourceModel
-  extends IImageDataSourceModel<typeof DEFAULT_IMAGE_DATA_SOURCE> {}
+  extends IImageDataSourceModel<typeof DEFAULT_IMAGE_DATA_SOURCE> {
+  tileSourceConfig?: TileSourceConfig;
+}
 
 export class DefaultImageData implements IImageData {
-  private readonly _tileSource: string;
+  private readonly _tileSource: string | TileSourceConfig;
   private readonly _objectUrl: string | null;
 
-  constructor(tileSource: string, objectUrl: string | null) {
+  constructor(tileSource: string | TileSourceConfig, objectUrl: string | null) {
     this._tileSource = tileSource;
     this._objectUrl = objectUrl;
   }
 
-  getChannels(): string[] | null {
-    return null;
-  }
-
-  getTileSource(): string | ICustomTileSource {
+  getTileSource(): string | TileSourceConfig | ICustomTileSource {
     return this._tileSource;
   }
 
@@ -42,7 +39,20 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
     return new DefaultImageData(tileSource, objectUrl);
   }
 
-  private async _loadTileSource(): Promise<[string, string | null]> {
+  private async _loadTileSource(): Promise<
+    [string | TileSourceConfig, string | null]
+  > {
+    if (this.dataSource.tileSourceConfig !== undefined) {
+      if (
+        this.dataSource.url !== undefined ||
+        this.dataSource.path !== undefined
+      ) {
+        throw new Error(
+          "Specify either a tile source configuration or a URL/workspace path, not both.",
+        );
+      }
+      return [this.dataSource.tileSourceConfig, null];
+    }
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       const file = await fh.getFile();
@@ -55,6 +65,8 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
     if (this.dataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     }
-    throw new Error("A URL or workspace path is required to load data.");
+    throw new Error(
+      "A tile source configuration or a URL/workspace path is required to load data.",
+    );
   }
 }
