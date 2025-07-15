@@ -211,16 +211,19 @@ export default class OpenSeadragonController {
     createTileSource: () => string | TileSourceConfig | ICustomTileSource,
   ): void {
     const newTiledImageState = createTiledImageState();
+    const flip = layerConfig.flip ?? false;
     this._viewer.addTiledImage({
       tileSource: createTileSource(),
       index: newTiledImageIndex,
       degrees: layerConfig.rotation ?? 0,
-      flipped: layerConfig.flipped ?? false,
+      // https://github.com/openseadragon/openseadragon/issues/2765
+      // flipped: layerConfig.flip ?? false,
       opacity: OpenSeadragonController._calculateOpacity(layer, imageOrLabels),
       success: (event) => {
         const newTiledImage = (event as unknown as { item: TiledImage }).item;
         newTiledImageState.imageWidth = newTiledImage.getContentSize().x;
         newTiledImageState.imageHeight = newTiledImage.getContentSize().y;
+        newTiledImage.setFlip(flip);
         if (
           newTiledImageState.deferredIndex !== undefined &&
           newTiledImageState.deferredIndex !== newTiledImageIndex
@@ -270,9 +273,9 @@ export default class OpenSeadragonController {
     if (tiledImage.getRotation() !== degrees) {
       tiledImage.setRotation(degrees, true);
     }
-    const flipped = layerConfig.flipped ?? false;
-    if (tiledImage.getFlip() !== flipped) {
-      tiledImage.setFlip(flipped);
+    const flip = layerConfig.flip ?? false;
+    if (tiledImage.getFlip() !== flip) {
+      tiledImage.setFlip(flip);
     }
     const opacity = OpenSeadragonController._calculateOpacity(
       layer,

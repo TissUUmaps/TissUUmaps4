@@ -67,7 +67,7 @@ export interface ILayerConfigModel extends IModel {
   scale?: number;
 
   /** Horizontal reflection, before rotation (defaults to false) */
-  flipped?: boolean;
+  flip?: boolean;
 
   /** Rotation around center (images/labels) or origin (points/shapes), in degrees (defaults to 0) */
   rotation?: number;
