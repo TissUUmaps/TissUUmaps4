@@ -3,10 +3,8 @@ import { IShapesData } from "../data/shapes";
 import { ILayerModel } from "../models/layer";
 import { IPointsModel } from "../models/points";
 import { IShapesModel } from "../models/shapes";
-import pointsFragmentShader from "./shaders/points.frag?raw";
-import pointsVertexShader from "./shaders/points.vert?raw";
-import shapesFragmentShader from "./shaders/shapes.frag?raw";
-import shapesVertexShader from "./shaders/shapes.vert?raw";
+import pointsFragmentShaderSource from "./shaders/points.frag?raw";
+import pointsVertexShaderSource from "./shaders/points.vert?raw";
 
 export default class WebGLController {
   private readonly _parent: HTMLElement;
@@ -113,9 +111,7 @@ class WebGLContext {
   };
 
   private readonly _gl: WebGL2RenderingContext;
-  private readonly _directPointsShaderProgram: WebGLProgram;
-  private readonly _instancedPointsShaderProgram: WebGLProgram;
-  private readonly _shapesShaderProgram: WebGLProgram;
+  private readonly _pointsShaderProgram: WebGLProgram;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl2", WebGLContext._GL_OPTIONS);
@@ -123,38 +119,27 @@ class WebGLContext {
       throw new Error("WebGL 2.0 is not supported by the browser.");
     }
     this._gl = gl;
-    this._directPointsShaderProgram = this._loadShaderProgram(
-      pointsVertexShader,
-      pointsFragmentShader,
-    );
-    this._instancedPointsShaderProgram = this._loadShaderProgram(
-      pointsVertexShader,
-      pointsFragmentShader,
-      "#define USE_INSTANCING",
-    );
-    this._shapesShaderProgram = this._loadShaderProgram(
-      shapesVertexShader,
-      shapesFragmentShader,
+    this._pointsShaderProgram = this._loadShaderProgram(
+      pointsVertexShaderSource,
+      pointsFragmentShaderSource,
     );
   }
 
   destroy(): void {
-    this._gl.deleteProgram(this._directPointsShaderProgram);
-    this._gl.deleteProgram(this._instancedPointsShaderProgram);
-    this._gl.deleteProgram(this._shapesShaderProgram);
+    this._gl.deleteProgram(this._pointsShaderProgram);
   }
 
   private _loadShaderProgram(
-    vertexSource: string,
-    fragmentSource: string,
+    vertexShaderSource: string,
+    fragmentShaderSource: string,
     header?: string,
   ): WebGLProgram {
     if (header) {
-      vertexSource = vertexSource.replace(
+      vertexShaderSource = vertexShaderSource.replace(
         `${WebGLContext._SHADER_PREPROCESSOR}\n`,
         `${WebGLContext._SHADER_PREPROCESSOR}\n${header}\n`,
       );
-      fragmentSource = fragmentSource.replace(
+      fragmentShaderSource = fragmentShaderSource.replace(
         `${WebGLContext._SHADER_PREPROCESSOR}\n`,
         `${WebGLContext._SHADER_PREPROCESSOR}\n${header}\n`,
       );
@@ -163,35 +148,35 @@ class WebGLContext {
     if (vertexShader === null) {
       throw new Error("Failed to create vertex shader.");
     }
-    this._gl.shaderSource(vertexShader, vertexSource);
-    this._gl.compileShader(vertexShader);
-    if (!this._gl.getShaderParameter(vertexShader, this._gl.COMPILE_STATUS)) {
-      throw new Error(
-        `Vertex shader compilation failed: ${this._gl.getShaderInfoLog(vertexShader)}`,
-      );
-    }
     const fragmentShader = this._gl.createShader(this._gl.FRAGMENT_SHADER);
     if (fragmentShader === null) {
       throw new Error("Failed to create fragment shader.");
     }
-    this._gl.shaderSource(fragmentShader, fragmentSource);
-    this._gl.compileShader(fragmentShader);
-    if (!this._gl.getShaderParameter(fragmentShader, this._gl.COMPILE_STATUS)) {
-      throw new Error(
-        `Fragment shader compilation failed: ${this._gl.getShaderInfoLog(fragmentShader)}`,
-      );
+    try {
+      const program = this._gl.createProgram();
+      for (const [shader, shaderSource] of [
+        [vertexShader, vertexShaderSource],
+        [fragmentShader, fragmentShaderSource],
+      ] as const) {
+        this._gl.shaderSource(shader, shaderSource);
+        this._gl.compileShader(shader);
+        this._gl.attachShader(program, shader);
+      }
+      this._gl.linkProgram(program);
+      if (!this._gl.getProgramParameter(program, this._gl.LINK_STATUS)) {
+        const programInfoLog = this._gl.getProgramInfoLog(program);
+        const vertexShaderInfoLog = this._gl.getShaderInfoLog(vertexShader);
+        const fragmentShaderInfoLog = this._gl.getShaderInfoLog(fragmentShader);
+        throw new Error(
+          `Shader program linking failed: ${programInfoLog}\n` +
+            `Vertex shader log: ${vertexShaderInfoLog}\n` +
+            `Fragment shader log: ${fragmentShaderInfoLog}`,
+        );
+      }
+      return program;
+    } finally {
+      this._gl.deleteShader(vertexShader);
+      this._gl.deleteShader(fragmentShader);
     }
-    const program = this._gl.createProgram();
-    this._gl.attachShader(program, vertexShader);
-    this._gl.attachShader(program, fragmentShader);
-    this._gl.linkProgram(program);
-    this._gl.deleteShader(vertexShader); // clean up shaders after linking
-    this._gl.deleteShader(fragmentShader); // clean up shaders after linking
-    if (!this._gl.getProgramParameter(program, this._gl.LINK_STATUS)) {
-      throw new Error(
-        `Shader program linking failed: ${this._gl.getProgramInfoLog(program)}`,
-      );
-    }
-    return program;
   }
 }
