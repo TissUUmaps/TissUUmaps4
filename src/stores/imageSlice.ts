@@ -1,98 +1,113 @@
-import { IImageData } from "../data/image";
-import { IImageModel } from "../models/image";
+import { IImageData, IImageDataLoader } from "../data/image";
+import {
+  DEFAULT_IMAGE_DATA_SOURCE,
+  DefaultImageDataLoader,
+  IDefaultImageDataSourceModel,
+} from "../data/loaders/default";
+import { IImageDataSourceModel, IImageModel } from "../models/image";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
+
+type ImageDataLoaderFactory = (
+  dataSource: IImageDataSourceModel,
+  projectDir: FileSystemDirectoryHandle | null,
+) => IImageDataLoader<IImageData>;
 
 export type ImageSlice = ImageSliceState & ImageSliceActions;
 
 export type ImageSliceState = {
-  images: Map<string, IImageModel>;
-  imageData: Map<string, IImageData>;
-  // imageDataLoaders: Map<
-  //   string,
-  //   IImageDataLoader<IImageDataSourceModel<string>>
-  // >;
+  imageMap: Map<string, IImageModel>;
+  imageDataCache: Map<IImageDataSourceModel, IImageData>;
+  imageDataLoaderFactories: Map<string, ImageDataLoaderFactory>;
 };
 
 export type ImageSliceActions = {
-  setImage: (imageId: string, image: IImageModel, imageIndex?: number) => void;
-  // loadImage: (imageId: string, image?: IImageModel) => Promise<IImageData>;
-  deleteImage: (imageId: string) => void;
-  // registerImageDataLoader: (
-  //   imageDataSourceType: string,
-  //   imageDataLoader: IImageDataLoader<IImageDataSourceModel<string>>,
-  // ) => void;
-  // unregisterImageDataLoader: (imageDataSourceType: string) => void;
+  setImage: (image: IImageModel, index?: number) => void;
+  loadImage: (image: IImageModel) => Promise<IImageData>;
+  deleteImage: (image: IImageModel) => void;
 };
 
-export const createImageSlice: BoundStoreStateCreator<ImageSlice> = (set) => ({
+export const createImageSlice: BoundStoreStateCreator<ImageSlice> = (
+  set,
+  get,
+) => ({
   ...initialImageSliceState,
-  setImage: (imageId, image, imageIndex) => {
+  setImage: (image, index) => {
     set((draft) => {
-      draft.images = MapUtils.cloneAndSet(
-        draft.images,
-        imageId,
+      const oldImage = draft.imageMap.get(image.id);
+      draft.imageMap = MapUtils.cloneAndSpliceSet(
+        draft.imageMap,
+        image.id,
         image,
-        imageIndex,
+        index,
       );
-      draft.imageData.delete(imageId);
+      if (oldImage !== undefined) {
+        draft.imageDataCache.delete(oldImage.dataSource);
+      }
     });
   },
-  // loadImage: async (imageId, image) => {
-  //   const state = get();
-  //   if (state.imageData.has(imageId)) {
-  //     return state.imageData.get(imageId)!;
-  //   }
-  //   if (image === undefined) {
-  //     image = state.images.get(imageId);
-  //     if (image === undefined) {
-  //       throw new Error(`No image found for ID: ${imageId}`);
-  //     }
-  //   }
-  //   const imageDataLoader = state.imageDataLoaders.get(image.dataSource.type);
-  //   if (imageDataLoader === undefined) {
-  //     throw new Error(
-  //       `No image data loader registered for image data source type: ${image.dataSource.type}`,
-  //     );
-  //   }
-  //   const imageData = await imageDataLoader.loadImage(image.dataSource);
-  //   set((draft) => {
-  //     draft.imageData.set(imageId, imageData);
-  //   });
-  //   return imageData;
-  // },
-  deleteImage: (imageId) => {
+  loadImage: async (image) => {
+    const state = get();
+    let imageData = state.imageDataCache.get(image.dataSource);
+    if (imageData !== undefined) {
+      return imageData;
+    }
+    const imageDataLoaderFactory = state.imageDataLoaderFactories.get(
+      image.dataSource.type,
+    );
+    if (imageDataLoaderFactory === undefined) {
+      throw new Error(
+        `No image data loader found for type ${image.dataSource.type}.`,
+      );
+    }
+    const imageDataLoader = imageDataLoaderFactory(
+      image.dataSource,
+      state.projectDir,
+    );
+    imageData = await imageDataLoader.loadImage();
     set((draft) => {
-      draft.images.delete(imageId);
-      draft.imageData.delete(imageId);
+      draft.imageDataCache.set(image.dataSource, imageData);
+    });
+    return imageData;
+  },
+  deleteImage: (image) => {
+    set((draft) => {
+      draft.imageMap.delete(image.id);
+      draft.imageDataCache.delete(image.dataSource);
     });
   },
-  // registerImageDataLoader: (imageDataSourceType, imageDataLoader) => {
-  //   set((draft) => {
-  //     if (draft.imageDataLoaders.has(imageDataSourceType)) {
-  //       console.warn(
-  //         `Image data loader was already registered for image data source type: ${imageDataSourceType}`,
-  //       );
-  //     }
-  //     draft.imageDataLoaders.set(imageDataSourceType, imageDataLoader);
-  //   });
-  // },
-  // unregisterImageDataLoader: (imageDataSourceType) => {
-  //   set((draft) => {
-  //     if (!draft.imageDataLoaders.delete(imageDataSourceType)) {
-  //       console.warn(
-  //         `No image data loader registered for image data source type: ${imageDataSourceType}`,
-  //       );
-  //     }
-  //   });
-  // },
 });
 
 const initialImageSliceState: ImageSliceState = {
-  images: new Map<string, IImageModel>(),
-  imageData: new Map<string, IImageData>(),
-  // imageDataLoaders: new Map<
-  //   string,
-  //   IImageDataLoader<IImageDataSourceModel<string>>
-  // >(),
+  // FIXME remove test data
+  imageMap: new Map<string, IImageModel>([
+    [
+      "test",
+      {
+        id: "test",
+        name: "Test",
+        dataSource: {
+          type: "default",
+          tileSourceConfig: {
+            type: "image",
+            url: "https://upload.wikimedia.org/wikipedia/en/a/a9/Example.jpg",
+            crossOriginPolicy: "Anonymous",
+            ajaxWithCredentials: false,
+          },
+        } as IDefaultImageDataSourceModel,
+        layerConfigs: [{ layerId: "test" }],
+      },
+    ],
+  ]),
+  imageDataCache: new Map<IImageDataSourceModel, IImageData>(),
+  imageDataLoaderFactories: new Map<string, ImageDataLoaderFactory>([
+    [
+      DEFAULT_IMAGE_DATA_SOURCE,
+      (dataSource, projectDir) =>
+        new DefaultImageDataLoader(
+          dataSource as IDefaultImageDataSourceModel,
+          projectDir,
+        ),
+    ],
+  ]),
 };

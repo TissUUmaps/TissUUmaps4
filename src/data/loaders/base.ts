@@ -11,9 +11,8 @@ import { IPointsData, IPointsDataLoader } from "../points";
 import { IShapesData, IShapesDataLoader } from "../shapes";
 import { ITableData, ITableDataLoader } from "../table";
 
-export abstract class DataLoaderBase<
-  TDataSourceModel extends IDataSourceModel<string>,
-> implements IDataLoader
+export abstract class DataLoaderBase<TDataSourceModel extends IDataSourceModel>
+  implements IDataLoader
 {
   protected readonly dataSource: TDataSourceModel;
   protected readonly workspace: FileSystemDirectoryHandle | null;
@@ -28,7 +27,7 @@ export abstract class DataLoaderBase<
 }
 
 export abstract class ImageDataLoaderBase<
-    TImageDataSourceModel extends IImageDataSourceModel<string>,
+    TImageDataSourceModel extends IImageDataSourceModel,
     TImageData extends IImageData,
   >
   extends DataLoaderBase<TImageDataSourceModel>
@@ -38,7 +37,7 @@ export abstract class ImageDataLoaderBase<
 }
 
 export abstract class LabelsDataLoaderBase<
-    TLabelsDataSourceModel extends ILabelsDataSourceModel<string>,
+    TLabelsDataSourceModel extends ILabelsDataSourceModel,
     TLabelsData extends ILabelsData,
   >
   extends DataLoaderBase<TLabelsDataSourceModel>
@@ -48,49 +47,49 @@ export abstract class LabelsDataLoaderBase<
 }
 
 export abstract class PointsDataLoaderBase<
-    TPointsDataSourceModel extends IPointsDataSourceModel<string>,
+    TPointsDataSourceModel extends IPointsDataSourceModel,
     TPointsData extends IPointsData,
   >
   extends DataLoaderBase<TPointsDataSourceModel>
   implements IPointsDataLoader<TPointsData>
 {
-  protected readonly getTableData: (tableId: string) => ITableData;
+  protected readonly loadTable: (tableId: string) => Promise<ITableData>;
 
   constructor(
     dataSource: TPointsDataSourceModel,
     projectDir: FileSystemDirectoryHandle | null,
-    getTableData: (tableId: string) => ITableData,
+    loadTable: (tableId: string) => Promise<ITableData>,
   ) {
     super(dataSource, projectDir);
-    this.getTableData = getTableData;
+    this.loadTable = loadTable;
   }
 
   abstract loadPoints(): Promise<TPointsData>;
 }
 
 export abstract class ShapesDataLoaderBase<
-    TShapesDataSourceModel extends IShapesDataSourceModel<string>,
+    TShapesDataSourceModel extends IShapesDataSourceModel,
     TShapesData extends IShapesData,
   >
   extends DataLoaderBase<TShapesDataSourceModel>
   implements IShapesDataLoader<TShapesData>
 {
-  protected readonly getTableData: (tableId: string) => ITableData;
+  protected readonly loadTable: (tableId: string) => Promise<ITableData>;
 
   constructor(
     dataSource: TShapesDataSourceModel,
     projectDir: FileSystemDirectoryHandle | null,
-    getTableData: (tableId: string) => ITableData,
+    loadTable: (tableId: string) => Promise<ITableData>,
   ) {
     super(dataSource, projectDir);
-    this.getTableData = getTableData;
+    this.loadTable = loadTable;
   }
 
   abstract loadShapes(): Promise<TShapesData>;
 }
 
 export abstract class TableDataLoaderBase<
-    TTableDataSourceModel extends ITableDataSourceModel<string>,
+    TTableDataSourceModel extends ITableDataSourceModel,
     TTableData extends ITableData,
   >
   extends DataLoaderBase<TTableDataSourceModel>

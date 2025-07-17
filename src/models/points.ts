@@ -9,7 +9,7 @@ import { Color, Shape, TableGroupsColumn, TableValuesColumn } from "./types";
 /** A 2D point cloud */
 export interface IPointsModel
   extends IObjectDataModel<
-    IPointsDataSourceModel<string>,
+    IPointsDataSourceModel,
     IPointsLayerConfigModel,
     IPointsGroupSettingsModel
   > {
@@ -31,7 +31,7 @@ export interface IPointsModel
 
 /** A data source for 2D point clouds */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface IPointsDataSourceModel<TType extends string>
+export interface IPointsDataSourceModel<TType extends string = string>
   extends IDataSourceModel<TType> {}
 
 /** A layer-specific display configuration for 2D point clouds */

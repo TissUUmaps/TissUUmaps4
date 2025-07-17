@@ -9,7 +9,7 @@ import { Color, TableGroupsColumn, TableValuesColumn } from "./types";
 /** A 2D shape cloud */
 export interface IShapesModel
   extends IObjectDataModel<
-    IShapesDataSourceModel<string>,
+    IShapesDataSourceModel,
     IShapesLayerConfigModel,
     IShapesGroupSettingsModel
   > {
@@ -25,7 +25,7 @@ export interface IShapesModel
 
 /** A data source for 2D shape clouds */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface IShapesDataSourceModel<TType extends string>
+export interface IShapesDataSourceModel<TType extends string = string>
   extends IDataSourceModel<TType> {}
 
 /** A layer-specific display configuration for 2D shape clouds */

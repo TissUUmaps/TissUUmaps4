@@ -45,9 +45,9 @@ export class TablePointsDataLoader extends PointsDataLoaderBase<
   ITablePointsDataSourceModel,
   IPointsData
 > {
-  loadPoints(): Promise<IPointsData> {
+  async loadPoints(): Promise<IPointsData> {
     const pointsData = new TablePointsData(
-      this.getTableData(this.dataSource.tableId),
+      await this.loadTable(this.dataSource.tableId),
       this.dataSource.columns ?? null,
     );
     return Promise.resolve(pointsData);

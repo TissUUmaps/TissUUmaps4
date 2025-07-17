@@ -4,10 +4,12 @@ export type ProjectSlice = ProjectSliceState & ProjectSliceActions;
 
 export type ProjectSliceState = {
   projectName: string;
+  projectDir: FileSystemDirectoryHandle | null;
 };
 
 export type ProjectSliceActions = {
   setProjectName: (projectName: string) => void;
+  setProjectDir: (projectDir: FileSystemDirectoryHandle | null) => void;
 };
 
 export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
@@ -19,8 +21,14 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
       draft.projectName = projectName;
     });
   },
+  setProjectDir: (projectDir) => {
+    set((draft) => {
+      draft.projectDir = projectDir;
+    });
+  },
 });
 
 const initialProjectSliceState: ProjectSliceState = {
   projectName: "New Project",
+  projectDir: null,
 };

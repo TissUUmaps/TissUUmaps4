@@ -3,11 +3,11 @@ import MapUtils from "../../utils/MapUtils";
 import PointsPanel from "./PointsPanel";
 
 export default function PointsCollectionPanel() {
-  const points = useBoundStore((state) => state.points);
+  const pointsMap = useBoundStore((state) => state.pointsMap);
   return (
     <>
-      {points &&
-        MapUtils.map(points, (pointsId, points) => (
+      {pointsMap &&
+        MapUtils.map(pointsMap, (pointsId, points) => (
           <PointsPanel key={pointsId} pointsId={pointsId} points={points} />
         ))}
     </>

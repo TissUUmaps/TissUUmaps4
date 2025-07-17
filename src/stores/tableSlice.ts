@@ -1,97 +1,107 @@
-import { ITableData } from "../data/table";
-import { ITableModel } from "../models/table";
+import {
+  CSVTableDataLoader,
+  CSV_TABLE_DATA_SOURCE,
+  ICSVTableDataSourceModel,
+} from "../data/loaders/csv";
+import {
+  IParquetTableDataSourceModel,
+  PARQUET_TABLE_DATA_SOURCE,
+  ParquetTableDataLoader,
+} from "../data/loaders/parquet";
+import { ITableData, ITableDataLoader } from "../data/table";
+import { ITableDataSourceModel, ITableModel } from "../models/table";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
+
+type TableDataLoaderFactory = (
+  dataSource: ITableDataSourceModel,
+  projectDir: FileSystemDirectoryHandle | null,
+) => ITableDataLoader<ITableData>;
 
 export type TableSlice = TableSliceState & TableSliceActions;
 
 export type TableSliceState = {
-  tables: Map<string, ITableModel>;
-  tableData: Map<string, ITableData>;
-  // tableDataLoaders: Map<
-  //   string,
-  //   ITableDataLoader<ITableDataSourceModel<string>>
-  // >;
+  tableMap: Map<string, ITableModel>;
+  tableDataCache: Map<ITableDataSourceModel, ITableData>;
+  tableDataLoaderFactories: Map<string, TableDataLoaderFactory>;
 };
 
 export type TableSliceActions = {
-  setTable: (tableId: string, table: ITableModel, tableIndex?: number) => void;
-  // loadTable: (tableId: string, table?: ITableModel) => Promise<ITableData>;
-  deleteTable: (tableId: string) => void;
-  // registerTableDataLoader: (
-  //   tableDataSourceType: string,
-  //   tableDataLoader: ITableDataLoader<ITableDataSourceModel<string>>,
-  // ) => void;
-  // unregisterTableDataLoader: (tableDataSourceType: string) => void;
+  setTable: (table: ITableModel, index?: number) => void;
+  loadTable: (table: ITableModel) => Promise<ITableData>;
+  deleteTable: (table: ITableModel) => void;
 };
 
-export const createTableSlice: BoundStoreStateCreator<TableSlice> = (set) => ({
+export const createTableSlice: BoundStoreStateCreator<TableSlice> = (
+  set,
+  get,
+) => ({
   ...initialTableSliceState,
-  setTable: (tableId, table, tableIndex) => {
+  setTable: (table, index) => {
     set((draft) => {
-      draft.tables = MapUtils.cloneAndSet(
-        draft.tables,
-        tableId,
+      const oldTable = draft.tableMap.get(table.id);
+      draft.tableMap = MapUtils.cloneAndSpliceSet(
+        draft.tableMap,
+        table.id,
         table,
-        tableIndex,
+        index,
       );
+      if (oldTable !== undefined) {
+        draft.tableDataCache.delete(oldTable.dataSource);
+      }
     });
   },
-  // loadTable: async (tableId, table) => {
-  //   const state = get();
-  //   if (state.tableData.has(tableId)) {
-  //     return state.tableData.get(tableId)!;
-  //   }
-  //   if (table === undefined) {
-  //     table = state.tables.get(tableId);
-  //     if (table === undefined) {
-  //       throw new Error(`No table found for ID: ${tableId}`);
-  //     }
-  //   }
-  //   const tableDataLoader = state.tableDataLoaders.get(table.dataSource.type);
-  //   if (tableDataLoader === undefined) {
-  //     throw new Error(
-  //       `No table data loader registered for table data source type: ${table.dataSource.type}`,
-  //     );
-  //   }
-  //   const tableData = await tableDataLoader.loadTable(table.dataSource);
-  //   set((draft) => {
-  //     draft.tableData.set(tableId, tableData);
-  //   });
-  //   return tableData;
-  // },
-  deleteTable: (tableId) => {
+  loadTable: async (table) => {
+    const state = get();
+    let tableData = state.tableDataCache.get(table.dataSource);
+    if (tableData !== undefined) {
+      return tableData;
+    }
+    const tableDataLoaderFactory = state.tableDataLoaderFactories.get(
+      table.dataSource.type,
+    );
+    if (tableDataLoaderFactory === undefined) {
+      throw new Error(
+        `No table data loader found for type ${table.dataSource.type}.`,
+      );
+    }
+    const tableDataLoader = tableDataLoaderFactory(
+      table.dataSource,
+      state.projectDir,
+    );
+    tableData = await tableDataLoader.loadTable();
     set((draft) => {
-      draft.tables.delete(tableId);
-      draft.tableData.delete(tableId);
+      draft.tableDataCache.set(table.dataSource, tableData);
+    });
+    return tableData;
+  },
+  deleteTable: (table) => {
+    set((draft) => {
+      draft.tableMap.delete(table.id);
+      draft.tableDataCache.delete(table.dataSource);
     });
   },
-  // registerTableDataLoader: (tableDataSourceType, tableDataLoader) => {
-  //   set((draft) => {
-  //     if (draft.tableDataLoaders.has(tableDataSourceType)) {
-  //       console.warn(
-  //         `Table data loader was already registered for table data source type: ${tableDataSourceType}`,
-  //       );
-  //     }
-  //     draft.tableDataLoaders.set(tableDataSourceType, tableDataLoader);
-  //   });
-  // },
-  // unregisterTableDataLoader: (tableDataSourceType) => {
-  //   set((draft) => {
-  //     if (!draft.tableDataLoaders.delete(tableDataSourceType)) {
-  //       console.warn(
-  //         `No table data loader registered for table data source type: ${tableDataSourceType}`,
-  //       );
-  //     }
-  //   });
-  // },
 });
 
 const initialTableSliceState: TableSliceState = {
-  tables: new Map<string, ITableModel>(),
-  tableData: new Map<string, ITableData>(),
-  // tableDataLoaders: new Map<
-  //   string,
-  //   ITableDataLoader<ITableDataSourceModel<string>>
-  // >(),
+  tableMap: new Map<string, ITableModel>(),
+  tableDataCache: new Map<ITableDataSourceModel, ITableData>(),
+  tableDataLoaderFactories: new Map<string, TableDataLoaderFactory>([
+    [
+      CSV_TABLE_DATA_SOURCE,
+      (dataSource, projectDir) =>
+        new CSVTableDataLoader(
+          dataSource as ICSVTableDataSourceModel,
+          projectDir,
+        ),
+    ],
+    [
+      PARQUET_TABLE_DATA_SOURCE,
+      (dataSource, projectDir) =>
+        new ParquetTableDataLoader(
+          dataSource as IParquetTableDataSourceModel,
+          projectDir,
+        ),
+    ],
+  ]),
 };

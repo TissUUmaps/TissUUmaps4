@@ -15,7 +15,7 @@ export default class MapUtils {
     return results;
   }
 
-  static splice<K, V>(
+  static cloneAndSplice<K, V>(
     map: Map<K, V>,
     start: number,
     deleteCount?: number,
@@ -30,7 +30,7 @@ export default class MapUtils {
     return new Map(entries);
   }
 
-  static cloneAndSet<K, V>(
+  static cloneAndSpliceSet<K, V>(
     map: Map<K, V>,
     key: K,
     value: V,
@@ -39,7 +39,7 @@ export default class MapUtils {
     map = new Map(map);
     if (index !== undefined) {
       map.delete(key);
-      map = MapUtils.splice(map, index, 0, [key, value]);
+      map = MapUtils.cloneAndSplice(map, index, 0, [key, value]);
     } else {
       map.set(key, value);
     }

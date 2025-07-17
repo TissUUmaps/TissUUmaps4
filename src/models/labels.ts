@@ -9,12 +9,9 @@ import { Color, TableGroupsColumn, TableValuesColumn } from "./types";
 
 /** A 2D labels mask */
 export interface ILabelsModel
-  extends IPixelDataModel<
-      ILabelsDataSourceModel<string>,
-      ILabelsLayerConfigModel
-    >,
+  extends IPixelDataModel<ILabelsDataSourceModel, ILabelsLayerConfigModel>,
     IObjectDataModel<
-      ILabelsDataSourceModel<string>,
+      ILabelsDataSourceModel,
       ILabelsLayerConfigModel,
       ILabelsGroupSettingsModel
     > {
@@ -30,7 +27,7 @@ export interface ILabelsModel
 
 /** A data source for 2D labels masks */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ILabelsDataSourceModel<TType extends string>
+export interface ILabelsDataSourceModel<TType extends string = string>
   extends IDataSourceModel<TType> {}
 
 /** A layer-specific display configuration for 2D labels masks */

@@ -5,8 +5,11 @@ import { TableValuesColumn } from "./types";
 export interface IModel {}
 
 /** Base interface for all data models */
-export interface IDataModel<TDataSourceModel extends IDataSourceModel<string>>
+export interface IDataModel<TDataSourceModel extends IDataSourceModel>
   extends IModel {
+  /** ID */
+  id: string;
+
   /** Name */
   name: string;
 
@@ -16,7 +19,7 @@ export interface IDataModel<TDataSourceModel extends IDataSourceModel<string>>
 
 /** Base interface for all rendered data models  */
 export interface IRenderedDataModel<
-  TDataSourceModel extends IDataSourceModel<string>,
+  TDataSourceModel extends IDataSourceModel,
   TLayerConfigModel extends ILayerConfigModel,
 > extends IDataModel<TDataSourceModel> {
   /** Visibility (defaults to true) */
@@ -25,29 +28,32 @@ export interface IRenderedDataModel<
   /** Opacity, between 0 and 1 (defaults to 1) */
   opacity?: number;
 
-  /** Layer configurations (layer configuration ID -> layer configuration) */
-  layerConfigs: Map<string, TLayerConfigModel>;
+  /** Layer configurations */
+  layerConfigs: TLayerConfigModel[];
 }
 
 /** Base interface for all pixel data models */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IPixelDataModel<
-  TDataSourceModel extends IDataSourceModel<string>,
+  TDataSourceModel extends IDataSourceModel,
   TLayerConfigModel extends ILayerConfigModel,
 > extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {}
 
 /** Base interface for all object data models */
 export interface IObjectDataModel<
-  TDataSourceModel extends IDataSourceModel<string>,
+  TDataSourceModel extends IDataSourceModel,
   TLayerConfigModel extends ILayerConfigModel,
   TGroupSettingsModel extends IObjectGroupSettingsModel,
 > extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {
-  /** Group settings (groupVar => group => settings) */
-  groupSettings?: Map<string, Map<string, TGroupSettingsModel>>;
+  /** Group settings  */
+  groupSettings?: {
+    [groupByVar: string]: { [groupKey: string]: TGroupSettingsModel };
+  };
 }
 
 /** Base interface for all data source models */
-export interface IDataSourceModel<TType extends string> extends IModel {
+export interface IDataSourceModel<TType extends string = string>
+  extends IModel {
   /** Data source type */
   type: TType;
 

@@ -11,21 +11,21 @@ export interface IProjectModel extends IModel {
   /** Name */
   name: string;
 
-  /** Layers (layer ID -> layer) */
-  layers?: Map<string, ILayerModel>;
+  /** Layers */
+  layers?: ILayerModel[];
 
-  /** Images (image ID -> image) */
-  images?: Map<string, IImageModel>;
+  /** Images */
+  images?: IImageModel[];
 
-  /** Labels (labels ID -> labels) */
-  labels?: Map<string, ILabelsModel>;
+  /** Labels */
+  labels?: ILabelsModel[];
 
-  /** Points (points ID -> points) */
-  points?: Map<string, IPointsModel>;
+  /** Points */
+  points?: IPointsModel[];
 
-  /** Shapes (shapes ID -> shapes) */
-  shapes?: Map<string, IShapesModel>;
+  /** Shapes */
+  shapes?: IShapesModel[];
 
-  /** Tables (table ID -> table) */
-  tables?: Map<string, ITableModel>;
+  /** Tables */
+  tables?: ITableModel[];
 }

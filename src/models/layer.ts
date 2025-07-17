@@ -2,6 +2,9 @@ import { IModel } from "./base";
 
 /** A named group of data (e.g., image, labels, points, shapes) sharing the same (e.g. physical) coordinate system */
 export interface ILayerModel extends IModel {
+  /** ID */
+  id: string;
+
   /** Name */
   name: string;
 

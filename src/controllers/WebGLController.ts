@@ -7,84 +7,37 @@ import pointsFragmentShaderSource from "./shaders/points.frag?raw";
 import pointsVertexShaderSource from "./shaders/points.vert?raw";
 
 export default class WebGLController {
-  private readonly _parent: HTMLElement;
   private readonly _canvas: HTMLCanvasElement;
   private _context: WebGLContext;
 
   constructor(parent: HTMLElement) {
-    this._parent = parent;
-    this._canvas = this._createCanvas(this._parent);
+    this._canvas = this._initCanvas(parent);
     this._context = new WebGLContext(this._canvas);
-
-    // TODO
-
-    // // Get HW capabilities from WebGL context
-    // glUtils._caps[gl.MAX_TEXTURE_SIZE] = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-    // glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] = gl.getParameter(
-    //   gl.ALIASED_POINT_SIZE_RANGE,
-    // );
-    // console.assert(
-    //   glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] instanceof Float32Array,
-    // );
-
-    // // Disable instanced marker drawing by default if the HW point size limit
-    // // is large enough. Should be faster in most cases, and we can still
-    // // temporarily switch to instanced drawing during viewport captures to
-    // // avoid the HW point size limit.
-    // if (glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE][1] >= 1023) {
-    //   glUtils._useInstancing = false;
-    // }
-
-    // this._textures["shapeAtlas"] = this._loadTextureFromImageURL(
-    //   gl,
-    //   glUtils._markershapes,
-    // );
-    // this._buffers["quad"] = this._createQuad(gl);
-    // this._buffers["transformUBO"] = this._createUniformBuffer(gl);
-    // this._textures["regionLUT"] = this._createRegionLUTTexture(
-    //   gl,
-    //   glUtils._regionMaxNumRegions,
-    // );
-    // this._vaos["empty"] = gl.createVertexArray();
-
-    // glUtils.updateMarkerScale();
-    // document
-    //   .getElementById("ISS_globalmarkersize_text")
-    //   .addEventListener("input", glUtils.updateMarkerScale);
-    // document
-    //   .getElementById("ISS_globalmarkersize_text")
-    //   .addEventListener("input", glUtils.draw);
-
-    // tmapp["hideSVGMarkers"] = true;
-    // tmapp["ISS_viewer"].removeHandler("resize", glUtils.resizeAndDraw);
-    // tmapp["ISS_viewer"].addHandler("resize", glUtils.resizeAndDraw);
-    // tmapp["ISS_viewer"].removeHandler("open", glUtils.draw);
-    // tmapp["ISS_viewer"].addHandler("open", glUtils.draw);
-    // tmapp["ISS_viewer"].removeHandler("viewport-change", glUtils.draw);
-    // tmapp["ISS_viewer"].addHandler("viewport-change", glUtils.draw);
-
-    // glUtils.resize(); // Force initial resize to OSD canvas size
   }
 
-  synchronize(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _layers: Map<string, ILayerModel>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _points: Map<string, IPointsModel>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _shapes: Map<string, IShapesModel>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _pointsData: Map<string, IPointsData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _shapesData: Map<string, IShapesData>,
-  ): void {}
+  async synchronize(
+    layerMap: Map<string, ILayerModel>,
+    pointsMap: Map<string, IPointsModel>,
+    shapesMap: Map<string, IShapesModel>,
+    loadPoints: (points: IPointsModel) => Promise<IPointsData>,
+    loadShapes: (shapes: IShapesModel) => Promise<IShapesData>,
+    isCurrent: () => boolean,
+  ): Promise<void> {
+    await this._context.synchronize(
+      layerMap,
+      pointsMap,
+      shapesMap,
+      loadPoints,
+      loadShapes,
+      isCurrent,
+    );
+  }
 
   destroy(): void {
     this._context.destroy();
-    this._parent.removeChild(this._canvas);
   }
 
-  private _createCanvas(parent: HTMLElement): HTMLCanvasElement {
+  private _initCanvas(parent: HTMLElement): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
     canvas.width = 1;
     canvas.height = 1;
@@ -94,7 +47,7 @@ export default class WebGLController {
       e.preventDefault(); // allow context to be restored
     });
     canvas.addEventListener("webglcontextrestored", () => {
-      this._context = new WebGLContext(this._canvas); // gracefully restore context
+      this._context = new WebGLContext(canvas); // gracefully restore context
     });
     // Place marker canvas under the parent (OpenSeadragon) canvas to enable
     // proper compositing with the minimap and other OpenSeadragon elements.
@@ -112,6 +65,14 @@ class WebGLContext {
 
   private readonly _gl: WebGL2RenderingContext;
   private readonly _pointsShaderProgram: WebGLProgram;
+  private readonly _pointsShaderBuffers: {
+    a_position: WebGLBuffer;
+    a_size: WebGLBuffer;
+    a_color: WebGLBuffer;
+    a_opacity: WebGLBuffer;
+    a_markerIndex: WebGLBuffer;
+    a_transformIndex: WebGLBuffer;
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl2", WebGLContext._GL_OPTIONS);
@@ -123,10 +84,36 @@ class WebGLContext {
       pointsVertexShaderSource,
       pointsFragmentShaderSource,
     );
+    this._pointsShaderBuffers = {
+      a_position: this._gl.createBuffer(),
+      a_size: this._gl.createBuffer(),
+      a_color: this._gl.createBuffer(),
+      a_opacity: this._gl.createBuffer(),
+      a_markerIndex: this._gl.createBuffer(),
+      a_transformIndex: this._gl.createBuffer(),
+    };
   }
+
+  async synchronize(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _layerMap: Map<string, ILayerModel>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _pointsMap: Map<string, IPointsModel>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _shapesMap: Map<string, IShapesModel>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _loadPoints: (points: IPointsModel) => Promise<IPointsData>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _loadShapes: (shapes: IShapesModel) => Promise<IShapesData>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _isCurrent: () => boolean,
+  ): Promise<void> {}
 
   destroy(): void {
     this._gl.deleteProgram(this._pointsShaderProgram);
+    for (const pointsShaderBuffer of Object.values(this._pointsShaderBuffers)) {
+      this._gl.deleteBuffer(pointsShaderBuffer);
+    }
   }
 
   private _loadShaderProgram(
@@ -175,6 +162,8 @@ class WebGLContext {
       }
       return program;
     } finally {
+      // flag shader for deletion (i.e., delete them when no longer in use)
+      // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glDeleteShader.xhtml
       this._gl.deleteShader(vertexShader);
       this._gl.deleteShader(fragmentShader);
     }

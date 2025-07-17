@@ -1,105 +1,90 @@
-import { IShapesData } from "../data/shapes";
-import { IShapesModel } from "../models/shapes";
+import { IShapesData, IShapesDataLoader } from "../data/shapes";
+import { ITableData } from "../data/table";
+import { IShapesDataSourceModel, IShapesModel } from "../models/shapes";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
+
+type ShapesDataLoaderFactory = (
+  dataSource: IShapesDataSourceModel,
+  projectDir: FileSystemDirectoryHandle | null,
+  loadTable: (tableId: string) => Promise<ITableData>,
+) => IShapesDataLoader<IShapesData>;
 
 export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
 
 export type ShapesSliceState = {
-  shapes: Map<string, IShapesModel>;
-  shapesData: Map<string, IShapesData>;
-  // shapesDataLoaders: Map<
-  //   string,
-  //   IShapesDataLoader<IShapesDataSourceModel<string>>
-  // >;
+  shapesMap: Map<string, IShapesModel>;
+  shapesDataCache: Map<IShapesDataSourceModel, IShapesData>;
+  shapesDataLoaderFactories: Map<string, ShapesDataLoaderFactory>;
 };
 
 export type ShapesSliceActions = {
-  setShapes: (
-    shapesId: string,
-    shapes: IShapesModel,
-    shapesIndex?: number,
-  ) => void;
-  // loadShapes: (shapesId: string, shapes?: IShapesModel) => Promise<IShapesData>;
-  deleteShapes: (shapesId: string) => void;
-  // registerShapesDataLoader: (
-  //   shapesDataSourceType: string,
-  //   shapesDataLoader: IShapesDataLoader<IShapesDataSourceModel<string>>,
-  // ) => void;
-  // unregisterShapesDataLoader: (shapesDataSourceType: string) => void;
+  setShapes: (shapes: IShapesModel, index?: number) => void;
+  loadShapes: (shapes: IShapesModel) => Promise<IShapesData>;
+  deleteShapes: (shapes: IShapesModel) => void;
 };
 
 export const createShapesSlice: BoundStoreStateCreator<ShapesSlice> = (
   set,
+  get,
 ) => ({
   ...initialShapesSliceState,
-  setShapes: (shapesId, shapes, shapesIndex) => {
+  setShapes: (shapes, index) => {
     set((draft) => {
-      draft.shapes = MapUtils.cloneAndSet(
-        draft.shapes,
-        shapesId,
+      const oldShapes = draft.shapesMap.get(shapes.id);
+      draft.shapesMap = MapUtils.cloneAndSpliceSet(
+        draft.shapesMap,
+        shapes.id,
         shapes,
-        shapesIndex,
+        index,
       );
+      if (oldShapes !== undefined) {
+        draft.shapesDataCache.delete(oldShapes.dataSource);
+      }
     });
   },
-  // loadShapes: async (shapesId, shapes) => {
-  //   const state = get();
-  //   if (state.shapesData.has(shapesId)) {
-  //     return state.shapesData.get(shapesId)!;
-  //   }
-  //   if (shapes === undefined) {
-  //     shapes = state.shapes.get(shapesId);
-  //     if (shapes === undefined) {
-  //       throw new Error(`No shapes found for ID: ${shapesId}`);
-  //     }
-  //   }
-  //   const shapesDataLoader = state.shapesDataLoaders.get(
-  //     shapes.dataSource.type,
-  //   );
-  //   if (shapesDataLoader === undefined) {
-  //     throw new Error(
-  //       `No shapes data loader registered for shapes data source type: ${shapes.dataSource.type}`,
-  //     );
-  //   }
-  //   const shapesData = await shapesDataLoader.loadShapes(shapes.dataSource);
-  //   set((draft) => {
-  //     draft.shapesData.set(shapesId, shapesData);
-  //   });
-  //   return shapesData;
-  // },
-  deleteShapes: (shapesId) => {
+  loadShapes: async (shapes) => {
+    const state = get();
+    let shapesData = state.shapesDataCache.get(shapes.dataSource);
+    if (shapesData !== undefined) {
+      return shapesData;
+    }
+    const shapesDataLoaderFactory = state.shapesDataLoaderFactories.get(
+      shapes.dataSource.type,
+    );
+    if (shapesDataLoaderFactory === undefined) {
+      throw new Error(
+        `No shapes data loader found for type ${shapes.dataSource.type}.`,
+      );
+    }
+    const shapesDataLoader = shapesDataLoaderFactory(
+      shapes.dataSource,
+      state.projectDir,
+      (tableId) => {
+        const state = get();
+        const table = state.tableMap.get(tableId);
+        if (table === undefined) {
+          throw new Error(`Table with ID ${tableId} not found.`);
+        }
+        return state.loadTable(table);
+      },
+    );
+    shapesData = await shapesDataLoader.loadShapes();
     set((draft) => {
-      draft.shapes.delete(shapesId);
-      draft.shapesData.delete(shapesId);
+      draft.shapesDataCache.set(shapes.dataSource, shapesData);
+    });
+    return shapesData;
+  },
+  deleteShapes: (shapes) => {
+    set((draft) => {
+      draft.shapesMap.delete(shapes.id);
+      draft.shapesDataCache.delete(shapes.dataSource);
     });
   },
-  // registerShapesDataLoader: (shapesDataSourceType, shapesDataLoader) => {
-  //   set((draft) => {
-  //     if (draft.shapesDataLoaders.has(shapesDataSourceType)) {
-  //       console.warn(
-  //         `Shapes data loader was already registered for shapes data source type: ${shapesDataSourceType}`,
-  //       );
-  //     }
-  //     draft.shapesDataLoaders.set(shapesDataSourceType, shapesDataLoader);
-  //   });
-  // },
-  // unregisterShapesDataLoader: (shapesDataSourceType) => {
-  //   set((draft) => {
-  //     if (!draft.shapesDataLoaders.delete(shapesDataSourceType)) {
-  //       console.warn(
-  //         `No shapes data loader registered for shapes data source type: ${shapesDataSourceType}`,
-  //       );
-  //     }
-  //   });
-  // },
 });
 
 const initialShapesSliceState: ShapesSliceState = {
-  shapes: new Map<string, IShapesModel>(),
-  shapesData: new Map<string, IShapesData>(),
-  // shapesDataLoaders: new Map<
-  //   string,
-  //   IShapesDataLoader<IShapesDataSourceModel<string>>
-  // >(),
+  shapesMap: new Map<string, IShapesModel>(),
+  shapesDataCache: new Map<IShapesDataSourceModel, IShapesData>(),
+  shapesDataLoaderFactories: new Map<string, ShapesDataLoaderFactory>(),
 };

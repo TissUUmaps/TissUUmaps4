@@ -3,11 +3,11 @@ import MapUtils from "../../utils/MapUtils";
 import ImagePanel from "./ImagePanel";
 
 export default function ImageCollectionPanel() {
-  const images = useBoundStore((state) => state.images);
+  const imageMap = useBoundStore((state) => state.imageMap);
   return (
     <>
-      {images &&
-        MapUtils.map(images, (imageId, image) => (
+      {imageMap &&
+        MapUtils.map(imageMap, (imageId, image) => (
           <ImagePanel key={imageId} imageId={imageId} image={image} />
         ))}
     </>

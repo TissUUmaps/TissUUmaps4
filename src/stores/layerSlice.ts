@@ -5,31 +5,34 @@ import { BoundStoreStateCreator } from "./boundStore";
 export type LayerSlice = LayerSliceState & LayerSliceActions;
 
 export type LayerSliceState = {
-  layers: Map<string, ILayerModel>;
+  layerMap: Map<string, ILayerModel>;
 };
 
 export type LayerSliceActions = {
-  setLayer: (layerId: string, layer: ILayerModel, layerIndex?: number) => void;
-  deleteLayer: (layerId: string) => void;
+  setLayer: (layer: ILayerModel, index?: number) => void;
+  deleteLayer: (layer: ILayerModel) => void;
 };
 
 export const createLayerSlice: BoundStoreStateCreator<LayerSlice> = (set) => ({
   ...initialLayerSliceState,
-  setLayer: (layerId, layer, layerIndex) => {
+  setLayer: (layer, index) => {
     set((draft) => {
-      draft.layers = MapUtils.cloneAndSet(
-        draft.layers,
-        layerId,
+      draft.layerMap = MapUtils.cloneAndSpliceSet(
+        draft.layerMap,
+        layer.id,
         layer,
-        layerIndex,
+        index,
       );
     });
   },
-  deleteLayer: (layerId) => {
-    set((draft) => draft.layers.delete(layerId));
+  deleteLayer: (layer) => {
+    set((draft) => draft.layerMap.delete(layer.id));
   },
 });
 
 const initialLayerSliceState: LayerSliceState = {
-  layers: new Map<string, ILayerModel>(),
+  // FIXME remove test data
+  layerMap: new Map<string, ILayerModel>([
+    ["test", { id: "test", name: "Test" }],
+  ]),
 };

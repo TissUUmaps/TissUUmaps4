@@ -3,11 +3,11 @@ import MapUtils from "../../utils/MapUtils";
 import TablePanel from "./TablePanel";
 
 export default function TableCollectionPanel() {
-  const tables = useBoundStore((state) => state.tables);
+  const tableMap = useBoundStore((state) => state.tableMap);
   return (
     <>
-      {tables &&
-        MapUtils.map(tables, (tableId, table) => (
+      {tableMap &&
+        MapUtils.map(tableMap, (tableId, table) => (
           <TablePanel key={tableId} tableId={tableId} table={table} />
         ))}
     </>

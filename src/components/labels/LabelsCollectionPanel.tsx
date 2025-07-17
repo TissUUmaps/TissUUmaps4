@@ -3,11 +3,11 @@ import MapUtils from "../../utils/MapUtils";
 import LabelsPanel from "./LabelsPanel";
 
 export default function LabelsCollectionPanel() {
-  const labels = useBoundStore((state) => state.labels);
+  const labelsMap = useBoundStore((state) => state.labelsMap);
   return (
     <>
-      {labels &&
-        MapUtils.map(labels, (labelsId, labels) => (
+      {labelsMap &&
+        MapUtils.map(labelsMap, (labelsId, labels) => (
           <LabelsPanel key={labelsId} labelsId={labelsId} labels={labels} />
         ))}
     </>

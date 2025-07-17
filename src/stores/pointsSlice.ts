@@ -1,105 +1,105 @@
-import { IPointsData } from "../data/points";
-import { IPointsModel } from "../models/points";
+import {
+  ITablePointsDataSourceModel,
+  TABLE_POINTS_DATA_SOURCE,
+  TablePointsDataLoader,
+} from "../data/loaders/table";
+import { IPointsData, IPointsDataLoader } from "../data/points";
+import { ITableData } from "../data/table";
+import { IPointsDataSourceModel, IPointsModel } from "../models/points";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
+
+type PointsDataLoaderFactory = (
+  dataSource: IPointsDataSourceModel,
+  projectDir: FileSystemDirectoryHandle | null,
+  loadTable: (tableId: string) => Promise<ITableData>,
+) => IPointsDataLoader<IPointsData>;
 
 export type PointsSlice = PointsSliceState & PointsSliceActions;
 
 export type PointsSliceState = {
-  points: Map<string, IPointsModel>;
-  pointsData: Map<string, IPointsData>;
-  // pointsDataLoaders: Map<
-  //   string,
-  //   IPointsDataLoader<IPointsDataSourceModel<string>>
-  // >;
+  pointsMap: Map<string, IPointsModel>;
+  pointsDataCache: Map<IPointsDataSourceModel, IPointsData>;
+  pointsDataLoaderFactories: Map<string, PointsDataLoaderFactory>;
 };
 
 export type PointsSliceActions = {
-  setPoints: (
-    pointsId: string,
-    points: IPointsModel,
-    pointsIndex?: number,
-  ) => void;
-  // loadPoints: (pointsId: string, points?: IPointsModel) => Promise<IPointsData>;
-  deletePoints: (pointsId: string) => void;
-  // registerPointsDataLoader: (
-  //   pointsDataSourceType: string,
-  //   pointsDataLoader: IPointsDataLoader<IPointsDataSourceModel<string>>,
-  // ) => void;
-  // unregisterPointsDataLoader: (pointsDataSourceType: string) => void;
+  setPoints: (points: IPointsModel, index?: number) => void;
+  loadPoints: (points: IPointsModel) => Promise<IPointsData>;
+  deletePoints: (points: IPointsModel) => void;
 };
 
 export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
   set,
+  get,
 ) => ({
   ...initialPointsSliceState,
-  setPoints: (pointsId, points, pointsIndex) => {
+  setPoints: (points, index) => {
     set((draft) => {
-      draft.points = MapUtils.cloneAndSet(
-        draft.points,
-        pointsId,
+      const oldPoints = draft.pointsMap.get(points.id);
+      draft.pointsMap = MapUtils.cloneAndSpliceSet(
+        draft.pointsMap,
+        points.id,
         points,
-        pointsIndex,
+        index,
       );
+      if (oldPoints !== undefined) {
+        draft.pointsDataCache.delete(oldPoints.dataSource);
+      }
     });
   },
-  // loadPoints: async (pointsId, points) => {
-  //   const state = get();
-  //   if (state.pointsData.has(pointsId)) {
-  //     return state.pointsData.get(pointsId)!;
-  //   }
-  //   if (points === undefined) {
-  //     points = state.points.get(pointsId);
-  //     if (points === undefined) {
-  //       throw new Error(`No points found for ID: ${pointsId}`);
-  //     }
-  //   }
-  //   const pointsDataLoader = state.pointsDataLoaders.get(
-  //     points.dataSource.type,
-  //   );
-  //   if (pointsDataLoader === undefined) {
-  //     throw new Error(
-  //       `No points data loader registered for points data source type: ${points.dataSource.type}`,
-  //     );
-  //   }
-  //   const pointsData = await pointsDataLoader.loadPoints(points.dataSource);
-  //   set((draft) => {
-  //     draft.pointsData.set(pointsId, pointsData);
-  //   });
-  //   return pointsData;
-  // },
-  deletePoints: (pointsId) => {
+  loadPoints: async (points) => {
+    const state = get();
+    let pointsData = state.pointsDataCache.get(points.dataSource);
+    if (pointsData !== undefined) {
+      return pointsData;
+    }
+    const pointsDataLoaderFactory = state.pointsDataLoaderFactories.get(
+      points.dataSource.type,
+    );
+    if (pointsDataLoaderFactory === undefined) {
+      throw new Error(
+        `No points data loader found for type ${points.dataSource.type}.`,
+      );
+    }
+    const pointsDataLoader = pointsDataLoaderFactory(
+      points.dataSource,
+      state.projectDir,
+      (tableId) => {
+        const state = get();
+        const table = state.tableMap.get(tableId);
+        if (table === undefined) {
+          throw new Error(`Table with ID ${tableId} not found.`);
+        }
+        return state.loadTable(table);
+      },
+    );
+    pointsData = await pointsDataLoader.loadPoints();
     set((draft) => {
-      draft.points.delete(pointsId);
-      draft.pointsData.delete(pointsId);
+      draft.pointsDataCache.set(points.dataSource, pointsData);
+    });
+    return pointsData;
+  },
+  deletePoints: (points) => {
+    set((draft) => {
+      draft.pointsMap.delete(points.id);
+      draft.pointsDataCache.delete(points.dataSource);
     });
   },
-  // registerPointsDataLoader: (pointsDataSourceType, pointsDataLoader) => {
-  //   set((draft) => {
-  //     if (draft.pointsDataLoaders.has(pointsDataSourceType)) {
-  //       console.warn(
-  //         `Points data loader was already registered for points data source type: ${pointsDataSourceType}`,
-  //       );
-  //     }
-  //     draft.pointsDataLoaders.set(pointsDataSourceType, pointsDataLoader);
-  //   });
-  // },
-  // unregisterPointsDataLoader: (pointsDataSourceType) => {
-  //   set((draft) => {
-  //     if (!draft.pointsDataLoaders.delete(pointsDataSourceType)) {
-  //       console.warn(
-  //         `No points data loader registered for points data source type: ${pointsDataSourceType}`,
-  //       );
-  //     }
-  //   });
-  // },
 });
 
 const initialPointsSliceState: PointsSliceState = {
-  points: new Map<string, IPointsModel>(),
-  pointsData: new Map<string, IPointsData>(),
-  // pointsDataLoaders: new Map<
-  //   string,
-  //   IPointsDataLoader<IPointsDataSourceModel<string>>
-  // >(),
+  pointsMap: new Map<string, IPointsModel>(),
+  pointsDataCache: new Map<IPointsDataSourceModel, IPointsData>(),
+  pointsDataLoaderFactories: new Map<string, PointsDataLoaderFactory>([
+    [
+      TABLE_POINTS_DATA_SOURCE,
+      (dataSource, projectDir, loadTable) =>
+        new TablePointsDataLoader(
+          dataSource as ITablePointsDataSourceModel,
+          projectDir,
+          loadTable,
+        ),
+    ],
+  ]),
 };

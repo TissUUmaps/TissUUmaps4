@@ -1,11 +1,11 @@
-import { Drawer, Point, TiledImage, Viewer } from "openseadragon";
+import { Point, TiledImage, Viewer } from "openseadragon";
 
 import { IImageData } from "../data/image";
 import { ILabelsData } from "../data/labels";
 import { ICustomTileSource, TileSourceConfig } from "../data/types";
 import { ILayerConfigModel } from "../models/base";
-import { IImageModel } from "../models/image";
-import { ILabelsModel } from "../models/labels";
+import { IImageLayerConfigModel, IImageModel } from "../models/image";
+import { ILabelsLayerConfigModel, ILabelsModel } from "../models/labels";
 import { ILayerModel } from "../models/layer";
 
 export default class OpenSeadragonController {
@@ -25,61 +25,54 @@ export default class OpenSeadragonController {
     });
   }
 
-  synchronize(
-    layers: Map<string, ILayerModel>,
-    images: Map<string, IImageModel>,
-    labels: Map<string, ILabelsModel>,
-    imageData: Map<string, IImageData>,
-    labelsData: Map<string, ILabelsData>,
-  ): void {
-    this._cleanTiledImages(layers, images, labels, imageData, labelsData);
-    this._createOrUpdateTiledImages(
-      layers,
-      images,
-      labels,
-      imageData,
-      labelsData,
+  async synchronize(
+    layerMap: Map<string, ILayerModel>,
+    imageMap: Map<string, IImageModel>,
+    labelsMap: Map<string, ILabelsModel>,
+    loadImage: (image: IImageModel) => Promise<IImageData>,
+    loadLabels: (labels: ILabelsModel) => Promise<ILabelsData>,
+    isCurrent: () => boolean,
+  ): Promise<void> {
+    this._cleanTiledImages(layerMap, imageMap, labelsMap);
+    await this._createOrUpdateTiledImages(
+      layerMap,
+      imageMap,
+      labelsMap,
+      loadImage,
+      loadLabels,
+      isCurrent,
     );
   }
 
   destroy(): void {
-    this.synchronize(new Map(), new Map(), new Map(), new Map(), new Map());
     this._viewer.destroy();
+    this._tiledImageStates.length = 0;
   }
 
-  getDrawer(): Drawer {
-    return this._viewer.drawer;
+  getCanvas(): HTMLElement {
+    return this._viewer.canvas;
   }
 
   private _cleanTiledImages(
-    layers: Map<string, ILayerModel>,
-    images: Map<string, IImageModel>,
-    labels: Map<string, ILabelsModel>,
-    imageData: Map<string, IImageData>,
-    labelsData: Map<string, ILabelsData>,
+    layerMap: Map<string, ILayerModel>,
+    imageMap: Map<string, IImageModel>,
+    labelsMap: Map<string, ILabelsModel>,
   ): void {
     for (let i = 0; i < this._tiledImageStates.length; i++) {
       const tiledImageState = this._tiledImageStates[i];
-      let keepTiledImage = false;
-      const imageOrLabels =
-        "imageId" in tiledImageState
-          ? images.get(tiledImageState.imageId)
-          : labels.get(tiledImageState.labelsId);
-      if (
-        imageOrLabels !== undefined &&
-        ("imageId" in tiledImageState
-          ? tiledImageState.imageId in imageData
-          : tiledImageState.labelsId in labelsData)
-      ) {
-        const layerConfig = imageOrLabels.layerConfigs.get(
-          tiledImageState.layerConfigId,
-        );
-        if (layerConfig !== undefined) {
-          if (layers.has(layerConfig.layerId)) {
-            keepTiledImage = true;
-          }
-        }
-      }
+      const keepTiledImage =
+        "image" in tiledImageState
+          ? imageMap.has(tiledImageState.image.id) &&
+            tiledImageState.image.layerConfigs.includes(
+              tiledImageState.layerConfig,
+            ) &&
+            layerMap.has(tiledImageState.layerConfig.layerId)
+          : labelsMap.has(tiledImageState.labels.id) &&
+            tiledImageState.labels.layerConfigs.includes(
+              tiledImageState.layerConfig,
+            ) &&
+            layerMap.has(tiledImageState.layerConfig.layerId);
+
       if (!keepTiledImage) {
         if (tiledImageState.loaded) {
           const tiledImage = this._viewer.world.getItemAt(i);
@@ -93,25 +86,31 @@ export default class OpenSeadragonController {
     }
   }
 
-  private _createOrUpdateTiledImages(
+  private async _createOrUpdateTiledImages(
     layerMap: Map<string, ILayerModel>,
     imageMap: Map<string, IImageModel>,
     labelsMap: Map<string, ILabelsModel>,
-    imageDataMap: Map<string, IImageData>,
-    labelsDataMap: Map<string, ILabelsData>,
-  ): void {
+    loadImage: (image: IImageModel) => Promise<IImageData>,
+    loadLabels: (labels: ILabelsModel) => Promise<ILabelsData>,
+    isCurrent: () => boolean,
+  ): Promise<void> {
     let desiredTiledImageIndex = 0;
-    for (const [layerId, layer] of layerMap) {
-      for (const [imageId, image] of imageMap) {
-        const imageData = imageDataMap.get(imageId);
-        if (imageData !== undefined) {
-          for (const [layerConfigId, layerConfig] of image.layerConfigs) {
-            if (layerConfig.layerId === layerId) {
+    for (const layer of layerMap.values()) {
+      for (const image of imageMap.values()) {
+        let imageData = null;
+        try {
+          imageData = await loadImage(image);
+        } catch (error) {
+          console.error(`Failed to load image with ID ${image.id}:`, error);
+        }
+        if (imageData !== null && isCurrent()) {
+          for (const layerConfig of image.layerConfigs) {
+            if (layerConfig.layerId === layer.id) {
               const currentTiledImageIndex = this._tiledImageStates.findIndex(
                 (tiledImageState) =>
-                  "imageId" in tiledImageState &&
-                  tiledImageState.imageId === imageId &&
-                  tiledImageState.layerConfigId === layerConfigId,
+                  "image" in tiledImageState &&
+                  tiledImageState.image === image &&
+                  tiledImageState.layerConfig === layerConfig,
               );
               this._createOrUpdateTiledImage(
                 layer,
@@ -119,7 +118,7 @@ export default class OpenSeadragonController {
                 layerConfig,
                 currentTiledImageIndex,
                 desiredTiledImageIndex,
-                () => ({ imageId: imageId, layerConfigId: layerConfigId }),
+                () => ({ image: image, layerConfig: layerConfig }),
                 () => imageData.getTileSource(),
               );
               desiredTiledImageIndex++;
@@ -127,16 +126,21 @@ export default class OpenSeadragonController {
           }
         }
       }
-      for (const [labelsId, labels] of labelsMap) {
-        const labelsData = labelsDataMap.get(labelsId);
-        if (labelsData !== undefined) {
-          for (const [layerConfigId, layerConfig] of labels.layerConfigs) {
-            if (layerConfig.layerId === layerId) {
+      for (const labels of labelsMap.values()) {
+        let labelsData = null;
+        try {
+          labelsData = await loadLabels(labels);
+        } catch (error) {
+          console.error(`Failed to load labels with ID ${labels.id}:`, error);
+        }
+        if (labelsData !== null && isCurrent()) {
+          for (const layerConfig of labels.layerConfigs) {
+            if (layerConfig.layerId === layer.id) {
               const currentTiledImageIndex = this._tiledImageStates.findIndex(
                 (tiledImageState) =>
-                  "labelsId" in tiledImageState &&
-                  tiledImageState.labelsId === labelsId &&
-                  tiledImageState.layerConfigId === layerConfigId,
+                  "labels" in tiledImageState &&
+                  tiledImageState.labels === labels &&
+                  tiledImageState.layerConfig === layerConfig,
               );
               this._createOrUpdateTiledImage(
                 layer,
@@ -144,7 +148,7 @@ export default class OpenSeadragonController {
                 layerConfig,
                 currentTiledImageIndex,
                 desiredTiledImageIndex,
-                () => ({ labelsId: labelsId, layerConfigId: layerConfigId }),
+                () => ({ labels: labels, layerConfig: layerConfig }),
                 () => {
                   throw new Error("Method not implemented"); // TODO
                 },
@@ -349,13 +353,13 @@ type BaseTiledImageState = {
 };
 
 type ImageTiledImageState = BaseTiledImageState & {
-  imageId: string;
-  layerConfigId: string;
+  image: IImageModel;
+  layerConfig: IImageLayerConfigModel;
 };
 
 type LabelsTiledImageState = BaseTiledImageState & {
-  labelsId: string;
-  layerConfigId: string;
+  labels: ILabelsModel;
+  layerConfig: ILabelsLayerConfigModel;
 };
 
 type TiledImageState = ImageTiledImageState | LabelsTiledImageState;

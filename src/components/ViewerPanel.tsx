@@ -5,54 +5,111 @@ import WebGLController from "../controllers/WebGLController";
 import { useBoundStore } from "../stores/boundStore";
 
 export default function ViewerPanel() {
-  const glRef = useRef<WebGLController | null>(null);
-  const osdRef = useRef<OpenSeadragonController | null>(null);
-  const layers = useBoundStore((state) => state.layers);
-  const images = useBoundStore((state) => state.images);
-  const labels = useBoundStore((state) => state.labels);
-  const points = useBoundStore((state) => state.points);
-  const shapes = useBoundStore((state) => state.shapes);
-  const imageData = useBoundStore((state) => state.imageData);
-  const labelsData = useBoundStore((state) => state.labelsData);
-  const pointsData = useBoundStore((state) => state.pointsData);
-  const shapesData = useBoundStore((state) => state.shapesData);
+  const openSeadragonControllerRef = useRef<OpenSeadragonController | null>(
+    null,
+  );
+  const webGLControllerRef = useRef<WebGLController | null>(null);
+  const projectDir = useBoundStore((state) => state.projectDir);
+  const layerMap = useBoundStore((state) => state.layerMap);
+  const imageMap = useBoundStore((state) => state.imageMap);
+  const labelsMap = useBoundStore((state) => state.labelsMap);
+  const pointsMap = useBoundStore((state) => state.pointsMap);
+  const shapesMap = useBoundStore((state) => state.shapesMap);
+  const loadImage = useBoundStore((state) => state.loadImage);
+  const loadLabels = useBoundStore((state) => state.loadLabels);
+  const loadPoints = useBoundStore((state) => state.loadPoints);
+  const loadShapes = useBoundStore((state) => state.loadShapes);
+  const imageDataLoaderFactories = useBoundStore(
+    (state) => state.imageDataLoaderFactories,
+  );
+  const labelsDataLoaderFactories = useBoundStore(
+    (state) => state.labelsDataLoaderFactories,
+  );
+  const pointsDataLoaderFactories = useBoundStore(
+    (state) => state.pointsDataLoaderFactories,
+  );
+  const shapesDataLoaderFactories = useBoundStore(
+    (state) => state.shapesDataLoaderFactories,
+  );
 
   // use a ref callback for initializing the OpenSeadragon viewer and the WebGL canvas
   // https://react.dev/reference/react-dom/components/common#ref-callback
   const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
-    let gl = glRef.current;
-    let osd = osdRef.current;
-    if (gl !== null) {
-      gl.destroy();
-      gl = glRef.current = null;
+    if (webGLControllerRef.current !== null) {
+      webGLControllerRef.current.destroy();
+      webGLControllerRef.current = null;
     }
-    if (osd !== null) {
-      osd.destroy();
-      osd = osdRef.current = null;
+    if (openSeadragonControllerRef.current !== null) {
+      openSeadragonControllerRef.current.destroy();
+      openSeadragonControllerRef.current = null;
     }
     if (viewerElement !== null) {
-      osd = osdRef.current = new OpenSeadragonController(viewerElement);
-      gl = glRef.current = new WebGLController(osd.getDrawer().canvas);
+      openSeadragonControllerRef.current = new OpenSeadragonController(
+        viewerElement,
+      );
+      webGLControllerRef.current = new WebGLController(
+        openSeadragonControllerRef.current.getCanvas(),
+      );
     }
   }, []);
 
-  // refresh the OpenSeadragon viewer upon layer/image/labels/data changes
+  // synchronize the OpenSeadragon viewer upon layer/image/labels changes
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
-    const osd = osdRef.current;
-    if (osd) {
-      osd.synchronize(layers, images, labels, imageData, labelsData);
+    let isCurrent = true;
+    const os = openSeadragonControllerRef.current;
+    if (os !== null) {
+      os.synchronize(
+        layerMap,
+        imageMap,
+        labelsMap,
+        loadImage,
+        loadLabels,
+        () => isCurrent,
+      ).catch(console.error);
     }
-  }, [layers, images, labels, imageData, labelsData]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [
+    projectDir,
+    layerMap,
+    imageMap,
+    labelsMap,
+    loadImage,
+    loadLabels,
+    imageDataLoaderFactories,
+    labelsDataLoaderFactories,
+  ]);
 
-  // refresh the WebGL canvas upon layer/points/shapes/data changes
+  // synchronize the WebGL canvas upon layer/points/shapes changes
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
-    const gl = glRef.current;
-    if (gl) {
-      gl.synchronize(layers, points, shapes, pointsData, shapesData);
+    let isCurrent = true;
+    const gl = webGLControllerRef.current;
+    if (gl !== null) {
+      gl.synchronize(
+        layerMap,
+        pointsMap,
+        shapesMap,
+        loadPoints,
+        loadShapes,
+        () => isCurrent,
+      ).catch(console.error);
     }
-  }, [layers, points, shapes, pointsData, shapesData]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [
+    projectDir,
+    layerMap,
+    pointsMap,
+    shapesMap,
+    loadPoints,
+    loadShapes,
+    pointsDataLoaderFactories,
+    shapesDataLoaderFactories,
+  ]);
 
   return <div ref={setViewerRef} className="size-full bg-white" />;
 }

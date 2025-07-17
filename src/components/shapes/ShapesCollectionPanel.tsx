@@ -3,11 +3,11 @@ import MapUtils from "../../utils/MapUtils";
 import ShapesPanel from "./ShapesPanel";
 
 export default function ShapesCollectionPanel() {
-  const shapes = useBoundStore((state) => state.shapes);
+  const shapesMap = useBoundStore((state) => state.shapesMap);
   return (
     <>
-      {shapes &&
-        MapUtils.map(shapes, (shapesId, shapes) => (
+      {shapesMap &&
+        MapUtils.map(shapesMap, (shapesId, shapes) => (
           <ShapesPanel key={shapesId} shapesId={shapesId} shapes={shapes} />
         ))}
     </>
