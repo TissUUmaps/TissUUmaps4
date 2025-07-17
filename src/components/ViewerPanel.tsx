@@ -44,12 +44,20 @@ export default function ViewerPanel() {
       openSeadragonControllerRef.current = null;
     }
     if (viewerElement !== null) {
-      openSeadragonControllerRef.current = new OpenSeadragonController(
-        viewerElement,
-      );
-      webGLControllerRef.current = new WebGLController(
-        openSeadragonControllerRef.current.getCanvas(),
-      );
+      try {
+        openSeadragonControllerRef.current = new OpenSeadragonController(
+          viewerElement,
+        );
+        try {
+          webGLControllerRef.current = new WebGLController(
+            openSeadragonControllerRef.current.getCanvas(),
+          );
+        } catch (error) {
+          console.error("Failed to initialize WebGL:", error);
+        }
+      } catch (error) {
+        console.error("Failed to initialize OpenSeadragon:", error);
+      }
     }
   }, []);
 
