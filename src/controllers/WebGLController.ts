@@ -1,12 +1,15 @@
 import { IPointsData } from "../data/points";
 import { IShapesData } from "../data/shapes";
 import { ITableData } from "../data/table";
+import { TypedArray } from "../data/types";
 import { ILayerModel } from "../models/layer";
-import { IPointsModel } from "../models/points";
+import { IPointsLayerConfigModel, IPointsModel } from "../models/points";
 import { IShapesModel } from "../models/shapes";
 import {
   Color,
   Marker,
+  TableGroupsColumn,
+  TableValuesColumn,
   isColor,
   isMarker,
   isTableGroupsColumn,
@@ -14,6 +17,7 @@ import {
 } from "../models/types";
 import ArrayUtils from "../utils/ArrayUtils";
 import ColorUtils from "../utils/ColorUtils";
+import WebGLUtils from "../utils/WebGLUtils";
 import pointsFragmentShaderSource from "./shaders/points.frag?raw";
 import pointsVertexShaderSource from "./shaders/points.vert?raw";
 
@@ -32,12 +36,12 @@ export default class WebGLController {
     });
   }
 
-  destroy(): void {
-    this._context.destroy();
-  }
-
   getContext(): WebGLContext {
     return this._context;
+  }
+
+  destroy(): void {
+    this._context.destroy();
   }
 
   private static _createCanvas(parent: HTMLElement): HTMLCanvasElement {
@@ -54,11 +58,6 @@ export default class WebGLController {
 }
 
 class WebGLContext {
-  private static readonly _SHADER_PREPROCESSOR = "#version 300 es";
-  private static readonly _GL_OPTIONS: WebGLContextAttributes = {
-    antialias: false,
-    preserveDrawingBuffer: true,
-  };
   private static readonly _DEFAULT_POINT_SIZE = 1.0;
   private static readonly _DEFAULT_POINT_COLOR: Color = {
     r: 0.0,
@@ -69,8 +68,8 @@ class WebGLContext {
   private static readonly _DEFAULT_POINT_MARKER = Marker.Disc;
 
   private readonly _gl: WebGL2RenderingContext;
-  private readonly _pointsShaderProgram: WebGLProgram;
-  private readonly _pointsShaderBuffers: {
+  private readonly _pointsProgram: WebGLProgram;
+  private readonly _pointsBuffers: {
     a_x: WebGLBuffer;
     a_y: WebGLBuffer;
     a_size: WebGLBuffer;
@@ -79,14 +78,19 @@ class WebGLContext {
     a_markerIndex: WebGLBuffer;
     a_transformIndex: WebGLBuffer;
   };
+  private readonly _pointsStates: PointsState[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
-    this._gl = WebGLContext._initGL(canvas);
-    this._pointsShaderProgram = this._loadShaderProgram(
+    this._gl = WebGLUtils.init(canvas, {
+      antialias: false,
+      preserveDrawingBuffer: true,
+    });
+    this._pointsProgram = WebGLUtils.loadProgram(
+      this._gl,
       pointsVertexShaderSource,
       pointsFragmentShaderSource,
     );
-    this._pointsShaderBuffers = {
+    this._pointsBuffers = {
       a_x: this._gl.createBuffer(),
       a_y: this._gl.createBuffer(),
       a_size: this._gl.createBuffer(),
@@ -97,165 +101,40 @@ class WebGLContext {
     };
   }
 
+  // TODO u_markerAtlas
+  // TODO u_viewTransform
+  // TODO draw
+
   async synchronizePoints(
     layerMap: Map<string, ILayerModel>,
     pointsMap: Map<string, IPointsModel>,
     loadPoints: (points: IPointsModel) => Promise<IPointsData>,
     loadTableByID: (tableId: string) => Promise<ITableData>,
     checkAbort: () => boolean,
-  ): Promise<void> {
-    let pointsIndex = 0;
-    const xsList = [];
-    const ysList = [];
-    const sizesList = [];
-    const colorsList = [];
-    const opacitiesList = [];
-    const markerIndicesList = [];
-    const transformIndicesList = [];
-    for (const layer of layerMap.values()) {
-      for (const points of pointsMap.values()) {
-        for (const layerConfig of points.layerConfigs.filter(
-          (layerConfig) => layerConfig.layerId === layer.id,
-        )) {
-          let pointsData = null;
-          try {
-            pointsData = await loadPoints(points);
-          } catch (error) {
-            console.error(`Failed to load points with ID ${points.id}`, error);
-          }
-          if (checkAbort()) {
-            return;
-          }
-          if (pointsData !== null) {
-            // x/y
-            const [xs, ys] = await pointsData.loadPositions(
-              layerConfig.pointXDimension,
-              layerConfig.pointYDimension,
-            );
-            if (checkAbort()) {
-              return;
-            }
-            xsList.push(xs);
-            ysList.push(ys);
-            // sizes
-            const sizes = new Float32Array(xs.length);
-            if (typeof points.pointSize === "number") {
-              sizes.fill(points.pointSize);
-            } else if (isTableValuesColumn(points.pointSize)) {
-              const tableData = await loadTableByID(points.pointSize.tableId);
-              const tableValues = await tableData.loadColumn<number>(
-                points.pointSize.valuesCol,
-              );
-              if (checkAbort()) {
-                return;
-              }
-              sizes.set(tableValues);
-            } else if (isTableGroupsColumn(points.pointSize)) {
-              // TODO
-            } else {
-              sizes.fill(WebGLContext._DEFAULT_POINT_SIZE);
-            }
-            sizesList.push(sizes);
-            // colors
-            const colors = new Float32Array(xs.length * 3);
-            if (isColor(points.pointColor)) {
-              ArrayUtils.fillSeq(colors, [
-                points.pointColor.r,
-                points.pointColor.g,
-                points.pointColor.b,
-              ]);
-            } else if (isTableValuesColumn(points.pointColor)) {
-              const tableData = await loadTableByID(points.pointColor.tableId);
-              const tableValues = await tableData.loadColumn<string>(
-                points.pointColor.valuesCol,
-              );
-              if (checkAbort()) {
-                return;
-              }
-              for (let i = 0; i < tableValues.length; i++) {
-                let color = WebGLContext._DEFAULT_POINT_COLOR;
-                try {
-                  color = ColorUtils.parseHex(tableValues[i]);
-                } catch (error) {
-                  console.error(`Invalid color: ${tableValues[i]}`, error);
-                }
-                colors.set([color.r, color.g, color.b], i * 3);
-              }
-            } else if (isTableGroupsColumn(points.pointColor)) {
-              // TODO
-            } else {
-              ArrayUtils.fillSeq(colors, [
-                WebGLContext._DEFAULT_POINT_COLOR.r,
-                WebGLContext._DEFAULT_POINT_COLOR.g,
-                WebGLContext._DEFAULT_POINT_COLOR.b,
-              ]);
-            }
-            colorsList.push(colors);
-            // opacities
-            const opacities = new Float32Array(xs.length);
-            if (typeof points.pointOpacity === "number") {
-              opacities.fill(points.pointOpacity);
-            } else if (isTableValuesColumn(points.pointOpacity)) {
-              const tableData = await loadTableByID(
-                points.pointOpacity.tableId,
-              );
-              const tableValues = await tableData.loadColumn<number>(
-                points.pointOpacity.valuesCol,
-              );
-              if (checkAbort()) {
-                return;
-              }
-              opacities.set(tableValues);
-            } else if (isTableGroupsColumn(points.pointOpacity)) {
-              // TODO
-            } else {
-              opacities.fill(WebGLContext._DEFAULT_POINT_OPACITY);
-            }
-            opacitiesList.push(opacities);
-            // marker indices
-            const markerIndices = new Uint32Array(xs.length);
-            if (isMarker(points.pointMarker)) {
-              markerIndices.fill(points.pointMarker);
-            } else if (isTableValuesColumn(points.pointMarker)) {
-              const tableData = await loadTableByID(points.pointMarker.tableId);
-              const tableValues = await tableData.loadColumn<number>(
-                points.pointMarker.valuesCol,
-              );
-              if (checkAbort()) {
-                return;
-              }
-              markerIndices.set(tableValues);
-            } else if (isTableGroupsColumn(points.pointMarker)) {
-              // TODO
-            } else {
-              markerIndices.fill(WebGLContext._DEFAULT_POINT_MARKER);
-            }
-            markerIndicesList.push(markerIndices);
-            // transform indices
-            const transformIndices = new Uint32Array(xs.length).fill(
-              pointsIndex,
-            );
-            transformIndicesList.push(transformIndices);
-            pointsIndex++;
-          }
-        }
-      }
+  ): Promise<boolean> {
+    const createPointsStatesResult = await this._createPointsStates(
+      layerMap,
+      pointsMap,
+      loadPoints,
+      checkAbort,
+    );
+    if (createPointsStatesResult === null) {
+      return false;
     }
-    this._loadArrayBufferData(this._pointsShaderBuffers.a_x, xsList);
-    this._loadArrayBufferData(this._pointsShaderBuffers.a_y, ysList);
-    this._loadArrayBufferData(this._pointsShaderBuffers.a_size, sizesList);
-    this._loadArrayBufferData(this._pointsShaderBuffers.a_color, colorsList);
-    this._loadArrayBufferData(
-      this._pointsShaderBuffers.a_opacity,
-      opacitiesList,
-    );
-    this._loadArrayBufferData(
-      this._pointsShaderBuffers.a_markerIndex,
-      markerIndicesList,
-    );
-    this._loadArrayBufferData(
-      this._pointsShaderBuffers.a_transformIndex,
-      transformIndicesList,
+    const [newPointsStates, xsList, ysList] = createPointsStatesResult;
+    let pointsBuffersResized = false;
+    const n = newPointsStates.reduce((s, x) => s + x.n, 0);
+    if (this._pointsStates.reduce((s, x) => s + x.n, 0) !== n) {
+      this._resizePointsBuffers(n);
+      pointsBuffersResized = true;
+    }
+    return await this._updatePointsBuffers(
+      newPointsStates,
+      pointsBuffersResized,
+      loadTableByID,
+      checkAbort,
+      xsList,
+      ysList,
     );
   }
 
@@ -270,92 +149,355 @@ class WebGLContext {
     _loadTableByID: (tableId: string) => Promise<ITableData>,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _checkAbort: () => boolean,
-  ): Promise<void> {
+  ): Promise<boolean> {
     // TODO
+    return await Promise.resolve(true);
   }
 
   destroy(): void {
-    this._gl.deleteProgram(this._pointsShaderProgram);
-    for (const pointsShaderBuffer of Object.values(this._pointsShaderBuffers)) {
-      this._gl.deleteBuffer(pointsShaderBuffer);
+    this._gl.deleteProgram(this._pointsProgram);
+    for (const pointsBuffer of Object.values(this._pointsBuffers)) {
+      this._gl.deleteBuffer(pointsBuffer);
     }
   }
 
-  private static _initGL(canvas: HTMLCanvasElement): WebGL2RenderingContext {
-    const gl = canvas.getContext("webgl2", WebGLContext._GL_OPTIONS);
-    if (gl === null) {
-      throw new Error("WebGL 2.0 is not supported by the browser.");
-    }
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    return gl;
-  }
-
-  private _loadShaderProgram(
-    vertexShaderSource: string,
-    fragmentShaderSource: string,
-    header?: string,
-  ): WebGLProgram {
-    if (header) {
-      vertexShaderSource = vertexShaderSource.replace(
-        `${WebGLContext._SHADER_PREPROCESSOR}\n`,
-        `${WebGLContext._SHADER_PREPROCESSOR}\n${header}\n`,
-      );
-      fragmentShaderSource = fragmentShaderSource.replace(
-        `${WebGLContext._SHADER_PREPROCESSOR}\n`,
-        `${WebGLContext._SHADER_PREPROCESSOR}\n${header}\n`,
-      );
-    }
-    const vertexShader = this._gl.createShader(this._gl.VERTEX_SHADER);
-    if (vertexShader === null) {
-      throw new Error("Failed to create vertex shader.");
-    }
-    const fragmentShader = this._gl.createShader(this._gl.FRAGMENT_SHADER);
-    if (fragmentShader === null) {
-      throw new Error("Failed to create fragment shader.");
-    }
-    try {
-      const program = this._gl.createProgram();
-      for (const [shader, shaderSource] of [
-        [vertexShader, vertexShaderSource],
-        [fragmentShader, fragmentShaderSource],
-      ] as const) {
-        this._gl.shaderSource(shader, shaderSource);
-        this._gl.compileShader(shader);
-        this._gl.attachShader(program, shader);
+  private async _createPointsStates(
+    layerMap: Map<string, ILayerModel>,
+    pointsMap: Map<string, IPointsModel>,
+    loadPoints: (points: IPointsModel) => Promise<IPointsData>,
+    checkAbort: () => boolean,
+  ): Promise<[PointsState[], Float32Array[], Float32Array[]] | null> {
+    let offset = 0;
+    const newPointsStates = [];
+    const xsList = [];
+    const ysList = [];
+    for (const layer of layerMap.values()) {
+      for (const points of pointsMap.values()) {
+        for (const layerConfig of points.layerConfigs.filter(
+          (layerConfig) => layerConfig.layerId === layer.id,
+        )) {
+          let data = null;
+          try {
+            data = await loadPoints(points);
+          } catch (error) {
+            console.error(`Failed to load points with ID ${points.id}`, error);
+          }
+          if (checkAbort()) {
+            return null;
+          }
+          if (data !== null) {
+            const [xs, ys] = await data.loadPositions(
+              layerConfig.pointXDimension,
+              layerConfig.pointYDimension,
+            );
+            if (checkAbort()) {
+              return null;
+            }
+            newPointsStates.push({
+              n: xs.length,
+              offset: offset,
+              points: points,
+              layerConfig: layerConfig,
+              data: data,
+              config: {
+                pointXDimension: layerConfig.pointXDimension,
+                pointYDimension: layerConfig.pointYDimension,
+                pointSize: points.pointSize,
+                pointColor: points.pointColor,
+                pointOpacity: points.pointOpacity,
+                pointMarker: points.pointMarker,
+              },
+            });
+            xsList.push(xs);
+            ysList.push(ys);
+            offset += xs.length;
+          }
+        }
       }
-      this._gl.linkProgram(program);
-      if (!this._gl.getProgramParameter(program, this._gl.LINK_STATUS)) {
-        const programInfoLog = this._gl.getProgramInfoLog(program);
-        const vertexShaderInfoLog = this._gl.getShaderInfoLog(vertexShader);
-        const fragmentShaderInfoLog = this._gl.getShaderInfoLog(fragmentShader);
-        throw new Error(
-          `Shader program linking failed: ${programInfoLog}\n` +
-            `Vertex shader log: ${vertexShaderInfoLog}\n` +
-            `Fragment shader log: ${fragmentShaderInfoLog}`,
-        );
-      }
-      return program;
-    } finally {
-      // flag shader for deletion (i.e., delete them when no longer in use)
-      // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glDeleteShader.xhtml
-      this._gl.deleteShader(vertexShader);
-      this._gl.deleteShader(fragmentShader);
     }
+    return [newPointsStates, xsList, ysList];
   }
 
-  private _loadArrayBufferData<
-    T extends Float32Array | Int32Array | Uint32Array,
-  >(buffer: WebGLBuffer, dataList: T[]): void {
-    this._gl.bindBuffer(this._gl.ARRAY_BUFFER, buffer);
+  private _resizePointsBuffers(n: number): void {
+    this._gl.bindBuffer(this._gl.ARRAY_BUFFER, this._pointsBuffers.a_x);
     this._gl.bufferData(
       this._gl.ARRAY_BUFFER,
-      dataList.reduce((sum, data) => sum + data.byteLength, 0),
+      n * Float32Array.BYTES_PER_ELEMENT,
       this._gl.STATIC_DRAW,
     );
-    let offset = 0;
-    for (const data of dataList) {
-      this._gl.bufferSubData(this._gl.ARRAY_BUFFER, offset, data);
-      offset += data.byteLength;
+    this._gl.bindBuffer(this._gl.ARRAY_BUFFER, this._pointsBuffers.a_y);
+    this._gl.bufferData(
+      this._gl.ARRAY_BUFFER,
+      n * Float32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
+    );
+    this._gl.bindBuffer(this._gl.ARRAY_BUFFER, this._pointsBuffers.a_size);
+    this._gl.bufferData(
+      this._gl.ARRAY_BUFFER,
+      n * Float32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
+    );
+    this._gl.bindBuffer(this._gl.ARRAY_BUFFER, this._pointsBuffers.a_color);
+    this._gl.bufferData(
+      this._gl.ARRAY_BUFFER,
+      3 * n * Float32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
+    );
+    this._gl.bindBuffer(this._gl.ARRAY_BUFFER, this._pointsBuffers.a_opacity);
+    this._gl.bufferData(
+      this._gl.ARRAY_BUFFER,
+      n * Float32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
+    );
+    this._gl.bindBuffer(
+      this._gl.ARRAY_BUFFER,
+      this._pointsBuffers.a_markerIndex,
+    );
+    this._gl.bufferData(
+      this._gl.ARRAY_BUFFER,
+      n * Uint32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
+    );
+    this._gl.bindBuffer(
+      this._gl.ARRAY_BUFFER,
+      this._pointsBuffers.a_transformIndex,
+    );
+    this._gl.bufferData(
+      this._gl.ARRAY_BUFFER,
+      n * Uint32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
+    );
+  }
+
+  private async _updatePointsBuffers(
+    newPointsStates: PointsState[],
+    pointsBuffersResized: boolean,
+    loadTableByID: (tableId: string) => Promise<ITableData>,
+    checkAbort: () => boolean,
+    xsList: Float32Array[],
+    ysList: Float32Array[],
+  ): Promise<boolean> {
+    let i = 0;
+    for (const newPointsState of newPointsStates) {
+      const currentPointsState =
+        i < this._pointsStates.length ? this._pointsStates[i] : null;
+      const pointsBufferDataChanged =
+        pointsBuffersResized ||
+        currentPointsState === null ||
+        currentPointsState.points !== newPointsState.points ||
+        currentPointsState.layerConfig !== newPointsState.layerConfig ||
+        currentPointsState.data !== newPointsState.data ||
+        currentPointsState.n !== newPointsState.n ||
+        currentPointsState.offset !== newPointsState.offset;
+      // x
+      if (
+        pointsBufferDataChanged ||
+        currentPointsState.config.pointXDimension !==
+          newPointsState.layerConfig.pointXDimension
+      ) {
+        this._loadBufferData(
+          this._pointsBuffers.a_x,
+          xsList[i],
+          newPointsState.offset,
+        );
+      }
+      // y
+      if (
+        pointsBufferDataChanged ||
+        currentPointsState.config.pointYDimension !==
+          newPointsState.layerConfig.pointYDimension
+      ) {
+        this._loadBufferData(
+          this._pointsBuffers.a_y,
+          ysList[i],
+          newPointsState.offset,
+        );
+      }
+      // size
+      if (
+        pointsBufferDataChanged ||
+        currentPointsState.config.pointSize !== newPointsState.points.pointSize
+      ) {
+        const sizes = new Float32Array(newPointsState.n);
+        if (typeof newPointsState.points.pointSize === "number") {
+          sizes.fill(newPointsState.points.pointSize);
+        } else if (isTableValuesColumn(newPointsState.points.pointSize)) {
+          const tableData = await loadTableByID(
+            newPointsState.points.pointSize.tableId,
+          );
+          const sizeValues = await tableData.loadColumn<number>(
+            newPointsState.points.pointSize.valuesCol,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          sizes.set(sizeValues);
+        } else if (isTableGroupsColumn(newPointsState.points.pointSize)) {
+          // TODO
+        } else {
+          sizes.fill(WebGLContext._DEFAULT_POINT_SIZE);
+        }
+        this._loadBufferData(
+          this._pointsBuffers.a_size,
+          sizes,
+          newPointsState.offset,
+        );
+      }
+      // color
+      if (
+        pointsBufferDataChanged ||
+        currentPointsState.config.pointColor !==
+          newPointsState.points.pointColor
+      ) {
+        const colors = new Float32Array(newPointsState.n * 3);
+        if (isColor(newPointsState.points.pointColor)) {
+          ArrayUtils.fillSeq(colors, [
+            newPointsState.points.pointColor.r,
+            newPointsState.points.pointColor.g,
+            newPointsState.points.pointColor.b,
+          ]);
+        } else if (isTableValuesColumn(newPointsState.points.pointColor)) {
+          const tableData = await loadTableByID(
+            newPointsState.points.pointColor.tableId,
+          );
+          const colorValues = await tableData.loadColumn<string>(
+            newPointsState.points.pointColor.valuesCol,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          for (let i = 0; i < colorValues.length; i++) {
+            let color = WebGLContext._DEFAULT_POINT_COLOR;
+            try {
+              color = ColorUtils.parseHex(colorValues[i]);
+            } catch (error) {
+              console.error(`Invalid color: ${colorValues[i]}`, error);
+            }
+            colors.set([color.r, color.g, color.b], i * 3);
+          }
+        } else if (isTableGroupsColumn(newPointsState.points.pointColor)) {
+          // TODO
+        } else {
+          ArrayUtils.fillSeq(colors, [
+            WebGLContext._DEFAULT_POINT_COLOR.r,
+            WebGLContext._DEFAULT_POINT_COLOR.g,
+            WebGLContext._DEFAULT_POINT_COLOR.b,
+          ]);
+        }
+        this._loadBufferData(
+          this._pointsBuffers.a_color,
+          colors,
+          newPointsState.offset * 3,
+        );
+      }
+      // opacity
+      if (
+        pointsBufferDataChanged ||
+        currentPointsState.config.pointOpacity !==
+          newPointsState.points.pointOpacity
+      ) {
+        const opacities = new Float32Array(newPointsState.n);
+        if (typeof newPointsState.points.pointOpacity === "number") {
+          opacities.fill(newPointsState.points.pointOpacity);
+        } else if (isTableValuesColumn(newPointsState.points.pointOpacity)) {
+          const tableData = await loadTableByID(
+            newPointsState.points.pointOpacity.tableId,
+          );
+          const opacityValues = await tableData.loadColumn<number>(
+            newPointsState.points.pointOpacity.valuesCol,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          opacities.set(opacityValues);
+        } else if (isTableGroupsColumn(newPointsState.points.pointOpacity)) {
+          // TODO
+        } else {
+          opacities.fill(WebGLContext._DEFAULT_POINT_OPACITY);
+        }
+        this._loadBufferData(
+          this._pointsBuffers.a_opacity,
+          opacities,
+          newPointsState.offset,
+        );
+      }
+      // marker
+      if (
+        pointsBufferDataChanged ||
+        currentPointsState.config.pointMarker !==
+          newPointsState.points.pointMarker
+      ) {
+        const markerIndices = new Uint32Array(newPointsState.n);
+        if (isMarker(newPointsState.points.pointMarker)) {
+          markerIndices.fill(newPointsState.points.pointMarker);
+        } else if (isTableValuesColumn(newPointsState.points.pointMarker)) {
+          const tableData = await loadTableByID(
+            newPointsState.points.pointMarker.tableId,
+          );
+          const markerIndexValues = await tableData.loadColumn<number>(
+            newPointsState.points.pointMarker.valuesCol,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          markerIndices.set(markerIndexValues);
+        } else if (isTableGroupsColumn(newPointsState.points.pointMarker)) {
+          // TODO
+        } else {
+          markerIndices.fill(WebGLContext._DEFAULT_POINT_MARKER);
+        }
+        this._loadBufferData(
+          this._pointsBuffers.a_markerIndex,
+          markerIndices,
+          newPointsState.offset,
+        );
+      }
+      // transform
+      if (pointsBufferDataChanged) {
+        const transformIndices = new Uint32Array(newPointsState.n).fill(i);
+        this._loadBufferData(
+          this._pointsBuffers.a_transformIndex,
+          transformIndices,
+          newPointsState.offset,
+        );
+      }
+      if (i < this._pointsStates.length) {
+        this._pointsStates[i] = newPointsState;
+      } else {
+        this._pointsStates.push(newPointsState);
+      }
+      i++;
     }
+    // TODO u_transforms
+    return true;
+  }
+
+  private _loadBufferData(
+    buffer: WebGLBuffer,
+    data: TypedArray,
+    offset: number = 0,
+    target: GLenum = this._gl.ARRAY_BUFFER,
+  ): void {
+    this._gl.bindBuffer(target, buffer);
+    this._gl.bufferSubData(target, offset * data.BYTES_PER_ELEMENT, data);
   }
 }
+
+type BaseState = {
+  n: number;
+  offset: number;
+};
+
+type PointsState = BaseState & {
+  points: IPointsModel;
+  layerConfig: IPointsLayerConfigModel;
+  data: IPointsData;
+  config: {
+    pointXDimension: string;
+    pointYDimension: string;
+    pointSize?: number | TableValuesColumn | TableGroupsColumn;
+    pointColor?: Color | TableValuesColumn | TableGroupsColumn;
+    pointOpacity?: number | TableValuesColumn | TableGroupsColumn;
+    pointMarker?: Marker | TableValuesColumn | TableGroupsColumn;
+  };
+};
