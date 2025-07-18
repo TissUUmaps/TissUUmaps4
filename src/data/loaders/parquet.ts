@@ -40,14 +40,14 @@ export class ParquetTableData implements ITableData {
     return this._columns;
   }
 
-  async loadColumnData<T>(column: string): Promise<T[]> {
+  async loadColumn<T>(column: string): Promise<ArrayLike<T>> {
     const data = await parquetReadColumn({
       file: this._buffer,
       columns: [column],
       metadata: this._metadata,
       compressors: compressors,
     });
-    return Array.from(data) as T[];
+    return Array.from(data) as ArrayLike<T>;
   }
 
   destroy(): void {}

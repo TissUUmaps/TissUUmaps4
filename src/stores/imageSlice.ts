@@ -4,6 +4,7 @@ import {
   DefaultImageDataLoader,
   IDefaultImageDataSourceModel,
 } from "../data/loaders/default";
+import { ITableData } from "../data/table";
 import { IImageDataSourceModel, IImageModel } from "../models/image";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
@@ -11,6 +12,7 @@ import { BoundStoreStateCreator } from "./boundStore";
 type ImageDataLoaderFactory = (
   dataSource: IImageDataSourceModel,
   projectDir: FileSystemDirectoryHandle | null,
+  loadTableByID: (tableId: string) => Promise<ITableData>,
 ) => IImageDataLoader<IImageData>;
 
 export type ImageSlice = ImageSliceState & ImageSliceActions;
@@ -24,6 +26,7 @@ export type ImageSliceState = {
 export type ImageSliceActions = {
   setImage: (image: IImageModel, index?: number) => void;
   loadImage: (image: IImageModel) => Promise<IImageData>;
+  loadImageByID: (imageId: string) => Promise<IImageData>;
   deleteImage: (image: IImageModel) => void;
 };
 
@@ -63,12 +66,21 @@ export const createImageSlice: BoundStoreStateCreator<ImageSlice> = (
     const imageDataLoader = imageDataLoaderFactory(
       image.dataSource,
       state.projectDir,
+      state.loadTableByID,
     );
     imageData = await imageDataLoader.loadImage();
     set((draft) => {
       draft.imageDataCache.set(image.dataSource, imageData);
     });
     return imageData;
+  },
+  loadImageByID: async (imageId) => {
+    const state = get();
+    const image = state.imageMap.get(imageId);
+    if (image === undefined) {
+      throw new Error(`Image with ID ${imageId} not found.`);
+    }
+    return state.loadImage(image);
   },
   deleteImage: (image) => {
     set((draft) => {

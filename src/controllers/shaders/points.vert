@@ -7,18 +7,19 @@
 uniform mat3 u_transforms[MAX_NUM_TRANSFORMS];
 uniform mat3 u_viewTransform;
 
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in float a_size;
-layout(location = 2) in vec3 a_color;
-layout(location = 3) in float a_opacity;
-layout(location = 4) in uint a_markerIndex;
-layout(location = 5) in uint a_transformIndex;
+layout(location = 0) in float a_x;
+layout(location = 1) in float a_y;
+layout(location = 2) in float a_size;
+layout(location = 3) in vec3 a_color;
+layout(location = 4) in float a_opacity;
+layout(location = 5) in uint a_markerIndex;
+layout(location = 6) in uint a_transformIndex;
 
 flat out vec4 v_color;
 flat out uvec3 v_markerOrigin;
 
 void main() {
-    vec3 dataPosition = vec3(a_position.xy, 1.0f);
+    vec3 dataPosition = vec3(a_x, a_y, 1.0f);
     vec3 worldPosition = u_transforms[a_transformIndex] * dataPosition;
     vec3 ndcPosition = u_viewTransform * worldPosition;
     gl_Position = vec4(ndcPosition.xy, 0.0f, 1.0f);

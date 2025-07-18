@@ -29,6 +29,7 @@ export type TableSliceState = {
 export type TableSliceActions = {
   setTable: (table: ITableModel, index?: number) => void;
   loadTable: (table: ITableModel) => Promise<ITableData>;
+  loadTableByID: (tableId: string) => Promise<ITableData>;
   deleteTable: (table: ITableModel) => void;
 };
 
@@ -74,6 +75,14 @@ export const createTableSlice: BoundStoreStateCreator<TableSlice> = (
       draft.tableDataCache.set(table.dataSource, tableData);
     });
     return tableData;
+  },
+  loadTableByID: async (tableId) => {
+    const state = get();
+    const table = state.tableMap.get(tableId);
+    if (table === undefined) {
+      throw new Error(`Table with ID ${tableId} not found.`);
+    }
+    return state.loadTable(table);
   },
   deleteTable: (table) => {
     set((draft) => {

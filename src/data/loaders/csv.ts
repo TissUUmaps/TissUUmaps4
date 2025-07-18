@@ -37,12 +37,12 @@ export class CSVTableData implements ITableData {
     return this._columns;
   }
 
-  loadColumnData<T>(column: string): Promise<T[]> {
+  loadColumn<T>(column: string): Promise<ArrayLike<T>> {
     if (!this._columns.includes(column)) {
       throw new Error(`Column "${column}" does not exist.`);
     }
-    const data = this._records.map((row) => row[column] as T);
-    return Promise.resolve(data);
+    const data = this._records.map((row) => row[column]);
+    return Promise.resolve(data as ArrayLike<T>);
   }
 
   destroy(): void {}

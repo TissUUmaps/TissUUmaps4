@@ -7,7 +7,7 @@ import { BoundStoreStateCreator } from "./boundStore";
 type ShapesDataLoaderFactory = (
   dataSource: IShapesDataSourceModel,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTable: (tableId: string) => Promise<ITableData>,
+  loadTableByID: (tableId: string) => Promise<ITableData>,
 ) => IShapesDataLoader<IShapesData>;
 
 export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
@@ -21,6 +21,7 @@ export type ShapesSliceState = {
 export type ShapesSliceActions = {
   setShapes: (shapes: IShapesModel, index?: number) => void;
   loadShapes: (shapes: IShapesModel) => Promise<IShapesData>;
+  loadShapesByID: (shapesId: string) => Promise<IShapesData>;
   deleteShapes: (shapes: IShapesModel) => void;
 };
 
@@ -60,20 +61,21 @@ export const createShapesSlice: BoundStoreStateCreator<ShapesSlice> = (
     const shapesDataLoader = shapesDataLoaderFactory(
       shapes.dataSource,
       state.projectDir,
-      (tableId) => {
-        const state = get();
-        const table = state.tableMap.get(tableId);
-        if (table === undefined) {
-          throw new Error(`Table with ID ${tableId} not found.`);
-        }
-        return state.loadTable(table);
-      },
+      state.loadTableByID,
     );
     shapesData = await shapesDataLoader.loadShapes();
     set((draft) => {
       draft.shapesDataCache.set(shapes.dataSource, shapesData);
     });
     return shapesData;
+  },
+  loadShapesByID: async (shapesId) => {
+    const state = get();
+    const shapes = state.shapesMap.get(shapesId);
+    if (shapes === undefined) {
+      throw new Error(`Shapes with ID ${shapesId} not found.`);
+    }
+    return state.loadShapes(shapes);
   },
   deleteShapes: (shapes) => {
     set((draft) => {

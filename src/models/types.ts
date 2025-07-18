@@ -1,20 +1,45 @@
-/** A color in RGB(A) format */
+/** A marker shape (see marker atlas) */
+export enum Marker {
+  Cross,
+  Diamond,
+  Square,
+  TriangleUp,
+  Star,
+  Clobber,
+  Disc,
+  HBar,
+  VBar,
+  TailedArrow,
+  TriangleDown,
+  Ring,
+  X,
+  Arrow,
+  Gaussian,
+}
+
+export function isMarker(x: unknown): x is Marker {
+  return (x as Marker) in Marker;
+}
+
+/** A color in RGB format */
 export type Color = {
-  /** Red component, between 0 and 255 */
+  /** Red component, between 0 and 1 */
   r: number;
 
-  /** Green component, between 0 and 255 */
+  /** Green component, between 0 and 1 */
   g: number;
 
-  /** Blue component, between 0 and 255 */
+  /** Blue component, between 0 and 1 */
   b: number;
-
-  /** Alpha component, between 0 and 1 */
-  a?: number;
 };
 
-/** An OpenSeadragon-supported shape */
-export type Shape = "circle"; // TODO add more shapes
+export function isColor(x: unknown): x is Color {
+  return (
+    (x as Color).r !== undefined &&
+    (x as Color).g !== undefined &&
+    (x as Color).b !== undefined
+  );
+}
 
 /** Link to a table column that holds values */
 export type TableValuesColumn = {
@@ -25,6 +50,13 @@ export type TableValuesColumn = {
   valuesCol: string;
 };
 
+export function isTableValuesColumn(x: unknown): x is TableValuesColumn {
+  return (
+    (x as TableValuesColumn).tableId !== undefined &&
+    (x as TableValuesColumn).valuesCol !== undefined
+  );
+}
+
 /** Link to a table column that holds groups */
 export type TableGroupsColumn = {
   /** Table ID */
@@ -34,15 +66,6 @@ export type TableGroupsColumn = {
   groupsCol: string;
 };
 
-/** Returns true if the column holds values, false otherwise */
-export function isTableValuesColumn(x: unknown): x is TableValuesColumn {
-  return (
-    (x as TableValuesColumn).tableId !== undefined &&
-    (x as TableValuesColumn).valuesCol !== undefined
-  );
-}
-
-/** Returns true if the column holds group names, false otherwise */
 export function isTableGroupsColumn(x: unknown): x is TableGroupsColumn {
   return (
     (x as TableGroupsColumn).tableId !== undefined &&

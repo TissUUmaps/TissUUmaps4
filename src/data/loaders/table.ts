@@ -1,7 +1,6 @@
 import { IPointsDataSourceModel } from "../../models/points";
 import { IPointsData } from "../points";
 import { ITableData } from "../table";
-import { TypedArray } from "../types";
 import { PointsDataLoaderBase } from "./base";
 
 // TODO TableShapesDataLoader
@@ -33,9 +32,17 @@ export class TablePointsData implements IPointsData {
     return this._columns || this._tableData.getColumns();
   }
 
-  async loadCoordinates(dimension: string): Promise<TypedArray> {
-    const coords = await this._tableData.loadColumnData(dimension);
-    return Float32Array.from(coords);
+  async loadPositions(
+    xDimension: string,
+    yDimension: string,
+  ): Promise<[Float32Array, Float32Array]> {
+    const px = this._tableData.loadColumn<number>(xDimension);
+    const py = this._tableData.loadColumn<number>(yDimension);
+    const [xs, ys] = await Promise.all([px, py]);
+    return [
+      xs instanceof Float32Array ? xs : Float32Array.from(xs),
+      ys instanceof Float32Array ? ys : Float32Array.from(ys),
+    ];
   }
 
   destroy(): void {}
@@ -45,9 +52,20 @@ export class TablePointsDataLoader extends PointsDataLoaderBase<
   ITablePointsDataSourceModel,
   IPointsData
 > {
+  private readonly _loadTableByID: (tableId: string) => Promise<ITableData>;
+
+  constructor(
+    dataSource: ITablePointsDataSourceModel,
+    projectDir: FileSystemDirectoryHandle | null,
+    loadTableByID: (tableId: string) => Promise<ITableData>,
+  ) {
+    super(dataSource, projectDir);
+    this._loadTableByID = loadTableByID;
+  }
+
   async loadPoints(): Promise<IPointsData> {
     const pointsData = new TablePointsData(
-      await this.loadTable(this.dataSource.tableId),
+      await this._loadTableByID(this.dataSource.tableId),
       this.dataSource.columns ?? null,
     );
     return Promise.resolve(pointsData);

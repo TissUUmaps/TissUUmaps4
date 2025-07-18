@@ -53,17 +53,6 @@ export abstract class PointsDataLoaderBase<
   extends DataLoaderBase<TPointsDataSourceModel>
   implements IPointsDataLoader<TPointsData>
 {
-  protected readonly loadTable: (tableId: string) => Promise<ITableData>;
-
-  constructor(
-    dataSource: TPointsDataSourceModel,
-    projectDir: FileSystemDirectoryHandle | null,
-    loadTable: (tableId: string) => Promise<ITableData>,
-  ) {
-    super(dataSource, projectDir);
-    this.loadTable = loadTable;
-  }
-
   abstract loadPoints(): Promise<TPointsData>;
 }
 
@@ -74,17 +63,6 @@ export abstract class ShapesDataLoaderBase<
   extends DataLoaderBase<TShapesDataSourceModel>
   implements IShapesDataLoader<TShapesData>
 {
-  protected readonly loadTable: (tableId: string) => Promise<ITableData>;
-
-  constructor(
-    dataSource: TShapesDataSourceModel,
-    projectDir: FileSystemDirectoryHandle | null,
-    loadTable: (tableId: string) => Promise<ITableData>,
-  ) {
-    super(dataSource, projectDir);
-    this.loadTable = loadTable;
-  }
-
   abstract loadShapes(): Promise<TShapesData>;
 }
 

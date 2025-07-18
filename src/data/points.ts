@@ -1,10 +1,12 @@
 import { IData, IDataLoader } from "./base";
-import { TypedArray } from "./types";
 
 export interface IPointsData extends IData {
   getIds(): number[];
   getDimensions(): string[];
-  loadCoordinates(dimension: string): Promise<TypedArray>;
+  loadPositions(
+    xDimension: string,
+    yDimension: string,
+  ): Promise<[Float32Array, Float32Array]>;
 }
 
 export interface IPointsDataLoader<TPointsData extends IPointsData>

@@ -9,6 +9,7 @@ import {
   ZARR_LABELS_DATA_SOURCE,
   ZarrLabelsDataLoader,
 } from "../data/loaders/zarr";
+import { ITableData } from "../data/table";
 import { ILabelsDataSourceModel, ILabelsModel } from "../models/labels";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
@@ -16,6 +17,7 @@ import { BoundStoreStateCreator } from "./boundStore";
 type LabelsDataLoaderFactory = (
   dataSource: ILabelsDataSourceModel,
   projectDir: FileSystemDirectoryHandle | null,
+  loadTableByID: (tableId: string) => Promise<ITableData>,
 ) => ILabelsDataLoader<ILabelsData>;
 
 export type LabelsSlice = LabelsSliceState & LabelsSliceActions;
@@ -29,6 +31,7 @@ export type LabelsSliceState = {
 export type LabelsSliceActions = {
   setLabels: (labels: ILabelsModel, index?: number) => void;
   loadLabels: (labels: ILabelsModel) => Promise<ILabelsData>;
+  loadLabelsByID: (labelsId: string) => Promise<ILabelsData>;
   deleteLabels: (labels: ILabelsModel) => void;
 };
 
@@ -68,12 +71,21 @@ export const createLabelsSlice: BoundStoreStateCreator<LabelsSlice> = (
     const labelsDataLoader = labelsDataLoaderFactory(
       labels.dataSource,
       state.projectDir,
+      state.loadTableByID,
     );
     labelsData = await labelsDataLoader.loadLabels();
     set((draft) => {
       draft.labelsDataCache.set(labels.dataSource, labelsData);
     });
     return labelsData;
+  },
+  loadLabelsByID: async (labelsId) => {
+    const state = get();
+    const labels = state.labelsMap.get(labelsId);
+    if (labels === undefined) {
+      throw new Error(`Labels with ID ${labelsId} not found.`);
+    }
+    return state.loadLabels(labels);
   },
   deleteLabels: (labels) => {
     set((draft) => {

@@ -4,7 +4,7 @@ import {
   IObjectDataModel,
   IObjectGroupSettingsModel,
 } from "./base";
-import { Color, Shape, TableGroupsColumn, TableValuesColumn } from "./types";
+import { Color, Marker, TableGroupsColumn, TableValuesColumn } from "./types";
 
 /** A 2D point cloud */
 export interface IPointsModel
@@ -17,9 +17,9 @@ export interface IPointsModel
   pointSize?: number | TableValuesColumn | TableGroupsColumn;
 
   /** Shape for all points, or column containing point-wise shapes/group names (defaults to "circle") */
-  pointShape?: Shape | TableValuesColumn | TableGroupsColumn;
+  pointMarker?: Marker | TableValuesColumn | TableGroupsColumn;
 
-  /** Color for all points, or column containing point-wise colors/group names (defaults to random) */
+  /** Color for all points, or column containing point-wise colors/group names (defaults to black) */
   pointColor?: Color | TableValuesColumn | TableGroupsColumn;
 
   /** Visibility for all points, or column containing point-wise visibilities/group names (defaults to true) */
@@ -36,11 +36,11 @@ export interface IPointsDataSourceModel<TType extends string = string>
 
 /** A layer-specific display configuration for 2D point clouds */
 export interface IPointsLayerConfigModel extends ILayerConfigModel {
-  /** Column containing point-wise X coordinates */
-  pointPosX: TableValuesColumn;
+  /** Dimension containing point-wise X coordinates */
+  pointXDimension: string;
 
-  /** Column containing point-wise Y coordinates */
-  pointPosY: TableValuesColumn;
+  /** Dimension containing point-wise Y coordinates */
+  pointYDimension: string;
 }
 
 /** A group-specific display configuration for 2D point clouds */
@@ -49,7 +49,7 @@ export interface IPointsGroupSettingsModel extends IObjectGroupSettingsModel {
   pointSize?: number;
 
   /** Point shape, or undefined if not specified for this group */
-  pointShape?: Shape;
+  pointShape?: Marker;
 
   /** Point color, or undefined if not specified for this group */
   pointColor?: Color;

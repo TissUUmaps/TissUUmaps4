@@ -19,6 +19,7 @@ export default function ViewerPanel() {
   const loadLabels = useBoundStore((state) => state.loadLabels);
   const loadPoints = useBoundStore((state) => state.loadPoints);
   const loadShapes = useBoundStore((state) => state.loadShapes);
+  const loadTableByID = useBoundStore((state) => state.loadTableByID);
   const imageDataLoaderFactories = useBoundStore(
     (state) => state.imageDataLoaderFactories,
   );
@@ -44,27 +45,29 @@ export default function ViewerPanel() {
       openSeadragonControllerRef.current = null;
     }
     if (viewerElement !== null) {
+      let os;
+      let gl;
       try {
-        openSeadragonControllerRef.current = new OpenSeadragonController(
-          viewerElement,
-        );
-        try {
-          webGLControllerRef.current = new WebGLController(
-            openSeadragonControllerRef.current.getCanvas(),
-          );
-        } catch (error) {
-          console.error("Failed to initialize WebGL:", error);
-        }
+        os = new OpenSeadragonController(viewerElement);
+        gl = new WebGLController(os.getViewer().canvas);
       } catch (error) {
-        console.error("Failed to initialize OpenSeadragon:", error);
+        console.error("Failed to initialize viewer", error);
+        os = null;
+        gl = null;
       }
+      // TODO register necessary OpenSeadragon events
+      // if (os !== null && gl !== null) {
+      //   const viewer = os.getViewer();
+      // }
+      openSeadragonControllerRef.current = os;
+      webGLControllerRef.current = gl;
     }
   }, []);
 
   // synchronize the OpenSeadragon viewer upon layer/image/labels changes
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
-    let isCurrent = true;
+    let abort = false;
     const os = openSeadragonControllerRef.current;
     if (os !== null) {
       os.synchronize(
@@ -73,11 +76,11 @@ export default function ViewerPanel() {
         labelsMap,
         loadImage,
         loadLabels,
-        () => isCurrent,
+        () => abort,
       ).catch(console.error);
     }
     return () => {
-      isCurrent = false;
+      abort = true;
     };
   }, [
     projectDir,
@@ -90,32 +93,59 @@ export default function ViewerPanel() {
     labelsDataLoaderFactories,
   ]);
 
-  // synchronize the WebGL canvas upon layer/points/shapes changes
+  // synchronize the WebGL canvas upon layer/points changes
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
-    let isCurrent = true;
+    let abort = false;
     const gl = webGLControllerRef.current;
     if (gl !== null) {
-      gl.synchronize(
-        layerMap,
-        pointsMap,
-        shapesMap,
-        loadPoints,
-        loadShapes,
-        () => isCurrent,
-      ).catch(console.error);
+      gl.getContext()
+        .synchronizePoints(
+          layerMap,
+          pointsMap,
+          loadPoints,
+          loadTableByID,
+          () => abort,
+        )
+        .catch(console.error);
     }
     return () => {
-      isCurrent = false;
+      abort = true;
     };
   }, [
     projectDir,
     layerMap,
     pointsMap,
-    shapesMap,
     loadPoints,
-    loadShapes,
+    loadTableByID,
     pointsDataLoaderFactories,
+  ]);
+
+  // synchronize the WebGL canvas upon layer/shapes changes
+  // (note: useEffect hooks are executed after ref callbacks used for initialization)
+  useEffect(() => {
+    let abort = false;
+    const gl = webGLControllerRef.current;
+    if (gl !== null) {
+      gl.getContext()
+        .synchronizeShapes(
+          layerMap,
+          shapesMap,
+          loadShapes,
+          loadTableByID,
+          () => abort,
+        )
+        .catch(console.error);
+    }
+    return () => {
+      abort = true;
+    };
+  }, [
+    projectDir,
+    layerMap,
+    shapesMap,
+    loadShapes,
+    loadTableByID,
     shapesDataLoaderFactories,
   ]);
 

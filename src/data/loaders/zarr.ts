@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ZipFileStore } from "@zarrita/storage";
 import * as zarrita from "zarrita";
 
@@ -43,23 +42,36 @@ export class ZarrLabelsData implements ILabelsData {
     return this._arrays.length;
   }
 
-  getLevelScale(level: number): number {
+  getLevelScale(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _level: number,
+  ): number {
     throw new Error("Method not implemented."); // TODO
   }
 
-  getTileWidth(level: number): number | undefined {
+  getTileWidth(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _level: number,
+  ): number | undefined {
     throw new Error("Method not implemented."); // TODO
   }
 
-  getTileHeight(level: number): number | undefined {
+  getTileHeight(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _level: number,
+  ): number | undefined {
     throw new Error("Method not implemented."); // TODO
   }
 
   loadTile(
-    level: number,
-    x: number,
-    y: number,
-    abortSignal?: AbortSignal,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _level: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _x: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _y: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _abortSignal?: AbortSignal,
   ): Promise<UintArray> {
     throw new Error("Method not implemented."); // TODO
   }

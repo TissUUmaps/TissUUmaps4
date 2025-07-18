@@ -12,7 +12,7 @@ import { BoundStoreStateCreator } from "./boundStore";
 type PointsDataLoaderFactory = (
   dataSource: IPointsDataSourceModel,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTable: (tableId: string) => Promise<ITableData>,
+  loadTableByID: (tableId: string) => Promise<ITableData>,
 ) => IPointsDataLoader<IPointsData>;
 
 export type PointsSlice = PointsSliceState & PointsSliceActions;
@@ -26,6 +26,7 @@ export type PointsSliceState = {
 export type PointsSliceActions = {
   setPoints: (points: IPointsModel, index?: number) => void;
   loadPoints: (points: IPointsModel) => Promise<IPointsData>;
+  loadPointsByID: (pointsId: string) => Promise<IPointsData>;
   deletePoints: (points: IPointsModel) => void;
 };
 
@@ -65,20 +66,21 @@ export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
     const pointsDataLoader = pointsDataLoaderFactory(
       points.dataSource,
       state.projectDir,
-      (tableId) => {
-        const state = get();
-        const table = state.tableMap.get(tableId);
-        if (table === undefined) {
-          throw new Error(`Table with ID ${tableId} not found.`);
-        }
-        return state.loadTable(table);
-      },
+      state.loadTableByID,
     );
     pointsData = await pointsDataLoader.loadPoints();
     set((draft) => {
       draft.pointsDataCache.set(points.dataSource, pointsData);
     });
     return pointsData;
+  },
+  loadPointsByID: async (pointsId) => {
+    const state = get();
+    const points = state.pointsMap.get(pointsId);
+    if (points === undefined) {
+      throw new Error(`Points with ID ${pointsId} not found.`);
+    }
+    return state.loadPoints(points);
   },
   deletePoints: (points) => {
     set((draft) => {
@@ -94,11 +96,11 @@ const initialPointsSliceState: PointsSliceState = {
   pointsDataLoaderFactories: new Map<string, PointsDataLoaderFactory>([
     [
       TABLE_POINTS_DATA_SOURCE,
-      (dataSource, projectDir, loadTable) =>
+      (dataSource, projectDir, loadTableByID) =>
         new TablePointsDataLoader(
           dataSource as ITablePointsDataSourceModel,
           projectDir,
-          loadTable,
+          loadTableByID,
         ),
     ],
   ]),
