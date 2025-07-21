@@ -1,3 +1,5 @@
+import { TypedArray } from "../data/types";
+
 export default class WebGLUtils {
   static init(
     canvas: HTMLCanvasElement,
@@ -52,5 +54,64 @@ export default class WebGLUtils {
       gl.deleteShader(vertexShader);
       gl.deleteShader(fragmentShader);
     }
+  }
+
+  static resizeBuffer(
+    gl: WebGL2RenderingContext,
+    buffer: WebGLBuffer,
+    size: GLsizeiptr,
+    target?: GLenum,
+    usage?: GLenum,
+  ): void {
+    if (target === undefined) {
+      target = gl.ARRAY_BUFFER;
+    }
+    if (usage === undefined) {
+      usage = gl.STATIC_DRAW;
+    }
+    gl.bindBuffer(target, buffer);
+    gl.bufferData(target, size, usage);
+    gl.bindBuffer(target, null);
+  }
+
+  static loadBufferData(
+    gl: WebGL2RenderingContext,
+    buffer: WebGLBuffer,
+    data: TypedArray,
+    offset: number = 0,
+    target?: GLenum,
+  ): void {
+    if (target === undefined) {
+      target = gl.ARRAY_BUFFER;
+    }
+    gl.bindBuffer(target, buffer);
+    gl.bufferSubData(target, offset * data.BYTES_PER_ELEMENT, data);
+    gl.bindBuffer(target, null);
+  }
+
+  static configureVertexAttribute(
+    gl: WebGL2RenderingContext,
+    index: number,
+    buffer: WebGLBuffer,
+    type: GLenum,
+    normalized: boolean | "int" = false,
+    size: number = 1,
+    stride: number = 0,
+    offset: number = 0,
+    divisor: number = 0,
+    target?: GLenum,
+  ): void {
+    if (target === undefined) {
+      target = gl.ARRAY_BUFFER;
+    }
+    gl.bindBuffer(target, buffer);
+    gl.enableVertexAttribArray(index);
+    if (normalized == "int") {
+      gl.vertexAttribIPointer(index, size, type, stride, offset);
+    } else {
+      gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
+    }
+    gl.vertexAttribDivisor(index, divisor);
+    gl.bindBuffer(target, null);
   }
 }
