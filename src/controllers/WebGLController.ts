@@ -70,6 +70,7 @@ class WebGLContext {
     g: 0,
     b: 0,
   };
+  private static readonly _DEFAULT_POINT_VISIBILITY = true;
   private static readonly _DEFAULT_POINT_OPACITY = 1.0;
   private static readonly _DEFAULT_POINT_MARKER = Marker.Disc;
   private static readonly _POINTS_ATTRIB_LOCATIONS = {
@@ -77,9 +78,10 @@ class WebGLContext {
     Y: 1,
     SIZE: 2,
     COLOR: 3,
-    OPACITY: 4,
-    MARKER_INDEX: 5,
-    TRANSFORM_INDEX: 6,
+    VISIBILITY: 4,
+    OPACITY: 5,
+    MARKER_INDEX: 6,
+    TRANSFORM_INDEX: 7,
   };
 
   private readonly _gl: WebGL2RenderingContext;
@@ -94,6 +96,7 @@ class WebGLContext {
     y: WebGLBuffer;
     size: WebGLBuffer;
     color: WebGLBuffer;
+    visibility: WebGLBuffer;
     opacity: WebGLBuffer;
     markerIndex: WebGLBuffer;
     transformIndex: WebGLBuffer;
@@ -132,6 +135,7 @@ class WebGLContext {
       y: this._gl.createBuffer(),
       size: this._gl.createBuffer(),
       color: this._gl.createBuffer(),
+      visibility: this._gl.createBuffer(),
       opacity: this._gl.createBuffer(),
       markerIndex: this._gl.createBuffer(),
       transformIndex: this._gl.createBuffer(),
@@ -242,6 +246,7 @@ class WebGLContext {
                 pointYDimension: layerConfig.pointYDimension,
                 pointSize: points.pointSize,
                 pointColor: points.pointColor,
+                pointVisibility: points.pointVisibility,
                 pointOpacity: points.pointOpacity,
                 pointMarker: points.pointMarker,
               },
@@ -278,6 +283,11 @@ class WebGLContext {
       this._gl,
       this._pointsBuffers.color,
       n * 3 * Uint8Array.BYTES_PER_ELEMENT,
+    );
+    WebGLUtils.resizeBuffer(
+      this._gl,
+      this._pointsBuffers.visibility,
+      n * Uint8Array.BYTES_PER_ELEMENT,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
@@ -421,18 +431,18 @@ class WebGLContext {
           if (checkAbort()) {
             return false;
           }
-          const colorValues = await tableData.loadColumn<string>(
+          const colorStrings = await tableData.loadColumn<string>(
             newPointsState.points.pointColor.valuesCol,
           );
           if (checkAbort()) {
             return false;
           }
-          for (let j = 0; j < colorValues.length; j++) {
+          for (let j = 0; j < colorStrings.length; j++) {
             let color = WebGLContext._DEFAULT_POINT_COLOR;
             try {
-              color = ColorUtils.parseHex(colorValues[j]);
+              color = ColorUtils.parseHex(colorStrings[j]);
             } catch (error) {
-              console.error(`Invalid color: ${colorValues[j]}`, error);
+              console.error(`Invalid color: ${colorStrings[j]}`, error);
             }
             colors.set([color.r, color.g, color.b], j * 3);
           }
@@ -475,6 +485,68 @@ class WebGLContext {
           this._pointsBuffers.color,
           colors,
           newPointsState.offset * 3,
+        );
+      }
+      // visibilities
+      if (
+        pointsBufferDataChanged ||
+        currentPointsState.config.pointVisibility !==
+          newPointsState.points.pointVisibility
+      ) {
+        const visibilities = new Uint8Array(newPointsState.n);
+        if (typeof newPointsState.points.pointVisibility === "boolean") {
+          visibilities.fill(newPointsState.points.pointVisibility ? 1 : 0);
+        } else if (isTableValuesColumn(newPointsState.points.pointVisibility)) {
+          const tableData = await loadTableByID(
+            newPointsState.points.pointVisibility.tableId,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const visibilityValues = await tableData.loadColumn<boolean>(
+            newPointsState.points.pointVisibility.valuesCol,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          visibilities.set(
+            Array.from(visibilityValues).map((v) => (v ? 1 : 0)),
+          );
+        } else if (isTableGroupsColumn(newPointsState.points.pointVisibility)) {
+          const tableData = await loadTableByID(
+            newPointsState.points.pointVisibility.tableId,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const visibilityGroups = Array.from(
+            await tableData.loadColumn<number>(
+              newPointsState.points.pointVisibility.groupsCol,
+            ),
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const uniqueVisibilityGroups = Array.from(new Set(visibilityGroups));
+          const visibilityMap = WebGLContext._createPointsGroupValueMap(
+            uniqueVisibilityGroups,
+            newPointsState.points.pointVisibility,
+            newPointsState.points.groupSettings,
+            (groupSettings) => groupSettings.pointVisibility,
+            WebGLContext._DEFAULT_POINT_VISIBILITY,
+          );
+          const visibilityValues = visibilityGroups.map((g) =>
+            visibilityMap[uniqueVisibilityGroups.indexOf(g)] ? 1 : 0,
+          ); // TODO potentially move visibilityMap to vertex shader
+          visibilities.set(visibilityValues);
+        } else {
+          visibilities.fill(WebGLContext._DEFAULT_POINT_VISIBILITY ? 1 : 0);
+        }
+        WebGLUtils.loadBufferData(
+          this._gl,
+          this._pointsBuffers.visibility,
+          visibilities,
+          newPointsState.offset,
         );
       }
       // opacities
@@ -678,10 +750,15 @@ class WebGLContext {
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
+      WebGLContext._POINTS_ATTRIB_LOCATIONS.VISIBILITY,
+      this._pointsBuffers.visibility,
+      this._gl.UNSIGNED_BYTE,
+    );
+    WebGLUtils.configureVertexAttribute(
+      this._gl,
       WebGLContext._POINTS_ATTRIB_LOCATIONS.OPACITY,
       this._pointsBuffers.opacity,
       this._gl.HALF_FLOAT,
-      true,
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
@@ -792,6 +869,7 @@ type PointsState = BaseState & {
     pointYDimension: string;
     pointSize?: number | TableValuesColumn | TableGroupsColumn;
     pointColor?: Color | TableValuesColumn | TableGroupsColumn;
+    pointVisibility?: boolean | TableValuesColumn | TableGroupsColumn;
     pointOpacity?: number | TableValuesColumn | TableGroupsColumn;
     pointMarker?: Marker | TableValuesColumn | TableGroupsColumn;
   };

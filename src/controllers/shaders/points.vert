@@ -13,9 +13,10 @@ layout(location = 0) in float a_x;
 layout(location = 1) in float a_y;
 layout(location = 2) in float a_size;
 layout(location = 3) in vec3 a_color;
-layout(location = 4) in float a_opacity;
-layout(location = 5) in uint a_markerIndex;
-layout(location = 6) in uint a_transformIndex;
+layout(location = 4) in uint a_visibility;
+layout(location = 5) in float a_opacity;
+layout(location = 6) in uint a_markerIndex;
+layout(location = 7) in uint a_transformIndex;
 
 flat out vec4 v_color;
 flat out uvec3 v_markerOrigin;
@@ -26,7 +27,7 @@ void main() {
     vec3 ndcPosition = u_viewTransform * worldPosition;
     gl_Position = vec4(ndcPosition.xy, 0.0f, 1.0f);
     gl_PointSize = a_size;
-    v_color = vec4(a_color.rgb, a_opacity);
+    v_color = vec4(a_color.rgb, (a_visibility > 0u ? 1.0f : 0.0f) * a_opacity);
     uint markerRow = (a_markerIndex % NUM_MARKERS_PER_CHANNEL) / MARKER_ATLAS_GRID_SIZE;
     uint markerCol = (a_markerIndex % NUM_MARKERS_PER_CHANNEL) % MARKER_ATLAS_GRID_SIZE;
     uint markerChannel = a_markerIndex / NUM_MARKERS_PER_CHANNEL;
