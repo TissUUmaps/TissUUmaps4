@@ -5,7 +5,11 @@ import { IShapesData } from "../data/shapes";
 import { ITableData } from "../data/table";
 import { ILayerConfigModel } from "../models/base";
 import { ILayerModel } from "../models/layer";
-import { IPointsLayerConfigModel, IPointsModel } from "../models/points";
+import {
+  IPointsGroupSettingsModel,
+  IPointsLayerConfigModel,
+  IPointsModel,
+} from "../models/points";
 import { IShapesModel } from "../models/shapes";
 import {
   Color,
@@ -361,7 +365,32 @@ class WebGLContext {
           }
           sizes.set(sizeValues);
         } else if (isTableGroupsColumn(newPointsState.points.pointSize)) {
-          // TODO
+          const tableData = await loadTableByID(
+            newPointsState.points.pointSize.tableId,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const sizeGroups = Array.from(
+            await tableData.loadColumn<number>(
+              newPointsState.points.pointSize.groupsCol,
+            ),
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const uniqueSizeGroups = Array.from(new Set(sizeGroups));
+          const sizeMap = WebGLContext._createPointsGroupValueMap(
+            uniqueSizeGroups,
+            newPointsState.points.pointSize,
+            newPointsState.points.groupSettings,
+            (groupSettings) => groupSettings.pointSize,
+            WebGLContext._DEFAULT_POINT_SIZE,
+          );
+          const sizeValues = sizeGroups.map(
+            (g) => sizeMap[uniqueSizeGroups.indexOf(g)],
+          ); // TODO potentially move to sizeMap vertex shader
+          sizes.set(sizeValues);
         } else {
           sizes.fill(WebGLContext._DEFAULT_POINT_SIZE);
         }
@@ -398,17 +427,42 @@ class WebGLContext {
           if (checkAbort()) {
             return false;
           }
-          for (let i = 0; i < colorValues.length; i++) {
+          for (let j = 0; j < colorValues.length; j++) {
             let color = WebGLContext._DEFAULT_POINT_COLOR;
             try {
-              color = ColorUtils.parseHex(colorValues[i]);
+              color = ColorUtils.parseHex(colorValues[j]);
             } catch (error) {
-              console.error(`Invalid color: ${colorValues[i]}`, error);
+              console.error(`Invalid color: ${colorValues[j]}`, error);
             }
-            colors.set([color.r, color.g, color.b], i * 3);
+            colors.set([color.r, color.g, color.b], j * 3);
           }
         } else if (isTableGroupsColumn(newPointsState.points.pointColor)) {
-          // TODO
+          const tableData = await loadTableByID(
+            newPointsState.points.pointColor.tableId,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const colorGroups = Array.from(
+            await tableData.loadColumn<string>(
+              newPointsState.points.pointColor.groupsCol,
+            ),
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const uniqueColorGroups = Array.from(new Set(colorGroups));
+          const colorMap = WebGLContext._createPointsGroupValueMap(
+            uniqueColorGroups,
+            newPointsState.points.pointColor,
+            newPointsState.points.groupSettings,
+            (groupSettings) => groupSettings.pointColor,
+            WebGLContext._DEFAULT_POINT_COLOR,
+          );
+          for (let j = 0; j < colorGroups.length; j++) {
+            const color = colorMap[uniqueColorGroups.indexOf(colorGroups[j])];
+            colors.set([color.r, color.g, color.b], j * 3);
+          } // TODO potentially move colorMap to vertex shader
         } else {
           ArrayUtils.fillSeq(colors, [
             WebGLContext._DEFAULT_POINT_COLOR.r,
@@ -447,7 +501,32 @@ class WebGLContext {
           }
           opacities.set(opacityValues);
         } else if (isTableGroupsColumn(newPointsState.points.pointOpacity)) {
-          // TODO
+          const tableData = await loadTableByID(
+            newPointsState.points.pointOpacity.tableId,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const opacityGroups = Array.from(
+            await tableData.loadColumn<number>(
+              newPointsState.points.pointOpacity.groupsCol,
+            ),
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const uniqueOpacityGroups = Array.from(new Set(opacityGroups));
+          const opacityMap = WebGLContext._createPointsGroupValueMap(
+            uniqueOpacityGroups,
+            newPointsState.points.pointOpacity,
+            newPointsState.points.groupSettings,
+            (groupSettings) => groupSettings.pointOpacity,
+            WebGLContext._DEFAULT_POINT_OPACITY,
+          );
+          const opacityValues = opacityGroups.map(
+            (g) => opacityMap[uniqueOpacityGroups.indexOf(g)],
+          ); // TODO potentially move opacityMap to vertex shader
+          opacities.set(opacityValues);
         } else {
           opacities.fill(WebGLContext._DEFAULT_POINT_OPACITY);
         }
@@ -482,7 +561,34 @@ class WebGLContext {
           }
           markerIndices.set(markerIndexValues);
         } else if (isTableGroupsColumn(newPointsState.points.pointMarker)) {
-          // TODO
+          const tableData = await loadTableByID(
+            newPointsState.points.pointMarker.tableId,
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const markerIndexGroups = Array.from(
+            await tableData.loadColumn<number>(
+              newPointsState.points.pointMarker.groupsCol,
+            ),
+          );
+          if (checkAbort()) {
+            return false;
+          }
+          const uniqueMarkerIndexGroups = Array.from(
+            new Set(markerIndexGroups),
+          );
+          const markerMap = WebGLContext._createPointsGroupValueMap(
+            uniqueMarkerIndexGroups,
+            newPointsState.points.pointMarker,
+            newPointsState.points.groupSettings,
+            (groupSettings) => groupSettings.pointMarker,
+            WebGLContext._DEFAULT_POINT_MARKER,
+          );
+          const markerIndexValues = markerIndexGroups.map(
+            (g) => markerMap[uniqueMarkerIndexGroups.indexOf(g)],
+          ); // TODO potentially move markerMap to vertex shader
+          markerIndices.set(markerIndexValues);
         } else {
           markerIndices.fill(WebGLContext._DEFAULT_POINT_MARKER);
         }
@@ -643,6 +749,31 @@ class WebGLContext {
       ]);
     }
     return transform;
+  }
+
+  private static _createPointsGroupValueMap<T>(
+    groups: unknown[],
+    groupsCol: TableGroupsColumn,
+    groupSettings: IPointsModel["groupSettings"],
+    getValue: (settings: IPointsGroupSettingsModel) => T | undefined,
+    defaultValue: T,
+  ): T[] {
+    const m = new Array<T>(groups.length).fill(defaultValue);
+    if (groupSettings) {
+      const gs = groupSettings[`${groupsCol.tableId}.${groupsCol.groupsCol}`];
+      if (gs !== undefined) {
+        for (const [g, s] of Object.entries(gs)) {
+          const i = groups.indexOf(g);
+          if (i !== -1) {
+            const v = getValue(s);
+            if (v !== undefined) {
+              m[i] = v;
+            }
+          }
+        }
+      }
+    }
+    return m;
   }
 }
 

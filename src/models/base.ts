@@ -47,7 +47,7 @@ export interface IObjectDataModel<
 > extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {
   /** Group settings  */
   groupSettings?: {
-    [groupByVar: string]: { [groupKey: string]: TGroupSettingsModel };
+    [tableGroupsColStr: string]: { [group: string]: TGroupSettingsModel };
   };
 }
 

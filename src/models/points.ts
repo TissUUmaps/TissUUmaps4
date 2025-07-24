@@ -49,7 +49,7 @@ export interface IPointsGroupSettingsModel extends IObjectGroupSettingsModel {
   pointSize?: number;
 
   /** Point shape, or undefined if not specified for this group */
-  pointShape?: Marker;
+  pointMarker?: Marker;
 
   /** Point color, or undefined if not specified for this group */
   pointColor?: Color;
