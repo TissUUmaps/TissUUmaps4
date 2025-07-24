@@ -148,7 +148,7 @@ class WebGLContext {
       loadPoints,
       checkAbort,
     );
-    if (createPointsStatesResult === null) {
+    if (createPointsStatesResult === null || checkAbort()) {
       return false;
     }
     const [newPointsStates, xsList, ysList] = createPointsStatesResult;
@@ -166,7 +166,7 @@ class WebGLContext {
       xsList,
       ysList,
     );
-    if (!pointsStatesLoaded) {
+    if (!pointsStatesLoaded || checkAbort()) {
       return false;
     }
     this._drawPoints(n);
@@ -350,6 +350,9 @@ class WebGLContext {
           const tableData = await loadTableByID(
             newPointsState.points.pointSize.tableId,
           );
+          if (checkAbort()) {
+            return false;
+          }
           const sizeValues = await tableData.loadColumn<number>(
             newPointsState.points.pointSize.valuesCol,
           );
@@ -386,6 +389,9 @@ class WebGLContext {
           const tableData = await loadTableByID(
             newPointsState.points.pointColor.tableId,
           );
+          if (checkAbort()) {
+            return false;
+          }
           const colorValues = await tableData.loadColumn<string>(
             newPointsState.points.pointColor.valuesCol,
           );
@@ -430,6 +436,9 @@ class WebGLContext {
           const tableData = await loadTableByID(
             newPointsState.points.pointOpacity.tableId,
           );
+          if (checkAbort()) {
+            return false;
+          }
           const opacityValues = await tableData.loadColumn<number>(
             newPointsState.points.pointOpacity.valuesCol,
           );
@@ -462,6 +471,9 @@ class WebGLContext {
           const tableData = await loadTableByID(
             newPointsState.points.pointMarker.tableId,
           );
+          if (checkAbort()) {
+            return false;
+          }
           const markerIndexValues = await tableData.loadColumn<number>(
             newPointsState.points.pointMarker.valuesCol,
           );
