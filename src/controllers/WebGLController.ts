@@ -268,7 +268,7 @@ class WebGLContext {
     WebGLUtils.resizeBuffer(
       this._gl,
       this._pointsBuffers.size,
-      n * Float32Array.BYTES_PER_ELEMENT,
+      n * Float16Array.BYTES_PER_ELEMENT,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
@@ -278,7 +278,7 @@ class WebGLContext {
     WebGLUtils.resizeBuffer(
       this._gl,
       this._pointsBuffers.opacity,
-      n * Uint8Array.BYTES_PER_ELEMENT,
+      n * Float16Array.BYTES_PER_ELEMENT,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
@@ -343,7 +343,7 @@ class WebGLContext {
         pointsBufferDataChanged ||
         currentPointsState.config.pointSize !== newPointsState.points.pointSize
       ) {
-        const sizes = new Float32Array(newPointsState.n);
+        const sizes = new Float16Array(newPointsState.n);
         if (typeof newPointsState.points.pointSize === "number") {
           sizes.fill(newPointsState.points.pointSize);
         } else if (isTableValuesColumn(newPointsState.points.pointSize)) {
@@ -423,9 +423,9 @@ class WebGLContext {
         currentPointsState.config.pointOpacity !==
           newPointsState.points.pointOpacity
       ) {
-        const opacities = new Uint8Array(newPointsState.n);
+        const opacities = new Float16Array(newPointsState.n);
         if (typeof newPointsState.points.pointOpacity === "number") {
-          opacities.fill(newPointsState.points.pointOpacity); // TODO
+          opacities.fill(newPointsState.points.pointOpacity);
         } else if (isTableValuesColumn(newPointsState.points.pointOpacity)) {
           const tableData = await loadTableByID(
             newPointsState.points.pointOpacity.tableId,
@@ -436,11 +436,11 @@ class WebGLContext {
           if (checkAbort()) {
             return false;
           }
-          opacities.set(opacityValues); // TODO
+          opacities.set(opacityValues);
         } else if (isTableGroupsColumn(newPointsState.points.pointOpacity)) {
           // TODO
         } else {
-          opacities.fill(WebGLContext._DEFAULT_POINT_OPACITY); // TODO
+          opacities.fill(WebGLContext._DEFAULT_POINT_OPACITY);
         }
         WebGLUtils.loadBufferData(
           this._gl,
@@ -548,7 +548,7 @@ class WebGLContext {
       this._gl,
       WebGLContext._POINTS_ATTRIB_LOCATIONS.SIZE,
       this._pointsBuffers.size,
-      this._gl.FLOAT,
+      this._gl.HALF_FLOAT,
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
@@ -562,7 +562,7 @@ class WebGLContext {
       this._gl,
       WebGLContext._POINTS_ATTRIB_LOCATIONS.OPACITY,
       this._pointsBuffers.opacity,
-      this._gl.UNSIGNED_BYTE,
+      this._gl.HALF_FLOAT,
       true,
     );
     WebGLUtils.configureVertexAttribute(

@@ -13,7 +13,7 @@ export interface IPointsModel
     IPointsLayerConfigModel,
     IPointsGroupSettingsModel
   > {
-  /** Size for all points, or column containing point-wise sizes/group names (defaults to 1) */
+  /** Size for all points, or column containing point-wise sizes/group names (defaults to 1.0) */
   pointSize?: number | TableValuesColumn | TableGroupsColumn;
 
   /** Shape for all points, or column containing point-wise shapes/group names (defaults to "circle") */
@@ -25,7 +25,7 @@ export interface IPointsModel
   /** Visibility for all points, or column containing point-wise visibilities/group names (defaults to true) */
   pointVisibility?: boolean | TableValuesColumn | TableGroupsColumn;
 
-  /** Opacity for all points, between 0 and 1, or column containing point-wise opacities/group names (defaults to 1) */
+  /** Opacity for all points, between 0.0 and 1.0, or column containing point-wise opacities/group names (defaults to 1.0) */
   pointOpacity?: number | TableValuesColumn | TableGroupsColumn;
 }
 
