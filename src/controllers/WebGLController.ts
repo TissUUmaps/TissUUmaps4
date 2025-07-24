@@ -389,7 +389,7 @@ class WebGLContext {
           );
           const sizeValues = sizeGroups.map(
             (g) => sizeMap[uniqueSizeGroups.indexOf(g)],
-          ); // TODO potentially move to sizeMap vertex shader
+          ); // TODO potentially move sizeMap to vertex shader
           sizes.set(sizeValues);
         } else {
           sizes.fill(WebGLContext._DEFAULT_POINT_SIZE);
