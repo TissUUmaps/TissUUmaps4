@@ -1,9 +1,13 @@
-import { IDataSourceModel, ILayerConfigModel, IPixelDataModel } from "./base";
+import {
+  IDataSourceModel,
+  ILayerConfigModel,
+  IRenderedDataModel,
+} from "./base";
 
 /** A 2D raster image */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IImageModel
-  extends IPixelDataModel<IImageDataSourceModel, IImageLayerConfigModel> {}
+  extends IRenderedDataModel<IImageDataSourceModel, IImageLayerConfigModel> {}
 
 /** A data source for 2D raster images */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

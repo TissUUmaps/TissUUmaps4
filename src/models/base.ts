@@ -32,25 +32,6 @@ export interface IRenderedDataModel<
   layerConfigs: TLayerConfigModel[];
 }
 
-/** Base interface for all pixel data models */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface IPixelDataModel<
-  TDataSourceModel extends IDataSourceModel,
-  TLayerConfigModel extends ILayerConfigModel,
-> extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {}
-
-/** Base interface for all object data models */
-export interface IObjectDataModel<
-  TDataSourceModel extends IDataSourceModel,
-  TLayerConfigModel extends ILayerConfigModel,
-  TGroupSettingsModel extends IObjectGroupSettingsModel,
-> extends IRenderedDataModel<TDataSourceModel, TLayerConfigModel> {
-  /** Group settings  */
-  groupSettings?: {
-    [tableGroupsColStr: string]: { [group: string]: TGroupSettingsModel };
-  };
-}
-
 /** Base interface for all data source models */
 export interface IDataSourceModel<TType extends string = string>
   extends IModel {
@@ -81,7 +62,3 @@ export interface ILayerConfigModel extends IModel {
   /** Translation, in physical/layer coordinates (defaults to 0) */
   translation?: { x: number; y: number };
 }
-
-/** Base interface for all object group settings models */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface IObjectGroupSettingsModel extends IModel {}

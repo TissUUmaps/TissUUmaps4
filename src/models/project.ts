@@ -5,6 +5,7 @@ import { ILayerModel } from "./layer";
 import { IPointsModel } from "./points";
 import { IShapesModel } from "./shapes";
 import { ITableModel } from "./table";
+import { Color, Marker } from "./types";
 
 /** A project */
 export interface IProjectModel extends IModel {
@@ -28,4 +29,39 @@ export interface IProjectModel extends IModel {
 
   /** Tables */
   tables?: ITableModel[];
+
+  /** Size maps */
+  sizeMaps?: {
+    id: string;
+    name: string;
+    values: { [key: string]: number };
+  }[];
+
+  /** Color maps */
+  colorMaps?: {
+    id: string;
+    name: string;
+    values: { [key: string]: Color };
+  }[];
+
+  /** Visibility maps */
+  visibilityMaps?: {
+    id: string;
+    name: string;
+    values: { [key: string]: boolean };
+  }[];
+
+  /** Opacity maps */
+  opacityMaps?: {
+    id: string;
+    name: string;
+    values: { [key: string]: number };
+  }[];
+
+  /** Marker maps */
+  markerMaps?: {
+    id: string;
+    name: string;
+    values: { [key: string]: Marker };
+  }[];
 }

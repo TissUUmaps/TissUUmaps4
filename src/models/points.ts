@@ -1,32 +1,42 @@
 import {
   IDataSourceModel,
   ILayerConfigModel,
-  IObjectDataModel,
-  IObjectGroupSettingsModel,
+  IRenderedDataModel,
 } from "./base";
 import { Color, Marker, TableGroupsColumn, TableValuesColumn } from "./types";
 
 /** A 2D point cloud */
 export interface IPointsModel
-  extends IObjectDataModel<
-    IPointsDataSourceModel,
-    IPointsLayerConfigModel,
-    IPointsGroupSettingsModel
-  > {
+  extends IRenderedDataModel<IPointsDataSourceModel, IPointsLayerConfigModel> {
   /** Size for all points, or column containing point-wise sizes/group names (defaults to 1.0) */
   pointSize?: number | TableValuesColumn | TableGroupsColumn;
+
+  /** Global size map ID or custom size map */
+  sizeMap?: string | { [key: string]: number };
 
   /** Shape for all points, or column containing point-wise shapes/group names (defaults to "circle") */
   pointMarker?: Marker | TableValuesColumn | TableGroupsColumn;
 
+  /** Global marker map ID or custom marker map */
+  markerMap?: string | { [key: string]: Marker };
+
   /** Color for all points, or column containing point-wise colors/group names (defaults to black) */
   pointColor?: Color | TableValuesColumn | TableGroupsColumn;
+
+  /** Global color map ID or custom color map */
+  colorMap?: string | { [key: string]: Color };
 
   /** Visibility for all points, or column containing point-wise visibilities/group names (defaults to true) */
   pointVisibility?: boolean | TableValuesColumn | TableGroupsColumn;
 
+  /** Global visibility map ID or custom visibility map */
+  visibilityMap?: string | { [key: string]: boolean };
+
   /** Opacity for all points, between 0.0 and 1.0, or column containing point-wise opacities/group names (defaults to 1.0) */
   pointOpacity?: number | TableValuesColumn | TableGroupsColumn;
+
+  /** Global opacity map ID or custom opacity map */
+  opacityMap?: string | { [key: string]: number };
 }
 
 /** A data source for 2D point clouds */
@@ -41,24 +51,6 @@ export interface IPointsLayerConfigModel extends ILayerConfigModel {
 
   /** Dimension containing point-wise Y coordinates */
   pointYDimension: string;
-}
-
-/** A group-specific display configuration for 2D point clouds */
-export interface IPointsGroupSettingsModel extends IObjectGroupSettingsModel {
-  /** Point size, or undefined if not specified for this group */
-  pointSize?: number;
-
-  /** Point shape, or undefined if not specified for this group */
-  pointMarker?: Marker;
-
-  /** Point color, or undefined if not specified for this group */
-  pointColor?: Color;
-
-  /** Point visibility, or undefined if not specified for this group */
-  pointVisibility?: boolean;
-
-  /** Point opacity, between 0 and 1, or undefined if not specified for this group */
-  pointOpacity?: number;
 }
 
 // TODO points presets
