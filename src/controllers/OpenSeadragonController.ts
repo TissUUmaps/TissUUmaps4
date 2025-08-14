@@ -59,7 +59,7 @@ export default class OpenSeadragonController {
     labelsMap: Map<string, ILabelsModel>,
   ): void {
     for (let i = 0; i < this._tiledImageStates.length; i++) {
-      const tiledImageState = this._tiledImageStates[i];
+      const tiledImageState = this._tiledImageStates[i]!;
       const keepTiledImage =
         "image" in tiledImageState
           ? imageMap.has(tiledImageState.image.id) &&
@@ -187,7 +187,7 @@ export default class OpenSeadragonController {
         createTiledImageState,
       );
     } else {
-      const tiledImageState = this._tiledImageStates[currentIndex];
+      const tiledImageState = this._tiledImageStates[currentIndex]!;
       if (currentIndex !== desiredIndex) {
         if (tiledImageState.loaded) {
           const tiledImage = this._viewer.world.getItemAt(currentIndex);

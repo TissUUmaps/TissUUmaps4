@@ -31,11 +31,11 @@ export class ZarrLabelsData implements ILabelsData {
   }
 
   getWidth(level?: number): number {
-    return this._arrays[level || 0].shape[ZarrLabelsData._X_AXIS];
+    return this._arrays[level || 0]!.shape[ZarrLabelsData._X_AXIS]!;
   }
 
   getHeight(level?: number): number {
-    return this._arrays[level || 0].shape[ZarrLabelsData._Y_AXIS];
+    return this._arrays[level || 0]!.shape[ZarrLabelsData._Y_AXIS]!;
   }
 
   getLevelCount(): number {

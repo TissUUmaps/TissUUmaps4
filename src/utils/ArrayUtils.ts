@@ -6,7 +6,7 @@ export default class ArrayUtils {
       throw new Error("Array length must be a multiple of sequence length");
     }
     for (let i = 0; i < seq.length; i++) {
-      arr[i] = seq[i];
+      arr[i] = seq[i]!;
     }
     let offset = seq.length;
     while (offset < arr.length) {

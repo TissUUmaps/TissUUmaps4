@@ -41,11 +41,11 @@ export class TIFFLabelsData implements ILabelsData {
   }
 
   getWidth(level?: number): number {
-    return this._levels[level || 0].getWidth();
+    return this._levels[level || 0]!.getWidth();
   }
 
   getHeight(level?: number): number {
-    return this._levels[level || 0].getHeight();
+    return this._levels[level || 0]!.getHeight();
   }
 
   getLevelCount(): number {
@@ -53,15 +53,15 @@ export class TIFFLabelsData implements ILabelsData {
   }
 
   getLevelScale(level: number): number {
-    return this._levels[0].getWidth() / this._levels[level].getWidth();
+    return this._levels[0]!.getWidth() / this._levels[level]!.getWidth();
   }
 
   getTileWidth(level: number): number | undefined {
-    return this._tileWidth || this._levels[level].getTileWidth();
+    return this._tileWidth || this._levels[level]!.getTileWidth();
   }
 
   getTileHeight(level: number): number | undefined {
-    return this._tileHeight || this._levels[level].getTileHeight();
+    return this._tileHeight || this._levels[level]!.getTileHeight();
   }
 
   async loadTile(
@@ -70,7 +70,7 @@ export class TIFFLabelsData implements ILabelsData {
     y: number,
     abortSignal?: AbortSignal,
   ): Promise<UintArray> {
-    const image = this._levels[level];
+    const image = this._levels[level]!;
     const tile = await image.getTileOrStrip(x, y, 0, POOL, abortSignal);
     const bitsPerSample = image.getBitsPerSample(0) as number;
     switch (bitsPerSample) {
