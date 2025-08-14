@@ -15,6 +15,11 @@ export default function ViewerPanel() {
   const labelsMap = useBoundStore((state) => state.labelsMap);
   const pointsMap = useBoundStore((state) => state.pointsMap);
   const shapesMap = useBoundStore((state) => state.shapesMap);
+  const sizeMaps = useBoundStore((state) => state.sizeMaps);
+  const colorMaps = useBoundStore((state) => state.colorMaps);
+  const visibilityMaps = useBoundStore((state) => state.visibilityMaps);
+  const opacityMaps = useBoundStore((state) => state.opacityMaps);
+  const markerMaps = useBoundStore((state) => state.markerMaps);
   const loadImage = useBoundStore((state) => state.loadImage);
   const loadLabels = useBoundStore((state) => state.loadLabels);
   const loadPoints = useBoundStore((state) => state.loadPoints);
@@ -103,6 +108,11 @@ export default function ViewerPanel() {
         .synchronizePoints(
           layerMap,
           pointsMap,
+          sizeMaps,
+          colorMaps,
+          visibilityMaps,
+          opacityMaps,
+          markerMaps,
           loadPoints,
           loadTableByID,
           () => abort,
@@ -116,6 +126,11 @@ export default function ViewerPanel() {
     projectDir,
     layerMap,
     pointsMap,
+    sizeMaps,
+    colorMaps,
+    visibilityMaps,
+    opacityMaps,
+    markerMaps,
     loadPoints,
     loadTableByID,
     pointsDataLoaderFactories,
