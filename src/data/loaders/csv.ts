@@ -2,6 +2,7 @@ import * as papaparse from "papaparse";
 
 import { ITableDataSourceModel } from "../../models/table";
 import { ITableData } from "../table";
+import { MappableArrayLike } from "../types";
 import { TableDataLoaderBase } from "./base";
 
 export const CSV_TABLE_DATA_SOURCE = "csv";
@@ -37,12 +38,12 @@ export class CSVTableData implements ITableData {
     return this._columns;
   }
 
-  loadColumn<T>(column: string): Promise<ArrayLike<T>> {
+  loadColumn<T>(column: string): Promise<MappableArrayLike<T>> {
     if (!this._columns.includes(column)) {
       throw new Error(`Column "${column}" does not exist.`);
     }
     const data = this._records.map((row) => row[column]);
-    return Promise.resolve(data as ArrayLike<T>);
+    return Promise.resolve(data as MappableArrayLike<T>);
   }
 
   destroy(): void {}

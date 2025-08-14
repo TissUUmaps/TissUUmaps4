@@ -4,6 +4,7 @@ import { parquetReadColumn } from "hyparquet/src/read.js";
 
 import { ITableDataSourceModel } from "../../models/table";
 import { ITableData } from "../table";
+import { MappableArrayLike } from "../types";
 import { TableDataLoaderBase } from "./base";
 
 export const PARQUET_TABLE_DATA_SOURCE = "parquet";
@@ -40,14 +41,14 @@ export class ParquetTableData implements ITableData {
     return this._columns;
   }
 
-  async loadColumn<T>(column: string): Promise<ArrayLike<T>> {
+  async loadColumn<T>(column: string): Promise<MappableArrayLike<T>> {
     const data = await parquetReadColumn({
       file: this._buffer,
       columns: [column],
       metadata: this._metadata,
       compressors: compressors,
     });
-    return Array.from(data) as ArrayLike<T>;
+    return Array.from(data) as MappableArrayLike<T>;
   }
 
   destroy(): void {}
