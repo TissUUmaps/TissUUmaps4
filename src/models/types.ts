@@ -23,13 +23,13 @@ export function isMarker(x: unknown): x is Marker {
 
 /** A color in RGB format */
 export type Color = {
-  /** Red component, between 0 and 255 */
+  /** Red component, between 0.0 and 1.0 */
   r: number;
 
-  /** Green component, between 0 and 255 */
+  /** Green component, between 0.0 and 1.0 */
   g: number;
 
-  /** Blue component, between 0 and 255 */
+  /** Blue component, between 0.0 and 1.0 */
   b: number;
 };
 
