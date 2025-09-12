@@ -72,7 +72,6 @@ export default class OpenSeadragonController {
               tiledImageState.layerConfig,
             ) &&
             layerMap.has(tiledImageState.layerConfig.layerId);
-
       if (!keepTiledImage) {
         if (tiledImageState.loaded) {
           const tiledImage = this._viewer.world.getItemAt(i);
