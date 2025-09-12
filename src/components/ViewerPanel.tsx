@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import OpenSeadragonController from "../controllers/OpenSeadragonController";
-import WebGLController from "../controllers/WebGLController";
+import WebGLControllerManager from "../controllers/WebGLControllerManager";
 import { useBoundStore } from "../stores/boundStore";
 
 export default function ViewerPanel() {
-  const openSeadragonControllerRef = useRef<OpenSeadragonController | null>(
-    null,
-  );
-  const webGLControllerRef = useRef<WebGLController | null>(null);
+  const osRef = useRef<OpenSeadragonController | null>(null);
+  const glRef = useRef<WebGLControllerManager | null>(null);
   const projectDir = useBoundStore((state) => state.projectDir);
   const layerMap = useBoundStore((state) => state.layerMap);
   const imageMap = useBoundStore((state) => state.imageMap);
@@ -41,20 +39,20 @@ export default function ViewerPanel() {
   // use a ref callback for initializing the OpenSeadragon viewer and the WebGL canvas
   // https://react.dev/reference/react-dom/components/common#ref-callback
   const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
-    if (webGLControllerRef.current !== null) {
-      webGLControllerRef.current.destroy();
-      webGLControllerRef.current = null;
+    if (glRef.current !== null) {
+      glRef.current.destroy();
+      glRef.current = null;
     }
-    if (openSeadragonControllerRef.current !== null) {
-      openSeadragonControllerRef.current.destroy();
-      openSeadragonControllerRef.current = null;
+    if (osRef.current !== null) {
+      osRef.current.destroy();
+      osRef.current = null;
     }
     if (viewerElement !== null) {
       let os;
       let gl;
       try {
         os = new OpenSeadragonController(viewerElement);
-        gl = new WebGLController(os.getViewer().canvas);
+        gl = new WebGLControllerManager(os.getViewer().canvas);
       } catch (error) {
         console.error("Failed to initialize viewer", error);
         os = null;
@@ -64,8 +62,8 @@ export default function ViewerPanel() {
       // if (os !== null && gl !== null) {
       //   const viewer = os.getViewer();
       // }
-      openSeadragonControllerRef.current = os;
-      webGLControllerRef.current = gl;
+      osRef.current = os;
+      glRef.current = gl;
     }
   }, []);
 
@@ -73,7 +71,7 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     let abort = false;
-    const os = openSeadragonControllerRef.current;
+    const os = osRef.current;
     if (os !== null) {
       os.synchronize(
         layerMap,
@@ -102,9 +100,9 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     let abort = false;
-    const gl = webGLControllerRef.current;
+    const gl = glRef.current;
     if (gl !== null) {
-      gl.getContext()
+      gl.getController()
         .synchronizePoints(
           layerMap,
           pointsMap,
@@ -140,9 +138,9 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     let abort = false;
-    const gl = webGLControllerRef.current;
+    const gl = glRef.current;
     if (gl !== null) {
-      gl.getContext()
+      gl.getController()
         .synchronizeShapes(
           layerMap,
           shapesMap,

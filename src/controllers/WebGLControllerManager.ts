@@ -22,27 +22,27 @@ import WebGLUtils from "../utils/WebGLUtils";
 import pointsFragmentShaderSource from "./shaders/points.frag?raw";
 import pointsVertexShaderSource from "./shaders/points.vert?raw";
 
-export default class WebGLController {
+export default class WebGLControllerManager {
   private readonly _canvas: HTMLCanvasElement;
-  private _context: WebGLControllerContext;
+  private _controller: WebGLController;
 
   constructor(parent: HTMLElement) {
-    this._canvas = WebGLController._createCanvas(parent);
-    this._context = new WebGLControllerContext(this._canvas);
+    this._canvas = WebGLControllerManager._createCanvas(parent);
+    this._controller = new WebGLController(this._canvas);
     this._canvas.addEventListener("webglcontextlost", (event) => {
       event.preventDefault(); // allow context to be restored
     });
     this._canvas.addEventListener("webglcontextrestored", () => {
-      this._context = new WebGLControllerContext(this._canvas);
+      this._controller = new WebGLController(this._canvas);
     });
   }
 
-  getContext(): WebGLControllerContext {
-    return this._context;
+  getController(): WebGLController {
+    return this._controller;
   }
 
   destroy(): void {
-    this._context.destroy();
+    this._controller.destroy();
   }
 
   private static _createCanvas(parent: HTMLElement): HTMLCanvasElement {
@@ -58,7 +58,7 @@ export default class WebGLController {
   }
 }
 
-class WebGLControllerContext {
+class WebGLController {
   private static readonly _DEFAULT_POINT_SIZES: number[] = [1.0];
   private static readonly _DEFAULT_POINT_COLORS: Color[] = [
     { r: 0, g: 0, b: 0 },
@@ -380,7 +380,7 @@ class WebGLControllerContext {
           pointsInfo.points.pointSize,
           sizeData,
           sizeMap,
-          WebGLControllerContext._DEFAULT_POINT_SIZES,
+          WebGLController._DEFAULT_POINT_SIZES,
           loadTableByID,
           checkAbort,
         );
@@ -414,7 +414,7 @@ class WebGLControllerContext {
           pointsInfo.points.pointColor,
           colorData,
           colorMap,
-          WebGLControllerContext._DEFAULT_POINT_COLORS,
+          WebGLController._DEFAULT_POINT_COLORS,
           loadTableByID,
           checkAbort,
           (color) => (color.r << 16) | (color.g << 8) | color.b,
@@ -465,7 +465,7 @@ class WebGLControllerContext {
             pointsInfo.points.pointVisibility,
             visibilityData,
             visibilityMap,
-            WebGLControllerContext._DEFAULT_POINT_VISIBILITIES,
+            WebGLController._DEFAULT_POINT_VISIBILITIES,
             loadTableByID,
             checkAbort,
             (pointVisibility) => (pointVisibility ? 1 : 0),
@@ -504,7 +504,7 @@ class WebGLControllerContext {
           pointsInfo.points.pointOpacity,
           opacityData,
           opacityMap,
-          WebGLControllerContext._DEFAULT_POINT_OPACITIES,
+          WebGLController._DEFAULT_POINT_OPACITIES,
           loadTableByID,
           checkAbort,
           (pointOpacity) =>
@@ -542,7 +542,7 @@ class WebGLControllerContext {
           pointsInfo.points.pointMarker,
           markerIndexData,
           markerMap,
-          WebGLControllerContext._DEFAULT_POINT_MARKERS,
+          WebGLController._DEFAULT_POINT_MARKERS,
           loadTableByID,
           checkAbort,
         );
@@ -694,50 +694,50 @@ class WebGLControllerContext {
     this._gl.bindVertexArray(pointsVAO);
     WebGLUtils.configureVertexAttribute(
       this._gl,
-      WebGLControllerContext._POINTS_ATTRIB_LOCATIONS.X,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.X,
       this._pointsBuffers.x,
       this._gl.FLOAT,
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
-      WebGLControllerContext._POINTS_ATTRIB_LOCATIONS.Y,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.Y,
       this._pointsBuffers.y,
       this._gl.FLOAT,
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
-      WebGLControllerContext._POINTS_ATTRIB_LOCATIONS.SIZE,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.SIZE,
       this._pointsBuffers.size,
       this._gl.HALF_FLOAT,
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
-      WebGLControllerContext._POINTS_ATTRIB_LOCATIONS.COLOR,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.COLOR,
       this._pointsBuffers.color,
       this._gl.UNSIGNED_INT,
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
-      WebGLControllerContext._POINTS_ATTRIB_LOCATIONS.VISIBILITY,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.VISIBILITY,
       this._pointsBuffers.visibility,
       this._gl.UNSIGNED_BYTE,
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
-      WebGLControllerContext._POINTS_ATTRIB_LOCATIONS.OPACITY,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.OPACITY,
       this._pointsBuffers.opacity,
       this._gl.HALF_FLOAT,
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
-      WebGLControllerContext._POINTS_ATTRIB_LOCATIONS.MARKER_INDEX,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.MARKER_INDEX,
       this._pointsBuffers.markerIndex,
       this._gl.UNSIGNED_BYTE,
       "int",
     );
     WebGLUtils.configureVertexAttribute(
       this._gl,
-      WebGLControllerContext._POINTS_ATTRIB_LOCATIONS.TRANSFORM_INDEX,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.TRANSFORM_INDEX,
       this._pointsBuffers.transformIndex,
       this._gl.UNSIGNED_BYTE,
       "int",
@@ -750,7 +750,7 @@ class WebGLControllerContext {
     const pointsTransforms = new Float32Array(this._pbsInfos.length * 9);
     for (let i = 0; i < this._pbsInfos.length; i++) {
       const pbs = this._pbsInfos[i]!;
-      const transform = WebGLControllerContext._createTransform(
+      const transform = WebGLController._createTransform(
         pbs.pointsInfo.layer,
         pbs.pointsInfo.layerConfig,
       );
