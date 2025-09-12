@@ -22,12 +22,12 @@ import WebGLUtils from "../utils/WebGLUtils";
 import pointsFragmentShaderSource from "./shaders/points.frag?raw";
 import pointsVertexShaderSource from "./shaders/points.vert?raw";
 
-export default class WebGLControllerManager {
+export default class WebGLManager {
   private readonly _canvas: HTMLCanvasElement;
   private _controller: WebGLController;
 
   constructor(parent: HTMLElement) {
-    this._canvas = WebGLControllerManager._createCanvas(parent);
+    this._canvas = WebGLManager._createCanvas(parent);
     this._controller = new WebGLController(this._canvas);
     this._canvas.addEventListener("webglcontextlost", (event) => {
       event.preventDefault(); // allow context to be restored

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import OpenSeadragonController from "../controllers/OpenSeadragonController";
-import WebGLControllerManager from "../controllers/WebGLControllerManager";
+import WebGLManager from "../controllers/WebGLManager";
 import { useBoundStore } from "../stores/boundStore";
 
 export default function ViewerPanel() {
   const osRef = useRef<OpenSeadragonController | null>(null);
-  const glRef = useRef<WebGLControllerManager | null>(null);
+  const glRef = useRef<WebGLManager | null>(null);
   const projectDir = useBoundStore((state) => state.projectDir);
   const layerMap = useBoundStore((state) => state.layerMap);
   const imageMap = useBoundStore((state) => state.imageMap);
@@ -52,7 +52,7 @@ export default function ViewerPanel() {
       let gl;
       try {
         os = new OpenSeadragonController(viewerElement);
-        gl = new WebGLControllerManager(os.getViewer().canvas);
+        gl = new WebGLManager(os.getViewer().canvas);
       } catch (error) {
         console.error("Failed to initialize viewer", error);
         os = null;
