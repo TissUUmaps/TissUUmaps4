@@ -46,21 +46,24 @@ export class ZarrLabelsData implements ILabelsData {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _level: number,
   ): number {
-    throw new Error("Method not implemented."); // TODO
+    // TODO getLevelScale
+    throw new Error("Method not implemented.");
   }
 
   getTileWidth(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _level: number,
   ): number | undefined {
-    throw new Error("Method not implemented."); // TODO
+    // TODO getTileWidth
+    throw new Error("Method not implemented.");
   }
 
   getTileHeight(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _level: number,
   ): number | undefined {
-    throw new Error("Method not implemented."); // TODO
+    // TODO getTileHeight
+    throw new Error("Method not implemented.");
   }
 
   loadTile(
@@ -73,7 +76,8 @@ export class ZarrLabelsData implements ILabelsData {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _abortSignal?: AbortSignal,
   ): Promise<UintArray> {
-    throw new Error("Method not implemented."); // TODO
+    // TODO loadTile
+    throw new Error("Method not implemented.");
   }
 
   destroy(): void {}
