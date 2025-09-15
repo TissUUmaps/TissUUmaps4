@@ -40,6 +40,7 @@ export default function ViewerPanel() {
   // https://react.dev/reference/react-dom/components/common#ref-callback
   const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
     if (glRef.current !== null) {
+      // TODO call removeHandlers on the OpenSeadragon viewer
       glRef.current.destroy();
       glRef.current = null;
     }
@@ -48,22 +49,23 @@ export default function ViewerPanel() {
       osRef.current = null;
     }
     if (viewerElement !== null) {
-      let os;
-      let gl;
       try {
-        os = new OpenSeadragonController(viewerElement);
-        gl = new WebGLManager(os.getViewer().canvas);
+        const os = new OpenSeadragonController(viewerElement);
+        const gl = new WebGLManager(os.getViewer().canvas);
+        os.getViewer().addHandler("resize", (e) => {
+          gl.resizeCanvas(e.newContainerSize.x, e.newContainerSize.y);
+          gl.getController().draw();
+        });
+        os.getViewer().addHandler("viewport-change", () => {
+          gl.getController().draw();
+        });
+        osRef.current = os;
+        glRef.current = gl;
       } catch (error) {
         console.error("Failed to initialize viewer", error);
-        os = null;
-        gl = null;
+        osRef.current = null;
+        glRef.current = null;
       }
-      // TODO register necessary OpenSeadragon events
-      // if (os !== null && gl !== null) {
-      //   const viewer = os.getViewer();
-      // }
-      osRef.current = os;
-      glRef.current = gl;
     }
   }, []);
 

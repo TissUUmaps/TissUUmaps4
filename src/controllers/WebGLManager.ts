@@ -36,10 +36,16 @@ export default class WebGLManager {
     this._canvas.addEventListener("webglcontextrestored", () => {
       this._controller = new WebGLController(this._canvas);
     });
+    // TODO initial call to resizeCanvas
   }
 
   getController(): WebGLController {
     return this._controller;
+  }
+
+  resizeCanvas(width: number, height: number): void {
+    this._canvas.width = width;
+    this._canvas.height = height;
   }
 
   destroy(): void {
@@ -48,8 +54,6 @@ export default class WebGLManager {
 
   private static _createCanvas(parent: HTMLElement): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
-    canvas.width = 1;
-    canvas.height = 1;
     canvas.style = // TODO double-check whether pointer-events and z-index are needed
       "position: relative; pointer-events: none; z-index: 12; width: 100%; height: 100%;";
     // Place marker canvas under the parent (OpenSeadragon) canvas to enable
@@ -114,6 +118,7 @@ class WebGLController {
   };
   private readonly _pointsVAO: WebGLVertexArrayObject;
   private _pointsBufferSliceInfos: PointsBufferSliceInfo[] = [];
+  private _nPoints: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this._gl = WebGLUtils.init(canvas, {
@@ -154,6 +159,11 @@ class WebGLController {
     this._pointsVAO = this._createPointsVAO();
   }
 
+  draw(): void {
+    this._drawPoints();
+    this._drawShapes();
+  }
+
   async synchronizePoints(
     layerMap: Map<string, ILayerModel>,
     pointsMap: Map<string, IPointsModel>,
@@ -177,7 +187,7 @@ class WebGLController {
     }
     let pointsBuffersResized = false;
     const n = pointsInfos.reduce((s, x) => s + x.xs.length, 0);
-    if (this._pointsBufferSliceInfos.reduce((s, x) => s + x.length, 0) !== n) {
+    if (this._nPoints !== n) {
       this._resizePointsBuffers(n);
       pointsBuffersResized = true;
     }
@@ -196,7 +206,7 @@ class WebGLController {
       return false;
     }
     this._pointsBufferSliceInfos = newPointsBufferSliceInfos;
-    this._drawPoints(n);
+    this._drawPoints();
     return true;
   }
 
@@ -221,6 +231,69 @@ class WebGLController {
     for (const pointsBuffer of Object.values(this._pointsBuffers)) {
       this._gl.deleteBuffer(pointsBuffer);
     }
+  }
+
+  private _createPointsVAO(): WebGLVertexArrayObject {
+    const pointsVAO = this._gl.createVertexArray();
+    this._gl.bindVertexArray(pointsVAO);
+    WebGLUtils.configureVertexFloatAttribute(
+      this._gl,
+      this._pointsBuffers.x,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.X,
+      1,
+      this._gl.FLOAT,
+    );
+    WebGLUtils.configureVertexFloatAttribute(
+      this._gl,
+      this._pointsBuffers.y,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.Y,
+      1,
+      this._gl.FLOAT,
+    );
+    WebGLUtils.configureVertexFloatAttribute(
+      this._gl,
+      this._pointsBuffers.size,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.SIZE,
+      1,
+      this._gl.HALF_FLOAT,
+    );
+    WebGLUtils.configureVertexFloatAttribute(
+      this._gl,
+      this._pointsBuffers.color,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.COLOR,
+      3,
+      this._gl.HALF_FLOAT,
+    );
+    WebGLUtils.configureVertexIntAttribute(
+      this._gl,
+      this._pointsBuffers.visibility,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.VISIBILITY,
+      1,
+      this._gl.UNSIGNED_BYTE,
+    );
+    WebGLUtils.configureVertexFloatAttribute(
+      this._gl,
+      this._pointsBuffers.opacity,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.OPACITY,
+      1,
+      this._gl.HALF_FLOAT,
+    );
+    WebGLUtils.configureVertexIntAttribute(
+      this._gl,
+      this._pointsBuffers.markerIndex,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.MARKER_INDEX,
+      1,
+      this._gl.UNSIGNED_BYTE,
+    );
+    WebGLUtils.configureVertexIntAttribute(
+      this._gl,
+      this._pointsBuffers.transformIndex,
+      WebGLController._POINTS_ATTRIB_LOCATIONS.TRANSFORM_INDEX,
+      1,
+      this._gl.UNSIGNED_BYTE,
+    );
+    this._gl.bindVertexArray(null);
+    return pointsVAO;
   }
 
   private async _collectPoints(
@@ -308,6 +381,7 @@ class WebGLController {
       this._pointsBuffers.transformIndex,
       n * Uint8Array.BYTES_PER_ELEMENT,
     );
+    this._nPoints = n;
   }
 
   private async _loadPoints(
@@ -602,6 +676,90 @@ class WebGLController {
     return newPointsBufferSliceInfos;
   }
 
+  _drawPoints(): void {
+    // TODO blending
+    this._gl.useProgram(this._pointsProgram);
+    this._gl.bindVertexArray(this._pointsVAO);
+    this._gl.uniformBlockBinding(
+      this._pointsProgram,
+      this._pointsUniformLocations.transformsUBO,
+      0,
+    );
+    this._gl.bindBufferBase(
+      this._gl.UNIFORM_BUFFER,
+      0,
+      this._createPointsTransforms(),
+    );
+    this._gl.uniformMatrix3fv(
+      this._pointsUniformLocations.viewTransform,
+      false,
+      this._createViewTransform(),
+    );
+    // TODO
+    // this._gl.activeTexture(this._gl.TEXTURE0);
+    // this._gl.bindTexture(this._gl.TEXTURE_2D, this._pointsMarkerAtlasTexture);
+    this._gl.uniform1i(this._pointsUniformLocations.markerAtlas, 0);
+    this._gl.drawArrays(this._gl.POINTS, 0, this._nPoints);
+    this._gl.bindVertexArray(null);
+    this._gl.useProgram(null);
+  }
+
+  _drawShapes(): void {
+    // TODO draw shapes
+  }
+
+  private static _createTransform(
+    layer: ILayerModel,
+    layerConfig: ILayerConfigModel,
+  ): mat3 {
+    const transform = mat3.create();
+    if (layerConfig.scale) {
+      mat3.scale(transform, transform, [layerConfig.scale, layerConfig.scale]);
+    }
+    if (layerConfig.flip) {
+      mat3.scale(transform, transform, [-1, 1]);
+    }
+    if (layerConfig.rotation) {
+      mat3.rotate(transform, transform, (layerConfig.rotation * Math.PI) / 180);
+    }
+    if (layerConfig.translation) {
+      mat3.translate(transform, transform, [
+        layerConfig.translation.x,
+        layerConfig.translation.y,
+      ]);
+    }
+    if (layer.scale) {
+      mat3.scale(transform, transform, [layer.scale, layer.scale]);
+    }
+    if (layer.translation) {
+      mat3.translate(transform, transform, [
+        layer.translation.x,
+        layer.translation.y,
+      ]);
+    }
+    return transform;
+  }
+
+  private _createPointsTransforms(): Float32Array {
+    const pointsTransforms = new Float32Array(
+      this._pointsBufferSliceInfos.length * 9,
+    );
+    for (let i = 0; i < this._pointsBufferSliceInfos.length; i++) {
+      const pbs = this._pointsBufferSliceInfos[i]!;
+      const transform = WebGLController._createTransform(
+        pbs.pointsInfo.layer,
+        pbs.pointsInfo.layerConfig,
+      );
+      pointsTransforms.set(transform, i * 9);
+    }
+    return pointsTransforms;
+  }
+
+  private _createViewTransform(): Float32Array {
+    // TODO view transform
+    throw new Error("View transform creation not implemented");
+  }
+
   async _prepareBufferData<TValue, TTableValue = TValue>(
     arr: TypedArray,
     value: TValue | TableValuesColumn | TableGroupsColumn | undefined,
@@ -667,149 +825,6 @@ class WebGLController {
       arr.fill(arrayValue);
     }
     return true;
-  }
-
-  _drawPoints(n: number): void {
-    // TODO blending
-    this._gl.useProgram(this._pointsProgram);
-    this._gl.bindVertexArray(this._pointsVAO);
-    this._gl.uniformBlockBinding(
-      this._pointsProgram,
-      this._pointsUniformLocations.transformsUBO,
-      0,
-    );
-    this._gl.bindBufferBase(
-      this._gl.UNIFORM_BUFFER,
-      0,
-      this._createPointsTransforms(),
-    );
-    this._gl.uniformMatrix3fv(
-      this._pointsUniformLocations.viewTransform,
-      false,
-      this._createViewTransform(),
-    );
-    // TODO
-    // this._gl.activeTexture(this._gl.TEXTURE0);
-    // this._gl.bindTexture(this._gl.TEXTURE_2D, this._pointsMarkerAtlasTexture);
-    this._gl.uniform1i(this._pointsUniformLocations.markerAtlas, 0);
-    this._gl.drawArrays(this._gl.POINTS, 0, n);
-    this._gl.bindVertexArray(null);
-    this._gl.useProgram(null);
-  }
-
-  private _createPointsVAO(): WebGLVertexArrayObject {
-    const pointsVAO = this._gl.createVertexArray();
-    this._gl.bindVertexArray(pointsVAO);
-    WebGLUtils.configureVertexFloatAttribute(
-      this._gl,
-      this._pointsBuffers.x,
-      WebGLController._POINTS_ATTRIB_LOCATIONS.X,
-      1,
-      this._gl.FLOAT,
-    );
-    WebGLUtils.configureVertexFloatAttribute(
-      this._gl,
-      this._pointsBuffers.y,
-      WebGLController._POINTS_ATTRIB_LOCATIONS.Y,
-      1,
-      this._gl.FLOAT,
-    );
-    WebGLUtils.configureVertexFloatAttribute(
-      this._gl,
-      this._pointsBuffers.size,
-      WebGLController._POINTS_ATTRIB_LOCATIONS.SIZE,
-      1,
-      this._gl.HALF_FLOAT,
-    );
-    WebGLUtils.configureVertexFloatAttribute(
-      this._gl,
-      this._pointsBuffers.color,
-      WebGLController._POINTS_ATTRIB_LOCATIONS.COLOR,
-      3,
-      this._gl.HALF_FLOAT,
-    );
-    WebGLUtils.configureVertexIntAttribute(
-      this._gl,
-      this._pointsBuffers.visibility,
-      WebGLController._POINTS_ATTRIB_LOCATIONS.VISIBILITY,
-      1,
-      this._gl.UNSIGNED_BYTE,
-    );
-    WebGLUtils.configureVertexFloatAttribute(
-      this._gl,
-      this._pointsBuffers.opacity,
-      WebGLController._POINTS_ATTRIB_LOCATIONS.OPACITY,
-      1,
-      this._gl.HALF_FLOAT,
-    );
-    WebGLUtils.configureVertexIntAttribute(
-      this._gl,
-      this._pointsBuffers.markerIndex,
-      WebGLController._POINTS_ATTRIB_LOCATIONS.MARKER_INDEX,
-      1,
-      this._gl.UNSIGNED_BYTE,
-    );
-    WebGLUtils.configureVertexIntAttribute(
-      this._gl,
-      this._pointsBuffers.transformIndex,
-      WebGLController._POINTS_ATTRIB_LOCATIONS.TRANSFORM_INDEX,
-      1,
-      this._gl.UNSIGNED_BYTE,
-    );
-    this._gl.bindVertexArray(null);
-    return pointsVAO;
-  }
-
-  private _createPointsTransforms(): Float32Array {
-    const pointsTransforms = new Float32Array(
-      this._pointsBufferSliceInfos.length * 9,
-    );
-    for (let i = 0; i < this._pointsBufferSliceInfos.length; i++) {
-      const pbs = this._pointsBufferSliceInfos[i]!;
-      const transform = WebGLController._createTransform(
-        pbs.pointsInfo.layer,
-        pbs.pointsInfo.layerConfig,
-      );
-      pointsTransforms.set(transform, i * 9);
-    }
-    return pointsTransforms;
-  }
-
-  private _createViewTransform(): Float32Array {
-    // TODO view transform
-    throw new Error("View transform creation not implemented");
-  }
-
-  private static _createTransform(
-    layer: ILayerModel,
-    layerConfig: ILayerConfigModel,
-  ): mat3 {
-    const transform = mat3.create();
-    if (layerConfig.scale) {
-      mat3.scale(transform, transform, [layerConfig.scale, layerConfig.scale]);
-    }
-    if (layerConfig.flip) {
-      mat3.scale(transform, transform, [-1, 1]);
-    }
-    if (layerConfig.rotation) {
-      mat3.rotate(transform, transform, (layerConfig.rotation * Math.PI) / 180);
-    }
-    if (layerConfig.translation) {
-      mat3.translate(transform, transform, [
-        layerConfig.translation.x,
-        layerConfig.translation.y,
-      ]);
-    }
-    if (layer.scale) {
-      mat3.scale(transform, transform, [layer.scale, layer.scale]);
-    }
-    if (layer.translation) {
-      mat3.translate(transform, transform, [
-        layer.translation.x,
-        layer.translation.y,
-      ]);
-    }
-    return transform;
   }
 }
 
