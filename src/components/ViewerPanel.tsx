@@ -51,13 +51,22 @@ export default function ViewerPanel() {
     if (viewerElement !== null) {
       try {
         const os = new OpenSeadragonController(viewerElement);
-        const gl = new WebGLManager(os.getViewer().canvas);
-        os.getViewer().addHandler("resize", (e) => {
-          gl.resizeCanvas(e.newContainerSize.x, e.newContainerSize.y);
-          gl.getController().draw();
+        const osCanvas = os.viewer.drawer.canvas as HTMLCanvasElement;
+        const glCanvas = document.createElement("canvas");
+        glCanvas.width = osCanvas.width;
+        glCanvas.height = osCanvas.height;
+        glCanvas.style = "position: relative; width: 100%; height: 100%;";
+        osCanvas.appendChild(glCanvas);
+        const gl = new WebGLManager(glCanvas);
+        os.viewer.addHandler("resize", () => {
+          glCanvas.width = osCanvas.width;
+          glCanvas.height = osCanvas.height;
+          gl.pointsController.draw();
+          gl.shapesController.draw();
         });
-        os.getViewer().addHandler("viewport-change", () => {
-          gl.getController().draw();
+        os.viewer.addHandler("viewport-change", () => {
+          gl.pointsController.draw();
+          gl.shapesController.draw();
         });
         osRef.current = os;
         glRef.current = gl;
@@ -104,8 +113,8 @@ export default function ViewerPanel() {
     let abort = false;
     const gl = glRef.current;
     if (gl !== null) {
-      gl.getController()
-        .synchronizePoints(
+      gl.pointsController
+        .synchronize(
           layerMap,
           pointsMap,
           sizeMaps,
@@ -142,8 +151,8 @@ export default function ViewerPanel() {
     let abort = false;
     const gl = glRef.current;
     if (gl !== null) {
-      gl.getController()
-        .synchronizeShapes(
+      gl.shapesController
+        .synchronize(
           layerMap,
           shapesMap,
           loadShapes,

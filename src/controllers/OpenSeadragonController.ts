@@ -25,6 +25,10 @@ export default class OpenSeadragonController {
     });
   }
 
+  get viewer(): Viewer {
+    return this._viewer;
+  }
+
   async synchronize(
     layerMap: Map<string, ILayerModel>,
     imageMap: Map<string, IImageModel>,
@@ -42,10 +46,6 @@ export default class OpenSeadragonController {
       loadLabels,
       checkAbort,
     );
-  }
-
-  getViewer(): Viewer {
-    return this._viewer;
   }
 
   destroy(): void {
