@@ -91,23 +91,30 @@ export const createImageSlice: BoundStoreStateCreator<ImageSlice> = (
 });
 
 const initialImageSliceState: ImageSliceState = {
-  // FIXME remove test data
+  // TODO remove test data
   imageMap: new Map<string, IImageModel>([
     [
-      "test",
+      "he",
       {
-        id: "test",
-        name: "Test",
+        id: "he",
+        name: "H&E",
         dataSource: {
           type: "default",
-          tileSourceConfig: {
-            type: "image",
-            url: "https://upload.wikimedia.org/wikipedia/en/a/a9/Example.jpg",
-            crossOriginPolicy: "Anonymous",
-            ajaxWithCredentials: false,
-          },
+          url: "/data/breast/TissueA_HnE.dzi",
         } as IDefaultImageDataSourceModel,
-        layerConfigs: [{ layerId: "test" }],
+        layerConfigs: [{ layerId: "breast" }],
+      },
+    ],
+    [
+      "dapi",
+      {
+        id: "dapi",
+        name: "DAPI",
+        dataSource: {
+          type: "default",
+          url: "/data/breast/TissueA_Fluo.dzi",
+        } as IDefaultImageDataSourceModel,
+        layerConfigs: [{ layerId: "breast" }],
       },
     ],
   ]),

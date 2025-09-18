@@ -31,8 +31,8 @@ export const createLayerSlice: BoundStoreStateCreator<LayerSlice> = (set) => ({
 });
 
 const initialLayerSliceState: LayerSliceState = {
-  // FIXME remove test data
+  // TODO remove test data
   layerMap: new Map<string, ILayerModel>([
-    ["test", { id: "test", name: "Test" }],
+    ["breast", { id: "breast", name: "Breast" }],
   ]),
 };

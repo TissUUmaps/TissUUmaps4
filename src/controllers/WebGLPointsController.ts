@@ -65,6 +65,7 @@ export default class WebGLPointsController extends WebGLController {
     opacity: WebGLBuffer;
     markerIndex: WebGLBuffer;
     transformIndex: WebGLBuffer;
+    transformsUBO: WebGLBuffer;
   };
   private readonly _vao: WebGLVertexArrayObject;
   private _bufferSlices: PointsBufferSlice[] = [];
@@ -107,6 +108,7 @@ export default class WebGLPointsController extends WebGLController {
       opacity: this._gl.createBuffer(),
       markerIndex: this._gl.createBuffer(),
       transformIndex: this._gl.createBuffer(),
+      transformsUBO: this._gl.createBuffer(),
     };
     this._vao = this._createVAO();
   }
@@ -168,7 +170,7 @@ export default class WebGLPointsController extends WebGLController {
     this._gl.bindBufferBase(
       this._gl.UNIFORM_BUFFER,
       0,
-      this._createDataToWorldTransforms(),
+      this._buffers.transformsUBO,
     );
     this._gl.uniformMatrix3fv(
       this._uniformLocations.worldToViewportTransform,
@@ -353,9 +355,11 @@ export default class WebGLPointsController extends WebGLController {
     loadTableByID: (tableId: string) => Promise<ITableData>,
     checkAbort: () => boolean,
   ): Promise<PointsBufferSlice[] | null> {
+    // TODO this._createDataToWorldTransforms()
     let i = 0;
     let offset = 0;
     const newBufferSlices: PointsBufferSlice[] = [];
+    const transformsUBOData = new Float32Array(metas.length * 9);
     for (const meta of metas) {
       const length = meta.xs.length;
       const bufferSlice = this._bufferSlices[i];
@@ -600,23 +604,19 @@ export default class WebGLPointsController extends WebGLController {
           markerMap: meta.points.markerMap,
         },
       });
+      // transform UBO
+      let tf = WebGLPointsController.dataToLayer(meta.layerConfig);
+      tf = WebGLPointsController.layerToWorld(meta.layer, tf);
+      transformsUBOData.set(tf, i * 9);
       offset += length;
       i++;
     }
+    WebGLUtils.loadBufferData(
+      this._gl,
+      this._buffers.transformsUBO,
+      transformsUBOData,
+    );
     return newBufferSlices;
-  }
-
-  private _createDataToWorldTransforms(): Float32Array {
-    const data = new Float32Array(this._bufferSlices.length * 9);
-    for (let i = 0; i < this._bufferSlices.length; i++) {
-      const bufferSlice = this._bufferSlices[i]!;
-      const tf = WebGLPointsController.dataToLayer(
-        bufferSlice.meta.layerConfig,
-      );
-      WebGLPointsController.layerToWorld(bufferSlice.meta.layer, tf);
-      data.set(tf, i * 9);
-    }
-    return data;
   }
 }
 
