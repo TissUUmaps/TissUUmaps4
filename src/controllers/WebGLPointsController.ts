@@ -27,6 +27,7 @@ export default class WebGLPointsController extends WebGLController {
     MARKER_INDEX: 6,
     TRANSFORM_INDEX: 7,
   };
+  private static readonly _TRANSFORMS_UBO_BINDING_POINT = 0;
   private static readonly _DEFAULT_POINT_SIZES: number[] = [1.0];
   private static readonly _DEFAULT_POINT_COLORS: Color[] = [
     { r: 0, g: 0, b: 0 },
@@ -161,25 +162,30 @@ export default class WebGLPointsController extends WebGLController {
   }
 
   draw(viewport: Viewport): void {
-    // TODO blending
+    if (this._n === 0) {
+      return;
+    }
     this._gl.useProgram(this._program);
+    // TODO blending
+    // this._gl.enable(this._gl.BLEND);
+    // this._gl.blendFunc(this._gl.SRC_ALPHA, this._gl.ONE_MINUS_SRC_ALPHA);
     this._gl.bindVertexArray(this._vao);
+    this._gl.bindBufferBase(
+      this._gl.UNIFORM_BUFFER,
+      WebGLPointsController._TRANSFORMS_UBO_BINDING_POINT,
+      this._buffers.transformsUBO,
+    );
     this._gl.uniformBlockBinding(
       this._program,
       this._uniformLocations.transformsUBO,
-      0,
-    );
-    this._gl.bindBufferBase(
-      this._gl.UNIFORM_BUFFER,
-      0,
-      this._buffers.transformsUBO,
+      WebGLPointsController._TRANSFORMS_UBO_BINDING_POINT,
     );
     this._gl.uniformMatrix3fv(
       this._uniformLocations.worldToViewportTransform,
       false,
       WebGLPointsController.createWorldToViewportTransform(viewport),
     );
-    // TODO
+    // TODO texture
     // this._gl.activeTexture(this._gl.TEXTURE0);
     // this._gl.bindTexture(this._gl.TEXTURE_2D, this._pointsMarkerAtlasTexture);
     this._gl.uniform1i(this._uniformLocations.markerAtlas, 0);
@@ -348,7 +354,6 @@ export default class WebGLPointsController extends WebGLController {
     loadTableByID: (tableId: string) => Promise<ITableData>,
     checkAbort: () => boolean,
   ): Promise<PointsBufferSlice[] | null> {
-    // TODO this._createDataToWorldTransforms()
     let i = 0;
     let offset = 0;
     const newBufferSlices: PointsBufferSlice[] = [];
