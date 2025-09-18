@@ -38,12 +38,12 @@ export class CSVTableData implements ITableData {
     return this._columns;
   }
 
-  loadColumn<T>(column: string): Promise<MappableArrayLike<T>> {
+  async loadColumn<T>(column: string): Promise<MappableArrayLike<T>> {
     if (!this._columns.includes(column)) {
       throw new Error(`Column "${column}" does not exist.`);
     }
     const data = this._records.map((row) => row[column]);
-    return Promise.resolve(data as MappableArrayLike<T>);
+    return await Promise.resolve(data as MappableArrayLike<T>);
   }
 
   destroy(): void {}
