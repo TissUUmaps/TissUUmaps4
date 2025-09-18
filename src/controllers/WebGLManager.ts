@@ -3,19 +3,21 @@ import WebGLPointsController from "./WebGLPointsController";
 import WebGLShapesController from "./WebGLShapesController";
 
 export default class WebGLManager {
+  readonly canvas: HTMLCanvasElement;
   private _gl: WebGL2RenderingContext;
   private _pointsController: WebGLPointsController;
   private _shapesController: WebGLShapesController;
 
   constructor(canvas: HTMLCanvasElement) {
-    this._gl = WebGLManager._createWebGLContext(canvas);
+    this.canvas = canvas;
+    this._gl = WebGLManager._createWebGLContext(this.canvas);
     this._pointsController = new WebGLPointsController(this._gl);
     this._shapesController = new WebGLShapesController(this._gl);
-    canvas.addEventListener("webglcontextlost", (event) => {
+    this.canvas.addEventListener("webglcontextlost", (event) => {
       event.preventDefault(); // allow context to be restored
     });
-    canvas.addEventListener("webglcontextrestored", () => {
-      this._gl = WebGLManager._createWebGLContext(canvas);
+    this.canvas.addEventListener("webglcontextrestored", () => {
+      this._gl = WebGLManager._createWebGLContext(this.canvas);
       this._pointsController = new WebGLPointsController(this._gl);
       this._shapesController = new WebGLShapesController(this._gl);
     });

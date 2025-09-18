@@ -36,47 +36,57 @@ export default function ViewerPanel() {
     (state) => state.shapesDataLoaderFactories,
   );
 
-  // use a ref callback for initializing the OpenSeadragon viewer and the WebGL canvas
-  // https://react.dev/reference/react-dom/components/common#ref-callback
-  const setViewerRef = useCallback((viewerElement: HTMLDivElement | null) => {
-    if (glRef.current !== null) {
-      // TODO call removeHandlers on the OpenSeadragon viewer
-      glRef.current.destroy();
-      glRef.current = null;
-    }
-    if (osRef.current !== null) {
-      osRef.current.destroy();
-      osRef.current = null;
-    }
-    if (viewerElement !== null) {
-      try {
-        const os = new OpenSeadragonController(viewerElement);
-        const osCanvas = os.viewer.drawer.canvas as HTMLCanvasElement;
-        const glCanvas = document.createElement("canvas");
-        glCanvas.width = osCanvas.width;
-        glCanvas.height = osCanvas.height;
-        glCanvas.style = "position: relative; width: 100%; height: 100%;";
-        osCanvas.appendChild(glCanvas);
-        const gl = new WebGLManager(glCanvas);
-        os.viewer.addHandler("resize", () => {
-          glCanvas.width = osCanvas.width;
-          glCanvas.height = osCanvas.height;
-          gl.pointsController.draw();
-          gl.shapesController.draw();
-        });
-        os.viewer.addHandler("viewport-change", () => {
-          gl.pointsController.draw();
-          gl.shapesController.draw();
-        });
-        osRef.current = os;
-        glRef.current = gl;
-      } catch (error) {
-        console.error("Failed to initialize viewer", error);
-        osRef.current = null;
-        glRef.current = null;
-      }
+  const onViewerResize = useCallback(() => {
+    const os = osRef.current;
+    const gl = glRef.current;
+    if (os !== null && gl !== null) {
+      const viewerCanvas = os.viewer.drawer.canvas as HTMLCanvasElement;
+      gl.canvas.width = viewerCanvas.width;
+      gl.canvas.height = viewerCanvas.height;
+      gl.pointsController.draw();
+      gl.shapesController.draw();
     }
   }, []);
+
+  const onViewerViewportChange = useCallback(() => {
+    const gl = glRef.current;
+    if (gl !== null) {
+      gl.pointsController.draw();
+      gl.shapesController.draw();
+    }
+  }, []);
+
+  // use a ref callback for initializing the OpenSeadragon viewer and the WebGL canvas
+  // https://react.dev/reference/react-dom/components/common#ref-callback
+  const setViewerRef = useCallback(
+    (viewerElement: HTMLDivElement | null) => {
+      const oldOS = osRef.current;
+      if (oldOS !== null) {
+        oldOS.destroy();
+        osRef.current = null;
+      }
+      const oldGL = glRef.current;
+      if (oldGL !== null) {
+        oldGL.destroy();
+        glRef.current = null;
+      }
+      if (viewerElement !== null) {
+        try {
+          const newOS = new OpenSeadragonController(viewerElement);
+          const newGL = new WebGLManager(createWebGLCanvas(newOS.viewer));
+          newOS.viewer.addHandler("resize", onViewerResize);
+          newOS.viewer.addHandler("viewport-change", onViewerViewportChange);
+          osRef.current = newOS;
+          glRef.current = newGL;
+        } catch (error) {
+          console.error("Failed to initialize viewer", error);
+          osRef.current = null;
+          glRef.current = null;
+        }
+      }
+    },
+    [onViewerResize, onViewerViewportChange],
+  );
 
   // synchronize the OpenSeadragon viewer upon layer/image/labels changes
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
@@ -174,4 +184,14 @@ export default function ViewerPanel() {
   ]);
 
   return <div ref={setViewerRef} className="size-full bg-white" />;
+}
+
+function createWebGLCanvas(viewer: OpenSeadragon.Viewer): HTMLCanvasElement {
+  const viewerCanvas = viewer.drawer.canvas as HTMLCanvasElement;
+  const webGLCanvas = document.createElement("canvas");
+  webGLCanvas.width = viewerCanvas.width;
+  webGLCanvas.height = viewerCanvas.height;
+  webGLCanvas.style = "position: relative; width: 100%; height: 100%;";
+  viewerCanvas.appendChild(webGLCanvas);
+  return webGLCanvas;
 }

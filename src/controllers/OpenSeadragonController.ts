@@ -9,11 +9,11 @@ import { ILabelsLayerConfigModel, ILabelsModel } from "../models/labels";
 import { ILayerModel } from "../models/layer";
 
 export default class OpenSeadragonController {
-  private readonly _viewer: Viewer;
+  readonly viewer: Viewer;
   private readonly _tiledImageStates: TiledImageState[] = [];
 
   constructor(viewerElement: HTMLElement) {
-    this._viewer = new Viewer({
+    this.viewer = new Viewer({
       element: viewerElement,
       // @ts-expect-error: 'drawer' is supported by OpenSeadragon but missing in types
       // https://github.com/usnistgov/OpenSeadragonFiltering/issues/34
@@ -23,10 +23,6 @@ export default class OpenSeadragonController {
       showNavigationControl: false,
       imageSmoothingEnabled: false,
     });
-  }
-
-  get viewer(): Viewer {
-    return this._viewer;
   }
 
   async synchronize(
@@ -49,7 +45,7 @@ export default class OpenSeadragonController {
   }
 
   destroy(): void {
-    this._viewer.destroy();
+    this.viewer.destroy();
     this._tiledImageStates.length = 0;
   }
 
@@ -74,8 +70,8 @@ export default class OpenSeadragonController {
             layerMap.has(tiledImageState.layerConfig.layerId);
       if (!keepTiledImage) {
         if (tiledImageState.loaded) {
-          const tiledImage = this._viewer.world.getItemAt(i);
-          this._viewer.world.removeItem(tiledImage);
+          const tiledImage = this.viewer.world.getItemAt(i);
+          this.viewer.world.removeItem(tiledImage);
         } else {
           tiledImageState.deferredDelete = true;
         }
@@ -189,14 +185,14 @@ export default class OpenSeadragonController {
       const tiledImageState = this._tiledImageStates[currentIndex]!;
       if (currentIndex !== desiredIndex) {
         if (tiledImageState.loaded) {
-          const tiledImage = this._viewer.world.getItemAt(currentIndex);
-          this._viewer.world.setItemIndex(tiledImage, desiredIndex);
+          const tiledImage = this.viewer.world.getItemAt(currentIndex);
+          this.viewer.world.setItemIndex(tiledImage, desiredIndex);
         } else {
           tiledImageState.deferredIndex = desiredIndex;
         }
       }
       if (tiledImageState.loaded) {
-        const tiledImage = this._viewer.world.getItemAt(currentIndex);
+        const tiledImage = this.viewer.world.getItemAt(currentIndex);
         this._updateTiledImage(
           layer,
           pixels,
@@ -220,7 +216,7 @@ export default class OpenSeadragonController {
   ): void {
     const newTiledImageState = createTiledImageState();
     const flip = layerConfig.flip ?? false;
-    this._viewer.addTiledImage({
+    this.viewer.addTiledImage({
       tileSource: createTileSource(),
       index: index,
       degrees: layerConfig.rotation ?? 0,
@@ -236,7 +232,7 @@ export default class OpenSeadragonController {
           newTiledImageState.deferredIndex !== undefined &&
           newTiledImageState.deferredIndex !== index
         ) {
-          this._viewer.world.setItemIndex(
+          this.viewer.world.setItemIndex(
             newTiledImage,
             newTiledImageState.deferredIndex,
           );
@@ -259,10 +255,10 @@ export default class OpenSeadragonController {
             newTiledImageState,
           );
         }
-        this._viewer.viewport.fitBounds(newTiledImage.getBounds(), true);
+        this.viewer.viewport.fitBounds(newTiledImage.getBounds(), true);
         newTiledImageState.loaded = true;
         if (newTiledImageState.deferredDelete) {
-          this._viewer.world.removeItem(newTiledImage);
+          this.viewer.world.removeItem(newTiledImage);
           newTiledImageState.deferredDelete = undefined;
         }
       },
