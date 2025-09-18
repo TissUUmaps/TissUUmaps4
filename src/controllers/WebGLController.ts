@@ -87,40 +87,57 @@ export default class WebGLController {
     return true;
   }
 
-  protected static _createTransform(
-    layer: ILayerModel,
+  protected static dataToLayer(
     layerConfig: ILayerConfigModel,
+    tf?: mat3,
   ): mat3 {
-    const transform = mat3.create();
+    if (tf === undefined) {
+      tf = mat3.create();
+    }
     if (layerConfig.scale) {
-      mat3.scale(transform, transform, [layerConfig.scale, layerConfig.scale]);
+      mat3.scale(tf, tf, [layerConfig.scale, layerConfig.scale]);
     }
     if (layerConfig.flip) {
-      mat3.scale(transform, transform, [-1, 1]);
+      mat3.scale(tf, tf, [-1, 1]);
     }
     if (layerConfig.rotation) {
-      mat3.rotate(transform, transform, (layerConfig.rotation * Math.PI) / 180);
+      mat3.rotate(tf, tf, (layerConfig.rotation * Math.PI) / 180);
     }
     if (layerConfig.translation) {
-      mat3.translate(transform, transform, [
+      mat3.translate(tf, tf, [
         layerConfig.translation.x,
         layerConfig.translation.y,
       ]);
     }
-    if (layer.scale) {
-      mat3.scale(transform, transform, [layer.scale, layer.scale]);
-    }
-    if (layer.translation) {
-      mat3.translate(transform, transform, [
-        layer.translation.x,
-        layer.translation.y,
-      ]);
-    }
-    return transform;
+    return tf;
   }
 
-  protected _createViewTransform(): Float32Array {
-    // TODO view transform
-    throw new Error("View transform creation not implemented");
+  protected static layerToWorld(layer: ILayerModel, tf?: mat3): mat3 {
+    if (tf === undefined) {
+      tf = mat3.create();
+    }
+    if (layer.scale) {
+      mat3.scale(tf, tf, [layer.scale, layer.scale]);
+    }
+    if (layer.translation) {
+      mat3.translate(tf, tf, [layer.translation.x, layer.translation.y]);
+    }
+    return tf;
   }
+
+  protected static worldToViewport(viewport: Viewport, tf?: mat3): mat3 {
+    if (tf === undefined) {
+      tf = mat3.create();
+    }
+    mat3.translate(tf, tf, [-viewport.x, -viewport.y]);
+    mat3.scale(tf, tf, [1.0 / viewport.width, 1.0 / viewport.height]);
+    return tf;
+  }
+}
+
+export interface Viewport {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }

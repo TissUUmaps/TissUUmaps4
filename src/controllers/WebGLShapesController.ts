@@ -2,7 +2,7 @@ import { IShapesData } from "../data/shapes";
 import { ITableData } from "../data/table";
 import { ILayerModel } from "../models/layer";
 import { IShapesModel } from "../models/shapes";
-import WebGLController from "./WebGLController";
+import WebGLController, { Viewport } from "./WebGLController";
 
 export default class WebGLShapesController extends WebGLController {
   constructor(gl: WebGL2RenderingContext) {
@@ -25,7 +25,10 @@ export default class WebGLShapesController extends WebGLController {
     return await Promise.resolve(true);
   }
 
-  draw(): void {
+  draw(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _viewport: Viewport,
+  ): void {
     // TODO draw shapes
   }
 

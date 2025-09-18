@@ -10,7 +10,7 @@ import {
 } from "../models/types";
 import ColorUtils from "../utils/ColorUtils";
 import WebGLUtils from "../utils/WebGLUtils";
-import WebGLController from "./WebGLController";
+import WebGLController, { Viewport } from "./WebGLController";
 import pointsFragmentShader from "./shaders/points.frag?raw";
 import pointsVertexShader from "./shaders/points.vert?raw";
 
@@ -53,7 +53,7 @@ export default class WebGLPointsController extends WebGLController {
   private readonly _program: WebGLProgram;
   private readonly _uniformLocations: {
     transformsUBO: GLuint;
-    viewTransform: WebGLUniformLocation;
+    worldToViewportTransform: WebGLUniformLocation;
     markerAtlas: WebGLUniformLocation;
   };
   private readonly _buffers: {
@@ -82,10 +82,15 @@ export default class WebGLPointsController extends WebGLController {
         this._program,
         "TransformsUBO",
       ),
-      viewTransform:
-        this._gl.getUniformLocation(this._program, "u_viewTransform") ??
+      worldToViewportTransform:
+        this._gl.getUniformLocation(
+          this._program,
+          "u_worldToViewportTransform",
+        ) ??
         (() => {
-          throw new Error("Failed to get uniform location for u_viewTransform");
+          throw new Error(
+            "Failed to get uniform location for u_worldToViewportTransform",
+          );
         })(),
       markerAtlas:
         this._gl.getUniformLocation(this._program, "u_markerAtlas") ??
@@ -148,11 +153,10 @@ export default class WebGLPointsController extends WebGLController {
       return false;
     }
     this._bufferSlices = newBufferSlices;
-    this.draw();
     return true;
   }
 
-  draw(): void {
+  draw(viewport: Viewport): void {
     // TODO blending
     this._gl.useProgram(this._program);
     this._gl.bindVertexArray(this._vao);
@@ -164,12 +168,12 @@ export default class WebGLPointsController extends WebGLController {
     this._gl.bindBufferBase(
       this._gl.UNIFORM_BUFFER,
       0,
-      this._createPointsTransforms(),
+      this._createDataToWorldTransforms(),
     );
     this._gl.uniformMatrix3fv(
-      this._uniformLocations.viewTransform,
+      this._uniformLocations.worldToViewportTransform,
       false,
-      this._createViewTransform(),
+      WebGLPointsController.worldToViewport(viewport),
     );
     // TODO
     // this._gl.activeTexture(this._gl.TEXTURE0);
@@ -602,17 +606,17 @@ export default class WebGLPointsController extends WebGLController {
     return newBufferSlices;
   }
 
-  private _createPointsTransforms(): Float32Array {
-    const pointsTransforms = new Float32Array(this._bufferSlices.length * 9);
+  private _createDataToWorldTransforms(): Float32Array {
+    const data = new Float32Array(this._bufferSlices.length * 9);
     for (let i = 0; i < this._bufferSlices.length; i++) {
-      const pbs = this._bufferSlices[i]!;
-      const transform = WebGLPointsController._createTransform(
-        pbs.meta.layer,
-        pbs.meta.layerConfig,
+      const bufferSlice = this._bufferSlices[i]!;
+      const tf = WebGLPointsController.dataToLayer(
+        bufferSlice.meta.layerConfig,
       );
-      pointsTransforms.set(transform, i * 9);
+      WebGLPointsController.layerToWorld(bufferSlice.meta.layer, tf);
+      data.set(tf, i * 9);
     }
-    return pointsTransforms;
+    return data;
   }
 }
 

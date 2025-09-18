@@ -1,3 +1,4 @@
+import OpenSeadragon from "openseadragon";
 import { useCallback, useEffect, useRef } from "react";
 
 import OpenSeadragonController from "../controllers/OpenSeadragonController";
@@ -36,23 +37,21 @@ export default function ViewerPanel() {
     (state) => state.shapesDataLoaderFactories,
   );
 
-  const onViewerResize = useCallback(() => {
-    const os = osRef.current;
+  const onViewerResize = useCallback((e: OpenSeadragon.ResizeEvent) => {
     const gl = glRef.current;
-    if (os !== null && gl !== null) {
-      const viewerCanvas = os.viewer.drawer.canvas as HTMLCanvasElement;
-      gl.canvas.width = viewerCanvas.width;
-      gl.canvas.height = viewerCanvas.height;
-      gl.pointsController.draw();
-      gl.shapesController.draw();
+    if (gl !== null) {
+      gl.canvas.width = e.newContainerSize.x;
+      gl.canvas.height = e.newContainerSize.y;
+      gl.pointsController.draw(e.eventSource.viewport.getBounds(true));
+      gl.shapesController.draw(e.eventSource.viewport.getBounds(true));
     }
   }, []);
 
-  const onViewerViewportChange = useCallback(() => {
+  const onViewerViewportChange = useCallback((e: OpenSeadragon.ViewerEvent) => {
     const gl = glRef.current;
     if (gl !== null) {
-      gl.pointsController.draw();
-      gl.shapesController.draw();
+      gl.pointsController.draw(e.eventSource.viewport.getBounds(true));
+      gl.shapesController.draw(e.eventSource.viewport.getBounds(true));
     }
   }, []);
 
@@ -137,6 +136,10 @@ export default function ViewerPanel() {
           () => abort,
         )
         .catch(console.error);
+      const os = osRef.current;
+      if (os !== null) {
+        gl.pointsController.draw(os.viewer.viewport.getBounds(true));
+      }
     }
     return () => {
       abort = true;
