@@ -151,7 +151,8 @@ export default class OpenSeadragonController {
               currentIndex,
               desiredIndex,
               () => {
-                throw new Error("Method not implemented"); // TODO create labels tile source
+                // TODO create labels tile source
+                throw new Error("Method not implemented");
               },
               () => ({ labels: labels, layerConfig: layerConfig }),
             );
