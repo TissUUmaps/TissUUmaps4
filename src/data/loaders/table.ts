@@ -28,21 +28,17 @@ export class TablePointsData implements IPointsData {
     return this._tableData.getIds();
   }
 
+  getLength(): number {
+    return this._tableData.getLength();
+  }
+
   getDimensions(): string[] {
     return this._columns || this._tableData.getColumns();
   }
 
-  async loadPositions(
-    xDimension: string,
-    yDimension: string,
-  ): Promise<[Float32Array, Float32Array]> {
-    const px = this._tableData.loadColumn<number>(xDimension);
-    const py = this._tableData.loadColumn<number>(yDimension);
-    const [xs, ys] = await Promise.all([px, py]);
-    return [
-      xs instanceof Float32Array ? xs : Float32Array.from(xs),
-      ys instanceof Float32Array ? ys : Float32Array.from(ys),
-    ];
+  async loadCoordinates(dimension: string): Promise<Float32Array> {
+    const coords = await this._tableData.loadColumn<number>(dimension);
+    return coords instanceof Float32Array ? coords : Float32Array.from(coords);
   }
 
   destroy(): void {}

@@ -1,3 +1,5 @@
+import { mat3 } from "gl-matrix";
+
 import { IPointsData } from "../data/points";
 import { ITableData } from "../data/table";
 import { ILayerModel } from "../models/layer";
@@ -135,7 +137,7 @@ export default class WebGLPointsController extends WebGLController {
       return false;
     }
     let buffersResized = false;
-    const n = metas.reduce((s, x) => s + x.xs.length, 0);
+    const n = metas.reduce((s, meta) => s + meta.data.getLength(), 0);
     if (this._n !== n) {
       this._resizeBuffers(n);
       buffersResized = true;
@@ -175,7 +177,7 @@ export default class WebGLPointsController extends WebGLController {
     this._gl.uniformMatrix3fv(
       this._uniformLocations.worldToViewportTransform,
       false,
-      WebGLPointsController.worldToViewport(viewport),
+      WebGLPointsController.createWorldToViewportTransform(viewport),
     );
     // TODO
     // this._gl.activeTexture(this._gl.TEXTURE0);
@@ -322,20 +324,11 @@ export default class WebGLPointsController extends WebGLController {
             return null;
           }
           if (data !== null) {
-            const [xs, ys] = await data.loadPositions(
-              layerConfig.pointXDimension,
-              layerConfig.pointYDimension,
-            );
-            if (checkAbort()) {
-              return null;
-            }
             metas.push({
               layer: layer,
               points: points,
               layerConfig: layerConfig,
               data: data,
-              xs: xs,
-              ys: ys,
             });
           }
         }
@@ -361,7 +354,7 @@ export default class WebGLPointsController extends WebGLController {
     const newBufferSlices: PointsBufferSlice[] = [];
     const transformsUBOData = new Float32Array(metas.length * 9);
     for (const meta of metas) {
-      const length = meta.xs.length;
+      const length = meta.data.getLength();
       const bufferSlice = this._bufferSlices[i];
       const bufferSliceChanged =
         buffersResized ||
@@ -372,44 +365,42 @@ export default class WebGLPointsController extends WebGLController {
         bufferSlice.meta.points !== meta.points ||
         bufferSlice.meta.layerConfig !== meta.layerConfig ||
         bufferSlice.meta.data !== meta.data;
-      // xs
       if (
         bufferSliceChanged ||
         bufferSlice.config.pointXDimension !== meta.layerConfig.pointXDimension
       ) {
-        WebGLUtils.loadBufferData(this._gl, this._buffers.x, meta.xs, offset);
+        const xData = await meta.data.loadCoordinates(
+          meta.layerConfig.pointXDimension,
+        );
+        if (checkAbort()) {
+          return null;
+        }
+        WebGLUtils.loadBufferData(this._gl, this._buffers.x, xData, offset);
       }
-      // ys
       if (
         bufferSliceChanged ||
         bufferSlice.config.pointYDimension !== meta.layerConfig.pointYDimension
       ) {
-        WebGLUtils.loadBufferData(this._gl, this._buffers.y, meta.ys, offset);
+        const yData = await meta.data.loadCoordinates(
+          meta.layerConfig.pointYDimension,
+        );
+        if (checkAbort()) {
+          return null;
+        }
+        WebGLUtils.loadBufferData(this._gl, this._buffers.y, yData, offset);
       }
-      // sizes
       if (
         bufferSliceChanged ||
         bufferSlice.config.pointSize !== meta.points.pointSize ||
         bufferSlice.config.sizeMap !== meta.points.sizeMap
       ) {
-        const sizeData = new Float16Array(length);
-        let sizeMap = undefined;
-        if (meta.points.sizeMap !== undefined) {
-          if (typeof meta.points.sizeMap === "string") {
-            sizeMap = sizeMaps.get(meta.points.sizeMap);
-          } else {
-            sizeMap = new Map(Object.entries(meta.points.sizeMap));
-          }
-        }
-        const success = await this._prepareBufferData<number>(
-          sizeData,
-          meta.points.pointSize,
-          WebGLPointsController._DEFAULT_POINT_SIZES,
-          sizeMap,
+        const sizeData = await this._loadPointSizes(
+          meta,
+          sizeMaps,
           loadTableByID,
           checkAbort,
         );
-        if (!success) {
+        if (sizeData === null || checkAbort()) {
           return null;
         }
         WebGLUtils.loadBufferData(
@@ -419,32 +410,18 @@ export default class WebGLPointsController extends WebGLController {
           offset,
         );
       }
-      // colors
       if (
         bufferSliceChanged ||
         bufferSlice.config.pointColor !== meta.points.pointColor ||
         bufferSlice.config.colorMap !== meta.points.colorMap
       ) {
-        const colorData = new Float16Array(3 * length);
-        let colorMap = undefined;
-        if (meta.points.colorMap !== undefined) {
-          if (typeof meta.points.colorMap === "string") {
-            colorMap = colorMaps.get(meta.points.colorMap);
-          } else {
-            colorMap = new Map(Object.entries(meta.points.colorMap));
-          }
-        }
-        const success = await this._prepareBufferData<Color, string>(
-          colorData,
-          meta.points.pointColor,
-          WebGLPointsController._DEFAULT_POINT_COLORS,
-          colorMap,
+        const colorData = await this._loadPointColors(
+          meta,
+          colorMaps,
           loadTableByID,
           checkAbort,
-          (colorValue) => [colorValue.r, colorValue.g, colorValue.b],
-          (colorTableValue) => ColorUtils.parseHex(colorTableValue),
         );
-        if (!success) {
+        if (colorData === null || checkAbort()) {
           return null;
         }
         WebGLUtils.loadBufferData(
@@ -454,7 +431,6 @@ export default class WebGLPointsController extends WebGLController {
           offset,
         );
       }
-      // visibilities
       if (
         bufferSliceChanged ||
         bufferSlice.config.layerVisibility !== meta.layer.visibility ||
@@ -462,35 +438,14 @@ export default class WebGLPointsController extends WebGLController {
         bufferSlice.config.pointVisibility !== meta.points.pointVisibility ||
         bufferSlice.config.visibilityMap !== meta.points.visibilityMap
       ) {
-        const visibilityData = new Uint8Array(length);
-        if (
-          meta.layer.visibility === false ||
-          meta.points.visibility === false
-        ) {
-          visibilityData.fill(0);
-        } else {
-          let visibilityMap = undefined;
-          if (meta.points.visibilityMap !== undefined) {
-            if (typeof meta.points.visibilityMap === "string") {
-              visibilityMap = visibilityMaps.get(meta.points.visibilityMap);
-            } else {
-              visibilityMap = new Map(
-                Object.entries(meta.points.visibilityMap),
-              );
-            }
-          }
-          const success = await this._prepareBufferData<boolean>(
-            visibilityData,
-            meta.points.pointVisibility,
-            WebGLPointsController._DEFAULT_POINT_VISIBILITIES,
-            visibilityMap,
-            loadTableByID,
-            checkAbort,
-            (visibilityValue) => (visibilityValue ? 1 : 0),
-          );
-          if (!success) {
-            return null;
-          }
+        const visibilityData = await this._loadPointVisibilities(
+          meta,
+          visibilityMaps,
+          loadTableByID,
+          checkAbort,
+        );
+        if (visibilityData === null || checkAbort()) {
+          return null;
         }
         WebGLUtils.loadBufferData(
           this._gl,
@@ -499,7 +454,6 @@ export default class WebGLPointsController extends WebGLController {
           offset,
         );
       }
-      // opacities
       if (
         bufferSliceChanged ||
         bufferSlice.config.layerOpacity !== meta.layer.opacity ||
@@ -507,28 +461,13 @@ export default class WebGLPointsController extends WebGLController {
         bufferSlice.config.pointOpacity !== meta.points.pointOpacity ||
         bufferSlice.config.opacityMap !== meta.points.opacityMap
       ) {
-        const opacityData = new Float16Array(length);
-        let opacityMap = undefined;
-        if (meta.points.opacityMap !== undefined) {
-          if (typeof meta.points.opacityMap === "string") {
-            opacityMap = opacityMaps.get(meta.points.opacityMap);
-          } else {
-            opacityMap = new Map(Object.entries(meta.points.opacityMap));
-          }
-        }
-        const success = await this._prepareBufferData<number>(
-          opacityData,
-          meta.points.pointOpacity,
-          WebGLPointsController._DEFAULT_POINT_OPACITIES,
-          opacityMap,
+        const opacityData = await this._loadPointOpacities(
+          meta,
+          opacityMaps,
           loadTableByID,
           checkAbort,
-          (opacityValue) =>
-            (meta.layer.opacity ?? 1.0) *
-            (meta.points.opacity ?? 1.0) *
-            opacityValue,
         );
-        if (!success) {
+        if (opacityData === null || checkAbort()) {
           return null;
         }
         WebGLUtils.loadBufferData(
@@ -538,30 +477,18 @@ export default class WebGLPointsController extends WebGLController {
           offset,
         );
       }
-      // marker indices
       if (
         bufferSliceChanged ||
         bufferSlice.config.pointMarker !== meta.points.pointMarker ||
         bufferSlice.config.markerMap !== meta.points.markerMap
       ) {
-        const markerIndexData = new Uint8Array(length);
-        let markerMap = undefined;
-        if (meta.points.markerMap !== undefined) {
-          if (typeof meta.points.markerMap === "string") {
-            markerMap = markerMaps.get(meta.points.markerMap);
-          } else {
-            markerMap = new Map(Object.entries(meta.points.markerMap));
-          }
-        }
-        const success = await this._prepareBufferData<Marker, number>(
-          markerIndexData,
-          meta.points.pointMarker,
-          WebGLPointsController._DEFAULT_POINT_MARKERS,
-          markerMap,
+        const markerIndexData = await this._loadPointMarkerIndices(
+          meta,
+          markerMaps,
           loadTableByID,
           checkAbort,
         );
-        if (!success) {
+        if (markerIndexData === null || checkAbort()) {
           return null;
         }
         WebGLUtils.loadBufferData(
@@ -571,13 +498,12 @@ export default class WebGLPointsController extends WebGLController {
           offset,
         );
       }
-      // transform indices
       if (bufferSliceChanged) {
-        const transformIndices = new Uint8Array(length).fill(i);
+        const transformIndexData = new Uint8Array(length).fill(i);
         WebGLUtils.loadBufferData(
           this._gl,
           this._buffers.transformIndex,
-          transformIndices,
+          transformIndexData,
           offset,
         );
       }
@@ -604,10 +530,12 @@ export default class WebGLPointsController extends WebGLController {
           markerMap: meta.points.markerMap,
         },
       });
-      // transform UBO
-      let tf = WebGLPointsController.dataToLayer(meta.layerConfig);
-      tf = WebGLPointsController.layerToWorld(meta.layer, tf);
-      transformsUBOData.set(tf, i * 9);
+      const dataToWorldTransform = mat3.multiply(
+        mat3.create(),
+        WebGLPointsController.createLayerToWorldTransform(meta.layer),
+        WebGLPointsController.createDataToLayerTransform(meta.layerConfig),
+      );
+      transformsUBOData.set(dataToWorldTransform, i * 9);
       offset += length;
       i++;
     }
@@ -618,6 +546,162 @@ export default class WebGLPointsController extends WebGLController {
     );
     return newBufferSlices;
   }
+
+  private async _loadPointSizes(
+    meta: PointsMeta,
+    sizeMaps: Map<string, Map<string, number>>,
+    loadTableByID: (tableId: string) => Promise<ITableData>,
+    checkAbort: () => boolean,
+  ): Promise<Float16Array | null> {
+    const data = new Float16Array(length);
+    let sizeMap = undefined;
+    if (meta.points.sizeMap !== undefined) {
+      if (typeof meta.points.sizeMap === "string") {
+        sizeMap = sizeMaps.get(meta.points.sizeMap);
+      } else {
+        sizeMap = new Map(Object.entries(meta.points.sizeMap));
+      }
+    }
+    const success = await this._prepareBufferData<number>(
+      data,
+      meta.points.pointSize,
+      WebGLPointsController._DEFAULT_POINT_SIZES,
+      sizeMap,
+      loadTableByID,
+      checkAbort,
+    );
+    if (!success || checkAbort()) {
+      return null;
+    }
+    return data;
+  }
+
+  private async _loadPointColors(
+    meta: PointsMeta,
+    colorMaps: Map<string, Map<string, Color>>,
+    loadTableByID: (tableId: string) => Promise<ITableData>,
+    checkAbort: () => boolean,
+  ): Promise<Float16Array | null> {
+    const data = new Float16Array(3 * length);
+    let colorMap = undefined;
+    if (meta.points.colorMap !== undefined) {
+      if (typeof meta.points.colorMap === "string") {
+        colorMap = colorMaps.get(meta.points.colorMap);
+      } else {
+        colorMap = new Map(Object.entries(meta.points.colorMap));
+      }
+    }
+    const success = await this._prepareBufferData<Color, string>(
+      data,
+      meta.points.pointColor,
+      WebGLPointsController._DEFAULT_POINT_COLORS,
+      colorMap,
+      loadTableByID,
+      checkAbort,
+      (colorValue) => [colorValue.r, colorValue.g, colorValue.b],
+      (colorTableValue) => ColorUtils.parseHex(colorTableValue),
+    );
+    if (!success || checkAbort()) {
+      return null;
+    }
+    return data;
+  }
+
+  private async _loadPointVisibilities(
+    meta: PointsMeta,
+    visibilityMaps: Map<string, Map<string, boolean>>,
+    loadTableByID: (tableId: string) => Promise<ITableData>,
+    checkAbort: () => boolean,
+  ): Promise<Uint8Array | null> {
+    const data = new Uint8Array(length);
+    if (meta.layer.visibility === false || meta.points.visibility === false) {
+      data.fill(0);
+    } else {
+      let visibilityMap = undefined;
+      if (meta.points.visibilityMap !== undefined) {
+        if (typeof meta.points.visibilityMap === "string") {
+          visibilityMap = visibilityMaps.get(meta.points.visibilityMap);
+        } else {
+          visibilityMap = new Map(Object.entries(meta.points.visibilityMap));
+        }
+      }
+      const success = await this._prepareBufferData<boolean>(
+        data,
+        meta.points.pointVisibility,
+        WebGLPointsController._DEFAULT_POINT_VISIBILITIES,
+        visibilityMap,
+        loadTableByID,
+        checkAbort,
+        (visibilityValue) => (visibilityValue ? 1 : 0),
+      );
+      if (!success || checkAbort()) {
+        return null;
+      }
+    }
+    return data;
+  }
+
+  private async _loadPointOpacities(
+    meta: PointsMeta,
+    opacityMaps: Map<string, Map<string, number>>,
+    loadTableByID: (tableId: string) => Promise<ITableData>,
+    checkAbort: () => boolean,
+  ): Promise<Float16Array | null> {
+    const data = new Float16Array(length);
+    let opacityMap = undefined;
+    if (meta.points.opacityMap !== undefined) {
+      if (typeof meta.points.opacityMap === "string") {
+        opacityMap = opacityMaps.get(meta.points.opacityMap);
+      } else {
+        opacityMap = new Map(Object.entries(meta.points.opacityMap));
+      }
+    }
+    const success = await this._prepareBufferData<number>(
+      data,
+      meta.points.pointOpacity,
+      WebGLPointsController._DEFAULT_POINT_OPACITIES,
+      opacityMap,
+      loadTableByID,
+      checkAbort,
+      (opacityValue) =>
+        (meta.layer.opacity ?? 1.0) *
+        (meta.points.opacity ?? 1.0) *
+        opacityValue,
+    );
+    if (!success || checkAbort()) {
+      return null;
+    }
+    return data;
+  }
+
+  private async _loadPointMarkerIndices(
+    meta: PointsMeta,
+    markerMaps: Map<string, Map<string, Marker>>,
+    loadTableByID: (tableId: string) => Promise<ITableData>,
+    checkAbort: () => boolean,
+  ): Promise<Uint8Array | null> {
+    const data = new Uint8Array(length);
+    let markerMap = undefined;
+    if (meta.points.markerMap !== undefined) {
+      if (typeof meta.points.markerMap === "string") {
+        markerMap = markerMaps.get(meta.points.markerMap);
+      } else {
+        markerMap = new Map(Object.entries(meta.points.markerMap));
+      }
+    }
+    const success = await this._prepareBufferData<Marker, number>(
+      data,
+      meta.points.pointMarker,
+      WebGLPointsController._DEFAULT_POINT_MARKERS,
+      markerMap,
+      loadTableByID,
+      checkAbort,
+    );
+    if (!success || checkAbort()) {
+      return null;
+    }
+    return data;
+  }
 }
 
 type PointsMeta = {
@@ -625,8 +709,6 @@ type PointsMeta = {
   points: IPointsModel;
   layerConfig: IPointsLayerConfigModel;
   data: IPointsData;
-  xs: Float32Array;
-  ys: Float32Array;
 };
 
 type PointsBufferSlice = {

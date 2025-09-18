@@ -3,6 +3,7 @@ import { GeoJSONGeometry } from "./types";
 
 export interface IShapesData extends IData {
   getIds(): number[];
+  getLength(): number;
   loadGeometries(): Promise<GeoJSONGeometry[]>;
 }
 

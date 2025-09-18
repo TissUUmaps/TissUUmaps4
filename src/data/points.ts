@@ -2,11 +2,9 @@ import { IData, IDataLoader } from "./base";
 
 export interface IPointsData extends IData {
   getIds(): number[];
+  getLength(): number;
   getDimensions(): string[];
-  loadPositions(
-    xDimension: string,
-    yDimension: string,
-  ): Promise<[Float32Array, Float32Array]>;
+  loadCoordinates(dimension: string): Promise<Float32Array>;
 }
 
 export interface IPointsDataLoader<TPointsData extends IPointsData>

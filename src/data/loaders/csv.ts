@@ -34,6 +34,10 @@ export class CSVTableData implements ITableData {
     return this._ids;
   }
 
+  getLength(): number {
+    return this._ids.length;
+  }
+
   getColumns(): string[] {
     return this._columns;
   }

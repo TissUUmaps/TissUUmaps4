@@ -87,13 +87,10 @@ export default class WebGLController {
     return true;
   }
 
-  protected static dataToLayer(
+  protected static createDataToLayerTransform(
     layerConfig: ILayerConfigModel,
-    tf?: mat3,
   ): mat3 {
-    if (tf === undefined) {
-      tf = mat3.create();
-    }
+    const tf = mat3.create();
     if (layerConfig.scale) {
       mat3.scale(tf, tf, [layerConfig.scale, layerConfig.scale]);
     }
@@ -112,10 +109,8 @@ export default class WebGLController {
     return tf;
   }
 
-  protected static layerToWorld(layer: ILayerModel, tf?: mat3): mat3 {
-    if (tf === undefined) {
-      tf = mat3.create();
-    }
+  protected static createLayerToWorldTransform(layer: ILayerModel): mat3 {
+    const tf = mat3.create();
     if (layer.scale) {
       mat3.scale(tf, tf, [layer.scale, layer.scale]);
     }
@@ -125,10 +120,8 @@ export default class WebGLController {
     return tf;
   }
 
-  protected static worldToViewport(viewport: Viewport, tf?: mat3): mat3 {
-    if (tf === undefined) {
-      tf = mat3.create();
-    }
+  protected static createWorldToViewportTransform(viewport: Viewport): mat3 {
+    const tf = mat3.create();
     mat3.translate(tf, tf, [-viewport.x, -viewport.y]);
     mat3.scale(tf, tf, [1.0 / viewport.width, 1.0 / viewport.height]);
     return tf;
