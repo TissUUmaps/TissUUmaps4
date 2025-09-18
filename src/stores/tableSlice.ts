@@ -93,7 +93,20 @@ export const createTableSlice: BoundStoreStateCreator<TableSlice> = (
 });
 
 const initialTableSliceState: TableSliceState = {
-  tableMap: new Map<string, ITableModel>(),
+  // TODO remove test data
+  tableMap: new Map<string, ITableModel>([
+    [
+      "iss",
+      {
+        id: "iss",
+        name: "ISS",
+        dataSource: {
+          type: "csv",
+          url: "/data/breast/TissueA.csv",
+        } as ICSVTableDataSourceModel,
+      },
+    ],
+  ]),
   tableDataCache: new Map<ITableDataSourceModel, ITableData>(),
   tableDataLoaderFactories: new Map<string, TableDataLoaderFactory>([
     [

@@ -384,11 +384,9 @@ export default class WebGLPointsController extends WebGLController {
       }
       if (
         bufferSliceChanged ||
-        bufferSlice.config.pointXDimension !== meta.layerConfig.pointXDimension
+        bufferSlice.config.pointX !== meta.layerConfig.x
       ) {
-        const xData = await meta.data.loadCoordinates(
-          meta.layerConfig.pointXDimension,
-        );
+        const xData = await meta.data.loadCoordinates(meta.layerConfig.x);
         if (checkAbort()) {
           return null;
         }
@@ -396,11 +394,9 @@ export default class WebGLPointsController extends WebGLController {
       }
       if (
         bufferSliceChanged ||
-        bufferSlice.config.pointYDimension !== meta.layerConfig.pointYDimension
+        bufferSlice.config.pointY !== meta.layerConfig.y
       ) {
-        const yData = await meta.data.loadCoordinates(
-          meta.layerConfig.pointYDimension,
-        );
+        const yData = await meta.data.loadCoordinates(meta.layerConfig.y);
         if (checkAbort()) {
           return null;
         }
@@ -524,8 +520,8 @@ export default class WebGLPointsController extends WebGLController {
           layerOpacity: meta.layer.opacity,
           pointsVisibility: meta.points.visibility,
           pointsOpacity: meta.points.opacity,
-          pointXDimension: meta.layerConfig.pointXDimension,
-          pointYDimension: meta.layerConfig.pointYDimension,
+          pointX: meta.layerConfig.x,
+          pointY: meta.layerConfig.y,
           pointSize: meta.points.pointSize,
           sizeMap: meta.points.sizeMap,
           pointColor: meta.points.pointColor,
@@ -730,8 +726,8 @@ type PointsBufferSlice = {
     layerOpacity?: number;
     pointsVisibility?: boolean;
     pointsOpacity?: number;
-    pointXDimension: string;
-    pointYDimension: string;
+    pointX: string;
+    pointY: string;
     pointSize?: number | TableValuesColumn | TableGroupsColumn;
     sizeMap?: string | { [key: string]: number };
     pointColor?: Color | TableValuesColumn | TableGroupsColumn;

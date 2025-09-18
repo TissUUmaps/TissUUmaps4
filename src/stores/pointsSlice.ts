@@ -91,7 +91,23 @@ export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
 });
 
 const initialPointsSliceState: PointsSliceState = {
-  pointsMap: new Map<string, IPointsModel>(),
+  // TODO remove test data
+  pointsMap: new Map<string, IPointsModel>([
+    [
+      "iss",
+      {
+        id: "iss",
+        name: "ISS",
+        dataSource: {
+          type: "table",
+          tableId: "iss",
+        } as ITablePointsDataSourceModel,
+        layerConfigs: [
+          { layerId: "breast", x: "global_X_pos", y: "global_Y_pos" },
+        ],
+      },
+    ],
+  ]),
   pointsDataCache: new Map<IPointsDataSourceModel, IPointsData>(),
   pointsDataLoaderFactories: new Map<string, PointsDataLoaderFactory>([
     [

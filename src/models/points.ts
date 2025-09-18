@@ -47,10 +47,10 @@ export interface IPointsDataSourceModel<TType extends string = string>
 /** A layer-specific display configuration for 2D point clouds */
 export interface IPointsLayerConfigModel extends ILayerConfigModel {
   /** Dimension containing point-wise X coordinates */
-  pointXDimension: string;
+  x: string;
 
   /** Dimension containing point-wise Y coordinates */
-  pointYDimension: string;
+  y: string;
 }
 
 // TODO points presets
