@@ -123,7 +123,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
             column.chunks.push(
               column.isNaN
                 ? (column.currentChunk as string[])
-                : new Float64Array(column.currentChunk as number[]),
+                : new Float32Array(column.currentChunk as number[]),
             );
             column.currentChunk = [];
           }
@@ -137,7 +137,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
           column.chunks.push(
             column.isNaN
               ? (column.currentChunk as string[])
-              : new Float64Array(column.currentChunk as number[]),
+              : new Float32Array(column.currentChunk as number[]),
           );
           column.currentChunk = [];
         }
@@ -147,7 +147,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
           );
           columnData.push(data);
         } else {
-          const data = new Float64Array(n);
+          const data = new Float32Array(n);
           let offset = 0;
           for (const chunk of column.chunks) {
             data.set(chunk as TypedArray, offset);
