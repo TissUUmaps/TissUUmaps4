@@ -103,6 +103,7 @@ const initialTableSliceState: TableSliceState = {
         dataSource: {
           type: "csv",
           url: "/data/breast/TissueA.csv",
+          loadColumns: ["global_X_pos", "global_Y_pos"],
         } as ICSVTableDataSourceModel,
       },
     ],

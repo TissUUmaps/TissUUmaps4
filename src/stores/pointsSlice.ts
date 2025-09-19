@@ -101,6 +101,7 @@ const initialPointsSliceState: PointsSliceState = {
         dataSource: {
           type: "table",
           tableId: "iss",
+          dimensionColumns: ["global_X_pos", "global_Y_pos"],
         } as ITablePointsDataSourceModel,
         layerConfigs: [
           { layerId: "breast", x: "global_X_pos", y: "global_Y_pos" },

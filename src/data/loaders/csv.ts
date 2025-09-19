@@ -2,40 +2,51 @@ import * as papaparse from "papaparse";
 
 import { ITableDataSourceModel } from "../../models/table";
 import { ITableData } from "../table";
-import { MappableArrayLike } from "../types";
+import { MappableArrayLike, TypedArray } from "../types";
 import { TableDataLoaderBase } from "./base";
 
 export const CSV_TABLE_DATA_SOURCE = "csv";
 
 export interface ICSVTableDataSourceModel
   extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
-  idColumn: string;
-  parseConfig?: Partial<
-    papaparse.ParseRemoteConfig | papaparse.ParseLocalConfig
-  >;
+  columns?: string[];
+  loadColumns?: string[];
+  chunkSize?: number;
+  parseConfig?: Pick<
+    papaparse.ParseConfig,
+    | "delimiter"
+    | "newline"
+    | "quoteChar"
+    | "escapeChar"
+    | "preview"
+    | "comments"
+    | "fastMode"
+    | "skipFirstNLines"
+  > &
+    Pick<papaparse.ParseLocalConfig, "encoding"> &
+    Pick<
+      papaparse.ParseRemoteConfig,
+      "downloadRequestHeaders" | "downloadRequestBody" | "withCredentials"
+    >;
 }
 
 export class CSVTableData implements ITableData {
-  private readonly _ids: number[];
+  private readonly _length: number;
   private readonly _columns: string[];
-  private readonly _records: Record<string, unknown>[];
+  private readonly _columnData: (string[] | TypedArray)[];
 
   constructor(
-    ids: number[],
+    length: number,
     columns: string[],
-    records: Record<string, unknown>[],
+    columnData: (string[] | TypedArray)[],
   ) {
-    this._ids = ids;
+    this._length = length;
     this._columns = columns;
-    this._records = records;
-  }
-
-  getIds(): number[] {
-    return this._ids;
+    this._columnData = columnData;
   }
 
   getLength(): number {
-    return this._ids.length;
+    return this._length;
   }
 
   getColumns(): string[] {
@@ -46,8 +57,10 @@ export class CSVTableData implements ITableData {
     if (!this._columns.includes(column)) {
       throw new Error(`Column "${column}" does not exist.`);
     }
-    const data = this._records.map((row) => row[column]);
-    return await Promise.resolve(data as MappableArrayLike<T>);
+    const columnIndex = this._columns.indexOf(column);
+    return await Promise.resolve(
+      this._columnData[columnIndex]! as unknown as MappableArrayLike<T>,
+    );
   }
 
   destroy(): void {}
@@ -57,41 +70,139 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   ICSVTableDataSourceModel,
   CSVTableData
 > {
+  private static readonly _DEFAULT_CHUNK_SIZE = 10000;
+  private static readonly _DEFAULT_DELIMITER = ",";
+
   async loadTable(): Promise<CSVTableData> {
-    const parseResult = await this._loadCSVFile();
-    const records = parseResult.data as Record<string, unknown>[];
-    const ids = records.map((row) => row[this.dataSource.idColumn] as number);
-    const columns = parseResult.meta.fields as string[];
-    return new CSVTableData(ids, columns, records);
+    const [length, columns, columnData] = await this._loadCSVFile();
+    return new CSVTableData(length, columns, columnData);
   }
 
-  private async _loadCSVFile(): Promise<papaparse.ParseResult<unknown>> {
+  private async _loadCSVFile(): Promise<
+    [number, string[], (string[] | Float64Array)[]]
+  > {
+    const chunkSize =
+      this.dataSource.chunkSize ?? CSVTableDataLoader._DEFAULT_CHUNK_SIZE;
+    const delimiter =
+      this.dataSource.parseConfig?.delimiter ??
+      CSVTableDataLoader._DEFAULT_DELIMITER;
+    let n = 0;
+    let allColumnNames = this.dataSource.columns;
+    let columnNames = this.dataSource.loadColumns ?? allColumnNames;
+    let columns: Column[] | undefined;
+    if (allColumnNames !== undefined && columnNames !== undefined) {
+      columns = columnNames.map((columnName) => ({
+        name: columnName,
+        index: allColumnNames!.indexOf(columnName),
+        chunks: [],
+        currentChunk: [],
+        isNaN: false,
+      }));
+    }
+    const step = (results: papaparse.ParseStepResult<unknown>) => {
+      const data = results.data as string[];
+      if (
+        allColumnNames === undefined ||
+        columnNames === undefined ||
+        columns === undefined
+      ) {
+        allColumnNames = data;
+        columnNames ??= allColumnNames;
+        columns = columnNames.map((columnName) => ({
+          name: columnName,
+          index: allColumnNames!.indexOf(columnName),
+          chunks: [],
+          currentChunk: [],
+          isNaN: false,
+        }));
+      } else {
+        if (data.length !== allColumnNames.length) {
+          throw new Error("Inconsistent column length");
+        }
+        for (const column of columns) {
+          const value = data[column.index]!;
+          column.isNaN = column.isNaN || value === "" || isNaN(+value);
+          column.currentChunk.push(column.isNaN ? value : +value);
+        }
+        n += 1;
+        if (n % chunkSize === 0) {
+          for (const column of columns) {
+            column.chunks.push(
+              column.isNaN
+                ? (column.currentChunk as string[])
+                : new Float64Array(column.currentChunk as number[]),
+            );
+            column.currentChunk = [];
+          }
+        }
+      }
+    };
+    const complete = () => {
+      const columnData = [];
+      for (const column of columns!) {
+        if (column.currentChunk.length > 0) {
+          column.chunks.push(
+            column.isNaN
+              ? (column.currentChunk as string[])
+              : new Float64Array(column.currentChunk as number[]),
+          );
+          column.currentChunk = [];
+        }
+        if (column.isNaN) {
+          const data = column.chunks.flatMap((chunk) =>
+            chunk instanceof Float64Array ? Array.from(chunk, String) : chunk,
+          );
+          columnData.push(data);
+        } else {
+          const data = new Float64Array(n);
+          let offset = 0;
+          for (const chunk of column.chunks) {
+            data.set(chunk as Float64Array, offset);
+            offset += chunk.length;
+          }
+          columnData.push(data);
+        }
+        column.chunks = [];
+      }
+      return columnData;
+    };
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       const file = await fh.getFile();
-      return await new Promise<papaparse.ParseResult<unknown>>(
-        (resolve, reject) =>
-          papaparse.parse(file, {
-            ...this.dataSource.parseConfig,
-            dynamicTyping: true,
-            header: true,
-            complete: resolve,
-            error: reject,
-          }),
+      return await new Promise((resolve, reject) =>
+        papaparse.parse(file, {
+          ...this.dataSource.parseConfig,
+          delimiter: delimiter,
+          worker: undefined, // TODO
+          header: false,
+          dynamicTyping: false,
+          skipEmptyLines: true,
+          step: step,
+          complete: () => {
+            const columnData = complete();
+            resolve([n, columnNames!, columnData]);
+          },
+          error: reject,
+        } as papaparse.ParseLocalConfig<unknown, File>),
       );
     }
     if (this.dataSource.url !== undefined) {
       const url = this.dataSource.url;
-      return await new Promise<papaparse.ParseResult<unknown>>(
-        (resolve, reject) =>
-          papaparse.parse(url, {
-            ...this.dataSource.parseConfig,
-            download: true,
-            dynamicTyping: true,
-            header: true,
-            complete: resolve,
-            error: reject,
-          }),
+      return await new Promise((resolve, reject) =>
+        papaparse.parse(url, {
+          ...this.dataSource.parseConfig,
+          download: true,
+          worker: undefined, // TODO
+          header: false,
+          dynamicTyping: false,
+          skipEmptyLines: true,
+          step: step,
+          complete: () => {
+            const columnData = complete();
+            resolve([n, columnNames!, columnData]);
+          },
+          error: reject,
+        } as papaparse.ParseRemoteConfig<unknown>),
       );
     }
     if (this.dataSource.path !== undefined) {
@@ -100,3 +211,11 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
     throw new Error("A URL or workspace path is required to load data.");
   }
 }
+
+type Column = {
+  name: string;
+  index: number;
+  chunks: (string[] | Float64Array)[];
+  currentChunk: (string | number)[];
+  isNaN: boolean;
+};

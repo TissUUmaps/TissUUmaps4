@@ -12,20 +12,16 @@ export interface ITablePointsDataSourceModel
   url: undefined; // Table data does not use a URL
   path: undefined; // Table data does not use a path
   tableId: string;
-  columns?: string[];
+  dimensionColumns?: string[];
 }
 
 export class TablePointsData implements IPointsData {
   private readonly _tableData: ITableData;
-  private readonly _columns: string[] | null;
+  private readonly _dimensionColumns: string[] | null;
 
-  constructor(tableData: ITableData, columns: string[] | null) {
+  constructor(tableData: ITableData, dimensionColumns: string[] | null) {
     this._tableData = tableData;
-    this._columns = columns;
-  }
-
-  getIds(): number[] {
-    return this._tableData.getIds();
+    this._dimensionColumns = dimensionColumns;
   }
 
   getLength(): number {
@@ -33,7 +29,7 @@ export class TablePointsData implements IPointsData {
   }
 
   getDimensions(): string[] {
-    return this._columns || this._tableData.getColumns();
+    return this._dimensionColumns || this._tableData.getColumns();
   }
 
   async loadCoordinates(dimension: string): Promise<Float32Array> {
@@ -62,7 +58,7 @@ export class TablePointsDataLoader extends PointsDataLoaderBase<
   async loadPoints(): Promise<IPointsData> {
     return new TablePointsData(
       await this._loadTableByID(this.dataSource.tableId),
-      this.dataSource.columns ?? null,
+      this.dataSource.dimensionColumns ?? null,
     );
   }
 }

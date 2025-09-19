@@ -11,38 +11,25 @@ export const PARQUET_TABLE_DATA_SOURCE = "parquet";
 
 export interface IParquetTableDataSourceModel
   extends ITableDataSourceModel<typeof PARQUET_TABLE_DATA_SOURCE> {
-  idColumn: string;
   headers?: { [headerName: string]: string };
 }
 
 export class ParquetTableData implements ITableData {
-  private readonly _ids: number[];
-  private readonly _columns: string[];
   private readonly _buffer: hyparquet.AsyncBuffer;
   private readonly _metadata: hyparquet.FileMetaData;
 
-  constructor(
-    ids: number[],
-    columns: string[],
-    buffer: hyparquet.AsyncBuffer,
-    metadata: hyparquet.FileMetaData,
-  ) {
-    this._ids = ids;
-    this._columns = columns;
+  constructor(buffer: hyparquet.AsyncBuffer, metadata: hyparquet.FileMetaData) {
     this._buffer = buffer;
     this._metadata = metadata;
   }
 
-  getIds(): number[] {
-    return this._ids;
-  }
-
   getLength(): number {
-    return this._ids.length;
+    return Number(this._metadata.num_rows);
   }
 
   getColumns(): string[] {
-    return this._columns;
+    const columnSchema = hyparquet.parquetSchema(this._metadata);
+    return columnSchema.children.map((c) => c.element.name);
   }
 
   async loadColumn<T>(column: string): Promise<MappableArrayLike<T>> {
@@ -65,16 +52,7 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
   async loadTable(): Promise<ParquetTableData> {
     const buffer = await this._loadParquetFile();
     const metadata = await hyparquet.parquetMetadataAsync(buffer);
-    const idArray = await parquetReadColumn({
-      file: buffer,
-      columns: [this.dataSource.idColumn],
-      metadata: metadata,
-      compressors: compressors,
-    });
-    const ids = Array.from(idArray) as number[];
-    const columnSchema = hyparquet.parquetSchema(metadata);
-    const columns = columnSchema.children.map((c) => c.element.name);
-    return new ParquetTableData(ids, columns, buffer, metadata);
+    return new ParquetTableData(buffer, metadata);
   }
 
   private async _loadParquetFile(): Promise<hyparquet.AsyncBuffer> {
