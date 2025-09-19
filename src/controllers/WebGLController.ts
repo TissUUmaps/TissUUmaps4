@@ -21,7 +21,7 @@ export default class WebGLController {
   }
 
   protected async _prepareBufferData<TValue, TTableValue = TValue>(
-    arr: TypedArray,
+    data: Exclude<TypedArray, Float64Array>,
     value: TValue | TableValuesColumn | TableGroupsColumn | undefined,
     defaultValues: TValue[],
     tableGroupValues: Map<string, TValue> | undefined,
@@ -47,9 +47,9 @@ export default class WebGLController {
         const value = parseTableValue(tableValues[i]!);
         const arrayValue = toArrayValue(value);
         if (Array.isArray(arrayValue)) {
-          arr.set(arrayValue, i * arrayValue.length);
+          data.set(arrayValue, i * arrayValue.length);
         } else {
-          arr[i] = arrayValue;
+          data[i] = arrayValue;
         }
       }
       return true;
@@ -71,18 +71,18 @@ export default class WebGLController {
             : defaultValues[HashUtils.djb2(tableGroup) % defaultValues.length]!;
         const arrayValue = toArrayValue(value);
         if (Array.isArray(arrayValue)) {
-          arr.set(arrayValue, i * arrayValue.length);
+          data.set(arrayValue, i * arrayValue.length);
         } else {
-          arr[i] = arrayValue;
+          data[i] = arrayValue;
         }
       }
       return true;
     }
     const arrayValue = toArrayValue(value ?? defaultValues[0]!);
     if (Array.isArray(arrayValue)) {
-      ArrayUtils.fillSeq(arr, arrayValue);
+      ArrayUtils.fillSeq(data, arrayValue);
     } else {
-      arr.fill(arrayValue);
+      data.fill(arrayValue);
     }
     return true;
   }

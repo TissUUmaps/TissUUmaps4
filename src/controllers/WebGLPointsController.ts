@@ -18,6 +18,7 @@ import pointsFragmentShader from "./shaders/points.frag?raw";
 import pointsVertexShader from "./shaders/points.vert?raw";
 
 export default class WebGLPointsController extends WebGLController {
+  static readonly NMAX = 256; // see vertex shader
   private static readonly _ATTRIB_LOCATIONS = {
     I: 0,
     X: 1,
@@ -58,9 +59,11 @@ export default class WebGLPointsController extends WebGLController {
 
   private readonly _program: WebGLProgram;
   private readonly _uniformLocations: {
-    dataToWorldTransformsUBO: GLuint;
     worldToViewportTransform: WebGLUniformLocation;
     markerAtlas: WebGLUniformLocation;
+  };
+  private readonly _uniformBlockIndices: {
+    dataToWorldTransformsUBO: number;
   };
   private readonly _buffers: {
     i: WebGLBuffer;
@@ -86,10 +89,6 @@ export default class WebGLPointsController extends WebGLController {
       pointsFragmentShader,
     );
     this._uniformLocations = {
-      dataToWorldTransformsUBO: this._gl.getUniformBlockIndex(
-        this._program,
-        "DataToWorldTransformsUBO",
-      ),
       worldToViewportTransform:
         this._gl.getUniformLocation(
           this._program,
@@ -106,6 +105,12 @@ export default class WebGLPointsController extends WebGLController {
           throw new Error("Failed to get uniform location for u_markerAtlas");
         })(),
     };
+    this._uniformBlockIndices = {
+      dataToWorldTransformsUBO: this._gl.getUniformBlockIndex(
+        this._program,
+        "DataToWorldTransformsUBO",
+      ),
+    };
     this._buffers = {
       i: this._gl.createBuffer(),
       x: this._gl.createBuffer(),
@@ -117,6 +122,13 @@ export default class WebGLPointsController extends WebGLController {
       markerIndex: this._gl.createBuffer(),
       dataToWorldTransformsUBO: this._gl.createBuffer(),
     };
+    WebGLUtils.resizeBuffer(
+      this._gl,
+      this._buffers.dataToWorldTransformsUBO,
+      WebGLPointsController.NMAX * 9 * Float32Array.BYTES_PER_ELEMENT,
+      gl.UNIFORM_BUFFER,
+      gl.DYNAMIC_DRAW,
+    );
     this._markerAtlasTexture = WebGLUtils.loadTexture(this._gl, markers);
     this._vao = this._createVAO();
   }
@@ -141,6 +153,10 @@ export default class WebGLPointsController extends WebGLController {
     );
     if (metas === null || checkAbort()) {
       return false;
+    }
+    if (metas.length > WebGLPointsController.NMAX) {
+      console.warn(`Only rendering ${WebGLPointsController.NMAX} objects`);
+      metas.length = WebGLPointsController.NMAX;
     }
     let buffersResized = false;
     const n = metas.reduce((s, meta) => s + meta.data.getLength(), 0);
@@ -179,7 +195,7 @@ export default class WebGLPointsController extends WebGLController {
     );
     this._gl.uniformBlockBinding(
       this._program,
-      this._uniformLocations.dataToWorldTransformsUBO,
+      this._uniformBlockIndices.dataToWorldTransformsUBO,
       WebGLPointsController._BINDING_POINTS.DATA_TO_WORLD_TRANSFORMS_UBO,
     );
     this._gl.uniformMatrix3fv(

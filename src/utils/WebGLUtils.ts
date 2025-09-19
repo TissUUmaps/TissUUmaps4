@@ -87,8 +87,8 @@ export default class WebGLUtils {
     gl: WebGL2RenderingContext,
     buffer: WebGLBuffer,
     size: GLsizeiptr,
-    usage: GLenum = gl.STATIC_DRAW,
     target: GLenum = gl.ARRAY_BUFFER,
+    usage: GLenum = gl.STATIC_DRAW,
   ): void {
     gl.bindBuffer(target, buffer);
     gl.bufferData(target, size, usage);
@@ -98,7 +98,7 @@ export default class WebGLUtils {
   static loadBufferData(
     gl: WebGL2RenderingContext,
     buffer: WebGLBuffer,
-    data: TypedArray,
+    data: Exclude<TypedArray, Float64Array>,
     offset: number = 0,
     target: GLenum = gl.ARRAY_BUFFER,
   ): void {

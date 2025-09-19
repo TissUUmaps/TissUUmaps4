@@ -1,6 +1,6 @@
 #version 300 es
 
-#define N 256
+#define NMAX 256 // WebGLPointsController.NMAX
 #define MARKER_ATLAS_GRID_SIZE 4u
 #define NUM_MARKERS_PER_CHANNEL 16u  // MARKER_ATLAS_GRID_SIZE * MARKER_ATLAS_GRID_SIZE
 
@@ -14,7 +14,7 @@ layout(location = 6) in float a_opacity;
 layout(location = 7) in uint a_markerIndex;
 
 layout(std140) uniform DataToWorldTransformsUBO {
-    mat3 transform[N];
+    mat3 transform[NMAX];
 } u_dataToWorldTransformsUBO;
 uniform mat3 u_worldToViewportTransform;
 
