@@ -76,23 +76,8 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   private static readonly _DEFAULT_DELIMITER = ",";
 
   async loadTable(): Promise<CSVTableData> {
-    const [length, columns, columnData] = await this._loadCSVFile();
-    return new CSVTableData(length, columns, columnData);
-  }
-
-  private async _loadCSVFile(): Promise<
-    [number, string[], (string[] | TypedArray)[]]
-  > {
     const chunkSize =
       this.dataSource.chunkSize ?? CSVTableDataLoader._DEFAULT_CHUNK_SIZE;
-    const parseConfig = {
-      ...this.dataSource.parseConfig,
-      delimiter:
-        this.dataSource.parseConfig?.delimiter ??
-        CSVTableDataLoader._DEFAULT_DELIMITER,
-      header: false,
-      skipEmptyLines: true,
-    };
     let n = 0;
     let allColumnNames = this.dataSource.columns;
     let columnNames = this.dataSource.loadColumns ?? allColumnNames;
@@ -172,19 +157,21 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
         }
         column.chunks = [];
       }
-      return columnData;
+      return new CSVTableData(n, columnNames!, columnData);
     };
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       const file = await fh.getFile();
       return await new Promise((resolve, reject) =>
         papaparse.parse(file, {
-          ...parseConfig,
+          ...this.dataSource.parseConfig,
+          delimiter:
+            this.dataSource.parseConfig?.delimiter ??
+            CSVTableDataLoader._DEFAULT_DELIMITER,
+          header: false,
+          skipEmptyLines: true,
           step: step,
-          complete: () => {
-            const columnData = complete();
-            resolve([n, columnNames!, columnData]);
-          },
+          complete: () => resolve(complete()),
           error: reject,
         }),
       );
@@ -193,13 +180,15 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
       const url = this.dataSource.url;
       return await new Promise((resolve, reject) =>
         papaparse.parse(url, {
-          ...parseConfig,
+          ...this.dataSource.parseConfig,
           download: true,
+          delimiter:
+            this.dataSource.parseConfig?.delimiter ??
+            CSVTableDataLoader._DEFAULT_DELIMITER,
+          header: false,
+          skipEmptyLines: true,
           step: step,
-          complete: () => {
-            const columnData = complete();
-            resolve([n, columnNames!, columnData]);
-          },
+          complete: () => resolve(complete()),
           error: reject,
         }),
       );

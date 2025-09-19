@@ -17,10 +17,14 @@ export interface IParquetTableDataSourceModel
 export class ParquetTableData implements ITableData {
   private readonly _buffer: hyparquet.AsyncBuffer;
   private readonly _metadata: hyparquet.FileMetaData;
+  private readonly _columns: string[];
 
   constructor(buffer: hyparquet.AsyncBuffer, metadata: hyparquet.FileMetaData) {
     this._buffer = buffer;
     this._metadata = metadata;
+    this._columns = hyparquet
+      .parquetSchema(metadata)
+      .children.map((c) => c.element.name);
   }
 
   getLength(): number {
@@ -28,8 +32,7 @@ export class ParquetTableData implements ITableData {
   }
 
   getColumns(): string[] {
-    const columnSchema = hyparquet.parquetSchema(this._metadata);
-    return columnSchema.children.map((c) => c.element.name);
+    return this._columns;
   }
 
   async loadColumn<T>(column: string): Promise<MappableArrayLike<T>> {

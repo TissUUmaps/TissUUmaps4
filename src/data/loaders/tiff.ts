@@ -93,7 +93,7 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
   TIFFLabelsData
 > {
   async loadLabels(abortSignal?: AbortSignal): Promise<TIFFLabelsData> {
-    const tiff = await this._loadTIFFFile(abortSignal);
+    const tiff = await this._loadTIFF(abortSignal);
     const imageCount = await tiff.getImageCount();
     if (imageCount <= 0) {
       throw new Error("No images found in the TIFF file.");
@@ -128,9 +128,7 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
     );
   }
 
-  private async _loadTIFFFile(
-    abortSignal?: AbortSignal,
-  ): Promise<geotiff.GeoTIFF> {
+  private async _loadTIFF(abortSignal?: AbortSignal): Promise<geotiff.GeoTIFF> {
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       const file = await fh.getFile();

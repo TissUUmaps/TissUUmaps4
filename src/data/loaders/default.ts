@@ -35,13 +35,6 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
   DefaultImageData
 > {
   async loadImage(): Promise<DefaultImageData> {
-    const [tileSource, objectUrl] = await this._loadTileSource();
-    return new DefaultImageData(tileSource, objectUrl);
-  }
-
-  private async _loadTileSource(): Promise<
-    [string | TileSourceConfig, string | null]
-  > {
     if (this.dataSource.tileSourceConfig !== undefined) {
       if (
         this.dataSource.url !== undefined ||
@@ -51,16 +44,16 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
           "Specify either a tile source configuration or a URL/workspace path, not both.",
         );
       }
-      return [this.dataSource.tileSourceConfig, null];
+      return new DefaultImageData(this.dataSource.tileSourceConfig, null);
     }
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       const file = await fh.getFile();
       const objectUrl = URL.createObjectURL(file);
-      return [objectUrl, objectUrl];
+      return new DefaultImageData(objectUrl, objectUrl);
     }
     if (this.dataSource.url !== undefined) {
-      return [this.dataSource.url, null];
+      return new DefaultImageData(this.dataSource.url, null);
     }
     if (this.dataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
