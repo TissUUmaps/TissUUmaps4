@@ -7,6 +7,8 @@ import { TableDataLoaderBase } from "./base";
 
 export const CSV_TABLE_DATA_SOURCE = "csv";
 
+// TODO make numeric data type configurable per column
+
 export interface ICSVTableDataSourceModel
   extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
   columns?: string[];
@@ -79,7 +81,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   }
 
   private async _loadCSVFile(): Promise<
-    [number, string[], (string[] | Float64Array)[]]
+    [number, string[], (string[] | TypedArray)[]]
   > {
     const chunkSize =
       this.dataSource.chunkSize ?? CSVTableDataLoader._DEFAULT_CHUNK_SIZE;
@@ -156,14 +158,14 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
         }
         if (column.isNaN) {
           const data = column.chunks.flatMap((chunk) =>
-            chunk instanceof Float64Array ? Array.from(chunk, String) : chunk,
+            Array.isArray(chunk) ? chunk : Array.from(chunk, String),
           );
           columnData.push(data);
         } else {
           const data = new Float64Array(n);
           let offset = 0;
           for (const chunk of column.chunks) {
-            data.set(chunk as Float64Array, offset);
+            data.set(chunk as TypedArray, offset);
             offset += chunk.length;
           }
           columnData.push(data);
@@ -212,7 +214,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
 type Column = {
   name: string;
   index: number;
-  chunks: (string[] | Float64Array)[];
+  chunks: (string[] | TypedArray)[];
   currentChunk: (string | number)[];
   isNaN: boolean;
 };
