@@ -5,6 +5,8 @@ import OpenSeadragonController from "../controllers/OpenSeadragonController";
 import WebGLManager from "../controllers/WebGLManager";
 import { useBoundStore } from "../stores/boundStore";
 
+// TODO refactor ViewerPanel into its own component library/package
+
 export default function ViewerPanel() {
   const osRef = useRef<OpenSeadragonController | null>(null);
   const glRef = useRef<WebGLManager | null>(null);
