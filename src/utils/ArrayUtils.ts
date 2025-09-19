@@ -10,8 +10,8 @@ export default class ArrayUtils {
     }
     let offset = seq.length;
     while (offset < arr.length) {
-      arr.set(arr.subarray(0, arr.length), offset);
-      offset += arr.length;
+      arr.set(arr.subarray(0, seq.length), offset);
+      offset += seq.length;
     }
   }
 }

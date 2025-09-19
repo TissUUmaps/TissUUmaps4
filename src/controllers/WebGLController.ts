@@ -32,7 +32,7 @@ export default class WebGLController {
     parseTableValue: (tableValue: TTableValue) => TValue = (tableValue) =>
       tableValue as unknown as TValue,
   ): Promise<boolean> {
-    if (isTableValuesColumn(value)) {
+    if (value !== undefined && isTableValuesColumn(value)) {
       const tableData = await loadTableByID(value.tableId);
       if (checkAbort()) {
         return false;
@@ -54,7 +54,7 @@ export default class WebGLController {
       }
       return true;
     }
-    if (isTableGroupsColumn(value)) {
+    if (value !== undefined && isTableGroupsColumn(value)) {
       const tableData = await loadTableByID(value.tableId);
       if (checkAbort()) {
         return false;

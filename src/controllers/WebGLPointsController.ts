@@ -559,7 +559,7 @@ export default class WebGLPointsController extends WebGLController {
     loadTableByID: (tableId: string) => Promise<ITableData>,
     checkAbort: () => boolean,
   ): Promise<Float16Array | null> {
-    const data = new Float16Array(length);
+    const data = new Float16Array(meta.data.getLength());
     let sizeMap = undefined;
     if (meta.points.sizeMap !== undefined) {
       if (typeof meta.points.sizeMap === "string") {
@@ -588,7 +588,7 @@ export default class WebGLPointsController extends WebGLController {
     loadTableByID: (tableId: string) => Promise<ITableData>,
     checkAbort: () => boolean,
   ): Promise<Float16Array | null> {
-    const data = new Float16Array(3 * length);
+    const data = new Float16Array(3 * meta.data.getLength());
     let colorMap = undefined;
     if (meta.points.colorMap !== undefined) {
       if (typeof meta.points.colorMap === "string") {
@@ -619,7 +619,7 @@ export default class WebGLPointsController extends WebGLController {
     loadTableByID: (tableId: string) => Promise<ITableData>,
     checkAbort: () => boolean,
   ): Promise<Uint8Array | null> {
-    const data = new Uint8Array(length);
+    const data = new Uint8Array(meta.data.getLength());
     if (meta.layer.visibility === false || meta.points.visibility === false) {
       data.fill(0);
     } else {
@@ -653,7 +653,7 @@ export default class WebGLPointsController extends WebGLController {
     loadTableByID: (tableId: string) => Promise<ITableData>,
     checkAbort: () => boolean,
   ): Promise<Float16Array | null> {
-    const data = new Float16Array(length);
+    const data = new Float16Array(meta.data.getLength());
     let opacityMap = undefined;
     if (meta.points.opacityMap !== undefined) {
       if (typeof meta.points.opacityMap === "string") {
@@ -686,7 +686,7 @@ export default class WebGLPointsController extends WebGLController {
     loadTableByID: (tableId: string) => Promise<ITableData>,
     checkAbort: () => boolean,
   ): Promise<Uint8Array | null> {
-    const data = new Uint8Array(length);
+    const data = new Uint8Array(meta.data.getLength());
     let markerMap = undefined;
     if (meta.points.markerMap !== undefined) {
       if (typeof meta.points.markerMap === "string") {

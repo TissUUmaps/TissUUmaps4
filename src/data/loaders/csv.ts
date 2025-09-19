@@ -76,8 +76,6 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   private static readonly _DEFAULT_DELIMITER = ",";
 
   async loadTable(): Promise<CSVTableData> {
-    const chunkSize =
-      this.dataSource.chunkSize ?? CSVTableDataLoader._DEFAULT_CHUNK_SIZE;
     let n = 0;
     let allColumnNames = this.dataSource.columns;
     let columnNames = this.dataSource.loadColumns ?? allColumnNames;
@@ -91,6 +89,8 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
         isNaN: false,
       }));
     }
+    const chunkSize =
+      this.dataSource.chunkSize ?? CSVTableDataLoader._DEFAULT_CHUNK_SIZE;
     const step = (results: papaparse.ParseStepResult<string[]>) => {
       if (
         allColumnNames === undefined ||
