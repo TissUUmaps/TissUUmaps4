@@ -14,18 +14,26 @@ layout(location = 6) in float a_opacity;
 layout(location = 7) in uint a_markerIndex;
 
 layout(std140) uniform DataToWorldTransformsUBO {
-    mat3 transform[NMAX];
-} u_dataToWorldTransformsUBO;
-uniform mat3 u_worldToViewportTransform;
+    // https://learnopengl.com/Advanced-OpenGL/Advanced-GLSL
+    // Matrices are stored as a large array of column vectors,
+    // where each of those vectors has a base alignment of vec4.
+    // Vectors have a base alignment of 2N (vec2) or 4N (vec3, vec4),
+    // where N is the size of the base type (4 bytes for float).
+    // Thus, mat2x4 has a base alignment of 4N, and each column
+    // is aligned to 4N. Since mat2x4 has 2 columns, its
+    // base alignment is 2 * 4N = 8N = 32 bytes.
+    mat2x4 dataToWorldTransforms[NMAX];
+};
+uniform mat3x2 u_worldToViewportTransform;
 
 flat out uvec3 v_marker;
 flat out vec4 v_color;
 
 void main() {
-    vec3 dataPosition = vec3(a_x, a_y, 1.0f);
-    vec3 worldPosition = u_dataToWorldTransformsUBO.transform[a_i] * dataPosition;
-    vec3 viewportPosition = u_worldToViewportTransform * worldPosition; // normalized to [0, 1]
-    gl_Position = vec4((2.0f * viewportPosition.xy - 1.0f) * vec2(1.0f, -1.0f), 0.0f, 1.0f);
+    mat3x2 dataToWorldTransform = mat3x2(transpose(dataToWorldTransforms[a_i]));
+    vec2 worldPosition = dataToWorldTransform * vec3(a_x, a_y, 1.0f);
+    vec2 viewportPosition = u_worldToViewportTransform * vec3(worldPosition, 1.0f); // in [0, 1]
+    gl_Position = vec4((2.0f * viewportPosition - 1.0f) * vec2(1.0f, -1.0f), 0.0f, 1.0f);
     gl_PointSize = a_size;
     uint markerRow = (a_markerIndex % NUM_MARKERS_PER_CHANNEL) / MARKER_ATLAS_GRID_SIZE;
     uint markerCol = (a_markerIndex % NUM_MARKERS_PER_CHANNEL) % MARKER_ATLAS_GRID_SIZE;

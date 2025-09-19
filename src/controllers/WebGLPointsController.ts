@@ -125,7 +125,7 @@ export default class WebGLPointsController extends WebGLController {
     WebGLUtils.resizeBuffer(
       this._gl,
       this._buffers.dataToWorldTransformsUBO,
-      WebGLPointsController.NMAX * 9 * Float32Array.BYTES_PER_ELEMENT,
+      WebGLPointsController.NMAX * 8 * Float32Array.BYTES_PER_ELEMENT,
       gl.UNIFORM_BUFFER,
       gl.DYNAMIC_DRAW,
     );
@@ -198,10 +198,12 @@ export default class WebGLPointsController extends WebGLController {
       this._uniformBlockIndices.dataToWorldTransformsUBO,
       WebGLPointsController._BINDING_POINTS.DATA_TO_WORLD_TRANSFORMS_UBO,
     );
-    this._gl.uniformMatrix3fv(
+    const tf = WebGLPointsController.createWorldToViewportTransform(viewport);
+    const glMat3x2 = [tf[0], tf[1], tf[3], tf[4], tf[6], tf[7]];
+    this._gl.uniformMatrix3x2fv(
       this._uniformLocations.worldToViewportTransform,
       false,
-      WebGLPointsController.createWorldToViewportTransform(viewport),
+      glMat3x2,
     );
     this._gl.activeTexture(this._gl.TEXTURE0);
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
@@ -377,7 +379,7 @@ export default class WebGLPointsController extends WebGLController {
     let i = 0;
     let offset = 0;
     const newBufferSlices: PointsBufferSlice[] = [];
-    const dataToWorldTransformsUBOData = new Float32Array(metas.length * 9);
+    const dataToWorldTransformsUBOData = new Float32Array(metas.length * 8);
     for (const meta of metas) {
       const length = meta.data.getLength();
       const bufferSlice = this._bufferSlices[i];
@@ -550,14 +552,13 @@ export default class WebGLPointsController extends WebGLController {
           markerMap: meta.points.markerMap,
         },
       });
-      dataToWorldTransformsUBOData.set(
-        mat3.multiply(
-          mat3.create(),
-          WebGLPointsController.createLayerToWorldTransform(meta.layer),
-          WebGLPointsController.createDataToLayerTransform(meta.layerConfig),
-        ),
-        i * 9,
+      const tf = mat3.multiply(
+        mat3.create(),
+        WebGLPointsController.createLayerToWorldTransform(meta.layer),
+        WebGLPointsController.createDataToLayerTransform(meta.layerConfig),
       );
+      const glMat2x4 = [tf[0], tf[3], tf[6], 0, tf[1], tf[4], tf[7], 0];
+      dataToWorldTransformsUBOData.set(glMat2x4, i * 8);
       offset += length;
       i++;
     }
