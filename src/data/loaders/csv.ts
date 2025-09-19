@@ -83,9 +83,14 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   > {
     const chunkSize =
       this.dataSource.chunkSize ?? CSVTableDataLoader._DEFAULT_CHUNK_SIZE;
-    const delimiter =
-      this.dataSource.parseConfig?.delimiter ??
-      CSVTableDataLoader._DEFAULT_DELIMITER;
+    const parseConfig = {
+      ...this.dataSource.parseConfig,
+      delimiter:
+        this.dataSource.parseConfig?.delimiter ??
+        CSVTableDataLoader._DEFAULT_DELIMITER,
+      header: false,
+      skipEmptyLines: true,
+    };
     let n = 0;
     let allColumnNames = this.dataSource.columns;
     let columnNames = this.dataSource.loadColumns ?? allColumnNames;
@@ -99,14 +104,13 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
         isNaN: false,
       }));
     }
-    const step = (results: papaparse.ParseStepResult<unknown>) => {
-      const data = results.data as string[];
+    const step = (results: papaparse.ParseStepResult<string[]>) => {
       if (
         allColumnNames === undefined ||
         columnNames === undefined ||
         columns === undefined
       ) {
-        allColumnNames = data;
+        allColumnNames = results.data;
         columnNames ??= allColumnNames;
         columns = columnNames.map((columnName) => ({
           name: columnName,
@@ -116,11 +120,13 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
           isNaN: false,
         }));
       } else {
-        if (data.length !== allColumnNames.length) {
-          throw new Error("Inconsistent column length");
+        if (results.data.length !== allColumnNames.length) {
+          throw new Error(
+            `Data row ${n} has ${results.data.length} values, expected ${allColumnNames.length}.`,
+          );
         }
         for (const column of columns) {
-          const value = data[column.index]!;
+          const value = results.data[column.index]!;
           column.isNaN = column.isNaN || value === "" || isNaN(+value);
           column.currentChunk.push(column.isNaN ? value : +value);
         }
@@ -171,38 +177,29 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
       const file = await fh.getFile();
       return await new Promise((resolve, reject) =>
         papaparse.parse(file, {
-          ...this.dataSource.parseConfig,
-          delimiter: delimiter,
-          worker: undefined, // TODO
-          header: false,
-          dynamicTyping: false,
-          skipEmptyLines: true,
+          ...parseConfig,
           step: step,
           complete: () => {
             const columnData = complete();
             resolve([n, columnNames!, columnData]);
           },
           error: reject,
-        } as papaparse.ParseLocalConfig<unknown, File>),
+        }),
       );
     }
     if (this.dataSource.url !== undefined) {
       const url = this.dataSource.url;
       return await new Promise((resolve, reject) =>
         papaparse.parse(url, {
-          ...this.dataSource.parseConfig,
+          ...parseConfig,
           download: true,
-          worker: undefined, // TODO
-          header: false,
-          dynamicTyping: false,
-          skipEmptyLines: true,
           step: step,
           complete: () => {
             const columnData = complete();
             resolve([n, columnNames!, columnData]);
           },
           error: reject,
-        } as papaparse.ParseRemoteConfig<unknown>),
+        }),
       );
     }
     if (this.dataSource.path !== undefined) {
