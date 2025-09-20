@@ -34,14 +34,14 @@ import WebGLController, { Viewport } from "./WebGLController";
 // - initial resize/sync/draw
 
 export default class WebGLPointsController extends WebGLController {
-  static readonly MAX_N_OBJ = 256; // see vertex shader
+  static readonly MAX_N_OBJECTS = 256; // see vertex shader
   private static readonly _ATTRIB_LOCATIONS = {
-    I: 0,
-    X: 1,
-    Y: 2,
-    SIZE: 3,
-    COLOR: 4,
-    MARKER_INDEX: 5,
+    X: 0,
+    Y: 1,
+    SIZE: 2,
+    COLOR: 3,
+    MARKER_INDEX: 4,
+    OBJECT_INDEX: 5,
   };
   private static readonly _BINDING_POINTS = {
     DATA_TO_WORLD_TRANSFORMS_UBO: 0,
@@ -83,18 +83,18 @@ export default class WebGLPointsController extends WebGLController {
     dataToWorldTransformsUBO: number;
   };
   private readonly _buffers: {
-    i: WebGLBuffer;
     x: WebGLBuffer;
     y: WebGLBuffer;
     size: WebGLBuffer;
     color: WebGLBuffer;
     markerIndex: WebGLBuffer;
+    objectIndex: WebGLBuffer;
     dataToWorldTransformsUBO: WebGLBuffer;
   };
   private readonly _markerAtlasTexture: WebGLTexture;
   private readonly _vao: WebGLVertexArrayObject;
   private _bufferSlices: PointsBufferSlice[] = [];
-  private _n: number = 0;
+  private _nPoints: number = 0;
 
   constructor(gl: WebGL2RenderingContext) {
     super(gl);
@@ -127,18 +127,18 @@ export default class WebGLPointsController extends WebGLController {
       ),
     };
     this._buffers = {
-      i: this._gl.createBuffer(),
       x: this._gl.createBuffer(),
       y: this._gl.createBuffer(),
       size: this._gl.createBuffer(),
       color: this._gl.createBuffer(),
       markerIndex: this._gl.createBuffer(),
+      objectIndex: this._gl.createBuffer(),
       dataToWorldTransformsUBO: this._gl.createBuffer(),
     };
     WebGLUtils.resizeBuffer(
       this._gl,
       this._buffers.dataToWorldTransformsUBO,
-      WebGLPointsController.MAX_N_OBJ * 8 * Float32Array.BYTES_PER_ELEMENT,
+      WebGLPointsController.MAX_N_OBJECTS * 8 * Float32Array.BYTES_PER_ELEMENT,
       gl.UNIFORM_BUFFER,
       gl.DYNAMIC_DRAW,
     );
@@ -167,14 +167,16 @@ export default class WebGLPointsController extends WebGLController {
     if (metas === null || checkAbort()) {
       return false;
     }
-    if (metas.length > WebGLPointsController.MAX_N_OBJ) {
-      console.warn(`Only rendering ${WebGLPointsController.MAX_N_OBJ} objects`);
-      metas.length = WebGLPointsController.MAX_N_OBJ;
+    if (metas.length > WebGLPointsController.MAX_N_OBJECTS) {
+      console.warn(
+        `Only rendering the first ${WebGLPointsController.MAX_N_OBJECTS} out of ${metas.length} objects`,
+      );
+      metas.length = WebGLPointsController.MAX_N_OBJECTS;
     }
     let buffersResized = false;
-    const n = metas.reduce((s, meta) => s + meta.data.getLength(), 0);
-    if (this._n !== n) {
-      this._resizeBuffers(n);
+    const nPoints = metas.reduce((s, meta) => s + meta.data.getLength(), 0);
+    if (this._nPoints !== nPoints) {
+      this._resizeBuffers(nPoints);
       buffersResized = true;
     }
     const newBufferSlices = await this._loadPoints(
@@ -196,7 +198,7 @@ export default class WebGLPointsController extends WebGLController {
   }
 
   draw(viewport: Viewport): void {
-    if (this._n === 0) {
+    if (this._nPoints === 0) {
       return;
     }
     this._gl.useProgram(this._program);
@@ -224,7 +226,7 @@ export default class WebGLPointsController extends WebGLController {
     // TODO blending
     // this._gl.enable(this._gl.BLEND);
     // this._gl.blendFunc(this._gl.SRC_ALPHA, this._gl.ONE_MINUS_SRC_ALPHA);
-    this._gl.drawArrays(this._gl.POINTS, 0, this._n);
+    this._gl.drawArrays(this._gl.POINTS, 0, this._nPoints);
     this._gl.bindVertexArray(null);
     this._gl.useProgram(null);
   }
@@ -239,13 +241,6 @@ export default class WebGLPointsController extends WebGLController {
   private _createVAO(): WebGLVertexArrayObject {
     const vao = this._gl.createVertexArray();
     this._gl.bindVertexArray(vao);
-    WebGLUtils.configureVertexIntAttribute(
-      this._gl,
-      this._buffers.i,
-      WebGLPointsController._ATTRIB_LOCATIONS.I,
-      1,
-      this._gl.UNSIGNED_BYTE,
-    );
     WebGLUtils.configureVertexFloatAttribute(
       this._gl,
       this._buffers.x,
@@ -281,42 +276,49 @@ export default class WebGLPointsController extends WebGLController {
       1,
       this._gl.UNSIGNED_BYTE,
     );
+    WebGLUtils.configureVertexIntAttribute(
+      this._gl,
+      this._buffers.objectIndex,
+      WebGLPointsController._ATTRIB_LOCATIONS.OBJECT_INDEX,
+      1,
+      this._gl.UNSIGNED_BYTE,
+    );
     this._gl.bindVertexArray(null);
     return vao;
   }
 
-  private _resizeBuffers(n: number): void {
-    WebGLUtils.resizeBuffer(
-      this._gl,
-      this._buffers.i,
-      n * Uint8Array.BYTES_PER_ELEMENT,
-    );
+  private _resizeBuffers(nPoints: number): void {
     WebGLUtils.resizeBuffer(
       this._gl,
       this._buffers.x,
-      n * Float32Array.BYTES_PER_ELEMENT,
+      nPoints * Float32Array.BYTES_PER_ELEMENT,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
       this._buffers.y,
-      n * Float32Array.BYTES_PER_ELEMENT,
+      nPoints * Float32Array.BYTES_PER_ELEMENT,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
       this._buffers.size,
-      n * Float16Array.BYTES_PER_ELEMENT,
+      nPoints * Float16Array.BYTES_PER_ELEMENT,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
       this._buffers.color,
-      n * Uint32Array.BYTES_PER_ELEMENT,
+      nPoints * Uint32Array.BYTES_PER_ELEMENT,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
       this._buffers.markerIndex,
-      n * Uint8Array.BYTES_PER_ELEMENT,
+      nPoints * Uint8Array.BYTES_PER_ELEMENT,
     );
-    this._n = n;
+    WebGLUtils.resizeBuffer(
+      this._gl,
+      this._buffers.objectIndex,
+      nPoints * Uint8Array.BYTES_PER_ELEMENT,
+    );
+    this._nPoints = nPoints;
   }
 
   private async _collectPoints(
@@ -370,25 +372,17 @@ export default class WebGLPointsController extends WebGLController {
     const newBufferSlices: PointsBufferSlice[] = [];
     const dataToWorldTransformsUBOData = new Float32Array(metas.length * 8);
     for (const meta of metas) {
-      const length = meta.data.getLength();
+      const nPoints = meta.data.getLength();
       const bufferSlice = this._bufferSlices[i];
       const bufferSliceChanged =
         buffersResized ||
         bufferSlice === undefined ||
         bufferSlice.offset !== offset ||
-        bufferSlice.length !== length ||
+        bufferSlice.nPoints !== nPoints ||
         bufferSlice.meta.layer !== meta.layer ||
         bufferSlice.meta.points !== meta.points ||
         bufferSlice.meta.layerConfig !== meta.layerConfig ||
         bufferSlice.meta.data !== meta.data;
-      if (bufferSliceChanged) {
-        WebGLUtils.loadBuffer(
-          this._gl,
-          this._buffers.i,
-          new Uint8Array(length).fill(i),
-          offset,
-        );
-      }
       if (
         bufferSliceChanged ||
         bufferSlice.config.pointX !== meta.layerConfig.x
@@ -467,9 +461,17 @@ export default class WebGLPointsController extends WebGLController {
           return null;
         }
       }
+      if (bufferSliceChanged) {
+        WebGLUtils.loadBuffer(
+          this._gl,
+          this._buffers.objectIndex,
+          new Uint8Array(nPoints).fill(i),
+          offset,
+        );
+      }
       newBufferSlices.push({
         offset: offset,
-        length: length,
+        nPoints: nPoints,
         meta: meta,
         config: {
           layerVisibility: meta.layer.visibility,
@@ -497,7 +499,7 @@ export default class WebGLPointsController extends WebGLController {
       );
       const glMat2x4 = [tf[0], tf[3], tf[6], 0, tf[1], tf[4], tf[7], 0];
       dataToWorldTransformsUBOData.set(glMat2x4, i * 8);
-      offset += length;
+      offset += nPoints;
       i++;
     }
     WebGLUtils.loadBuffer(
@@ -857,7 +859,7 @@ type PointsMeta = {
 
 type PointsBufferSlice = {
   offset: number;
-  length: number;
+  nPoints: number;
   meta: PointsMeta;
   config: {
     layerVisibility?: boolean;
