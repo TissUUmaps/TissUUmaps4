@@ -1,6 +1,6 @@
 #version 300 es
 
-#define NMAX 256 // WebGLPointsController.NMAX
+#define MAX_N_OBJ 256 // WebGLPointsController.MAX_N_OBJ
 #define MARKER_ATLAS_GRID_SIZE 4u
 #define NUM_MARKERS_PER_CHANNEL 16u  // MARKER_ATLAS_GRID_SIZE * MARKER_ATLAS_GRID_SIZE
 
@@ -8,10 +8,8 @@ layout(location = 0) in uint a_i;
 layout(location = 1) in float a_x;
 layout(location = 2) in float a_y;
 layout(location = 3) in float a_size;
-layout(location = 4) in vec3 a_color;
-layout(location = 5) in uint a_visibility;
-layout(location = 6) in float a_opacity;
-layout(location = 7) in uint a_markerIndex;
+layout(location = 4) in uint a_color;
+layout(location = 5) in uint a_markerIndex;
 
 layout(std140) uniform DataToWorldTransformsUBO {
     // https://learnopengl.com/Advanced-OpenGL/Advanced-GLSL
@@ -22,7 +20,7 @@ layout(std140) uniform DataToWorldTransformsUBO {
     // Thus, mat2x4 has a base alignment of 4N, and each column
     // is aligned to 4N. Since mat2x4 has 2 columns, its
     // base alignment is 2 * 4N = 8N = 32 bytes.
-    mat2x4 dataToWorldTransforms[NMAX];
+    mat2x4 dataToWorldTransforms[MAX_N_OBJ];
 };
 uniform mat3x2 u_worldToViewportTransform;
 
@@ -39,5 +37,12 @@ void main() {
     uint markerCol = (a_markerIndex % NUM_MARKERS_PER_CHANNEL) % MARKER_ATLAS_GRID_SIZE;
     uint markerChannel = a_markerIndex / NUM_MARKERS_PER_CHANNEL;
     v_marker = uvec3(markerRow, markerCol, markerChannel);
-    v_color = vec4(a_color, a_visibility > 0u ? a_opacity : 0.0f);
+    float colorRed = float((a_color >> 24) & 0xFFu) / 255.0f;
+    float colorGreen = float((a_color >> 16) & 0xFFu) / 255.0f;
+    float colorBlue = float((a_color >> 8) & 0xFFu) / 255.0f;
+    float colorAlpha = float(a_color & 0xFFu) / 255.0f;
+    v_color = vec4(colorRed, colorGreen, colorBlue, colorAlpha);
+    if(colorAlpha == 0.0f) {
+        gl_Position = vec4(2.0f, 2.0f, 2.0f, 0.0f);
+    }
 }

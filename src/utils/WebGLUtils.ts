@@ -95,7 +95,7 @@ export default class WebGLUtils {
     gl.bindBuffer(target, null);
   }
 
-  static loadBufferData(
+  static loadBuffer(
     gl: WebGL2RenderingContext,
     buffer: WebGLBuffer,
     data: Exclude<TypedArray, Float64Array>,
