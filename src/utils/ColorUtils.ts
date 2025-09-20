@@ -14,4 +14,26 @@ export default class ColorUtils {
     }
     return { r, g, b };
   }
+
+  static parseColormap(
+    colormap: string,
+    sep: string = " ",
+    maxValue: number = 1.0,
+  ): Color[] {
+    return colormap
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line, i) => {
+        const values = line.split(sep);
+        if (values.length !== 3) {
+          throw new Error(`Invalid colormap line ${i}: ${line}`);
+        }
+        const [rValue, gValue, bValue] = values.map((v) => +v);
+        return {
+          r: rValue! / maxValue,
+          g: gValue! / maxValue,
+          b: bValue! / maxValue,
+        };
+      });
+  }
 }

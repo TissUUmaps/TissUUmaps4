@@ -23,6 +23,7 @@ export default class WebGLController {
   protected async _prepareBufferData<TValue, TTableValue = TValue>(
     data: Exclude<TypedArray, Float64Array>,
     value: TValue | TableValuesColumn | TableGroupsColumn | undefined,
+    defaultValue: TValue,
     defaultValues: TValue[],
     tableGroupValues: Map<string, TValue> | undefined,
     loadTableByID: (tableId: string) => Promise<ITableData>,
@@ -67,7 +68,7 @@ export default class WebGLController {
         const tableGroup = JSON.stringify(tableGroups[i]!);
         const value =
           tableGroupValues !== undefined
-            ? (tableGroupValues.get(tableGroup) ?? defaultValues[0]!)
+            ? (tableGroupValues.get(tableGroup) ?? defaultValue)
             : defaultValues[HashUtils.djb2(tableGroup) % defaultValues.length]!;
         const arrayValue = toArrayValue(value);
         if (Array.isArray(arrayValue)) {
@@ -78,7 +79,7 @@ export default class WebGLController {
       }
       return true;
     }
-    const arrayValue = toArrayValue(value ?? defaultValues[0]!);
+    const arrayValue = toArrayValue(value ?? defaultValue);
     if (Array.isArray(arrayValue)) {
       ArrayUtils.fillSeq(data, arrayValue);
     } else {

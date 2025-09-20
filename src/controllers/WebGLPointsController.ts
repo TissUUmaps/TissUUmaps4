@@ -1,6 +1,9 @@
 import { mat3 } from "gl-matrix";
 
-import markers from "../assets/markers.png?url";
+import batlowS from "../assets/colormaps/batlowS.txt?raw";
+import markersUrl from "../assets/markers/markers.png?url";
+import pointsFragmentShader from "../assets/shaders/points.frag?raw";
+import pointsVertexShader from "../assets/shaders/points.vert?raw";
 import { IPointsData } from "../data/points";
 import { ITableData } from "../data/table";
 import { ILayerModel } from "../models/layer";
@@ -14,8 +17,6 @@ import {
 import ColorUtils from "../utils/ColorUtils";
 import WebGLUtils from "../utils/WebGLUtils";
 import WebGLController, { Viewport } from "./WebGLController";
-import pointsFragmentShader from "./shaders/points.frag?raw";
-import pointsVertexShader from "./shaders/points.vert?raw";
 
 export default class WebGLPointsController extends WebGLController {
   static readonly NMAX = 256; // see vertex shader
@@ -32,21 +33,24 @@ export default class WebGLPointsController extends WebGLController {
   private static readonly _BINDING_POINTS = {
     DATA_TO_WORLD_TRANSFORMS_UBO: 0,
   };
+  private static readonly _DEFAULT_POINT_SIZE: number = 1.0;
   private static readonly _DEFAULT_POINT_SIZES: number[] = [1.0];
-  private static readonly _DEFAULT_POINT_COLORS: Color[] = [
-    { r: 0, g: 0, b: 0 },
-    // TODO add more default point colors
-  ];
+  private static readonly _DEFAULT_POINT_COLOR: Color = { r: 0, g: 0, b: 0 };
+  private static readonly _DEFAULT_POINT_COLORS: Color[] =
+    ColorUtils.parseColormap(batlowS);
+  private static readonly _DEFAULT_POINT_VISIBILITY: boolean = true;
   private static readonly _DEFAULT_POINT_VISIBILITIES: boolean[] = [true];
+  private static readonly _DEFAULT_POINT_OPACITY: number = 1.0;
   private static readonly _DEFAULT_POINT_OPACITIES: number[] = [1.0];
+  private static readonly _DEFAULT_POINT_MARKER: Marker = Marker.Disc;
   private static readonly _DEFAULT_POINT_MARKERS: Marker[] = [
-    Marker.Disc,
     Marker.Cross,
     Marker.Diamond,
     Marker.Square,
     Marker.TriangleUp,
     Marker.Star,
     Marker.Clobber,
+    Marker.Disc,
     Marker.HBar,
     Marker.VBar,
     Marker.TailedArrow,
@@ -129,7 +133,7 @@ export default class WebGLPointsController extends WebGLController {
       gl.UNIFORM_BUFFER,
       gl.DYNAMIC_DRAW,
     );
-    this._markerAtlasTexture = WebGLUtils.loadTexture(this._gl, markers);
+    this._markerAtlasTexture = WebGLUtils.loadTexture(this._gl, markersUrl);
     this._vao = this._createVAO();
   }
 
@@ -588,6 +592,7 @@ export default class WebGLPointsController extends WebGLController {
     const success = await this._prepareBufferData<number>(
       data,
       meta.points.pointSize,
+      WebGLPointsController._DEFAULT_POINT_SIZE,
       WebGLPointsController._DEFAULT_POINT_SIZES,
       sizeMap,
       loadTableByID,
@@ -617,6 +622,7 @@ export default class WebGLPointsController extends WebGLController {
     const success = await this._prepareBufferData<Color, string>(
       data,
       meta.points.pointColor,
+      WebGLPointsController._DEFAULT_POINT_COLOR,
       WebGLPointsController._DEFAULT_POINT_COLORS,
       colorMap,
       loadTableByID,
@@ -651,6 +657,7 @@ export default class WebGLPointsController extends WebGLController {
       const success = await this._prepareBufferData<boolean>(
         data,
         meta.points.pointVisibility,
+        WebGLPointsController._DEFAULT_POINT_VISIBILITY,
         WebGLPointsController._DEFAULT_POINT_VISIBILITIES,
         visibilityMap,
         loadTableByID,
@@ -682,6 +689,7 @@ export default class WebGLPointsController extends WebGLController {
     const success = await this._prepareBufferData<number>(
       data,
       meta.points.pointOpacity,
+      WebGLPointsController._DEFAULT_POINT_OPACITY,
       WebGLPointsController._DEFAULT_POINT_OPACITIES,
       opacityMap,
       loadTableByID,
@@ -715,6 +723,7 @@ export default class WebGLPointsController extends WebGLController {
     const success = await this._prepareBufferData<Marker, number>(
       data,
       meta.points.pointMarker,
+      WebGLPointsController._DEFAULT_POINT_MARKER,
       WebGLPointsController._DEFAULT_POINT_MARKERS,
       markerMap,
       loadTableByID,
