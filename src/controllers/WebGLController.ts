@@ -44,6 +44,11 @@ export default class WebGLController {
     });
   }
 
+  async initialize(): Promise<WebGLController> {
+    await this._pointsController.initialize();
+    return this;
+  }
+
   async synchronizePoints(
     ...args: Parameters<typeof this._pointsController.synchronize>
   ): ReturnType<typeof this._pointsController.synchronize> {

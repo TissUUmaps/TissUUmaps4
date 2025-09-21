@@ -93,8 +93,8 @@ export default class WebGLPointsController extends WebGLControllerBase {
     objectIndex: WebGLBuffer;
     dataToWorldTransformsUBO: WebGLBuffer;
   };
-  private readonly _markerAtlasTexture: WebGLTexture;
   private readonly _vao: WebGLVertexArrayObject;
+  private _markerAtlasTexture: WebGLTexture | undefined;
   private _bufferSlices: PointsBufferSlice[] = [];
   private _nPoints: number = 0;
 
@@ -149,8 +149,15 @@ export default class WebGLPointsController extends WebGLControllerBase {
       gl.UNIFORM_BUFFER,
       gl.DYNAMIC_DRAW,
     );
-    this._markerAtlasTexture = WebGLUtils.loadTexture(this._gl, markersUrl);
     this._vao = this._createVAO();
+  }
+
+  async initialize(): Promise<WebGLPointsController> {
+    this._markerAtlasTexture = await WebGLUtils.loadTexture(
+      this._gl,
+      markersUrl,
+    );
+    return this;
   }
 
   async synchronize(
@@ -205,7 +212,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
   }
 
   draw(viewport: Rect, blendMode: BlendMode, sizeFactor: number): void {
-    if (this._nPoints === 0) {
+    if (this._nPoints === 0 || this._markerAtlasTexture === undefined) {
       return;
     }
     // TODO clear

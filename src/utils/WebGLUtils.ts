@@ -56,7 +56,10 @@ export default class WebGLUtils {
     }
   }
 
-  static loadTexture(gl: WebGL2RenderingContext, url: string): WebGLTexture {
+  static async loadTexture(
+    gl: WebGL2RenderingContext,
+    url: string,
+  ): Promise<WebGLTexture> {
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -68,19 +71,28 @@ export default class WebGLUtils {
     );
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.bindTexture(gl.TEXTURE_2D, null);
-    const img = new Image();
-    img.onload = () => {
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.generateMipmap(gl.TEXTURE_2D);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      // TODO redraw
-    };
-    img.onerror = () => {
-      console.error("Failed to load texture image.");
-    };
-    img.src = url;
-    return texture;
+    return await new Promise<WebGLTexture>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.RGBA,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          img,
+        );
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        resolve(texture);
+      };
+      img.onerror = (...args) => {
+        const error = args[4];
+        reject(error ?? new Error(`Failed to load image: ${url}`));
+      };
+      img.src = url;
+    });
   }
 
   static resizeBuffer(
