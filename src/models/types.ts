@@ -72,3 +72,6 @@ export function isTableGroupsColumn(x: unknown): x is TableGroupsColumn {
     (x as TableGroupsColumn).groupsCol !== undefined
   );
 }
+
+/** Blend mode */
+export type BlendMode = "add" | "over";

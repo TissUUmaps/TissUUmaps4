@@ -9,6 +9,7 @@ import { ITableData } from "../data/table";
 import { ILayerModel } from "../models/layer";
 import { IPointsLayerConfigModel, IPointsModel } from "../models/points";
 import {
+  BlendMode,
   Color,
   Marker,
   TableGroupsColumn,
@@ -19,22 +20,24 @@ import {
 import ColorUtils from "../utils/ColorUtils";
 import HashUtils from "../utils/HashUtils";
 import WebGLUtils from "../utils/WebGLUtils";
-import WebGLController, { Viewport } from "./WebGLController";
+import { Viewport } from "./WebGLController";
+import WebGLControllerBase from "./WebGLControllerBase";
 
-// To-do:
-// - blending ("over" by default?)
-// - global marker scale?
-// - relate point size to world space?
+// TODO:
+// - global marker scale
 // - marker stroke/fill/outline
+// - marker size relative to world space (?)
 // - point sorting/zorder (?)
 // - react to OpenSeadragon collection mode, viewer rotation, ...
-// - chunked loading/drawing?
-// - canvas style: pointer-events, z-index
-// - resizing with max canvas size
-// - initial resize/sync/draw
+// - chunked loading
+// - chunked drawing
 
-export default class WebGLPointsController extends WebGLController {
-  static readonly MAX_N_OBJECTS = 256; // see vertex shader
+// Not implemented:
+// - instancing
+// - pie charts
+
+export default class WebGLPointsController extends WebGLControllerBase {
+  private static readonly _MAX_N_OBJECTS = 256; // see vertex shader
   private static readonly _ATTRIB_LOCATIONS = {
     X: 0,
     Y: 1,
@@ -138,7 +141,7 @@ export default class WebGLPointsController extends WebGLController {
     WebGLUtils.resizeBuffer(
       this._gl,
       this._buffers.dataToWorldTransformsUBO,
-      WebGLPointsController.MAX_N_OBJECTS * 8 * Float32Array.BYTES_PER_ELEMENT,
+      WebGLPointsController._MAX_N_OBJECTS * 8 * Float32Array.BYTES_PER_ELEMENT,
       gl.UNIFORM_BUFFER,
       gl.DYNAMIC_DRAW,
     );
@@ -167,11 +170,11 @@ export default class WebGLPointsController extends WebGLController {
     if (metas === null || checkAbort()) {
       return false;
     }
-    if (metas.length > WebGLPointsController.MAX_N_OBJECTS) {
+    if (metas.length > WebGLPointsController._MAX_N_OBJECTS) {
       console.warn(
-        `Only rendering the first ${WebGLPointsController.MAX_N_OBJECTS} out of ${metas.length} objects`,
+        `Only rendering the first ${WebGLPointsController._MAX_N_OBJECTS} out of ${metas.length} objects`,
       );
-      metas.length = WebGLPointsController.MAX_N_OBJECTS;
+      metas.length = WebGLPointsController._MAX_N_OBJECTS;
     }
     let buffersResized = false;
     const nPoints = metas.reduce((s, meta) => s + meta.data.getLength(), 0);
@@ -197,10 +200,11 @@ export default class WebGLPointsController extends WebGLController {
     return true;
   }
 
-  draw(viewport: Viewport): void {
+  draw(viewport: Viewport, blendMode: BlendMode): void {
     if (this._nPoints === 0) {
       return;
     }
+    // TODO clear
     this._gl.useProgram(this._program);
     this._gl.bindVertexArray(this._vao);
     this._gl.bindBufferBase(
@@ -223,10 +227,43 @@ export default class WebGLPointsController extends WebGLController {
     this._gl.activeTexture(this._gl.TEXTURE0);
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
     this._gl.uniform1i(this._uniformLocations.markerAtlas, 0);
-    // TODO blending
-    // this._gl.enable(this._gl.BLEND);
-    // this._gl.blendFunc(this._gl.SRC_ALPHA, this._gl.ONE_MINUS_SRC_ALPHA);
+    this._gl.enable(this._gl.BLEND);
+    // https://en.wikipedia.org/wiki/Alpha_compositing
+    // https://learnopengl.com/Advanced-OpenGL/Blending
+    // https://www.khronos.org/opengl/wiki/Blending
+    // https://www.realtimerendering.com/blog/gpus-prefer-premultiplication/
+    switch (blendMode) {
+      // additive blending / plus operator (Porter & Duff)
+      case "add": {
+        this._gl.blendEquation(this._gl.FUNC_ADD);
+        this._gl.blendFuncSeparate(
+          this._gl.ONE,
+          this._gl.ONE,
+          this._gl.ONE,
+          this._gl.ONE,
+        );
+        break;
+      }
+      // traditional alpha blending / over operator (Porter & Duff)
+      case "over": {
+        this._gl.blendEquation(this._gl.FUNC_ADD);
+        this._gl.blendFuncSeparate(
+          this._gl.ONE, // alpha is premultiplied in fragment shader
+          this._gl.ONE_MINUS_SRC_ALPHA,
+          this._gl.ONE,
+          this._gl.ONE_MINUS_SRC_ALPHA,
+        );
+      }
+    }
     this._gl.drawArrays(this._gl.POINTS, 0, this._nPoints);
+    this._gl.blendEquation(this._gl.FUNC_ADD);
+    this._gl.blendFuncSeparate(
+      this._gl.ONE,
+      this._gl.ZERO,
+      this._gl.ONE,
+      this._gl.ZERO,
+    );
+    this._gl.disable(this._gl.BLEND);
     this._gl.bindVertexArray(null);
     this._gl.useProgram(null);
   }

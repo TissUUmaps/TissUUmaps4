@@ -1,4 +1,4 @@
-import { Point, TiledImage, Viewer } from "openseadragon";
+import OpenSeadragon, { Point, TiledImage, Viewer } from "openseadragon";
 
 import { IImageData } from "../data/image";
 import { ILabelsData } from "../data/labels";
@@ -9,11 +9,11 @@ import { ILabelsLayerConfigModel, ILabelsModel } from "../models/labels";
 import { ILayerModel } from "../models/layer";
 
 export default class OpenSeadragonController {
-  readonly viewer: Viewer;
+  private readonly _viewer: Viewer;
   private readonly _tiledImageStates: TiledImageState[] = [];
 
-  constructor(viewerElement: HTMLElement) {
-    this.viewer = new Viewer({
+  static createViewer(viewerElement: HTMLElement): Viewer {
+    return new Viewer({
       element: viewerElement,
       // @ts-expect-error: 'drawer' is supported by OpenSeadragon but missing in types
       // https://github.com/usnistgov/OpenSeadragonFiltering/issues/34
@@ -23,6 +23,10 @@ export default class OpenSeadragonController {
       showNavigationControl: false,
       imageSmoothingEnabled: false,
     });
+  }
+
+  constructor(viewer: Viewer) {
+    this._viewer = viewer;
   }
 
   async synchronize(
@@ -44,8 +48,12 @@ export default class OpenSeadragonController {
     );
   }
 
+  getViewport(): OpenSeadragon.Rect {
+    return this._viewer.viewport.getBounds(true);
+  }
+
   destroy(): void {
-    this.viewer.destroy();
+    this._viewer.destroy();
     this._tiledImageStates.length = 0;
   }
 
@@ -70,8 +78,8 @@ export default class OpenSeadragonController {
             layerMap.has(tiledImageState.layerConfig.layerId);
       if (!keepTiledImage) {
         if (tiledImageState.loaded) {
-          const tiledImage = this.viewer.world.getItemAt(i);
-          this.viewer.world.removeItem(tiledImage);
+          const tiledImage = this._viewer.world.getItemAt(i);
+          this._viewer.world.removeItem(tiledImage);
         } else {
           tiledImageState.deferredDelete = true;
         }
@@ -186,14 +194,14 @@ export default class OpenSeadragonController {
       const tiledImageState = this._tiledImageStates[currentIndex]!;
       if (currentIndex !== desiredIndex) {
         if (tiledImageState.loaded) {
-          const tiledImage = this.viewer.world.getItemAt(currentIndex);
-          this.viewer.world.setItemIndex(tiledImage, desiredIndex);
+          const tiledImage = this._viewer.world.getItemAt(currentIndex);
+          this._viewer.world.setItemIndex(tiledImage, desiredIndex);
         } else {
           tiledImageState.deferredIndex = desiredIndex;
         }
       }
       if (tiledImageState.loaded) {
-        const tiledImage = this.viewer.world.getItemAt(currentIndex);
+        const tiledImage = this._viewer.world.getItemAt(currentIndex);
         this._updateTiledImage(
           layer,
           pixels,
@@ -217,7 +225,7 @@ export default class OpenSeadragonController {
   ): void {
     const newTiledImageState = createTiledImageState();
     const flip = layerConfig.flip ?? false;
-    this.viewer.addTiledImage({
+    this._viewer.addTiledImage({
       tileSource: createTileSource(),
       index: index,
       degrees: layerConfig.rotation ?? 0,
@@ -233,7 +241,7 @@ export default class OpenSeadragonController {
           newTiledImageState.deferredIndex !== undefined &&
           newTiledImageState.deferredIndex !== index
         ) {
-          this.viewer.world.setItemIndex(
+          this._viewer.world.setItemIndex(
             newTiledImage,
             newTiledImageState.deferredIndex,
           );
@@ -256,10 +264,10 @@ export default class OpenSeadragonController {
             newTiledImageState,
           );
         }
-        this.viewer.viewport.fitBounds(newTiledImage.getBounds(), true);
+        this._viewer.viewport.fitBounds(newTiledImage.getBounds(), true);
         newTiledImageState.loaded = true;
         if (newTiledImageState.deferredDelete) {
-          this.viewer.world.removeItem(newTiledImage);
+          this._viewer.world.removeItem(newTiledImage);
           newTiledImageState.deferredDelete = undefined;
         }
       },

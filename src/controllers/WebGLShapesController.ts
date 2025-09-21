@@ -2,9 +2,11 @@ import { IShapesData } from "../data/shapes";
 import { ITableData } from "../data/table";
 import { ILayerModel } from "../models/layer";
 import { IShapesModel } from "../models/shapes";
-import WebGLController, { Viewport } from "./WebGLController";
+import { BlendMode } from "../models/types";
+import { Viewport } from "./WebGLController";
+import WebGLControllerBase from "./WebGLControllerBase";
 
-export default class WebGLShapesController extends WebGLController {
+export default class WebGLShapesController extends WebGLControllerBase {
   constructor(gl: WebGL2RenderingContext) {
     super(gl);
   }
@@ -28,6 +30,8 @@ export default class WebGLShapesController extends WebGLController {
   draw(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _viewport: Viewport,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _blendMode: BlendMode,
   ): void {
     // TODO draw shapes
   }

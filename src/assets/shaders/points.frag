@@ -23,8 +23,8 @@ void main() {
     vec2 uv = (float(v_marker.xy) + gl_PointCoord.xy) / float(MARKER_ATLAS_GRID_SIZE);
     float dist = (texture(u_markerAtlas, uv, TEXTURE_LOD_BIAS)[v_marker.z] - 0.5f) * 255.0f / DISTANCE_MULTIPLIER;
     float pixelWidth = dFdx(uv.x) * float(textureSize(u_markerAtlas, 0).x);
-    float alpha = clamp(dist / pixelWidth + 0.5f, 0.0f, 1.0f);
-    fragColor = vec4(v_color.rgb, v_color.a * alpha);
+    float alpha = v_color.a * clamp(dist / pixelWidth + 0.5f, 0.0f, 1.0f);
+    fragColor = vec4(v_color.rgb * alpha, alpha);
     if(fragColor.a < ALPHA_THRESHOLD) {
         discard;
     }

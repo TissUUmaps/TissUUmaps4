@@ -1,15 +1,15 @@
-import OpenSeadragon from "openseadragon";
+import { ResizeEvent, ViewerEvent } from "openseadragon";
 import { useCallback, useEffect, useRef } from "react";
 
 import OpenSeadragonController from "../controllers/OpenSeadragonController";
-import WebGLManager from "../controllers/WebGLManager";
+import WebGLController from "../controllers/WebGLController";
 import { useBoundStore } from "../stores/boundStore";
 
 // TODO refactor ViewerPanel into its own component library/package
 
 export default function ViewerPanel() {
   const osRef = useRef<OpenSeadragonController | null>(null);
-  const glRef = useRef<WebGLManager | null>(null);
+  const glRef = useRef<WebGLController | null>(null);
   const projectDir = useBoundStore((state) => state.projectDir);
   const layerMap = useBoundStore((state) => state.layerMap);
   const imageMap = useBoundStore((state) => state.imageMap);
@@ -21,6 +21,7 @@ export default function ViewerPanel() {
   const visibilityMaps = useBoundStore((state) => state.visibilityMaps);
   const opacityMaps = useBoundStore((state) => state.opacityMaps);
   const markerMaps = useBoundStore((state) => state.markerMaps);
+  const blendMode = useBoundStore((state) => state.blendMode);
   const loadImage = useBoundStore((state) => state.loadImage);
   const loadLabels = useBoundStore((state) => state.loadLabels);
   const loadPoints = useBoundStore((state) => state.loadPoints);
@@ -39,21 +40,18 @@ export default function ViewerPanel() {
     (state) => state.shapesDataLoaderFactories,
   );
 
-  const onViewerResize = useCallback((e: OpenSeadragon.ResizeEvent) => {
+  const onViewerResize = useCallback((e: ResizeEvent) => {
     const gl = glRef.current;
     if (gl !== null) {
-      gl.canvas.width = e.newContainerSize.x;
-      gl.canvas.height = e.newContainerSize.y;
-      gl.pointsController.draw(e.eventSource.viewport.getBounds(true));
-      gl.shapesController.draw(e.eventSource.viewport.getBounds(true));
+      gl.resize(e.newContainerSize.x, e.newContainerSize.y);
+      gl.draw(e.eventSource.viewport.getBounds(true));
     }
   }, []);
 
-  const onViewerViewportChange = useCallback((e: OpenSeadragon.ViewerEvent) => {
+  const onViewerViewportChange = useCallback((e: ViewerEvent) => {
     const gl = glRef.current;
     if (gl !== null) {
-      gl.pointsController.draw(e.eventSource.viewport.getBounds(true));
-      gl.shapesController.draw(e.eventSource.viewport.getBounds(true));
+      gl.draw(e.eventSource.viewport.getBounds(true));
     }
   }, []);
 
@@ -61,24 +59,29 @@ export default function ViewerPanel() {
   // https://react.dev/reference/react-dom/components/common#ref-callback
   const setViewerRef = useCallback(
     (viewerElement: HTMLDivElement | null) => {
-      const oldOS = osRef.current;
-      if (oldOS !== null) {
-        oldOS.destroy();
+      const os = osRef.current;
+      if (os !== null) {
+        os.destroy();
         osRef.current = null;
       }
-      const oldGL = glRef.current;
-      if (oldGL !== null) {
-        oldGL.destroy();
+      const gl = glRef.current;
+      if (gl !== null) {
+        gl.destroy();
         glRef.current = null;
       }
       if (viewerElement !== null) {
         try {
-          const newOS = new OpenSeadragonController(viewerElement);
-          const newGL = new WebGLManager(createWebGLCanvas(newOS.viewer));
-          newOS.viewer.addHandler("resize", onViewerResize);
-          newOS.viewer.addHandler("viewport-change", onViewerViewportChange);
-          osRef.current = newOS;
-          glRef.current = newGL;
+          const viewer = OpenSeadragonController.createViewer(viewerElement);
+          viewer.addHandler("resize", onViewerResize);
+          viewer.addHandler("viewport-change", onViewerViewportChange);
+          const osCanvas = viewer.drawer.canvas as HTMLCanvasElement;
+          const glCanvas = osCanvas.appendChild(WebGLController.createCanvas());
+          const os = new OpenSeadragonController(viewer);
+          const gl = new WebGLController(glCanvas);
+          gl.resize(osCanvas.width, osCanvas.height);
+          gl.draw(os.getViewport());
+          osRef.current = os;
+          glRef.current = gl;
         } catch (error) {
           console.error("Failed to initialize viewer", error);
           osRef.current = null;
@@ -124,23 +127,21 @@ export default function ViewerPanel() {
     let abort = false;
     const gl = glRef.current;
     if (gl !== null) {
-      gl.pointsController
-        .synchronize(
-          layerMap,
-          pointsMap,
-          sizeMaps,
-          colorMaps,
-          visibilityMaps,
-          opacityMaps,
-          markerMaps,
-          loadPoints,
-          loadTableByID,
-          () => abort,
-        )
-        .catch(console.error);
+      gl.synchronizePoints(
+        layerMap,
+        pointsMap,
+        sizeMaps,
+        colorMaps,
+        visibilityMaps,
+        opacityMaps,
+        markerMaps,
+        loadPoints,
+        loadTableByID,
+        () => abort,
+      ).catch(console.error);
       const os = osRef.current;
       if (os !== null) {
-        gl.pointsController.draw(os.viewer.viewport.getBounds(true));
+        gl.draw(os.getViewport());
       }
     }
     return () => {
@@ -166,15 +167,17 @@ export default function ViewerPanel() {
     let abort = false;
     const gl = glRef.current;
     if (gl !== null) {
-      gl.shapesController
-        .synchronize(
-          layerMap,
-          shapesMap,
-          loadShapes,
-          loadTableByID,
-          () => abort,
-        )
-        .catch(console.error);
+      gl.synchronizeShapes(
+        layerMap,
+        shapesMap,
+        loadShapes,
+        loadTableByID,
+        () => abort,
+      ).catch(console.error);
+      const os = osRef.current;
+      if (os !== null) {
+        gl.draw(os.getViewport());
+      }
     }
     return () => {
       abort = true;
@@ -188,15 +191,17 @@ export default function ViewerPanel() {
     shapesDataLoaderFactories,
   ]);
 
-  return <div ref={setViewerRef} className="size-full bg-white" />;
-}
+  // redraw upon WebGL configuration changes
+  useEffect(() => {
+    const gl = glRef.current;
+    if (gl !== null) {
+      gl.blendMode = blendMode;
+      const os = osRef.current;
+      if (os !== null) {
+        gl.draw(os.getViewport());
+      }
+    }
+  }, [blendMode]);
 
-function createWebGLCanvas(viewer: OpenSeadragon.Viewer): HTMLCanvasElement {
-  const viewerCanvas = viewer.drawer.canvas as HTMLCanvasElement;
-  const webGLCanvas = document.createElement("canvas");
-  webGLCanvas.width = viewerCanvas.width;
-  webGLCanvas.height = viewerCanvas.height;
-  webGLCanvas.style = "position: relative; width: 100%; height: 100%;";
-  viewerCanvas.appendChild(webGLCanvas);
-  return webGLCanvas;
+  return <div ref={setViewerRef} className="size-full bg-white" />;
 }

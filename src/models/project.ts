@@ -5,7 +5,7 @@ import { ILayerModel } from "./layer";
 import { IPointsModel } from "./points";
 import { IShapesModel } from "./shapes";
 import { ITableModel } from "./table";
-import { Color, Marker } from "./types";
+import { BlendMode, Color, Marker } from "./types";
 
 /** A project */
 export interface IProjectModel extends IModel {
@@ -64,4 +64,7 @@ export interface IProjectModel extends IModel {
     name: string;
     values: { [key: string]: Marker };
   }[];
+
+  /** Blend mode (defaults to "over") */
+  blendMode?: BlendMode;
 }
