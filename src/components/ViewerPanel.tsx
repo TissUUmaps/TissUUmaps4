@@ -101,7 +101,7 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     const abortController = new AbortController();
-    const cleanupReason = new String("image/labels effect cleanup");
+    const cleanupReason = new Error("image/labels effect cleanup");
     const os = osRef.current;
     if (os !== null) {
       os.synchronize(
@@ -135,7 +135,7 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     const abortController = new AbortController();
-    const cleanupReason = new String("points effect cleanup");
+    const cleanupReason = new Error("points effect cleanup");
     const gl = glRef.current;
     if (gl !== null) {
       gl.synchronizePoints(
@@ -184,7 +184,7 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     const abortController = new AbortController();
-    const cleanupReason = new String("shapes effect cleanup");
+    const cleanupReason = new Error("shapes effect cleanup");
     const gl = glRef.current;
     if (gl !== null) {
       gl.synchronizeShapes(
