@@ -3,7 +3,7 @@ import { ITableData } from "../data/table";
 import { ILayerModel } from "../models/layer";
 import { IShapesModel } from "../models/shapes";
 import { BlendMode } from "../models/types";
-import { Viewport } from "./WebGLController";
+import { Rect } from "./WebGLController";
 import WebGLControllerBase from "./WebGLControllerBase";
 
 export default class WebGLShapesController extends WebGLControllerBase {
@@ -29,7 +29,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
 
   draw(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _viewport: Viewport,
+    _viewport: Rect,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _blendMode: BlendMode,
   ): void {

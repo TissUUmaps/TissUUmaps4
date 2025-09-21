@@ -20,7 +20,7 @@ import {
 import ColorUtils from "../utils/ColorUtils";
 import HashUtils from "../utils/HashUtils";
 import WebGLUtils from "../utils/WebGLUtils";
-import { Viewport } from "./WebGLController";
+import { Rect } from "./WebGLController";
 import WebGLControllerBase from "./WebGLControllerBase";
 
 // TODO:
@@ -204,7 +204,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     return true;
   }
 
-  draw(viewport: Viewport, blendMode: BlendMode, sizeFactor: number): void {
+  draw(viewport: Rect, blendMode: BlendMode, sizeFactor: number): void {
     if (this._nPoints === 0) {
       return;
     }

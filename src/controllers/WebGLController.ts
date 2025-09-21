@@ -3,7 +3,7 @@ import WebGLUtils from "../utils/WebGLUtils";
 import WebGLPointsController from "./WebGLPointsController";
 import WebGLShapesController from "./WebGLShapesController";
 
-export type Viewport = {
+export type Rect = {
   x: number;
   y: number;
   width: number;
@@ -56,7 +56,7 @@ export default class WebGLController {
     return await this._shapesController.synchronize(...args);
   }
 
-  draw(viewport: Viewport): void {
+  draw(viewport: Rect): void {
     this._gl.clearColor(0, 0, 0, 0);
     this._gl.clear(this._gl.COLOR_BUFFER_BIT);
     this._pointsController.draw(viewport, this.blendMode, this.pointSizeFactor);

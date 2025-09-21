@@ -48,7 +48,7 @@ export default class OpenSeadragonController {
     );
   }
 
-  getViewport(): OpenSeadragon.Rect {
+  getViewportBounds(): OpenSeadragon.Rect {
     return this._viewer.viewport.getBounds(true);
   }
 

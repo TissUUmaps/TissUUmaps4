@@ -82,7 +82,7 @@ export default function ViewerPanel() {
           const gl = new WebGLController(glCanvas);
           const containerSize = viewer.viewport.getContainerSize();
           gl.resize(containerSize.x, containerSize.y);
-          gl.draw(os.getViewport());
+          gl.draw(os.getViewportBounds());
           osRef.current = os;
           glRef.current = gl;
         } catch (error) {
@@ -144,7 +144,7 @@ export default function ViewerPanel() {
       ).catch(console.error);
       const os = osRef.current;
       if (os !== null) {
-        gl.draw(os.getViewport());
+        gl.draw(os.getViewportBounds());
       }
     }
     return () => {
@@ -179,7 +179,7 @@ export default function ViewerPanel() {
       ).catch(console.error);
       const os = osRef.current;
       if (os !== null) {
-        gl.draw(os.getViewport());
+        gl.draw(os.getViewportBounds());
       }
     }
     return () => {
@@ -210,7 +210,7 @@ export default function ViewerPanel() {
       if (redraw) {
         const os = osRef.current;
         if (os !== null) {
-          gl.draw(os.getViewport());
+          gl.draw(os.getViewportBounds());
         }
       }
     }

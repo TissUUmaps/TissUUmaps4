@@ -2,7 +2,7 @@ import { mat3 } from "gl-matrix";
 
 import { ILayerConfigModel } from "../models/base";
 import { ILayerModel } from "../models/layer";
-import { Viewport } from "./WebGLController";
+import { Rect } from "./WebGLController";
 
 // TODO:
 // - colorbar
@@ -52,7 +52,7 @@ export default class WebGLControllerBase {
     return tf;
   }
 
-  protected static createWorldToViewportTransform(viewport: Viewport): mat3 {
+  protected static createWorldToViewportTransform(viewport: Rect): mat3 {
     const tf = mat3.create();
     mat3.translate(tf, tf, [-viewport.x, -viewport.y]);
     mat3.scale(tf, tf, [1.0 / viewport.width, 1.0 / viewport.height]);
