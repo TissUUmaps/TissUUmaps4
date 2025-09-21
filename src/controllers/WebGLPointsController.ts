@@ -391,10 +391,12 @@ export default class WebGLPointsController extends WebGLControllerBase {
           try {
             data = await loadPoints(points, signal);
           } catch (error) {
-            console.error(
-              `Failed to load points with ID '${points.id}'`,
-              error,
-            );
+            if (!signal?.aborted) {
+              console.error(
+                `Failed to load points with ID '${points.id}'`,
+                error,
+              );
+            }
           }
           signal?.throwIfAborted();
           if (data !== null) {
