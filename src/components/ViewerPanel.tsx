@@ -195,10 +195,16 @@ export default function ViewerPanel() {
   useEffect(() => {
     const gl = glRef.current;
     if (gl !== null) {
-      gl.blendMode = blendMode;
-      const os = osRef.current;
-      if (os !== null) {
-        gl.draw(os.getViewport());
+      let redraw: boolean = false;
+      if (gl.blendMode !== blendMode) {
+        gl.blendMode = blendMode;
+        redraw = true;
+      }
+      if (redraw) {
+        const os = osRef.current;
+        if (os !== null) {
+          gl.draw(os.getViewport());
+        }
       }
     }
   }, [blendMode]);

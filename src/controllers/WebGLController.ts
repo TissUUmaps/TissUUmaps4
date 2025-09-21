@@ -14,11 +14,12 @@ export default class WebGLController {
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas#maximum_canvas_size
   private static readonly _MAX_CANVAS_SIZE = 4096;
 
+  blendMode: BlendMode = "over";
+
   private readonly _canvas: HTMLCanvasElement;
   private _gl: WebGL2RenderingContext;
   private _pointsController: WebGLPointsController;
   private _shapesController: WebGLShapesController;
-  private _blendMode: BlendMode = "over";
 
   static createCanvas(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
@@ -42,10 +43,6 @@ export default class WebGLController {
     });
   }
 
-  set blendMode(mode: BlendMode) {
-    this._blendMode = mode;
-  }
-
   async synchronizePoints(
     ...args: Parameters<typeof this._pointsController.synchronize>
   ): ReturnType<typeof this._pointsController.synchronize> {
@@ -61,8 +58,8 @@ export default class WebGLController {
   draw(viewport: Viewport): void {
     this._gl.clearColor(0, 0, 0, 0);
     this._gl.clear(this._gl.COLOR_BUFFER_BIT);
-    this._pointsController.draw(viewport, this._blendMode);
-    this._shapesController.draw(viewport, this._blendMode);
+    this._pointsController.draw(viewport, this.blendMode);
+    this._shapesController.draw(viewport, this.blendMode);
   }
 
   resize(width: number, height: number): void {
