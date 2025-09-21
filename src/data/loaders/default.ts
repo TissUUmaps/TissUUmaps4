@@ -34,7 +34,8 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
   IDefaultImageDataSourceModel,
   DefaultImageData
 > {
-  async loadImage(): Promise<DefaultImageData> {
+  async loadImage(signal?: AbortSignal): Promise<DefaultImageData> {
+    signal?.throwIfAborted();
     if (this.dataSource.tileSourceConfig !== undefined) {
       if (
         this.dataSource.url !== undefined ||
@@ -48,7 +49,9 @@ export class DefaultImageDataLoader extends ImageDataLoaderBase<
     }
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      signal?.throwIfAborted();
       const file = await fh.getFile();
+      signal?.throwIfAborted();
       const objectUrl = URL.createObjectURL(file);
       return new DefaultImageData(objectUrl, objectUrl);
     }

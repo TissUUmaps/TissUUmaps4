@@ -68,10 +68,12 @@ export class TIFFLabelsData implements ILabelsData {
     level: number,
     x: number,
     y: number,
-    abortSignal?: AbortSignal,
+    signal?: AbortSignal,
   ): Promise<UintArray> {
+    signal?.throwIfAborted();
     const image = this._levels[level]!;
-    const tile = await image.getTileOrStrip(x, y, 0, POOL, abortSignal);
+    const tile = await image.getTileOrStrip(x, y, 0, POOL, signal);
+    signal?.throwIfAborted();
     const bitsPerSample = image.getBitsPerSample(0) as number;
     switch (bitsPerSample) {
       case 8:
@@ -92,9 +94,12 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
   ITIFFLabelsDataSourceModel,
   TIFFLabelsData
 > {
-  async loadLabels(abortSignal?: AbortSignal): Promise<TIFFLabelsData> {
-    const tiff = await this._loadTIFF(abortSignal);
+  async loadLabels(signal?: AbortSignal): Promise<TIFFLabelsData> {
+    signal?.throwIfAborted();
+    const tiff = await this._loadTIFF(signal);
+    signal?.throwIfAborted();
     const imageCount = await tiff.getImageCount();
+    signal?.throwIfAborted();
     if (imageCount <= 0) {
       throw new Error("No images found in the TIFF file.");
     }
@@ -121,6 +126,7 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
       imagePromises.push(imagePromise);
     }
     const images = await Promise.all(imagePromises);
+    signal?.throwIfAborted();
     return new TIFFLabelsData(
       images.sort((a, b) => b.getWidth() - a.getWidth()),
       this.dataSource.tileWidth ?? null,
@@ -128,14 +134,21 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
     );
   }
 
-  private async _loadTIFF(abortSignal?: AbortSignal): Promise<geotiff.GeoTIFF> {
+  private async _loadTIFF(signal?: AbortSignal): Promise<geotiff.GeoTIFF> {
+    signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      signal?.throwIfAborted();
       const file = await fh.getFile();
-      return await geotiff.fromBlob(file, abortSignal);
+      signal?.throwIfAborted();
+      const tiff = await geotiff.fromBlob(file, signal);
+      signal?.throwIfAborted();
+      return tiff;
     }
     if (this.dataSource.url !== undefined) {
-      return await geotiff.fromUrl(this.dataSource.url, abortSignal);
+      const tiff = await geotiff.fromUrl(this.dataSource.url, signal);
+      signal?.throwIfAborted();
+      return tiff;
     }
     if (this.dataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");

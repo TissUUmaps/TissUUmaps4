@@ -100,7 +100,7 @@ export default function ViewerPanel() {
   // synchronize the OpenSeadragon viewer upon layer/image/labels changes
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
-    let abort = false;
+    const abortController = new AbortController();
     const os = osRef.current;
     if (os !== null) {
       os.synchronize(
@@ -109,11 +109,11 @@ export default function ViewerPanel() {
         labelsMap,
         loadImage,
         loadLabels,
-        () => abort,
+        abortController.signal,
       ).catch(console.error);
     }
     return () => {
-      abort = true;
+      abortController.abort();
     };
   }, [
     projectDir,
@@ -129,7 +129,7 @@ export default function ViewerPanel() {
   // synchronize the WebGL canvas upon layer/points changes
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
-    let abort = false;
+    const abortController = new AbortController();
     const gl = glRef.current;
     if (gl !== null) {
       gl.synchronizePoints(
@@ -142,15 +142,16 @@ export default function ViewerPanel() {
         markerMaps,
         loadPoints,
         loadTableByID,
-        () => abort,
-      ).catch(console.error);
-      const os = osRef.current;
-      if (os !== null) {
-        gl.draw(os.getViewportBounds());
-      }
+        abortController.signal,
+      ).then(() => {
+        const os = osRef.current;
+        if (os !== null) {
+          gl.draw(os.getViewportBounds());
+        }
+      }, console.error);
     }
     return () => {
-      abort = true;
+      abortController.abort();
     };
   }, [
     projectDir,
@@ -169,7 +170,7 @@ export default function ViewerPanel() {
   // synchronize the WebGL canvas upon layer/shapes changes
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
-    let abort = false;
+    const abortController = new AbortController();
     const gl = glRef.current;
     if (gl !== null) {
       gl.synchronizeShapes(
@@ -177,15 +178,16 @@ export default function ViewerPanel() {
         shapesMap,
         loadShapes,
         loadTableByID,
-        () => abort,
-      ).catch(console.error);
-      const os = osRef.current;
-      if (os !== null) {
-        gl.draw(os.getViewportBounds());
-      }
+        abortController.signal,
+      ).then(() => {
+        const os = osRef.current;
+        if (os !== null) {
+          gl.draw(os.getViewportBounds());
+        }
+      }, console.error);
     }
     return () => {
-      abort = true;
+      abortController.abort();
     };
   }, [
     projectDir,

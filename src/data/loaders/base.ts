@@ -33,7 +33,7 @@ export abstract class ImageDataLoaderBase<
   extends DataLoaderBase<TImageDataSourceModel>
   implements IImageDataLoader<TImageData>
 {
-  abstract loadImage(abortSignal?: AbortSignal): Promise<TImageData>;
+  abstract loadImage(signal?: AbortSignal): Promise<TImageData>;
 }
 
 export abstract class LabelsDataLoaderBase<
@@ -43,7 +43,7 @@ export abstract class LabelsDataLoaderBase<
   extends DataLoaderBase<TLabelsDataSourceModel>
   implements ILabelsDataLoader<TLabelsData>
 {
-  abstract loadLabels(abortSignal?: AbortSignal): Promise<TLabelsData>;
+  abstract loadLabels(signal?: AbortSignal): Promise<TLabelsData>;
 }
 
 export abstract class PointsDataLoaderBase<
@@ -53,7 +53,7 @@ export abstract class PointsDataLoaderBase<
   extends DataLoaderBase<TPointsDataSourceModel>
   implements IPointsDataLoader<TPointsData>
 {
-  abstract loadPoints(): Promise<TPointsData>;
+  abstract loadPoints(signal?: AbortSignal): Promise<TPointsData>;
 }
 
 export abstract class ShapesDataLoaderBase<
@@ -63,7 +63,7 @@ export abstract class ShapesDataLoaderBase<
   extends DataLoaderBase<TShapesDataSourceModel>
   implements IShapesDataLoader<TShapesData>
 {
-  abstract loadShapes(): Promise<TShapesData>;
+  abstract loadShapes(signal?: AbortSignal): Promise<TShapesData>;
 }
 
 export abstract class TableDataLoaderBase<
@@ -73,5 +73,5 @@ export abstract class TableDataLoaderBase<
   extends DataLoaderBase<TTableDataSourceModel>
   implements ITableDataLoader<TTableData>
 {
-  abstract loadTable(): Promise<TTableData>;
+  abstract loadTable(signal?: AbortSignal): Promise<TTableData>;
 }

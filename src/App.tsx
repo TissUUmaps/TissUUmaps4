@@ -18,7 +18,7 @@ import { useBoundStore } from "./stores/boundStore";
 
 declare global {
   interface Window {
-    tissuumaps: typeof useBoundStore;
+    tissuumaps?: typeof useBoundStore;
   }
 }
 
@@ -26,17 +26,10 @@ export default function App() {
   // make the store available to plugins
   useEffect(() => {
     window.tissuumaps = useBoundStore;
+    return () => {
+      delete window.tissuumaps;
+    };
   }, []);
-
-  // const initialized = useBoundStore((state) => state.initialized);
-  // const setInitialized = useBoundStore((state) => state.setInitialized);
-
-  // useEffect(() => {
-  //   setInitialized(true);
-  //   return () => {
-  //     setInitialized(false);
-  //   };
-  // }, [setInitialized]);
 
   const dockviewComponents = {
     viewerPanel: () => <ViewerPanel />,
@@ -103,13 +96,6 @@ export default function App() {
     projectPanel.api.setActive();
   }
 
-  // if (!initialized) {
-  //   return (
-  //     <div className="w-screen h-screen overflow-hidden flex items-center justify-center">
-  //       <p>Initializing...</p>
-  //     </div>
-  //   );
-  // }
   return (
     <div className="w-screen h-screen overflow-hidden">
       <DockviewReact

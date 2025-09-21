@@ -12,19 +12,21 @@ export default class WebGLShapesController extends WebGLControllerBase {
   }
 
   async synchronize(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _layerMap: Map<string, ILayerModel>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _shapesMap: Map<string, IShapesModel>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _loadShapes: (shapes: IShapesModel) => Promise<IShapesData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _loadTableByID: (tableId: string) => Promise<ITableData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _checkAbort: () => boolean,
-  ): Promise<boolean> {
+    _loadShapes: (
+      shapes: IShapesModel,
+      signal?: AbortSignal,
+    ) => Promise<IShapesData>,
+    _loadTableByID: (
+      tableId: string,
+      signal?: AbortSignal,
+    ) => Promise<ITableData>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    signal?.throwIfAborted();
     // TODO synchronize shapes
-    return await Promise.resolve(true);
+    await Promise.resolve();
   }
 
   draw(

@@ -7,7 +7,7 @@ import { BoundStoreStateCreator } from "./boundStore";
 type ShapesDataLoaderFactory = (
   dataSource: IShapesDataSourceModel,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (tableId: string) => Promise<ITableData>,
+  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<ITableData>,
 ) => IShapesDataLoader<IShapesData>;
 
 export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
@@ -20,8 +20,14 @@ export type ShapesSliceState = {
 
 export type ShapesSliceActions = {
   setShapes: (shapes: IShapesModel, index?: number) => void;
-  loadShapes: (shapes: IShapesModel) => Promise<IShapesData>;
-  loadShapesByID: (shapesId: string) => Promise<IShapesData>;
+  loadShapes: (
+    shapes: IShapesModel,
+    signal?: AbortSignal,
+  ) => Promise<IShapesData>;
+  loadShapesByID: (
+    shapesId: string,
+    signal?: AbortSignal,
+  ) => Promise<IShapesData>;
   deleteShapes: (shapes: IShapesModel) => void;
 };
 
@@ -44,7 +50,8 @@ export const createShapesSlice: BoundStoreStateCreator<ShapesSlice> = (
       }
     });
   },
-  loadShapes: async (shapes) => {
+  loadShapes: async (shapes, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     let shapesData = state.shapesDataCache.get(shapes.dataSource);
     if (shapesData !== undefined) {
@@ -63,19 +70,21 @@ export const createShapesSlice: BoundStoreStateCreator<ShapesSlice> = (
       state.projectDir,
       state.loadTableByID,
     );
-    shapesData = await shapesDataLoader.loadShapes();
+    shapesData = await shapesDataLoader.loadShapes(signal);
+    signal?.throwIfAborted();
     set((draft) => {
       draft.shapesDataCache.set(shapes.dataSource, shapesData);
     });
     return shapesData;
   },
-  loadShapesByID: async (shapesId) => {
+  loadShapesByID: async (shapesId, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     const shapes = state.shapesMap.get(shapesId);
     if (shapes === undefined) {
       throw new Error(`Shapes with ID ${shapesId} not found.`);
     }
-    return state.loadShapes(shapes);
+    return state.loadShapes(shapes, signal);
   },
   deleteShapes: (shapes) => {
     set((draft) => {

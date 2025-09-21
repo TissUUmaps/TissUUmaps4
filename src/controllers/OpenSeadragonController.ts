@@ -33,18 +33,25 @@ export default class OpenSeadragonController {
     layerMap: Map<string, ILayerModel>,
     imageMap: Map<string, IImageModel>,
     labelsMap: Map<string, ILabelsModel>,
-    loadImage: (image: IImageModel) => Promise<IImageData>,
-    loadLabels: (labels: ILabelsModel) => Promise<ILabelsData>,
-    checkAbort: () => boolean,
-  ): Promise<boolean> {
+    loadImage: (
+      image: IImageModel,
+      signal?: AbortSignal,
+    ) => Promise<IImageData>,
+    loadLabels: (
+      labels: ILabelsModel,
+      signal?: AbortSignal,
+    ) => Promise<ILabelsData>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    signal?.throwIfAborted();
     this._cleanTiledImages(layerMap, imageMap, labelsMap);
-    return await this._createOrUpdateTiledImages(
+    await this._createOrUpdateTiledImages(
       layerMap,
       imageMap,
       labelsMap,
       loadImage,
       loadLabels,
-      checkAbort,
+      signal,
     );
   }
 
@@ -93,10 +100,17 @@ export default class OpenSeadragonController {
     layerMap: Map<string, ILayerModel>,
     imageMap: Map<string, IImageModel>,
     labelsMap: Map<string, ILabelsModel>,
-    loadImage: (image: IImageModel) => Promise<IImageData>,
-    loadLabels: (labels: ILabelsModel) => Promise<ILabelsData>,
-    checkAbort: () => boolean,
-  ): Promise<boolean> {
+    loadImage: (
+      image: IImageModel,
+      signal?: AbortSignal,
+    ) => Promise<IImageData>,
+    loadLabels: (
+      labels: ILabelsModel,
+      signal?: AbortSignal,
+    ) => Promise<ILabelsData>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    signal?.throwIfAborted();
     let desiredIndex = 0;
     for (const layer of layerMap.values()) {
       for (const image of imageMap.values()) {
@@ -105,13 +119,11 @@ export default class OpenSeadragonController {
         )) {
           let imageData = null;
           try {
-            imageData = await loadImage(image);
+            imageData = await loadImage(image, signal);
           } catch (error) {
             console.error(`Failed to load image with ID ${image.id}`, error);
           }
-          if (checkAbort()) {
-            return false;
-          }
+          signal?.throwIfAborted();
           if (imageData !== null) {
             const currentIndex = this._tiledImageStates.findIndex(
               (tiledImageState) =>
@@ -138,13 +150,11 @@ export default class OpenSeadragonController {
         )) {
           let labelsData = null;
           try {
-            labelsData = await loadLabels(labels);
+            labelsData = await loadLabels(labels, signal);
           } catch (error) {
             console.error(`Failed to load labels with ID ${labels.id}`, error);
           }
-          if (checkAbort()) {
-            return false;
-          }
+          signal?.throwIfAborted();
           if (labelsData !== null) {
             const currentIndex = this._tiledImageStates.findIndex(
               (tiledImageState) =>
@@ -169,7 +179,6 @@ export default class OpenSeadragonController {
         }
       }
     }
-    return true;
   }
 
   private _createOrUpdateTiledImage(

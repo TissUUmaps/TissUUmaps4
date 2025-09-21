@@ -28,8 +28,8 @@ export type TableSliceState = {
 
 export type TableSliceActions = {
   setTable: (table: ITableModel, index?: number) => void;
-  loadTable: (table: ITableModel) => Promise<ITableData>;
-  loadTableByID: (tableId: string) => Promise<ITableData>;
+  loadTable: (table: ITableModel, signal?: AbortSignal) => Promise<ITableData>;
+  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<ITableData>;
   deleteTable: (table: ITableModel) => void;
 };
 
@@ -52,7 +52,8 @@ export const createTableSlice: BoundStoreStateCreator<TableSlice> = (
       }
     });
   },
-  loadTable: async (table) => {
+  loadTable: async (table, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     let tableData = state.tableDataCache.get(table.dataSource);
     if (tableData !== undefined) {
@@ -70,19 +71,21 @@ export const createTableSlice: BoundStoreStateCreator<TableSlice> = (
       table.dataSource,
       state.projectDir,
     );
-    tableData = await tableDataLoader.loadTable();
+    tableData = await tableDataLoader.loadTable(signal);
+    signal?.throwIfAborted();
     set((draft) => {
       draft.tableDataCache.set(table.dataSource, tableData);
     });
     return tableData;
   },
-  loadTableByID: async (tableId) => {
+  loadTableByID: async (tableId, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     const table = state.tableMap.get(tableId);
     if (table === undefined) {
       throw new Error(`Table with ID ${tableId} not found.`);
     }
-    return state.loadTable(table);
+    return state.loadTable(table, signal);
   },
   deleteTable: (table) => {
     set((draft) => {

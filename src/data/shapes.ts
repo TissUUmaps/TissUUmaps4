@@ -3,10 +3,10 @@ import { GeoJSONGeometry } from "./types";
 
 export interface IShapesData extends IData {
   getLength(): number;
-  loadGeometries(): Promise<GeoJSONGeometry[]>;
+  loadGeometries(signal?: AbortSignal): Promise<GeoJSONGeometry[]>;
 }
 
 export interface IShapesDataLoader<TShapesData extends IShapesData>
   extends IDataLoader {
-  loadShapes: () => Promise<TShapesData>;
+  loadShapes: (signal?: AbortSignal) => Promise<TShapesData>;
 }

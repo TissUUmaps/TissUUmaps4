@@ -67,15 +67,12 @@ export class ZarrLabelsData implements ILabelsData {
   }
 
   loadTile(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _level: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _x: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _y: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _abortSignal?: AbortSignal,
+    signal?: AbortSignal,
   ): Promise<UintArray> {
+    signal?.throwIfAborted();
     // TODO loadTile
     throw new Error("Method not implemented.");
   }
@@ -87,9 +84,12 @@ export class ZarrLabelsDataLoader extends LabelsDataLoaderBase<
   IZarrLabelsDataSourceModel,
   ZarrLabelsData
 > {
-  async loadLabels(): Promise<ZarrLabelsData> {
-    const store = await this._loadZarr();
+  async loadLabels(signal?: AbortSignal): Promise<ZarrLabelsData> {
+    signal?.throwIfAborted();
+    const store = await this._loadZarr(signal);
+    signal?.throwIfAborted();
     const root = await zarrita.open(store);
+    signal?.throwIfAborted();
     let labelsNode: zarrita.Location<zarrita.Readable> = root;
     if (this.dataSource.path !== undefined) {
       labelsNode = labelsNode.resolve(this.dataSource.path);
@@ -104,21 +104,28 @@ export class ZarrLabelsDataLoader extends LabelsDataLoaderBase<
         } catch {
           break; // no more levels available
         }
+        signal?.throwIfAborted();
       }
       if (arrays.length === 0) {
         throw new Error("No Zarr levels found.");
       }
     } else {
       const array = await zarrita.open(labelsNode, { kind: "array" });
+      signal?.throwIfAborted();
       arrays.push(array);
     }
     return new ZarrLabelsData(arrays);
   }
 
-  private async _loadZarr(): Promise<zarrita.AsyncReadable> {
+  private async _loadZarr(
+    signal?: AbortSignal,
+  ): Promise<zarrita.AsyncReadable> {
+    signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      signal?.throwIfAborted();
       const file = await fh.getFile();
+      signal?.throwIfAborted();
       return ZipFileStore.fromBlob(file);
     }
     if (this.dataSource.url !== undefined) {

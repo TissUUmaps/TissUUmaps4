@@ -12,11 +12,11 @@ export interface ILabelsData extends IData {
     level: number,
     x: number,
     y: number,
-    abortSignal?: AbortSignal,
+    signal?: AbortSignal,
   ): Promise<UintArray>;
 }
 
 export interface ILabelsDataLoader<TLabelsData extends ILabelsData>
   extends IDataLoader {
-  loadLabels(abortSignal?: AbortSignal): Promise<TLabelsData>;
+  loadLabels(signal?: AbortSignal): Promise<TLabelsData>;
 }

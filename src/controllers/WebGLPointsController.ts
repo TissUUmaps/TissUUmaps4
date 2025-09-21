@@ -168,19 +168,24 @@ export default class WebGLPointsController extends WebGLControllerBase {
     visibilityMaps: Map<string, Map<string, boolean>>,
     opacityMaps: Map<string, Map<string, number>>,
     markerMaps: Map<string, Map<string, Marker>>,
-    loadPoints: (points: IPointsModel) => Promise<IPointsData>,
-    loadTableByID: (tableId: string) => Promise<ITableData>,
-    checkAbort: () => boolean,
-  ): Promise<boolean> {
+    loadPoints: (
+      points: IPointsModel,
+      signal?: AbortSignal,
+    ) => Promise<IPointsData>,
+    loadTableByID: (
+      tableId: string,
+      signal?: AbortSignal,
+    ) => Promise<ITableData>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    signal?.throwIfAborted();
     const metas = await this._collectPoints(
       layerMap,
       pointsMap,
       loadPoints,
-      checkAbort,
+      signal,
     );
-    if (metas === null || checkAbort()) {
-      return false;
-    }
+    signal?.throwIfAborted();
     if (metas.length > WebGLPointsController._MAX_N_OBJECTS) {
       console.warn(
         `Only rendering the first ${WebGLPointsController._MAX_N_OBJECTS} out of ${metas.length} objects`,
@@ -202,13 +207,10 @@ export default class WebGLPointsController extends WebGLControllerBase {
       markerMaps,
       buffersResized,
       loadTableByID,
-      checkAbort,
+      signal,
     );
-    if (newBufferSlices === null || checkAbort()) {
-      return false;
-    }
+    signal?.throwIfAborted();
     this._bufferSlices = newBufferSlices;
-    return true;
   }
 
   draw(viewport: Rect, blendMode: BlendMode, sizeFactor: number): void {
@@ -372,9 +374,13 @@ export default class WebGLPointsController extends WebGLControllerBase {
   private async _collectPoints(
     layerMap: Map<string, ILayerModel>,
     pointsMap: Map<string, IPointsModel>,
-    loadPoints: (points: IPointsModel) => Promise<IPointsData>,
-    checkAbort: () => boolean,
-  ): Promise<PointsMeta[] | null> {
+    loadPoints: (
+      points: IPointsModel,
+      signal?: AbortSignal,
+    ) => Promise<IPointsData>,
+    signal?: AbortSignal,
+  ): Promise<PointsMeta[]> {
+    signal?.throwIfAborted();
     const metas: PointsMeta[] = [];
     for (const layer of layerMap.values()) {
       for (const points of pointsMap.values()) {
@@ -383,13 +389,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
         )) {
           let data = null;
           try {
-            data = await loadPoints(points);
+            data = await loadPoints(points, signal);
           } catch (error) {
             console.error(`Failed to load points with ID ${points.id}`, error);
           }
-          if (checkAbort()) {
-            return null;
-          }
+          signal?.throwIfAborted();
           if (data !== null) {
             metas.push({
               layer: layer,
@@ -412,9 +416,13 @@ export default class WebGLPointsController extends WebGLControllerBase {
     opacityMaps: Map<string, Map<string, number>>,
     markerMaps: Map<string, Map<string, Marker>>,
     buffersResized: boolean,
-    loadTableByID: (tableId: string) => Promise<ITableData>,
-    checkAbort: () => boolean,
-  ): Promise<PointsBufferSlice[] | null> {
+    loadTableByID: (
+      tableId: string,
+      signal?: AbortSignal,
+    ) => Promise<ITableData>,
+    signal?: AbortSignal,
+  ): Promise<PointsBufferSlice[]> {
+    signal?.throwIfAborted();
     let i = 0;
     let offset = 0;
     const newBufferSlices: PointsBufferSlice[] = [];
@@ -435,20 +443,22 @@ export default class WebGLPointsController extends WebGLControllerBase {
         bufferSliceChanged ||
         bufferSlice.config.pointX !== meta.layerConfig.x
       ) {
-        const data = await meta.data.loadCoordinates(meta.layerConfig.x);
-        if (checkAbort()) {
-          return null;
-        }
+        const data = await meta.data.loadCoordinates(
+          meta.layerConfig.x,
+          signal,
+        );
+        signal?.throwIfAborted();
         WebGLUtils.loadBuffer(this._gl, this._buffers.x, data, offset);
       }
       if (
         bufferSliceChanged ||
         bufferSlice.config.pointY !== meta.layerConfig.y
       ) {
-        const data = await meta.data.loadCoordinates(meta.layerConfig.y);
-        if (checkAbort()) {
-          return null;
-        }
+        const data = await meta.data.loadCoordinates(
+          meta.layerConfig.y,
+          signal,
+        );
+        signal?.throwIfAborted();
         WebGLUtils.loadBuffer(this._gl, this._buffers.y, data, offset);
       }
       if (
@@ -456,16 +466,14 @@ export default class WebGLPointsController extends WebGLControllerBase {
         bufferSlice.config.pointSize !== meta.points.pointSize ||
         bufferSlice.config.sizeMap !== meta.points.sizeMap
       ) {
-        const success = await this._loadPointSizeBuffer(
+        await this._loadPointSizeBuffer(
           offset,
           meta,
           sizeMaps,
           loadTableByID,
-          checkAbort,
+          signal,
         );
-        if (!success || checkAbort()) {
-          return null;
-        }
+        signal?.throwIfAborted();
       }
       if (
         bufferSliceChanged ||
@@ -480,34 +488,30 @@ export default class WebGLPointsController extends WebGLControllerBase {
         bufferSlice.config.pointColor !== meta.points.pointColor ||
         bufferSlice.config.colorMap !== meta.points.colorMap
       ) {
-        const success = await this._loadPointColorBuffer(
+        await this._loadPointColorBuffer(
           offset,
           meta,
           colorMaps,
           visibilityMaps,
           opacityMaps,
           loadTableByID,
-          checkAbort,
+          signal,
         );
-        if (!success || checkAbort()) {
-          return null;
-        }
+        signal?.throwIfAborted();
       }
       if (
         bufferSliceChanged ||
         bufferSlice.config.pointMarker !== meta.points.pointMarker ||
         bufferSlice.config.markerMap !== meta.points.markerMap
       ) {
-        const success = await this._loadPointMarkerIndexBuffer(
+        await this._loadPointMarkerIndexBuffer(
           offset,
           meta,
           markerMaps,
           loadTableByID,
-          checkAbort,
+          signal,
         );
-        if (!success || checkAbort()) {
-          return null;
-        }
+        signal?.throwIfAborted();
       }
       if (bufferSliceChanged) {
         WebGLUtils.loadBuffer(
@@ -562,35 +566,39 @@ export default class WebGLPointsController extends WebGLControllerBase {
     offset: number,
     meta: PointsMeta,
     sizeMaps: Map<string, Map<string, number>>,
-    loadTableByID: (tableId: string) => Promise<ITableData>,
-    checkAbort: () => boolean,
-  ): Promise<boolean> {
+    loadTableByID: (
+      tableId: string,
+      signal?: AbortSignal,
+    ) => Promise<ITableData>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    signal?.throwIfAborted();
     const data = new Float16Array(meta.data.getLength());
     if (meta.points.pointSize === undefined) {
       data.fill(WebGLPointsController._DEFAULT_POINT_SIZE);
     } else if (isTableValuesColumn(meta.points.pointSize)) {
-      const tableData = await loadTableByID(meta.points.pointSize.tableId);
-      if (checkAbort()) {
-        return false;
-      }
+      const tableData = await loadTableByID(
+        meta.points.pointSize.tableId,
+        signal,
+      );
+      signal?.throwIfAborted();
       const tableValues = await tableData.loadColumn<number>(
         meta.points.pointSize.valuesCol,
+        signal,
       );
-      if (checkAbort()) {
-        return false;
-      }
+      signal?.throwIfAborted();
       data.set(tableValues);
     } else if (isTableGroupsColumn(meta.points.pointSize)) {
-      const tableData = await loadTableByID(meta.points.pointSize.tableId);
-      if (checkAbort()) {
-        return false;
-      }
+      const tableData = await loadTableByID(
+        meta.points.pointSize.tableId,
+        signal,
+      );
+      signal?.throwIfAborted();
       const tableGroups = await tableData.loadColumn(
         meta.points.pointSize.groupsCol,
+        signal,
       );
-      if (checkAbort()) {
-        return false;
-      }
+      signal?.throwIfAborted();
       let sizeMap = undefined;
       if (meta.points.sizeMap !== undefined) {
         if (typeof meta.points.sizeMap === "string") {
@@ -618,7 +626,6 @@ export default class WebGLPointsController extends WebGLControllerBase {
       data.fill(meta.points.pointSize);
     }
     WebGLUtils.loadBuffer(this._gl, this._buffers.size, data, offset);
-    return true;
   }
 
   private async _loadPointColorBuffer(
@@ -627,9 +634,13 @@ export default class WebGLPointsController extends WebGLControllerBase {
     colorMaps: Map<string, Map<string, Color>>,
     visibilityMaps: Map<string, Map<string, boolean>>,
     opacityMaps: Map<string, Map<string, number>>,
-    loadTableByID: (tableId: string) => Promise<ITableData>,
-    checkAbort: () => boolean,
-  ): Promise<boolean> {
+    loadTableByID: (
+      tableId: string,
+      signal?: AbortSignal,
+    ) => Promise<ITableData>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    signal?.throwIfAborted();
     const data = new Uint32Array(meta.data.getLength());
     if (
       meta.layer.visibility === false ||
@@ -644,32 +655,32 @@ export default class WebGLPointsController extends WebGLControllerBase {
           ColorUtils.packColor(WebGLPointsController._DEFAULT_POINT_COLOR),
         );
       } else if (isTableValuesColumn(meta.points.pointColor)) {
-        const tableData = await loadTableByID(meta.points.pointColor.tableId);
-        if (checkAbort()) {
-          return false;
-        }
+        const tableData = await loadTableByID(
+          meta.points.pointColor.tableId,
+          signal,
+        );
+        signal?.throwIfAborted();
         const tableValues = await tableData.loadColumn<string>(
           meta.points.pointColor.valuesCol,
+          signal,
         );
-        if (checkAbort()) {
-          return false;
-        }
+        signal?.throwIfAborted();
         for (let i = 0; i < tableValues.length; i++) {
           data[i] = ColorUtils.packColor(
             ColorUtils.parseColor(tableValues[i]!),
           );
         }
       } else if (isTableGroupsColumn(meta.points.pointColor)) {
-        const tableData = await loadTableByID(meta.points.pointColor.tableId);
-        if (checkAbort()) {
-          return false;
-        }
+        const tableData = await loadTableByID(
+          meta.points.pointColor.tableId,
+          signal,
+        );
+        signal?.throwIfAborted();
         const tableGroups = await tableData.loadColumn(
           meta.points.pointColor.groupsCol,
+          signal,
         );
-        if (checkAbort()) {
-          return false;
-        }
+        signal?.throwIfAborted();
         let colorMap = undefined;
         if (meta.points.colorMap !== undefined) {
           if (typeof meta.points.colorMap === "string") {
@@ -698,38 +709,105 @@ export default class WebGLPointsController extends WebGLControllerBase {
       } else {
         data.fill(ColorUtils.packColor(meta.points.pointColor));
       }
-      const visibilities = await this._loadPointVisibilityBuffer(
+      const visibilities = await this._loadPointVisibilities(
         meta,
         visibilityMaps,
         loadTableByID,
-        checkAbort,
+        signal,
       );
-      if (visibilities === null || checkAbort()) {
-        return false;
-      }
-      const opacities = await this._loadPointOpacityBuffer(
+      signal?.throwIfAborted();
+      const opacities = await this._loadPointOpacities(
         meta,
         opacityMaps,
         loadTableByID,
-        checkAbort,
+        signal,
       );
-      if (opacities === null || checkAbort()) {
-        return false;
-      }
+      signal?.throwIfAborted();
       for (let i = 0; i < data.length; i++) {
         data[i] = (data[i]! << 8) + (visibilities[i]! > 0 ? opacities[i]! : 0);
       }
     }
     WebGLUtils.loadBuffer(this._gl, this._buffers.color, data, offset);
-    return true;
   }
 
-  private async _loadPointVisibilityBuffer(
+  private async _loadPointMarkerIndexBuffer(
+    offset: number,
+    meta: PointsMeta,
+    markerMaps: Map<string, Map<string, Marker>>,
+    loadTableByID: (
+      tableId: string,
+      signal?: AbortSignal,
+    ) => Promise<ITableData>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    signal?.throwIfAborted();
+    const data = new Uint8Array(meta.data.getLength());
+    if (meta.points.pointMarker === undefined) {
+      data.fill(WebGLPointsController._DEFAULT_POINT_MARKER);
+    } else if (isTableValuesColumn(meta.points.pointMarker)) {
+      const tableData = await loadTableByID(
+        meta.points.pointMarker.tableId,
+        signal,
+      );
+      signal?.throwIfAborted();
+      const tableValues = await tableData.loadColumn<string>(
+        meta.points.pointMarker.valuesCol,
+        signal,
+      );
+      signal?.throwIfAborted();
+      for (let i = 0; i < tableValues.length; i++) {
+        data[i] = Marker[tableValues[i]! as keyof typeof Marker];
+      }
+    } else if (isTableGroupsColumn(meta.points.pointMarker)) {
+      const tableData = await loadTableByID(
+        meta.points.pointMarker.tableId,
+        signal,
+      );
+      signal?.throwIfAborted();
+      const tableGroups = await tableData.loadColumn(
+        meta.points.pointMarker.groupsCol,
+        signal,
+      );
+      signal?.throwIfAborted();
+      let markerMap = undefined;
+      if (meta.points.markerMap !== undefined) {
+        if (typeof meta.points.markerMap === "string") {
+          markerMap = markerMaps.get(meta.points.markerMap);
+        } else {
+          markerMap = new Map(Object.entries(meta.points.markerMap));
+        }
+      }
+      if (markerMap !== undefined) {
+        for (let i = 0; i < tableGroups.length; i++) {
+          const group = JSON.stringify(tableGroups[i]!);
+          data[i] =
+            markerMap.get(group) ?? WebGLPointsController._DEFAULT_POINT_MARKER;
+        }
+      } else {
+        for (let i = 0; i < tableGroups.length; i++) {
+          const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
+          data[i] =
+            WebGLPointsController._DEFAULT_POINT_MARKERS[
+              hash % WebGLPointsController._DEFAULT_POINT_MARKERS.length
+            ]!;
+        }
+      }
+    } else {
+      data.fill(meta.points.pointMarker);
+    }
+    WebGLUtils.loadBuffer(this._gl, this._buffers.markerIndex, data, offset);
+  }
+
+  private async _loadPointVisibilities(
     meta: PointsMeta,
     visibilityMaps: Map<string, Map<string, boolean>>,
-    loadTableByID: (tableId: string) => Promise<ITableData>,
-    checkAbort: () => boolean,
-  ): Promise<Uint8Array | null> {
+    loadTableByID: (
+      tableId: string,
+      signal?: AbortSignal,
+    ) => Promise<ITableData>,
+    signal?: AbortSignal,
+  ): Promise<Uint8Array> {
+    signal?.throwIfAborted();
     const visibilities = new Uint8Array(meta.data.getLength());
     if (meta.points.pointVisibility === undefined) {
       visibilities.fill(
@@ -738,30 +816,26 @@ export default class WebGLPointsController extends WebGLControllerBase {
     } else if (isTableValuesColumn(meta.points.pointVisibility)) {
       const tableData = await loadTableByID(
         meta.points.pointVisibility.tableId,
+        signal,
       );
-      if (checkAbort()) {
-        return null;
-      }
+      signal?.throwIfAborted();
       const tableValues = await tableData.loadColumn<number>(
         meta.points.pointVisibility.valuesCol,
+        signal,
       );
-      if (checkAbort()) {
-        return null;
-      }
+      signal?.throwIfAborted();
       visibilities.set(tableValues);
     } else if (isTableGroupsColumn(meta.points.pointVisibility)) {
       const tableData = await loadTableByID(
         meta.points.pointVisibility.tableId,
+        signal,
       );
-      if (checkAbort()) {
-        return null;
-      }
+      signal?.throwIfAborted();
       const tableGroups = await tableData.loadColumn(
         meta.points.pointVisibility.groupsCol,
+        signal,
       );
-      if (checkAbort()) {
-        return null;
-      }
+      signal?.throwIfAborted();
       let visibilityMap = undefined;
       if (meta.points.visibilityMap !== undefined) {
         if (typeof meta.points.visibilityMap === "string") {
@@ -794,12 +868,16 @@ export default class WebGLPointsController extends WebGLControllerBase {
     return visibilities;
   }
 
-  private async _loadPointOpacityBuffer(
+  private async _loadPointOpacities(
     meta: PointsMeta,
     opacityMaps: Map<string, Map<string, number>>,
-    loadTableByID: (tableId: string) => Promise<ITableData>,
-    checkAbort: () => boolean,
-  ): Promise<Uint8Array | null> {
+    loadTableByID: (
+      tableId: string,
+      signal?: AbortSignal,
+    ) => Promise<ITableData>,
+    signal?: AbortSignal,
+  ): Promise<Uint8Array> {
+    signal?.throwIfAborted();
     const opacities = new Uint8Array(meta.data.getLength());
     const baseOpacity =
       (meta.layer.opacity ?? 1.0) * (meta.points.opacity ?? 1.0);
@@ -810,30 +888,30 @@ export default class WebGLPointsController extends WebGLControllerBase {
         ),
       );
     } else if (isTableValuesColumn(meta.points.pointOpacity)) {
-      const tableData = await loadTableByID(meta.points.pointOpacity.tableId);
-      if (checkAbort()) {
-        return null;
-      }
+      const tableData = await loadTableByID(
+        meta.points.pointOpacity.tableId,
+        signal,
+      );
+      signal?.throwIfAborted();
       const tableValues = await tableData.loadColumn<number>(
         meta.points.pointOpacity.valuesCol,
+        signal,
       );
-      if (checkAbort()) {
-        return null;
-      }
+      signal?.throwIfAborted();
       for (let i = 0; i < tableValues.length; i++) {
         opacities[i] = Math.round(baseOpacity * tableValues[i]! * 255);
       }
     } else if (isTableGroupsColumn(meta.points.pointOpacity)) {
-      const tableData = await loadTableByID(meta.points.pointOpacity.tableId);
-      if (checkAbort()) {
-        return null;
-      }
+      const tableData = await loadTableByID(
+        meta.points.pointOpacity.tableId,
+        signal,
+      );
+      signal?.throwIfAborted();
       const tableGroups = await tableData.loadColumn(
         meta.points.pointOpacity.groupsCol,
+        signal,
       );
-      if (checkAbort()) {
-        return null;
-      }
+      signal?.throwIfAborted();
       let opacityMap = undefined;
       if (meta.points.opacityMap !== undefined) {
         if (typeof meta.points.opacityMap === "string") {
@@ -864,71 +942,6 @@ export default class WebGLPointsController extends WebGLControllerBase {
       opacities.fill(Math.round(baseOpacity * meta.points.pointOpacity * 255));
     }
     return opacities;
-  }
-
-  private async _loadPointMarkerIndexBuffer(
-    offset: number,
-    meta: PointsMeta,
-    markerMaps: Map<string, Map<string, Marker>>,
-    loadTableByID: (tableId: string) => Promise<ITableData>,
-    checkAbort: () => boolean,
-  ): Promise<boolean> {
-    const data = new Uint8Array(meta.data.getLength());
-    if (meta.points.pointMarker === undefined) {
-      data.fill(WebGLPointsController._DEFAULT_POINT_MARKER);
-    } else if (isTableValuesColumn(meta.points.pointMarker)) {
-      const tableData = await loadTableByID(meta.points.pointMarker.tableId);
-      if (checkAbort()) {
-        return false;
-      }
-      const tableValues = await tableData.loadColumn<string>(
-        meta.points.pointMarker.valuesCol,
-      );
-      if (checkAbort()) {
-        return false;
-      }
-      for (let i = 0; i < tableValues.length; i++) {
-        data[i] = Marker[tableValues[i]! as keyof typeof Marker];
-      }
-    } else if (isTableGroupsColumn(meta.points.pointMarker)) {
-      const tableData = await loadTableByID(meta.points.pointMarker.tableId);
-      if (checkAbort()) {
-        return false;
-      }
-      const tableGroups = await tableData.loadColumn(
-        meta.points.pointMarker.groupsCol,
-      );
-      if (checkAbort()) {
-        return false;
-      }
-      let markerMap = undefined;
-      if (meta.points.markerMap !== undefined) {
-        if (typeof meta.points.markerMap === "string") {
-          markerMap = markerMaps.get(meta.points.markerMap);
-        } else {
-          markerMap = new Map(Object.entries(meta.points.markerMap));
-        }
-      }
-      if (markerMap !== undefined) {
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          data[i] =
-            markerMap.get(group) ?? WebGLPointsController._DEFAULT_POINT_MARKER;
-        }
-      } else {
-        for (let i = 0; i < tableGroups.length; i++) {
-          const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
-          data[i] =
-            WebGLPointsController._DEFAULT_POINT_MARKERS[
-              hash % WebGLPointsController._DEFAULT_POINT_MARKERS.length
-            ]!;
-        }
-      }
-    } else {
-      data.fill(meta.points.pointMarker);
-    }
-    WebGLUtils.loadBuffer(this._gl, this._buffers.markerIndex, data, offset);
-    return true;
   }
 }
 

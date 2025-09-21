@@ -7,5 +7,5 @@ export interface IImageData extends IData {
 
 export interface IImageDataLoader<TImageData extends IImageData>
   extends IDataLoader {
-  loadImage(abortSignal?: AbortSignal): Promise<TImageData>;
+  loadImage(signal?: AbortSignal): Promise<TImageData>;
 }

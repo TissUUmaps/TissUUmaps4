@@ -12,7 +12,7 @@ import { BoundStoreStateCreator } from "./boundStore";
 type PointsDataLoaderFactory = (
   dataSource: IPointsDataSourceModel,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (tableId: string) => Promise<ITableData>,
+  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<ITableData>,
 ) => IPointsDataLoader<IPointsData>;
 
 export type PointsSlice = PointsSliceState & PointsSliceActions;
@@ -25,8 +25,14 @@ export type PointsSliceState = {
 
 export type PointsSliceActions = {
   setPoints: (points: IPointsModel, index?: number) => void;
-  loadPoints: (points: IPointsModel) => Promise<IPointsData>;
-  loadPointsByID: (pointsId: string) => Promise<IPointsData>;
+  loadPoints: (
+    points: IPointsModel,
+    signal?: AbortSignal,
+  ) => Promise<IPointsData>;
+  loadPointsByID: (
+    pointsId: string,
+    signal?: AbortSignal,
+  ) => Promise<IPointsData>;
   deletePoints: (points: IPointsModel) => void;
 };
 
@@ -49,7 +55,8 @@ export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
       }
     });
   },
-  loadPoints: async (points) => {
+  loadPoints: async (points, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     let pointsData = state.pointsDataCache.get(points.dataSource);
     if (pointsData !== undefined) {
@@ -68,19 +75,21 @@ export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
       state.projectDir,
       state.loadTableByID,
     );
-    pointsData = await pointsDataLoader.loadPoints();
+    pointsData = await pointsDataLoader.loadPoints(signal);
+    signal?.throwIfAborted();
     set((draft) => {
       draft.pointsDataCache.set(points.dataSource, pointsData);
     });
     return pointsData;
   },
-  loadPointsByID: async (pointsId) => {
+  loadPointsByID: async (pointsId, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     const points = state.pointsMap.get(pointsId);
     if (points === undefined) {
       throw new Error(`Points with ID ${pointsId} not found.`);
     }
-    return state.loadPoints(points);
+    return state.loadPoints(points, signal);
   },
   deletePoints: (points) => {
     set((draft) => {

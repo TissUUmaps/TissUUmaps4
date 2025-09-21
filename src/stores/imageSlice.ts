@@ -12,7 +12,7 @@ import { BoundStoreStateCreator } from "./boundStore";
 type ImageDataLoaderFactory = (
   dataSource: IImageDataSourceModel,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (tableId: string) => Promise<ITableData>,
+  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<ITableData>,
 ) => IImageDataLoader<IImageData>;
 
 export type ImageSlice = ImageSliceState & ImageSliceActions;
@@ -25,8 +25,8 @@ export type ImageSliceState = {
 
 export type ImageSliceActions = {
   setImage: (image: IImageModel, index?: number) => void;
-  loadImage: (image: IImageModel) => Promise<IImageData>;
-  loadImageByID: (imageId: string) => Promise<IImageData>;
+  loadImage: (image: IImageModel, signal?: AbortSignal) => Promise<IImageData>;
+  loadImageByID: (imageId: string, signal?: AbortSignal) => Promise<IImageData>;
   deleteImage: (image: IImageModel) => void;
 };
 
@@ -49,7 +49,8 @@ export const createImageSlice: BoundStoreStateCreator<ImageSlice> = (
       }
     });
   },
-  loadImage: async (image) => {
+  loadImage: async (image, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     let imageData = state.imageDataCache.get(image.dataSource);
     if (imageData !== undefined) {
@@ -68,19 +69,21 @@ export const createImageSlice: BoundStoreStateCreator<ImageSlice> = (
       state.projectDir,
       state.loadTableByID,
     );
-    imageData = await imageDataLoader.loadImage();
+    imageData = await imageDataLoader.loadImage(signal);
+    signal?.throwIfAborted();
     set((draft) => {
       draft.imageDataCache.set(image.dataSource, imageData);
     });
     return imageData;
   },
-  loadImageByID: async (imageId) => {
+  loadImageByID: async (imageId, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     const image = state.imageMap.get(imageId);
     if (image === undefined) {
       throw new Error(`Image with ID ${imageId} not found.`);
     }
-    return state.loadImage(image);
+    return state.loadImage(image, signal);
   },
   deleteImage: (image) => {
     set((draft) => {

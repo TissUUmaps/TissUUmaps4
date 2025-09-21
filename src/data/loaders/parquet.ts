@@ -35,13 +35,18 @@ export class ParquetTableData implements ITableData {
     return this._columns;
   }
 
-  async loadColumn<T>(column: string): Promise<MappableArrayLike<T>> {
+  async loadColumn<T>(
+    column: string,
+    signal?: AbortSignal,
+  ): Promise<MappableArrayLike<T>> {
+    signal?.throwIfAborted();
     const data = await parquetReadColumn({
       file: this._buffer,
       columns: [column],
       metadata: this._metadata,
       compressors: compressors,
     });
+    signal?.throwIfAborted();
     return Array.from(data) as MappableArrayLike<T>;
   }
 
@@ -52,27 +57,39 @@ export class ParquetTableDataLoader extends TableDataLoaderBase<
   IParquetTableDataSourceModel,
   ParquetTableData
 > {
-  async loadTable(): Promise<ParquetTableData> {
-    const buffer = await this._loadParquetFile();
+  async loadTable(signal?: AbortSignal): Promise<ParquetTableData> {
+    signal?.throwIfAborted();
+    const buffer = await this._loadParquet(signal);
+    signal?.throwIfAborted();
     const metadata = await hyparquet.parquetMetadataAsync(buffer);
+    signal?.throwIfAborted();
     return new ParquetTableData(buffer, metadata);
   }
 
-  private async _loadParquetFile(): Promise<hyparquet.AsyncBuffer> {
+  private async _loadParquet(
+    signal?: AbortSignal,
+  ): Promise<hyparquet.AsyncBuffer> {
+    signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      signal?.throwIfAborted();
       const file = await fh.getFile();
-      return await file.arrayBuffer();
+      signal?.throwIfAborted();
+      const buffer = await file.arrayBuffer();
+      signal?.throwIfAborted();
+      return buffer;
     }
     if (this.dataSource.url !== undefined) {
       let requestInit = undefined;
       if (this.dataSource.headers !== undefined) {
         requestInit = { headers: this.dataSource.headers };
       }
-      return await hyparquet.asyncBufferFromUrl({
+      const buffer = await hyparquet.asyncBufferFromUrl({
         url: this.dataSource.url,
         requestInit: requestInit,
       });
+      signal?.throwIfAborted();
+      return buffer;
     }
     if (this.dataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");

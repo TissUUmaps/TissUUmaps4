@@ -55,14 +55,20 @@ export class CSVTableData implements ITableData {
     return this._columns;
   }
 
-  async loadColumn<T>(column: string): Promise<MappableArrayLike<T>> {
+  async loadColumn<T>(
+    column: string,
+    signal?: AbortSignal,
+  ): Promise<MappableArrayLike<T>> {
+    signal?.throwIfAborted();
     if (!this._columns.includes(column)) {
       throw new Error(`Column "${column}" does not exist.`);
     }
     const columnIndex = this._columns.indexOf(column);
-    return await Promise.resolve(
+    const columnData = await Promise.resolve(
       this._columnData[columnIndex]! as unknown as MappableArrayLike<T>,
     );
+    signal?.throwIfAborted();
+    return columnData;
   }
 
   destroy(): void {}
@@ -75,7 +81,8 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   private static readonly _DEFAULT_CHUNK_SIZE = 10000;
   private static readonly _DEFAULT_DELIMITER = ",";
 
-  async loadTable(): Promise<CSVTableData> {
+  async loadTable(signal?: AbortSignal): Promise<CSVTableData> {
+    signal?.throwIfAborted();
     let n = 0;
     let allColumnNames = this.dataSource.columns;
     let columnNames = this.dataSource.loadColumns ?? allColumnNames;
@@ -157,41 +164,49 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
         }
         column.chunks = [];
       }
-      return new CSVTableData(n, columnNames!, columnData);
+      return columnData;
     };
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      signal?.throwIfAborted();
       const file = await fh.getFile();
-      return await new Promise((resolve, reject) =>
-        papaparse.parse(file, {
-          ...this.dataSource.parseConfig,
-          delimiter:
-            this.dataSource.parseConfig?.delimiter ??
-            CSVTableDataLoader._DEFAULT_DELIMITER,
-          header: false,
-          skipEmptyLines: true,
-          step: step,
-          complete: () => resolve(complete()),
-          error: reject,
-        }),
+      signal?.throwIfAborted();
+      const columnData = await new Promise<(string[] | Float32Array)[]>(
+        (resolve, reject) =>
+          papaparse.parse(file, {
+            ...this.dataSource.parseConfig,
+            delimiter:
+              this.dataSource.parseConfig?.delimiter ??
+              CSVTableDataLoader._DEFAULT_DELIMITER,
+            header: false,
+            skipEmptyLines: true,
+            step: step,
+            complete: () => resolve(complete()),
+            error: reject,
+          }),
       );
+      signal?.throwIfAborted();
+      return new CSVTableData(n, columnNames!, columnData);
     }
     if (this.dataSource.url !== undefined) {
       const url = this.dataSource.url;
-      return await new Promise((resolve, reject) =>
-        papaparse.parse(url, {
-          ...this.dataSource.parseConfig,
-          download: true,
-          delimiter:
-            this.dataSource.parseConfig?.delimiter ??
-            CSVTableDataLoader._DEFAULT_DELIMITER,
-          header: false,
-          skipEmptyLines: true,
-          step: step,
-          complete: () => resolve(complete()),
-          error: reject,
-        }),
+      const columnData = await new Promise<(string[] | Float32Array)[]>(
+        (resolve, reject) =>
+          papaparse.parse(url, {
+            ...this.dataSource.parseConfig,
+            download: true,
+            delimiter:
+              this.dataSource.parseConfig?.delimiter ??
+              CSVTableDataLoader._DEFAULT_DELIMITER,
+            header: false,
+            skipEmptyLines: true,
+            step: step,
+            complete: () => resolve(complete()),
+            error: reject,
+          }),
       );
+      signal?.throwIfAborted();
+      return new CSVTableData(n, columnNames!, columnData);
     }
     if (this.dataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");

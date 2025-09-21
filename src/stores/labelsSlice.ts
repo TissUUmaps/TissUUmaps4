@@ -17,7 +17,7 @@ import { BoundStoreStateCreator } from "./boundStore";
 type LabelsDataLoaderFactory = (
   dataSource: ILabelsDataSourceModel,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (tableId: string) => Promise<ITableData>,
+  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<ITableData>,
 ) => ILabelsDataLoader<ILabelsData>;
 
 export type LabelsSlice = LabelsSliceState & LabelsSliceActions;
@@ -30,8 +30,14 @@ export type LabelsSliceState = {
 
 export type LabelsSliceActions = {
   setLabels: (labels: ILabelsModel, index?: number) => void;
-  loadLabels: (labels: ILabelsModel) => Promise<ILabelsData>;
-  loadLabelsByID: (labelsId: string) => Promise<ILabelsData>;
+  loadLabels: (
+    labels: ILabelsModel,
+    signal?: AbortSignal,
+  ) => Promise<ILabelsData>;
+  loadLabelsByID: (
+    labelsId: string,
+    signal?: AbortSignal,
+  ) => Promise<ILabelsData>;
   deleteLabels: (labels: ILabelsModel) => void;
 };
 
@@ -54,7 +60,8 @@ export const createLabelsSlice: BoundStoreStateCreator<LabelsSlice> = (
       }
     });
   },
-  loadLabels: async (labels) => {
+  loadLabels: async (labels, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     let labelsData = state.labelsDataCache.get(labels.dataSource);
     if (labelsData !== undefined) {
@@ -73,19 +80,21 @@ export const createLabelsSlice: BoundStoreStateCreator<LabelsSlice> = (
       state.projectDir,
       state.loadTableByID,
     );
-    labelsData = await labelsDataLoader.loadLabels();
+    labelsData = await labelsDataLoader.loadLabels(signal);
+    signal?.throwIfAborted();
     set((draft) => {
       draft.labelsDataCache.set(labels.dataSource, labelsData);
     });
     return labelsData;
   },
-  loadLabelsByID: async (labelsId) => {
+  loadLabelsByID: async (labelsId, signal) => {
+    signal?.throwIfAborted();
     const state = get();
     const labels = state.labelsMap.get(labelsId);
     if (labels === undefined) {
       throw new Error(`Labels with ID ${labelsId} not found.`);
     }
-    return state.loadLabels(labels);
+    return state.loadLabels(labels, signal);
   },
   deleteLabels: (labels) => {
     set((draft) => {
