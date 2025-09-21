@@ -698,131 +698,23 @@ export default class WebGLPointsController extends WebGLControllerBase {
       } else {
         data.fill(ColorUtils.packColor(meta.points.pointColor));
       }
-      const visibilities = new Uint8Array(meta.data.getLength());
-      if (meta.points.pointVisibility === undefined) {
-        visibilities.fill(
-          WebGLPointsController._DEFAULT_POINT_VISIBILITY ? 1 : 0,
-        );
-      } else if (isTableValuesColumn(meta.points.pointVisibility)) {
-        const tableData = await loadTableByID(
-          meta.points.pointVisibility.tableId,
-        );
-        if (checkAbort()) {
-          return false;
-        }
-        const tableValues = await tableData.loadColumn<number>(
-          meta.points.pointVisibility.valuesCol,
-        );
-        if (checkAbort()) {
-          return false;
-        }
-        visibilities.set(tableValues);
-      } else if (isTableGroupsColumn(meta.points.pointVisibility)) {
-        const tableData = await loadTableByID(
-          meta.points.pointVisibility.tableId,
-        );
-        if (checkAbort()) {
-          return false;
-        }
-        const tableGroups = await tableData.loadColumn(
-          meta.points.pointVisibility.groupsCol,
-        );
-        if (checkAbort()) {
-          return false;
-        }
-        let visibilityMap = undefined;
-        if (meta.points.visibilityMap !== undefined) {
-          if (typeof meta.points.visibilityMap === "string") {
-            visibilityMap = visibilityMaps.get(meta.points.visibilityMap);
-          } else {
-            visibilityMap = new Map(Object.entries(meta.points.visibilityMap));
-          }
-        }
-        if (visibilityMap !== undefined) {
-          for (let i = 0; i < tableGroups.length; i++) {
-            const group = JSON.stringify(tableGroups[i]!);
-            const visibility =
-              visibilityMap.get(group) ??
-              WebGLPointsController._DEFAULT_POINT_VISIBILITY;
-            visibilities[i] = visibility ? 1 : 0;
-          }
-        } else {
-          for (let i = 0; i < tableGroups.length; i++) {
-            const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
-            const visibility =
-              WebGLPointsController._DEFAULT_POINT_VISIBILITIES[
-                hash % WebGLPointsController._DEFAULT_POINT_VISIBILITIES.length
-              ]!;
-            visibilities[i] = visibility ? 1 : 0;
-          }
-        }
-      } else {
-        visibilities.fill(meta.points.pointVisibility ? 1 : 0);
+      const visibilities = await this._loadPointVisibilityBuffer(
+        meta,
+        visibilityMaps,
+        loadTableByID,
+        checkAbort,
+      );
+      if (visibilities === null || checkAbort()) {
+        return false;
       }
-      const opacities = new Uint8Array(meta.data.getLength());
-      const baseOpacity =
-        (meta.layer.opacity ?? 1.0) * (meta.points.opacity ?? 1.0);
-      if (meta.points.pointOpacity === undefined) {
-        opacities.fill(
-          Math.round(
-            baseOpacity * WebGLPointsController._DEFAULT_POINT_OPACITY * 255,
-          ),
-        );
-      } else if (isTableValuesColumn(meta.points.pointOpacity)) {
-        const tableData = await loadTableByID(meta.points.pointOpacity.tableId);
-        if (checkAbort()) {
-          return false;
-        }
-        const tableValues = await tableData.loadColumn<number>(
-          meta.points.pointOpacity.valuesCol,
-        );
-        if (checkAbort()) {
-          return false;
-        }
-        for (let i = 0; i < tableValues.length; i++) {
-          opacities[i] = Math.round(baseOpacity * tableValues[i]! * 255);
-        }
-      } else if (isTableGroupsColumn(meta.points.pointOpacity)) {
-        const tableData = await loadTableByID(meta.points.pointOpacity.tableId);
-        if (checkAbort()) {
-          return false;
-        }
-        const tableGroups = await tableData.loadColumn(
-          meta.points.pointOpacity.groupsCol,
-        );
-        if (checkAbort()) {
-          return false;
-        }
-        let opacityMap = undefined;
-        if (meta.points.opacityMap !== undefined) {
-          if (typeof meta.points.opacityMap === "string") {
-            opacityMap = opacityMaps.get(meta.points.opacityMap);
-          } else {
-            opacityMap = new Map(Object.entries(meta.points.opacityMap));
-          }
-        }
-        if (opacityMap !== undefined) {
-          for (let i = 0; i < tableGroups.length; i++) {
-            const group = JSON.stringify(tableGroups[i]!);
-            const opacity =
-              opacityMap.get(group) ??
-              WebGLPointsController._DEFAULT_POINT_OPACITY;
-            opacities[i] = Math.round(baseOpacity * opacity * 255);
-          }
-        } else {
-          for (let i = 0; i < tableGroups.length; i++) {
-            const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
-            const opacity =
-              WebGLPointsController._DEFAULT_POINT_OPACITIES[
-                hash % WebGLPointsController._DEFAULT_POINT_OPACITIES.length
-              ]!;
-            opacities[i] = Math.round(baseOpacity * opacity * 255);
-          }
-        }
-      } else {
-        opacities.fill(
-          Math.round(baseOpacity * meta.points.pointOpacity * 255),
-        );
+      const opacities = await this._loadPointOpacityBuffer(
+        meta,
+        opacityMaps,
+        loadTableByID,
+        checkAbort,
+      );
+      if (opacities === null || checkAbort()) {
+        return false;
       }
       for (let i = 0; i < data.length; i++) {
         data[i] = (data[i]! << 8) + (visibilities[i]! > 0 ? opacities[i]! : 0);
@@ -830,6 +722,148 @@ export default class WebGLPointsController extends WebGLControllerBase {
     }
     WebGLUtils.loadBuffer(this._gl, this._buffers.color, data, offset);
     return true;
+  }
+
+  private async _loadPointVisibilityBuffer(
+    meta: PointsMeta,
+    visibilityMaps: Map<string, Map<string, boolean>>,
+    loadTableByID: (tableId: string) => Promise<ITableData>,
+    checkAbort: () => boolean,
+  ): Promise<Uint8Array | null> {
+    const visibilities = new Uint8Array(meta.data.getLength());
+    if (meta.points.pointVisibility === undefined) {
+      visibilities.fill(
+        WebGLPointsController._DEFAULT_POINT_VISIBILITY ? 1 : 0,
+      );
+    } else if (isTableValuesColumn(meta.points.pointVisibility)) {
+      const tableData = await loadTableByID(
+        meta.points.pointVisibility.tableId,
+      );
+      if (checkAbort()) {
+        return null;
+      }
+      const tableValues = await tableData.loadColumn<number>(
+        meta.points.pointVisibility.valuesCol,
+      );
+      if (checkAbort()) {
+        return null;
+      }
+      visibilities.set(tableValues);
+    } else if (isTableGroupsColumn(meta.points.pointVisibility)) {
+      const tableData = await loadTableByID(
+        meta.points.pointVisibility.tableId,
+      );
+      if (checkAbort()) {
+        return null;
+      }
+      const tableGroups = await tableData.loadColumn(
+        meta.points.pointVisibility.groupsCol,
+      );
+      if (checkAbort()) {
+        return null;
+      }
+      let visibilityMap = undefined;
+      if (meta.points.visibilityMap !== undefined) {
+        if (typeof meta.points.visibilityMap === "string") {
+          visibilityMap = visibilityMaps.get(meta.points.visibilityMap);
+        } else {
+          visibilityMap = new Map(Object.entries(meta.points.visibilityMap));
+        }
+      }
+      if (visibilityMap !== undefined) {
+        for (let i = 0; i < tableGroups.length; i++) {
+          const group = JSON.stringify(tableGroups[i]!);
+          const visibility =
+            visibilityMap.get(group) ??
+            WebGLPointsController._DEFAULT_POINT_VISIBILITY;
+          visibilities[i] = visibility ? 1 : 0;
+        }
+      } else {
+        for (let i = 0; i < tableGroups.length; i++) {
+          const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
+          const visibility =
+            WebGLPointsController._DEFAULT_POINT_VISIBILITIES[
+              hash % WebGLPointsController._DEFAULT_POINT_VISIBILITIES.length
+            ]!;
+          visibilities[i] = visibility ? 1 : 0;
+        }
+      }
+    } else {
+      visibilities.fill(meta.points.pointVisibility ? 1 : 0);
+    }
+    return visibilities;
+  }
+
+  private async _loadPointOpacityBuffer(
+    meta: PointsMeta,
+    opacityMaps: Map<string, Map<string, number>>,
+    loadTableByID: (tableId: string) => Promise<ITableData>,
+    checkAbort: () => boolean,
+  ): Promise<Uint8Array | null> {
+    const opacities = new Uint8Array(meta.data.getLength());
+    const baseOpacity =
+      (meta.layer.opacity ?? 1.0) * (meta.points.opacity ?? 1.0);
+    if (meta.points.pointOpacity === undefined) {
+      opacities.fill(
+        Math.round(
+          baseOpacity * WebGLPointsController._DEFAULT_POINT_OPACITY * 255,
+        ),
+      );
+    } else if (isTableValuesColumn(meta.points.pointOpacity)) {
+      const tableData = await loadTableByID(meta.points.pointOpacity.tableId);
+      if (checkAbort()) {
+        return null;
+      }
+      const tableValues = await tableData.loadColumn<number>(
+        meta.points.pointOpacity.valuesCol,
+      );
+      if (checkAbort()) {
+        return null;
+      }
+      for (let i = 0; i < tableValues.length; i++) {
+        opacities[i] = Math.round(baseOpacity * tableValues[i]! * 255);
+      }
+    } else if (isTableGroupsColumn(meta.points.pointOpacity)) {
+      const tableData = await loadTableByID(meta.points.pointOpacity.tableId);
+      if (checkAbort()) {
+        return null;
+      }
+      const tableGroups = await tableData.loadColumn(
+        meta.points.pointOpacity.groupsCol,
+      );
+      if (checkAbort()) {
+        return null;
+      }
+      let opacityMap = undefined;
+      if (meta.points.opacityMap !== undefined) {
+        if (typeof meta.points.opacityMap === "string") {
+          opacityMap = opacityMaps.get(meta.points.opacityMap);
+        } else {
+          opacityMap = new Map(Object.entries(meta.points.opacityMap));
+        }
+      }
+      if (opacityMap !== undefined) {
+        for (let i = 0; i < tableGroups.length; i++) {
+          const group = JSON.stringify(tableGroups[i]!);
+          const opacity =
+            opacityMap.get(group) ??
+            WebGLPointsController._DEFAULT_POINT_OPACITY;
+          opacities[i] = Math.round(baseOpacity * opacity * 255);
+        }
+      } else {
+        for (let i = 0; i < tableGroups.length; i++) {
+          const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
+          const opacity =
+            WebGLPointsController._DEFAULT_POINT_OPACITIES[
+              hash % WebGLPointsController._DEFAULT_POINT_OPACITIES.length
+            ]!;
+          opacities[i] = Math.round(baseOpacity * opacity * 255);
+        }
+      }
+    } else {
+      opacities.fill(Math.round(baseOpacity * meta.points.pointOpacity * 255));
+    }
+    return opacities;
   }
 
   private async _loadPointMarkerIndexBuffer(
