@@ -75,11 +75,13 @@ export default function ViewerPanel() {
           const viewer = OpenSeadragonController.createViewer(viewerElement);
           viewer.addHandler("resize", onViewerResize);
           viewer.addHandler("viewport-change", onViewerViewportChange);
-          const osCanvas = viewer.drawer.canvas as HTMLCanvasElement;
-          const glCanvas = osCanvas.appendChild(WebGLController.createCanvas());
+          const glCanvas = viewer.canvas.appendChild(
+            WebGLController.createCanvas(),
+          );
           const os = new OpenSeadragonController(viewer);
           const gl = new WebGLController(glCanvas);
-          gl.resize(osCanvas.width, osCanvas.height);
+          const containerSize = viewer.viewport.getContainerSize();
+          gl.resize(containerSize.x, containerSize.y);
           gl.draw(os.getViewport());
           osRef.current = os;
           glRef.current = gl;
