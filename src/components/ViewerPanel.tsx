@@ -22,6 +22,7 @@ export default function ViewerPanel() {
   const opacityMaps = useBoundStore((state) => state.opacityMaps);
   const markerMaps = useBoundStore((state) => state.markerMaps);
   const blendMode = useBoundStore((state) => state.blendMode);
+  const pointSizeFactor = useBoundStore((state) => state.pointSizeFactor);
   const loadImage = useBoundStore((state) => state.loadImage);
   const loadLabels = useBoundStore((state) => state.loadLabels);
   const loadPoints = useBoundStore((state) => state.loadPoints);
@@ -200,6 +201,10 @@ export default function ViewerPanel() {
         gl.blendMode = blendMode;
         redraw = true;
       }
+      if (gl.pointSizeFactor !== pointSizeFactor) {
+        gl.pointSizeFactor = pointSizeFactor;
+        redraw = true;
+      }
       if (redraw) {
         const os = osRef.current;
         if (os !== null) {
@@ -207,7 +212,7 @@ export default function ViewerPanel() {
         }
       }
     }
-  }, [blendMode]);
+  }, [blendMode, pointSizeFactor]);
 
   return <div ref={setViewerRef} className="size-full bg-white" />;
 }

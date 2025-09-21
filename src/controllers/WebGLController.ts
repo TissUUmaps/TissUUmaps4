@@ -15,6 +15,7 @@ export default class WebGLController {
   private static readonly _MAX_CANVAS_SIZE = 4096;
 
   blendMode: BlendMode = "over";
+  pointSizeFactor: number = 1.0;
 
   private readonly _canvas: HTMLCanvasElement;
   private _gl: WebGL2RenderingContext;
@@ -58,7 +59,7 @@ export default class WebGLController {
   draw(viewport: Viewport): void {
     this._gl.clearColor(0, 0, 0, 0);
     this._gl.clear(this._gl.COLOR_BUFFER_BIT);
-    this._pointsController.draw(viewport, this.blendMode);
+    this._pointsController.draw(viewport, this.blendMode, this.pointSizeFactor);
     this._shapesController.draw(viewport, this.blendMode);
   }
 

@@ -24,9 +24,7 @@ import { Viewport } from "./WebGLController";
 import WebGLControllerBase from "./WebGLControllerBase";
 
 // TODO:
-// - global marker scale
 // - marker stroke/fill/outline
-// - marker size relative to world space (?)
 // - point sorting/zorder (?)
 // - react to OpenSeadragon collection mode, viewer rotation, ...
 // - chunked loading
@@ -81,6 +79,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
   private readonly _uniformLocations: {
     worldToViewportTransform: WebGLUniformLocation;
     markerAtlas: WebGLUniformLocation;
+    sizeFactor: WebGLUniformLocation;
   };
   private readonly _uniformBlockIndices: {
     dataToWorldTransformsUBO: number;
@@ -121,6 +120,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
         this._gl.getUniformLocation(this._program, "u_markerAtlas") ??
         (() => {
           throw new Error("Failed to get uniform location for u_markerAtlas");
+        })(),
+      sizeFactor:
+        this._gl.getUniformLocation(this._program, "u_sizeFactor") ??
+        (() => {
+          throw new Error("Failed to get uniform location for u_sizeFactor");
         })(),
     };
     this._uniformBlockIndices = {
@@ -200,7 +204,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     return true;
   }
 
-  draw(viewport: Viewport, blendMode: BlendMode): void {
+  draw(viewport: Viewport, blendMode: BlendMode, sizeFactor: number): void {
     if (this._nPoints === 0) {
       return;
     }
@@ -224,6 +228,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
       false,
       glMat3x2,
     );
+    this._gl.uniform1f(this._uniformLocations.sizeFactor, sizeFactor);
     this._gl.activeTexture(this._gl.TEXTURE0);
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
     this._gl.uniform1i(this._uniformLocations.markerAtlas, 0);

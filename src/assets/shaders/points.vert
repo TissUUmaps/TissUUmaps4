@@ -23,6 +23,7 @@ layout(std140) uniform DataToWorldTransformsUBO {
     mat2x4 dataToWorldTransforms[MAX_N_OBJECTS];
 };
 uniform mat3x2 u_worldToViewportTransform;
+uniform float u_sizeFactor;
 
 flat out uvec3 v_marker;
 flat out vec4 v_color;
@@ -32,7 +33,7 @@ void main() {
     vec2 worldPosition = dataToWorldTransform * vec3(a_x, a_y, 1.0f);
     vec2 viewportPosition = u_worldToViewportTransform * vec3(worldPosition, 1.0f); // in [0, 1]
     gl_Position = vec4((2.0f * viewportPosition - 1.0f) * vec2(1.0f, -1.0f), 0.0f, 1.0f);
-    gl_PointSize = a_size;
+    gl_PointSize = a_size * u_sizeFactor;
     uint markerRow = (a_markerIndex % NUM_MARKERS_PER_CHANNEL) / MARKER_ATLAS_GRID_SIZE;
     uint markerCol = (a_markerIndex % NUM_MARKERS_PER_CHANNEL) % MARKER_ATLAS_GRID_SIZE;
     uint markerChannel = a_markerIndex / NUM_MARKERS_PER_CHANNEL;

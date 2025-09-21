@@ -67,4 +67,7 @@ export interface IProjectModel extends IModel {
 
   /** Blend mode (defaults to "over") */
   blendMode?: BlendMode;
+
+  /** Point size factor (defaults to 1.0) */
+  pointSizeFactor?: number;
 }
