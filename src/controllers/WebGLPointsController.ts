@@ -215,7 +215,6 @@ export default class WebGLPointsController extends WebGLControllerBase {
     if (this._nPoints === 0 || this._markerAtlasTexture === undefined) {
       return;
     }
-    // TODO clear
     this._gl.useProgram(this._program);
     this._gl.bindVertexArray(this._vao);
     this._gl.bindBufferBase(
@@ -249,7 +248,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
       case "add": {
         this._gl.blendEquation(this._gl.FUNC_ADD);
         this._gl.blendFuncSeparate(
-          this._gl.ONE,
+          this._gl.ONE, // alpha is premultiplied in fragment shader
           this._gl.ONE,
           this._gl.ONE,
           this._gl.ONE,
