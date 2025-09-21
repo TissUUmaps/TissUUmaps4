@@ -101,6 +101,7 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     const abortController = new AbortController();
+    const cleanupReason = new String("image/labels effect cleanup");
     const os = osRef.current;
     if (os !== null) {
       os.synchronize(
@@ -110,10 +111,14 @@ export default function ViewerPanel() {
         loadImage,
         loadLabels,
         abortController.signal,
-      ).catch(console.error);
+      ).catch((reason) => {
+        if (reason !== cleanupReason) {
+          console.error(reason);
+        }
+      });
     }
     return () => {
-      abortController.abort();
+      abortController.abort(cleanupReason);
     };
   }, [
     projectDir,
@@ -130,6 +135,7 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     const abortController = new AbortController();
+    const cleanupReason = new String("points effect cleanup");
     const gl = glRef.current;
     if (gl !== null) {
       gl.synchronizePoints(
@@ -143,15 +149,22 @@ export default function ViewerPanel() {
         loadPoints,
         loadTableByID,
         abortController.signal,
-      ).then(() => {
-        const os = osRef.current;
-        if (os !== null) {
-          gl.draw(os.getViewportBounds());
-        }
-      }, console.error);
+      ).then(
+        () => {
+          const os = osRef.current;
+          if (os !== null) {
+            gl.draw(os.getViewportBounds());
+          }
+        },
+        (reason) => {
+          if (reason !== cleanupReason) {
+            console.error(reason);
+          }
+        },
+      );
     }
     return () => {
-      abortController.abort();
+      abortController.abort(cleanupReason);
     };
   }, [
     projectDir,
@@ -171,6 +184,7 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     const abortController = new AbortController();
+    const cleanupReason = new String("shapes effect cleanup");
     const gl = glRef.current;
     if (gl !== null) {
       gl.synchronizeShapes(
@@ -179,15 +193,22 @@ export default function ViewerPanel() {
         loadShapes,
         loadTableByID,
         abortController.signal,
-      ).then(() => {
-        const os = osRef.current;
-        if (os !== null) {
-          gl.draw(os.getViewportBounds());
-        }
-      }, console.error);
+      ).then(
+        () => {
+          const os = osRef.current;
+          if (os !== null) {
+            gl.draw(os.getViewportBounds());
+          }
+        },
+        (reason) => {
+          if (reason !== cleanupReason) {
+            console.error(reason);
+          }
+        },
+      );
     }
     return () => {
-      abortController.abort();
+      abortController.abort(cleanupReason);
     };
   }, [
     projectDir,

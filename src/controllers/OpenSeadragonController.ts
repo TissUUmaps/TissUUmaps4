@@ -121,7 +121,7 @@ export default class OpenSeadragonController {
           try {
             imageData = await loadImage(image, signal);
           } catch (error) {
-            console.error(`Failed to load image with ID ${image.id}`, error);
+            console.error(`Failed to load image with ID '${image.id}'`, error);
           }
           signal?.throwIfAborted();
           if (imageData !== null) {
@@ -152,7 +152,10 @@ export default class OpenSeadragonController {
           try {
             labelsData = await loadLabels(labels, signal);
           } catch (error) {
-            console.error(`Failed to load labels with ID ${labels.id}`, error);
+            console.error(
+              `Failed to load labels with ID '${labels.id}'`,
+              error,
+            );
           }
           signal?.throwIfAborted();
           if (labelsData !== null) {
