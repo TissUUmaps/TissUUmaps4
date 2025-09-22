@@ -101,7 +101,6 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     const abortController = new AbortController();
-    const cleanupReason = new Error("image/labels effect cleanup");
     const os = osRef.current;
     if (os !== null) {
       os.synchronize(
@@ -112,13 +111,13 @@ export default function ViewerPanel() {
         loadLabels,
         abortController.signal,
       ).catch((reason) => {
-        if (reason !== cleanupReason) {
+        if (!abortController.signal.aborted) {
           console.error(reason);
         }
       });
     }
     return () => {
-      abortController.abort(cleanupReason);
+      abortController.abort("image/labels effect cleanup");
     };
   }, [
     projectDir,
@@ -135,7 +134,6 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     const abortController = new AbortController();
-    const cleanupReason = new Error("points effect cleanup");
     const gl = glRef.current;
     if (gl !== null) {
       gl.synchronizePoints(
@@ -157,14 +155,14 @@ export default function ViewerPanel() {
           }
         },
         (reason) => {
-          if (reason !== cleanupReason) {
+          if (!abortController.signal.aborted) {
             console.error(reason);
           }
         },
       );
     }
     return () => {
-      abortController.abort(cleanupReason);
+      abortController.abort("points effect cleanup");
     };
   }, [
     projectDir,
@@ -184,7 +182,6 @@ export default function ViewerPanel() {
   // (note: useEffect hooks are executed after ref callbacks used for initialization)
   useEffect(() => {
     const abortController = new AbortController();
-    const cleanupReason = new Error("shapes effect cleanup");
     const gl = glRef.current;
     if (gl !== null) {
       gl.synchronizeShapes(
@@ -201,14 +198,14 @@ export default function ViewerPanel() {
           }
         },
         (reason) => {
-          if (reason !== cleanupReason) {
+          if (!abortController.signal.aborted) {
             console.error(reason);
           }
         },
       );
     }
     return () => {
-      abortController.abort(cleanupReason);
+      abortController.abort("shapes effect cleanup");
     };
   }, [
     projectDir,
