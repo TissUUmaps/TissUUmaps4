@@ -1,5 +1,7 @@
 # TissUUmaps
 
+TissUUmaps 4 is under active development.
+
 ## Built-in data loaders
 
 | Type      | Images              | Labels             | Points          | Shapes          | Tables                |
