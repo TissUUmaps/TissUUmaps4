@@ -431,7 +431,9 @@ export default class WebGLPointsController extends WebGLControllerBase {
     let i = 0;
     let offset = 0;
     const newBufferSlices: PointsBufferSlice[] = [];
-    const dataToWorldTransformsUBOData = new Float32Array(metas.length * 8);
+    const dataToWorldTransformsUBOData = new Float32Array(
+      WebGLPointsController._MAX_N_OBJECTS * 8,
+    );
     for (const meta of metas) {
       const nPoints = meta.data.getLength();
       const bufferSlice = this._bufferSlices[i];
@@ -562,7 +564,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     WebGLUtils.loadBuffer(
       this._gl,
       this._buffers.dataToWorldTransformsUBO,
-      dataToWorldTransformsUBOData,
+      dataToWorldTransformsUBOData.fill(0, metas.length * 8),
     );
     return newBufferSlices;
   }
