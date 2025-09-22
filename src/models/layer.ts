@@ -11,7 +11,7 @@ export interface ILayerModel extends IModel {
   /** Scale factor, converts from physical/layer space to world space (defaults to 1) */
   scale?: number;
 
-  /** Translation, in world coordinates (defaults to 0) */
+  /** Translation, in world coordinates (i.e. after scaling; defaults to 0) */
   translation?: { x: number; y: number };
 
   /** Visibility (defaults to true) */

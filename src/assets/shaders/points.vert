@@ -24,7 +24,7 @@ layout(std140) uniform DataToWorldTransformsUBO {
     // Thus, mat2x4 has a base alignment of 4N, and each column
     // is aligned to 4N. Since mat2x4 has 2 columns, its
     // base alignment is 2 * 4N = 8N = 32 bytes.
-    mat2x4 dataToWorldTransforms[MAX_N_OBJECTS];
+    mat2x4 transposedDataToWorldTransforms[MAX_N_OBJECTS];
 };
 uniform mat3x2 u_worldToViewportTransform;
 uniform float u_sizeFactor;
@@ -36,7 +36,7 @@ void main() {
     if(a_markerIndex >= MAX_N_MARKERS || a_objectIndex >= MAX_N_OBJECTS) {
         DISCARD;
     }
-    mat4x2 dataToWorldTransform = transpose(dataToWorldTransforms[a_objectIndex]);
+    mat4x2 dataToWorldTransform = transpose(transposedDataToWorldTransforms[a_objectIndex]);
     vec2 worldPosition = dataToWorldTransform * vec4(a_x, a_y, 1.0f, 0.0f);
     vec2 viewportPosition = u_worldToViewportTransform * vec3(worldPosition, 1.0f); // in [0, 1]
     gl_Position = vec4((2.0f * viewportPosition - 1.0f) * vec2(1.0f, -1.0f), 0.0f, 1.0f);

@@ -24,19 +24,29 @@ export default class WebGLControllerBase {
   ): mat3 {
     const tf = mat3.create();
     if (layerConfig.scale) {
-      mat3.scale(tf, tf, [layerConfig.scale, layerConfig.scale]);
+      const scale = mat3.fromScaling(mat3.create(), [
+        layerConfig.scale,
+        layerConfig.scale,
+      ]);
+      mat3.multiply(tf, scale, tf);
     }
     if (layerConfig.flip) {
-      mat3.scale(tf, tf, [-1, 1]);
+      const flip = mat3.fromScaling(mat3.create(), [-1, 1]);
+      mat3.multiply(tf, flip, tf);
     }
     if (layerConfig.rotation) {
-      mat3.rotate(tf, tf, (layerConfig.rotation * Math.PI) / 180);
+      const rotation = mat3.fromRotation(
+        mat3.create(),
+        (layerConfig.rotation * Math.PI) / 180,
+      );
+      mat3.multiply(tf, rotation, tf);
     }
     if (layerConfig.translation) {
-      mat3.translate(tf, tf, [
+      const translation = mat3.fromTranslation(mat3.create(), [
         layerConfig.translation.x,
         layerConfig.translation.y,
       ]);
+      mat3.multiply(tf, translation, tf);
     }
     return tf;
   }
@@ -44,18 +54,31 @@ export default class WebGLControllerBase {
   protected static createLayerToWorldTransform(layer: ILayerModel): mat3 {
     const tf = mat3.create();
     if (layer.scale) {
-      mat3.scale(tf, tf, [layer.scale, layer.scale]);
+      const scale = mat3.fromScaling(mat3.create(), [layer.scale, layer.scale]);
+      mat3.multiply(tf, scale, tf);
     }
     if (layer.translation) {
-      mat3.translate(tf, tf, [layer.translation.x, layer.translation.y]);
+      const translation = mat3.fromTranslation(mat3.create(), [
+        layer.translation.x,
+        layer.translation.y,
+      ]);
+      mat3.multiply(tf, translation, tf);
     }
     return tf;
   }
 
   protected static createWorldToViewportTransform(viewport: Rect): mat3 {
     const tf = mat3.create();
-    mat3.translate(tf, tf, [-viewport.x, -viewport.y]);
-    mat3.scale(tf, tf, [1.0 / viewport.width, 1.0 / viewport.height]);
+    const translation = mat3.fromTranslation(mat3.create(), [
+      -viewport.x,
+      -viewport.y,
+    ]);
+    mat3.multiply(tf, translation, tf);
+    const scale = mat3.fromScaling(mat3.create(), [
+      1.0 / viewport.width,
+      1.0 / viewport.height,
+    ]);
+    mat3.multiply(tf, scale, tf);
     return tf;
   }
 }

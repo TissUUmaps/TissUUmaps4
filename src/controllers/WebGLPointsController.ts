@@ -235,12 +235,20 @@ export default class WebGLPointsController extends WebGLControllerBase {
       this._uniformBlockIndices.dataToWorldTransformsUBO,
       WebGLPointsController._BINDING_POINTS.DATA_TO_WORLD_TRANSFORMS_UBO,
     );
-    const tf = WebGLPointsController.createWorldToViewportTransform(viewport);
-    const glMat3x2 = [tf[0], tf[1], tf[3], tf[4], tf[6], tf[7]];
+    const worldToViewportTransform =
+      WebGLPointsController.createWorldToViewportTransform(viewport);
+    const worldToViewportTransformAsGLMat3x2 = [
+      worldToViewportTransform[0],
+      worldToViewportTransform[1],
+      worldToViewportTransform[3],
+      worldToViewportTransform[4],
+      worldToViewportTransform[6],
+      worldToViewportTransform[7],
+    ];
     this._gl.uniformMatrix3x2fv(
       this._uniformLocations.worldToViewportTransform,
       false,
-      glMat3x2,
+      worldToViewportTransformAsGLMat3x2,
     );
     this._gl.uniform1f(this._uniformLocations.sizeFactor, sizeFactor);
     this._gl.activeTexture(this._gl.TEXTURE0);
@@ -557,13 +565,25 @@ export default class WebGLPointsController extends WebGLControllerBase {
           markerMap: meta.points.markerMap,
         },
       });
-      const tf = mat3.multiply(
+      const dataToWorldTransform = mat3.multiply(
         mat3.create(),
         WebGLPointsController.createLayerToWorldTransform(meta.layer),
         WebGLPointsController.createDataToLayerTransform(meta.layerConfig),
       );
-      const glMat2x4 = [tf[0], tf[3], tf[6], 0, tf[1], tf[4], tf[7], 0];
-      dataToWorldTransformsUBOData.set(glMat2x4, i * 8);
+      const transposedDataToWorldTransformAsGLMat2x4 = [
+        dataToWorldTransform[0],
+        dataToWorldTransform[3],
+        dataToWorldTransform[6],
+        0,
+        dataToWorldTransform[1],
+        dataToWorldTransform[4],
+        dataToWorldTransform[7],
+        0,
+      ];
+      dataToWorldTransformsUBOData.set(
+        transposedDataToWorldTransformAsGLMat2x4,
+        i * 8,
+      );
       offset += nPoints;
       i++;
     }

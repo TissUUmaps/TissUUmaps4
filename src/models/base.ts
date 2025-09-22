@@ -59,6 +59,6 @@ export interface ILayerConfigModel extends IModel {
   /** Rotation around center (images/labels) or origin (points/shapes), in degrees (defaults to 0) */
   rotation?: number;
 
-  /** Translation, in physical/layer coordinates (defaults to 0) */
+  /** Translation, in physical/layer coordinates (i.e. after scaling; defaults to 0) */
   translation?: { x: number; y: number };
 }
