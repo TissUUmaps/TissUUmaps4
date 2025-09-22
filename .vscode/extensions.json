@@ -1,8 +1,9 @@
 {
   "recommendations": [
-    "esbenp.prettier-vscode",
-    "dbaeumer.vscode-eslint",
     "bradlc.vscode-tailwindcss",
-    "raczzalan.webgl-glsl-editor"
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "raczzalan.webgl-glsl-editor",
+    "vitest.explorer"
   ]
 }
