@@ -5,7 +5,7 @@ on:
     branches: ["main"]
 
 concurrency:
-  group: "lint-and-format"
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
