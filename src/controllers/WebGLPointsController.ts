@@ -49,7 +49,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
   };
   private static readonly _DEFAULT_POINT_SIZE: number = 1.0;
   private static readonly _DEFAULT_POINT_SIZES: number[] = [1.0];
-  private static readonly _DEFAULT_POINT_COLOR: Color = { r: 0, g: 0, b: 0 };
+  private static readonly _DEFAULT_POINT_COLOR: Color = {
+    r: 255,
+    g: 255,
+    b: 255,
+  };
   private static readonly _DEFAULT_POINT_COLORS: Color[] =
     ColorUtils.parseColormap(batlowS);
   private static readonly _DEFAULT_POINT_VISIBILITY: boolean = true;
