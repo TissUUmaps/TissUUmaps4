@@ -62,7 +62,7 @@
     "vitest": "^3.2.4"
   },
   "lint-staged": {
-    "{src,test}/**/*.{js,jsx,ts,tsx}": [
+    "src/**/*.{js,jsx,ts,tsx}": [
       "eslint --fix"
     ],
     "**/*.{js,jsx,ts,tsx,css,scss,html,json,md,yaml}": [
