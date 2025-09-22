@@ -152,11 +152,14 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._vao = this._createVAO();
   }
 
-  async initialize(): Promise<WebGLPointsController> {
+  async initialize(signal?: AbortSignal): Promise<WebGLPointsController> {
+    signal?.throwIfAborted();
     this._markerAtlasTexture = await WebGLUtils.loadTexture(
       this._gl,
       markersUrl,
+      signal,
     );
+    signal?.throwIfAborted();
     return this;
   }
 
@@ -213,7 +216,10 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._bufferSlices = newBufferSlices;
   }
 
-  draw(viewport: Rect, blendMode: BlendMode, sizeFactor: number): void {
+  draw(
+    viewport: Rect,
+    { blendMode, sizeFactor }: { blendMode: BlendMode; sizeFactor: number },
+  ): void {
     if (this._nPoints === 0 || this._markerAtlasTexture === undefined) {
       return;
     }

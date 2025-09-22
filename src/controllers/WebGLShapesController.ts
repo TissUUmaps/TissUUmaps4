@@ -2,7 +2,6 @@ import { IShapesData } from "../data/shapes";
 import { ITableData } from "../data/table";
 import { ILayerModel } from "../models/layer";
 import { IShapesModel } from "../models/shapes";
-import { BlendMode } from "../models/types";
 import { Rect } from "./WebGLController";
 import WebGLControllerBase from "./WebGLControllerBase";
 
@@ -32,8 +31,6 @@ export default class WebGLShapesController extends WebGLControllerBase {
   draw(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _viewport: Rect,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _blendMode: BlendMode,
   ): void {
     // TODO draw shapes
   }

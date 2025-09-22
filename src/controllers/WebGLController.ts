@@ -44,8 +44,10 @@ export default class WebGLController {
     });
   }
 
-  async initialize(): Promise<WebGLController> {
-    await this._pointsController.initialize();
+  async initialize(signal?: AbortSignal): Promise<WebGLController> {
+    signal?.throwIfAborted();
+    await this._pointsController.initialize(signal);
+    signal?.throwIfAborted();
     return this;
   }
 
@@ -64,8 +66,11 @@ export default class WebGLController {
   draw(viewport: Rect): void {
     this._gl.clearColor(0, 0, 0, 0);
     this._gl.clear(this._gl.COLOR_BUFFER_BIT);
-    this._pointsController.draw(viewport, this.blendMode, this.pointSizeFactor);
-    this._shapesController.draw(viewport, this.blendMode);
+    this._pointsController.draw(viewport, {
+      blendMode: this.blendMode,
+      sizeFactor: this.pointSizeFactor,
+    });
+    this._shapesController.draw(viewport);
   }
 
   resize(width: number, height: number): void {

@@ -59,7 +59,9 @@ export default class WebGLUtils {
   static async loadTexture(
     gl: WebGL2RenderingContext,
     url: string,
+    signal?: AbortSignal,
   ): Promise<WebGLTexture> {
+    signal?.throwIfAborted();
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -71,7 +73,7 @@ export default class WebGLUtils {
     );
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.bindTexture(gl.TEXTURE_2D, null);
-    return await new Promise<WebGLTexture>((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
         gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -85,7 +87,7 @@ export default class WebGLUtils {
         );
         gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, null);
-        resolve(texture);
+        resolve();
       };
       img.onerror = (...args) => {
         const error = args[4];
@@ -93,6 +95,8 @@ export default class WebGLUtils {
       };
       img.src = url;
     });
+    signal?.throwIfAborted();
+    return texture;
   }
 
   static resizeBuffer(
