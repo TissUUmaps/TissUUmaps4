@@ -23,17 +23,6 @@ import WebGLUtils from "../utils/WebGLUtils";
 import { Rect } from "./WebGLController";
 import WebGLControllerBase from "./WebGLControllerBase";
 
-// TODO:
-// - marker stroke/fill/outline
-// - point sorting/zorder (?)
-// - react to OpenSeadragon collection mode, viewer rotation, ...
-// - chunked loading
-// - chunked drawing
-
-// Not implemented:
-// - instancing
-// - pie charts
-
 export default class WebGLPointsController extends WebGLControllerBase {
   private static readonly _MAX_N_OBJECTS = 256; // see vertex shader
   private static readonly _ATTRIB_LOCATIONS = {

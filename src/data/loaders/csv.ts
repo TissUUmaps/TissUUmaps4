@@ -7,8 +7,6 @@ import { TableDataLoaderBase } from "./base";
 
 export const CSV_TABLE_DATA_SOURCE = "csv";
 
-// TODO make numeric data type configurable per column
-
 export interface ICSVTableDataSourceModel
   extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
   columns?: string[];

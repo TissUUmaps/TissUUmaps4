@@ -52,15 +52,3 @@ export interface IPointsLayerConfigModel extends ILayerConfigModel {
   /** Dimension containing point-wise Y coordinates */
   y: string;
 }
-
-// TODO points presets
-// export type PointsPreset = {
-//   name: string;
-//   columns: string[];
-//   setsSize: boolean;
-//   setsShape: boolean;
-//   setsColor: boolean;
-//   setsVisibility: boolean;
-//   setsOpacity: boolean;
-//   targetLayerConfigId?: string;
-// };

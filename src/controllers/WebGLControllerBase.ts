@@ -4,14 +4,6 @@ import { ILayerConfigModel } from "../models/base";
 import { ILayerModel } from "../models/layer";
 import { Rect } from "./WebGLController";
 
-// TODO:
-// - colorbar
-// - scalebar
-// - picking
-// - shapes
-// - graphs
-// - screenshot (instancing?)
-
 export default class WebGLControllerBase {
   protected readonly _gl: WebGL2RenderingContext;
 
