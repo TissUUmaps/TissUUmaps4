@@ -71,9 +71,14 @@ export default class WebGLController {
   resize(width: number, height: number): void {
     width *= window.devicePixelRatio;
     height *= window.devicePixelRatio;
-    const maxSize = Math.max(width, height);
-    if (maxSize > WebGLController._MAX_CANVAS_SIZE) {
-      const scale = WebGLController._MAX_CANVAS_SIZE / maxSize;
+    if (width <= 0 || height <= 0) {
+      width = 1;
+      height = 1;
+    } else if (
+      width > WebGLController._MAX_CANVAS_SIZE ||
+      height > WebGLController._MAX_CANVAS_SIZE
+    ) {
+      const scale = WebGLController._MAX_CANVAS_SIZE / Math.max(width, height);
       width = Math.floor(width * scale);
       height = Math.floor(height * scale);
     }
