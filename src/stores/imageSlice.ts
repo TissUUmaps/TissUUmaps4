@@ -103,7 +103,7 @@ const initialImageSliceState: ImageSliceState = {
         name: "H&E",
         dataSource: {
           type: "default",
-          url: "/data/breast/TissueA_HnE.dzi",
+          url: "https://user.it.uu.se/~chrav452/TissUUmaps4/data/breast/TissueA_HnE.dzi",
         } as IDefaultImageDataSourceModel,
         layerConfigs: [{ layerId: "breast" }],
       },
@@ -115,7 +115,7 @@ const initialImageSliceState: ImageSliceState = {
         name: "DAPI",
         dataSource: {
           type: "default",
-          url: "/data/breast/TissueA_Fluo.dzi",
+          url: "https://user.it.uu.se/~chrav452/TissUUmaps4/data/breast/TissueA_Fluo.dzi",
         } as IDefaultImageDataSourceModel,
         layerConfigs: [{ layerId: "breast" }],
       },
