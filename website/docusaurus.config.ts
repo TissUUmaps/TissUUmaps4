@@ -4,6 +4,7 @@ import { themes as prismThemes } from "prism-react-renderer";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+// https://www.typedoc-plugin-markdown.org/plugins/docusaurus/guides/sidebar
 function injectTypeDocSidebar(items) {
   return items.map((item) => {
     if (item.link?.id === "api/index") {
@@ -54,7 +55,8 @@ const config: Config = {
       {
         docs: {
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://github.com/TissUUmaps/TissUUmaps4/tree/main/docs/",
+          editUrl:
+            "https://github.com/TissUUmaps/TissUUmaps4/tree/main/website/",
           // https://www.typedoc-plugin-markdown.org/plugins/docusaurus/guides/sidebar
           async sidebarItemsGenerator({
             defaultSidebarItemsGenerator,

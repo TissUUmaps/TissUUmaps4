@@ -5,6 +5,6 @@
 | [Default](../data-loaders/default) | TileSource specification       |                                |                                |                                |                                |
 | [TIFF](../data-loaders/tiff)       | TIFF file URL/path             | TIFF file URL/path             |                                |                                |                                |
 | [Zarr](../data-loaders/zarr)       | Zarr file URL/path             | Zarr file URL/path             |                                |                                |                                |
-| [Table](../data-loaders/table)     |                                |                                | _Table reference_              | _Table reference_              |                                |
+| [Table](../data-loaders/table)     |                                |                                | Table reference                | Table reference                |                                |
 | [CSV](../data-loaders/csv)         |                                |                                |                                |                                | CSV file URL/path              |
 | [Parquet](../data-loaders/parquet) |                                |                                |                                |                                | Parquet file URL/path          |
