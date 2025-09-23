@@ -25,16 +25,17 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-      - name: Build website
-        working-directory: ./website
+      - name: Install dependencies
         run: |
           npm ci
-          npm run build
+          cd ./website && npm ci
+      - name: Build website
+        working-directory: ./website
+        run: npm run build
         env:
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/
       - name: Build TissUUmaps
         run: |
-          npm ci
           npm run build
           cp -r ./dist ./website/build/live
         env:
