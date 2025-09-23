@@ -25,18 +25,26 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Build
-        run: npm run build
+      - name: Build website
+        working-directory: ./website
+        run: |
+          npm ci
+          npm run build
         env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/
+      - name: Build TissUUmaps
+        run: |
+          npm ci
+          npm run build
+          cp -r ./dist ./website/build/live
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./dist
+          path: ./website/build
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
