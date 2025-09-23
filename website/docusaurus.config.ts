@@ -125,7 +125,7 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/facebook/docusaurus",
+              href: "https://github.com/TissUUmaps/TissUUmaps4",
             },
             {
               href: "https://tissuumaps.github.io/TissUUmaps4/live",
