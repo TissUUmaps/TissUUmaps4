@@ -24,8 +24,10 @@ export default class WebGLController {
 
   static createCanvas(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
-    canvas.style =
-      "position: relative; width: 100%; height: 100%; z-index: 50;";
+    canvas.style.setProperty("position", "relative");
+    canvas.style.setProperty("width", "100%");
+    canvas.style.setProperty("height", "100%");
+    canvas.style.setProperty("z-index", "50");
     return canvas;
   }
 

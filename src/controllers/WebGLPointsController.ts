@@ -127,13 +127,43 @@ export default class WebGLPointsController extends WebGLControllerBase {
       ),
     };
     this._buffers = {
-      x: this._gl.createBuffer(),
-      y: this._gl.createBuffer(),
-      size: this._gl.createBuffer(),
-      color: this._gl.createBuffer(),
-      markerIndex: this._gl.createBuffer(),
-      objectIndex: this._gl.createBuffer(),
-      dataToWorldTransformsUBO: this._gl.createBuffer(),
+      x:
+        this._gl.createBuffer() ??
+        (() => {
+          throw new Error("Failed to create buffer for x");
+        })(),
+      y:
+        this._gl.createBuffer() ??
+        (() => {
+          throw new Error("Failed to create buffer for y");
+        })(),
+      size:
+        this._gl.createBuffer() ??
+        (() => {
+          throw new Error("Failed to create buffer for size");
+        })(),
+      color:
+        this._gl.createBuffer() ??
+        (() => {
+          throw new Error("Failed to create buffer for color");
+        })(),
+      markerIndex:
+        this._gl.createBuffer() ??
+        (() => {
+          throw new Error("Failed to create buffer for markerIndex");
+        })(),
+      objectIndex:
+        this._gl.createBuffer() ??
+        (() => {
+          throw new Error("Failed to create buffer for objectIndex");
+        })(),
+      dataToWorldTransformsUBO:
+        this._gl.createBuffer() ??
+        (() => {
+          throw new Error(
+            "Failed to create buffer for dataToWorldTransformsUBO",
+          );
+        })(),
     };
     WebGLUtils.resizeBuffer(
       this._gl,
@@ -297,6 +327,9 @@ export default class WebGLPointsController extends WebGLControllerBase {
 
   private _createVAO(): WebGLVertexArrayObject {
     const vao = this._gl.createVertexArray();
+    if (vao === null) {
+      throw new Error("Failed to create vertex array object");
+    }
     this._gl.bindVertexArray(vao);
     WebGLUtils.configureVertexFloatAttribute(
       this._gl,
@@ -358,7 +391,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     WebGLUtils.resizeBuffer(
       this._gl,
       this._buffers.size,
-      nPoints * Float16Array.BYTES_PER_ELEMENT,
+      nPoints * Float32Array.BYTES_PER_ELEMENT,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
@@ -599,7 +632,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     signal?: AbortSignal,
   ): Promise<void> {
     signal?.throwIfAborted();
-    const data = new Float16Array(meta.data.getLength());
+    const data = new Float32Array(meta.data.getLength());
     if (meta.points.pointSize === undefined) {
       data.fill(WebGLPointsController._DEFAULT_POINT_SIZE);
     } else if (isTableValuesColumn(meta.points.pointSize)) {

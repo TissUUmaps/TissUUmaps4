@@ -28,6 +28,9 @@ export default class WebGLUtils {
     }
     try {
       const program = gl.createProgram();
+      if (program === null) {
+        throw new Error("Failed to create shader program.");
+      }
       for (const [shader, shaderSource] of [
         [vertexShader, vertexShaderSource],
         [fragmentShader, fragmentShaderSource],
@@ -63,6 +66,9 @@ export default class WebGLUtils {
   ): Promise<WebGLTexture> {
     signal?.throwIfAborted();
     const texture = gl.createTexture();
+    if (texture === null) {
+      throw new Error("Failed to create texture.");
+    }
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
