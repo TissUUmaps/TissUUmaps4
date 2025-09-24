@@ -18,7 +18,7 @@ sidebar_position: 3
 
 | Direction          | Transformation                                                                       |
 | ------------------ | ------------------------------------------------------------------------------------ |
-| Data -> Layer      | _layer coordinates_ = **_object-level pixel size_** \* _data coordinates_            |
+| Data -> Layer      | _layer coordinates_ = **_object-level similarity transform_** \* _data coordinates_  |
 | Layer -> World     | _world coordinates_ = **_layer-level similarity transform_** \* _layer coordinates_  |
 | World -> Viewport  | _viewport coordinates_ = (_world coordinates_ - _viewport origin_) / _viewport size_ |
 | Viewport -> Device | _device coordinates_ = _device pixel ratio_ \* _viewport coordinates_                |
