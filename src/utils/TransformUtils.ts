@@ -15,17 +15,15 @@ export default class TransformUtils {
     tf: Partial<SimilarityTransform>,
     rotationCenter?: { x: number; y: number },
   ): mat3 {
-    let scale = 1;
     const m = mat3.create();
     if (tf.scale !== undefined) {
       const s = mat3.fromScaling(mat3.create(), [tf.scale, tf.scale]);
       mat3.multiply(m, s, m);
-      scale = tf.scale;
     }
     if (rotationCenter !== undefined) {
       const t = mat3.fromTranslation(mat3.create(), [
-        -rotationCenter.x * scale,
-        -rotationCenter.y * scale,
+        -rotationCenter.x * (tf.scale ?? 1),
+        -rotationCenter.y * (tf.scale ?? 1),
       ]);
       mat3.multiply(m, t, m);
     }
@@ -35,8 +33,8 @@ export default class TransformUtils {
     }
     if (rotationCenter !== undefined) {
       const t = mat3.fromTranslation(mat3.create(), [
-        rotationCenter.x * scale,
-        rotationCenter.y * scale,
+        rotationCenter.x * (tf.scale ?? 1),
+        rotationCenter.y * (tf.scale ?? 1),
       ]);
       mat3.multiply(m, t, m);
     }
