@@ -256,6 +256,8 @@ export default class WebGLPointsController extends WebGLControllerBase {
     );
     const worldToViewportMatrix =
       WebGLPointsController.createWorldToViewportMatrix(viewport);
+    // gl-matrix, like OpenGL, uses column-major order.
+    // In OpenGL, mat3x2 has three columns and two rows.
     const worldToViewportMatrixAsGLMat3x2 = [
       worldToViewportMatrix[0],
       worldToViewportMatrix[1],
@@ -589,7 +591,8 @@ export default class WebGLPointsController extends WebGLControllerBase {
       });
       const m = mat3.create();
       if (meta.layerConfig.flip === true) {
-        mat3.multiply(m, mat3.fromScaling(mat3.create(), [-1, 1]), m);
+        const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
+        mat3.multiply(m, flipMatrix, m);
       }
       if (meta.layerConfig.transform !== undefined) {
         const dataToLayerMatrix = TransformUtils.toMatrix(
@@ -603,6 +606,8 @@ export default class WebGLPointsController extends WebGLControllerBase {
         );
         mat3.multiply(m, layerToWorldMatrix, m);
       }
+      // gl-matrix, like OpenGL, uses column-major order.
+      // In OpenGL, mat2x4 has two columns and four rows.
       const transposedDataToWorldMatrixAsGLMat2x4 = [
         m[0],
         m[3],

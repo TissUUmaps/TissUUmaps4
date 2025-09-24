@@ -10,14 +10,11 @@ export default class WebGLControllerBase {
   }
 
   protected static createWorldToViewportMatrix(viewport: Rect): mat3 {
+    // gl-matrix, like OpenGL, uses pre-multiplied matrices,
+    // so we need to apply transformations in reverse order.
     const m = mat3.create();
-    const t = mat3.fromTranslation(mat3.create(), [-viewport.x, -viewport.y]);
-    mat3.multiply(m, t, m);
-    const s = mat3.fromScaling(mat3.create(), [
-      1.0 / viewport.width,
-      1.0 / viewport.height,
-    ]);
-    mat3.multiply(m, s, m);
+    mat3.scale(m, m, [1.0 / viewport.width, 1.0 / viewport.height]);
+    mat3.translate(m, m, [-viewport.x, -viewport.y]);
     return m;
   }
 }

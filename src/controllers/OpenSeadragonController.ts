@@ -245,7 +245,6 @@ export default class OpenSeadragonController {
     createTiledImageState: () => TiledImageState,
   ): void {
     const newTiledImageState = createTiledImageState();
-    const flip = layerConfig.flip ?? false;
     this._viewer.addTiledImage({
       tileSource: createTileSource(),
       index: index,
@@ -256,7 +255,6 @@ export default class OpenSeadragonController {
         const newTiledImage = (event as unknown as { item: TiledImage }).item;
         newTiledImageState.imageWidth = newTiledImage.getContentSize().x;
         newTiledImageState.imageHeight = newTiledImage.getContentSize().y;
-        newTiledImage.setFlip(flip);
         if (
           newTiledImageState.deferredIndex !== undefined &&
           newTiledImageState.deferredIndex !== index
@@ -338,17 +336,21 @@ export default class OpenSeadragonController {
     }
     const dataToWorldTransform = TransformUtils.fromMatrix(m);
     const bounds = tiledImage.getBounds();
-    const { x, y } = dataToWorldTransform.translation;
-    if (bounds.x !== x || bounds.y !== y) {
-      tiledImage.setPosition(new Point(x, y), true);
+    const flip = layerConfig.flip ?? false;
+    if (tiledImage.getFlip() !== flip) {
+      tiledImage.setFlip(flip);
+    }
+    const width = tiledImageState.imageWidth! * dataToWorldTransform.scale;
+    if (bounds.width !== width) {
+      tiledImage.setWidth(width, true);
     }
     const rotation = dataToWorldTransform.rotation;
     if (tiledImage.getRotation() !== rotation) {
       tiledImage.setRotation(rotation, true);
     }
-    const width = tiledImageState.imageWidth! * dataToWorldTransform.scale;
-    if (bounds.width !== width) {
-      tiledImage.setWidth(width, true);
+    const { x, y } = dataToWorldTransform.translation;
+    if (bounds.x !== x || bounds.y !== y) {
+      tiledImage.setPosition(new Point(x, y), true);
     }
   }
 
