@@ -15,7 +15,7 @@ layout(location = 3) in uint a_color;
 layout(location = 4) in uint a_markerIndex;
 layout(location = 5) in uint a_objectIndex;
 
-layout(std140) uniform DataToWorldTransformsUBO {
+layout(std140) uniform DataToWorldMatricesUBO {
     // https://learnopengl.com/Advanced-OpenGL/Advanced-GLSL
     // Matrices are stored as a large array of column vectors,
     // where each of those vectors has a base alignment of vec4.
@@ -24,9 +24,9 @@ layout(std140) uniform DataToWorldTransformsUBO {
     // Thus, mat2x4 has a base alignment of 4N, and each column
     // is aligned to 4N. Since mat2x4 has 2 columns, its
     // base alignment is 2 * 4N = 8N = 32 bytes.
-    mat2x4 transposedDataToWorldTransforms[MAX_N_OBJECTS];
+    mat2x4 transposedDataToWorldMatrices[MAX_N_OBJECTS];
 };
-uniform mat3x2 u_worldToViewportTransform;
+uniform mat3x2 u_worldToViewportMatrix;
 uniform float u_sizeFactor;
 
 flat out vec4 v_color;
@@ -36,9 +36,9 @@ void main() {
     if(a_markerIndex >= MAX_N_MARKERS || a_objectIndex >= MAX_N_OBJECTS) {
         DISCARD;
     }
-    mat4x2 dataToWorldTransform = transpose(transposedDataToWorldTransforms[a_objectIndex]);
-    vec2 worldPosition = dataToWorldTransform * vec4(a_x, a_y, 1.0f, 0.0f);
-    vec2 viewportPosition = u_worldToViewportTransform * vec3(worldPosition, 1.0f); // in [0, 1]
+    mat4x2 dataToWorldMatrix = transpose(transposedDataToWorldMatrices[a_objectIndex]);
+    vec2 worldPosition = dataToWorldMatrix * vec4(a_x, a_y, 1.0f, 0.0f);
+    vec2 viewportPosition = u_worldToViewportMatrix * vec3(worldPosition, 1.0f); // in [0, 1]
     gl_Position = vec4((2.0f * viewportPosition - 1.0f) * vec2(1.0f, -1.0f), 0.0f, 1.0f);
     if(gl_Position.x < -1.0f || gl_Position.x > 1.0f || gl_Position.y < -1.0f || gl_Position.y > 1.0f) {
         DISCARD;

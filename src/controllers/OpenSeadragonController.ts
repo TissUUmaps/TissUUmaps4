@@ -1,3 +1,4 @@
+import { mat3 } from "gl-matrix";
 import OpenSeadragon, { Point, TiledImage, Viewer } from "openseadragon";
 
 import { IImageData } from "../data/image";
@@ -7,6 +8,7 @@ import { ILayerConfigModel } from "../models/base";
 import { IImageLayerConfigModel, IImageModel } from "../models/image";
 import { ILabelsLayerConfigModel, ILabelsModel } from "../models/labels";
 import { ILayerModel } from "../models/layer";
+import TransformUtils from "../utils/TransformUtils";
 
 export default class OpenSeadragonController {
   private readonly _viewer: Viewer;
@@ -247,7 +249,6 @@ export default class OpenSeadragonController {
     this._viewer.addTiledImage({
       tileSource: createTileSource(),
       index: index,
-      degrees: layerConfig.rotation ?? 0,
       // https://github.com/openseadragon/openseadragon/issues/2765
       // flipped: layerConfig.flip ?? false,
       opacity: OpenSeadragonController._calculateOpacity(layer, pixels),
@@ -276,7 +277,7 @@ export default class OpenSeadragonController {
           );
           newTiledImageState.deferredUpdate = undefined;
         } else {
-          this._updateTiledImagePositionAndSize(
+          this._updateTiledImageTransform(
             layer,
             layerConfig,
             newTiledImage,
@@ -301,10 +302,6 @@ export default class OpenSeadragonController {
     tiledImage: TiledImage,
     tiledImageState: TiledImageState,
   ): void {
-    const degrees = layerConfig.rotation ?? 0.0;
-    if (tiledImage.getRotation() !== degrees) {
-      tiledImage.setRotation(degrees, true);
-    }
     const flip = layerConfig.flip ?? false;
     if (tiledImage.getFlip() !== flip) {
       tiledImage.setFlip(flip);
@@ -313,7 +310,7 @@ export default class OpenSeadragonController {
     if (tiledImage.getOpacity() !== opacity) {
       tiledImage.setOpacity(opacity);
     }
-    this._updateTiledImagePositionAndSize(
+    this._updateTiledImageTransform(
       layer,
       layerConfig,
       tiledImage,
@@ -321,37 +318,35 @@ export default class OpenSeadragonController {
     );
   }
 
-  private _updateTiledImagePositionAndSize(
+  private _updateTiledImageTransform(
     layer: ILayerModel,
     layerConfig: ILayerConfigModel,
     tiledImage: TiledImage,
     tiledImageState: TiledImageState,
   ): void {
-    let x = 0.0;
-    let y = 0.0;
-    let width = tiledImageState.imageWidth!;
-    if (layerConfig.scale !== undefined) {
-      x *= layerConfig.scale;
-      y *= layerConfig.scale;
-      width *= layerConfig.scale;
+    const m = mat3.create();
+    if (layerConfig.transform !== undefined) {
+      const dataToLayerMatrix = TransformUtils.toMatrix(layerConfig.transform, {
+        x: tiledImageState.imageWidth! / 2,
+        y: tiledImageState.imageHeight! / 2,
+      });
+      mat3.multiply(m, dataToLayerMatrix, m);
     }
-    if (layerConfig.translation !== undefined) {
-      x += layerConfig.translation.x;
-      y += layerConfig.translation.y;
+    if (layer.transform !== undefined) {
+      const layerToWorldMatrix = TransformUtils.toMatrix(layer.transform);
+      mat3.multiply(m, layerToWorldMatrix, m);
     }
-    if (layer.scale !== undefined) {
-      x *= layer.scale;
-      y *= layer.scale;
-      width *= layer.scale;
-    }
-    if (layer.translation !== undefined) {
-      x += layer.translation.x;
-      y += layer.translation.y;
-    }
+    const dataToWorldTransform = TransformUtils.fromMatrix(m);
     const bounds = tiledImage.getBounds();
+    const { x, y } = dataToWorldTransform.translation;
     if (bounds.x !== x || bounds.y !== y) {
       tiledImage.setPosition(new Point(x, y), true);
     }
+    const rotation = dataToWorldTransform.rotation;
+    if (tiledImage.getRotation() !== rotation) {
+      tiledImage.setRotation(rotation, true);
+    }
+    const width = tiledImageState.imageWidth! * dataToWorldTransform.scale;
     if (bounds.width !== width) {
       tiledImage.setWidth(width, true);
     }

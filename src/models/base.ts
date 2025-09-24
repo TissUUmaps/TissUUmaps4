@@ -1,4 +1,4 @@
-import { TableValuesColumn } from "./types";
+import { SimilarityTransform, TableValuesColumn } from "./types";
 
 /** Base interface for all models */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -50,15 +50,9 @@ export interface ILayerConfigModel extends IModel {
   /** Layer ID for all items, or column containing item-wise layer IDs */
   layerId: string | TableValuesColumn;
 
-  /** Scale factor, converts from data space to physical/layer space (defaults to 1) */
-  scale?: number;
-
-  /** Horizontal reflection, before rotation (defaults to false) */
+  /** Horizontal reflection, applied before transformation (defaults to false) */
   flip?: boolean;
 
-  /** Rotation around center (images/labels) or origin (points/shapes), in degrees (defaults to 0) */
-  rotation?: number;
-
-  /** Translation, in physical/layer coordinates (i.e. after scaling; defaults to 0) */
-  translation?: { x: number; y: number };
+  /** Transformation from data/object space to layer space (defaults to identity transform) */
+  transform?: Partial<SimilarityTransform>;
 }
