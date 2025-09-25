@@ -1,10 +1,4 @@
-import {
-  Color,
-  DrawOptions,
-  Marker,
-  ViewerAnimationOptions,
-  ViewerOptions,
-} from "../models/types";
+import { Color, DrawOptions, Marker, ViewerOptions } from "../models/types";
 import { BoundStoreStateCreator } from "./boundStore";
 
 export type ProjectSlice = ProjectSliceState & ProjectSliceActions;
@@ -19,8 +13,8 @@ export type ProjectSliceState = {
   markerMaps: Map<string, Map<string, Marker>>;
   drawOptions: Partial<DrawOptions>;
   viewerOptions: Partial<ViewerOptions>;
-  viewerAnimationStartOptions: Partial<ViewerAnimationOptions>;
-  viewerAnimationFinishOptions: Partial<ViewerAnimationOptions>;
+  viewerAnimationStartOptions: Partial<ViewerOptions>;
+  viewerAnimationFinishOptions: Partial<ViewerOptions>;
 };
 
 export type ProjectSliceActions = {

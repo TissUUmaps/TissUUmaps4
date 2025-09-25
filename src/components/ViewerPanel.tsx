@@ -77,10 +77,7 @@ export default function ViewerPanel() {
       }
       if (viewerElement !== null) {
         try {
-          const viewer = OpenSeadragonController.createViewer(
-            viewerElement,
-            viewerOptions,
-          );
+          const viewer = OpenSeadragonController.createViewer(viewerElement);
           viewer.addHandler("resize", onViewerResize);
           viewer.addHandler("viewport-change", onViewerViewportChange);
           const glCanvas = viewer.canvas.appendChild(
@@ -102,8 +99,15 @@ export default function ViewerPanel() {
         }
       }
     },
-    [onViewerResize, onViewerViewportChange, viewerOptions],
+    [onViewerResize, onViewerViewportChange],
   );
+
+  useEffect(() => {
+    const os = osRef.current;
+    if (os !== null) {
+      os.updateViewerOptions(viewerOptions);
+    }
+  }, [viewerOptions]);
 
   // configure OpenSeadragon animation handlers
   useEffect(() => {

@@ -5,13 +5,7 @@ import { ILayerModel } from "./layer";
 import { IPointsModel } from "./points";
 import { IShapesModel } from "./shapes";
 import { ITableModel } from "./table";
-import {
-  Color,
-  DrawOptions,
-  Marker,
-  ViewerAnimationOptions,
-  ViewerOptions,
-} from "./types";
+import { Color, DrawOptions, Marker, ViewerOptions } from "./types";
 
 /** A project */
 export interface IProjectModel extends IModel {
@@ -84,18 +78,18 @@ export interface IProjectModel extends IModel {
   viewerOptions?: Partial<ViewerOptions>;
 
   /**
-   * OpenSeadragon viewer/tiled image options set when an animation starts
+   * OpenSeadragon viewer options set when an animation starts
    *
    * Each option will be reset to the initial value when the animation finishes, unless overridden by `viewerAnimationFinishOptions`
    *
    * @see OpenSeadragonController for default values
    */
-  viewerAnimationStartOptions?: Partial<ViewerAnimationOptions>;
+  viewerAnimationStartOptions?: Partial<ViewerOptions>;
 
   /**
-   * OpenSeadragon viewer/tiled image options set when an animation finishes
+   * OpenSeadragon viewer options set when an animation finishes
    *
    * @see OpenSeadragonController for default values
    */
-  viewerAnimationFinishOptions?: Partial<ViewerAnimationOptions>;
+  viewerAnimationFinishOptions?: Partial<ViewerOptions>;
 }

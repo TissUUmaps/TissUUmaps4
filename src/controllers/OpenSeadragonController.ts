@@ -8,14 +8,11 @@ import { ILayerConfigModel } from "../models/base";
 import { IImageLayerConfigModel, IImageModel } from "../models/image";
 import { ILabelsLayerConfigModel, ILabelsModel } from "../models/labels";
 import { ILayerModel } from "../models/layer";
-import { ViewerAnimationOptions, ViewerOptions } from "../models/types";
+import { ViewerOptions } from "../models/types";
 import TransformUtils from "../utils/TransformUtils";
 
 export default class OpenSeadragonController {
-  static readonly DEFAULT_VIEWER_OPTIONS: Exclude<
-    ViewerOptions,
-    "element" | "drawer"
-  > = {
+  static readonly DEFAULT_VIEWER_OPTIONS: ViewerOptions = {
     minZoomImageRatio: 0,
     maxZoomPixelRatio: Infinity,
     preserveImageSizeOnResize: true,
@@ -40,32 +37,19 @@ export default class OpenSeadragonController {
     showNavigationControl: false,
     imageSmoothingEnabled: false,
   };
-  static readonly DEFAULT_VIEWER_ANIMATION_START_OPTIONS: ViewerAnimationOptions =
-    {
-      viewer: {
-        immediateRender: false,
-        imageLoaderLimit: 1,
-      },
-      tiledImage: {
-        immediateRender: false,
-        imageLoaderLimit: 1,
-      },
-    };
-  static readonly DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS: ViewerAnimationOptions =
-    {
-      viewer: {
-        immediateRender: true,
-      },
-      tiledImage: {
-        immediateRender: true,
-      },
-    };
+  static readonly DEFAULT_VIEWER_ANIMATION_START_OPTIONS: ViewerOptions = {
+    immediateRender: false,
+    imageLoaderLimit: 1,
+  };
+  static readonly DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS: ViewerOptions = {
+    immediateRender: true, // set to true, even if initially set to false
+  };
 
   private readonly _viewer: Viewer;
   private readonly _tiledImageStates: TiledImageState[] = [];
   private readonly _animationMemory: {
-    viewerValues: Record<string, unknown>;
-    tiledImageValues: Record<string, unknown>[];
+    viewerValues: Partial<ViewerOptions>;
+    tiledImageValues: Partial<ViewerOptions>[];
   } = {
     viewerValues: {},
     tiledImageValues: [],
@@ -73,20 +57,12 @@ export default class OpenSeadragonController {
   private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
   private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
 
-  static createViewer(
-    viewerElement: HTMLElement,
-    viewerOptions: Partial<ViewerOptions>,
-  ): Viewer {
-    viewerOptions = {
-      ...OpenSeadragonController.DEFAULT_VIEWER_OPTIONS,
-      ...viewerOptions,
-    };
+  static createViewer(viewerElement: HTMLElement): Viewer {
     const viewer = new Viewer({
-      ...viewerOptions,
+      ...OpenSeadragonController.DEFAULT_VIEWER_OPTIONS,
+      // do not forget to update ViewerOptions when adding more options here
       element: viewerElement,
-      // https://github.com/usnistgov/OpenSeadragonFiltering/issues/34
-      // also, according to Christophe Avenel, WebGL may actually be slower
-      drawer: "canvas",
+      drawer: "canvas", // https://github.com/usnistgov/OpenSeadragonFiltering/issues/34
     });
     // disable key bindings for rotation and flipping
     viewer.addHandler("canvas-key", (event) => {
@@ -102,9 +78,27 @@ export default class OpenSeadragonController {
     this._viewer = viewer;
   }
 
+  updateViewerOptions(options: Partial<ViewerOptions>): void {
+    for (const [key, value] of Object.entries(options)) {
+      // @ts-expect-error: dynamic property access
+      if (key in this._viewer && this._viewer[key] !== value) {
+        // @ts-expect-error: dynamic property access
+        this._viewer[key] = value;
+      }
+      for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
+        const tiledImage = this._viewer.world.getItemAt(i);
+        // @ts-expect-error: dynamic property access
+        if (key in tiledImage && tiledImage[key] !== value) {
+          // @ts-expect-error: dynamic property access
+          tiledImage[key] = value;
+        }
+      }
+    }
+  }
+
   configureAnimationHandlers(
-    viewerAnimationStartOptions: Partial<ViewerAnimationOptions>,
-    viewerAnimationFinishOptions: Partial<ViewerAnimationOptions>,
+    viewerAnimationStartOptions: Partial<ViewerOptions>,
+    viewerAnimationFinishOptions: Partial<ViewerOptions>,
   ): void {
     viewerAnimationStartOptions = {
       ...OpenSeadragonController.DEFAULT_VIEWER_ANIMATION_START_OPTIONS,
@@ -129,63 +123,32 @@ export default class OpenSeadragonController {
       this._animationFinishHandler = undefined;
     }
     this._animationStartHandler = () => {
-      // memorize and change viewer property values as configured
       this._animationMemory.viewerValues = {};
-      if (viewerAnimationStartOptions.viewer !== undefined) {
-        for (const property of Object.keys(
-          viewerAnimationStartOptions.viewer,
-        )) {
-          // @ts-expect-error: dynamic property access
-          this._animationMemory.viewerValues[property] = this._viewer[property];
-        }
-        Object.assign(this._viewer, viewerAnimationStartOptions.viewer);
-      }
-      // memorize and change tiled image property values as configured
       this._animationMemory.tiledImageValues = [];
-      if (viewerAnimationStartOptions.tiledImage !== undefined) {
-        for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
-          const tiledImage = this._viewer.world.getItemAt(i);
-          const tiledImageValues: Record<string, unknown> = {};
-          for (const property of Object.keys(
-            viewerAnimationStartOptions.tiledImage,
-          )) {
-            // @ts-expect-error: dynamic property access
-            tiledImageValues[property] = tiledImage[property];
-          }
-          this._animationMemory.tiledImageValues.push(tiledImageValues);
-          Object.assign(tiledImage, viewerAnimationStartOptions.tiledImage);
-        }
+      for (const key of Object.keys(viewerAnimationStartOptions)) {
+        // @ts-expect-error: dynamic property access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        this._animationMemory.viewerValues[key] = this._viewer[key];
       }
-    };
-    this._animationFinishHandler = () => {
-      const viewerValues = this._animationMemory.viewerValues;
-      // override memorized viewer property values as configured
-      if (viewerAnimationFinishOptions.viewer !== undefined) {
-        for (const property of Object.keys(
-          viewerAnimationFinishOptions.viewer,
-        )) {
-          viewerValues[property] =
-            viewerAnimationFinishOptions.viewer[property];
-        }
-      }
-      const tiledImageValues = this._animationMemory.tiledImageValues;
-      // override memorized tiled image property values as configured
-      if (viewerAnimationFinishOptions.tiledImage !== undefined) {
-        for (const property of Object.keys(
-          viewerAnimationFinishOptions.tiledImage,
-        )) {
-          for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
-            tiledImageValues[i]![property] =
-              viewerAnimationFinishOptions.tiledImage[property];
-          }
-        }
-      }
-      // restore viewer and tiled image property values from memory
-      Object.assign(this._viewer, viewerValues);
       for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
         const tiledImage = this._viewer.world.getItemAt(i);
-        Object.assign(tiledImage, tiledImageValues[i]);
+        const tiledImageValues: Partial<ViewerOptions> = {};
+        for (const property of Object.keys(viewerAnimationStartOptions)) {
+          if (property in tiledImage) {
+            // @ts-expect-error: dynamic property access
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            tiledImageValues[property] = tiledImage[property];
+          }
+        }
+        this._animationMemory.tiledImageValues.push(tiledImageValues);
       }
+      this.updateViewerOptions(viewerAnimationStartOptions);
+    };
+    this._animationFinishHandler = () => {
+      this.updateViewerOptions({
+        ...this._animationMemory.viewerValues,
+        ...viewerAnimationFinishOptions,
+      });
     };
     this._viewer.addHandler("animation-start", this._animationStartHandler);
     this._viewer.addHandler("animation-finish", this._animationFinishHandler);

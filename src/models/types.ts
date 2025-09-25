@@ -87,20 +87,14 @@ export type SimilarityTransform = {
   translation: { x: number; y: number };
 };
 
-/** OpenSeadragon viewer options */
-export type ViewerOptions = OpenSeadragon.Options;
-
-/** OpenSeadragon viewer/tiled image animation options */
-export type ViewerAnimationOptions = {
-  viewer: Record<string, unknown>;
-  tiledImage: Record<string, unknown>;
-};
-
 /** WebGL Points Options */
 export type DrawOptions = {
-  /** Blend mode (defaults to "over") */
-  blendMode: "add" | "over";
-
   /** Point size factor (defaults to 1.0) */
   pointSizeFactor: number;
 };
+
+/** OpenSeadragon viewer options */
+export type ViewerOptions = Exclude<
+  OpenSeadragon.Options,
+  "element" | "drawer"
+>;

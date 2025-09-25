@@ -276,34 +276,18 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
     this._gl.uniform1i(this._uniformLocations.markerAtlas, 0);
     this._gl.enable(this._gl.BLEND);
+    // alpha blending / over operator (Porter & Duff)
     // https://en.wikipedia.org/wiki/Alpha_compositing
     // https://learnopengl.com/Advanced-OpenGL/Blending
     // https://www.khronos.org/opengl/wiki/Blending
     // https://www.realtimerendering.com/blog/gpus-prefer-premultiplication/
-    switch (drawOptions.blendMode) {
-      // additive blending / plus operator (Porter & Duff)
-      case "add": {
-        this._gl.blendEquation(this._gl.FUNC_ADD);
-        this._gl.blendFuncSeparate(
-          this._gl.ONE, // alpha is premultiplied in fragment shader
-          this._gl.ONE,
-          this._gl.ONE,
-          this._gl.ONE,
-        );
-        break;
-      }
-      // traditional alpha blending / over operator (Porter & Duff)
-      case "over": {
-        this._gl.blendEquation(this._gl.FUNC_ADD);
-        this._gl.blendFuncSeparate(
-          this._gl.ONE, // alpha is premultiplied in fragment shader
-          this._gl.ONE_MINUS_SRC_ALPHA,
-          this._gl.ONE,
-          this._gl.ONE_MINUS_SRC_ALPHA,
-        );
-        break;
-      }
-    }
+    this._gl.blendEquation(this._gl.FUNC_ADD);
+    this._gl.blendFuncSeparate(
+      this._gl.ONE, // alpha is premultiplied in fragment shader
+      this._gl.ONE_MINUS_SRC_ALPHA,
+      this._gl.ONE,
+      this._gl.ONE_MINUS_SRC_ALPHA,
+    );
     this._gl.drawArrays(this._gl.POINTS, 0, this._nPoints);
     this._gl.blendEquation(this._gl.FUNC_ADD);
     this._gl.blendFuncSeparate(
