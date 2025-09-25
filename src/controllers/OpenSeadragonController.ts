@@ -44,9 +44,11 @@ export default class OpenSeadragonController {
     {
       viewer: {
         immediateRender: false,
+        imageLoaderLimit: 1,
       },
       tiledImage: {
         immediateRender: false,
+        imageLoaderLimit: 1,
       },
     };
   static readonly DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS: ViewerAnimationOptions =
