@@ -62,7 +62,6 @@ export default class OpenSeadragonController {
       ...OpenSeadragonController.DEFAULT_VIEWER_OPTIONS,
       // do not forget to update ViewerOptions when adding more options here
       element: viewerElement,
-      drawer: "canvas", // https://github.com/usnistgov/OpenSeadragonFiltering/issues/34
     });
     // disable key bindings for rotation and flipping
     viewer.addHandler("canvas-key", (event) => {
