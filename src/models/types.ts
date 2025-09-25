@@ -94,7 +94,4 @@ export type DrawOptions = {
 };
 
 /** OpenSeadragon viewer options */
-export type ViewerOptions = Exclude<
-  OpenSeadragon.Options,
-  "element" | "drawer"
->;
+export type ViewerOptions = Exclude<OpenSeadragon.Options, "element">;
