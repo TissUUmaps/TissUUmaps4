@@ -66,17 +66,17 @@ export default class WebGLPointsController extends WebGLControllerBase {
     OBJECT_INDEX: 5,
   };
   private static readonly _BINDING_POINTS = {
-    DATA_TO_WORLD_MATRICES_UBO: 0,
+    OBJECTS_UBO: 0,
   };
 
   private readonly _program: WebGLProgram;
   private readonly _uniformLocations: {
     worldToViewportMatrix: WebGLUniformLocation;
+    pointSizeFactor: WebGLUniformLocation;
     markerAtlas: WebGLUniformLocation;
-    sizeFactor: WebGLUniformLocation;
   };
   private readonly _uniformBlockIndices: {
-    dataToWorldMatricesUBO: number;
+    objectsUBO: number;
   };
   private readonly _buffers: {
     x: WebGLBuffer;
@@ -85,7 +85,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     color: WebGLBuffer;
     markerIndex: WebGLBuffer;
     objectIndex: WebGLBuffer;
-    dataToWorldMatricesUBO: WebGLBuffer;
+    objectsUBO: WebGLBuffer;
   };
   private readonly _vao: WebGLVertexArrayObject;
   private _markerAtlasTexture: WebGLTexture | undefined;
@@ -107,22 +107,21 @@ export default class WebGLPointsController extends WebGLControllerBase {
             "Failed to get uniform location for u_worldToViewportMatrix",
           );
         })(),
+      pointSizeFactor:
+        this._gl.getUniformLocation(this._program, "u_pointSizeFactor") ??
+        (() => {
+          throw new Error(
+            "Failed to get uniform location for u_pointSizeFactor",
+          );
+        })(),
       markerAtlas:
         this._gl.getUniformLocation(this._program, "u_markerAtlas") ??
         (() => {
           throw new Error("Failed to get uniform location for u_markerAtlas");
         })(),
-      sizeFactor:
-        this._gl.getUniformLocation(this._program, "u_sizeFactor") ??
-        (() => {
-          throw new Error("Failed to get uniform location for u_sizeFactor");
-        })(),
     };
     this._uniformBlockIndices = {
-      dataToWorldMatricesUBO: this._gl.getUniformBlockIndex(
-        this._program,
-        "DataToWorldMatricesUBO",
-      ),
+      objectsUBO: this._gl.getUniformBlockIndex(this._program, "ObjectsUBO"),
     };
     this._buffers = {
       x:
@@ -155,15 +154,15 @@ export default class WebGLPointsController extends WebGLControllerBase {
         (() => {
           throw new Error("Failed to create buffer for objectIndex");
         })(),
-      dataToWorldMatricesUBO:
+      objectsUBO:
         this._gl.createBuffer() ??
         (() => {
-          throw new Error("Failed to create buffer for dataToWorldMatricesUBO");
+          throw new Error("Failed to create buffer for ObjectsUBO");
         })(),
     };
     WebGLUtils.resizeBuffer(
       this._gl,
-      this._buffers.dataToWorldMatricesUBO,
+      this._buffers.objectsUBO,
       WebGLPointsController._MAX_N_OBJECTS * 8 * Float32Array.BYTES_PER_ELEMENT,
       gl.UNIFORM_BUFFER,
       gl.DYNAMIC_DRAW,
@@ -243,13 +242,13 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._gl.bindVertexArray(this._vao);
     this._gl.bindBufferBase(
       this._gl.UNIFORM_BUFFER,
-      WebGLPointsController._BINDING_POINTS.DATA_TO_WORLD_MATRICES_UBO,
-      this._buffers.dataToWorldMatricesUBO,
+      WebGLPointsController._BINDING_POINTS.OBJECTS_UBO,
+      this._buffers.objectsUBO,
     );
     this._gl.uniformBlockBinding(
       this._program,
-      this._uniformBlockIndices.dataToWorldMatricesUBO,
-      WebGLPointsController._BINDING_POINTS.DATA_TO_WORLD_MATRICES_UBO,
+      this._uniformBlockIndices.objectsUBO,
+      WebGLPointsController._BINDING_POINTS.OBJECTS_UBO,
     );
     const worldToViewportMatrix =
       WebGLPointsController.createWorldToViewportMatrix(viewport);
@@ -269,8 +268,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
       worldToViewportMatrixAsGLMat3x2,
     );
     this._gl.uniform1f(
-      this._uniformLocations.sizeFactor,
-      drawOptions.pointSizeFactor,
+      this._uniformLocations.pointSizeFactor,
+      drawOptions.pointSizeFactor * // global (world) scale factor
+        (1.0 / viewport.width) * // scale to viewport space (in [0, 1])
+        this._gl.canvas.width * // scale viewport space to browser pixels
+        window.devicePixelRatio, // scale browser pixels to device pixels
     );
     this._gl.activeTexture(this._gl.TEXTURE0);
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
@@ -454,7 +456,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     let i = 0;
     let offset = 0;
     const newBufferSlices: PointsBufferSlice[] = [];
-    const dataToWorldMatricesUBOData = new Float32Array(
+    const objectsUBOData = new Float32Array(
       WebGLPointsController._MAX_N_OBJECTS * 8,
     );
     for (const meta of metas) {
@@ -493,7 +495,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
       }
       if (
         bufferSliceChanged ||
+        bufferSlice.config.layerPointSizeFactor !==
+          meta.layer.pointSizeFactor ||
         bufferSlice.config.pointSize !== meta.points.pointSize ||
+        bufferSlice.config.pointSizeUnit !== meta.points.pointSizeUnit ||
+        bufferSlice.config.pointSizeFactor !== meta.points.pointSizeFactor ||
         bufferSlice.config.sizeMap !== meta.points.sizeMap
       ) {
         await this._loadPointSizeBuffer(
@@ -603,18 +609,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
         m[7],
         0,
       ];
-      dataToWorldMatricesUBOData.set(
-        transposedDataToWorldMatrixAsGLMat2x4,
-        i * 8,
-      );
+      objectsUBOData.set(transposedDataToWorldMatrixAsGLMat2x4, i * 8);
       offset += nPoints;
       i++;
     }
-    WebGLUtils.loadBuffer(
-      this._gl,
-      this._buffers.dataToWorldMatricesUBO,
-      dataToWorldMatricesUBOData.fill(0, metas.length * 8),
-    );
+    WebGLUtils.loadBuffer(this._gl, this._buffers.objectsUBO, objectsUBOData);
     return newBufferSlices;
   }
 
@@ -630,8 +629,23 @@ export default class WebGLPointsController extends WebGLControllerBase {
   ): Promise<void> {
     signal?.throwIfAborted();
     const data = new Float32Array(meta.data.getLength());
+    let sizeFactor =
+      (meta.points.pointSizeFactor ?? 1.0) *
+      (meta.layer.pointSizeFactor ?? 1.0);
+    switch (meta.points.pointSizeUnit ?? "data") {
+      case "data":
+        sizeFactor *=
+          (meta.layerConfig.transform?.scale ?? 1.0) *
+          (meta.layer.transform?.scale ?? 1.0);
+        break;
+      case "layer":
+        sizeFactor *= meta.layer.transform?.scale ?? 1.0;
+        break;
+      case "world":
+        break;
+    }
     if (meta.points.pointSize === undefined) {
-      data.fill(WebGLPointsController.DEFAULT_POINT_SIZE);
+      data.fill(WebGLPointsController.DEFAULT_POINT_SIZE * sizeFactor);
     } else if (isTableValuesColumn(meta.points.pointSize)) {
       const tableData = await loadTableByID(
         meta.points.pointSize.tableId,
@@ -643,7 +657,9 @@ export default class WebGLPointsController extends WebGLControllerBase {
         signal,
       );
       signal?.throwIfAborted();
-      data.set(tableValues);
+      for (let i = 0; i < tableValues.length; i++) {
+        data[i] = tableValues[i]! * sizeFactor;
+      }
     } else if (isTableGroupsColumn(meta.points.pointSize)) {
       const tableData = await loadTableByID(
         meta.points.pointSize.tableId,
@@ -666,20 +682,22 @@ export default class WebGLPointsController extends WebGLControllerBase {
       if (sizeMap !== undefined) {
         for (let i = 0; i < tableGroups.length; i++) {
           const group = JSON.stringify(tableGroups[i]!);
-          data[i] =
+          const size =
             sizeMap.get(group) ?? WebGLPointsController.DEFAULT_POINT_SIZE;
+          data[i] = size * sizeFactor;
         }
       } else {
         for (let i = 0; i < tableGroups.length; i++) {
           const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
-          data[i] =
+          const size =
             WebGLPointsController.DEFAULT_POINT_SIZES[
               hash % WebGLPointsController.DEFAULT_POINT_SIZES.length
             ]!;
+          data[i] = size * sizeFactor;
         }
       }
     } else {
-      data.fill(meta.points.pointSize);
+      data.fill(meta.points.pointSize * sizeFactor);
     }
     WebGLUtils.loadBuffer(this._gl, this._buffers.size, data, offset);
   }
@@ -1013,11 +1031,14 @@ type PointsBufferSlice = {
   config: {
     layerVisibility?: boolean;
     layerOpacity?: number;
+    layerPointSizeFactor?: number;
     pointsVisibility?: boolean;
     pointsOpacity?: number;
     pointX: string;
     pointY: string;
     pointSize?: number | TableValuesColumn | TableGroupsColumn;
+    pointSizeUnit?: "data" | "layer" | "world";
+    pointSizeFactor?: number;
     sizeMap?: string | { [key: string]: number };
     pointColor?: Color | TableValuesColumn | TableGroupsColumn;
     colorMap?: string | { [key: string]: Color };

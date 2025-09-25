@@ -87,11 +87,11 @@ export type SimilarityTransform = {
   translation: { x: number; y: number };
 };
 
-/** WebGL Points Options */
+/** OpenSeadragon viewer options */
+export type ViewerOptions = Exclude<OpenSeadragon.Options, "element">;
+
+/** WebGL draw options */
 export type DrawOptions = {
   /** Point size factor (defaults to 1.0) */
   pointSizeFactor: number;
 };
-
-/** OpenSeadragon viewer options */
-export type ViewerOptions = Exclude<OpenSeadragon.Options, "element">;

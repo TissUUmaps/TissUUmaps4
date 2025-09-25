@@ -17,4 +17,7 @@ export interface ILayerModel extends IModel {
 
   /** Opacity, between 0 and 1 (defaults to 1) */
   opacity?: number;
+
+  /** Point size factor (defaults to 1.0) */
+  pointSizeFactor?: number;
 }
