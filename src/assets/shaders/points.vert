@@ -28,7 +28,7 @@ layout(std140) uniform ObjectsUBO {
 };
 
 uniform mat3x2 u_worldToViewportMatrix;
-uniform float u_sizeFactor;
+uniform float u_pointSizeFactor;
 
 flat out vec4 v_color;
 flat out uvec3 v_marker;
@@ -44,7 +44,7 @@ void main() {
     if(gl_Position.x < -1.0f || gl_Position.x > 1.0f || gl_Position.y < -1.0f || gl_Position.y > 1.0f) {
         DISCARD;
     }
-    gl_PointSize = a_size * u_sizeFactor;
+    gl_PointSize = a_size * u_pointSizeFactor;
     if(gl_PointSize == 0.0f) {
         DISCARD;
     }

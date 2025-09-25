@@ -72,8 +72,8 @@ export default class WebGLPointsController extends WebGLControllerBase {
   private readonly _program: WebGLProgram;
   private readonly _uniformLocations: {
     worldToViewportMatrix: WebGLUniformLocation;
+    pointSizeFactor: WebGLUniformLocation;
     markerAtlas: WebGLUniformLocation;
-    sizeFactor: WebGLUniformLocation;
   };
   private readonly _uniformBlockIndices: {
     objectsUBO: number;
@@ -107,15 +107,17 @@ export default class WebGLPointsController extends WebGLControllerBase {
             "Failed to get uniform location for u_worldToViewportMatrix",
           );
         })(),
+      pointSizeFactor:
+        this._gl.getUniformLocation(this._program, "u_pointSizeFactor") ??
+        (() => {
+          throw new Error(
+            "Failed to get uniform location for u_pointSizeFactor",
+          );
+        })(),
       markerAtlas:
         this._gl.getUniformLocation(this._program, "u_markerAtlas") ??
         (() => {
           throw new Error("Failed to get uniform location for u_markerAtlas");
-        })(),
-      sizeFactor:
-        this._gl.getUniformLocation(this._program, "u_sizeFactor") ??
-        (() => {
-          throw new Error("Failed to get uniform location for u_sizeFactor");
         })(),
     };
     this._uniformBlockIndices = {
@@ -266,8 +268,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
       worldToViewportMatrixAsGLMat3x2,
     );
     this._gl.uniform1f(
-      this._uniformLocations.sizeFactor,
-      drawOptions.pointSizeFactor,
+      this._uniformLocations.pointSizeFactor,
+      drawOptions.pointSizeFactor * // global (world) scale factor
+        (1.0 / viewport.width) * // scale to viewport space (in [0, 1])
+        this._gl.canvas.width * // scale viewport space to browser pixels
+        window.devicePixelRatio, // scale browser pixels to device pixels
     );
     this._gl.activeTexture(this._gl.TEXTURE0);
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
