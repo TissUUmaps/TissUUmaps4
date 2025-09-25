@@ -11,6 +11,12 @@ export interface IPointsModel
   /** Size for all points, or column containing point-wise sizes/group names (defaults to 1.0) */
   pointSize?: number | TableValuesColumn | TableGroupsColumn;
 
+  /** Unit for point sizes (defaults to "data") */
+  pointSizeUnit?: "data" | "layer" | "world";
+
+  /** Point size factor (defaults to 1.0) */
+  pointSizeFactor?: number;
+
   /** Global size map ID or custom size map */
   sizeMap?: string | { [key: string]: number };
 

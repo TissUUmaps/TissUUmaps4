@@ -495,7 +495,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
       }
       if (
         bufferSliceChanged ||
+        bufferSlice.config.layerPointSizeFactor !==
+          meta.layer.pointSizeFactor ||
         bufferSlice.config.pointSize !== meta.points.pointSize ||
+        bufferSlice.config.pointSizeUnit !== meta.points.pointSizeUnit ||
+        bufferSlice.config.pointSizeFactor !== meta.points.pointSizeFactor ||
         bufferSlice.config.sizeMap !== meta.points.sizeMap
       ) {
         await this._loadPointSizeBuffer(
@@ -625,8 +629,23 @@ export default class WebGLPointsController extends WebGLControllerBase {
   ): Promise<void> {
     signal?.throwIfAborted();
     const data = new Float32Array(meta.data.getLength());
+    let sizeFactor =
+      (meta.points.pointSizeFactor ?? 1.0) *
+      (meta.layer.pointSizeFactor ?? 1.0);
+    switch (meta.points.pointSizeUnit ?? "data") {
+      case "data":
+        sizeFactor *=
+          (meta.layerConfig.transform?.scale ?? 1.0) *
+          (meta.layer.transform?.scale ?? 1.0);
+        break;
+      case "layer":
+        sizeFactor *= meta.layer.transform?.scale ?? 1.0;
+        break;
+      case "world":
+        break;
+    }
     if (meta.points.pointSize === undefined) {
-      data.fill(WebGLPointsController.DEFAULT_POINT_SIZE);
+      data.fill(WebGLPointsController.DEFAULT_POINT_SIZE * sizeFactor);
     } else if (isTableValuesColumn(meta.points.pointSize)) {
       const tableData = await loadTableByID(
         meta.points.pointSize.tableId,
@@ -638,7 +657,9 @@ export default class WebGLPointsController extends WebGLControllerBase {
         signal,
       );
       signal?.throwIfAborted();
-      data.set(tableValues);
+      for (let i = 0; i < tableValues.length; i++) {
+        data[i] = tableValues[i]! * sizeFactor;
+      }
     } else if (isTableGroupsColumn(meta.points.pointSize)) {
       const tableData = await loadTableByID(
         meta.points.pointSize.tableId,
@@ -661,20 +682,22 @@ export default class WebGLPointsController extends WebGLControllerBase {
       if (sizeMap !== undefined) {
         for (let i = 0; i < tableGroups.length; i++) {
           const group = JSON.stringify(tableGroups[i]!);
-          data[i] =
+          const size =
             sizeMap.get(group) ?? WebGLPointsController.DEFAULT_POINT_SIZE;
+          data[i] = size * sizeFactor;
         }
       } else {
         for (let i = 0; i < tableGroups.length; i++) {
           const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
-          data[i] =
+          const size =
             WebGLPointsController.DEFAULT_POINT_SIZES[
               hash % WebGLPointsController.DEFAULT_POINT_SIZES.length
             ]!;
+          data[i] = size * sizeFactor;
         }
       }
     } else {
-      data.fill(meta.points.pointSize);
+      data.fill(meta.points.pointSize * sizeFactor);
     }
     WebGLUtils.loadBuffer(this._gl, this._buffers.size, data, offset);
   }
@@ -1008,11 +1031,14 @@ type PointsBufferSlice = {
   config: {
     layerVisibility?: boolean;
     layerOpacity?: number;
+    layerPointSizeFactor?: number;
     pointsVisibility?: boolean;
     pointsOpacity?: number;
     pointX: string;
     pointY: string;
     pointSize?: number | TableValuesColumn | TableGroupsColumn;
+    pointSizeUnit?: "data" | "layer" | "world";
+    pointSizeFactor?: number;
     sizeMap?: string | { [key: string]: number };
     pointColor?: Color | TableValuesColumn | TableGroupsColumn;
     colorMap?: string | { [key: string]: Color };
