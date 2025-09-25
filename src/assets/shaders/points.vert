@@ -15,7 +15,7 @@ layout(location = 3) in uint a_color;
 layout(location = 4) in uint a_markerIndex;
 layout(location = 5) in uint a_objectIndex;
 
-layout(std140) uniform DataToWorldMatricesUBO {
+layout(std140) uniform ObjectsUBO {
     // https://learnopengl.com/Advanced-OpenGL/Advanced-GLSL
     // Matrices are stored as a large array of column vectors,
     // where each of those vectors has a base alignment of vec4.
@@ -26,6 +26,7 @@ layout(std140) uniform DataToWorldMatricesUBO {
     // base alignment is 2 * 4N = 8N = 32 bytes.
     mat2x4 transposedDataToWorldMatrices[MAX_N_OBJECTS];
 };
+
 uniform mat3x2 u_worldToViewportMatrix;
 uniform float u_sizeFactor;
 

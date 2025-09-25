@@ -66,7 +66,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     OBJECT_INDEX: 5,
   };
   private static readonly _BINDING_POINTS = {
-    DATA_TO_WORLD_MATRICES_UBO: 0,
+    OBJECTS_UBO: 0,
   };
 
   private readonly _program: WebGLProgram;
@@ -76,7 +76,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     sizeFactor: WebGLUniformLocation;
   };
   private readonly _uniformBlockIndices: {
-    dataToWorldMatricesUBO: number;
+    objectsUBO: number;
   };
   private readonly _buffers: {
     x: WebGLBuffer;
@@ -85,7 +85,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     color: WebGLBuffer;
     markerIndex: WebGLBuffer;
     objectIndex: WebGLBuffer;
-    dataToWorldMatricesUBO: WebGLBuffer;
+    objectsUBO: WebGLBuffer;
   };
   private readonly _vao: WebGLVertexArrayObject;
   private _markerAtlasTexture: WebGLTexture | undefined;
@@ -119,10 +119,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
         })(),
     };
     this._uniformBlockIndices = {
-      dataToWorldMatricesUBO: this._gl.getUniformBlockIndex(
-        this._program,
-        "DataToWorldMatricesUBO",
-      ),
+      objectsUBO: this._gl.getUniformBlockIndex(this._program, "ObjectsUBO"),
     };
     this._buffers = {
       x:
@@ -155,15 +152,15 @@ export default class WebGLPointsController extends WebGLControllerBase {
         (() => {
           throw new Error("Failed to create buffer for objectIndex");
         })(),
-      dataToWorldMatricesUBO:
+      objectsUBO:
         this._gl.createBuffer() ??
         (() => {
-          throw new Error("Failed to create buffer for dataToWorldMatricesUBO");
+          throw new Error("Failed to create buffer for ObjectsUBO");
         })(),
     };
     WebGLUtils.resizeBuffer(
       this._gl,
-      this._buffers.dataToWorldMatricesUBO,
+      this._buffers.objectsUBO,
       WebGLPointsController._MAX_N_OBJECTS * 8 * Float32Array.BYTES_PER_ELEMENT,
       gl.UNIFORM_BUFFER,
       gl.DYNAMIC_DRAW,
@@ -243,13 +240,13 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._gl.bindVertexArray(this._vao);
     this._gl.bindBufferBase(
       this._gl.UNIFORM_BUFFER,
-      WebGLPointsController._BINDING_POINTS.DATA_TO_WORLD_MATRICES_UBO,
-      this._buffers.dataToWorldMatricesUBO,
+      WebGLPointsController._BINDING_POINTS.OBJECTS_UBO,
+      this._buffers.objectsUBO,
     );
     this._gl.uniformBlockBinding(
       this._program,
-      this._uniformBlockIndices.dataToWorldMatricesUBO,
-      WebGLPointsController._BINDING_POINTS.DATA_TO_WORLD_MATRICES_UBO,
+      this._uniformBlockIndices.objectsUBO,
+      WebGLPointsController._BINDING_POINTS.OBJECTS_UBO,
     );
     const worldToViewportMatrix =
       WebGLPointsController.createWorldToViewportMatrix(viewport);
@@ -454,7 +451,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     let i = 0;
     let offset = 0;
     const newBufferSlices: PointsBufferSlice[] = [];
-    const dataToWorldMatricesUBOData = new Float32Array(
+    const objectsUBOData = new Float32Array(
       WebGLPointsController._MAX_N_OBJECTS * 8,
     );
     for (const meta of metas) {
@@ -603,18 +600,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
         m[7],
         0,
       ];
-      dataToWorldMatricesUBOData.set(
-        transposedDataToWorldMatrixAsGLMat2x4,
-        i * 8,
-      );
+      objectsUBOData.set(transposedDataToWorldMatrixAsGLMat2x4, i * 8);
       offset += nPoints;
       i++;
     }
-    WebGLUtils.loadBuffer(
-      this._gl,
-      this._buffers.dataToWorldMatricesUBO,
-      dataToWorldMatricesUBOData.fill(0, metas.length * 8),
-    );
+    WebGLUtils.loadBuffer(this._gl, this._buffers.objectsUBO, objectsUBOData);
     return newBufferSlices;
   }
 
