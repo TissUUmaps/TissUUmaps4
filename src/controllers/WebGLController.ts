@@ -1,4 +1,4 @@
-import { BlendMode } from "../models/types";
+import { DrawOptions } from "../models/types";
 import WebGLUtils from "../utils/WebGLUtils";
 import WebGLPointsController from "./WebGLPointsController";
 import WebGLShapesController from "./WebGLShapesController";
@@ -12,15 +12,16 @@ export type Rect = {
 
 export default class WebGLController {
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas#maximum_canvas_size
-  private static readonly _MAX_CANVAS_SIZE = 4096;
-
-  blendMode: BlendMode = "over";
-  pointSizeFactor: number = 1.0;
+  static readonly MAX_CANVAS_SIZE = 4096;
+  static readonly DEFAULT_DRAW_OPTIONS: DrawOptions = {
+    pointSizeFactor: 1.0,
+  };
 
   private readonly _canvas: HTMLCanvasElement;
   private _gl: WebGL2RenderingContext;
   private _pointsController: WebGLPointsController;
   private _shapesController: WebGLShapesController;
+  private _drawOptions: DrawOptions = WebGLController.DEFAULT_DRAW_OPTIONS;
 
   static createCanvas(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
@@ -46,6 +47,13 @@ export default class WebGLController {
     });
   }
 
+  setDrawOptions(drawOptions: Partial<DrawOptions>): void {
+    this._drawOptions = {
+      ...WebGLController.DEFAULT_DRAW_OPTIONS,
+      ...drawOptions,
+    };
+  }
+
   async initialize(signal?: AbortSignal): Promise<WebGLController> {
     signal?.throwIfAborted();
     await this._pointsController.initialize(signal);
@@ -68,11 +76,8 @@ export default class WebGLController {
   draw(viewport: Rect): void {
     this._gl.clearColor(0, 0, 0, 0);
     this._gl.clear(this._gl.COLOR_BUFFER_BIT);
-    this._pointsController.draw(viewport, {
-      blendMode: this.blendMode,
-      sizeFactor: this.pointSizeFactor,
-    });
-    this._shapesController.draw(viewport);
+    this._pointsController.draw(viewport, this._drawOptions);
+    this._shapesController.draw(viewport, this._drawOptions);
   }
 
   resize(width: number, height: number): void {
@@ -82,10 +87,10 @@ export default class WebGLController {
       width = 1;
       height = 1;
     } else if (
-      width > WebGLController._MAX_CANVAS_SIZE ||
-      height > WebGLController._MAX_CANVAS_SIZE
+      width > WebGLController.MAX_CANVAS_SIZE ||
+      height > WebGLController.MAX_CANVAS_SIZE
     ) {
-      const scale = WebGLController._MAX_CANVAS_SIZE / Math.max(width, height);
+      const scale = WebGLController.MAX_CANVAS_SIZE / Math.max(width, height);
       width = Math.floor(width * scale);
       height = Math.floor(height * scale);
     }

@@ -9,8 +9,8 @@ import { ITableData } from "../data/table";
 import { ILayerModel } from "../models/layer";
 import { IPointsLayerConfigModel, IPointsModel } from "../models/points";
 import {
-  BlendMode,
   Color,
+  DrawOptions,
   Marker,
   TableGroupsColumn,
   TableValuesColumn,
@@ -25,33 +25,21 @@ import { Rect } from "./WebGLController";
 import WebGLControllerBase from "./WebGLControllerBase";
 
 export default class WebGLPointsController extends WebGLControllerBase {
-  private static readonly _MAX_N_OBJECTS = 256; // see vertex shader
-  private static readonly _ATTRIB_LOCATIONS = {
-    X: 0,
-    Y: 1,
-    SIZE: 2,
-    COLOR: 3,
-    MARKER_INDEX: 4,
-    OBJECT_INDEX: 5,
-  };
-  private static readonly _BINDING_POINTS = {
-    DATA_TO_WORLD_MATRICES_UBO: 0,
-  };
-  private static readonly _DEFAULT_POINT_SIZE: number = 1.0;
-  private static readonly _DEFAULT_POINT_SIZES: number[] = [1.0];
-  private static readonly _DEFAULT_POINT_COLOR: Color = {
+  static readonly DEFAULT_POINT_SIZE: number = 1.0;
+  static readonly DEFAULT_POINT_SIZES: number[] = [1.0];
+  static readonly DEFAULT_POINT_COLOR: Color = {
     r: 255,
     g: 255,
     b: 255,
   };
-  private static readonly _DEFAULT_POINT_COLORS: Color[] =
+  static readonly DEFAULT_POINT_COLORS: Color[] =
     ColorUtils.parseColormap(batlowS);
-  private static readonly _DEFAULT_POINT_VISIBILITY: boolean = true;
-  private static readonly _DEFAULT_POINT_VISIBILITIES: boolean[] = [true];
-  private static readonly _DEFAULT_POINT_OPACITY: number = 1.0;
-  private static readonly _DEFAULT_POINT_OPACITIES: number[] = [1.0];
-  private static readonly _DEFAULT_POINT_MARKER: Marker = Marker.Disc;
-  private static readonly _DEFAULT_POINT_MARKERS: Marker[] = [
+  static readonly DEFAULT_POINT_VISIBILITY: boolean = true;
+  static readonly DEFAULT_POINT_VISIBILITIES: boolean[] = [true];
+  static readonly DEFAULT_POINT_OPACITY: number = 1.0;
+  static readonly DEFAULT_POINT_OPACITIES: number[] = [1.0];
+  static readonly DEFAULT_POINT_MARKER: Marker = Marker.Disc;
+  static readonly DEFAULT_POINT_MARKERS: Marker[] = [
     Marker.Cross,
     Marker.Diamond,
     Marker.Square,
@@ -68,6 +56,18 @@ export default class WebGLPointsController extends WebGLControllerBase {
     Marker.Arrow,
     Marker.Gaussian,
   ];
+  private static readonly _MAX_N_OBJECTS = 256; // see vertex shader
+  private static readonly _ATTRIB_LOCATIONS = {
+    X: 0,
+    Y: 1,
+    SIZE: 2,
+    COLOR: 3,
+    MARKER_INDEX: 4,
+    OBJECT_INDEX: 5,
+  };
+  private static readonly _BINDING_POINTS = {
+    DATA_TO_WORLD_MATRICES_UBO: 0,
+  };
 
   private readonly _program: WebGLProgram;
   private readonly _uniformLocations: {
@@ -235,10 +235,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._bufferSlices = newBufferSlices;
   }
 
-  draw(
-    viewport: Rect,
-    { blendMode, sizeFactor }: { blendMode: BlendMode; sizeFactor: number },
-  ): void {
+  draw(viewport: Rect, drawOptions: DrawOptions): void {
     if (this._nPoints === 0 || this._markerAtlasTexture === undefined) {
       return;
     }
@@ -271,38 +268,26 @@ export default class WebGLPointsController extends WebGLControllerBase {
       false,
       worldToViewportMatrixAsGLMat3x2,
     );
-    this._gl.uniform1f(this._uniformLocations.sizeFactor, sizeFactor);
+    this._gl.uniform1f(
+      this._uniformLocations.sizeFactor,
+      drawOptions.pointSizeFactor,
+    );
     this._gl.activeTexture(this._gl.TEXTURE0);
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
     this._gl.uniform1i(this._uniformLocations.markerAtlas, 0);
     this._gl.enable(this._gl.BLEND);
+    // alpha blending / over operator (Porter & Duff)
     // https://en.wikipedia.org/wiki/Alpha_compositing
     // https://learnopengl.com/Advanced-OpenGL/Blending
     // https://www.khronos.org/opengl/wiki/Blending
     // https://www.realtimerendering.com/blog/gpus-prefer-premultiplication/
-    switch (blendMode) {
-      // additive blending / plus operator (Porter & Duff)
-      case "add": {
-        this._gl.blendEquation(this._gl.FUNC_ADD);
-        this._gl.blendFuncSeparate(
-          this._gl.ONE, // alpha is premultiplied in fragment shader
-          this._gl.ONE,
-          this._gl.ONE,
-          this._gl.ONE,
-        );
-        break;
-      }
-      // traditional alpha blending / over operator (Porter & Duff)
-      case "over": {
-        this._gl.blendEquation(this._gl.FUNC_ADD);
-        this._gl.blendFuncSeparate(
-          this._gl.ONE, // alpha is premultiplied in fragment shader
-          this._gl.ONE_MINUS_SRC_ALPHA,
-          this._gl.ONE,
-          this._gl.ONE_MINUS_SRC_ALPHA,
-        );
-      }
-    }
+    this._gl.blendEquation(this._gl.FUNC_ADD);
+    this._gl.blendFuncSeparate(
+      this._gl.ONE, // alpha is premultiplied in fragment shader
+      this._gl.ONE_MINUS_SRC_ALPHA,
+      this._gl.ONE,
+      this._gl.ONE_MINUS_SRC_ALPHA,
+    );
     this._gl.drawArrays(this._gl.POINTS, 0, this._nPoints);
     this._gl.blendEquation(this._gl.FUNC_ADD);
     this._gl.blendFuncSeparate(
@@ -646,7 +631,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     signal?.throwIfAborted();
     const data = new Float32Array(meta.data.getLength());
     if (meta.points.pointSize === undefined) {
-      data.fill(WebGLPointsController._DEFAULT_POINT_SIZE);
+      data.fill(WebGLPointsController.DEFAULT_POINT_SIZE);
     } else if (isTableValuesColumn(meta.points.pointSize)) {
       const tableData = await loadTableByID(
         meta.points.pointSize.tableId,
@@ -682,14 +667,14 @@ export default class WebGLPointsController extends WebGLControllerBase {
         for (let i = 0; i < tableGroups.length; i++) {
           const group = JSON.stringify(tableGroups[i]!);
           data[i] =
-            sizeMap.get(group) ?? WebGLPointsController._DEFAULT_POINT_SIZE;
+            sizeMap.get(group) ?? WebGLPointsController.DEFAULT_POINT_SIZE;
         }
       } else {
         for (let i = 0; i < tableGroups.length; i++) {
           const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
           data[i] =
-            WebGLPointsController._DEFAULT_POINT_SIZES[
-              hash % WebGLPointsController._DEFAULT_POINT_SIZES.length
+            WebGLPointsController.DEFAULT_POINT_SIZES[
+              hash % WebGLPointsController.DEFAULT_POINT_SIZES.length
             ]!;
         }
       }
@@ -723,7 +708,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     } else {
       if (meta.points.pointColor === undefined) {
         data.fill(
-          ColorUtils.packColor(WebGLPointsController._DEFAULT_POINT_COLOR),
+          ColorUtils.packColor(WebGLPointsController.DEFAULT_POINT_COLOR),
         );
       } else if (isTableValuesColumn(meta.points.pointColor)) {
         const tableData = await loadTableByID(
@@ -764,15 +749,15 @@ export default class WebGLPointsController extends WebGLControllerBase {
           for (let i = 0; i < tableGroups.length; i++) {
             const group = JSON.stringify(tableGroups[i]!);
             const color =
-              colorMap.get(group) ?? WebGLPointsController._DEFAULT_POINT_COLOR;
+              colorMap.get(group) ?? WebGLPointsController.DEFAULT_POINT_COLOR;
             data[i] = ColorUtils.packColor(color);
           }
         } else {
           for (let i = 0; i < tableGroups.length; i++) {
             const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
             const color =
-              WebGLPointsController._DEFAULT_POINT_COLORS[
-                hash % WebGLPointsController._DEFAULT_POINT_COLORS.length
+              WebGLPointsController.DEFAULT_POINT_COLORS[
+                hash % WebGLPointsController.DEFAULT_POINT_COLORS.length
               ]!;
             data[i] = ColorUtils.packColor(color);
           }
@@ -814,7 +799,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     signal?.throwIfAborted();
     const data = new Uint8Array(meta.data.getLength());
     if (meta.points.pointMarker === undefined) {
-      data.fill(WebGLPointsController._DEFAULT_POINT_MARKER);
+      data.fill(WebGLPointsController.DEFAULT_POINT_MARKER);
     } else if (isTableValuesColumn(meta.points.pointMarker)) {
       const tableData = await loadTableByID(
         meta.points.pointMarker.tableId,
@@ -852,14 +837,14 @@ export default class WebGLPointsController extends WebGLControllerBase {
         for (let i = 0; i < tableGroups.length; i++) {
           const group = JSON.stringify(tableGroups[i]!);
           data[i] =
-            markerMap.get(group) ?? WebGLPointsController._DEFAULT_POINT_MARKER;
+            markerMap.get(group) ?? WebGLPointsController.DEFAULT_POINT_MARKER;
         }
       } else {
         for (let i = 0; i < tableGroups.length; i++) {
           const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
           data[i] =
-            WebGLPointsController._DEFAULT_POINT_MARKERS[
-              hash % WebGLPointsController._DEFAULT_POINT_MARKERS.length
+            WebGLPointsController.DEFAULT_POINT_MARKERS[
+              hash % WebGLPointsController.DEFAULT_POINT_MARKERS.length
             ]!;
         }
       }
@@ -881,9 +866,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     signal?.throwIfAborted();
     const visibilities = new Uint8Array(meta.data.getLength());
     if (meta.points.pointVisibility === undefined) {
-      visibilities.fill(
-        WebGLPointsController._DEFAULT_POINT_VISIBILITY ? 1 : 0,
-      );
+      visibilities.fill(WebGLPointsController.DEFAULT_POINT_VISIBILITY ? 1 : 0);
     } else if (isTableValuesColumn(meta.points.pointVisibility)) {
       const tableData = await loadTableByID(
         meta.points.pointVisibility.tableId,
@@ -920,15 +903,15 @@ export default class WebGLPointsController extends WebGLControllerBase {
           const group = JSON.stringify(tableGroups[i]!);
           const visibility =
             visibilityMap.get(group) ??
-            WebGLPointsController._DEFAULT_POINT_VISIBILITY;
+            WebGLPointsController.DEFAULT_POINT_VISIBILITY;
           visibilities[i] = visibility ? 1 : 0;
         }
       } else {
         for (let i = 0; i < tableGroups.length; i++) {
           const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
           const visibility =
-            WebGLPointsController._DEFAULT_POINT_VISIBILITIES[
-              hash % WebGLPointsController._DEFAULT_POINT_VISIBILITIES.length
+            WebGLPointsController.DEFAULT_POINT_VISIBILITIES[
+              hash % WebGLPointsController.DEFAULT_POINT_VISIBILITIES.length
             ]!;
           visibilities[i] = visibility ? 1 : 0;
         }
@@ -955,7 +938,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     if (meta.points.pointOpacity === undefined) {
       opacities.fill(
         Math.round(
-          baseOpacity * WebGLPointsController._DEFAULT_POINT_OPACITY * 255,
+          baseOpacity * WebGLPointsController.DEFAULT_POINT_OPACITY * 255,
         ),
       );
     } else if (isTableValuesColumn(meta.points.pointOpacity)) {
@@ -996,15 +979,15 @@ export default class WebGLPointsController extends WebGLControllerBase {
           const group = JSON.stringify(tableGroups[i]!);
           const opacity =
             opacityMap.get(group) ??
-            WebGLPointsController._DEFAULT_POINT_OPACITY;
+            WebGLPointsController.DEFAULT_POINT_OPACITY;
           opacities[i] = Math.round(baseOpacity * opacity * 255);
         }
       } else {
         for (let i = 0; i < tableGroups.length; i++) {
           const hash = HashUtils.djb2(JSON.stringify(tableGroups[i]!));
           const opacity =
-            WebGLPointsController._DEFAULT_POINT_OPACITIES[
-              hash % WebGLPointsController._DEFAULT_POINT_OPACITIES.length
+            WebGLPointsController.DEFAULT_POINT_OPACITIES[
+              hash % WebGLPointsController.DEFAULT_POINT_OPACITIES.length
             ]!;
           opacities[i] = Math.round(baseOpacity * opacity * 255);
         }

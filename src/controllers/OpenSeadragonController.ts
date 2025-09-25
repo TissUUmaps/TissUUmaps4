@@ -8,27 +8,150 @@ import { ILayerConfigModel } from "../models/base";
 import { IImageLayerConfigModel, IImageModel } from "../models/image";
 import { ILabelsLayerConfigModel, ILabelsModel } from "../models/labels";
 import { ILayerModel } from "../models/layer";
+import { ViewerOptions } from "../models/types";
 import TransformUtils from "../utils/TransformUtils";
 
 export default class OpenSeadragonController {
+  static readonly DEFAULT_VIEWER_OPTIONS: ViewerOptions = {
+    minZoomImageRatio: 0,
+    maxZoomPixelRatio: Infinity,
+    preserveImageSizeOnResize: true,
+    visibilityRatio: 0,
+    animationTime: 0,
+    gestureSettingsMouse: {
+      flickEnabled: false,
+    },
+    gestureSettingsTouch: {
+      flickEnabled: false,
+    },
+    gestureSettingsPen: {
+      flickEnabled: false,
+    },
+    gestureSettingsUnknown: {
+      flickEnabled: false,
+    },
+    zoomPerClick: 1,
+    showNavigator: true,
+    navigatorPosition: "BOTTOM_LEFT",
+    maxImageCacheCount: 2000,
+    showNavigationControl: false,
+    imageSmoothingEnabled: false,
+  };
+  static readonly DEFAULT_VIEWER_ANIMATION_START_OPTIONS: ViewerOptions = {
+    immediateRender: false,
+    imageLoaderLimit: 1,
+  };
+  static readonly DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS: ViewerOptions = {
+    immediateRender: true, // set to true, even if initially set to false
+  };
+
   private readonly _viewer: Viewer;
   private readonly _tiledImageStates: TiledImageState[] = [];
+  private readonly _animationMemory: {
+    viewerValues: Partial<ViewerOptions>;
+    tiledImageValues: Partial<ViewerOptions>[];
+  } = {
+    viewerValues: {},
+    tiledImageValues: [],
+  };
+  private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
+  private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
 
   static createViewer(viewerElement: HTMLElement): Viewer {
-    return new Viewer({
+    const viewer = new Viewer({
+      ...OpenSeadragonController.DEFAULT_VIEWER_OPTIONS,
+      // do not forget to update ViewerOptions when adding more options here
       element: viewerElement,
-      // @ts-expect-error: 'drawer' is supported by OpenSeadragon but missing in types
-      // https://github.com/usnistgov/OpenSeadragonFiltering/issues/34
-      // also, according to Christophe Avenel, WebGL may be slower
-      drawer: "canvas",
-      showNavigator: true,
-      showNavigationControl: false,
-      imageSmoothingEnabled: false,
+      drawer: "canvas", // https://github.com/usnistgov/OpenSeadragonFiltering/issues/34
     });
+    // disable key bindings for rotation and flipping
+    viewer.addHandler("canvas-key", (event) => {
+      const originalEvent = event.originalEvent as KeyboardEvent;
+      if (["r", "R", "f"].includes(originalEvent.key)) {
+        event.preventDefaultAction = true;
+      }
+    });
+    return viewer;
   }
 
   constructor(viewer: Viewer) {
     this._viewer = viewer;
+  }
+
+  updateViewerOptions(options: Partial<ViewerOptions>): void {
+    for (const [key, value] of Object.entries(options)) {
+      // @ts-expect-error: dynamic property access
+      if (key in this._viewer && this._viewer[key] !== value) {
+        // @ts-expect-error: dynamic property access
+        this._viewer[key] = value;
+      }
+      for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
+        const tiledImage = this._viewer.world.getItemAt(i);
+        // @ts-expect-error: dynamic property access
+        if (key in tiledImage && tiledImage[key] !== value) {
+          // @ts-expect-error: dynamic property access
+          tiledImage[key] = value;
+        }
+      }
+    }
+  }
+
+  configureAnimationHandlers(
+    viewerAnimationStartOptions: Partial<ViewerOptions>,
+    viewerAnimationFinishOptions: Partial<ViewerOptions>,
+  ): void {
+    viewerAnimationStartOptions = {
+      ...OpenSeadragonController.DEFAULT_VIEWER_ANIMATION_START_OPTIONS,
+      ...viewerAnimationStartOptions,
+    };
+    viewerAnimationFinishOptions = {
+      ...OpenSeadragonController.DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS,
+      ...viewerAnimationFinishOptions,
+    };
+    if (this._animationStartHandler !== undefined) {
+      this._viewer.removeHandler(
+        "animation-start",
+        this._animationStartHandler,
+      );
+      this._animationStartHandler = undefined;
+    }
+    if (this._animationFinishHandler !== undefined) {
+      this._viewer.removeHandler(
+        "animation-finish",
+        this._animationFinishHandler,
+      );
+      this._animationFinishHandler = undefined;
+    }
+    this._animationStartHandler = () => {
+      this._animationMemory.viewerValues = {};
+      this._animationMemory.tiledImageValues = [];
+      for (const key of Object.keys(viewerAnimationStartOptions)) {
+        // @ts-expect-error: dynamic property access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        this._animationMemory.viewerValues[key] = this._viewer[key];
+      }
+      for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
+        const tiledImage = this._viewer.world.getItemAt(i);
+        const tiledImageValues: Partial<ViewerOptions> = {};
+        for (const property of Object.keys(viewerAnimationStartOptions)) {
+          if (property in tiledImage) {
+            // @ts-expect-error: dynamic property access
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            tiledImageValues[property] = tiledImage[property];
+          }
+        }
+        this._animationMemory.tiledImageValues.push(tiledImageValues);
+      }
+      this.updateViewerOptions(viewerAnimationStartOptions);
+    };
+    this._animationFinishHandler = () => {
+      this.updateViewerOptions({
+        ...this._animationMemory.viewerValues,
+        ...viewerAnimationFinishOptions,
+      });
+    };
+    this._viewer.addHandler("animation-start", this._animationStartHandler);
+    this._viewer.addHandler("animation-finish", this._animationFinishHandler);
   }
 
   async synchronize(
@@ -387,3 +510,18 @@ type LabelsTiledImageState = BaseTiledImageState & {
 };
 
 type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
+
+// add missing OpenSeadragon types
+declare module "openseadragon" {
+  interface Viewer {
+    immediateRender: boolean | undefined;
+  }
+
+  interface TiledImage {
+    immediateRender: boolean | undefined;
+  }
+
+  interface Options {
+    drawer?: "canvas" | "webgl";
+  }
+}

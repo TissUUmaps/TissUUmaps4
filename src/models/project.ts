@@ -5,7 +5,7 @@ import { ILayerModel } from "./layer";
 import { IPointsModel } from "./points";
 import { IShapesModel } from "./shapes";
 import { ITableModel } from "./table";
-import { BlendMode, Color, Marker } from "./types";
+import { Color, DrawOptions, Marker, ViewerOptions } from "./types";
 
 /** A project */
 export interface IProjectModel extends IModel {
@@ -65,9 +65,31 @@ export interface IProjectModel extends IModel {
     values: { [key: string]: Marker };
   }[];
 
-  /** Blend mode (defaults to "over") */
-  blendMode?: BlendMode;
+  /** WebGL draw options for points/shapes */
+  drawOptions?: Partial<DrawOptions>;
 
-  /** Point size factor (defaults to 1.0) */
-  pointSizeFactor?: number;
+  /**
+   * OpenSeadragon viewer options for images/labels
+   *
+   * @see OpenSeadragonController for default values
+   *
+   * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
+   */
+  viewerOptions?: Partial<ViewerOptions>;
+
+  /**
+   * OpenSeadragon viewer options set when an animation starts
+   *
+   * Each option will be reset to the initial value when the animation finishes, unless overridden by `viewerAnimationFinishOptions`
+   *
+   * @see OpenSeadragonController for default values
+   */
+  viewerAnimationStartOptions?: Partial<ViewerOptions>;
+
+  /**
+   * OpenSeadragon viewer options set when an animation finishes
+   *
+   * @see OpenSeadragonController for default values
+   */
+  viewerAnimationFinishOptions?: Partial<ViewerOptions>;
 }
