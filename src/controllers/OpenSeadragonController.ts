@@ -8,27 +8,185 @@ import { ILayerConfigModel } from "../models/base";
 import { IImageLayerConfigModel, IImageModel } from "../models/image";
 import { ILabelsLayerConfigModel, ILabelsModel } from "../models/labels";
 import { ILayerModel } from "../models/layer";
+import { ViewerAnimationOptions, ViewerOptions } from "../models/types";
 import TransformUtils from "../utils/TransformUtils";
 
 export default class OpenSeadragonController {
+  static readonly DEFAULT_VIEWER_OPTIONS: Exclude<
+    ViewerOptions,
+    "element" | "drawer"
+  > = {
+    minZoomImageRatio: 0,
+    maxZoomPixelRatio: Infinity,
+    preserveImageSizeOnResize: true,
+    visibilityRatio: 0,
+    animationTime: 0,
+    gestureSettingsMouse: {
+      flickEnabled: false,
+    },
+    gestureSettingsTouch: {
+      flickEnabled: false,
+    },
+    gestureSettingsPen: {
+      flickEnabled: false,
+    },
+    gestureSettingsUnknown: {
+      flickEnabled: false,
+    },
+    zoomPerClick: 1,
+    showNavigator: true,
+    navigatorPosition: "BOTTOM_LEFT",
+    maxImageCacheCount: 2000,
+    showNavigationControl: false,
+    imageSmoothingEnabled: false,
+  };
+  static readonly DEFAULT_VIEWER_ANIMATION_START_OPTIONS: ViewerAnimationOptions =
+    {
+      viewer: {
+        immediateRender: false,
+      },
+      tiledImage: {
+        immediateRender: false,
+      },
+    };
+  static readonly DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS: ViewerAnimationOptions =
+    {
+      viewer: {
+        immediateRender: true,
+      },
+      tiledImage: {
+        immediateRender: true,
+      },
+    };
+
   private readonly _viewer: Viewer;
   private readonly _tiledImageStates: TiledImageState[] = [];
+  private readonly _animationMemory: {
+    viewerValues: Record<string, unknown>;
+    tiledImageValues: Record<string, unknown>[];
+  } = {
+    viewerValues: {},
+    tiledImageValues: [],
+  };
+  private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
+  private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
 
-  static createViewer(viewerElement: HTMLElement): Viewer {
-    return new Viewer({
+  static createViewer(
+    viewerElement: HTMLElement,
+    viewerOptions: Partial<ViewerOptions>,
+  ): Viewer {
+    viewerOptions = {
+      ...OpenSeadragonController.DEFAULT_VIEWER_OPTIONS,
+      ...viewerOptions,
+    };
+    const viewer = new Viewer({
+      ...viewerOptions,
       element: viewerElement,
-      // @ts-expect-error: 'drawer' is supported by OpenSeadragon but missing in types
       // https://github.com/usnistgov/OpenSeadragonFiltering/issues/34
-      // also, according to Christophe Avenel, WebGL may be slower
+      // also, according to Christophe Avenel, WebGL may actually be slower
       drawer: "canvas",
-      showNavigator: true,
-      showNavigationControl: false,
-      imageSmoothingEnabled: false,
     });
+    // disable key bindings for rotation and flipping
+    viewer.addHandler("canvas-key", (event) => {
+      const originalEvent = event.originalEvent as KeyboardEvent;
+      if (["r", "R", "f"].includes(originalEvent.key)) {
+        event.preventDefaultAction = true;
+      }
+    });
+    return viewer;
   }
 
   constructor(viewer: Viewer) {
     this._viewer = viewer;
+  }
+
+  configureAnimationHandlers(
+    viewerAnimationStartOptions: Partial<ViewerAnimationOptions>,
+    viewerAnimationFinishOptions: Partial<ViewerAnimationOptions>,
+  ): void {
+    viewerAnimationStartOptions = {
+      ...OpenSeadragonController.DEFAULT_VIEWER_ANIMATION_START_OPTIONS,
+      ...viewerAnimationStartOptions,
+    };
+    viewerAnimationFinishOptions = {
+      ...OpenSeadragonController.DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS,
+      ...viewerAnimationFinishOptions,
+    };
+    if (this._animationStartHandler !== undefined) {
+      this._viewer.removeHandler(
+        "animation-start",
+        this._animationStartHandler,
+      );
+      this._animationStartHandler = undefined;
+    }
+    if (this._animationFinishHandler !== undefined) {
+      this._viewer.removeHandler(
+        "animation-finish",
+        this._animationFinishHandler,
+      );
+      this._animationFinishHandler = undefined;
+    }
+    this._animationStartHandler = () => {
+      // memorize and change viewer property values as configured
+      this._animationMemory.viewerValues = {};
+      if (viewerAnimationStartOptions.viewer !== undefined) {
+        for (const property of Object.keys(
+          viewerAnimationStartOptions.viewer,
+        )) {
+          // @ts-expect-error: dynamic property access
+          this._animationMemory.viewerValues[property] = this._viewer[property];
+        }
+        Object.assign(this._viewer, viewerAnimationStartOptions.viewer);
+      }
+      // memorize and change tiled image property values as configured
+      this._animationMemory.tiledImageValues = [];
+      if (viewerAnimationStartOptions.tiledImage !== undefined) {
+        for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
+          const tiledImage = this._viewer.world.getItemAt(i);
+          const tiledImageValues: Record<string, unknown> = {};
+          for (const property of Object.keys(
+            viewerAnimationStartOptions.tiledImage,
+          )) {
+            // @ts-expect-error: dynamic property access
+            tiledImageValues[property] = tiledImage[property];
+          }
+          this._animationMemory.tiledImageValues.push(tiledImageValues);
+          Object.assign(tiledImage, viewerAnimationStartOptions.tiledImage);
+        }
+      }
+    };
+    this._animationFinishHandler = () => {
+      const viewerValues = this._animationMemory.viewerValues;
+      // override memorized viewer property values as configured
+      if (viewerAnimationFinishOptions.viewer !== undefined) {
+        for (const property of Object.keys(
+          viewerAnimationFinishOptions.viewer,
+        )) {
+          viewerValues[property] =
+            viewerAnimationFinishOptions.viewer[property];
+        }
+      }
+      const tiledImageValues = this._animationMemory.tiledImageValues;
+      // override memorized tiled image property values as configured
+      if (viewerAnimationFinishOptions.tiledImage !== undefined) {
+        for (const property of Object.keys(
+          viewerAnimationFinishOptions.tiledImage,
+        )) {
+          for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
+            tiledImageValues[i]![property] =
+              viewerAnimationFinishOptions.tiledImage[property];
+          }
+        }
+      }
+      // restore viewer and tiled image property values from memory
+      Object.assign(this._viewer, viewerValues);
+      for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
+        const tiledImage = this._viewer.world.getItemAt(i);
+        Object.assign(tiledImage, tiledImageValues[i]);
+      }
+    };
+    this._viewer.addHandler("animation-start", this._animationStartHandler);
+    this._viewer.addHandler("animation-finish", this._animationFinishHandler);
   }
 
   async synchronize(
@@ -387,3 +545,18 @@ type LabelsTiledImageState = BaseTiledImageState & {
 };
 
 type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
+
+// add missing OpenSeadragon types
+declare module "openseadragon" {
+  interface Viewer {
+    immediateRender: boolean | undefined;
+  }
+
+  interface TiledImage {
+    immediateRender: boolean | undefined;
+  }
+
+  interface Options {
+    drawer?: "canvas" | "webgl";
+  }
+}

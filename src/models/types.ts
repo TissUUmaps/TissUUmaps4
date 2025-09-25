@@ -1,3 +1,5 @@
+import OpenSeadragon from "openseadragon";
+
 /** A marker shape (see marker atlas) */
 export enum Marker {
   Cross,
@@ -73,9 +75,6 @@ export function isTableGroupsColumn(x: unknown): x is TableGroupsColumn {
   );
 }
 
-/** Blend mode */
-export type BlendMode = "add" | "over";
-
 /** Similarity transform */
 export type SimilarityTransform = {
   /** Scale factor */
@@ -86,4 +85,22 @@ export type SimilarityTransform = {
 
   /** Translation, applied after scaling and rotation */
   translation: { x: number; y: number };
+};
+
+/** OpenSeadragon viewer options */
+export type ViewerOptions = OpenSeadragon.Options;
+
+/** OpenSeadragon viewer/tiled image animation options */
+export type ViewerAnimationOptions = {
+  viewer: Record<string, unknown>;
+  tiledImage: Record<string, unknown>;
+};
+
+/** WebGL Points Options */
+export type DrawOptions = {
+  /** Blend mode (defaults to "over") */
+  blendMode: "add" | "over";
+
+  /** Point size factor (defaults to 1.0) */
+  pointSizeFactor: number;
 };

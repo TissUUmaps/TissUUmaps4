@@ -19,8 +19,14 @@ export default function ViewerPanel() {
   const visibilityMaps = useBoundStore((state) => state.visibilityMaps);
   const opacityMaps = useBoundStore((state) => state.opacityMaps);
   const markerMaps = useBoundStore((state) => state.markerMaps);
-  const blendMode = useBoundStore((state) => state.blendMode);
-  const pointSizeFactor = useBoundStore((state) => state.pointSizeFactor);
+  const drawOptions = useBoundStore((state) => state.drawOptions);
+  const viewerOptions = useBoundStore((state) => state.viewerOptions);
+  const viewerAnimationStartOptions = useBoundStore(
+    (state) => state.viewerAnimationStartOptions,
+  );
+  const viewerAnimationFinishOptions = useBoundStore(
+    (state) => state.viewerAnimationFinishOptions,
+  );
   const loadImage = useBoundStore((state) => state.loadImage);
   const loadLabels = useBoundStore((state) => state.loadLabels);
   const loadPoints = useBoundStore((state) => state.loadPoints);
@@ -56,6 +62,7 @@ export default function ViewerPanel() {
 
   // use a ref callback for initializing the OpenSeadragon viewer and the WebGL canvas
   // https://react.dev/reference/react-dom/components/common#ref-callback
+  // (note: ref callbacks are called before useEffect hooks)
   const setViewerRef = useCallback(
     (viewerElement: HTMLDivElement | null) => {
       const os = osRef.current;
@@ -70,7 +77,10 @@ export default function ViewerPanel() {
       }
       if (viewerElement !== null) {
         try {
-          const viewer = OpenSeadragonController.createViewer(viewerElement);
+          const viewer = OpenSeadragonController.createViewer(
+            viewerElement,
+            viewerOptions,
+          );
           viewer.addHandler("resize", onViewerResize);
           viewer.addHandler("viewport-change", onViewerViewportChange);
           const glCanvas = viewer.canvas.appendChild(
@@ -92,11 +102,21 @@ export default function ViewerPanel() {
         }
       }
     },
-    [onViewerResize, onViewerViewportChange],
+    [onViewerResize, onViewerViewportChange, viewerOptions],
   );
 
-  // synchronize the OpenSeadragon viewer upon layer/image/labels changes
-  // (note: useEffect hooks are executed after ref callbacks used for initialization)
+  // configure OpenSeadragon animation handlers
+  useEffect(() => {
+    const os = osRef.current;
+    if (os !== null) {
+      os.configureAnimationHandlers(
+        viewerAnimationStartOptions,
+        viewerAnimationFinishOptions,
+      );
+    }
+  }, [viewerAnimationStartOptions, viewerAnimationFinishOptions]);
+
+  // synchronize OpenSeadragon viewer upon layer/image/labels changes
   useEffect(() => {
     const abortController = new AbortController();
     const os = osRef.current;
@@ -128,8 +148,7 @@ export default function ViewerPanel() {
     labelsDataLoaderFactories,
   ]);
 
-  // synchronize the WebGL canvas upon layer/points changes
-  // (note: useEffect hooks are executed after ref callbacks used for initialization)
+  // synchronize points and redraw upon layer/points changes
   useEffect(() => {
     const abortController = new AbortController();
     const gl = glRef.current;
@@ -176,8 +195,7 @@ export default function ViewerPanel() {
     pointsDataLoaderFactories,
   ]);
 
-  // synchronize the WebGL canvas upon layer/shapes changes
-  // (note: useEffect hooks are executed after ref callbacks used for initialization)
+  // synchronize shapes and redraw upon layer/shapes changes
   useEffect(() => {
     const abortController = new AbortController();
     const gl = glRef.current;
@@ -214,27 +232,17 @@ export default function ViewerPanel() {
     shapesDataLoaderFactories,
   ]);
 
-  // redraw upon WebGL configuration changes
+  // redraw upon configuration changes
   useEffect(() => {
     const gl = glRef.current;
     if (gl !== null) {
-      let redraw: boolean = false;
-      if (gl.blendMode !== blendMode) {
-        gl.blendMode = blendMode;
-        redraw = true;
-      }
-      if (gl.pointSizeFactor !== pointSizeFactor) {
-        gl.pointSizeFactor = pointSizeFactor;
-        redraw = true;
-      }
-      if (redraw) {
-        const os = osRef.current;
-        if (os !== null) {
-          gl.draw(os.getViewportBounds());
-        }
+      gl.setDrawOptions(drawOptions);
+      const os = osRef.current;
+      if (os !== null) {
+        gl.draw(os.getViewportBounds());
       }
     }
-  }, [blendMode, pointSizeFactor]);
+  }, [drawOptions]);
 
   return <div ref={setViewerRef} className="size-full bg-white" />;
 }

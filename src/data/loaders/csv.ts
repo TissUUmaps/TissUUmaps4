@@ -76,8 +76,8 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   ICSVTableDataSourceModel,
   CSVTableData
 > {
-  private static readonly _DEFAULT_CHUNK_SIZE = 10000;
-  private static readonly _DEFAULT_DELIMITER = ",";
+  static readonly DEFAULT_CHUNK_SIZE = 10000;
+  static readonly DEFAULT_DELIMITER = ",";
 
   async loadTable(signal?: AbortSignal): Promise<CSVTableData> {
     signal?.throwIfAborted();
@@ -95,7 +95,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
       }));
     }
     const chunkSize =
-      this.dataSource.chunkSize ?? CSVTableDataLoader._DEFAULT_CHUNK_SIZE;
+      this.dataSource.chunkSize ?? CSVTableDataLoader.DEFAULT_CHUNK_SIZE;
     const step = (results: papaparse.ParseStepResult<string[]>) => {
       if (
         allColumnNames === undefined ||
@@ -175,7 +175,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
             ...this.dataSource.parseConfig,
             delimiter:
               this.dataSource.parseConfig?.delimiter ??
-              CSVTableDataLoader._DEFAULT_DELIMITER,
+              CSVTableDataLoader.DEFAULT_DELIMITER,
             header: false,
             skipEmptyLines: true,
             step: step,
@@ -195,7 +195,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
             download: true,
             delimiter:
               this.dataSource.parseConfig?.delimiter ??
-              CSVTableDataLoader._DEFAULT_DELIMITER,
+              CSVTableDataLoader.DEFAULT_DELIMITER,
             header: false,
             skipEmptyLines: true,
             step: step,
