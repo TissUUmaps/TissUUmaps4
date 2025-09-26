@@ -59,6 +59,26 @@ export default class WebGLUtils {
     }
   }
 
+  static getUniformLocation(
+    gl: WebGL2RenderingContext,
+    program: WebGLProgram,
+    name: string,
+  ): WebGLUniformLocation {
+    const location = gl.getUniformLocation(program, name);
+    if (location === null) {
+      throw new Error(`Failed to get the storage location of ${name}.`);
+    }
+    return location;
+  }
+
+  static createBuffer(gl: WebGL2RenderingContext): WebGLBuffer {
+    const buffer = gl.createBuffer();
+    if (buffer === null) {
+      throw new Error("Failed to create buffer.");
+    }
+    return buffer;
+  }
+
   static async loadTexture(
     gl: WebGL2RenderingContext,
     url: string,

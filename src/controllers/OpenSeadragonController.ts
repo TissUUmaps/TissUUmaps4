@@ -482,7 +482,7 @@ export default class OpenSeadragonController {
   ): number {
     const visibility =
       (layer.visibility ?? true) && (pixels.visibility ?? true);
-    const opacity = (layer.opacity ?? 1) * (pixels.opacity ?? 1);
+    const opacity = (layer.opacity ?? 1.0) * (pixels.opacity ?? 1.0);
     return visibility ? opacity : 0.0;
   }
 }

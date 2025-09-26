@@ -98,65 +98,33 @@ export default class WebGLPointsController extends WebGLControllerBase {
       pointsFragmentShader,
     );
     this._uniformLocations = {
-      worldToViewportMatrix:
-        this._gl.getUniformLocation(this._program, "u_worldToViewportMatrix") ??
-        (() => {
-          throw new Error(
-            "Failed to get uniform location for u_worldToViewportMatrix",
-          );
-        })(),
-      pointSizeFactor:
-        this._gl.getUniformLocation(this._program, "u_pointSizeFactor") ??
-        (() => {
-          throw new Error(
-            "Failed to get uniform location for u_pointSizeFactor",
-          );
-        })(),
-      markerAtlas:
-        this._gl.getUniformLocation(this._program, "u_markerAtlas") ??
-        (() => {
-          throw new Error("Failed to get uniform location for u_markerAtlas");
-        })(),
+      worldToViewportMatrix: WebGLUtils.getUniformLocation(
+        this._gl,
+        this._program,
+        "u_worldToViewportMatrix",
+      ),
+      pointSizeFactor: WebGLUtils.getUniformLocation(
+        this._gl,
+        this._program,
+        "u_pointSizeFactor",
+      ),
+      markerAtlas: WebGLUtils.getUniformLocation(
+        this._gl,
+        this._program,
+        "u_markerAtlas",
+      ),
     };
     this._uniformBlockIndices = {
       objectsUBO: this._gl.getUniformBlockIndex(this._program, "ObjectsUBO"),
     };
     this._buffers = {
-      x:
-        this._gl.createBuffer() ??
-        (() => {
-          throw new Error("Failed to create buffer for x");
-        })(),
-      y:
-        this._gl.createBuffer() ??
-        (() => {
-          throw new Error("Failed to create buffer for y");
-        })(),
-      size:
-        this._gl.createBuffer() ??
-        (() => {
-          throw new Error("Failed to create buffer for size");
-        })(),
-      color:
-        this._gl.createBuffer() ??
-        (() => {
-          throw new Error("Failed to create buffer for color");
-        })(),
-      markerIndex:
-        this._gl.createBuffer() ??
-        (() => {
-          throw new Error("Failed to create buffer for markerIndex");
-        })(),
-      objectIndex:
-        this._gl.createBuffer() ??
-        (() => {
-          throw new Error("Failed to create buffer for objectIndex");
-        })(),
-      objectsUBO:
-        this._gl.createBuffer() ??
-        (() => {
-          throw new Error("Failed to create buffer for ObjectsUBO");
-        })(),
+      x: WebGLUtils.createBuffer(this._gl),
+      y: WebGLUtils.createBuffer(this._gl),
+      size: WebGLUtils.createBuffer(this._gl),
+      color: WebGLUtils.createBuffer(this._gl),
+      markerIndex: WebGLUtils.createBuffer(this._gl),
+      objectIndex: WebGLUtils.createBuffer(this._gl),
+      objectsUBO: WebGLUtils.createBuffer(this._gl),
     };
     WebGLUtils.resizeBuffer(
       this._gl,
