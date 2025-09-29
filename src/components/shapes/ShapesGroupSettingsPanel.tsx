@@ -1,8 +1,8 @@
-import { IShapesModel } from "../../models/shapes";
+import { Shapes } from "../../models/shapes";
 
 type ShapesGroupSettingsPanelProps = {
   shapesId: string;
-  shapes: IShapesModel;
+  shapes: Shapes;
 };
 
 export default function ShapesGroupSettingsPanel(

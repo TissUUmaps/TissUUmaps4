@@ -1,14 +1,14 @@
 import * as papaparse from "papaparse";
 
-import { ITableDataSourceModel } from "../../models/table";
-import { ITableData } from "../table";
-import { MappableArrayLike, TypedArray } from "../types";
-import { TableDataLoaderBase } from "./base";
+import { RawTableDataSource, createTableDataSource } from "../../models/table";
+import { MappableArrayLike, TypedArray } from "../../types";
+import { TableData } from "../table";
+import { AbstractTableDataLoader } from "./base";
 
 export const CSV_TABLE_DATA_SOURCE = "csv";
 
-export interface ICSVTableDataSourceModel
-  extends ITableDataSourceModel<typeof CSV_TABLE_DATA_SOURCE> {
+export interface RawCSVTableDataSource
+  extends RawTableDataSource<typeof CSV_TABLE_DATA_SOURCE> {
   columns?: string[];
   loadColumns?: string[];
   chunkSize?: number;
@@ -30,61 +30,47 @@ export interface ICSVTableDataSourceModel
     >;
 }
 
-export class CSVTableData implements ITableData {
-  private readonly _length: number;
-  private readonly _columns: string[];
-  private readonly _columnData: (string[] | TypedArray)[];
+type DefaultedCSVTableDataSourceKeys = keyof Omit<
+  RawCSVTableDataSource,
+  "type" | "url" | "path" | "columns" | "loadColumns"
+>;
 
-  constructor(
-    length: number,
-    columns: string[],
-    columnData: (string[] | TypedArray)[],
-  ) {
-    this._length = length;
-    this._columns = columns;
-    this._columnData = columnData;
-  }
+export type CSVTableDataSource = Required<
+  Pick<RawCSVTableDataSource, DefaultedCSVTableDataSourceKeys>
+> &
+  Omit<RawCSVTableDataSource, DefaultedCSVTableDataSourceKeys>;
 
-  getLength(): number {
-    return this._length;
-  }
-
-  getColumns(): string[] {
-    return this._columns;
-  }
-
-  async loadColumn<T>(
-    column: string,
-    signal?: AbortSignal,
-  ): Promise<MappableArrayLike<T>> {
-    signal?.throwIfAborted();
-    if (!this._columns.includes(column)) {
-      throw new Error(`Column "${column}" does not exist.`);
-    }
-    const columnIndex = this._columns.indexOf(column);
-    const columnData = await Promise.resolve(
-      this._columnData[columnIndex]! as unknown as MappableArrayLike<T>,
-    );
-    signal?.throwIfAborted();
-    return columnData;
-  }
-
-  destroy(): void {}
+export function createCSVTableDataSource(
+  rawCSVTableDataSource: RawCSVTableDataSource,
+): CSVTableDataSource {
+  return {
+    chunkSize: 10000,
+    parseConfig: {
+      delimiter: ",",
+    },
+    ...createTableDataSource(rawCSVTableDataSource),
+    ...rawCSVTableDataSource,
+  };
 }
 
-export class CSVTableDataLoader extends TableDataLoaderBase<
-  ICSVTableDataSourceModel,
+export class CSVTableDataLoader extends AbstractTableDataLoader<
+  CSVTableDataSource,
   CSVTableData
 > {
-  static readonly DEFAULT_CHUNK_SIZE = 10000;
-  static readonly DEFAULT_DELIMITER = ",";
-
   async loadTable(signal?: AbortSignal): Promise<CSVTableData> {
     signal?.throwIfAborted();
     let n = 0;
     let allColumnNames = this.dataSource.columns;
     let columnNames = this.dataSource.loadColumns ?? allColumnNames;
-    let columns: Column[] | undefined;
+    let columns:
+      | {
+          name: string;
+          index: number;
+          chunks: (string[] | TypedArray)[];
+          currentChunk: (string | number)[];
+          isNaN: boolean;
+        }[]
+      | undefined;
     if (allColumnNames !== undefined && columnNames !== undefined) {
       columns = columnNames.map((columnName) => ({
         name: columnName,
@@ -94,8 +80,6 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
         isNaN: false,
       }));
     }
-    const chunkSize =
-      this.dataSource.chunkSize ?? CSVTableDataLoader.DEFAULT_CHUNK_SIZE;
     const step = (results: papaparse.ParseStepResult<string[]>) => {
       if (
         allColumnNames === undefined ||
@@ -123,7 +107,7 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
           column.currentChunk.push(column.isNaN ? value : +value);
         }
         n += 1;
-        if (n % chunkSize === 0) {
+        if (n % this.dataSource.chunkSize === 0) {
           for (const column of columns) {
             column.chunks.push(
               column.isNaN
@@ -173,9 +157,6 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
         (resolve, reject) =>
           papaparse.parse(file, {
             ...this.dataSource.parseConfig,
-            delimiter:
-              this.dataSource.parseConfig?.delimiter ??
-              CSVTableDataLoader.DEFAULT_DELIMITER,
             header: false,
             skipEmptyLines: true,
             step: step,
@@ -193,9 +174,6 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
           papaparse.parse(url, {
             ...this.dataSource.parseConfig,
             download: true,
-            delimiter:
-              this.dataSource.parseConfig?.delimiter ??
-              CSVTableDataLoader.DEFAULT_DELIMITER,
             header: false,
             skipEmptyLines: true,
             step: step,
@@ -213,10 +191,44 @@ export class CSVTableDataLoader extends TableDataLoaderBase<
   }
 }
 
-type Column = {
-  name: string;
-  index: number;
-  chunks: (string[] | TypedArray)[];
-  currentChunk: (string | number)[];
-  isNaN: boolean;
-};
+export class CSVTableData implements TableData {
+  private readonly _length: number;
+  private readonly _columns: string[];
+  private readonly _columnData: (string[] | TypedArray)[];
+
+  constructor(
+    length: number,
+    columns: string[],
+    columnData: (string[] | TypedArray)[],
+  ) {
+    this._length = length;
+    this._columns = columns;
+    this._columnData = columnData;
+  }
+
+  getLength(): number {
+    return this._length;
+  }
+
+  getColumns(): string[] {
+    return this._columns;
+  }
+
+  async loadColumn<T>(
+    column: string,
+    signal?: AbortSignal,
+  ): Promise<MappableArrayLike<T>> {
+    signal?.throwIfAborted();
+    if (!this._columns.includes(column)) {
+      throw new Error(`Column "${column}" does not exist.`);
+    }
+    const columnIndex = this._columns.indexOf(column);
+    const columnData = await Promise.resolve(
+      this._columnData[columnIndex]! as unknown as MappableArrayLike<T>,
+    );
+    signal?.throwIfAborted();
+    return columnData;
+  }
+
+  destroy(): void {}
+}

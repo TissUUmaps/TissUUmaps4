@@ -1,8 +1,8 @@
-import { IImageModel } from "../../models/image";
+import { Image } from "../../models/image";
 
 type ImageSettingsPanelProps = {
   imageId: string;
-  image: IImageModel;
+  image: Image;
 };
 
 export default function ImageSettingsPanel(

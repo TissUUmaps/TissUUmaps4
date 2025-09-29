@@ -1,10 +1,10 @@
-import { IShapesModel } from "../../models/shapes";
+import { Shapes } from "../../models/shapes";
 import ShapesGroupSettingsPanel from "./ShapesGroupSettingsPanel";
 import ShapesSettingsPanel from "./ShapesSettingsPanel";
 
 type ShapesPanelProps = {
   shapesId: string;
-  shapes: IShapesModel;
+  shapes: Shapes;
 };
 
 export default function ShapesPanel(props: ShapesPanelProps) {

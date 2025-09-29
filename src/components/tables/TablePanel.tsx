@@ -1,9 +1,9 @@
-import { ITableModel } from "../../models/table";
+import { Table } from "../../models/table";
 import TableSettingsPanel from "./TableSettingsPanel";
 
 type TablePanelProps = {
   tableId: string;
-  table: ITableModel;
+  table: Table;
 };
 
 export default function TablePanel(props: TablePanelProps) {

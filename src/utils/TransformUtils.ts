@@ -1,6 +1,6 @@
 import { mat3 } from "gl-matrix";
 
-import { SimilarityTransform } from "../models/types";
+import { SimilarityTransform } from "../types";
 
 export default class TransformUtils {
   static fromMatrix(m: mat3): SimilarityTransform {

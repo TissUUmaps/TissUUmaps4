@@ -1,6 +1,8 @@
-import { IData, IDataLoader } from "./base";
+import { RawPointsDataSource } from "../models/points";
+import { Data, DataLoader } from "./base";
+import { TableData } from "./table";
 
-export interface IPointsData extends IData {
+export interface PointsData extends Data {
   getLength(): number;
   getDimensions(): string[];
   loadCoordinates(
@@ -9,7 +11,13 @@ export interface IPointsData extends IData {
   ): Promise<Float32Array>;
 }
 
-export interface IPointsDataLoader<TPointsData extends IPointsData>
-  extends IDataLoader {
+export interface PointsDataLoader<TPointsData extends PointsData>
+  extends DataLoader {
   loadPoints(signal?: AbortSignal): Promise<TPointsData>;
 }
+
+export type PointsDataLoaderFactory = (
+  dataSource: RawPointsDataSource,
+  projectDir: FileSystemDirectoryHandle | null,
+  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>,
+) => PointsDataLoader<PointsData>;

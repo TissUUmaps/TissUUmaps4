@@ -1,44 +1,27 @@
-import { ILabelsData, ILabelsDataLoader } from "../data/labels";
-import {
-  ITIFFLabelsDataSourceModel,
-  TIFFLabelsDataLoader,
-  TIFF_LABELS_DATA_SOURCE,
-} from "../data/loaders/tiff";
-import {
-  IZarrLabelsDataSourceModel,
-  ZARR_LABELS_DATA_SOURCE,
-  ZarrLabelsDataLoader,
-} from "../data/loaders/zarr";
-import { ITableData } from "../data/table";
-import { ILabelsDataSourceModel, ILabelsModel } from "../models/labels";
+import { LabelsData } from "../data/labels";
+import { Labels, LabelsDataSource } from "../models/labels";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
-
-type LabelsDataLoaderFactory = (
-  dataSource: ILabelsDataSourceModel,
-  projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<ITableData>,
-) => ILabelsDataLoader<ILabelsData>;
 
 export type LabelsSlice = LabelsSliceState & LabelsSliceActions;
 
 export type LabelsSliceState = {
-  labelsMap: Map<string, ILabelsModel>;
-  labelsDataCache: Map<ILabelsDataSourceModel, ILabelsData>;
-  labelsDataLoaderFactories: Map<string, LabelsDataLoaderFactory>;
+  labelsMap: Map<string, Labels>;
+  labelsDataCache: Map<LabelsDataSource, LabelsData>;
 };
 
 export type LabelsSliceActions = {
-  setLabels: (labels: ILabelsModel, index?: number) => void;
-  loadLabels: (
-    labels: ILabelsModel,
-    signal?: AbortSignal,
-  ) => Promise<ILabelsData>;
+  addLabels: (labels: Labels, index?: number) => void;
+  loadLabels: (labels: Labels, signal?: AbortSignal) => Promise<LabelsData>;
   loadLabelsByID: (
     labelsId: string,
     signal?: AbortSignal,
-  ) => Promise<ILabelsData>;
-  deleteLabels: (labels: ILabelsModel) => void;
+  ) => Promise<LabelsData>;
+  unloadLabels: (labels: Labels) => void;
+  unloadLabelsByID: (labelsId: string) => void;
+  deleteLabels: (labels: Labels) => void;
+  deleteLabelsByID: (labelsId: string) => void;
+  clearLabels: () => void;
 };
 
 export const createLabelsSlice: BoundStoreStateCreator<LabelsSlice> = (
@@ -46,18 +29,19 @@ export const createLabelsSlice: BoundStoreStateCreator<LabelsSlice> = (
   get,
 ) => ({
   ...initialLabelsSliceState,
-  setLabels: (labels, index) => {
+  addLabels: (labels, index) => {
+    const state = get();
+    const oldLabels = state.labelsMap.get(labels.id);
+    if (oldLabels !== undefined) {
+      state.unloadLabels(oldLabels);
+    }
     set((draft) => {
-      const oldLabels = draft.labelsMap.get(labels.id);
       draft.labelsMap = MapUtils.cloneAndSpliceSet(
         draft.labelsMap,
         labels.id,
         labels,
         index,
       );
-      if (oldLabels !== undefined) {
-        draft.labelsDataCache.delete(oldLabels.dataSource);
-      }
     });
   },
   loadLabels: async (labels, signal) => {
@@ -96,33 +80,47 @@ export const createLabelsSlice: BoundStoreStateCreator<LabelsSlice> = (
     }
     return state.loadLabels(labels, signal);
   },
-  deleteLabels: (labels) => {
+  unloadLabels: (labels) => {
+    const state = get();
+    const labelsData = state.labelsDataCache.get(labels.dataSource);
     set((draft) => {
-      draft.labelsMap.delete(labels.id);
       draft.labelsDataCache.delete(labels.dataSource);
     });
+    labelsData?.destroy();
+  },
+  unloadLabelsByID: (labelsId) => {
+    const state = get();
+    const labels = state.labelsMap.get(labelsId);
+    if (labels === undefined) {
+      throw new Error(`Labels with ID ${labelsId} not found.`);
+    }
+    state.unloadLabels(labels);
+  },
+  deleteLabels: (labels) => {
+    const state = get();
+    state.unloadLabels(labels);
+    set((draft) => {
+      draft.labelsMap.delete(labels.id);
+    });
+  },
+  deleteLabelsByID: (labelsId) => {
+    const state = get();
+    const labels = state.labelsMap.get(labelsId);
+    if (labels === undefined) {
+      throw new Error(`Labels with ID ${labelsId} not found.`);
+    }
+    state.deleteLabels(labels);
+  },
+  clearLabels: () => {
+    const state = get();
+    state.labelsMap.forEach((labels) => {
+      state.deleteLabels(labels);
+    });
+    set(initialLabelsSliceState);
   },
 });
 
 const initialLabelsSliceState: LabelsSliceState = {
-  labelsMap: new Map<string, ILabelsModel>(),
-  labelsDataCache: new Map<ILabelsDataSourceModel, ILabelsData>(),
-  labelsDataLoaderFactories: new Map<string, LabelsDataLoaderFactory>([
-    [
-      TIFF_LABELS_DATA_SOURCE,
-      (dataSource, projectDir) =>
-        new TIFFLabelsDataLoader(
-          dataSource as ITIFFLabelsDataSourceModel,
-          projectDir,
-        ),
-    ],
-    [
-      ZARR_LABELS_DATA_SOURCE,
-      (dataSource, projectDir) =>
-        new ZarrLabelsDataLoader(
-          dataSource as IZarrLabelsDataSourceModel,
-          projectDir,
-        ),
-    ],
-  ]),
+  labelsMap: new Map(),
+  labelsDataCache: new Map(),
 };

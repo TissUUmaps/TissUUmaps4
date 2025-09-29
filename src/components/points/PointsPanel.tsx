@@ -1,10 +1,10 @@
-import { IPointsModel } from "../../models/points";
+import { Points } from "../../models/points";
 import PointsGroupSettingsPanel from "./PointsGroupSettingsPanel";
 import PointsSettingsPanel from "./PointsSettingsPanel";
 
 type PointsPanelProps = {
   pointsId: string;
-  points: IPointsModel;
+  points: Points;
 };
 
 export default function PointsPanel(props: PointsPanelProps) {

@@ -1,39 +1,27 @@
-import {
-  ITablePointsDataSourceModel,
-  TABLE_POINTS_DATA_SOURCE,
-  TablePointsDataLoader,
-} from "../data/loaders/table";
-import { IPointsData, IPointsDataLoader } from "../data/points";
-import { ITableData } from "../data/table";
-import { IPointsDataSourceModel, IPointsModel } from "../models/points";
+import { PointsData } from "../data/points";
+import { Points, PointsDataSource } from "../models/points";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
-
-type PointsDataLoaderFactory = (
-  dataSource: IPointsDataSourceModel,
-  projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<ITableData>,
-) => IPointsDataLoader<IPointsData>;
 
 export type PointsSlice = PointsSliceState & PointsSliceActions;
 
 export type PointsSliceState = {
-  pointsMap: Map<string, IPointsModel>;
-  pointsDataCache: Map<IPointsDataSourceModel, IPointsData>;
-  pointsDataLoaderFactories: Map<string, PointsDataLoaderFactory>;
+  pointsMap: Map<string, Points>;
+  pointsDataCache: Map<PointsDataSource, PointsData>;
 };
 
 export type PointsSliceActions = {
-  setPoints: (points: IPointsModel, index?: number) => void;
-  loadPoints: (
-    points: IPointsModel,
-    signal?: AbortSignal,
-  ) => Promise<IPointsData>;
+  addPoints: (points: Points, index?: number) => void;
+  loadPoints: (points: Points, signal?: AbortSignal) => Promise<PointsData>;
   loadPointsByID: (
     pointsId: string,
     signal?: AbortSignal,
-  ) => Promise<IPointsData>;
-  deletePoints: (points: IPointsModel) => void;
+  ) => Promise<PointsData>;
+  unloadPoints: (points: Points) => void;
+  unloadPointsByID: (pointsId: string) => void;
+  deletePoints: (points: Points) => void;
+  deletePointsByID: (pointsId: string) => void;
+  clearPoints: () => void;
 };
 
 export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
@@ -41,18 +29,19 @@ export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
   get,
 ) => ({
   ...initialPointsSliceState,
-  setPoints: (points, index) => {
+  addPoints: (points, index) => {
+    const state = get();
+    const oldPoints = state.pointsMap.get(points.id);
+    if (oldPoints !== undefined) {
+      state.unloadPoints(oldPoints);
+    }
     set((draft) => {
-      const oldPoints = draft.pointsMap.get(points.id);
       draft.pointsMap = MapUtils.cloneAndSpliceSet(
         draft.pointsMap,
         points.id,
         points,
         index,
       );
-      if (oldPoints !== undefined) {
-        draft.pointsDataCache.delete(oldPoints.dataSource);
-      }
     });
   },
   loadPoints: async (points, signal) => {
@@ -91,43 +80,47 @@ export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
     }
     return state.loadPoints(points, signal);
   },
-  deletePoints: (points) => {
+  unloadPoints: (points) => {
+    const state = get();
+    const pointsData = state.pointsDataCache.get(points.dataSource);
     set((draft) => {
-      draft.pointsMap.delete(points.id);
       draft.pointsDataCache.delete(points.dataSource);
     });
+    pointsData?.destroy();
+  },
+  unloadPointsByID: (pointsId) => {
+    const state = get();
+    const points = state.pointsMap.get(pointsId);
+    if (points === undefined) {
+      throw new Error(`Points with ID ${pointsId} not found.`);
+    }
+    state.unloadPoints(points);
+  },
+  deletePoints: (points) => {
+    const state = get();
+    state.unloadPoints(points);
+    set((draft) => {
+      draft.pointsMap.delete(points.id);
+    });
+  },
+  deletePointsByID: (pointsId) => {
+    const state = get();
+    const points = state.pointsMap.get(pointsId);
+    if (points === undefined) {
+      throw new Error(`Points with ID ${pointsId} not found.`);
+    }
+    state.deletePoints(points);
+  },
+  clearPoints: () => {
+    const state = get();
+    state.pointsMap.forEach((points) => {
+      state.deletePoints(points);
+    });
+    set(initialPointsSliceState);
   },
 });
 
 const initialPointsSliceState: PointsSliceState = {
-  // TODO remove test data
-  pointsMap: new Map<string, IPointsModel>([
-    [
-      "iss",
-      {
-        id: "iss",
-        name: "ISS",
-        dataSource: {
-          type: "table",
-          tableId: "iss",
-          dimensionColumns: ["global_X_pos", "global_Y_pos"],
-        } as ITablePointsDataSourceModel,
-        layerConfigs: [
-          { layerId: "breast", x: "global_X_pos", y: "global_Y_pos" },
-        ],
-      },
-    ],
-  ]),
-  pointsDataCache: new Map<IPointsDataSourceModel, IPointsData>(),
-  pointsDataLoaderFactories: new Map<string, PointsDataLoaderFactory>([
-    [
-      TABLE_POINTS_DATA_SOURCE,
-      (dataSource, projectDir, loadTableByID) =>
-        new TablePointsDataLoader(
-          dataSource as ITablePointsDataSourceModel,
-          projectDir,
-          loadTableByID,
-        ),
-    ],
-  ]),
+  pointsMap: new Map(),
+  pointsDataCache: new Map(),
 };

@@ -1,11 +1,11 @@
 import { ResizeEvent, ViewerEvent } from "openseadragon";
 import { useCallback, useEffect, useRef } from "react";
 
-import OpenSeadragonController from "../controllers/OpenSeadragonController";
-import WebGLController from "../controllers/WebGLController";
-import { useBoundStore } from "../stores/boundStore";
+import OpenSeadragonController from "../../controllers/OpenSeadragonController";
+import WebGLController from "../../controllers/WebGLController";
+import { useBoundStore } from "../../stores/boundStore";
 
-export default function ViewerPanel() {
+export default function Viewer() {
   const osRef = useRef<OpenSeadragonController | null>(null);
   const glRef = useRef<WebGLController | null>(null);
   const projectDir = useBoundStore((state) => state.projectDir);
@@ -105,7 +105,7 @@ export default function ViewerPanel() {
   useEffect(() => {
     const os = osRef.current;
     if (os !== null) {
-      os.updateViewerOptions(viewerOptions);
+      os.setViewerOptions(viewerOptions);
     }
   }, [viewerOptions]);
 
@@ -139,7 +139,7 @@ export default function ViewerPanel() {
       });
     }
     return () => {
-      abortController.abort("image/labels effect cleanup");
+      abortController.abort("viewer image/labels cleanup");
     };
   }, [
     projectDir,
@@ -183,7 +183,7 @@ export default function ViewerPanel() {
       );
     }
     return () => {
-      abortController.abort("points effect cleanup");
+      abortController.abort("viewer points effect cleanup");
     };
   }, [
     projectDir,
@@ -225,7 +225,7 @@ export default function ViewerPanel() {
       );
     }
     return () => {
-      abortController.abort("shapes effect cleanup");
+      abortController.abort("viewer shapes effect cleanup");
     };
   }, [
     projectDir,

@@ -1,10 +1,10 @@
-import { Color } from "../models/types";
+import { Color } from "../types";
 
 export default class ColorUtils {
   static parseColormap(
     colormap: string,
     sep: string = " ",
-    maxValue: number = 1.0,
+    maxValue: number = 1,
   ): Color[] {
     return colormap
       .split("\n")

@@ -1,7 +1,8 @@
-import { IData, IDataLoader } from "./base";
-import { MappableArrayLike } from "./types";
+import { RawTableDataSource } from "../models/table";
+import { MappableArrayLike } from "../types";
+import { Data, DataLoader } from "./base";
 
-export interface ITableData extends IData {
+export interface TableData extends Data {
   getLength(): number;
   getColumns(): string[];
   loadColumn<T>(
@@ -10,7 +11,12 @@ export interface ITableData extends IData {
   ): Promise<MappableArrayLike<T>>;
 }
 
-export interface ITableDataLoader<TTableData extends ITableData>
-  extends IDataLoader {
+export interface TableDataLoader<TTableData extends TableData>
+  extends DataLoader {
   loadTable(signal?: AbortSignal): Promise<TTableData>;
 }
+
+export type TableDataLoaderFactory = (
+  dataSource: RawTableDataSource,
+  projectDir: FileSystemDirectoryHandle | null,
+) => TableDataLoader<TableData>;

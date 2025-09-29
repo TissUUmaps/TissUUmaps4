@@ -1,20 +1,13 @@
-import { DrawOptions } from "../models/types";
+import { DrawOptions, Rect } from "../types";
 import WebGLUtils from "../utils/WebGLUtils";
 import WebGLPointsController from "./WebGLPointsController";
 import WebGLShapesController from "./WebGLShapesController";
-
-export type Rect = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
 
 export default class WebGLController {
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas#maximum_canvas_size
   static readonly MAX_CANVAS_SIZE = 4096;
   static readonly DEFAULT_DRAW_OPTIONS: DrawOptions = {
-    pointSizeFactor: 1.0,
+    pointSizeFactor: 1,
   };
 
   private readonly _canvas: HTMLCanvasElement;
@@ -47,11 +40,8 @@ export default class WebGLController {
     });
   }
 
-  setDrawOptions(drawOptions: Partial<DrawOptions>): void {
-    this._drawOptions = {
-      ...WebGLController.DEFAULT_DRAW_OPTIONS,
-      ...drawOptions,
-    };
+  setDrawOptions(drawOptions: DrawOptions): void {
+    this._drawOptions = drawOptions;
   }
 
   async initialize(signal?: AbortSignal): Promise<WebGLController> {

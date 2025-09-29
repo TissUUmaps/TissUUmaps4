@@ -1,9 +1,8 @@
-import { IShapesData } from "../data/shapes";
-import { ITableData } from "../data/table";
-import { ILayerModel } from "../models/layer";
-import { IShapesModel } from "../models/shapes";
-import { DrawOptions } from "../models/types";
-import { Rect } from "./WebGLController";
+import { ShapesData } from "../data/shapes";
+import { TableData } from "../data/table";
+import { Layer } from "../models/layer";
+import { Shapes } from "../models/shapes";
+import { DrawOptions, Rect } from "../types";
 import WebGLControllerBase from "./WebGLControllerBase";
 
 export default class WebGLShapesController extends WebGLControllerBase {
@@ -12,16 +11,13 @@ export default class WebGLShapesController extends WebGLControllerBase {
   }
 
   async synchronize(
-    _layerMap: Map<string, ILayerModel>,
-    _shapesMap: Map<string, IShapesModel>,
-    _loadShapes: (
-      shapes: IShapesModel,
-      signal?: AbortSignal,
-    ) => Promise<IShapesData>,
+    _layerMap: Map<string, Layer>,
+    _shapesMap: Map<string, Shapes>,
+    _loadShapes: (shapes: Shapes, signal?: AbortSignal) => Promise<ShapesData>,
     _loadTableByID: (
       tableId: string,
       signal?: AbortSignal,
-    ) => Promise<ITableData>,
+    ) => Promise<TableData>,
     signal?: AbortSignal,
   ): Promise<void> {
     signal?.throwIfAborted();

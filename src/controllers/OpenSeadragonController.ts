@@ -1,50 +1,54 @@
 import { mat3 } from "gl-matrix";
-import OpenSeadragon, { Point, TiledImage, Viewer } from "openseadragon";
+import {
+  EventHandler,
+  Point,
+  Rect,
+  TiledImage,
+  Viewer,
+  ViewerEvent,
+} from "openseadragon";
 
-import { IImageData } from "../data/image";
-import { ILabelsData } from "../data/labels";
-import { ICustomTileSource, TileSourceConfig } from "../data/types";
-import { ILayerConfigModel } from "../models/base";
-import { IImageLayerConfigModel, IImageModel } from "../models/image";
-import { ILabelsLayerConfigModel, ILabelsModel } from "../models/labels";
-import { ILayerModel } from "../models/layer";
-import { ViewerOptions } from "../models/types";
+import { CustomTileSource, ImageData, TileSourceConfig } from "../data/image";
+import { LabelsData } from "../data/labels";
+import {
+  Image,
+  ImageLayerConfig,
+  RawImageLayerConfig,
+  createImageLayerConfig,
+} from "../models/image";
+import {
+  Labels,
+  LabelsLayerConfig,
+  RawLabelsLayerConfig,
+  createLabelsLayerConfig,
+} from "../models/labels";
+import { Layer } from "../models/layer";
+import { DEFAULT_VIEWER_OPTIONS } from "../models/project";
+import { ViewerOptions } from "../types";
 import TransformUtils from "../utils/TransformUtils";
 
-export default class OpenSeadragonController {
-  static readonly DEFAULT_VIEWER_OPTIONS: ViewerOptions = {
-    minZoomImageRatio: 0,
-    maxZoomPixelRatio: Infinity,
-    preserveImageSizeOnResize: true,
-    visibilityRatio: 0,
-    animationTime: 0,
-    gestureSettingsMouse: {
-      flickEnabled: false,
-    },
-    gestureSettingsTouch: {
-      flickEnabled: false,
-    },
-    gestureSettingsPen: {
-      flickEnabled: false,
-    },
-    gestureSettingsUnknown: {
-      flickEnabled: false,
-    },
-    zoomPerClick: 1,
-    showNavigator: true,
-    navigatorPosition: "BOTTOM_LEFT",
-    maxImageCacheCount: 2000,
-    showNavigationControl: false,
-    imageSmoothingEnabled: false,
-  };
-  static readonly DEFAULT_VIEWER_ANIMATION_START_OPTIONS: ViewerOptions = {
-    immediateRender: false,
-    imageLoaderLimit: 1,
-  };
-  static readonly DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS: ViewerOptions = {
-    immediateRender: true, // set to true, even if initially set to false
-  };
+type BaseTiledImageState = {
+  loaded?: boolean;
+  imageWidth?: number;
+  imageHeight?: number;
+  deferredIndex?: number;
+  deferredUpdate?: boolean;
+  deferredDelete?: boolean;
+};
 
+type ImageTiledImageState = BaseTiledImageState & {
+  image: Image;
+  rawLayerConfig: RawImageLayerConfig;
+};
+
+type LabelsTiledImageState = BaseTiledImageState & {
+  labels: Labels;
+  rawLayerConfig: RawLabelsLayerConfig;
+};
+
+type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
+
+export default class OpenSeadragonController {
   private readonly _viewer: Viewer;
   private readonly _tiledImageStates: TiledImageState[] = [];
   private readonly _animationMemory: {
@@ -54,13 +58,13 @@ export default class OpenSeadragonController {
     viewerValues: {},
     tiledImageValues: [],
   };
-  private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
-  private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
+  private _animationStartHandler?: EventHandler<ViewerEvent>;
+  private _animationFinishHandler?: EventHandler<ViewerEvent>;
 
   static createViewer(viewerElement: HTMLElement): Viewer {
     const viewer = new Viewer({
-      ...OpenSeadragonController.DEFAULT_VIEWER_OPTIONS,
-      // do not forget to update ViewerOptions when adding more options here
+      ...DEFAULT_VIEWER_OPTIONS,
+      // do not forget to exclude properties from the ViewerOptions type when setting them here
       element: viewerElement,
     });
     // disable key bindings for rotation and flipping
@@ -77,49 +81,56 @@ export default class OpenSeadragonController {
     this._viewer = viewer;
   }
 
-  updateViewerOptions(options: Partial<ViewerOptions>): void {
-    for (const [key, value] of Object.entries(options)) {
+  setViewerOptions(viewerOptions: ViewerOptions): void {
+    // TODO allow more than one level (deep nested shallow merge)
+    for (const [key, value] of Object.entries(viewerOptions)) {
       // @ts-expect-error: dynamic property access
       if (key in this._viewer && this._viewer[key] !== value) {
-        // @ts-expect-error: dynamic property access
-        this._viewer[key] = value;
+        // shallow merge of nested objects (first level only)
+        if (typeof value === "object" && value !== null) {
+          // @ts-expect-error: dynamic property access
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          this._viewer[key] = { ...this._viewer[key], ...value };
+        } else {
+          // @ts-expect-error: dynamic property access
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          this._viewer[key] = value;
+        }
       }
       for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
         const tiledImage = this._viewer.world.getItemAt(i);
         // @ts-expect-error: dynamic property access
         if (key in tiledImage && tiledImage[key] !== value) {
-          // @ts-expect-error: dynamic property access
-          tiledImage[key] = value;
+          // shallow merge of nested objects (first level only)
+          if (typeof value === "object" && value !== null) {
+            // @ts-expect-error: dynamic property access
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            tiledImage[key] = { ...tiledImage[key], ...value };
+          } else {
+            // @ts-expect-error: dynamic property access
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            tiledImage[key] = value;
+          }
         }
       }
     }
   }
 
   configureAnimationHandlers(
-    viewerAnimationStartOptions: Partial<ViewerOptions>,
-    viewerAnimationFinishOptions: Partial<ViewerOptions>,
+    viewerAnimationStartOptions: ViewerOptions,
+    viewerAnimationFinishOptions: ViewerOptions,
   ): void {
-    viewerAnimationStartOptions = {
-      ...OpenSeadragonController.DEFAULT_VIEWER_ANIMATION_START_OPTIONS,
-      ...viewerAnimationStartOptions,
-    };
-    viewerAnimationFinishOptions = {
-      ...OpenSeadragonController.DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS,
-      ...viewerAnimationFinishOptions,
-    };
     if (this._animationStartHandler !== undefined) {
       this._viewer.removeHandler(
         "animation-start",
         this._animationStartHandler,
       );
-      this._animationStartHandler = undefined;
     }
     if (this._animationFinishHandler !== undefined) {
       this._viewer.removeHandler(
         "animation-finish",
         this._animationFinishHandler,
       );
-      this._animationFinishHandler = undefined;
     }
     this._animationStartHandler = () => {
       this._animationMemory.viewerValues = {};
@@ -141,10 +152,10 @@ export default class OpenSeadragonController {
         }
         this._animationMemory.tiledImageValues.push(tiledImageValues);
       }
-      this.updateViewerOptions(viewerAnimationStartOptions);
+      this.setViewerOptions(viewerAnimationStartOptions);
     };
     this._animationFinishHandler = () => {
-      this.updateViewerOptions({
+      this.setViewerOptions({
         ...this._animationMemory.viewerValues,
         ...viewerAnimationFinishOptions,
       });
@@ -154,17 +165,11 @@ export default class OpenSeadragonController {
   }
 
   async synchronize(
-    layerMap: Map<string, ILayerModel>,
-    imageMap: Map<string, IImageModel>,
-    labelsMap: Map<string, ILabelsModel>,
-    loadImage: (
-      image: IImageModel,
-      signal?: AbortSignal,
-    ) => Promise<IImageData>,
-    loadLabels: (
-      labels: ILabelsModel,
-      signal?: AbortSignal,
-    ) => Promise<ILabelsData>,
+    layerMap: Map<string, Layer>,
+    imageMap: Map<string, Image>,
+    labelsMap: Map<string, Labels>,
+    loadImage: (image: Image, signal?: AbortSignal) => Promise<ImageData>,
+    loadLabels: (labels: Labels, signal?: AbortSignal) => Promise<LabelsData>,
     signal?: AbortSignal,
   ): Promise<void> {
     signal?.throwIfAborted();
@@ -179,7 +184,7 @@ export default class OpenSeadragonController {
     );
   }
 
-  getViewportBounds(): OpenSeadragon.Rect {
+  getViewportBounds(): Rect {
     return this._viewer.viewport.getBounds(true);
   }
 
@@ -189,9 +194,9 @@ export default class OpenSeadragonController {
   }
 
   private _cleanTiledImages(
-    layerMap: Map<string, ILayerModel>,
-    imageMap: Map<string, IImageModel>,
-    labelsMap: Map<string, ILabelsModel>,
+    layerMap: Map<string, Layer>,
+    imageMap: Map<string, Image>,
+    labelsMap: Map<string, Labels>,
   ): void {
     for (let i = 0; i < this._tiledImageStates.length; i++) {
       const tiledImageState = this._tiledImageStates[i]!;
@@ -199,14 +204,14 @@ export default class OpenSeadragonController {
         "image" in tiledImageState
           ? imageMap.has(tiledImageState.image.id) &&
             tiledImageState.image.layerConfigs.includes(
-              tiledImageState.layerConfig,
+              tiledImageState.rawLayerConfig,
             ) &&
-            layerMap.has(tiledImageState.layerConfig.layerId)
+            layerMap.has(tiledImageState.rawLayerConfig.layerId)
           : labelsMap.has(tiledImageState.labels.id) &&
             tiledImageState.labels.layerConfigs.includes(
-              tiledImageState.layerConfig,
+              tiledImageState.rawLayerConfig,
             ) &&
-            layerMap.has(tiledImageState.layerConfig.layerId);
+            layerMap.has(tiledImageState.rawLayerConfig.layerId);
       if (!keepTiledImage) {
         if (tiledImageState.loaded) {
           const tiledImage = this._viewer.world.getItemAt(i);
@@ -221,25 +226,19 @@ export default class OpenSeadragonController {
   }
 
   private async _createOrUpdateTiledImages(
-    layerMap: Map<string, ILayerModel>,
-    imageMap: Map<string, IImageModel>,
-    labelsMap: Map<string, ILabelsModel>,
-    loadImage: (
-      image: IImageModel,
-      signal?: AbortSignal,
-    ) => Promise<IImageData>,
-    loadLabels: (
-      labels: ILabelsModel,
-      signal?: AbortSignal,
-    ) => Promise<ILabelsData>,
+    layerMap: Map<string, Layer>,
+    imageMap: Map<string, Image>,
+    labelsMap: Map<string, Labels>,
+    loadImage: (image: Image, signal?: AbortSignal) => Promise<ImageData>,
+    loadLabels: (labels: Labels, signal?: AbortSignal) => Promise<LabelsData>,
     signal?: AbortSignal,
   ): Promise<void> {
     signal?.throwIfAborted();
     let desiredIndex = 0;
     for (const layer of layerMap.values()) {
       for (const image of imageMap.values()) {
-        for (const layerConfig of image.layerConfigs.filter(
-          (layerConfig) => layerConfig.layerId === layer.id,
+        for (const rawLayerConfig of image.layerConfigs.filter(
+          (rawLayerConfig) => rawLayerConfig.layerId === layer.id,
         )) {
           let imageData = null;
           try {
@@ -258,8 +257,9 @@ export default class OpenSeadragonController {
               (tiledImageState) =>
                 "image" in tiledImageState &&
                 tiledImageState.image === image &&
-                tiledImageState.layerConfig === layerConfig,
+                tiledImageState.rawLayerConfig === rawLayerConfig,
             );
+            const layerConfig = createImageLayerConfig(rawLayerConfig);
             this._createOrUpdateTiledImage(
               layer,
               image,
@@ -267,15 +267,15 @@ export default class OpenSeadragonController {
               currentIndex,
               desiredIndex,
               () => imageData.getTileSource(),
-              () => ({ image: image, layerConfig: layerConfig }),
+              () => ({ image: image, rawLayerConfig: rawLayerConfig }),
             );
             desiredIndex++;
           }
         }
       }
       for (const labels of labelsMap.values()) {
-        for (const layerConfig of labels.layerConfigs.filter(
-          (layerConfig) => layerConfig.layerId === layer.id,
+        for (const rawLayerConfig of labels.layerConfigs.filter(
+          (rawLayerConfig) => rawLayerConfig.layerId === layer.id,
         )) {
           let labelsData = null;
           try {
@@ -294,8 +294,9 @@ export default class OpenSeadragonController {
               (tiledImageState) =>
                 "labels" in tiledImageState &&
                 tiledImageState.labels === labels &&
-                tiledImageState.layerConfig === layerConfig,
+                tiledImageState.rawLayerConfig === rawLayerConfig,
             );
+            const layerConfig = createLabelsLayerConfig(rawLayerConfig);
             this._createOrUpdateTiledImage(
               layer,
               labels,
@@ -306,7 +307,7 @@ export default class OpenSeadragonController {
                 // TODO labels tile source
                 throw new Error("Method not implemented");
               },
-              () => ({ labels: labels, layerConfig: layerConfig }),
+              () => ({ labels: labels, rawLayerConfig: rawLayerConfig }),
             );
             desiredIndex++;
           }
@@ -316,19 +317,37 @@ export default class OpenSeadragonController {
   }
 
   private _createOrUpdateTiledImage(
-    layer: ILayerModel,
-    pixels: IPixelsModel,
-    layerConfig: ILayerConfigModel,
+    layer: Layer,
+    object: Image,
+    layerConfig: ImageLayerConfig,
     currentIndex: number,
     desiredIndex: number,
-    createTileSource: () => string | TileSourceConfig | ICustomTileSource,
+    createTileSource: () => string | TileSourceConfig | CustomTileSource,
+    createTiledImageState: () => TiledImageState,
+  ): void;
+  private _createOrUpdateTiledImage(
+    layer: Layer,
+    object: Labels,
+    layerConfig: LabelsLayerConfig,
+    currentIndex: number,
+    desiredIndex: number,
+    createTileSource: () => string | TileSourceConfig | CustomTileSource,
+    createTiledImageState: () => TiledImageState,
+  ): void;
+  private _createOrUpdateTiledImage(
+    layer: Layer,
+    object: Image | Labels,
+    layerConfig: ImageLayerConfig | LabelsLayerConfig,
+    currentIndex: number,
+    desiredIndex: number,
+    createTileSource: () => string | TileSourceConfig | CustomTileSource,
     createTiledImageState: () => TiledImageState,
   ): void {
     if (currentIndex === -1) {
       this._createTiledImage(
         desiredIndex,
         layer,
-        pixels,
+        object,
         layerConfig,
         createTileSource,
         createTiledImageState,
@@ -347,7 +366,7 @@ export default class OpenSeadragonController {
         const tiledImage = this._viewer.world.getItemAt(currentIndex);
         this._updateTiledImage(
           layer,
-          pixels,
+          object,
           layerConfig,
           tiledImage,
           tiledImageState,
@@ -360,10 +379,26 @@ export default class OpenSeadragonController {
 
   private _createTiledImage(
     index: number,
-    layer: ILayerModel,
-    pixels: IPixelsModel,
-    layerConfig: ILayerConfigModel,
-    createTileSource: () => string | TileSourceConfig | ICustomTileSource,
+    layer: Layer,
+    object: Image,
+    layerConfig: ImageLayerConfig,
+    createTileSource: () => string | TileSourceConfig | CustomTileSource,
+    createTiledImageState: () => TiledImageState,
+  ): void;
+  private _createTiledImage(
+    index: number,
+    layer: Layer,
+    object: Labels,
+    layerConfig: LabelsLayerConfig,
+    createTileSource: () => string | TileSourceConfig | CustomTileSource,
+    createTiledImageState: () => TiledImageState,
+  ): void;
+  private _createTiledImage(
+    index: number,
+    layer: Layer,
+    object: Image | Labels,
+    layerConfig: ImageLayerConfig | LabelsLayerConfig,
+    createTileSource: () => string | TileSourceConfig | CustomTileSource,
     createTiledImageState: () => TiledImageState,
   ): void {
     const newTiledImageState = createTiledImageState();
@@ -371,8 +406,8 @@ export default class OpenSeadragonController {
       tileSource: createTileSource(),
       index: index,
       // https://github.com/openseadragon/openseadragon/issues/2765
-      // flipped: layerConfig.flip ?? false,
-      opacity: OpenSeadragonController._calculateOpacity(layer, pixels),
+      // flipped: layerConfig.flip ?? layerConfigDefaults.flip,
+      opacity: OpenSeadragonController._calculateOpacity(layer, object),
       success: (event) => {
         const newTiledImage = (event as unknown as { item: TiledImage }).item;
         newTiledImageState.imageWidth = newTiledImage.getContentSize().x;
@@ -390,7 +425,7 @@ export default class OpenSeadragonController {
         if (newTiledImageState.deferredUpdate) {
           this._updateTiledImage(
             layer,
-            pixels,
+            object,
             layerConfig,
             newTiledImage,
             newTiledImageState,
@@ -416,17 +451,30 @@ export default class OpenSeadragonController {
   }
 
   private _updateTiledImage(
-    layer: ILayerModel,
-    pixels: IPixelsModel,
-    layerConfig: ILayerConfigModel,
+    layer: Layer,
+    object: Image,
+    layerConfig: ImageLayerConfig,
+    tiledImage: TiledImage,
+    tiledImageState: TiledImageState,
+  ): void;
+  private _updateTiledImage(
+    layer: Layer,
+    object: Labels,
+    layerConfig: LabelsLayerConfig,
+    tiledImage: TiledImage,
+    tiledImageState: TiledImageState,
+  ): void;
+  private _updateTiledImage(
+    layer: Layer,
+    object: Image | Labels,
+    layerConfig: ImageLayerConfig | LabelsLayerConfig,
     tiledImage: TiledImage,
     tiledImageState: TiledImageState,
   ): void {
-    const flip = layerConfig.flip ?? false;
-    if (tiledImage.getFlip() !== flip) {
-      tiledImage.setFlip(flip);
+    if (tiledImage.getFlip() !== layerConfig.flip) {
+      tiledImage.setFlip(layerConfig.flip);
     }
-    const opacity = OpenSeadragonController._calculateOpacity(layer, pixels);
+    const opacity = OpenSeadragonController._calculateOpacity(layer, object);
     if (tiledImage.getOpacity() !== opacity) {
       tiledImage.setOpacity(opacity);
     }
@@ -439,28 +487,35 @@ export default class OpenSeadragonController {
   }
 
   private _updateTiledImageTransform(
-    layer: ILayerModel,
-    layerConfig: ILayerConfigModel,
+    layer: Layer,
+    layerConfig: ImageLayerConfig,
+    tiledImage: TiledImage,
+    tiledImageState: TiledImageState,
+  ): void;
+  private _updateTiledImageTransform(
+    layer: Layer,
+    layerConfig: LabelsLayerConfig,
+    tiledImage: TiledImage,
+    tiledImageState: TiledImageState,
+  ): void;
+  private _updateTiledImageTransform(
+    layer: Layer,
+    layerConfig: ImageLayerConfig | LabelsLayerConfig,
     tiledImage: TiledImage,
     tiledImageState: TiledImageState,
   ): void {
     const m = mat3.create();
-    if (layerConfig.transform !== undefined) {
-      const dataToLayerMatrix = TransformUtils.toMatrix(layerConfig.transform, {
-        x: tiledImageState.imageWidth! / 2,
-        y: tiledImageState.imageHeight! / 2,
-      });
-      mat3.multiply(m, dataToLayerMatrix, m);
-    }
-    if (layer.transform !== undefined) {
-      const layerToWorldMatrix = TransformUtils.toMatrix(layer.transform);
-      mat3.multiply(m, layerToWorldMatrix, m);
-    }
+    const dataToLayerMatrix = TransformUtils.toMatrix(layerConfig.transform, {
+      x: tiledImageState.imageWidth! / 2,
+      y: tiledImageState.imageHeight! / 2,
+    });
+    mat3.multiply(m, dataToLayerMatrix, m);
+    const layerToWorldMatrix = TransformUtils.toMatrix(layer.transform);
+    mat3.multiply(m, layerToWorldMatrix, m);
     const dataToWorldTransform = TransformUtils.fromMatrix(m);
     const bounds = tiledImage.getBounds();
-    const flip = layerConfig.flip ?? false;
-    if (tiledImage.getFlip() !== flip) {
-      tiledImage.setFlip(flip);
+    if (tiledImage.getFlip() !== layerConfig.flip) {
+      tiledImage.setFlip(layerConfig.flip);
     }
     const width = tiledImageState.imageWidth! * dataToWorldTransform.scale;
     if (bounds.width !== width) {
@@ -476,39 +531,17 @@ export default class OpenSeadragonController {
     }
   }
 
+  private static _calculateOpacity(layer: Layer, object: Image): number;
+  private static _calculateOpacity(layer: Layer, object: Labels): number;
   private static _calculateOpacity(
-    layer: ILayerModel,
-    pixels: IPixelsModel,
+    layer: Layer,
+    object: Image | Labels,
   ): number {
-    const visibility =
-      (layer.visibility ?? true) && (pixels.visibility ?? true);
-    const opacity = (layer.opacity ?? 1) * (pixels.opacity ?? 1);
-    return visibility ? opacity : 0.0;
+    const visibility = layer.visibility && object.visibility;
+    const opacity = layer.opacity * object.opacity;
+    return visibility ? opacity : 0;
   }
 }
-
-type IPixelsModel = IImageModel | ILabelsModel;
-
-type BaseTiledImageState = {
-  loaded?: boolean;
-  imageWidth?: number;
-  imageHeight?: number;
-  deferredIndex?: number;
-  deferredUpdate?: boolean;
-  deferredDelete?: boolean;
-};
-
-type ImageTiledImageState = BaseTiledImageState & {
-  image: IImageModel;
-  layerConfig: IImageLayerConfigModel;
-};
-
-type LabelsTiledImageState = BaseTiledImageState & {
-  labels: ILabelsModel;
-  layerConfig: ILabelsLayerConfigModel;
-};
-
-type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
 
 // add missing OpenSeadragon types
 declare module "openseadragon" {

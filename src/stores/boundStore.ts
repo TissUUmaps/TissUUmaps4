@@ -1,6 +1,7 @@
 import { StateCreator, create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
+import { AppSlice, createAppSlice } from "./appSlice";
 import { ImageSlice, createImageSlice } from "./imageSlice";
 import { LabelsSlice, createLabelsSlice } from "./labelsSlice";
 import { LayerSlice, createLayerSlice } from "./layerSlice";
@@ -16,7 +17,8 @@ export type BoundStoreStateCreator<T> = StateCreator<
   T
 >;
 
-export type BoundStore = ProjectSlice &
+export type BoundStore = AppSlice &
+  ProjectSlice &
   LayerSlice &
   ImageSlice &
   LabelsSlice &
@@ -26,6 +28,7 @@ export type BoundStore = ProjectSlice &
 
 export const useBoundStore = create<BoundStore>()(
   immer((...a) => ({
+    ...createAppSlice(...a),
     ...createProjectSlice(...a),
     ...createLayerSlice(...a),
     ...createImageSlice(...a),

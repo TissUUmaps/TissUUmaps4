@@ -1,36 +1,24 @@
-import {
-  CSVTableDataLoader,
-  CSV_TABLE_DATA_SOURCE,
-  ICSVTableDataSourceModel,
-} from "../data/loaders/csv";
-import {
-  IParquetTableDataSourceModel,
-  PARQUET_TABLE_DATA_SOURCE,
-  ParquetTableDataLoader,
-} from "../data/loaders/parquet";
-import { ITableData, ITableDataLoader } from "../data/table";
-import { ITableDataSourceModel, ITableModel } from "../models/table";
+import { TableData } from "../data/table";
+import { Table, TableDataSource } from "../models/table";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
-
-type TableDataLoaderFactory = (
-  dataSource: ITableDataSourceModel,
-  projectDir: FileSystemDirectoryHandle | null,
-) => ITableDataLoader<ITableData>;
 
 export type TableSlice = TableSliceState & TableSliceActions;
 
 export type TableSliceState = {
-  tableMap: Map<string, ITableModel>;
-  tableDataCache: Map<ITableDataSourceModel, ITableData>;
-  tableDataLoaderFactories: Map<string, TableDataLoaderFactory>;
+  tableMap: Map<string, Table>;
+  tableDataCache: Map<TableDataSource, TableData>;
 };
 
 export type TableSliceActions = {
-  setTable: (table: ITableModel, index?: number) => void;
-  loadTable: (table: ITableModel, signal?: AbortSignal) => Promise<ITableData>;
-  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<ITableData>;
-  deleteTable: (table: ITableModel) => void;
+  addTable: (table: Table, index?: number) => void;
+  loadTable: (table: Table, signal?: AbortSignal) => Promise<TableData>;
+  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>;
+  unloadTable: (table: Table) => void;
+  unloadTableByID: (tableId: string) => void;
+  deleteTable: (table: Table) => void;
+  deleteTableByID: (tableId: string) => void;
+  clearTables: () => void;
 };
 
 export const createTableSlice: BoundStoreStateCreator<TableSlice> = (
@@ -38,18 +26,19 @@ export const createTableSlice: BoundStoreStateCreator<TableSlice> = (
   get,
 ) => ({
   ...initialTableSliceState,
-  setTable: (table, index) => {
+  addTable: (table, index) => {
+    const state = get();
+    const oldTable = state.tableMap.get(table.id);
+    if (oldTable !== undefined) {
+      state.unloadTable(oldTable);
+    }
     set((draft) => {
-      const oldTable = draft.tableMap.get(table.id);
       draft.tableMap = MapUtils.cloneAndSpliceSet(
         draft.tableMap,
         table.id,
         table,
         index,
       );
-      if (oldTable !== undefined) {
-        draft.tableDataCache.delete(oldTable.dataSource);
-      }
     });
   },
   loadTable: async (table, signal) => {
@@ -87,47 +76,47 @@ export const createTableSlice: BoundStoreStateCreator<TableSlice> = (
     }
     return state.loadTable(table, signal);
   },
-  deleteTable: (table) => {
+  unloadTable: (table) => {
+    const state = get();
+    const tableData = state.tableDataCache.get(table.dataSource);
     set((draft) => {
-      draft.tableMap.delete(table.id);
       draft.tableDataCache.delete(table.dataSource);
     });
+    tableData?.destroy();
+  },
+  unloadTableByID: (tableId) => {
+    const state = get();
+    const table = state.tableMap.get(tableId);
+    if (table === undefined) {
+      throw new Error(`Table with ID ${tableId} not found.`);
+    }
+    state.unloadTable(table);
+  },
+  deleteTable: (table) => {
+    const state = get();
+    state.unloadTable(table);
+    set((draft) => {
+      draft.tableMap.delete(table.id);
+    });
+  },
+  deleteTableByID: (tableId) => {
+    const state = get();
+    const table = state.tableMap.get(tableId);
+    if (table === undefined) {
+      throw new Error(`Table with ID ${tableId} not found.`);
+    }
+    state.deleteTable(table);
+  },
+  clearTables: () => {
+    const state = get();
+    state.tableMap.forEach((table) => {
+      state.deleteTable(table);
+    });
+    set(initialTableSliceState);
   },
 });
 
 const initialTableSliceState: TableSliceState = {
-  // TODO remove test data
-  tableMap: new Map<string, ITableModel>([
-    [
-      "iss",
-      {
-        id: "iss",
-        name: "ISS",
-        dataSource: {
-          type: "csv",
-          url: "https://user.it.uu.se/~chrav452/TissUUmaps4/data/breast/TissueA.csv",
-          loadColumns: ["global_X_pos", "global_Y_pos"],
-        } as ICSVTableDataSourceModel,
-      },
-    ],
-  ]),
-  tableDataCache: new Map<ITableDataSourceModel, ITableData>(),
-  tableDataLoaderFactories: new Map<string, TableDataLoaderFactory>([
-    [
-      CSV_TABLE_DATA_SOURCE,
-      (dataSource, projectDir) =>
-        new CSVTableDataLoader(
-          dataSource as ICSVTableDataSourceModel,
-          projectDir,
-        ),
-    ],
-    [
-      PARQUET_TABLE_DATA_SOURCE,
-      (dataSource, projectDir) =>
-        new ParquetTableDataLoader(
-          dataSource as IParquetTableDataSourceModel,
-          projectDir,
-        ),
-    ],
-  ]),
+  tableMap: new Map(),
+  tableDataCache: new Map(),
 };

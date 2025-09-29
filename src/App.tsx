@@ -7,13 +7,13 @@ import {
 import { useEffect } from "react";
 
 import "./App.css";
-import ProjectPanel from "./components/ProjectPanel";
-import ViewerPanel from "./components/ViewerPanel";
 import ImageCollectionPanel from "./components/images/ImageCollectionPanel";
 import LabelsCollectionPanel from "./components/labels/LabelsCollectionPanel";
 import PointsCollectionPanel from "./components/points/PointsCollectionPanel";
+import ProjectPanel from "./components/project/ProjectPanel";
 import ShapesCollectionPanel from "./components/shapes/ShapesCollectionPanel";
 import TableCollectionPanel from "./components/tables/TableCollectionPanel";
+import Viewer from "./components/viewer/Viewer";
 import { useBoundStore } from "./stores/boundStore";
 
 declare global {
@@ -22,8 +22,90 @@ declare global {
   }
 }
 
+const dockviewComponents = {
+  viewer: () => <Viewer />,
+  projectPanel: () => <ProjectPanel />,
+  imageCollectionPanel: () => <ImageCollectionPanel />,
+  labelsCollectionPanel: () => <LabelsCollectionPanel />,
+  pointsCollectionPanel: () => <PointsCollectionPanel />,
+  shapesCollectionPanel: () => <ShapesCollectionPanel />,
+  tableCollectionPanel: () => <TableCollectionPanel />,
+};
+
+const dockviewTabComponents = {
+  closableTab: (props: IDockviewPanelHeaderProps) => {
+    return <DockviewDefaultTab hideClose={false} {...props} />;
+  },
+  nonClosableTab: (props: IDockviewPanelHeaderProps) => {
+    return <DockviewDefaultTab hideClose={true} {...props} />;
+  },
+};
+
+const onDockviewReady = (event: DockviewReadyEvent) => {
+  const viewer = event.api.addPanel({
+    id: "viewer",
+    title: "Viewer",
+    component: "viewer",
+  });
+  const projectPanel = event.api.addPanel({
+    id: "projectPanel",
+    title: "Project",
+    component: "projectPanel",
+    tabComponent: "nonClosableTab",
+    initialWidth: 600,
+    position: {
+      referencePanel: viewer,
+      direction: "right",
+    },
+  });
+  event.api.addPanel({
+    id: "imageCollectionPanel",
+    title: "Images",
+    component: "imageCollectionPanel",
+    tabComponent: "nonClosableTab",
+    position: { referenceGroup: projectPanel.group },
+  });
+  event.api.addPanel({
+    id: "labelsCollectionPanel",
+    title: "Labels",
+    component: "labelsCollectionPanel",
+    tabComponent: "nonClosableTab",
+    position: { referenceGroup: projectPanel.group },
+  });
+  event.api.addPanel({
+    id: "pointsCollectionPanel",
+    title: "Points",
+    component: "pointsCollectionPanel",
+    tabComponent: "nonClosableTab",
+    position: { referenceGroup: projectPanel.group },
+  });
+  event.api.addPanel({
+    id: "shapesCollectionPanel",
+    title: "Shapes",
+    component: "shapesCollectionPanel",
+    tabComponent: "nonClosableTab",
+    position: { referenceGroup: projectPanel.group },
+  });
+  event.api.addPanel({
+    id: "tableCollectionPanel",
+    title: "Tables",
+    component: "tableCollectionPanel",
+    tabComponent: "nonClosableTab",
+    position: { referenceGroup: projectPanel.group },
+  });
+  viewer.group.header.hidden = true;
+  viewer.group.locked = true;
+  projectPanel.api.setActive();
+};
+
+const PROJECT_URL_PARAM = "project";
+const DEFAULT_PROJECT_URL = "project.json";
+
 export default function App() {
-  // make the store available to plugins
+  const clearProject = useBoundStore((state) => state.clearProject);
+  const loadProjectFromURL = useBoundStore((state) => state.loadProjectFromURL);
+
+  // make store available to plugins
   useEffect(() => {
     window.tissuumaps = useBoundStore;
     return () => {
@@ -31,76 +113,29 @@ export default function App() {
     };
   }, []);
 
-  const dockviewComponents = {
-    viewerPanel: () => <ViewerPanel />,
-    projectPanel: () => <ProjectPanel />,
-    imageCollectionPanel: () => <ImageCollectionPanel />,
-    labelsCollectionPanel: () => <LabelsCollectionPanel />,
-    pointsCollectionPanel: () => <PointsCollectionPanel />,
-    shapesCollectionPanel: () => <ShapesCollectionPanel />,
-    tableCollectionPanel: () => <TableCollectionPanel />,
-  };
-
-  const NonClosableDockviewDefaultTab = (props: IDockviewPanelHeaderProps) => {
-    return <DockviewDefaultTab hideClose={true} {...props} />;
-  };
-
-  function onDockviewReady(event: DockviewReadyEvent) {
-    const viewerPanel = event.api.addPanel({
-      id: "viewerPanel",
-      title: "Viewer",
-      component: "viewerPanel",
-    });
-    const projectPanel = event.api.addPanel({
-      id: "projectPanel",
-      title: "Project",
-      component: "projectPanel",
-      initialWidth: 600,
-      position: {
-        referencePanel: viewerPanel,
-        direction: "right",
+  // load project, if available
+  useEffect(() => {
+    const abortController = new AbortController();
+    const params = new URLSearchParams(window.location.search);
+    const projectUrl = params.get(PROJECT_URL_PARAM) ?? DEFAULT_PROJECT_URL;
+    loadProjectFromURL(projectUrl, abortController.signal, true).catch(
+      (reason) => {
+        if (!abortController.signal.aborted) {
+          console.error(reason);
+        }
       },
-    });
-    event.api.addPanel({
-      id: "imageCollectionPanel",
-      title: "Images",
-      component: "imageCollectionPanel",
-      position: { referenceGroup: projectPanel.group },
-    });
-    event.api.addPanel({
-      id: "labelsCollectionPanel",
-      title: "Labels",
-      component: "labelsCollectionPanel",
-      position: { referenceGroup: projectPanel.group },
-    });
-    event.api.addPanel({
-      id: "pointsCollectionPanel",
-      title: "Points",
-      component: "pointsCollectionPanel",
-      position: { referenceGroup: projectPanel.group },
-    });
-    event.api.addPanel({
-      id: "shapesCollectionPanel",
-      title: "Shapes",
-      component: "shapesCollectionPanel",
-      position: { referenceGroup: projectPanel.group },
-    });
-    event.api.addPanel({
-      id: "tableCollectionPanel",
-      title: "Tables",
-      component: "tableCollectionPanel",
-      position: { referenceGroup: projectPanel.group },
-    });
-    viewerPanel.group.header.hidden = true;
-    viewerPanel.group.locked = true;
-    projectPanel.api.setActive();
-  }
+    );
+    return () => {
+      abortController.abort("app cleanup");
+      clearProject();
+    };
+  }, [clearProject, loadProjectFromURL]);
 
   return (
     <div className="w-screen h-screen overflow-hidden">
       <DockviewReact
         components={dockviewComponents}
-        defaultTabComponent={NonClosableDockviewDefaultTab}
+        tabComponents={dockviewTabComponents}
         onReady={onDockviewReady}
       />
     </div>
