@@ -7,13 +7,13 @@ import {
 import { useEffect } from "react";
 
 import "./App.css";
-import ImageCollectionPanel from "./components/images/ImageCollectionPanel";
-import LabelsCollectionPanel from "./components/labels/LabelsCollectionPanel";
-import PointsCollectionPanel from "./components/points/PointsCollectionPanel";
-import ProjectPanel from "./components/project/ProjectPanel";
-import ShapesCollectionPanel from "./components/shapes/ShapesCollectionPanel";
-import TableCollectionPanel from "./components/tables/TableCollectionPanel";
-import Viewer from "./components/viewer/Viewer";
+import ImageCollectionPanel from "./components/ImageCollectionPanel";
+import LabelsCollectionPanel from "./components/LabelsCollectionPanel";
+import PointsCollectionPanel from "./components/PointsCollectionPanel";
+import ProjectPanel from "./components/ProjectPanel";
+import ShapesCollectionPanel from "./components/ShapesCollectionPanel";
+import TableCollectionPanel from "./components/TableCollectionPanel";
+import Viewer from "./components/Viewer";
 import { useBoundStore } from "./store/boundStore";
 
 declare global {
