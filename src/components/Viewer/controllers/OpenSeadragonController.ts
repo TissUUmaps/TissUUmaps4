@@ -5,24 +5,24 @@ import {
   CustomTileSource,
   ImageData,
   TileSourceConfig,
-} from "../../data/image";
-import { LabelsData } from "../../data/labels";
+} from "../../../data/image";
+import { LabelsData } from "../../../data/labels";
 import {
   Image,
   ImageLayerConfig,
   RawImageLayerConfig,
   createImageLayerConfig,
-} from "../../model/image";
+} from "../../../model/image";
 import {
   Labels,
   LabelsLayerConfig,
   RawLabelsLayerConfig,
   createLabelsLayerConfig,
-} from "../../model/labels";
-import { Layer } from "../../model/layer";
-import { DEFAULT_VIEWER_OPTIONS } from "../../model/project";
-import { Rect, ViewerOptions } from "../../types";
-import TransformUtils from "../../utils/TransformUtils";
+} from "../../../model/labels";
+import { Layer } from "../../../model/layer";
+import { DEFAULT_VIEWER_OPTIONS } from "../../../model/project";
+import { Rect, ViewerOptions } from "../../../types";
+import TransformUtils from "../../../utils/TransformUtils";
 
 type BaseTiledImageState = {
   loaded?: boolean;

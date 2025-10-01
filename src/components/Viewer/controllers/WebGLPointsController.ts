@@ -1,8 +1,8 @@
 import { mat3 } from "gl-matrix";
 
-import { PointsData } from "../../data/points";
-import { TableData } from "../../data/table";
-import { Layer } from "../../model/layer";
+import { PointsData } from "../../../data/points";
+import { TableData } from "../../../data/table";
+import { Layer } from "../../../model/layer";
 import {
   DEFAULT_POINT_COLOR,
   DEFAULT_POINT_COLORS,
@@ -18,7 +18,7 @@ import {
   PointsLayerConfig,
   RawPointsLayerConfig,
   createPointsLayerConfig,
-} from "../../model/points";
+} from "../../../model/points";
 import {
   Color,
   DrawOptions,
@@ -27,11 +27,11 @@ import {
   Rect,
   isTableGroupsColumn,
   isTableValuesColumn,
-} from "../../types";
-import ColorUtils from "../../utils/ColorUtils";
-import HashUtils from "../../utils/HashUtils";
-import TransformUtils from "../../utils/TransformUtils";
-import WebGLUtils from "../../utils/WebGLUtils";
+} from "../../../types";
+import ColorUtils from "../../../utils/ColorUtils";
+import HashUtils from "../../../utils/HashUtils";
+import TransformUtils from "../../../utils/TransformUtils";
+import WebGLUtils from "../../../utils/WebGLUtils";
 import markersUrl from "../assets/markers/markers.png?url";
 import pointsFragmentShader from "../assets/shaders/points.frag?raw";
 import pointsVertexShader from "../assets/shaders/points.vert?raw";

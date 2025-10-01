@@ -1,8 +1,8 @@
-import { ShapesData } from "../../data/shapes";
-import { TableData } from "../../data/table";
-import { Layer } from "../../model/layer";
-import { Shapes } from "../../model/shapes";
-import { DrawOptions, Rect } from "../../types";
+import { ShapesData } from "../../../data/shapes";
+import { TableData } from "../../../data/table";
+import { Layer } from "../../../model/layer";
+import { Shapes } from "../../../model/shapes";
+import { DrawOptions, Rect } from "../../../types";
 import WebGLControllerBase from "./WebGLControllerBase";
 
 export default class WebGLShapesController extends WebGLControllerBase {
