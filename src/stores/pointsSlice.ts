@@ -1,5 +1,5 @@
 import { PointsData } from "../data/points";
-import { Points, PointsDataSource } from "../models/points";
+import { Points, PointsDataSource } from "../model/points";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 

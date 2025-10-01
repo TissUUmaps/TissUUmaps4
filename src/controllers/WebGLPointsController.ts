@@ -5,7 +5,7 @@ import pointsFragmentShader from "../assets/shaders/points.frag?raw";
 import pointsVertexShader from "../assets/shaders/points.vert?raw";
 import { PointsData } from "../data/points";
 import { TableData } from "../data/table";
-import { Layer } from "../models/layer";
+import { Layer } from "../model/layer";
 import {
   DEFAULT_POINT_COLOR,
   DEFAULT_POINT_COLORS,
@@ -21,7 +21,7 @@ import {
   PointsLayerConfig,
   RawPointsLayerConfig,
   createPointsLayerConfig,
-} from "../models/points";
+} from "../model/points";
 import {
   Color,
   DrawOptions,

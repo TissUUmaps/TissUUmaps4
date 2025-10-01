@@ -1,4 +1,4 @@
-import { Labels } from "../../models/labels";
+import { Labels } from "../../model/labels";
 
 type LabelsGroupSettingsPanelProps = {
   labelsId: string;

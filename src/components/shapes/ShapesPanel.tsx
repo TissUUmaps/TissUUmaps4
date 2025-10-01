@@ -1,4 +1,4 @@
-import { Shapes } from "../../models/shapes";
+import { Shapes } from "../../model/shapes";
 import ShapesGroupSettingsPanel from "./ShapesGroupSettingsPanel";
 import ShapesSettingsPanel from "./ShapesSettingsPanel";
 

@@ -1,4 +1,4 @@
-import { RawTableDataSource } from "../models/table";
+import { RawTableDataSource } from "../model/table";
 import { MappableArrayLike } from "../types";
 import { Data, DataLoader } from "./base";
 

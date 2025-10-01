@@ -1,5 +1,5 @@
 import { TableData } from "../data/table";
-import { Table, TableDataSource } from "../models/table";
+import { Table, TableDataSource } from "../model/table";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 

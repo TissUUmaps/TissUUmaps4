@@ -1,4 +1,4 @@
-import { RawImageDataSource, createImageDataSource } from "../../models/image";
+import { RawImageDataSource, createImageDataSource } from "../../model/image";
 import { CustomTileSource, ImageData, TileSourceConfig } from "../image";
 import { AbstractImageDataLoader } from "./base";
 

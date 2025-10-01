@@ -1,4 +1,4 @@
-import { RawLabelsDataSource } from "../models/labels";
+import { RawLabelsDataSource } from "../model/labels";
 import { UintArray } from "../types";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";

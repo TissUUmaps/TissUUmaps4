@@ -3,7 +3,7 @@ import * as geotiff from "geotiff";
 import {
   RawLabelsDataSource,
   createLabelsDataSource,
-} from "../../models/labels";
+} from "../../model/labels";
 import { UintArray } from "../../types";
 import { LabelsData } from "../labels";
 import { AbstractLabelsDataLoader } from "./base";

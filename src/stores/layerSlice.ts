@@ -1,4 +1,4 @@
-import { Layer } from "../models/layer";
+import { Layer } from "../model/layer";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 

@@ -1,4 +1,4 @@
-import { Image } from "../../models/image";
+import { Image } from "../../model/image";
 import ImageSettingsPanel from "./ImageSettingsPanel";
 
 type ImagePanelProps = {

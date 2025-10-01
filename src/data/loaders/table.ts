@@ -1,7 +1,7 @@
 import {
   RawPointsDataSource,
   createPointsDataSource,
-} from "../../models/points";
+} from "../../model/points";
 import { PointsData } from "../points";
 import { TableData } from "../table";
 import { AbstractPointsDataLoader } from "./base";

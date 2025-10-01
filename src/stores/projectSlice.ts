@@ -1,7 +1,7 @@
-import { createImage } from "../models/image";
-import { createLabels } from "../models/labels";
-import { createLayer } from "../models/layer";
-import { createPoints } from "../models/points";
+import { createImage } from "../model/image";
+import { createLabels } from "../model/labels";
+import { createLayer } from "../model/layer";
+import { createPoints } from "../model/points";
 import {
   DEFAULT_DRAW_OPTIONS,
   DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS,
@@ -10,9 +10,9 @@ import {
   Project,
   RawProject,
   createProject,
-} from "../models/project";
-import { createShapes } from "../models/shapes";
-import { createTable } from "../models/table";
+} from "../model/project";
+import { createShapes } from "../model/shapes";
+import { createTable } from "../model/table";
 import {
   Color,
   DrawOptions,

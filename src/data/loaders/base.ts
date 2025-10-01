@@ -1,9 +1,9 @@
-import { RawDataSource } from "../../models/base";
-import { ImageDataSource } from "../../models/image";
-import { LabelsDataSource } from "../../models/labels";
-import { PointsDataSource } from "../../models/points";
-import { ShapesDataSource } from "../../models/shapes";
-import { TableDataSource } from "../../models/table";
+import { RawDataSource } from "../../model/base";
+import { ImageDataSource } from "../../model/image";
+import { LabelsDataSource } from "../../model/labels";
+import { PointsDataSource } from "../../model/points";
+import { ShapesDataSource } from "../../model/shapes";
+import { TableDataSource } from "../../model/table";
 import { DataLoader } from "../base";
 import { ImageData, ImageDataLoader } from "../image";
 import { LabelsData, LabelsDataLoader } from "../labels";

@@ -1,4 +1,4 @@
-import { Table } from "../../models/table";
+import { Table } from "../../model/table";
 
 type TableSettingsPanelProps = {
   tableId: string;

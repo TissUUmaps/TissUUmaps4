@@ -1,5 +1,5 @@
 import { ShapesData } from "../data/shapes";
-import { Shapes, ShapesDataSource } from "../models/shapes";
+import { Shapes, ShapesDataSource } from "../model/shapes";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 

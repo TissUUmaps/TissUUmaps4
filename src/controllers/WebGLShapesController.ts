@@ -1,7 +1,7 @@
 import { ShapesData } from "../data/shapes";
 import { TableData } from "../data/table";
-import { Layer } from "../models/layer";
-import { Shapes } from "../models/shapes";
+import { Layer } from "../model/layer";
+import { Shapes } from "../model/shapes";
 import { DrawOptions, Rect } from "../types";
 import WebGLControllerBase from "./WebGLControllerBase";
 

@@ -1,5 +1,5 @@
 import { LabelsData } from "../data/labels";
-import { Labels, LabelsDataSource } from "../models/labels";
+import { Labels, LabelsDataSource } from "../model/labels";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 

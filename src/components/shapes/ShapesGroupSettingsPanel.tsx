@@ -1,4 +1,4 @@
-import { Shapes } from "../../models/shapes";
+import { Shapes } from "../../model/shapes";
 
 type ShapesGroupSettingsPanelProps = {
   shapesId: string;

@@ -1,4 +1,4 @@
-import { Points } from "../../models/points";
+import { Points } from "../../model/points";
 import PointsGroupSettingsPanel from "./PointsGroupSettingsPanel";
 import PointsSettingsPanel from "./PointsSettingsPanel";
 

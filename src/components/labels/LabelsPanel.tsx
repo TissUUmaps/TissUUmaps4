@@ -1,4 +1,4 @@
-import { Labels } from "../../models/labels";
+import { Labels } from "../../model/labels";
 import LabelsGroupSettingsPanel from "./LabelsGroupSettingsPanel";
 import LabelsSettingsPanel from "./LabelsSettingsPanel";
 

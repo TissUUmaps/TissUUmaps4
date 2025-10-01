@@ -1,4 +1,4 @@
-import { RawPointsDataSource } from "../models/points";
+import { RawPointsDataSource } from "../model/points";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";
 

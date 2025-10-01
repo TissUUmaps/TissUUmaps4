@@ -1,6 +1,6 @@
 import * as papaparse from "papaparse";
 
-import { RawTableDataSource, createTableDataSource } from "../../models/table";
+import { RawTableDataSource, createTableDataSource } from "../../model/table";
 import { MappableArrayLike, TypedArray } from "../../types";
 import { TableData } from "../table";
 import { AbstractTableDataLoader } from "./base";

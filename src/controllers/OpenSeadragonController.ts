@@ -15,15 +15,15 @@ import {
   ImageLayerConfig,
   RawImageLayerConfig,
   createImageLayerConfig,
-} from "../models/image";
+} from "../model/image";
 import {
   Labels,
   LabelsLayerConfig,
   RawLabelsLayerConfig,
   createLabelsLayerConfig,
-} from "../models/labels";
-import { Layer } from "../models/layer";
-import { DEFAULT_VIEWER_OPTIONS } from "../models/project";
+} from "../model/labels";
+import { Layer } from "../model/layer";
+import { DEFAULT_VIEWER_OPTIONS } from "../model/project";
 import { ViewerOptions } from "../types";
 import TransformUtils from "../utils/TransformUtils";
 

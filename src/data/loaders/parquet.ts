@@ -2,7 +2,7 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import { RawTableDataSource, createTableDataSource } from "../../models/table";
+import { RawTableDataSource, createTableDataSource } from "../../model/table";
 import { MappableArrayLike } from "../../types";
 import { TableData } from "../table";
 import { AbstractTableDataLoader } from "./base";

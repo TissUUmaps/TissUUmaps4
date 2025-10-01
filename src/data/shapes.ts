@@ -1,4 +1,4 @@
-import { RawShapesDataSource } from "../models/shapes";
+import { RawShapesDataSource } from "../model/shapes";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";
 

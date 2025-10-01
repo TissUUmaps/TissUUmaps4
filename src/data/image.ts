@@ -1,4 +1,4 @@
-import { RawImageDataSource } from "../models/image";
+import { RawImageDataSource } from "../model/image";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";
 

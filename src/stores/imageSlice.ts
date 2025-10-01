@@ -1,5 +1,5 @@
 import { ImageData } from "../data/image";
-import { Image, ImageDataSource } from "../models/image";
+import { Image, ImageDataSource } from "../model/image";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
