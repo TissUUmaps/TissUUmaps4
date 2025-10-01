@@ -14,7 +14,7 @@ import ProjectPanel from "./components/project/ProjectPanel";
 import ShapesCollectionPanel from "./components/shapes/ShapesCollectionPanel";
 import TableCollectionPanel from "./components/tables/TableCollectionPanel";
 import Viewer from "./components/viewer/Viewer";
-import { useBoundStore } from "./stores/boundStore";
+import { useBoundStore } from "./store/boundStore";
 
 declare global {
   interface Window {

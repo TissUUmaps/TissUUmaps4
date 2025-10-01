@@ -1,4 +1,4 @@
-import { useBoundStore } from "../../stores/boundStore";
+import { useBoundStore } from "../../store/boundStore";
 import MapUtils from "../../utils/MapUtils";
 import ImagePanel from "./ImagePanel";
 

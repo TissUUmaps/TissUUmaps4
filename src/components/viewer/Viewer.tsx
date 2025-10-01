@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 import OpenSeadragonController from "../../controllers/OpenSeadragonController";
 import WebGLController from "../../controllers/WebGLController";
-import { useBoundStore } from "../../stores/boundStore";
+import { useBoundStore } from "../../store/boundStore";
 
 export default function Viewer() {
   const osRef = useRef<OpenSeadragonController | null>(null);
