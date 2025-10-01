@@ -1,6 +1,6 @@
 import { mat3 } from "gl-matrix";
 
-import { Rect } from "../types";
+import { Rect } from "../../types";
 
 export default class WebGLControllerBase {
   protected readonly _gl: WebGL2RenderingContext;

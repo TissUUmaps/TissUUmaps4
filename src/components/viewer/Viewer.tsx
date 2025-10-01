@@ -1,9 +1,9 @@
 import { ResizeEvent, ViewerEvent } from "openseadragon";
 import { useCallback, useEffect, useRef } from "react";
 
-import OpenSeadragonController from "../../controllers/OpenSeadragonController";
-import WebGLController from "../../controllers/WebGLController";
 import { useBoundStore } from "../../store/boundStore";
+import OpenSeadragonController from "./OpenSeadragonController";
+import WebGLController from "./WebGLController";
 
 export default function Viewer() {
   const osRef = useRef<OpenSeadragonController | null>(null);

@@ -1,31 +1,28 @@
 import { mat3 } from "gl-matrix";
-import {
-  EventHandler,
-  Point,
-  Rect,
-  TiledImage,
-  Viewer,
-  ViewerEvent,
-} from "openseadragon";
+import OpenSeadragon from "openseadragon";
 
-import { CustomTileSource, ImageData, TileSourceConfig } from "../data/image";
-import { LabelsData } from "../data/labels";
+import {
+  CustomTileSource,
+  ImageData,
+  TileSourceConfig,
+} from "../../data/image";
+import { LabelsData } from "../../data/labels";
 import {
   Image,
   ImageLayerConfig,
   RawImageLayerConfig,
   createImageLayerConfig,
-} from "../model/image";
+} from "../../model/image";
 import {
   Labels,
   LabelsLayerConfig,
   RawLabelsLayerConfig,
   createLabelsLayerConfig,
-} from "../model/labels";
-import { Layer } from "../model/layer";
-import { DEFAULT_VIEWER_OPTIONS } from "../model/project";
-import { ViewerOptions } from "../types";
-import TransformUtils from "../utils/TransformUtils";
+} from "../../model/labels";
+import { Layer } from "../../model/layer";
+import { DEFAULT_VIEWER_OPTIONS } from "../../model/project";
+import { Rect, ViewerOptions } from "../../types";
+import TransformUtils from "../../utils/TransformUtils";
 
 type BaseTiledImageState = {
   loaded?: boolean;
@@ -49,7 +46,7 @@ type LabelsTiledImageState = BaseTiledImageState & {
 type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
 
 export default class OpenSeadragonController {
-  private readonly _viewer: Viewer;
+  private readonly _viewer: OpenSeadragon.Viewer;
   private readonly _tiledImageStates: TiledImageState[] = [];
   private readonly _animationMemory: {
     viewerValues: Partial<ViewerOptions>;
@@ -58,11 +55,11 @@ export default class OpenSeadragonController {
     viewerValues: {},
     tiledImageValues: [],
   };
-  private _animationStartHandler?: EventHandler<ViewerEvent>;
-  private _animationFinishHandler?: EventHandler<ViewerEvent>;
+  private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
+  private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
 
-  static createViewer(viewerElement: HTMLElement): Viewer {
-    const viewer = new Viewer({
+  static createViewer(viewerElement: HTMLElement): OpenSeadragon.Viewer {
+    const viewer = new OpenSeadragon.Viewer({
       ...DEFAULT_VIEWER_OPTIONS,
       // do not forget to exclude properties from the ViewerOptions type when setting them here
       element: viewerElement,
@@ -77,7 +74,7 @@ export default class OpenSeadragonController {
     return viewer;
   }
 
-  constructor(viewer: Viewer) {
+  constructor(viewer: OpenSeadragon.Viewer) {
     this._viewer = viewer;
   }
 
@@ -185,6 +182,8 @@ export default class OpenSeadragonController {
   }
 
   getViewportBounds(): Rect {
+    // OpenSeadragon.Viewport.getBounds(current):
+    // Returns the bounds of the visible area in viewport coordinates
     return this._viewer.viewport.getBounds(true);
   }
 
@@ -409,7 +408,9 @@ export default class OpenSeadragonController {
       // flipped: layerConfig.flip ?? layerConfigDefaults.flip,
       opacity: OpenSeadragonController._calculateOpacity(layer, object),
       success: (event) => {
-        const newTiledImage = (event as unknown as { item: TiledImage }).item;
+        const newTiledImage = (
+          event as unknown as { item: OpenSeadragon.TiledImage }
+        ).item;
         newTiledImageState.imageWidth = newTiledImage.getContentSize().x;
         newTiledImageState.imageHeight = newTiledImage.getContentSize().y;
         if (
@@ -454,21 +455,21 @@ export default class OpenSeadragonController {
     layer: Layer,
     object: Image,
     layerConfig: ImageLayerConfig,
-    tiledImage: TiledImage,
+    tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void;
   private _updateTiledImage(
     layer: Layer,
     object: Labels,
     layerConfig: LabelsLayerConfig,
-    tiledImage: TiledImage,
+    tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void;
   private _updateTiledImage(
     layer: Layer,
     object: Image | Labels,
     layerConfig: ImageLayerConfig | LabelsLayerConfig,
-    tiledImage: TiledImage,
+    tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void {
     if (tiledImage.getFlip() !== layerConfig.flip) {
@@ -489,19 +490,19 @@ export default class OpenSeadragonController {
   private _updateTiledImageTransform(
     layer: Layer,
     layerConfig: ImageLayerConfig,
-    tiledImage: TiledImage,
+    tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void;
   private _updateTiledImageTransform(
     layer: Layer,
     layerConfig: LabelsLayerConfig,
-    tiledImage: TiledImage,
+    tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void;
   private _updateTiledImageTransform(
     layer: Layer,
     layerConfig: ImageLayerConfig | LabelsLayerConfig,
-    tiledImage: TiledImage,
+    tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void {
     const m = mat3.create();
@@ -527,7 +528,7 @@ export default class OpenSeadragonController {
     }
     const { x, y } = dataToWorldTransform.translation;
     if (bounds.x !== x || bounds.y !== y) {
-      tiledImage.setPosition(new Point(x, y), true);
+      tiledImage.setPosition(new OpenSeadragon.Point(x, y), true);
     }
   }
 

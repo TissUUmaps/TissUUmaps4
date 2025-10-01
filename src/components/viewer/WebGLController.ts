@@ -1,5 +1,5 @@
-import { DrawOptions, Rect } from "../types";
-import WebGLUtils from "../utils/WebGLUtils";
+import { DrawOptions, Rect } from "../../types";
+import WebGLUtils from "../../utils/WebGLUtils";
 import WebGLPointsController from "./WebGLPointsController";
 import WebGLShapesController from "./WebGLShapesController";
 
