@@ -1,4 +1,4 @@
-import { TypedArray } from "../data/types";
+import { TypedArray } from "../types";
 
 export default class WebGLUtils {
   static init(
@@ -59,6 +59,83 @@ export default class WebGLUtils {
     }
   }
 
+  static getUniformLocation(
+    gl: WebGL2RenderingContext,
+    program: WebGLProgram,
+    name: string,
+  ): WebGLUniformLocation {
+    const uniformLocation = gl.getUniformLocation(program, name);
+    if (uniformLocation === null) {
+      throw new Error(`Failed to get uniform location for ${name}`);
+    }
+    return uniformLocation;
+  }
+
+  static createBuffer(gl: WebGL2RenderingContext): WebGLBuffer {
+    const buffer = gl.createBuffer();
+    if (buffer === null) {
+      throw new Error("Failed to create buffer.");
+    }
+    return buffer;
+  }
+
+  static resizeBuffer(
+    gl: WebGL2RenderingContext,
+    buffer: WebGLBuffer,
+    size: GLsizeiptr,
+    target: GLenum = gl.ARRAY_BUFFER,
+    usage: GLenum = gl.STATIC_DRAW,
+  ): void {
+    gl.bindBuffer(target, buffer);
+    gl.bufferData(target, size, usage);
+    gl.bindBuffer(target, null);
+  }
+
+  static createVertexArray(gl: WebGL2RenderingContext): WebGLVertexArrayObject {
+    const vao = gl.createVertexArray();
+    if (vao === null) {
+      throw new Error("Failed to create vertex array object.");
+    }
+    return vao;
+  }
+
+  static configureVertexFloatAttribute(
+    gl: WebGL2RenderingContext,
+    buffer: WebGLBuffer,
+    index: number,
+    size: number,
+    type: GLenum,
+    normalized: boolean = false,
+    stride: number = 0,
+    offset: number = 0,
+    divisor: number = 0,
+    target: GLenum = gl.ARRAY_BUFFER,
+  ): void {
+    gl.bindBuffer(target, buffer);
+    gl.enableVertexAttribArray(index);
+    gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
+    gl.vertexAttribDivisor(index, divisor);
+    gl.bindBuffer(target, null);
+  }
+
+  static configureVertexIntAttribute(
+    gl: WebGL2RenderingContext,
+    buffer: WebGLBuffer,
+    index: number,
+    size: number,
+    type: GLenum,
+    stride: number = 0,
+    offset: number = 0,
+    divisor: number = 1,
+    target: GLenum = gl.ARRAY_BUFFER,
+  ): void {
+    gl.bindBuffer(target, buffer);
+    gl.enableVertexAttribArray(index);
+    gl.vertexAttribIPointer(index, size, type, stride, offset);
+    gl.vertexAttribDivisor(index, divisor);
+    gl.bindBuffer(target, null);
+  }
+
   static async loadTexture(
     gl: WebGL2RenderingContext,
     url: string,
@@ -105,18 +182,6 @@ export default class WebGLUtils {
     return texture;
   }
 
-  static resizeBuffer(
-    gl: WebGL2RenderingContext,
-    buffer: WebGLBuffer,
-    size: GLsizeiptr,
-    target: GLenum = gl.ARRAY_BUFFER,
-    usage: GLenum = gl.STATIC_DRAW,
-  ): void {
-    gl.bindBuffer(target, buffer);
-    gl.bufferData(target, size, usage);
-    gl.bindBuffer(target, null);
-  }
-
   static loadBuffer(
     gl: WebGL2RenderingContext,
     buffer: WebGLBuffer,
@@ -126,43 +191,6 @@ export default class WebGLUtils {
   ): void {
     gl.bindBuffer(target, buffer);
     gl.bufferSubData(target, offset * data.BYTES_PER_ELEMENT, data);
-    gl.bindBuffer(target, null);
-  }
-
-  static configureVertexFloatAttribute(
-    gl: WebGL2RenderingContext,
-    buffer: WebGLBuffer,
-    index: number,
-    size: number,
-    type: GLenum,
-    normalized: boolean = false,
-    stride: number = 0,
-    offset: number = 0,
-    divisor: number = 0,
-    target: GLenum = gl.ARRAY_BUFFER,
-  ): void {
-    gl.bindBuffer(target, buffer);
-    gl.enableVertexAttribArray(index);
-    gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
-    gl.vertexAttribDivisor(index, divisor);
-    gl.bindBuffer(target, null);
-  }
-
-  static configureVertexIntAttribute(
-    gl: WebGL2RenderingContext,
-    buffer: WebGLBuffer,
-    index: number,
-    size: number,
-    type: GLenum,
-    stride: number = 0,
-    offset: number = 0,
-    divisor: number = 1,
-    target: GLenum = gl.ARRAY_BUFFER,
-  ): void {
-    gl.bindBuffer(target, buffer);
-    gl.enableVertexAttribArray(index);
-    gl.vertexAttribIPointer(index, size, type, stride, offset);
-    gl.vertexAttribDivisor(index, divisor);
     gl.bindBuffer(target, null);
   }
 }

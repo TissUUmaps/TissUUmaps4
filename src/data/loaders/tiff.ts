@@ -1,11 +1,15 @@
 import * as geotiff from "geotiff";
 
-import { ILabelsDataSourceModel } from "../../models/labels";
-import { ILabelsData } from "../labels";
-import { UintArray } from "../types";
-import { LabelsDataLoaderBase } from "./base";
+import {
+  LabelsDataSource,
+  LabelsDataSourceKeysWithDefaults,
+  completeLabelsDataSource,
+} from "../../model/labels";
+import { UintArray } from "../../types";
+import { LabelsData } from "../labels";
+import { AbstractLabelsDataLoader } from "./base";
 
-const POOL = new geotiff.Pool();
+// TODO TIFFImageDataLoader
 
 // https://github.com/geotiffjs/geotiff.js/issues/445
 enum SampleFormat {
@@ -15,83 +19,35 @@ enum SampleFormat {
   UNDEFINED = 4,
 }
 
-// TODO TIFFImageDataLoader
+const pool = new geotiff.Pool();
 
 export const TIFF_LABELS_DATA_SOURCE = "tiff";
 
-export interface ITIFFLabelsDataSourceModel
-  extends ILabelsDataSourceModel<typeof TIFF_LABELS_DATA_SOURCE> {
+export interface TIFFLabelsDataSource
+  extends LabelsDataSource<typeof TIFF_LABELS_DATA_SOURCE> {
   tileWidth?: number;
   tileHeight?: number;
 }
 
-export class TIFFLabelsData implements ILabelsData {
-  private readonly _levels: geotiff.GeoTIFFImage[];
-  private readonly _tileWidth: number | null;
-  private readonly _tileHeight: number | null;
+export type TIFFLabelsDataSourceKeysWithDefaults =
+  LabelsDataSourceKeysWithDefaults<typeof TIFF_LABELS_DATA_SOURCE>;
 
-  constructor(
-    levels: geotiff.GeoTIFFImage[],
-    tileWidth: number | null,
-    tileHeight: number | null,
-  ) {
-    this._levels = levels;
-    this._tileWidth = tileWidth;
-    this._tileHeight = tileHeight;
-  }
+export type CompleteTIFFLabelsDataSource = Required<
+  Pick<TIFFLabelsDataSource, TIFFLabelsDataSourceKeysWithDefaults>
+> &
+  Omit<TIFFLabelsDataSource, TIFFLabelsDataSourceKeysWithDefaults>;
 
-  getWidth(level?: number): number {
-    return this._levels[level || 0]!.getWidth();
-  }
-
-  getHeight(level?: number): number {
-    return this._levels[level || 0]!.getHeight();
-  }
-
-  getLevelCount(): number {
-    return this._levels.length;
-  }
-
-  getLevelScale(level: number): number {
-    return this._levels[0]!.getWidth() / this._levels[level]!.getWidth();
-  }
-
-  getTileWidth(level: number): number | undefined {
-    return this._tileWidth || this._levels[level]!.getTileWidth();
-  }
-
-  getTileHeight(level: number): number | undefined {
-    return this._tileHeight || this._levels[level]!.getTileHeight();
-  }
-
-  async loadTile(
-    level: number,
-    x: number,
-    y: number,
-    signal?: AbortSignal,
-  ): Promise<UintArray> {
-    signal?.throwIfAborted();
-    const image = this._levels[level]!;
-    const tile = await image.getTileOrStrip(x, y, 0, POOL, signal);
-    signal?.throwIfAborted();
-    const bitsPerSample = image.getBitsPerSample(0) as number;
-    switch (bitsPerSample) {
-      case 8:
-        return new Uint8Array(tile.data);
-      case 16:
-        return new Uint16Array(tile.data);
-      case 32:
-        return new Uint32Array(tile.data);
-      default:
-        throw new Error(`Unsupported bits per sample: ${bitsPerSample}`);
-    }
-  }
-
-  destroy(): void {}
+export function completeTIFFLabelsDataSource(
+  tiffLabelsDataSource: TIFFLabelsDataSource,
+): CompleteTIFFLabelsDataSource {
+  return {
+    ...completeLabelsDataSource(tiffLabelsDataSource),
+    ...tiffLabelsDataSource,
+  };
 }
 
-export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
-  ITIFFLabelsDataSourceModel,
+export class TIFFLabelsDataLoader extends AbstractLabelsDataLoader<
+  CompleteTIFFLabelsDataSource,
   TIFFLabelsData
 > {
   async loadLabels(signal?: AbortSignal): Promise<TIFFLabelsData> {
@@ -129,8 +85,8 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
     signal?.throwIfAborted();
     return new TIFFLabelsData(
       images.sort((a, b) => b.getWidth() - a.getWidth()),
-      this.dataSource.tileWidth ?? null,
-      this.dataSource.tileHeight ?? null,
+      this.dataSource.tileWidth,
+      this.dataSource.tileHeight,
     );
   }
 
@@ -155,4 +111,69 @@ export class TIFFLabelsDataLoader extends LabelsDataLoaderBase<
     }
     throw new Error("A URL or workspace path is required to load data.");
   }
+}
+
+export class TIFFLabelsData implements LabelsData {
+  private readonly _levels: geotiff.GeoTIFFImage[];
+  private readonly _tileWidth?: number;
+  private readonly _tileHeight?: number;
+
+  constructor(
+    levels: geotiff.GeoTIFFImage[],
+    tileWidth?: number,
+    tileHeight?: number,
+  ) {
+    this._levels = levels;
+    this._tileWidth = tileWidth;
+    this._tileHeight = tileHeight;
+  }
+
+  getWidth(level?: number): number {
+    return this._levels[level ?? 0]!.getWidth();
+  }
+
+  getHeight(level?: number): number {
+    return this._levels[level ?? 0]!.getHeight();
+  }
+
+  getLevelCount(): number {
+    return this._levels.length;
+  }
+
+  getLevelScale(level: number): number {
+    return this._levels[0]!.getWidth() / this._levels[level]!.getWidth();
+  }
+
+  getTileWidth(level: number): number | undefined {
+    return this._tileWidth ?? this._levels[level]!.getTileWidth();
+  }
+
+  getTileHeight(level: number): number | undefined {
+    return this._tileHeight ?? this._levels[level]!.getTileHeight();
+  }
+
+  async loadTile(
+    level: number,
+    x: number,
+    y: number,
+    signal?: AbortSignal,
+  ): Promise<UintArray> {
+    signal?.throwIfAborted();
+    const image = this._levels[level]!;
+    const tile = await image.getTileOrStrip(x, y, 0, pool, signal);
+    signal?.throwIfAborted();
+    const bitsPerSample = image.getBitsPerSample(0) as number;
+    switch (bitsPerSample) {
+      case 8:
+        return new Uint8Array(tile.data);
+      case 16:
+        return new Uint16Array(tile.data);
+      case 32:
+        return new Uint32Array(tile.data);
+      default:
+        throw new Error(`Unsupported bits per sample: ${bitsPerSample}`);
+    }
+  }
+
+  destroy(): void {}
 }

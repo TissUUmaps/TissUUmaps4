@@ -1,25 +1,75 @@
-import { IPointsDataSourceModel } from "../../models/points";
-import { IPointsData } from "../points";
-import { ITableData } from "../table";
-import { PointsDataLoaderBase } from "./base";
+import {
+  PointsDataSource,
+  PointsDataSourceKeysWithDefaults,
+  completePointsDataSource,
+} from "../../model/points";
+import { PointsData } from "../points";
+import { TableData } from "../table";
+import { AbstractPointsDataLoader } from "./base";
 
 // TODO TableShapesDataLoader
 
 export const TABLE_POINTS_DATA_SOURCE = "table";
 
-export interface ITablePointsDataSourceModel
-  extends IPointsDataSourceModel<typeof TABLE_POINTS_DATA_SOURCE> {
+export interface TablePointsDataSource
+  extends PointsDataSource<typeof TABLE_POINTS_DATA_SOURCE> {
   url: undefined; // Table data does not use a URL
   path: undefined; // Table data does not use a path
   tableId: string;
   dimensionColumns?: string[];
 }
 
-export class TablePointsData implements IPointsData {
-  private readonly _tableData: ITableData;
-  private readonly _dimensionColumns: string[] | null;
+export type TablePointsDataSourceKeysWithDefaults =
+  PointsDataSourceKeysWithDefaults<typeof TABLE_POINTS_DATA_SOURCE>;
 
-  constructor(tableData: ITableData, dimensionColumns: string[] | null) {
+export type CompleteTablePointsDataSource = Required<
+  Pick<TablePointsDataSource, TablePointsDataSourceKeysWithDefaults>
+> &
+  Omit<TablePointsDataSource, TablePointsDataSourceKeysWithDefaults>;
+
+export function completeTablePointsDataSource(
+  tablePointsDataSource: TablePointsDataSource,
+): CompleteTablePointsDataSource {
+  return {
+    ...completePointsDataSource(tablePointsDataSource),
+    ...tablePointsDataSource,
+  };
+}
+
+export class TablePointsDataLoader extends AbstractPointsDataLoader<
+  CompleteTablePointsDataSource,
+  PointsData
+> {
+  private readonly _loadTableByID: (
+    tableId: string,
+    signal?: AbortSignal,
+  ) => Promise<TableData>;
+
+  constructor(
+    dataSource: TablePointsDataSource,
+    projectDir: FileSystemDirectoryHandle | null,
+    loadTableByID: TablePointsDataLoader["_loadTableByID"],
+  ) {
+    super(dataSource, projectDir);
+    this._loadTableByID = loadTableByID;
+  }
+
+  async loadPoints(signal?: AbortSignal): Promise<PointsData> {
+    signal?.throwIfAborted();
+    const tableData = await this._loadTableByID(
+      this.dataSource.tableId,
+      signal,
+    );
+    signal?.throwIfAborted();
+    return new TablePointsData(tableData, this.dataSource.dimensionColumns);
+  }
+}
+
+export class TablePointsData implements PointsData {
+  private readonly _tableData: TableData;
+  private readonly _dimensionColumns?: string[];
+
+  constructor(tableData: TableData, dimensionColumns?: string[]) {
     this._tableData = tableData;
     this._dimensionColumns = dimensionColumns;
   }
@@ -29,7 +79,7 @@ export class TablePointsData implements IPointsData {
   }
 
   getDimensions(): string[] {
-    return this._dimensionColumns || this._tableData.getColumns();
+    return this._dimensionColumns ?? this._tableData.getColumns();
   }
 
   async loadCoordinates(
@@ -43,39 +93,4 @@ export class TablePointsData implements IPointsData {
   }
 
   destroy(): void {}
-}
-
-export class TablePointsDataLoader extends PointsDataLoaderBase<
-  ITablePointsDataSourceModel,
-  IPointsData
-> {
-  private readonly _loadTableByID: (
-    tableId: string,
-    signal?: AbortSignal,
-  ) => Promise<ITableData>;
-
-  constructor(
-    dataSource: ITablePointsDataSourceModel,
-    projectDir: FileSystemDirectoryHandle | null,
-    loadTableByID: (
-      tableId: string,
-      signal?: AbortSignal,
-    ) => Promise<ITableData>,
-  ) {
-    super(dataSource, projectDir);
-    this._loadTableByID = loadTableByID;
-  }
-
-  async loadPoints(signal?: AbortSignal): Promise<IPointsData> {
-    signal?.throwIfAborted();
-    const tableData = await this._loadTableByID(
-      this.dataSource.tableId,
-      signal,
-    );
-    signal?.throwIfAborted();
-    return new TablePointsData(
-      tableData,
-      this.dataSource.dimensionColumns ?? null,
-    );
-  }
 }

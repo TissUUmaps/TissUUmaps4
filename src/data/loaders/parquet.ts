@@ -2,19 +2,81 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import { ITableDataSourceModel } from "../../models/table";
-import { ITableData } from "../table";
-import { MappableArrayLike } from "../types";
-import { TableDataLoaderBase } from "./base";
+import {
+  TableDataSource,
+  TableDataSourceKeysWithDefaults,
+  completeTableDataSource,
+} from "../../model/table";
+import { MappableArrayLike } from "../../types";
+import { TableData } from "../table";
+import { AbstractTableDataLoader } from "./base";
 
 export const PARQUET_TABLE_DATA_SOURCE = "parquet";
 
-export interface IParquetTableDataSourceModel
-  extends ITableDataSourceModel<typeof PARQUET_TABLE_DATA_SOURCE> {
+export interface ParquetTableDataSource
+  extends TableDataSource<typeof PARQUET_TABLE_DATA_SOURCE> {
   headers?: { [headerName: string]: string };
 }
 
-export class ParquetTableData implements ITableData {
+export type ParquetTableDataSourceKeysWithDefaults =
+  TableDataSourceKeysWithDefaults<typeof PARQUET_TABLE_DATA_SOURCE>;
+
+export type CompleteParquetTableDataSource = Required<
+  Pick<ParquetTableDataSource, ParquetTableDataSourceKeysWithDefaults>
+> &
+  Omit<ParquetTableDataSource, ParquetTableDataSourceKeysWithDefaults>;
+
+export function completeParquetTableDataSource(
+  parquetTableDataSource: ParquetTableDataSource,
+): CompleteParquetTableDataSource {
+  return {
+    ...completeTableDataSource(parquetTableDataSource),
+    ...parquetTableDataSource,
+  };
+}
+
+export class ParquetTableDataLoader extends AbstractTableDataLoader<
+  CompleteParquetTableDataSource,
+  ParquetTableData
+> {
+  async loadTable(signal?: AbortSignal): Promise<ParquetTableData> {
+    signal?.throwIfAborted();
+    const buffer = await this._loadParquet(signal);
+    signal?.throwIfAborted();
+    const metadata = await hyparquet.parquetMetadataAsync(buffer);
+    signal?.throwIfAborted();
+    return new ParquetTableData(buffer, metadata);
+  }
+
+  private async _loadParquet(
+    signal?: AbortSignal,
+  ): Promise<hyparquet.AsyncBuffer> {
+    signal?.throwIfAborted();
+    if (this.dataSource.path !== undefined && this.workspace !== null) {
+      const fh = await this.workspace.getFileHandle(this.dataSource.path);
+      signal?.throwIfAborted();
+      const file = await fh.getFile();
+      signal?.throwIfAborted();
+      const buffer = await file.arrayBuffer();
+      signal?.throwIfAborted();
+      return buffer;
+    }
+    if (this.dataSource.url !== undefined) {
+      const buffer = await hyparquet.asyncBufferFromUrl({
+        url: this.dataSource.url,
+        requestInit: { headers: this.dataSource.headers },
+      });
+      signal?.throwIfAborted();
+      return buffer;
+    }
+    if (this.dataSource.path !== undefined) {
+      throw new Error("An open workspace is required to open local-only data.");
+    }
+    throw new Error("A URL or workspace path is required to load data.");
+  }
+}
+
+export class ParquetTableData implements TableData {
   private readonly _buffer: hyparquet.AsyncBuffer;
   private readonly _metadata: hyparquet.FileMetaData;
   private readonly _columns: string[];
@@ -51,49 +113,4 @@ export class ParquetTableData implements ITableData {
   }
 
   destroy(): void {}
-}
-
-export class ParquetTableDataLoader extends TableDataLoaderBase<
-  IParquetTableDataSourceModel,
-  ParquetTableData
-> {
-  async loadTable(signal?: AbortSignal): Promise<ParquetTableData> {
-    signal?.throwIfAborted();
-    const buffer = await this._loadParquet(signal);
-    signal?.throwIfAborted();
-    const metadata = await hyparquet.parquetMetadataAsync(buffer);
-    signal?.throwIfAborted();
-    return new ParquetTableData(buffer, metadata);
-  }
-
-  private async _loadParquet(
-    signal?: AbortSignal,
-  ): Promise<hyparquet.AsyncBuffer> {
-    signal?.throwIfAborted();
-    if (this.dataSource.path !== undefined && this.workspace !== null) {
-      const fh = await this.workspace.getFileHandle(this.dataSource.path);
-      signal?.throwIfAborted();
-      const file = await fh.getFile();
-      signal?.throwIfAborted();
-      const buffer = await file.arrayBuffer();
-      signal?.throwIfAborted();
-      return buffer;
-    }
-    if (this.dataSource.url !== undefined) {
-      let requestInit = undefined;
-      if (this.dataSource.headers !== undefined) {
-        requestInit = { headers: this.dataSource.headers };
-      }
-      const buffer = await hyparquet.asyncBufferFromUrl({
-        url: this.dataSource.url,
-        requestInit: requestInit,
-      });
-      signal?.throwIfAborted();
-      return buffer;
-    }
-    if (this.dataSource.path !== undefined) {
-      throw new Error("An open workspace is required to open local-only data.");
-    }
-    throw new Error("A URL or workspace path is required to load data.");
-  }
 }

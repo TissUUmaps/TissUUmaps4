@@ -1,7 +1,9 @@
-import { IData, IDataLoader } from "./base";
-import { UintArray } from "./types";
+import { LabelsDataSource } from "../model/labels";
+import { UintArray } from "../types";
+import { Data, DataLoader } from "./base";
+import { TableData } from "./table";
 
-export interface ILabelsData extends IData {
+export interface LabelsData extends Data {
   getWidth(level?: number): number;
   getHeight(level?: number): number;
   getLevelCount(): number;
@@ -16,7 +18,13 @@ export interface ILabelsData extends IData {
   ): Promise<UintArray>;
 }
 
-export interface ILabelsDataLoader<TLabelsData extends ILabelsData>
-  extends IDataLoader {
+export interface LabelsDataLoader<TLabelsData extends LabelsData>
+  extends DataLoader {
   loadLabels(signal?: AbortSignal): Promise<TLabelsData>;
 }
+
+export type LabelsDataLoaderFactory = (
+  dataSource: LabelsDataSource,
+  projectDir: FileSystemDirectoryHandle | null,
+  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>,
+) => LabelsDataLoader<LabelsData>;

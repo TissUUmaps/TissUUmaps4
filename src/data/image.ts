@@ -1,11 +1,24 @@
-import { IData, IDataLoader } from "./base";
-import { ICustomTileSource, TileSourceConfig } from "./types";
+import { ImageDataSource } from "../model/image";
+import { Data, DataLoader } from "./base";
+import { TableData } from "./table";
 
-export interface IImageData extends IData {
-  getTileSource(): string | TileSourceConfig | ICustomTileSource;
+export type TileSourceConfig = object;
+
+export interface CustomTileSource {
+  getTileUrl(level: number, x: number, y: number): string | (() => string);
 }
 
-export interface IImageDataLoader<TImageData extends IImageData>
-  extends IDataLoader {
+export interface ImageData extends Data {
+  getTileSource(): string | TileSourceConfig | CustomTileSource;
+}
+
+export interface ImageDataLoader<TImageData extends ImageData>
+  extends DataLoader {
   loadImage(signal?: AbortSignal): Promise<TImageData>;
 }
+
+export type ImageDataLoaderFactory = (
+  dataSource: ImageDataSource,
+  projectDir: FileSystemDirectoryHandle | null,
+  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>,
+) => ImageDataLoader<ImageData>;

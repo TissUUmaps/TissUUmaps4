@@ -3,19 +3,19 @@ import { describe, expect, it } from "vitest";
 import ColorUtils from "./ColorUtils";
 
 describe("ColorUtils", () => {
-  describe("parseColormap", () => {
-    it("parses a simple colormap with default separator and maxValue", () => {
-      const cmap = "0 0 0\n1 1 1";
-      const result = ColorUtils.parseColormap(cmap);
+  describe("parseColorPalette", () => {
+    it("parses a simple color palette with default separator and maxValue", () => {
+      const str = "0 0 0\n1 1 1";
+      const result = ColorUtils.parseColorPalette(str);
       expect(result).toEqual([
         { r: 0, g: 0, b: 0 },
         { r: 255, g: 255, b: 255 },
       ]);
     });
 
-    it("parses a colormap with custom separator and maxValue", () => {
-      const cmap = "0,0,0\n0.5,0.5,0.5\n1,1,1";
-      const result = ColorUtils.parseColormap(cmap, ",", 1);
+    it("parses a color palette with custom separator and maxValue", () => {
+      const str = "0,0,0\n0.5,0.5,0.5\n1,1,1";
+      const result = ColorUtils.parseColorPalette(str, ",", 1);
       expect(result).toEqual([
         { r: 0, g: 0, b: 0 },
         { r: 127.5, g: 127.5, b: 127.5 },
@@ -24,15 +24,15 @@ describe("ColorUtils", () => {
     });
 
     it("throws on invalid line", () => {
-      const cmap = "0 0\n1 1 1";
-      expect(() => ColorUtils.parseColormap(cmap)).toThrow(
-        /Invalid colormap line 0/,
+      const str = "0 0\n1 1 1";
+      expect(() => ColorUtils.parseColorPalette(str)).toThrow(
+        /Invalid color palette line 0/,
       );
     });
 
     it("ignores empty lines", () => {
-      const cmap = "\n0 0 0\n\n1 1 1\n";
-      const result = ColorUtils.parseColormap(cmap);
+      const str = "\n0 0 0\n\n1 1 1\n";
+      const result = ColorUtils.parseColorPalette(str);
       expect(result.length).toBe(2);
     });
   });

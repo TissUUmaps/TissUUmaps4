@@ -1,4 +1,4 @@
-import { TypedArray } from "../data/types";
+import { TypedArray } from "../types";
 
 export default class ArrayUtils {
   static fillSeq<T extends TypedArray>(arr: T, seq: number[]): void {
