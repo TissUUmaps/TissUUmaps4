@@ -1,25 +1,28 @@
 import { LabelsData } from "../data/labels";
-import { Labels, LabelsDataSource } from "../model/labels";
+import { CompleteLabels, CompleteLabelsDataSource } from "../model/labels";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
 export type LabelsSlice = LabelsSliceState & LabelsSliceActions;
 
 export type LabelsSliceState = {
-  labelsMap: Map<string, Labels>;
-  labelsDataCache: Map<LabelsDataSource, LabelsData>;
+  labelsMap: Map<string, CompleteLabels>;
+  labelsDataCache: Map<CompleteLabelsDataSource, LabelsData>;
 };
 
 export type LabelsSliceActions = {
-  addLabels: (labels: Labels, index?: number) => void;
-  loadLabels: (labels: Labels, signal?: AbortSignal) => Promise<LabelsData>;
+  addLabels: (labels: CompleteLabels, index?: number) => void;
+  loadLabels: (
+    labels: CompleteLabels,
+    signal?: AbortSignal,
+  ) => Promise<LabelsData>;
   loadLabelsByID: (
     labelsId: string,
     signal?: AbortSignal,
   ) => Promise<LabelsData>;
-  unloadLabels: (labels: Labels) => void;
+  unloadLabels: (labels: CompleteLabels) => void;
   unloadLabelsByID: (labelsId: string) => void;
-  deleteLabels: (labels: Labels) => void;
+  deleteLabels: (labels: CompleteLabels) => void;
   deleteLabelsByID: (labelsId: string) => void;
   clearLabels: () => void;
 };

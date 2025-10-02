@@ -1,4 +1,4 @@
-import { RawImageDataSource } from "../model/image";
+import { ImageDataSource } from "../model/image";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";
 
@@ -18,7 +18,7 @@ export interface ImageDataLoader<TImageData extends ImageData>
 }
 
 export type ImageDataLoaderFactory = (
-  dataSource: RawImageDataSource,
+  dataSource: ImageDataSource,
   projectDir: FileSystemDirectoryHandle | null,
   loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>,
 ) => ImageDataLoader<ImageData>;

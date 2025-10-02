@@ -1,14 +1,26 @@
 import * as papaparse from "papaparse";
 
-import { RawTableDataSource, createTableDataSource } from "../../model/table";
+import {
+  TableDataSource,
+  TableDataSourceKeysWithDefaults,
+  completeTableDataSource,
+} from "../../model/table";
 import { MappableArrayLike, TypedArray } from "../../types";
 import { TableData } from "../table";
 import { AbstractTableDataLoader } from "./base";
 
 export const CSV_TABLE_DATA_SOURCE = "csv";
 
-export interface RawCSVTableDataSource
-  extends RawTableDataSource<typeof CSV_TABLE_DATA_SOURCE> {
+export const DEFAULT_CSV_TABLE_DATA_SOURCE_CHUNK_SIZE = 10000;
+export const DEFAULT_CSV_TABLE_DATA_SOURCE_PARSE_CONFIG: Exclude<
+  CSVTableDataSource["parseConfig"],
+  undefined
+> = {
+  delimiter: ",",
+};
+
+export interface CSVTableDataSource
+  extends TableDataSource<typeof CSV_TABLE_DATA_SOURCE> {
   columns?: string[];
   loadColumns?: string[];
   chunkSize?: number;
@@ -30,31 +42,29 @@ export interface RawCSVTableDataSource
     >;
 }
 
-type DefaultedCSVTableDataSourceKeys = keyof Omit<
-  RawCSVTableDataSource,
-  "type" | "url" | "path" | "columns" | "loadColumns"
->;
+export type CSVTableDataSourceKeysWithDefaults =
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  | TableDataSourceKeysWithDefaults<typeof CSV_TABLE_DATA_SOURCE>
+  | keyof Pick<CSVTableDataSource, "chunkSize" | "parseConfig">;
 
-export type CSVTableDataSource = Required<
-  Pick<RawCSVTableDataSource, DefaultedCSVTableDataSourceKeys>
+export type CompleteCSVTableDataSource = Required<
+  Pick<CSVTableDataSource, CSVTableDataSourceKeysWithDefaults>
 > &
-  Omit<RawCSVTableDataSource, DefaultedCSVTableDataSourceKeys>;
+  Omit<CSVTableDataSource, CSVTableDataSourceKeysWithDefaults>;
 
-export function createCSVTableDataSource(
-  rawCSVTableDataSource: RawCSVTableDataSource,
-): CSVTableDataSource {
+export function completeCSVTableDataSource(
+  csvTableDataSource: CSVTableDataSource,
+): CompleteCSVTableDataSource {
   return {
-    chunkSize: 10000,
-    parseConfig: {
-      delimiter: ",",
-    },
-    ...createTableDataSource(rawCSVTableDataSource),
-    ...rawCSVTableDataSource,
+    ...completeTableDataSource(csvTableDataSource),
+    chunkSize: DEFAULT_CSV_TABLE_DATA_SOURCE_CHUNK_SIZE,
+    parseConfig: DEFAULT_CSV_TABLE_DATA_SOURCE_PARSE_CONFIG,
+    ...csvTableDataSource,
   };
 }
 
 export class CSVTableDataLoader extends AbstractTableDataLoader<
-  CSVTableDataSource,
+  CompleteCSVTableDataSource,
   CSVTableData
 > {
   async loadTable(signal?: AbortSignal): Promise<CSVTableData> {

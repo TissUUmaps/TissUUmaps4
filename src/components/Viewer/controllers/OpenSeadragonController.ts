@@ -8,19 +8,19 @@ import {
 } from "../../../data/image";
 import { LabelsData } from "../../../data/labels";
 import {
-  Image,
+  CompleteImage,
+  CompleteImageLayerConfig,
   ImageLayerConfig,
-  RawImageLayerConfig,
-  createImageLayerConfig,
+  completeImageLayerConfig,
 } from "../../../model/image";
 import {
-  Labels,
+  CompleteLabels,
+  CompleteLabelsLayerConfig,
   LabelsLayerConfig,
-  RawLabelsLayerConfig,
-  createLabelsLayerConfig,
+  completeLabelsLayerConfig,
 } from "../../../model/labels";
-import { Layer } from "../../../model/layer";
-import { DEFAULT_VIEWER_OPTIONS } from "../../../model/project";
+import { CompleteLayer } from "../../../model/layer";
+import { DEFAULT_PROJECT_VIEWER_OPTIONS } from "../../../model/project";
 import { Rect, ViewerOptions } from "../../../types";
 import TransformUtils from "../../../utils/TransformUtils";
 
@@ -34,13 +34,13 @@ type BaseTiledImageState = {
 };
 
 type ImageTiledImageState = BaseTiledImageState & {
-  image: Image;
-  rawLayerConfig: RawImageLayerConfig;
+  image: CompleteImage;
+  rawLayerConfig: ImageLayerConfig;
 };
 
 type LabelsTiledImageState = BaseTiledImageState & {
-  labels: Labels;
-  rawLayerConfig: RawLabelsLayerConfig;
+  labels: CompleteLabels;
+  rawLayerConfig: LabelsLayerConfig;
 };
 
 type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
@@ -60,7 +60,7 @@ export default class OpenSeadragonController {
 
   static createViewer(viewerElement: HTMLElement): OpenSeadragon.Viewer {
     const viewer = new OpenSeadragon.Viewer({
-      ...DEFAULT_VIEWER_OPTIONS,
+      ...DEFAULT_PROJECT_VIEWER_OPTIONS,
       // do not forget to exclude properties from the ViewerOptions type when setting them here
       element: viewerElement,
     });
@@ -162,11 +162,17 @@ export default class OpenSeadragonController {
   }
 
   async synchronize(
-    layerMap: Map<string, Layer>,
-    imageMap: Map<string, Image>,
-    labelsMap: Map<string, Labels>,
-    loadImage: (image: Image, signal?: AbortSignal) => Promise<ImageData>,
-    loadLabels: (labels: Labels, signal?: AbortSignal) => Promise<LabelsData>,
+    layerMap: Map<string, CompleteLayer>,
+    imageMap: Map<string, CompleteImage>,
+    labelsMap: Map<string, CompleteLabels>,
+    loadImage: (
+      image: CompleteImage,
+      signal?: AbortSignal,
+    ) => Promise<ImageData>,
+    loadLabels: (
+      labels: CompleteLabels,
+      signal?: AbortSignal,
+    ) => Promise<LabelsData>,
     signal?: AbortSignal,
   ): Promise<void> {
     signal?.throwIfAborted();
@@ -193,9 +199,9 @@ export default class OpenSeadragonController {
   }
 
   private _cleanTiledImages(
-    layerMap: Map<string, Layer>,
-    imageMap: Map<string, Image>,
-    labelsMap: Map<string, Labels>,
+    layerMap: Map<string, CompleteLayer>,
+    imageMap: Map<string, CompleteImage>,
+    labelsMap: Map<string, CompleteLabels>,
   ): void {
     for (let i = 0; i < this._tiledImageStates.length; i++) {
       const tiledImageState = this._tiledImageStates[i]!;
@@ -225,11 +231,17 @@ export default class OpenSeadragonController {
   }
 
   private async _createOrUpdateTiledImages(
-    layerMap: Map<string, Layer>,
-    imageMap: Map<string, Image>,
-    labelsMap: Map<string, Labels>,
-    loadImage: (image: Image, signal?: AbortSignal) => Promise<ImageData>,
-    loadLabels: (labels: Labels, signal?: AbortSignal) => Promise<LabelsData>,
+    layerMap: Map<string, CompleteLayer>,
+    imageMap: Map<string, CompleteImage>,
+    labelsMap: Map<string, CompleteLabels>,
+    loadImage: (
+      image: CompleteImage,
+      signal?: AbortSignal,
+    ) => Promise<ImageData>,
+    loadLabels: (
+      labels: CompleteLabels,
+      signal?: AbortSignal,
+    ) => Promise<LabelsData>,
     signal?: AbortSignal,
   ): Promise<void> {
     signal?.throwIfAborted();
@@ -258,7 +270,7 @@ export default class OpenSeadragonController {
                 tiledImageState.image === image &&
                 tiledImageState.rawLayerConfig === rawLayerConfig,
             );
-            const layerConfig = createImageLayerConfig(rawLayerConfig);
+            const layerConfig = completeImageLayerConfig(rawLayerConfig);
             this._createOrUpdateTiledImage(
               layer,
               image,
@@ -295,7 +307,7 @@ export default class OpenSeadragonController {
                 tiledImageState.labels === labels &&
                 tiledImageState.rawLayerConfig === rawLayerConfig,
             );
-            const layerConfig = createLabelsLayerConfig(rawLayerConfig);
+            const layerConfig = completeLabelsLayerConfig(rawLayerConfig);
             this._createOrUpdateTiledImage(
               layer,
               labels,
@@ -316,27 +328,27 @@ export default class OpenSeadragonController {
   }
 
   private _createOrUpdateTiledImage(
-    layer: Layer,
-    object: Image,
-    layerConfig: ImageLayerConfig,
+    layer: CompleteLayer,
+    object: CompleteImage,
+    layerConfig: CompleteImageLayerConfig,
     currentIndex: number,
     desiredIndex: number,
     createTileSource: () => string | TileSourceConfig | CustomTileSource,
     createTiledImageState: () => TiledImageState,
   ): void;
   private _createOrUpdateTiledImage(
-    layer: Layer,
-    object: Labels,
-    layerConfig: LabelsLayerConfig,
+    layer: CompleteLayer,
+    object: CompleteLabels,
+    layerConfig: CompleteLabelsLayerConfig,
     currentIndex: number,
     desiredIndex: number,
     createTileSource: () => string | TileSourceConfig | CustomTileSource,
     createTiledImageState: () => TiledImageState,
   ): void;
   private _createOrUpdateTiledImage(
-    layer: Layer,
-    object: Image | Labels,
-    layerConfig: ImageLayerConfig | LabelsLayerConfig,
+    layer: CompleteLayer,
+    object: CompleteImage | CompleteLabels,
+    layerConfig: CompleteImageLayerConfig | CompleteLabelsLayerConfig,
     currentIndex: number,
     desiredIndex: number,
     createTileSource: () => string | TileSourceConfig | CustomTileSource,
@@ -378,25 +390,25 @@ export default class OpenSeadragonController {
 
   private _createTiledImage(
     index: number,
-    layer: Layer,
-    object: Image,
-    layerConfig: ImageLayerConfig,
+    layer: CompleteLayer,
+    object: CompleteImage,
+    layerConfig: CompleteImageLayerConfig,
     createTileSource: () => string | TileSourceConfig | CustomTileSource,
     createTiledImageState: () => TiledImageState,
   ): void;
   private _createTiledImage(
     index: number,
-    layer: Layer,
-    object: Labels,
-    layerConfig: LabelsLayerConfig,
+    layer: CompleteLayer,
+    object: CompleteLabels,
+    layerConfig: CompleteLabelsLayerConfig,
     createTileSource: () => string | TileSourceConfig | CustomTileSource,
     createTiledImageState: () => TiledImageState,
   ): void;
   private _createTiledImage(
     index: number,
-    layer: Layer,
-    object: Image | Labels,
-    layerConfig: ImageLayerConfig | LabelsLayerConfig,
+    layer: CompleteLayer,
+    object: CompleteImage | CompleteLabels,
+    layerConfig: CompleteImageLayerConfig | CompleteLabelsLayerConfig,
     createTileSource: () => string | TileSourceConfig | CustomTileSource,
     createTiledImageState: () => TiledImageState,
   ): void {
@@ -452,23 +464,23 @@ export default class OpenSeadragonController {
   }
 
   private _updateTiledImage(
-    layer: Layer,
-    object: Image,
-    layerConfig: ImageLayerConfig,
+    layer: CompleteLayer,
+    object: CompleteImage,
+    layerConfig: CompleteImageLayerConfig,
     tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void;
   private _updateTiledImage(
-    layer: Layer,
-    object: Labels,
-    layerConfig: LabelsLayerConfig,
+    layer: CompleteLayer,
+    object: CompleteLabels,
+    layerConfig: CompleteLabelsLayerConfig,
     tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void;
   private _updateTiledImage(
-    layer: Layer,
-    object: Image | Labels,
-    layerConfig: ImageLayerConfig | LabelsLayerConfig,
+    layer: CompleteLayer,
+    object: CompleteImage | CompleteLabels,
+    layerConfig: CompleteImageLayerConfig | CompleteLabelsLayerConfig,
     tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void {
@@ -488,20 +500,20 @@ export default class OpenSeadragonController {
   }
 
   private _updateTiledImageTransform(
-    layer: Layer,
-    layerConfig: ImageLayerConfig,
+    layer: CompleteLayer,
+    layerConfig: CompleteImageLayerConfig,
     tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void;
   private _updateTiledImageTransform(
-    layer: Layer,
-    layerConfig: LabelsLayerConfig,
+    layer: CompleteLayer,
+    layerConfig: CompleteLabelsLayerConfig,
     tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void;
   private _updateTiledImageTransform(
-    layer: Layer,
-    layerConfig: ImageLayerConfig | LabelsLayerConfig,
+    layer: CompleteLayer,
+    layerConfig: CompleteImageLayerConfig | CompleteLabelsLayerConfig,
     tiledImage: OpenSeadragon.TiledImage,
     tiledImageState: TiledImageState,
   ): void {
@@ -532,11 +544,17 @@ export default class OpenSeadragonController {
     }
   }
 
-  private static _calculateOpacity(layer: Layer, object: Image): number;
-  private static _calculateOpacity(layer: Layer, object: Labels): number;
   private static _calculateOpacity(
-    layer: Layer,
-    object: Image | Labels,
+    layer: CompleteLayer,
+    object: CompleteImage,
+  ): number;
+  private static _calculateOpacity(
+    layer: CompleteLayer,
+    object: CompleteLabels,
+  ): number;
+  private static _calculateOpacity(
+    layer: CompleteLayer,
+    object: CompleteImage | CompleteLabels,
   ): number {
     const visibility = layer.visibility && object.visibility;
     const opacity = layer.opacity * object.opacity;

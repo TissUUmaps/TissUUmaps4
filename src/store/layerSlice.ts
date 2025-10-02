@@ -1,16 +1,16 @@
-import { Layer } from "../model/layer";
+import { CompleteLayer } from "../model/layer";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
 export type LayerSlice = LayerSliceState & LayerSliceActions;
 
 export type LayerSliceState = {
-  layerMap: Map<string, Layer>;
+  layerMap: Map<string, CompleteLayer>;
 };
 
 export type LayerSliceActions = {
-  addLayer: (layer: Layer, index?: number) => void;
-  deleteLayer: (layer: Layer) => void;
+  addLayer: (layer: CompleteLayer, index?: number) => void;
+  deleteLayer: (layer: CompleteLayer) => void;
   deleteLayerByID: (layerId: string) => void;
   clearLayers: () => void;
 };

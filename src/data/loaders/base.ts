@@ -1,9 +1,9 @@
-import { RawDataSource } from "../../model/base";
+import { DataSource } from "../../model/base";
 import { ImageDataSource } from "../../model/image";
 import { LabelsDataSource } from "../../model/labels";
 import { PointsDataSource } from "../../model/points";
 import { ShapesDataSource } from "../../model/shapes";
-import { TableDataSource } from "../../model/table";
+import { CompleteTableDataSource } from "../../model/table";
 import { DataLoader } from "../base";
 import { ImageData, ImageDataLoader } from "../image";
 import { LabelsData, LabelsDataLoader } from "../labels";
@@ -11,7 +11,7 @@ import { PointsData, PointsDataLoader } from "../points";
 import { ShapesData, ShapesDataLoader } from "../shapes";
 import { TableData, TableDataLoader } from "../table";
 
-export abstract class AbstractDataLoader<TDataSource extends RawDataSource>
+export abstract class AbstractDataLoader<TDataSource extends DataSource>
   implements DataLoader
 {
   protected readonly dataSource: TDataSource;
@@ -67,7 +67,7 @@ export abstract class AbstractShapesDataLoader<
 }
 
 export abstract class AbstractTableDataLoader<
-    TTableDataSource extends TableDataSource,
+    TTableDataSource extends CompleteTableDataSource,
     TTableData extends TableData,
   >
   extends AbstractDataLoader<TTableDataSource>

@@ -1,79 +1,128 @@
 import {
-  RawDataSource,
-  RawLayerConfig,
-  RawRenderedDataModel,
-  createDataSource,
-  createLayerConfig,
-  createRenderedDataModel,
+  DataSource,
+  DataSourceKeysWithDefaults,
+  LayerConfig,
+  LayerConfigKeysWithDefaults,
+  RenderedDataObject,
+  RenderedDataObjectKeysWithDefaults,
+  completeDataSource,
+  completeLayerConfig,
+  completeRenderedDataObject,
 } from "./base";
 
-/** A 2D raster image */
+/**
+ * A two-dimensional raster image
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawImage
-  extends RawRenderedDataModel<RawImageDataSource, RawImageLayerConfig> {}
+export interface Image
+  extends RenderedDataObject<ImageDataSource, ImageLayerConfig> {}
 
-type DefaultedImageKeys = keyof Omit<
-  RawImage,
-  "id" | "name" | "dataSource" | "layerConfigs"
+/**
+ * {@link Image} properties that have default values
+ *
+ * @internal
+ */
+export type ImageKeysWithDefaults = RenderedDataObjectKeysWithDefaults<
+  ImageDataSource,
+  ImageLayerConfig
 >;
 
-export type Image = Required<Pick<RawImage, DefaultedImageKeys>> &
-  Omit<RawImage, DefaultedImageKeys>;
+/**
+ * An {@link Image} with default values applied
+ *
+ * @internal
+ */
+export type CompleteImage = Required<Pick<Image, ImageKeysWithDefaults>> &
+  Omit<Image, ImageKeysWithDefaults>;
 
-export function createImage(rawImage: RawImage): Image {
-  return {
-    ...createRenderedDataModel(rawImage),
-    visibility: true,
-    opacity: 1,
-    ...rawImage,
-  };
+/**
+ * Creates a {@link CompleteImage} from an {@link Image} by applying default values
+ *
+ * @param image - The raw image
+ * @returns The complete image with default values applied
+ *
+ * @internal
+ */
+export function completeImage(image: Image): CompleteImage {
+  return { ...completeRenderedDataObject(image), ...image };
 }
 
-/** A data source for 2D raster images */
+/**
+ * A data source for two-dimensional raster images
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawImageDataSource<TType extends string = string>
-  extends RawDataSource<TType> {}
+export interface ImageDataSource<TType extends string = string>
+  extends DataSource<TType> {}
 
-type DefaultedImageDataSourceKeys<TType extends string = string> = keyof Omit<
-  RawImageDataSource<TType>,
-  "type" | "url" | "path"
->;
+/**
+ * {@link ImageDataSource} properties that have default values
+ *
+ * @internal
+ */
+export type ImageDataSourceKeysWithDefaults<TType extends string = string> =
+  DataSourceKeysWithDefaults<TType>;
 
-export type ImageDataSource<TType extends string = string> = Required<
-  Pick<RawImageDataSource<TType>, DefaultedImageDataSourceKeys<TType>>
+/**
+ * An {@link ImageDataSource} with default values applied
+ *
+ * @internal
+ */
+export type CompleteImageDataSource<TType extends string = string> = Required<
+  Pick<ImageDataSource<TType>, ImageDataSourceKeysWithDefaults<TType>>
 > &
-  Omit<RawImageDataSource<TType>, DefaultedImageDataSourceKeys<TType>>;
+  Omit<ImageDataSource<TType>, ImageDataSourceKeysWithDefaults<TType>>;
 
-export function createImageDataSource<TType extends string = string>(
-  rawImageDataSource: RawImageDataSource<TType>,
-): ImageDataSource<TType> {
-  return { ...createDataSource(rawImageDataSource), ...rawImageDataSource };
+/**
+ * Creates a {@link CompleteImageDataSource} from an {@link ImageDataSource} by applying default values
+ *
+ * @param imageDataSource - The raw image data source
+ * @returns The complete image data source with default values applied
+ *
+ * @internal
+ */
+export function completeImageDataSource<TType extends string = string>(
+  imageDataSource: ImageDataSource<TType>,
+): CompleteImageDataSource<TType> {
+  return { ...completeDataSource(imageDataSource), ...imageDataSource };
 }
 
-/** A layer-specific display configuration for 2D raster images */
-export interface RawImageLayerConfig extends RawLayerConfig {
-  /** Layer ID */
+/**
+ * A layer-specific display configuration for two-dimensional raster images
+ */
+export interface ImageLayerConfig extends LayerConfig {
+  /**
+   * Layer ID
+   */
   layerId: string;
 }
 
-type DefaultedImageLayerConfigKeys = keyof Omit<RawImageLayerConfig, "layerId">;
+/**
+ * {@link ImageLayerConfig} properties that have default values
+ *
+ * @internal
+ */
+export type ImageLayerConfigKeysWithDefaults = LayerConfigKeysWithDefaults;
 
-export type ImageLayerConfig = Required<
-  Pick<RawImageLayerConfig, DefaultedImageLayerConfigKeys>
+/**
+ * An {@link ImageLayerConfig} with default values applied
+ *
+ * @internal
+ */
+export type CompleteImageLayerConfig = Required<
+  Pick<ImageLayerConfig, ImageLayerConfigKeysWithDefaults>
 > &
-  Omit<RawImageLayerConfig, DefaultedImageLayerConfigKeys>;
+  Omit<ImageLayerConfig, ImageLayerConfigKeysWithDefaults>;
 
-export function createImageLayerConfig(
-  rawImageLayerConfig: RawImageLayerConfig,
-): ImageLayerConfig {
-  return {
-    ...createLayerConfig(rawImageLayerConfig),
-    flip: false,
-    transform: {
-      scale: 1,
-      rotation: 0,
-      translation: { x: 0, y: 0 },
-    },
-    ...rawImageLayerConfig,
-  };
+/**
+ * Creates a {@link CompleteImageLayerConfig} from an {@link ImageLayerConfig} by applying default values
+ *
+ * @param imageLayerConfig - The raw image layer configuration
+ * @returns The complete image layer configuration with default values applied
+ *
+ * @internal
+ */
+export function completeImageLayerConfig(
+  imageLayerConfig: ImageLayerConfig,
+): CompleteImageLayerConfig {
+  return { ...completeLayerConfig(imageLayerConfig), ...imageLayerConfig };
 }

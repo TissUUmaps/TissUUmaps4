@@ -1,35 +1,37 @@
-import { RawImageDataSource, createImageDataSource } from "../../model/image";
+import {
+  ImageDataSource,
+  ImageDataSourceKeysWithDefaults,
+  completeImageDataSource,
+} from "../../model/image";
 import { CustomTileSource, ImageData, TileSourceConfig } from "../image";
 import { AbstractImageDataLoader } from "./base";
 
 export const DEFAULT_IMAGE_DATA_SOURCE = "default";
 
-export interface RawDefaultImageDataSource
-  extends RawImageDataSource<typeof DEFAULT_IMAGE_DATA_SOURCE> {
+export interface DefaultImageDataSource
+  extends ImageDataSource<typeof DEFAULT_IMAGE_DATA_SOURCE> {
   tileSourceConfig?: TileSourceConfig;
 }
 
-type DefaultedDefaultImageDataSourceKeys = keyof Omit<
-  RawDefaultImageDataSource,
-  "type" | "url" | "path" | "tileSourceConfig"
->;
+export type DefaultImageDataSourceKeysWithDefaults =
+  ImageDataSourceKeysWithDefaults<typeof DEFAULT_IMAGE_DATA_SOURCE>;
 
-export type DefaultImageDataSource = Required<
-  Pick<RawDefaultImageDataSource, DefaultedDefaultImageDataSourceKeys>
+export type CompleteDefaultImageDataSource = Required<
+  Pick<DefaultImageDataSource, DefaultImageDataSourceKeysWithDefaults>
 > &
-  Omit<RawDefaultImageDataSource, DefaultedDefaultImageDataSourceKeys>;
+  Omit<DefaultImageDataSource, DefaultImageDataSourceKeysWithDefaults>;
 
-export function createDefaultImageDataSource(
-  rawDefaultImageDataSource: RawDefaultImageDataSource,
-): DefaultImageDataSource {
+export function completeDefaultImageDataSource(
+  defaultImageDataSource: DefaultImageDataSource,
+): CompleteDefaultImageDataSource {
   return {
-    ...createImageDataSource(rawDefaultImageDataSource),
-    ...rawDefaultImageDataSource,
+    ...completeImageDataSource(defaultImageDataSource),
+    ...defaultImageDataSource,
   };
 }
 
 export class DefaultImageDataLoader extends AbstractImageDataLoader<
-  DefaultImageDataSource,
+  CompleteDefaultImageDataSource,
   DefaultImageData
 > {
   async loadImage(signal?: AbortSignal): Promise<DefaultImageData> {

@@ -1,9 +1,9 @@
-import { Image } from "../../model/image";
+import { CompleteImage } from "../../model/image";
 import ImageSettingsPanel from "./ImageSettingsPanel";
 
 type ImagePanelProps = {
   imageId: string;
-  image: Image;
+  image: CompleteImage;
 };
 
 export default function ImagePanel(props: ImagePanelProps) {

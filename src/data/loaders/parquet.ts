@@ -2,39 +2,41 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import { RawTableDataSource, createTableDataSource } from "../../model/table";
+import {
+  TableDataSource,
+  TableDataSourceKeysWithDefaults,
+  completeTableDataSource,
+} from "../../model/table";
 import { MappableArrayLike } from "../../types";
 import { TableData } from "../table";
 import { AbstractTableDataLoader } from "./base";
 
 export const PARQUET_TABLE_DATA_SOURCE = "parquet";
 
-export interface RawParquetTableDataSource
-  extends RawTableDataSource<typeof PARQUET_TABLE_DATA_SOURCE> {
+export interface ParquetTableDataSource
+  extends TableDataSource<typeof PARQUET_TABLE_DATA_SOURCE> {
   headers?: { [headerName: string]: string };
 }
 
-type DefaultedParquetTableDataSourceKeys = keyof Omit<
-  RawParquetTableDataSource,
-  "type" | "url" | "path" | "headers"
->;
+export type ParquetTableDataSourceKeysWithDefaults =
+  TableDataSourceKeysWithDefaults<typeof PARQUET_TABLE_DATA_SOURCE>;
 
-export type ParquetTableDataSource = Required<
-  Pick<RawParquetTableDataSource, DefaultedParquetTableDataSourceKeys>
+export type CompleteParquetTableDataSource = Required<
+  Pick<ParquetTableDataSource, ParquetTableDataSourceKeysWithDefaults>
 > &
-  Omit<RawParquetTableDataSource, DefaultedParquetTableDataSourceKeys>;
+  Omit<ParquetTableDataSource, ParquetTableDataSourceKeysWithDefaults>;
 
-export function createParquetTableDataSource(
-  rawParquetTableDataSource: RawParquetTableDataSource,
-): ParquetTableDataSource {
+export function completeParquetTableDataSource(
+  parquetTableDataSource: ParquetTableDataSource,
+): CompleteParquetTableDataSource {
   return {
-    ...createTableDataSource(rawParquetTableDataSource),
-    ...rawParquetTableDataSource,
+    ...completeTableDataSource(parquetTableDataSource),
+    ...parquetTableDataSource,
   };
 }
 
 export class ParquetTableDataLoader extends AbstractTableDataLoader<
-  ParquetTableDataSource,
+  CompleteParquetTableDataSource,
   ParquetTableData
 > {
   async loadTable(signal?: AbortSignal): Promise<ParquetTableData> {

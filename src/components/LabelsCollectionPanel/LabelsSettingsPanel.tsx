@@ -1,8 +1,8 @@
-import { Labels } from "../../model/labels";
+import { CompleteLabels } from "../../model/labels";
 
 type LabelsSettingsPanelProps = {
   labelsId: string;
-  labels: Labels;
+  labels: CompleteLabels;
 };
 
 export default function LabelsSettingsPanel(

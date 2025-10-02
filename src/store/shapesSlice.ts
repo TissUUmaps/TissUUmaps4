@@ -1,25 +1,28 @@
 import { ShapesData } from "../data/shapes";
-import { Shapes, ShapesDataSource } from "../model/shapes";
+import { CompleteShapes, CompleteShapesDataSource } from "../model/shapes";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
 export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
 
 export type ShapesSliceState = {
-  shapesMap: Map<string, Shapes>;
-  shapesDataCache: Map<ShapesDataSource, ShapesData>;
+  shapesMap: Map<string, CompleteShapes>;
+  shapesDataCache: Map<CompleteShapesDataSource, ShapesData>;
 };
 
 export type ShapesSliceActions = {
-  addShapes: (shapes: Shapes, index?: number) => void;
-  loadShapes: (shapes: Shapes, signal?: AbortSignal) => Promise<ShapesData>;
+  addShapes: (shapes: CompleteShapes, index?: number) => void;
+  loadShapes: (
+    shapes: CompleteShapes,
+    signal?: AbortSignal,
+  ) => Promise<ShapesData>;
   loadShapesByID: (
     shapesId: string,
     signal?: AbortSignal,
   ) => Promise<ShapesData>;
-  unloadShapes: (shapes: Shapes) => void;
+  unloadShapes: (shapes: CompleteShapes) => void;
   unloadShapesByID: (shapesId: string) => void;
-  deleteShapes: (shapes: Shapes) => void;
+  deleteShapes: (shapes: CompleteShapes) => void;
   deleteShapesByID: (shapesId: string) => void;
   clearShapes: () => void;
 };

@@ -1,4 +1,4 @@
-import { RawLabelsDataSource } from "../model/labels";
+import { LabelsDataSource } from "../model/labels";
 import { UintArray } from "../types";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";
@@ -24,7 +24,7 @@ export interface LabelsDataLoader<TLabelsData extends LabelsData>
 }
 
 export type LabelsDataLoaderFactory = (
-  dataSource: RawLabelsDataSource,
+  dataSource: LabelsDataSource,
   projectDir: FileSystemDirectoryHandle | null,
   loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>,
 ) => LabelsDataLoader<LabelsData>;

@@ -2,8 +2,9 @@ import { ZipFileStore } from "@zarrita/storage";
 import * as zarrita from "zarrita";
 
 import {
-  RawLabelsDataSource,
-  createLabelsDataSource,
+  LabelsDataSource,
+  LabelsDataSourceKeysWithDefaults,
+  completeLabelsDataSource,
 } from "../../model/labels";
 import { UintArray } from "../../types";
 import { LabelsData } from "../labels";
@@ -13,36 +14,39 @@ import { AbstractLabelsDataLoader } from "./base";
 
 export const ZARR_LABELS_DATA_SOURCE = "zarr";
 
-export interface RawZarrLabelsDataSource
-  extends RawLabelsDataSource<typeof ZARR_LABELS_DATA_SOURCE> {
+export const DEFAULT_ZARR_LABELS_DATA_SOURCE_AXES = { x: 1, y: 0 };
+export const DEFAULT_ZARR_LABELS_DATA_SOURCE_HAS_LEVELS = false;
+
+export interface ZarrLabelsDataSource
+  extends LabelsDataSource<typeof ZARR_LABELS_DATA_SOURCE> {
   axes?: { x: number; y: number };
   hasLevels?: boolean;
   fetchStoreOptions?: ConstructorParameters<typeof zarrita.FetchStore>[1];
 }
 
-type DefaultedZarrLabelsDataSourceKeys = keyof Omit<
-  RawZarrLabelsDataSource,
-  "type" | "url" | "path" | "fetchStoreOptions"
->;
+export type ZarrLabelsDataSourceKeysWithDefaults =
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  | LabelsDataSourceKeysWithDefaults<typeof ZARR_LABELS_DATA_SOURCE>
+  | keyof Pick<ZarrLabelsDataSource, "axes" | "hasLevels">;
 
-export type ZarrLabelsDataSource = Required<
-  Pick<RawZarrLabelsDataSource, DefaultedZarrLabelsDataSourceKeys>
+export type CompleteZarrLabelsDataSource = Required<
+  Pick<ZarrLabelsDataSource, ZarrLabelsDataSourceKeysWithDefaults>
 > &
-  Omit<RawZarrLabelsDataSource, DefaultedZarrLabelsDataSourceKeys>;
+  Omit<ZarrLabelsDataSource, ZarrLabelsDataSourceKeysWithDefaults>;
 
-export function createZarrLabelsDataSource(
-  rawZarrLabelsDataSource: RawZarrLabelsDataSource,
-): ZarrLabelsDataSource {
+export function completeZarrLabelsDataSource(
+  zarrLabelsDataSource: ZarrLabelsDataSource,
+): CompleteZarrLabelsDataSource {
   return {
-    axes: { x: 1, y: 0 },
-    hasLevels: false,
-    ...createLabelsDataSource(rawZarrLabelsDataSource),
-    ...rawZarrLabelsDataSource,
+    ...completeLabelsDataSource(zarrLabelsDataSource),
+    axes: DEFAULT_ZARR_LABELS_DATA_SOURCE_AXES,
+    hasLevels: DEFAULT_ZARR_LABELS_DATA_SOURCE_HAS_LEVELS,
+    ...zarrLabelsDataSource,
   };
 }
 
 export class ZarrLabelsDataLoader extends AbstractLabelsDataLoader<
-  ZarrLabelsDataSource,
+  CompleteZarrLabelsDataSource,
   ZarrLabelsData
 > {
   async loadLabels(signal?: AbortSignal): Promise<ZarrLabelsData> {

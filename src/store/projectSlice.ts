@@ -1,23 +1,23 @@
-import { createImage } from "../model/image";
-import { createLabels } from "../model/labels";
-import { createLayer } from "../model/layer";
-import { createPoints } from "../model/points";
+import { completeImage } from "../model/image";
+import { completeLabels } from "../model/labels";
+import { completeLayer } from "../model/layer";
+import { completePoints } from "../model/points";
 import {
-  DEFAULT_DRAW_OPTIONS,
-  DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS,
-  DEFAULT_VIEWER_ANIMATION_START_OPTIONS,
-  DEFAULT_VIEWER_OPTIONS,
+  CompleteProject,
+  DEFAULT_PROJECT_DRAW_OPTIONS,
+  DEFAULT_PROJECT_VIEWER_ANIMATION_FINISH_OPTIONS,
+  DEFAULT_PROJECT_VIEWER_ANIMATION_START_OPTIONS,
+  DEFAULT_PROJECT_VIEWER_OPTIONS,
   Project,
-  RawProject,
-  createProject,
+  completeProject,
 } from "../model/project";
-import { createShapes } from "../model/shapes";
-import { createTable } from "../model/table";
+import { completeShapes } from "../model/shapes";
+import { completeTable } from "../model/table";
 import {
-  Color,
+  ColorMap,
   DrawOptions,
   Marker,
-  PropertyMap,
+  ValueMap,
   ViewerOptions,
 } from "../types";
 import { BoundStoreStateCreator } from "./boundStore";
@@ -26,11 +26,11 @@ export type ProjectSlice = ProjectSliceState & ProjectSliceActions;
 
 export type ProjectSliceState = {
   projectName: string;
-  sizeMaps: Map<string, PropertyMap<number>>;
-  colorMaps: Map<string, PropertyMap<Color>>;
-  visibilityMaps: Map<string, PropertyMap<boolean>>;
-  opacityMaps: Map<string, PropertyMap<number>>;
-  markerMaps: Map<string, PropertyMap<Marker>>;
+  markerMaps: Map<string, ValueMap<Marker>>;
+  sizeMaps: Map<string, ValueMap<number>>;
+  colorMaps: Map<string, ColorMap>;
+  visibilityMaps: Map<string, ValueMap<boolean>>;
+  opacityMaps: Map<string, ValueMap<number>>;
   drawOptions: DrawOptions;
   viewerOptions: ViewerOptions;
   viewerAnimationStartOptions: ViewerOptions;
@@ -40,7 +40,10 @@ export type ProjectSliceState = {
 export type ProjectSliceActions = {
   setProjectName: (name: string) => void;
   // TODO actions for maps, drawOptions, viewerOptions
-  loadProject: (project: Project, signal?: AbortSignal) => Promise<void>;
+  loadProject: (
+    project: CompleteProject,
+    signal?: AbortSignal,
+  ) => Promise<void>;
   loadProjectFromURL: (
     url: string,
     signal?: AbortSignal,
@@ -70,13 +73,13 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
     state.clearLayers();
     set((draft) => {
       draft.projectName = project.name;
+      draft.markerMaps = new Map(project.markerMaps?.map((m) => [m.id, m]));
       draft.sizeMaps = new Map(project.sizeMaps?.map((m) => [m.id, m]));
       draft.colorMaps = new Map(project.colorMaps?.map((m) => [m.id, m]));
       draft.visibilityMaps = new Map(
         project.visibilityMaps?.map((m) => [m.id, m]),
       );
       draft.opacityMaps = new Map(project.opacityMaps?.map((m) => [m.id, m]));
-      draft.markerMaps = new Map(project.markerMaps?.map((m) => [m.id, m]));
       draft.drawOptions = project.drawOptions;
       draft.viewerOptions = project.viewerOptions;
       draft.viewerAnimationStartOptions = project.viewerAnimationStartOptions;
@@ -85,52 +88,52 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
     // first, add layers
     if (project.layers !== undefined) {
       for (const rawLayer of project.layers) {
-        const layer = createLayer(rawLayer);
+        const layer = completeLayer(rawLayer);
         state.addLayer(layer);
       }
     }
-    // then, load table data
-    const loadTablePromises = [];
+    // then, load data objects
+    const loadDataObjectPromises = [];
     if (project.tables !== undefined) {
       for (const rawTable of project.tables) {
-        const table = createTable(rawTable);
+        const table = completeTable(rawTable);
         state.addTable(table);
-        loadTablePromises.push(state.loadTable(table, signal));
+        loadDataObjectPromises.push(state.loadTable(table, signal));
       }
     }
-    await Promise.all(loadTablePromises);
+    await Promise.all(loadDataObjectPromises);
     signal?.throwIfAborted();
-    // finally, load table-dependent data
-    const loadPromises = [];
+    // finally, load rendered data objects
+    const loadRenderedDataObjectPromises = [];
     if (project.images !== undefined) {
       for (const rawImage of project.images) {
-        const image = createImage(rawImage);
+        const image = completeImage(rawImage);
         state.addImage(image);
-        loadPromises.push(state.loadImage(image, signal));
+        loadRenderedDataObjectPromises.push(state.loadImage(image, signal));
       }
     }
     if (project.labels !== undefined) {
       for (const rawLabels of project.labels) {
-        const labels = createLabels(rawLabels);
+        const labels = completeLabels(rawLabels);
         state.addLabels(labels);
-        loadPromises.push(state.loadLabels(labels, signal));
+        loadRenderedDataObjectPromises.push(state.loadLabels(labels, signal));
       }
     }
     if (project.points !== undefined) {
       for (const rawPoints of project.points) {
-        const points = createPoints(rawPoints);
+        const points = completePoints(rawPoints);
         state.addPoints(points);
-        loadPromises.push(state.loadPoints(points, signal));
+        loadRenderedDataObjectPromises.push(state.loadPoints(points, signal));
       }
     }
     if (project.shapes !== undefined) {
       for (const rawShapes of project.shapes) {
-        const shapes = createShapes(rawShapes);
+        const shapes = completeShapes(rawShapes);
         state.addShapes(shapes);
-        loadPromises.push(state.loadShapes(shapes, signal));
+        loadRenderedDataObjectPromises.push(state.loadShapes(shapes, signal));
       }
     }
-    await Promise.all(loadPromises);
+    await Promise.all(loadRenderedDataObjectPromises);
     signal?.throwIfAborted();
   },
   loadProjectFromURL: async (url, signal, quiet) => {
@@ -150,9 +153,9 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
         );
       }
     }
-    const rawProject = (await response.json()) as RawProject; // TODO validate project
+    const rawProject = (await response.json()) as Project; // TODO validate project
     signal?.throwIfAborted();
-    const project = createProject(rawProject);
+    const project = completeProject(rawProject);
     await state.loadProject(project);
     signal?.throwIfAborted();
   },
@@ -175,8 +178,8 @@ const initialProjectSliceState: ProjectSliceState = {
   visibilityMaps: new Map(),
   opacityMaps: new Map(),
   markerMaps: new Map(),
-  drawOptions: DEFAULT_DRAW_OPTIONS,
-  viewerOptions: DEFAULT_VIEWER_OPTIONS,
-  viewerAnimationStartOptions: DEFAULT_VIEWER_ANIMATION_START_OPTIONS,
-  viewerAnimationFinishOptions: DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS,
+  drawOptions: DEFAULT_PROJECT_DRAW_OPTIONS,
+  viewerOptions: DEFAULT_PROJECT_VIEWER_OPTIONS,
+  viewerAnimationStartOptions: DEFAULT_PROJECT_VIEWER_ANIMATION_START_OPTIONS,
+  viewerAnimationFinishOptions: DEFAULT_PROJECT_VIEWER_ANIMATION_FINISH_OPTIONS,
 };

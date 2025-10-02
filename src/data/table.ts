@@ -1,4 +1,4 @@
-import { RawTableDataSource } from "../model/table";
+import { TableDataSource } from "../model/table";
 import { MappableArrayLike } from "../types";
 import { Data, DataLoader } from "./base";
 
@@ -17,6 +17,6 @@ export interface TableDataLoader<TTableData extends TableData>
 }
 
 export type TableDataLoaderFactory = (
-  dataSource: RawTableDataSource,
+  dataSource: TableDataSource,
   projectDir: FileSystemDirectoryHandle | null,
 ) => TableDataLoader<TableData>;

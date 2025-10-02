@@ -1,22 +1,22 @@
 import { TableData } from "../data/table";
-import { Table, TableDataSource } from "../model/table";
+import { CompleteTable, CompleteTableDataSource } from "../model/table";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
 export type TableSlice = TableSliceState & TableSliceActions;
 
 export type TableSliceState = {
-  tableMap: Map<string, Table>;
-  tableDataCache: Map<TableDataSource, TableData>;
+  tableMap: Map<string, CompleteTable>;
+  tableDataCache: Map<CompleteTableDataSource, TableData>;
 };
 
 export type TableSliceActions = {
-  addTable: (table: Table, index?: number) => void;
-  loadTable: (table: Table, signal?: AbortSignal) => Promise<TableData>;
+  addTable: (table: CompleteTable, index?: number) => void;
+  loadTable: (table: CompleteTable, signal?: AbortSignal) => Promise<TableData>;
   loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>;
-  unloadTable: (table: Table) => void;
+  unloadTable: (table: CompleteTable) => void;
   unloadTableByID: (tableId: string) => void;
-  deleteTable: (table: Table) => void;
+  deleteTable: (table: CompleteTable) => void;
   deleteTableByID: (tableId: string) => void;
   clearTables: () => void;
 };

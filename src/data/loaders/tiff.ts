@@ -1,8 +1,9 @@
 import * as geotiff from "geotiff";
 
 import {
-  RawLabelsDataSource,
-  createLabelsDataSource,
+  LabelsDataSource,
+  LabelsDataSourceKeysWithDefaults,
+  completeLabelsDataSource,
 } from "../../model/labels";
 import { UintArray } from "../../types";
 import { LabelsData } from "../labels";
@@ -22,33 +23,31 @@ const pool = new geotiff.Pool();
 
 export const TIFF_LABELS_DATA_SOURCE = "tiff";
 
-export interface RawTIFFLabelsDataSource
-  extends RawLabelsDataSource<typeof TIFF_LABELS_DATA_SOURCE> {
+export interface TIFFLabelsDataSource
+  extends LabelsDataSource<typeof TIFF_LABELS_DATA_SOURCE> {
   tileWidth?: number;
   tileHeight?: number;
 }
 
-type DefaultedTIFFLabelsDataSourceKeys = keyof Omit<
-  RawTIFFLabelsDataSource,
-  "type" | "url" | "path" | "tileWidth" | "tileHeight"
->;
+export type TIFFLabelsDataSourceKeysWithDefaults =
+  LabelsDataSourceKeysWithDefaults<typeof TIFF_LABELS_DATA_SOURCE>;
 
-export type TIFFLabelsDataSource = Required<
-  Pick<RawTIFFLabelsDataSource, DefaultedTIFFLabelsDataSourceKeys>
+export type CompleteTIFFLabelsDataSource = Required<
+  Pick<TIFFLabelsDataSource, TIFFLabelsDataSourceKeysWithDefaults>
 > &
-  Omit<RawTIFFLabelsDataSource, DefaultedTIFFLabelsDataSourceKeys>;
+  Omit<TIFFLabelsDataSource, TIFFLabelsDataSourceKeysWithDefaults>;
 
-export function createTIFFLabelsDataSource(
-  rawTIFFLabelsDataSource: RawTIFFLabelsDataSource,
-): TIFFLabelsDataSource {
+export function completeTIFFLabelsDataSource(
+  tiffLabelsDataSource: TIFFLabelsDataSource,
+): CompleteTIFFLabelsDataSource {
   return {
-    ...createLabelsDataSource(rawTIFFLabelsDataSource),
-    ...rawTIFFLabelsDataSource,
+    ...completeLabelsDataSource(tiffLabelsDataSource),
+    ...tiffLabelsDataSource,
   };
 }
 
 export class TIFFLabelsDataLoader extends AbstractLabelsDataLoader<
-  TIFFLabelsDataSource,
+  CompleteTIFFLabelsDataSource,
   TIFFLabelsData
 > {
   async loadLabels(signal?: AbortSignal): Promise<TIFFLabelsData> {

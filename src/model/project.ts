@@ -1,22 +1,29 @@
 import {
-  Color,
   DrawOptions,
   Marker,
-  PropertyMap,
+  NamedColorMap,
+  NamedValueMap,
   ViewerOptions,
 } from "../types";
-import { RawModel, createModel } from "./base";
-import { RawImage } from "./image";
-import { RawLabels } from "./labels";
-import { RawLayer } from "./layer";
-import { RawPoints } from "./points";
-import { RawShapes } from "./shapes";
-import { RawTable } from "./table";
+import { Model, ModelKeysWithDefaults, completeModel } from "./base";
+import { Image } from "./image";
+import { Labels } from "./labels";
+import { Layer } from "./layer";
+import { Points } from "./points";
+import { Shapes } from "./shapes";
+import { Table } from "./table";
 
-export const DEFAULT_DRAW_OPTIONS: DrawOptions = {
+/**
+ * Default WebGL draw options of {@link Project}
+ */
+export const DEFAULT_PROJECT_DRAW_OPTIONS: DrawOptions = {
   pointSizeFactor: 1,
 };
-export const DEFAULT_VIEWER_OPTIONS: ViewerOptions = {
+
+/**
+ * Default OpenSeadragon viewer options of {@link Project}
+ */
+export const DEFAULT_PROJECT_VIEWER_OPTIONS: ViewerOptions = {
   minZoomImageRatio: 0,
   maxZoomPixelRatio: Infinity,
   preserveImageSizeOnResize: true,
@@ -41,53 +48,87 @@ export const DEFAULT_VIEWER_OPTIONS: ViewerOptions = {
   showNavigationControl: false,
   imageSmoothingEnabled: false,
 };
-export const DEFAULT_VIEWER_ANIMATION_START_OPTIONS: ViewerOptions = {
+
+/**
+ * Default OpenSeadragon viewer animation start options of {@link Project}
+ */
+export const DEFAULT_PROJECT_VIEWER_ANIMATION_START_OPTIONS: ViewerOptions = {
   immediateRender: false,
   imageLoaderLimit: 1,
 };
-export const DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS: ViewerOptions = {
+
+/**
+ * Default OpenSeadragon viewer animation finish options of {@link Project}
+ */
+export const DEFAULT_PROJECT_VIEWER_ANIMATION_FINISH_OPTIONS: ViewerOptions = {
   immediateRender: true, // set to true, even if initially set to false
 };
 
-/** A project */
-export interface RawProject extends RawModel {
-  /** Name */
+/** A TissUUmaps project */
+export interface Project extends Model {
+  /**
+   * Project name
+   */
   name: string;
 
-  /** Layers */
-  layers?: RawLayer[];
+  /**
+   * Layers
+   */
+  layers?: Layer[];
 
-  /** Images */
-  images?: RawImage[];
+  /**
+   * Images
+   */
+  images?: Image[];
 
-  /** Labels */
-  labels?: RawLabels[];
+  /**
+   * Labels
+   */
+  labels?: Labels[];
 
-  /** Points */
-  points?: RawPoints[];
+  /**
+   * Points
+   */
+  points?: Points[];
 
-  /** Shapes */
-  shapes?: RawShapes[];
+  /**
+   * Shapes
+   */
+  shapes?: Shapes[];
 
-  /** Tables */
-  tables?: RawTable[];
+  /**
+   * Tables
+   */
+  tables?: Table[];
 
-  /** Size maps */
-  sizeMaps?: PropertyMap<number>[];
+  /**
+   * Marker maps
+   */
+  markerMaps?: NamedValueMap<Marker>[];
 
-  /** Color maps */
-  colorMaps?: PropertyMap<Color>[];
+  /**
+   * Size maps
+   */
+  sizeMaps?: NamedValueMap<number>[];
 
-  /** Visibility maps */
-  visibilityMaps?: PropertyMap<boolean>[];
+  /**
+   * Color maps
+   */
+  colorMaps?: NamedColorMap[];
 
-  /** Opacity maps */
-  opacityMaps?: PropertyMap<number>[];
+  /**
+   * Visibility maps
+   */
+  visibilityMaps?: NamedValueMap<boolean>[];
 
-  /** Marker maps */
-  markerMaps?: PropertyMap<Marker>[];
+  /**
+   * Opacity maps
+   */
+  opacityMaps?: NamedValueMap<number>[];
 
-  /** WebGL draw options for points/shapes */
+  /**
+   * WebGL draw options for points/shapes
+   */
   drawOptions?: DrawOptions;
 
   /**
@@ -114,29 +155,56 @@ export interface RawProject extends RawModel {
   viewerAnimationFinishOptions?: ViewerOptions;
 }
 
-type DefaultedProjectKeys = keyof Omit<RawProject, "name">;
+/**
+ * {@link Project} properties that have default values
+ *
+ * @internal
+ */
+export type ProjectKeysWithDefaults =
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  | ModelKeysWithDefaults
+  | keyof Pick<
+      Project,
+      | "markerMaps"
+      | "sizeMaps"
+      | "colorMaps"
+      | "visibilityMaps"
+      | "opacityMaps"
+      | "drawOptions"
+      | "viewerOptions"
+      | "viewerAnimationStartOptions"
+      | "viewerAnimationFinishOptions"
+    >;
 
-export type Project = Required<Pick<RawProject, DefaultedProjectKeys>> &
-  Omit<RawProject, DefaultedProjectKeys>;
+/**
+ * A {@link Project} with default values applied
+ *
+ * @internal
+ */
+export type CompleteProject = Required<Pick<Project, ProjectKeysWithDefaults>> &
+  Omit<Project, ProjectKeysWithDefaults>;
 
-export function createProject(rawProject: RawProject): Project {
+/**
+ * Creates a {@link CompleteProject} from a {@link Project} by applying default values
+ *
+ * @param project - The raw project
+ * @returns The complete project with default values applied
+ *
+ * @internal
+ */
+export function completeProject(project: Project): CompleteProject {
   return {
-    ...createModel(rawProject),
-    layers: [],
-    images: [],
-    labels: [],
-    points: [],
-    shapes: [],
-    tables: [],
-    sizeMaps: [],
-    colorMaps: [],
-    visibilityMaps: [],
-    opacityMaps: [],
-    markerMaps: [],
-    drawOptions: DEFAULT_DRAW_OPTIONS,
-    viewerOptions: DEFAULT_VIEWER_OPTIONS,
-    viewerAnimationStartOptions: DEFAULT_VIEWER_ANIMATION_START_OPTIONS,
-    viewerAnimationFinishOptions: DEFAULT_VIEWER_ANIMATION_FINISH_OPTIONS,
-    ...rawProject,
+    ...completeModel(project),
+    markerMaps: project.markerMaps ?? [],
+    sizeMaps: project.sizeMaps ?? [],
+    colorMaps: project.colorMaps ?? [],
+    visibilityMaps: project.visibilityMaps ?? [],
+    opacityMaps: project.opacityMaps ?? [],
+    drawOptions: DEFAULT_PROJECT_DRAW_OPTIONS,
+    viewerOptions: DEFAULT_PROJECT_VIEWER_OPTIONS,
+    viewerAnimationStartOptions: DEFAULT_PROJECT_VIEWER_ANIMATION_START_OPTIONS,
+    viewerAnimationFinishOptions:
+      DEFAULT_PROJECT_VIEWER_ANIMATION_FINISH_OPTIONS,
+    ...project,
   };
 }

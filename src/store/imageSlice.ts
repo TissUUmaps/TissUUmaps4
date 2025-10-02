@@ -1,22 +1,22 @@
 import { ImageData } from "../data/image";
-import { Image, ImageDataSource } from "../model/image";
+import { CompleteImage, CompleteImageDataSource } from "../model/image";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
 export type ImageSlice = ImageSliceState & ImageSliceActions;
 
 export type ImageSliceState = {
-  imageMap: Map<string, Image>;
-  imageDataCache: Map<ImageDataSource, ImageData>;
+  imageMap: Map<string, CompleteImage>;
+  imageDataCache: Map<CompleteImageDataSource, ImageData>;
 };
 
 export type ImageSliceActions = {
-  addImage: (image: Image, index?: number) => void;
-  loadImage: (image: Image, signal?: AbortSignal) => Promise<ImageData>;
+  addImage: (image: CompleteImage, index?: number) => void;
+  loadImage: (image: CompleteImage, signal?: AbortSignal) => Promise<ImageData>;
   loadImageByID: (imageId: string, signal?: AbortSignal) => Promise<ImageData>;
-  unloadImage: (image: Image) => void;
+  unloadImage: (image: CompleteImage) => void;
   unloadImageByID: (imageId: string) => void;
-  deleteImage: (image: Image) => void;
+  deleteImage: (image: CompleteImage) => void;
   deleteImageByID: (imageId: string) => void;
   clearImages: () => void;
 };

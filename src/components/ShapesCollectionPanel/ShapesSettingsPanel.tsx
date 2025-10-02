@@ -1,8 +1,8 @@
-import { Shapes } from "../../model/shapes";
+import { CompleteShapes } from "../../model/shapes";
 
 type ShapesSettingsPanelProps = {
   shapesId: string;
-  shapes: Shapes;
+  shapes: CompleteShapes;
 };
 
 export default function ShapesSettingsPanel(

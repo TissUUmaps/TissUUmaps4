@@ -1,40 +1,80 @@
 import {
-  RawDataModel,
-  RawDataSource,
-  createDataModel,
-  createDataSource,
+  DataObject,
+  DataObjectKeysWithDefaults,
+  DataSource,
+  DataSourceKeysWithDefaults,
+  completeDataObject,
+  completeDataSource,
 } from "./base";
 
-/** A table */
+/**
+ * Tabular data
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawTable extends RawDataModel<RawTableDataSource> {}
+export interface Table extends DataObject<TableDataSource> {}
 
-type DefaultedTableKeys = keyof Omit<RawTable, "id" | "name" | "dataSource">;
+/**
+ * {@link Table} properties that have default values
+ *
+ * @internal
+ */
+export type TableKeysWithDefaults = DataObjectKeysWithDefaults<TableDataSource>;
 
-export type Table = Required<Pick<RawTable, DefaultedTableKeys>> &
-  Omit<RawTable, DefaultedTableKeys>;
+/**
+ * A {@link Table} with default values applied
+ *
+ * @internal
+ */
+export type CompleteTable = Required<Pick<Table, TableKeysWithDefaults>> &
+  Omit<Table, TableKeysWithDefaults>;
 
-export function createTable(rawTable: RawTable): Table {
-  return { ...createDataModel(rawTable), ...rawTable };
+/**
+ * Creates a {@link CompleteTable} from a {@link Table} by applying default values
+ *
+ * @param table - The raw table
+ * @returns The complete table with default values applied
+ *
+ * @internal
+ */
+export function completeTable(table: Table): CompleteTable {
+  return { ...completeDataObject(table), ...table };
 }
 
-/** A data source for tables */
+/**
+ * A data source for tabular data
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawTableDataSource<TType extends string = string>
-  extends RawDataSource<TType> {}
+export interface TableDataSource<TType extends string = string>
+  extends DataSource<TType> {}
 
-type DefaultedTableDataSourceKeys<TType extends string = string> = keyof Omit<
-  RawTableDataSource<TType>,
-  "type" | "url" | "path"
->;
+/**
+ * {@link TableDataSource} properties that have default values
+ *
+ * @internal
+ */
+export type TableDataSourceKeysWithDefaults<TType extends string = string> =
+  DataSourceKeysWithDefaults<TType>;
 
-export type TableDataSource<TType extends string = string> = Required<
-  Pick<RawTableDataSource<TType>, DefaultedTableDataSourceKeys<TType>>
+/**
+ * A {@link TableDataSource} with default values applied
+ *
+ * @internal
+ */
+export type CompleteTableDataSource<TType extends string = string> = Required<
+  Pick<TableDataSource<TType>, TableDataSourceKeysWithDefaults<TType>>
 > &
-  Omit<RawTableDataSource<TType>, DefaultedTableDataSourceKeys<TType>>;
+  Omit<TableDataSource<TType>, TableDataSourceKeysWithDefaults<TType>>;
 
-export function createTableDataSource<TType extends string = string>(
-  rawTableDataSource: RawTableDataSource<TType>,
-): TableDataSource<TType> {
-  return { ...createDataSource(rawTableDataSource), ...rawTableDataSource };
+/**
+ * Creates a {@link CompleteTableDataSource} from a {@link TableDataSource} by applying default values
+ *
+ * @param tableDataSource - The raw table data source
+ * @returns The complete table data source with default values applied
+ *
+ * @internal
+ */
+export function completeTableDataSource<TType extends string = string>(
+  tableDataSource: TableDataSource<TType>,
+): CompleteTableDataSource<TType> {
+  return { ...completeDataSource(tableDataSource), ...tableDataSource };
 }

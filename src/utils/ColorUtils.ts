@@ -1,18 +1,18 @@
 import { Color } from "../types";
 
 export default class ColorUtils {
-  static parseColormap(
-    colormap: string,
+  static parseColorPalette(
+    str: string,
     sep: string = " ",
     maxValue: number = 1,
   ): Color[] {
-    return colormap
+    return str
       .split("\n")
       .filter((line) => line.trim().length > 0)
       .map((line, i) => {
         const values = line.split(sep);
         if (values.length !== 3) {
-          throw new Error(`Invalid colormap line ${i}: ${line}`);
+          throw new Error(`Invalid color palette line ${i}: ${line}`);
         }
         return {
           r: (+values[0]! / maxValue) * 255,

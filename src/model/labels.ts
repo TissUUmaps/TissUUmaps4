@@ -1,108 +1,266 @@
-import { Color, TableGroupsColumn, TableValuesColumn } from "../types";
+import { COLOR_PALETTES } from "../palettes";
 import {
-  RawDataSource,
-  RawLayerConfig,
-  RawRenderedDataModel,
-  createDataSource,
-  createLayerConfig,
-  createRenderedDataModel,
+  Color,
+  ColorMap,
+  TableGroupsColumn,
+  TableValuesColumn,
+  ValueMap,
+} from "../types";
+import {
+  DataSource,
+  DataSourceKeysWithDefaults,
+  LayerConfig,
+  LayerConfigKeysWithDefaults,
+  RenderedDataObject,
+  RenderedDataObjectKeysWithDefaults,
+  completeDataSource,
+  completeLayerConfig,
+  completeRenderedDataObject,
 } from "./base";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Layer } from "./layer";
 
-/** A 2D labels mask */
-export interface RawLabels
-  extends RawRenderedDataModel<RawLabelsDataSource, RawLabelsLayerConfig> {
-  /** Color for all labels, column containing label-wise colors/group names, or random colors from colormap (default) */
+/** Default label color of {@link Labels} */
+export const DEFAULT_LABEL_COLOR: Exclude<
+  Labels["labelColor"],
+  undefined | TableValuesColumn | TableGroupsColumn
+> = "randomFromPalette";
+
+/** Default label color palette of {@link Labels} */
+export const DEFAULT_LABEL_COLOR_PALETTE: keyof typeof COLOR_PALETTES =
+  "batlowS";
+
+/** Default label visibility of {@link Labels} */
+export const DEFAULT_LABEL_VISIBILITY: boolean = true;
+
+/** Default label opacity of {@link Labels} */
+export const DEFAULT_LABEL_OPACITY: number = 1;
+
+/**
+ * A two-dimensional label mask
+ */
+export interface Labels
+  extends RenderedDataObject<LabelsDataSource, LabelsLayerConfig> {
+  /**
+   * Label color
+   *
+   * Can be specified as:
+   * - A single color to set the same color for all labels
+   * - A table column holding continuous numerical values for each label; values are clipped to {@link labelColorRange}, which is linearly mapped to {@link labelColorPalette}
+   * - A table column holding categorical group names for each label; group names are mapped to label colors using {@link labelColorMap}
+   * - The special value "randomFromPalette" to assign each label a random color from {@link labelColorPalette}
+   *
+   * @defaultValue {@link DEFAULT_LABEL_COLOR}
+   */
   labelColor?:
     | Color
     | TableValuesColumn
     | TableGroupsColumn
-    | "randomFromColorMap";
+    | "randomFromPalette";
 
-  /** Global color map ID or custom color map (defaults to "batlowS") */
-  colorMap?: string | { [key: string]: Color };
+  /**
+   * Value range that is linearly mapped to {@link labelColorPalette}
+   *
+   * Table values are clipped to this range before mapping them to label colors.
+   *
+   * Used when {@link labelColor} is specified as a table column holding continuous numerical values.
+   *
+   * @defaultValue `undefined` (i.e., the range of values in the specified column is used)
+   */
+  labelColorRange?: [number, number];
 
-  /** Visibility for all labels, or column containing label-wise visibilities/group names (defaults to true) */
+  /**
+   * Color palette to which clipped and rescaled numerical values are mapped
+   *
+   * Can be one of the predefined continuous or categorical color palettes in {@link COLOR_PALETTES}.
+   *
+   * Used when {@link labelColor} is specified as a table column holding continuous numerical values.
+   *
+   * @defaultValue {@link DEFAULT_LABEL_COLOR_PALETTE}
+   */
+  labelColorPalette?: keyof typeof COLOR_PALETTES;
+
+  /**
+   * Label group-to-color mapping
+   *
+   * Can be specified as:
+   * - ID of a project-global color map
+   * - A custom mapping of group names to colors
+   *
+   * Used when {@link labelColor} is specified as a table column holding categorical group names.
+   *
+   * @defaultValue `undefined` (i.e., all groups default to {@link DEFAULT_LABEL_COLOR})
+   */
+  labelColorMap?: string | ColorMap;
+
+  /**
+   * Label visibility
+   *
+   * Can be specified as:
+   * - A single boolean to set the same visibility for all labels
+   * - A table column holding numerical values for each label; values are interpreted as boolean (0 = invisible, non-zero = visible)
+   * - A table column holding categorical group names for each label; group names are mapped to label visibilities using {@link labelVisibilityMap}
+   *
+   * @defaultValue {@link DEFAULT_LABEL_VISIBILITY}
+   */
   labelVisibility?: boolean | TableValuesColumn | TableGroupsColumn;
 
-  /** Global visibility map ID or custom visibility map */
-  visibilityMap?: string | { [key: string]: boolean };
+  /**
+   * Label group-to-visibility mapping
+   *
+   * Can be specified as:
+   * - ID of a project-global visibility map
+   * - Object-specific mapping of group names to boolean visibility values
+   *
+   * Used when {@link labelVisibility} is specified as a table column holding categorical group names.
+   *
+   * @defaultValue `undefined` (i.e., all groups default to {@link DEFAULT_LABEL_VISIBILITY})
+   */
+  labelVisibilityMap?: string | ValueMap<boolean>;
 
-  /** Opacity for all labels, between 0 and 1, or column containing label-wise opacities/group names (defaults to 1) */
+  /**
+   * Label opacity
+   *
+   * Can be specified as:
+   * - A single number in the range [0, 1] to set the same opacity for all labels
+   * - A table column holding numerical opacity values in the range [0, 1] for each label
+   * - A table column holding categorical group names for each label; group names are mapped to opacities using {@link labelOpacityMap}
+   *
+   * Note that label opacities are also affected by {@link Labels.opacity} and {@link Layer.opacity}, which are multiplied to this value.
+   *
+   * @defaultValue {@link DEFAULT_LABEL_OPACITY}
+   */
   labelOpacity?: number | TableValuesColumn | TableGroupsColumn;
 
-  /** Global opacity map ID or custom opacity map */
-  opacityMap?: string | { [key: string]: number };
+  /**
+   * Label group-to-opacity mapping
+   *
+   * Can be specified as:
+   * - ID of a project-global opacity map
+   * - Object-specific mapping of group names to opacity values in the range [0, 1]
+   *
+   * Used when {@link labelOpacity} is specified as a table column holding categorical group names.
+   *
+   * @defaultValue `undefined` (i.e., all groups default to {@link DEFAULT_LABEL_OPACITY})
+   */
+  labelOpacityMap?: string | ValueMap<number>;
 }
 
-type DefaultedLabelsKeys = keyof Omit<
-  RawLabels,
-  "id" | "name" | "dataSource" | "layerConfigs" | "visibilityMap" | "opacityMap"
->;
+/**
+ * {@link Labels} properties that have default values
+ *
+ * @internal
+ */
+export type LabelsKeysWithDefaults =
+  | RenderedDataObjectKeysWithDefaults<LabelsDataSource, LabelsLayerConfig>
+  | keyof Pick<
+      Labels,
+      "labelColor" | "labelColorPalette" | "labelVisibility" | "labelOpacity"
+    >;
 
-export type Labels = Required<Pick<RawLabels, DefaultedLabelsKeys>> &
-  Omit<RawLabels, DefaultedLabelsKeys>;
+/**
+ * A {@link Labels} with default values applied
+ *
+ * @internal
+ */
+export type CompleteLabels = Required<Pick<Labels, LabelsKeysWithDefaults>> &
+  Omit<Labels, LabelsKeysWithDefaults>;
 
-export function createLabels(rawLabels: RawLabels): Labels {
+/**
+ * Creates a {@link CompleteLabels} from a {@link Labels} by applying default values
+ *
+ * @param labels - The raw labels
+ * @returns The complete labels with default values applied
+ *
+ * @internal
+ */
+export function completeLabels(labels: Labels): CompleteLabels {
   return {
-    ...createRenderedDataModel(rawLabels),
-    visibility: true,
-    opacity: 1,
-    labelColor: "randomFromColorMap",
-    colorMap: "batlowS",
-    labelVisibility: true,
-    labelOpacity: 1,
-    ...rawLabels,
+    ...completeRenderedDataObject(labels),
+    labelColor: DEFAULT_LABEL_COLOR,
+    labelColorPalette: DEFAULT_LABEL_COLOR_PALETTE,
+    labelVisibility: DEFAULT_LABEL_VISIBILITY,
+    labelOpacity: DEFAULT_LABEL_OPACITY,
+    ...labels,
   };
 }
 
-/** A data source for 2D labels masks */
+/**
+ * A data source for two-dimensional label masks
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawLabelsDataSource<TType extends string = string>
-  extends RawDataSource<TType> {}
+export interface LabelsDataSource<TType extends string = string>
+  extends DataSource<TType> {}
 
-type DefaultedLabelsDataSourceKeys<TType extends string = string> = keyof Omit<
-  RawLabelsDataSource<TType>,
-  "type" | "url" | "path"
->;
+/**
+ * {@link LabelsDataSource} properties that have default values
+ *
+ * @internal
+ */
+export type LabelsDataSourceKeysWithDefaults<TType extends string = string> =
+  DataSourceKeysWithDefaults<TType>;
 
-export type LabelsDataSource<TType extends string = string> = Required<
-  Pick<RawLabelsDataSource<TType>, DefaultedLabelsDataSourceKeys<TType>>
+/**
+ * A {@link LabelsDataSource} with default values applied
+ *
+ * @internal
+ */
+export type CompleteLabelsDataSource<TType extends string = string> = Required<
+  Pick<LabelsDataSource<TType>, LabelsDataSourceKeysWithDefaults<TType>>
 > &
-  Omit<RawLabelsDataSource<TType>, DefaultedLabelsDataSourceKeys<TType>>;
+  Omit<LabelsDataSource<TType>, LabelsDataSourceKeysWithDefaults<TType>>;
 
-export function createLabelsDataSource<TType extends string = string>(
-  rawLabelsDataSource: RawLabelsDataSource<TType>,
-): LabelsDataSource<TType> {
-  return { ...createDataSource(rawLabelsDataSource), ...rawLabelsDataSource };
+/**
+ * Creates a {@link CompleteLabelsDataSource} from a {@link LabelsDataSource} by applying default values
+ *
+ * @param labelsDataSource - The raw labels data source
+ * @returns The complete labels data source with default values applied
+ *
+ * @internal
+ */
+export function completeLabelsDataSource<TType extends string = string>(
+  labelsDataSource: LabelsDataSource<TType>,
+): CompleteLabelsDataSource<TType> {
+  return { ...completeDataSource(labelsDataSource), ...labelsDataSource };
 }
 
-/** A layer-specific display configuration for 2D labels masks */
-export interface RawLabelsLayerConfig extends RawLayerConfig {
-  /** Layer ID */
+/**
+ * A layer-specific display configuration for two-dimensional label masks
+ */
+export interface LabelsLayerConfig extends LayerConfig {
+  /**
+   * Layer ID
+   */
   layerId: string;
 }
 
-type DefaultedLabelsLayerConfigKeys = keyof Omit<
-  RawLabelsLayerConfig,
-  "layerId"
->;
+/**
+ * {@link LabelsLayerConfig} properties that have default values
+ *
+ * @internal
+ */
+export type LabelsLayerConfigKeysWithDefaults = LayerConfigKeysWithDefaults;
 
-export type LabelsLayerConfig = Required<
-  Pick<RawLabelsLayerConfig, DefaultedLabelsLayerConfigKeys>
+/**
+ * An {@link LabelsLayerConfig} with default values applied
+ *
+ * @internal
+ */
+export type CompleteLabelsLayerConfig = Required<
+  Pick<LabelsLayerConfig, LabelsLayerConfigKeysWithDefaults>
 > &
-  Omit<RawLabelsLayerConfig, DefaultedLabelsLayerConfigKeys>;
+  Omit<LabelsLayerConfig, LabelsLayerConfigKeysWithDefaults>;
 
-export function createLabelsLayerConfig(
-  rawLabelsLayerConfig: RawLabelsLayerConfig,
-): LabelsLayerConfig {
-  return {
-    ...createLayerConfig(rawLabelsLayerConfig),
-    flip: false,
-    transform: {
-      scale: 1,
-      rotation: 0,
-      translation: { x: 0, y: 0 },
-    },
-    ...rawLabelsLayerConfig,
-  };
+/**
+ * Creates a {@link CompleteLabelsLayerConfig} from a {@link LabelsLayerConfig} by applying default values
+ *
+ * @param labelsLayerConfig - The raw labels layer configuration
+ * @returns The complete labels layer configuration with default values applied
+ *
+ * @internal
+ */
+export function completeLabelsLayerConfig(
+  labelsLayerConfig: LabelsLayerConfig,
+): CompleteLabelsLayerConfig {
+  return { ...completeLayerConfig(labelsLayerConfig), ...labelsLayerConfig };
 }

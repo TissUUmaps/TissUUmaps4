@@ -1,8 +1,8 @@
-import { Table } from "../../model/table";
+import { CompleteTable } from "../../model/table";
 
 type TableSettingsPanelProps = {
   tableId: string;
-  table: Table;
+  table: CompleteTable;
 };
 
 export default function TableSettingsPanel(

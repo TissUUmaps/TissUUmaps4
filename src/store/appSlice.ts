@@ -2,39 +2,39 @@ import { ImageDataLoaderFactory } from "../data/image";
 import { LabelsDataLoaderFactory } from "../data/labels";
 import {
   CSVTableDataLoader,
+  CSVTableDataSource,
   CSV_TABLE_DATA_SOURCE,
-  RawCSVTableDataSource,
-  createCSVTableDataSource,
+  completeCSVTableDataSource,
 } from "../data/loaders/csv";
 import {
   DEFAULT_IMAGE_DATA_SOURCE,
   DefaultImageDataLoader,
-  RawDefaultImageDataSource,
-  createDefaultImageDataSource,
+  DefaultImageDataSource,
+  completeDefaultImageDataSource,
 } from "../data/loaders/default";
 import {
   PARQUET_TABLE_DATA_SOURCE,
   ParquetTableDataLoader,
-  RawParquetTableDataSource,
-  createParquetTableDataSource,
+  ParquetTableDataSource,
+  completeParquetTableDataSource,
 } from "../data/loaders/parquet";
 import {
-  RawTablePointsDataSource,
   TABLE_POINTS_DATA_SOURCE,
   TablePointsDataLoader,
-  createTablePointsDataSource,
+  TablePointsDataSource,
+  completeTablePointsDataSource,
 } from "../data/loaders/table";
 import {
-  RawTIFFLabelsDataSource,
   TIFFLabelsDataLoader,
+  TIFFLabelsDataSource,
   TIFF_LABELS_DATA_SOURCE,
-  createTIFFLabelsDataSource,
+  completeTIFFLabelsDataSource,
 } from "../data/loaders/tiff";
 import {
-  RawZarrLabelsDataSource,
   ZARR_LABELS_DATA_SOURCE,
   ZarrLabelsDataLoader,
-  createZarrLabelsDataSource,
+  ZarrLabelsDataSource,
+  completeZarrLabelsDataSource,
 } from "../data/loaders/zarr";
 import { PointsDataLoaderFactory } from "../data/points";
 import { ShapesDataLoaderFactory } from "../data/shapes";
@@ -118,7 +118,7 @@ const initialAppSliceState: AppSliceState = {
       DEFAULT_IMAGE_DATA_SOURCE,
       (dataSource, projectDir) =>
         new DefaultImageDataLoader(
-          createDefaultImageDataSource(dataSource as RawDefaultImageDataSource),
+          completeDefaultImageDataSource(dataSource as DefaultImageDataSource),
           projectDir,
         ),
     ],
@@ -128,7 +128,7 @@ const initialAppSliceState: AppSliceState = {
       TIFF_LABELS_DATA_SOURCE,
       (dataSource, projectDir) =>
         new TIFFLabelsDataLoader(
-          createTIFFLabelsDataSource(dataSource as RawTIFFLabelsDataSource),
+          completeTIFFLabelsDataSource(dataSource as TIFFLabelsDataSource),
           projectDir,
         ),
     ],
@@ -136,7 +136,7 @@ const initialAppSliceState: AppSliceState = {
       ZARR_LABELS_DATA_SOURCE,
       (dataSource, projectDir) =>
         new ZarrLabelsDataLoader(
-          createZarrLabelsDataSource(dataSource as RawZarrLabelsDataSource),
+          completeZarrLabelsDataSource(dataSource as ZarrLabelsDataSource),
           projectDir,
         ),
     ],
@@ -146,7 +146,7 @@ const initialAppSliceState: AppSliceState = {
       TABLE_POINTS_DATA_SOURCE,
       (dataSource, projectDir, loadTableByID) =>
         new TablePointsDataLoader(
-          createTablePointsDataSource(dataSource as RawTablePointsDataSource),
+          completeTablePointsDataSource(dataSource as TablePointsDataSource),
           projectDir,
           loadTableByID,
         ),
@@ -158,7 +158,7 @@ const initialAppSliceState: AppSliceState = {
       CSV_TABLE_DATA_SOURCE,
       (dataSource, projectDir) =>
         new CSVTableDataLoader(
-          createCSVTableDataSource(dataSource as RawCSVTableDataSource),
+          completeCSVTableDataSource(dataSource as CSVTableDataSource),
           projectDir,
         ),
     ],
@@ -166,7 +166,7 @@ const initialAppSliceState: AppSliceState = {
       PARQUET_TABLE_DATA_SOURCE,
       (dataSource, projectDir) =>
         new ParquetTableDataLoader(
-          createParquetTableDataSource(dataSource as RawParquetTableDataSource),
+          completeParquetTableDataSource(dataSource as ParquetTableDataSource),
           projectDir,
         ),
     ],

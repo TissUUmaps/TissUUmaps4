@@ -1,166 +1,381 @@
-import batlowS from "../assets/colormaps/batlowS.txt?raw";
-import { Color, Marker, TableGroupsColumn, TableValuesColumn } from "../types";
-import ColorUtils from "../utils/ColorUtils";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { PointsData } from "../data/points";
+import { COLOR_PALETTES } from "../palettes";
 import {
-  RawDataSource,
-  RawLayerConfig,
-  RawRenderedDataModel,
-  createDataSource,
-  createLayerConfig,
-  createRenderedDataModel,
+  Color,
+  ColorMap,
+  Marker,
+  TableGroupsColumn,
+  TableValuesColumn,
+  ValueMap,
+} from "../types";
+import {
+  DataSource,
+  DataSourceKeysWithDefaults,
+  LayerConfig,
+  LayerConfigKeysWithDefaults,
+  RenderedDataObject,
+  RenderedDataObjectKeysWithDefaults,
+  completeDataSource,
+  completeLayerConfig,
+  completeRenderedDataObject,
 } from "./base";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Layer } from "./layer";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { CompleteProject } from "./project";
 
-export const DEFAULT_POINT_SIZE = 1;
-export const DEFAULT_POINT_MARKER = Marker.Disc;
+/** Default point marker of {@link Points} */
+export const DEFAULT_POINT_MARKER: Marker = Marker.Disc;
+
+/** Default point size of {@link Points} */
+export const DEFAULT_POINT_SIZE: number = 1;
+
+/** Default point size unit of {@link Points} */
+export const DEFAULT_POINT_SIZE_UNIT: Exclude<
+  Points["pointSizeUnit"],
+  undefined
+> = "data";
+
+/** Default point size factor of {@link Points} */
+export const DEFAULT_POINT_SIZE_FACTOR: number = 1;
+
+/** Default point color of {@link Points} */
 export const DEFAULT_POINT_COLOR: Color = { r: 255, g: 255, b: 255 };
-export const DEFAULT_POINT_VISIBILITY = true;
-export const DEFAULT_POINT_OPACITY = 1;
 
-export const DEFAULT_POINT_SIZES: number[] = [DEFAULT_POINT_SIZE];
-export const DEFAULT_POINT_COLORS: Color[] = ColorUtils.parseColormap(batlowS);
-export const DEFAULT_POINT_VISIBILITIES: boolean[] = [DEFAULT_POINT_VISIBILITY];
-export const DEFAULT_POINT_OPACITIES: number[] = [DEFAULT_POINT_OPACITY];
-export const DEFAULT_POINT_MARKERS: Marker[] = [
-  Marker.Cross,
-  Marker.Diamond,
-  Marker.Square,
-  Marker.TriangleUp,
-  Marker.Star,
-  Marker.Clobber,
-  Marker.Disc,
-  Marker.HBar,
-  Marker.VBar,
-  Marker.TailedArrow,
-  Marker.TriangleDown,
-  Marker.Ring,
-  Marker.X,
-  Marker.Arrow,
-  Marker.Gaussian,
-];
+/** Default point color palette of {@link Points} */
+export const DEFAULT_POINT_COLOR_PALETTE: keyof typeof COLOR_PALETTES =
+  "batlow";
 
-/** A 2D point cloud */
-export interface RawPoints
-  extends RawRenderedDataModel<RawPointsDataSource, RawPointsLayerConfig> {
-  /** Size for all points, or column containing point-wise sizes/group names (defaults to 1) */
+/** Default point visibility of {@link Points} */
+export const DEFAULT_POINT_VISIBILITY: boolean = true;
+
+/** Default point opacity of {@link Points} */
+export const DEFAULT_POINT_OPACITY: number = 1;
+
+/**
+ * A two-dimensional point cloud
+ */
+export interface Points
+  extends RenderedDataObject<PointsDataSource, PointsLayerConfig> {
+  /**
+   * Point marker
+   *
+   * Can be specified as:
+   * - A single marker to set the same shape for all points
+   * - A table column holding numerical {@link Marker} enum values for each point
+   * - A table column holding categorical group names for each point; group names are mapped to point markers using {@link pointMarkerMap}
+   * - The special value "random" to assign each point a random marker from the available {@link Marker} enum values
+   *
+   * @defaultValue {@link DEFAULT_POINT_MARKER}
+   */
+  pointMarker?: Marker | TableValuesColumn | TableGroupsColumn | "random";
+
+  /**
+   * Point group-to-marker mapping
+   *
+   * Can be specified as:
+   * - ID of a project-global marker map
+   * - Object-specific mapping of group names to {@link Marker} enum values
+   *
+   * Used when {@link pointMarker} is specified as a table column holding categorical group names.
+   *
+   * @defaultValue `undefined` (i.e., all groups default to {@link DEFAULT_POINT_MARKER})
+   */
+  pointMarkerMap?: string | ValueMap<Marker>;
+
+  /**
+   * Point size
+   *
+   * Can be specified as:
+   * - A single number to set the same size for all points
+   * - A table column holding continuous numerical size values for each point
+   * - A table column holding categorical group names for each point; group names are mapped to point sizes using {@link pointSizeMap}
+   *
+   * Point sizes are specified in units configured by {@link pointSizeUnit} and scaled accordingly for display.
+   * Additionally, point sizes are scaled by {@link pointSizeFactor} and {@link Layer.pointSizeFactor}, independent of {@link pointSizeUnit}.
+   *
+   * @defaultValue {@link DEFAULT_POINT_SIZE}
+   */
   pointSize?: number | TableValuesColumn | TableGroupsColumn;
 
-  /** Unit for point sizes (defaults to "data") */
+  /**
+   * Point group-to-size mapping
+   *
+   * Can be specified as:
+   * - ID of a project-global size map
+   * - Object-specific mapping of group names to size values
+   *
+   * Used when {@link pointSize} is specified as a table column holding categorical group names.
+   *
+   * @defaultValue `undefined` (i.e., all groups default to {@link DEFAULT_POINT_SIZE})
+   */
+  pointSizeMap?: string | ValueMap<number>;
+
+  /**
+   * Unit in which point sizes are specified
+   *
+   * Can be one of:
+   * - "data": Point sizes are in data (e.g. pixel) dimensions
+   * - "layer": Point sizes are in layer (e.g. physical) dimensions
+   * - "world": Point sizes are in world (i.e. global) dimensions
+   *
+   * @defaultValue {@link DEFAULT_POINT_SIZE_UNIT}
+   */
   pointSizeUnit?: "data" | "layer" | "world";
 
-  /** Point size factor (defaults to 1) */
+  /**
+   * Object-level point size scaling factor
+   *
+   * A unitless scaling factor by which all point sizes are multiplied.
+   *
+   * Can be used to adjust the size of points without changing individual point sizes or the size unit.
+   * Note that point sizes are also affected by {@link Layer.pointSizeFactor} and {@link CompleteProject.drawOptions}.
+   *
+   * @defaultValue {@link DEFAULT_POINT_SIZE_FACTOR}
+   */
   pointSizeFactor?: number;
 
-  /** Global size map ID or custom size map */
-  sizeMap?: string | { [key: string]: number };
+  /**
+   * Point color
+   *
+   * Can be specified as:
+   * - A single color to set the same color for all points
+   * - A table column holding continuous numerical values for each point; values are clipped to {@link pointColorRange}, which is linearly mapped to {@link pointColorPalette}
+   * - A table column holding categorical group names for each point; group names are mapped to point colors using {@link pointColorMap}
+   * - The special value "randomFromPalette" to assign each point a random color from {@link pointColorPalette}
+   *
+   * @defaultValue {@link DEFAULT_POINT_COLOR}
+   */
+  pointColor?:
+    | Color
+    | TableValuesColumn
+    | TableGroupsColumn
+    | "randomFromPalette";
 
-  /** Shape for all points, or column containing point-wise shapes/group names (defaults to disc) */
-  pointMarker?: Marker | TableValuesColumn | TableGroupsColumn;
+  /**
+   * Value range that is linearly mapped to {@link pointColorPalette}
+   *
+   * Table values are clipped to this range before mapping them to point colors.
+   *
+   * Used when {@link pointColor} is specified as a table column holding continuous numerical values.
+   *
+   * @defaultValue `undefined` (i.e., the range of values in the specified column is used)
+   */
+  pointColorRange?: [number, number];
 
-  /** Global marker map ID or custom marker map */
-  markerMap?: string | { [key: string]: Marker };
+  /**
+   * Color palette to which clipped and rescaled numerical values are mapped
+   *
+   * Can be specified as the name of a color palette defined in {@link COLOR_PALETTES}.
+   *
+   * Used when {@link pointColor} is specified as a table column holding continuous numerical values.
+   *
+   * @defaultValue {@link DEFAULT_POINT_COLOR_PALETTE}
+   */
+  pointColorPalette?: keyof typeof COLOR_PALETTES;
 
-  /** Color for all points, or column containing point-wise colors/group names (defaults to white) */
-  pointColor?: Color | TableValuesColumn | TableGroupsColumn;
+  /**
+   * Point group-to-color mapping
+   *
+   * Can be specified as:
+   * - ID of a project-global color map
+   * - A custom mapping of group names to colors
+   *
+   * Used when {@link pointColor} is specified as a table column holding categorical group names.
+   *
+   * @defaultValue `undefined` (i.e., all groups default to {@link DEFAULT_POINT_COLOR})
+   */
+  pointColorMap?: string | ColorMap;
 
-  /** Global color map ID or custom color map */
-  colorMap?: string | { [key: string]: Color };
-
-  /** Visibility for all points, or column containing point-wise visibilities/group names (defaults to true) */
+  /**
+   * Point visibility
+   *
+   * Can be specified as:
+   * - A single boolean to set the same visibility for all points
+   * - A table column holding numerical values for each point; values are interpreted as boolean (0 = invisible, non-zero = visible)
+   * - A table column holding categorical group names for each point; group names are mapped to point visibilities using {@link pointVisibilityMap}
+   *
+   * @defaultValue {@link DEFAULT_POINT_VISIBILITY}
+   */
   pointVisibility?: boolean | TableValuesColumn | TableGroupsColumn;
 
-  /** Global visibility map ID or custom visibility map */
-  visibilityMap?: string | { [key: string]: boolean };
+  /**
+   * Point group-to-visibility mapping
+   *
+   * Can be specified as:
+   * - ID of a project-global visibility map
+   * - Object-specific mapping of group names to boolean visibility values
+   *
+   * Used when {@link pointVisibility} is specified as a table column holding categorical group names.
+   *
+   * @defaultValue `undefined` (i.e., all groups default to {@link DEFAULT_POINT_VISIBILITY})
+   */
+  pointVisibilityMap?: string | ValueMap<boolean>;
 
-  /** Opacity for all points, between 0 and 1, or column containing point-wise opacities/group names (defaults to 1) */
+  /**
+   * Point opacity
+   *
+   * Can be specified as:
+   * - A single number in the range [0, 1] to set the same opacity for all points
+   * - A table column holding numerical opacity values in the range [0, 1] for each point
+   * - A table column holding categorical group names for each point; group names are mapped to opacities using {@link pointOpacityMap}
+   *
+   * Note that point opacities are also affected by {@link Points.opacity} and {@link Layer.opacity}, which are multiplied to this value.
+   *
+   * @defaultValue {@link DEFAULT_POINT_OPACITY}
+   */
   pointOpacity?: number | TableValuesColumn | TableGroupsColumn;
 
-  /** Global opacity map ID or custom opacity map */
-  opacityMap?: string | { [key: string]: number };
+  /**
+   * Point group-to-opacity mapping
+   *
+   * Can be specified as:
+   * - ID of a project-global opacity map
+   * - Object-specific mapping of group names to opacity values in the range [0, 1]
+   *
+   * Used when {@link pointOpacity} is specified as a table column holding categorical group names.
+   *
+   * @defaultValue `undefined` (i.e., all groups default to {@link DEFAULT_POINT_OPACITY})
+   */
+  pointOpacityMap?: string | ValueMap<number>;
 }
 
-type DefaultedPointsKeys = keyof Omit<
-  RawPoints,
-  | "id"
-  | "name"
-  | "dataSource"
-  | "layerConfigs"
-  | "sizeMap"
-  | "colorMap"
-  | "visibilityMap"
-  | "opacityMap"
-  | "markerMap"
->;
+/**
+ * {@link Points} properties that have default values
+ *
+ * @internal
+ */
+export type PointsKeysWithDefaults =
+  | RenderedDataObjectKeysWithDefaults<PointsDataSource, PointsLayerConfig>
+  | keyof Pick<
+      Points,
+      | "pointMarker"
+      | "pointSize"
+      | "pointSizeUnit"
+      | "pointSizeFactor"
+      | "pointColor"
+      | "pointColorPalette"
+      | "pointVisibility"
+      | "pointOpacity"
+    >;
 
-export type Points = Required<Pick<RawPoints, DefaultedPointsKeys>> &
-  Omit<RawPoints, DefaultedPointsKeys>;
+/**
+ * A {@link Points} object with default values applied
+ *
+ * @internal
+ */
+export type CompletePoints = Required<Pick<Points, PointsKeysWithDefaults>> &
+  Omit<Points, PointsKeysWithDefaults>;
 
-export function createPoints(rawPoints: RawPoints): Points {
+/**
+ * Creates a {@link CompletePoints} from a {@link Points} by applying default values
+ *
+ * @param points - The raw points
+ * @returns The complete points with default values applied
+ *
+ * @internal
+ */
+export function completePoints(points: Points): CompletePoints {
   return {
-    ...createRenderedDataModel(rawPoints),
-    visibility: true,
-    opacity: 1,
-    pointSize: DEFAULT_POINT_SIZE,
-    pointSizeUnit: "data",
-    pointSizeFactor: 1,
+    ...completeRenderedDataObject(points),
     pointMarker: DEFAULT_POINT_MARKER,
+    pointSize: DEFAULT_POINT_SIZE,
+    pointSizeUnit: DEFAULT_POINT_SIZE_UNIT,
+    pointSizeFactor: DEFAULT_POINT_SIZE_FACTOR,
     pointColor: DEFAULT_POINT_COLOR,
+    pointColorPalette: DEFAULT_POINT_COLOR_PALETTE,
     pointVisibility: DEFAULT_POINT_VISIBILITY,
     pointOpacity: DEFAULT_POINT_OPACITY,
-    ...rawPoints,
+    ...points,
   };
 }
 
-/** A data source for 2D point clouds */
+/**
+ * A data source for two-dimensional point clouds
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawPointsDataSource<TType extends string = string>
-  extends RawDataSource<TType> {}
+export interface PointsDataSource<TType extends string = string>
+  extends DataSource<TType> {}
 
-type DefaultedPointsDataSourceKeys<TType extends string = string> = keyof Omit<
-  RawPointsDataSource<TType>,
-  "type" | "url" | "path"
->;
+/**
+ * {@link PointsDataSource} properties that have default values
+ *
+ * @internal
+ */
+export type PointsDataSourceKeysWithDefaults<TType extends string = string> =
+  DataSourceKeysWithDefaults<TType>;
 
-export type PointsDataSource<TType extends string = string> = Required<
-  Pick<RawPointsDataSource<TType>, DefaultedPointsDataSourceKeys<TType>>
+/**
+ * A {@link PointsDataSource} with default values applied
+ *
+ * @internal
+ */
+export type CompletePointsDataSource<TType extends string = string> = Required<
+  Pick<PointsDataSource<TType>, PointsDataSourceKeysWithDefaults<TType>>
 > &
-  Omit<RawPointsDataSource<TType>, DefaultedPointsDataSourceKeys<TType>>;
+  Omit<PointsDataSource<TType>, PointsDataSourceKeysWithDefaults<TType>>;
 
-export function createPointsDataSource<TType extends string = string>(
-  rawPointsDataSource: RawPointsDataSource<TType>,
-): PointsDataSource<TType> {
-  return { ...createDataSource(rawPointsDataSource), ...rawPointsDataSource };
+/**
+ * Creates a {@link CompletePointsDataSource} from a {@link PointsDataSource} by applying default values
+ *
+ * @param pointsDataSource - The raw points data source
+ * @returns The complete points data source with default values applied
+ *
+ * @internal
+ */
+export function completePointsDataSource<TType extends string = string>(
+  pointsDataSource: PointsDataSource<TType>,
+): CompletePointsDataSource<TType> {
+  return { ...completeDataSource(pointsDataSource), ...pointsDataSource };
 }
 
-/** A layer-specific display configuration for 2D point clouds */
-export interface RawPointsLayerConfig extends RawLayerConfig {
-  /** Dimension containing point-wise X coordinates */
+/**
+ * A layer-specific display configuration for two-dimensional point clouds
+ */
+export interface PointsLayerConfig extends LayerConfig {
+  /**
+   * Dimension containing point-wise X coordinates
+   *
+   * @see {@link PointsData.getDimensions}
+   */
   x: string;
 
-  /** Dimension containing point-wise Y coordinates */
+  /**
+   * Dimension containing point-wise Y coordinates
+   *
+   * @see {@link PointsData.getDimensions}
+   */
   y: string;
 }
 
-type DefaultedPointsLayerConfigKeys = keyof Omit<
-  RawPointsLayerConfig,
-  "layerId" | "x" | "y"
->;
+/**
+ * {@link PointsLayerConfig} properties that have default values
+ *
+ * @internal
+ */
+export type PointsLayerConfigKeysWithDefaults = LayerConfigKeysWithDefaults;
 
-export type PointsLayerConfig = Required<
-  Pick<RawPointsLayerConfig, DefaultedPointsLayerConfigKeys>
+/**
+ * A {@link PointsLayerConfig} with default values applied
+ *
+ * @internal
+ */
+export type CompletePointsLayerConfig = Required<
+  Pick<PointsLayerConfig, PointsLayerConfigKeysWithDefaults>
 > &
-  Omit<RawPointsLayerConfig, DefaultedPointsLayerConfigKeys>;
+  Omit<PointsLayerConfig, PointsLayerConfigKeysWithDefaults>;
 
-export function createPointsLayerConfig(
-  rawPointsLayerConfig: RawPointsLayerConfig,
-): PointsLayerConfig {
-  return {
-    ...createLayerConfig(rawPointsLayerConfig),
-    flip: false,
-    transform: {
-      scale: 1,
-      rotation: 0,
-      translation: { x: 0, y: 0 },
-    },
-    ...rawPointsLayerConfig,
-  };
+/**
+ * Creates a {@link CompletePointsLayerConfig} from a {@link PointsLayerConfig} by applying default values
+ *
+ * @param pointsLayerConfig - The raw points layer configuration
+ * @returns The complete points layer configuration with default values applied
+ *
+ * @internal
+ */
+export function completePointsLayerConfig(
+  pointsLayerConfig: PointsLayerConfig,
+): CompletePointsLayerConfig {
+  return { ...completeLayerConfig(pointsLayerConfig), ...pointsLayerConfig };
 }

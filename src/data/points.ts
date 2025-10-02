@@ -1,4 +1,4 @@
-import { RawPointsDataSource } from "../model/points";
+import { PointsDataSource } from "../model/points";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";
 
@@ -17,7 +17,7 @@ export interface PointsDataLoader<TPointsData extends PointsData>
 }
 
 export type PointsDataLoaderFactory = (
-  dataSource: RawPointsDataSource,
+  dataSource: PointsDataSource,
   projectDir: FileSystemDirectoryHandle | null,
   loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>,
 ) => PointsDataLoader<PointsData>;

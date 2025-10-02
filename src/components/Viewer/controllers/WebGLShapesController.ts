@@ -1,7 +1,7 @@
 import { ShapesData } from "../../../data/shapes";
 import { TableData } from "../../../data/table";
-import { Layer } from "../../../model/layer";
-import { Shapes } from "../../../model/shapes";
+import { CompleteLayer } from "../../../model/layer";
+import { CompleteShapes } from "../../../model/shapes";
 import { DrawOptions, Rect } from "../../../types";
 import WebGLControllerBase from "./WebGLControllerBase";
 
@@ -11,9 +11,12 @@ export default class WebGLShapesController extends WebGLControllerBase {
   }
 
   async synchronize(
-    _layerMap: Map<string, Layer>,
-    _shapesMap: Map<string, Shapes>,
-    _loadShapes: (shapes: Shapes, signal?: AbortSignal) => Promise<ShapesData>,
+    _layerMap: Map<string, CompleteLayer>,
+    _shapesMap: Map<string, CompleteShapes>,
+    _loadShapes: (
+      shapes: CompleteShapes,
+      signal?: AbortSignal,
+    ) => Promise<ShapesData>,
     _loadTableByID: (
       tableId: string,
       signal?: AbortSignal,

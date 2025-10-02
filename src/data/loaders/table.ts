@@ -1,6 +1,7 @@
 import {
-  RawPointsDataSource,
-  createPointsDataSource,
+  PointsDataSource,
+  PointsDataSourceKeysWithDefaults,
+  completePointsDataSource,
 } from "../../model/points";
 import { PointsData } from "../points";
 import { TableData } from "../table";
@@ -10,35 +11,33 @@ import { AbstractPointsDataLoader } from "./base";
 
 export const TABLE_POINTS_DATA_SOURCE = "table";
 
-export interface RawTablePointsDataSource
-  extends RawPointsDataSource<typeof TABLE_POINTS_DATA_SOURCE> {
+export interface TablePointsDataSource
+  extends PointsDataSource<typeof TABLE_POINTS_DATA_SOURCE> {
   url: undefined; // Table data does not use a URL
   path: undefined; // Table data does not use a path
   tableId: string;
   dimensionColumns?: string[];
 }
 
-type DefaultedTablePointsDataSourceKeys = keyof Omit<
-  RawTablePointsDataSource,
-  "type" | "url" | "path" | "tableId" | "dimensionColumns"
->;
+export type TablePointsDataSourceKeysWithDefaults =
+  PointsDataSourceKeysWithDefaults<typeof TABLE_POINTS_DATA_SOURCE>;
 
-export type TablePointsDataSource = Required<
-  Pick<RawTablePointsDataSource, DefaultedTablePointsDataSourceKeys>
+export type CompleteTablePointsDataSource = Required<
+  Pick<TablePointsDataSource, TablePointsDataSourceKeysWithDefaults>
 > &
-  Omit<RawTablePointsDataSource, DefaultedTablePointsDataSourceKeys>;
+  Omit<TablePointsDataSource, TablePointsDataSourceKeysWithDefaults>;
 
-export function createTablePointsDataSource(
-  rawTablePointsDataSource: RawTablePointsDataSource,
-): TablePointsDataSource {
+export function completeTablePointsDataSource(
+  tablePointsDataSource: TablePointsDataSource,
+): CompleteTablePointsDataSource {
   return {
-    ...createPointsDataSource(rawTablePointsDataSource),
-    ...rawTablePointsDataSource,
+    ...completePointsDataSource(tablePointsDataSource),
+    ...tablePointsDataSource,
   };
 }
 
 export class TablePointsDataLoader extends AbstractPointsDataLoader<
-  TablePointsDataSource,
+  CompleteTablePointsDataSource,
   PointsData
 > {
   private readonly _loadTableByID: (
@@ -47,7 +46,7 @@ export class TablePointsDataLoader extends AbstractPointsDataLoader<
   ) => Promise<TableData>;
 
   constructor(
-    dataSource: RawTablePointsDataSource,
+    dataSource: TablePointsDataSource,
     projectDir: FileSystemDirectoryHandle | null,
     loadTableByID: TablePointsDataLoader["_loadTableByID"],
   ) {

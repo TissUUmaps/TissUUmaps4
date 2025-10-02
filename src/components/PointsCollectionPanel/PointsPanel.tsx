@@ -1,10 +1,10 @@
-import { Points } from "../../model/points";
+import { CompletePoints } from "../../model/points";
 import PointsGroupSettingsPanel from "./PointsGroupSettingsPanel";
 import PointsSettingsPanel from "./PointsSettingsPanel";
 
 type PointsPanelProps = {
   pointsId: string;
-  points: Points;
+  points: CompletePoints;
 };
 
 export default function PointsPanel(props: PointsPanelProps) {

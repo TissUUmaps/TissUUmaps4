@@ -1,154 +1,308 @@
 import { SimilarityTransform, TableValuesColumn } from "../types";
 
-/** Base interface for all models */
+/**
+ * A model
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawModel {}
+export interface Model {}
 
-type DefaultedModelKeys = keyof Omit<RawModel, never>;
+/**
+ * {@link Model} properties that have default values
+ *
+ * @internal
+ */
+export type ModelKeysWithDefaults = keyof Pick<Model, never>;
 
-export type Model = Required<Pick<RawModel, DefaultedModelKeys>> &
-  Omit<RawModel, DefaultedModelKeys>;
+/**
+ * A {@link Model} with default values applied
+ *
+ * @internal
+ */
+export type CompleteModel = Required<Pick<Model, ModelKeysWithDefaults>> &
+  Omit<Model, ModelKeysWithDefaults>;
 
-export function createModel(rawModel: RawModel): Model {
-  return { ...rawModel };
+/**
+ * Creates a {@link CompleteModel} from a {@link Model} by applying default values
+ *
+ * @param model - The raw model
+ * @returns The complete model with default values applied
+ *
+ * @internal
+ */
+export function completeModel(model: Model): CompleteModel {
+  return { ...model };
 }
 
-/** Base interface for all data models */
-export interface RawDataModel<TDataSource extends RawDataSource>
-  extends RawModel {
-  /** ID */
+/**
+ * A data object
+ */
+export interface DataObject<TDataSource extends DataSource> extends Model {
+  /** Data object ID */
   id: string;
 
-  /** Name */
+  /** Human-readable data object name */
   name: string;
 
   /** Data source */
   dataSource: TDataSource;
 }
 
-type DefaultedDataModelKeys<TDataSource extends RawDataSource> = keyof Omit<
-  RawDataModel<TDataSource>,
-  "id" | "name" | "dataSource"
->;
+/**
+ * {@link DataObject} properties that have default values
+ *
+ * @internal
+ */
+export type DataObjectKeysWithDefaults<TDataSource extends DataSource> =
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-duplicate-type-constituents
+  ModelKeysWithDefaults | keyof Pick<DataObject<TDataSource>, never>;
 
-export type DataModel<TDataSource extends RawDataSource> = Required<
-  Pick<RawDataModel<TDataSource>, DefaultedDataModelKeys<TDataSource>>
+/**
+ * A {@link DataObject} with default values applied
+ *
+ * @internal
+ */
+export type CompleteDataObject<TDataSource extends DataSource> = Required<
+  Pick<DataObject<TDataSource>, DataObjectKeysWithDefaults<TDataSource>>
 > &
-  Omit<RawDataModel<TDataSource>, DefaultedDataModelKeys<TDataSource>>;
+  Omit<DataObject<TDataSource>, DataObjectKeysWithDefaults<TDataSource>>;
 
-export function createDataModel<TDataSource extends RawDataSource>(
-  rawDataModel: RawDataModel<TDataSource>,
-): DataModel<TDataSource> {
-  return { ...createModel(rawDataModel), ...rawDataModel };
+/**
+ * Creates a {@link CompleteDataObject} from a {@link DataObject} by applying default values
+ *
+ * @param dataObject - The raw data object
+ * @returns The complete data object with default values applied
+ *
+ * @internal
+ */
+export function completeDataObject<TDataSource extends DataSource>(
+  dataObject: DataObject<TDataSource>,
+): CompleteDataObject<TDataSource> {
+  return { ...completeModel(dataObject), ...dataObject };
 }
 
-/** Base interface for all rendered data models  */
-export interface RawRenderedDataModel<
-  TDataSource extends RawDataSource,
-  TLayerConfig extends RawLayerConfig,
-> extends RawDataModel<TDataSource> {
-  /** Visibility (defaults to true) */
+/**
+ * Default visibility of {@link RenderedDataObject}
+ */
+export const DEFAULT_RENDERED_DATA_OBJECT_VISIBILITY: boolean = true;
+
+/**
+ * Default opacity of {@link RenderedDataObject}
+ */
+export const DEFAULT_RENDERED_DATA_OBJECT_OPACITY: number = 1.0;
+
+/**
+ * A data object that can be rendered
+ */
+export interface RenderedDataObject<
+  TDataSource extends DataSource,
+  TLayerConfig extends LayerConfig,
+> extends DataObject<TDataSource> {
+  /**
+   * Data object visibility
+   *
+   * @defaultValue {@link DEFAULT_RENDERED_DATA_OBJECT_VISIBILITY}
+   */
   visibility?: boolean;
 
-  /** Opacity, between 0 and 1 (defaults to 1) */
+  /**
+   * Data object opacity, in the range [0, 1]
+   *
+   * @defaultValue {@link DEFAULT_RENDERED_DATA_OBJECT_OPACITY}
+   */
   opacity?: number;
 
-  /** Layer configurations */
+  /**
+   * Layer configurations
+   */
   layerConfigs: TLayerConfig[];
 }
 
-type DefaultedRenderedDataModelKeys<
-  TDataSource extends RawDataSource,
-  TLayerConfig extends RawLayerConfig,
-> = keyof Omit<
-  RawRenderedDataModel<TDataSource, TLayerConfig>,
-  "id" | "name" | "dataSource" | "layerConfigs"
->;
+/**
+ * {@link RenderedDataObject} properties that have default values
+ *
+ * @internal
+ */
+export type RenderedDataObjectKeysWithDefaults<
+  TDataSource extends DataSource,
+  TLayerConfig extends LayerConfig,
+> =
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  | DataObjectKeysWithDefaults<TDataSource>
+  | keyof Pick<
+      RenderedDataObject<TDataSource, TLayerConfig>,
+      "visibility" | "opacity"
+    >;
 
-export type RenderedDataModel<
-  TDataSource extends RawDataSource,
-  TLayerConfig extends RawLayerConfig,
+/**
+ * A {@link RenderedDataObject} with default values applied
+ *
+ * @internal
+ */
+export type CompleteRenderedDataObject<
+  TDataSource extends DataSource,
+  TLayerConfig extends LayerConfig,
 > = Required<
   Pick<
-    RawRenderedDataModel<TDataSource, TLayerConfig>,
-    DefaultedRenderedDataModelKeys<TDataSource, TLayerConfig>
+    RenderedDataObject<TDataSource, TLayerConfig>,
+    RenderedDataObjectKeysWithDefaults<TDataSource, TLayerConfig>
   >
 > &
   Omit<
-    RawRenderedDataModel<TDataSource, TLayerConfig>,
-    DefaultedRenderedDataModelKeys<TDataSource, TLayerConfig>
+    RenderedDataObject<TDataSource, TLayerConfig>,
+    RenderedDataObjectKeysWithDefaults<TDataSource, TLayerConfig>
   >;
 
-export function createRenderedDataModel<
-  TDataSource extends RawDataSource,
-  TLayerConfig extends RawLayerConfig,
+/**
+ * Creates a {@link CompleteRenderedDataObject} from a {@link RenderedDataObject} by applying default values
+ *
+ * @param renderedDataObject - The raw rendered data object
+ * @returns The complete rendered data object with default values applied
+ *
+ * @internal
+ */
+export function completeRenderedDataObject<
+  TDataSource extends DataSource,
+  TLayerConfig extends LayerConfig,
 >(
-  rawRenderedDataModel: RawRenderedDataModel<TDataSource, TLayerConfig>,
-): RenderedDataModel<TDataSource, TLayerConfig> {
+  renderedDataObject: RenderedDataObject<TDataSource, TLayerConfig>,
+): CompleteRenderedDataObject<TDataSource, TLayerConfig> {
   return {
-    ...createDataModel(rawRenderedDataModel),
-    visibility: true,
-    opacity: 1,
-    ...rawRenderedDataModel,
+    ...completeDataObject(renderedDataObject),
+    visibility: DEFAULT_RENDERED_DATA_OBJECT_VISIBILITY,
+    opacity: DEFAULT_RENDERED_DATA_OBJECT_OPACITY,
+    ...renderedDataObject,
   };
 }
 
-/** Base interface for all data sources */
-export interface RawDataSource<TType extends string = string> extends RawModel {
-  /** Data source type */
+/**
+ * A data source for data objects
+ */
+export interface DataSource<TType extends string = string> extends Model {
+  /**
+   * Data source type
+   */
   type: TType;
 
-  /** Remote URL (absolute or relative to TissUUmaps root) */
+  /**
+   * Remote URL (absolute or relative to TissUUmaps root)
+   */
   url?: string;
 
-  /** Local path (relative to workspace root) */
+  /**
+   * Local path (relative to workspace root)
+   */
   path?: string;
 }
 
-type DefaultedDataSourceKeys<TType extends string = string> = keyof Omit<
-  RawDataSource<TType>,
-  "type" | "url" | "path"
->;
+/**
+ * {@link DataSource} properties that have default values
+ *
+ * @internal
+ */
+export type DataSourceKeysWithDefaults<TType extends string = string> =
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-duplicate-type-constituents
+  ModelKeysWithDefaults | keyof Pick<DataSource<TType>, never>;
 
-export type DataSource<TType extends string = string> = Required<
-  Pick<RawDataSource<TType>, DefaultedDataSourceKeys<TType>>
+/**
+ * A {@link DataSource} with default values applied
+ *
+ * @internal
+ */
+export type CompleteDataSource<TType extends string = string> = Required<
+  Pick<DataSource<TType>, DataSourceKeysWithDefaults<TType>>
 > &
-  Omit<RawDataSource<TType>, DefaultedDataSourceKeys<TType>>;
+  Omit<DataSource<TType>, DataSourceKeysWithDefaults<TType>>;
 
-export function createDataSource<TType extends string = string>(
-  rawDataSource: RawDataSource<TType>,
-): DataSource<TType> {
-  return { ...createModel(rawDataSource), ...rawDataSource };
+/**
+ * Creates a {@link CompleteDataSource} from a {@link DataSource} by applying default values
+ *
+ * @param dataSource - The raw data source
+ * @returns The complete data source with default values applied
+ *
+ * @internal
+ */
+export function completeDataSource<TType extends string = string>(
+  dataSource: DataSource<TType>,
+): CompleteDataSource<TType> {
+  return { ...completeModel(dataSource), ...dataSource };
 }
 
-/** Base interface for all layer configurations */
-export interface RawLayerConfig extends RawModel {
-  /** Layer ID for all items, or column containing item-wise layer IDs */
+/**
+ * Default horizontal reflection of {@link LayerConfig}
+ */
+export const DEFAULT_LAYER_CONFIG_FLIP: boolean = false;
+
+/**
+ * Default transformation from data object space to layer space of {@link LayerConfig}
+ */
+export const DEFAULT_LAYER_CONFIG_TRANSFORM: SimilarityTransform = {
+  scale: 1,
+  rotation: 0,
+  translation: { x: 0, y: 0 },
+};
+
+/**
+ * A layer-specific display configuration for rendered data objects
+ */
+export interface LayerConfig extends Model {
+  /**
+   * Layer ID
+   *
+   * Can be specified as:
+   * - An ID of an existing Layer
+   * - A table column holding the layer ID values for each item
+   */
   layerId: string | TableValuesColumn;
 
-  /** Horizontal reflection, applied before transformation (defaults to false) */
+  /**
+   * Horizontal reflection, applied before transformation
+   *
+   * @defaultValue {@link DEFAULT_LAYER_CONFIG_FLIP}
+   */
   flip?: boolean;
 
-  /** Transformation from data/object space to layer space (defaults to identity transform) */
+  /**
+   * Transformation from data object space to layer space
+   *
+   * @defaultValue {@link DEFAULT_LAYER_CONFIG_TRANSFORM}
+   */
   transform?: SimilarityTransform;
 }
 
-type DefaultedLayerConfigKeys = keyof Omit<RawLayerConfig, "layerId">;
+/**
+ * {@link LayerConfig} properties that have default values
+ *
+ * @internal
+ */
+export type LayerConfigKeysWithDefaults =
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  ModelKeysWithDefaults | keyof Pick<LayerConfig, "flip" | "transform">;
 
-export type LayerConfig = Required<
-  Pick<RawLayerConfig, DefaultedLayerConfigKeys>
+/**
+ * A {@link LayerConfig} with default values applied
+ *
+ * @internal
+ */
+export type CompleteLayerConfig = Required<
+  Pick<LayerConfig, LayerConfigKeysWithDefaults>
 > &
-  Omit<RawLayerConfig, DefaultedLayerConfigKeys>;
+  Omit<LayerConfig, LayerConfigKeysWithDefaults>;
 
-export function createLayerConfig(rawLayerConfig: RawLayerConfig): LayerConfig {
+/**
+ * Creates a {@link CompleteLayerConfig} from a {@link LayerConfig} by applying default values
+ *
+ * @param layerConfig - The raw layer configuration
+ * @returns The complete layer configuration with default values applied
+ *
+ * @internal
+ */
+export function completeLayerConfig(
+  layerConfig: LayerConfig,
+): CompleteLayerConfig {
   return {
-    ...createModel(rawLayerConfig),
-    flip: false,
-    transform: {
-      scale: 1,
-      rotation: 0,
-      translation: { x: 0, y: 0 },
-    },
-    ...rawLayerConfig,
+    ...completeModel(layerConfig),
+    flip: DEFAULT_LAYER_CONFIG_FLIP,
+    transform: DEFAULT_LAYER_CONFIG_TRANSFORM,
+    ...layerConfig,
   };
 }

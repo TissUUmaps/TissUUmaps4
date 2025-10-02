@@ -1,8 +1,8 @@
-import { Points } from "../../model/points";
+import { CompletePoints } from "../../model/points";
 
 type PointsGroupSettingsPanelProps = {
   pointsId: string;
-  points: Points;
+  points: CompletePoints;
 };
 
 export default function PointsGroupSettingsPanel(

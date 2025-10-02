@@ -1,4 +1,4 @@
-import { RawShapesDataSource } from "../model/shapes";
+import { ShapesDataSource } from "../model/shapes";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";
 
@@ -15,7 +15,7 @@ export interface ShapesDataLoader<TShapesData extends ShapesData>
 }
 
 export type ShapesDataLoaderFactory = (
-  dataSource: RawShapesDataSource,
+  dataSource: ShapesDataSource,
   projectDir: FileSystemDirectoryHandle | null,
   loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>,
 ) => ShapesDataLoader<ShapesData>;

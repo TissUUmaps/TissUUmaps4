@@ -1,25 +1,28 @@
 import { PointsData } from "../data/points";
-import { Points, PointsDataSource } from "../model/points";
+import { CompletePoints, CompletePointsDataSource } from "../model/points";
 import MapUtils from "../utils/MapUtils";
 import { BoundStoreStateCreator } from "./boundStore";
 
 export type PointsSlice = PointsSliceState & PointsSliceActions;
 
 export type PointsSliceState = {
-  pointsMap: Map<string, Points>;
-  pointsDataCache: Map<PointsDataSource, PointsData>;
+  pointsMap: Map<string, CompletePoints>;
+  pointsDataCache: Map<CompletePointsDataSource, PointsData>;
 };
 
 export type PointsSliceActions = {
-  addPoints: (points: Points, index?: number) => void;
-  loadPoints: (points: Points, signal?: AbortSignal) => Promise<PointsData>;
+  addPoints: (points: CompletePoints, index?: number) => void;
+  loadPoints: (
+    points: CompletePoints,
+    signal?: AbortSignal,
+  ) => Promise<PointsData>;
   loadPointsByID: (
     pointsId: string,
     signal?: AbortSignal,
   ) => Promise<PointsData>;
-  unloadPoints: (points: Points) => void;
+  unloadPoints: (points: CompletePoints) => void;
   unloadPointsByID: (pointsId: string) => void;
-  deletePoints: (points: Points) => void;
+  deletePoints: (points: CompletePoints) => void;
   deletePointsByID: (pointsId: string) => void;
   clearPoints: () => void;
 };
