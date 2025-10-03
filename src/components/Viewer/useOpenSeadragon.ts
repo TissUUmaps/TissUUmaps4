@@ -48,6 +48,7 @@ export default function useOpenSeadragon() {
       setContainerSize(controllerRef.current.getContainerSize());
       setViewportBounds(controllerRef.current.getViewportBounds());
     }
+    // React 19 added cleanup functions for ref callbacks
     return () => {
       if (controllerRef.current !== null) {
         controllerRef.current.destroy();
