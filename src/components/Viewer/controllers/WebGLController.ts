@@ -16,13 +16,13 @@ export default class WebGLController {
   private _shapesController: WebGLShapesController;
   private _drawOptions: DrawOptions = WebGLController.DEFAULT_DRAW_OPTIONS;
 
-  static createCanvas(parent: HTMLElement): HTMLCanvasElement {
+  static createCanvas(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
     canvas.style.setProperty("position", "relative");
     canvas.style.setProperty("width", "100%");
     canvas.style.setProperty("height", "100%");
     canvas.style.setProperty("z-index", "50");
-    return parent.appendChild(canvas);
+    return canvas;
   }
 
   constructor(canvas: HTMLCanvasElement) {

@@ -39,7 +39,7 @@ export default function useWebGL(
   // initialize the WebGL controller
   useEffect(() => {
     if (parent !== null) {
-      const canvas = WebGLController.createCanvas(parent);
+      const canvas = parent.appendChild(WebGLController.createCanvas());
       controllerRef.current = new WebGLController(canvas);
       controllerRef.current.initialize().then(() => {
         setInitialized(true);
