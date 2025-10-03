@@ -173,11 +173,11 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
 
 const initialProjectSliceState: ProjectSliceState = {
   projectName: "New Project",
+  markerMaps: new Map(),
   sizeMaps: new Map(),
   colorMaps: new Map(),
   visibilityMaps: new Map(),
   opacityMaps: new Map(),
-  markerMaps: new Map(),
   drawOptions: DEFAULT_PROJECT_DRAW_OPTIONS,
   viewerOptions: DEFAULT_PROJECT_VIEWER_OPTIONS,
   viewerAnimationStartOptions: DEFAULT_PROJECT_VIEWER_ANIMATION_START_OPTIONS,
