@@ -58,24 +58,50 @@ export default class OpenSeadragonController {
   private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
   private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
 
-  static createViewer(viewerElement: HTMLElement): OpenSeadragon.Viewer {
-    const viewer = new OpenSeadragon.Viewer({
+  constructor(
+    viewerElement: HTMLElement,
+    containerResizedHandler: (newContainerSize: {
+      width: number;
+      height: number;
+    }) => void,
+    viewportChangedHandler: (newViewportBounds: Rect) => void,
+  ) {
+    this._viewer = new OpenSeadragon.Viewer({
       ...DEFAULT_PROJECT_VIEWER_OPTIONS,
       // do not forget to exclude properties from the ViewerOptions type when setting them here
       element: viewerElement,
     });
-    // disable key bindings for rotation and flipping
-    viewer.addHandler("canvas-key", (event) => {
+    this._viewer.addHandler("resize", (event) => {
+      containerResizedHandler({
+        width: event.newContainerSize.x,
+        height: event.newContainerSize.y,
+      });
+    });
+    this._viewer.addHandler("viewport-change", () => {
+      viewportChangedHandler(this.getViewportBounds());
+    });
+    this._viewer.addHandler("canvas-key", (event) => {
+      // disable key bindings for rotation and flipping
       const originalEvent = event.originalEvent as KeyboardEvent;
       if (["r", "R", "f"].includes(originalEvent.key)) {
         event.preventDefaultAction = true;
       }
     });
-    return viewer;
   }
 
-  constructor(viewer: OpenSeadragon.Viewer) {
-    this._viewer = viewer;
+  getViewerCanvas(): HTMLElement {
+    return this._viewer.canvas;
+  }
+
+  getContainerSize(): { width: number; height: number } {
+    const containerSize = this._viewer.viewport.getContainerSize();
+    return { width: containerSize.x, height: containerSize.y };
+  }
+
+  getViewportBounds(): Rect {
+    // OpenSeadragon.Viewport.getBounds(current):
+    // Returns the bounds of the visible area in viewport coordinates
+    return this._viewer.viewport.getBounds(true);
   }
 
   setViewerOptions(viewerOptions: ViewerOptions): void {
@@ -185,12 +211,6 @@ export default class OpenSeadragonController {
       loadLabels,
       signal,
     );
-  }
-
-  getViewportBounds(): Rect {
-    // OpenSeadragon.Viewport.getBounds(current):
-    // Returns the bounds of the visible area in viewport coordinates
-    return this._viewer.viewport.getBounds(true);
   }
 
   destroy(): void {

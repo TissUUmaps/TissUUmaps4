@@ -178,11 +178,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
   async synchronize(
     layerMap: Map<string, CompleteLayer>,
     pointsMap: Map<string, CompletePoints>,
+    markerMaps: Map<string, ValueMap<Marker>>,
     sizeMaps: Map<string, ValueMap<number>>,
     colorMaps: Map<string, ColorMap>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
-    markerMaps: Map<string, ValueMap<Marker>>,
     loadPoints: (
       points: CompletePoints,
       signal?: AbortSignal,

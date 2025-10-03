@@ -16,13 +16,13 @@ export default class WebGLController {
   private _shapesController: WebGLShapesController;
   private _drawOptions: DrawOptions = WebGLController.DEFAULT_DRAW_OPTIONS;
 
-  static createCanvas(): HTMLCanvasElement {
+  static createCanvas(parent: HTMLElement): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
     canvas.style.setProperty("position", "relative");
     canvas.style.setProperty("width", "100%");
     canvas.style.setProperty("height", "100%");
     canvas.style.setProperty("z-index", "50");
-    return canvas;
+    return parent.appendChild(canvas);
   }
 
   constructor(canvas: HTMLCanvasElement) {
@@ -63,13 +63,6 @@ export default class WebGLController {
     return await this._shapesController.synchronize(...args);
   }
 
-  draw(viewport: Rect): void {
-    this._gl.clearColor(0, 0, 0, 0);
-    this._gl.clear(this._gl.COLOR_BUFFER_BIT);
-    this._pointsController.draw(viewport, this._drawOptions);
-    this._shapesController.draw(viewport, this._drawOptions);
-  }
-
   resize(width: number, height: number): void {
     width *= window.devicePixelRatio;
     height *= window.devicePixelRatio;
@@ -87,6 +80,13 @@ export default class WebGLController {
     this._canvas.width = width;
     this._canvas.height = height;
     this._gl.viewport(0, 0, width, height);
+  }
+
+  draw(viewport: Rect): void {
+    this._gl.clearColor(0, 0, 0, 0);
+    this._gl.clear(this._gl.COLOR_BUFFER_BIT);
+    this._pointsController.draw(viewport, this._drawOptions);
+    this._shapesController.draw(viewport, this._drawOptions);
   }
 
   destroy(): void {
