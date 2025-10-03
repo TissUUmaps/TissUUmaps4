@@ -215,11 +215,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
     }
     const newBufferSlices = await this._loadPoints(
       refs,
+      markerMaps,
       sizeMaps,
       colorMaps,
       visibilityMaps,
       opacityMaps,
-      markerMaps,
       buffersResized,
       loadTableByID,
       signal,
@@ -383,11 +383,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
 
   private async _loadPoints(
     refs: PointsRef[],
+    markerMaps: Map<string, ValueMap<Marker>>,
     sizeMaps: Map<string, ValueMap<number>>,
     colorMaps: Map<string, ColorMap>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
-    markerMaps: Map<string, ValueMap<Marker>>,
     buffersResized: boolean,
     loadTableByID: (
       tableId: string,
