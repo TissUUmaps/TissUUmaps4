@@ -1,12 +1,11 @@
 import { ShapesDataSource } from "../model/shapes";
+import { MultiPolygon } from "../types";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";
 
-export type GeoJSONGeometry = object;
-
 export interface ShapesData extends Data {
   getLength(): number;
-  loadGeometries(signal?: AbortSignal): Promise<GeoJSONGeometry[]>;
+  loadPolygons(signal?: AbortSignal): Promise<MultiPolygon[]>;
 }
 
 export interface ShapesDataLoader<TShapesData extends ShapesData>
