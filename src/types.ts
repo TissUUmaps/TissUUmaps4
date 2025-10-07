@@ -133,3 +133,14 @@ export type DrawOptions = {
   /** Point size factor */
   pointSizeFactor: number;
 };
+
+export type Point = [number, number];
+
+export type Polygon = {
+  shell: Point[];
+  holes: Point[][];
+};
+
+export type MultiPolygon = {
+  polygons: Polygon[];
+};
