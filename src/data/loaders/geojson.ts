@@ -3,7 +3,8 @@ import {
   ShapesDataSourceKeysWithDefaults,
   completeShapesDataSource,
 } from "../../model/shapes";
-import { GeoJSONGeometry, ShapesData } from "../shapes";
+import { MultiPolygon } from "../../types";
+import { ShapesData } from "../shapes";
 import { AbstractShapesDataLoader } from "./base";
 
 export const GEOJSON_SHAPES_DATA_SOURCE = "geojson";
@@ -50,7 +51,7 @@ export class GeoJSONShapesData implements ShapesData {
     throw new Error("Method not implemented.");
   }
 
-  loadGeometries(signal?: AbortSignal): Promise<GeoJSONGeometry[]> {
+  loadPolygons(signal?: AbortSignal): Promise<MultiPolygon[]> {
     signal?.throwIfAborted();
     // TODO implement loading of GeoJSON geometries (make function async if needed)
     throw new Error("Method not implemented.");
