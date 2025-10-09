@@ -10,6 +10,6 @@ The following global events are available on `window`:
 
 - `tissuumaps-init (eventBus)` issued after the application has been initialized, but before any data is loaded
 
-The following scoped events are available on the `eventBus` provided by `window.tissuumaps-init`:
+The following scoped events are available on the `eventBus` provided by the `tissuumaps-init` event:
 
 - `loaded (project)` issued after a project has been loaded (including the initial startup project)
