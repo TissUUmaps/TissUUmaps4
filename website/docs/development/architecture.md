@@ -28,4 +28,4 @@ Components are grouped in barrels. In most cases, calls to React hooks are abstr
 
 ## Utilities
 
-Utilities are exclusively implement as static classes with corresponding unit tests.
+Utilities are exclusively implemented as static classes with corresponding unit tests.
