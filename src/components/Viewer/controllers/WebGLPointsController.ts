@@ -78,7 +78,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
       pointsVertexShader,
       pointsFragmentShader,
     );
-    // get uniform locations and block indices
+    // get uniform locations
     this._uniformLocations = {
       worldToViewportMatrix: WebGLUtils.getUniformLocation(
         this._gl,
@@ -96,10 +96,11 @@ export default class WebGLPointsController extends WebGLControllerBase {
         "u_markerAtlas",
       ),
     };
+    // get block indices
     this._uniformBlockIndices = {
       objectsUBO: this._gl.getUniformBlockIndex(this._program, "ObjectsUBO"),
     };
-    // create buffers and allocate space for UBO
+    // create buffers and allocate space for UBOs
     this._buffers = {
       x: WebGLUtils.createBuffer(this._gl),
       y: WebGLUtils.createBuffer(this._gl),
@@ -299,6 +300,10 @@ export default class WebGLPointsController extends WebGLControllerBase {
 
   destroy(): void {
     this._gl.deleteProgram(this._program);
+    this._gl.deleteVertexArray(this._vao);
+    if (this._markerAtlasTexture !== undefined) {
+      this._gl.deleteTexture(this._markerAtlasTexture);
+    }
     for (const buffer of Object.values(this._buffers)) {
       this._gl.deleteBuffer(buffer);
     }
