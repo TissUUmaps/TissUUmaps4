@@ -10,13 +10,13 @@ precision highp float; // no default otherwise
 precision highp int; // defaults to mediump otherwise
 precision highp sampler2D;  // defaults to lowp otherwise
 
+flat in vec4 v_color;
+flat in uvec3 v_marker;
+
 // Signed distance fields (SDFs),
 // pre-multiplied by DISTANCE_MULTIPLIER,
 // and quantized into unsigned 8-bit integers
 uniform sampler2D u_markerAtlas;
-
-flat in vec4 v_color;
-flat in uvec3 v_marker;
 
 out vec4 fragColor;
 
