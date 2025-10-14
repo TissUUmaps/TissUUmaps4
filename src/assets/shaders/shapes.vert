@@ -5,9 +5,9 @@ layout(location = 0) in vec2 a_viewportPos; // viewport corner, in viewport coor
 uniform mat3x2 u_viewportToWorldMatrix;
 uniform uint u_numScanlines;
 
-out vec2 v_viewportPos; // in [0, 1] (will be interpolated for fragments)
-out vec2 v_worldPos; // in world coordinates (will be interpolated for fragments)
-out float v_scanline; // in [0, u_numScanlines] (will be interpolated for fragments)
+out vec2 v_viewportPos; // in [0, 1]
+out vec2 v_worldPos; // in world coordinates
+out float v_scanline; // in [0, u_numScanlines]
 
 void main() {
     v_viewportPos = a_viewportPos;
