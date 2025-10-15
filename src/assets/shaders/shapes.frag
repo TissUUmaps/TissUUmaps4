@@ -13,20 +13,26 @@ in vec2 v_viewportPos; // in [0, 1]
 in vec2 v_worldPos; // in world coordinates
 in float v_scanline; // in [0, u_numScanlines]
 
-// Scanline data
-// [header, scanline data 0, scanline data 1, ..., scanline data N]
-//   header: [scanline info 1, scanline info 2, ..., scanline info N]
-//      scanline info = (offset, shape count M, xmin, xmax)
-//   scanline data: [scanline header, shape data 1, shape data 2, ..., shape data M]
-//     scanline header = (4 * 32 = 128 bit occupancy mask)
-//     shape data: [shape header, edge data 1, edge data 2, ..., edge data L]
-//       shape header = (id, edge count L, xmin, xmax)
-//       edge data = (x0, y0, x1, y1)
+/*
+ * Scanline data (RGBA32F data texture)
+ *
+ * Memory layout: [header, scanline data 0, scanline data 1, ..., scanline data N]
+ *   Header: [scanline info 1, scanline info 2, ..., scanline info N]
+ *      Scanline info = (offset, shape count M, xmin, xmax)
+ *   Scanline data: [scanline header, shape data 1, shape data 2, ..., shape data M]
+ *     Scanline header = (4 * 32 = 128 bit occupancy mask)
+ *     Shape data: [shape header, edge data 1, edge data 2, ..., edge data L]
+ *       Shape header = (id, edge count L, xmin, xmax)
+ *       Edge data = (x0, y0, x1, y1)
+ */
 uniform sampler2D u_scanlineData;
 
-// Shape properties
-// [shape 1, shape 2, ..., shape N]
-//   shape = (fill color, unused, line width, line color)
+/*
+ * Shape properties (RGBA32F data texture)
+ *
+ * Memory layout: [shape properties 1, shape properties 2, ..., shape properties L]
+ *   Shape properties = (fill color, unused, line width, line color)
+ */
 uniform sampler2D u_shapeProperties;
 
 out vec4 fragColor;
