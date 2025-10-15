@@ -88,7 +88,7 @@ float pointToLineDist(vec2 p, vec2 v0, vec2 v1) {
     return min(length(p - v0), length(p - v1)); // distance to closest endpoint
 }
 
-// compute the winding number for a given point p and n edges stored in data starting at offset
+// computes the winding number for a given point p and n edges stored in data starting at offset
 // https://web.archive.org/web/20210504233957/http://geomalgorithms.com/a03-_inclusion.html
 int windingNumber(vec2 p, uint offset, uint n, float hsw, out float minDist) {
     int wn = 0;
