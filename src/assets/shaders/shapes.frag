@@ -157,7 +157,7 @@ void main() {
             if(windingNumber(v_pos, shapeOffset + 1u, edgeCount, v_halfStrokeWidth, minDist) > 0) { // point is inside shape
                 vec4 shapeProperties = shapePropertiesTexelFetch(shapeIndex);
                 if(minDist < v_halfStrokeWidth) { // point is inside stroke area
-                    vec4 strokColor = unpackColor(floatBitsToUint(shapeProperties[1]));
+                    vec4 strokeColor = unpackColor(floatBitsToUint(shapeProperties[1]));
                     // TODO update fragColor
                 } else { // point is inside fill area
                     vec4 fillColor = unpackColor(floatBitsToUint(shapeProperties[0]));
