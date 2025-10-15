@@ -33,6 +33,22 @@ uniform float u_pointSizeFactor;
 flat out vec4 v_color;
 flat out uvec3 v_marker;
 
+// unpacks a uint-packed 8-bit RGBA color
+vec4 unpackColor(uint color) {
+    float r = float((color >> 24) & 0xFFu) / 255.0f;
+    float g = float((color >> 16) & 0xFFu) / 255.0f;
+    float b = float((color >> 8) & 0xFFu) / 255.0f;
+    float a = float(color & 0xFFu) / 255.0f;
+    return vec4(r, g, b, a);
+}
+
+uvec3 getMarkerCoords(uint markerIndex) {
+    uint x = (markerIndex % N_MARKERS_PER_CHANNEL) % MARKER_ATLAS_GRID_SIZE;
+    uint y = (markerIndex % N_MARKERS_PER_CHANNEL) / MARKER_ATLAS_GRID_SIZE;
+    uint c = markerIndex / N_MARKERS_PER_CHANNEL;
+    return uvec3(x, y, c);
+}
+
 void main() {
     if(a_markerIndex >= MAX_N_MARKERS || a_objectIndex >= MAX_N_OBJECTS) {
         DISCARD;
@@ -48,16 +64,9 @@ void main() {
     if(gl_PointSize == 0.0f) {
         DISCARD;
     }
-    float r = float((a_color >> 24) & 0xFFu) / 255.0f;
-    float g = float((a_color >> 16) & 0xFFu) / 255.0f;
-    float b = float((a_color >> 8) & 0xFFu) / 255.0f;
-    float a = float(a_color & 0xFFu) / 255.0f;
-    if(a == 0.0f) {
+    v_color = unpackColor(a_color);
+    if(v_color.a == 0.0f) {
         DISCARD;
     }
-    v_color = vec4(r, g, b, a);
-    uint col = (a_markerIndex % N_MARKERS_PER_CHANNEL) % MARKER_ATLAS_GRID_SIZE;
-    uint row = (a_markerIndex % N_MARKERS_PER_CHANNEL) / MARKER_ATLAS_GRID_SIZE;
-    uint channel = a_markerIndex / N_MARKERS_PER_CHANNEL;
-    v_marker = uvec3(col, row, channel);
+    v_marker = getMarkerCoords(a_markerIndex);
 }
