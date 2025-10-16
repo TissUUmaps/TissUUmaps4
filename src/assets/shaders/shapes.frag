@@ -6,7 +6,7 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#implicit_defaults
 precision highp float; // no default otherwise
 precision highp int; // defaults to mediump otherwise
-precision highp sampler2D; // defaults to mediump otherwise
+precision highp sampler2D; // defaults to lowp otherwise
 
 uniform uint u_numScanlines;
 uniform vec4 u_objectBounds; // (xmin, ymin, xmax, ymax), in data dimensions
