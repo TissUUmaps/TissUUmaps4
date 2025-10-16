@@ -62,7 +62,7 @@ void main() {
         DISCARD;
     }
     gl_PointSize = a_size * u_pointSizeFactor;
-    if(gl_PointSize == 0.0) {
+    if(gl_PointSize <= 0.0) {
         DISCARD;
     }
     v_color = unpackColor(a_color);

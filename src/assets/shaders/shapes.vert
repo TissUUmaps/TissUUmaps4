@@ -23,6 +23,6 @@ void main() {
     vec2 worldPos = u_viewportToWorldMatrix * vec3(a_viewportPos, 1.0);
     v_pos = u_worldToDataMatrix * vec3(worldPos, 1.0);
     v_scanline = float(u_numScanlines) * (v_pos.y - u_objectBounds[1]) / objectHeight;
-    v_hsw = 0.5 * u_strokeWidth * length(u_worldToDataMatrix[0]);
+    v_hsw = 0.5 * u_strokeWidth * length(u_worldToDataMatrix[0]); // scaling is uniform
     gl_Position = vec4((2.0 * a_viewportPos - 1.0) * vec2(1.0, -1.0), 0.0, 1.0);
 }
