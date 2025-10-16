@@ -6,7 +6,7 @@
 #define N_MARKERS_PER_CHANNEL 16u // MARKER_ATLAS_GRID_SIZE * MARKER_ATLAS_GRID_SIZE
 #define MARKER_ATLAS_GRID_SIZE 4u
 
-#define DISCARD gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 0.0, 1.0); v_marker = uvec3(0); v_color = vec4(0.0); return;
+#define DISCARD gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 0.0, 1.0); v_color = vec4(0.0); v_marker = uvec3(0); return;
 
 uniform mat3x2 u_worldToViewportMatrix;
 uniform float u_pointSizeFactor;
