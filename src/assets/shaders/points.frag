@@ -1,9 +1,9 @@
 #version 300 es
 
 #define MARKER_ATLAS_GRID_SIZE 4u
-#define DISTANCE_MULTIPLIER 8.f
-#define TEXTURE_LOD_BIAS -2.f
-#define ALPHA_THRESHOLD 0.005f
+#define DISTANCE_MULTIPLIER 8.0
+#define TEXTURE_LOD_BIAS -2.0
+#define ALPHA_THRESHOLD 0.005
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#implicit_defaults
 precision highp float; // no default otherwise
@@ -21,13 +21,13 @@ flat in uvec3 v_marker;
 out vec4 fragColor;
 
 void main() {
-    if(v_color.a == 0.f) {
+    if(v_color.a == 0.0) {
         discard;
     }
     vec2 uv = (float(v_marker.xy) + gl_PointCoord.xy) / float(MARKER_ATLAS_GRID_SIZE);
-    float dist = (texture(u_markerAtlas, uv, TEXTURE_LOD_BIAS)[v_marker.z] - 0.5f) * 255.f / DISTANCE_MULTIPLIER;
+    float dist = (texture(u_markerAtlas, uv, TEXTURE_LOD_BIAS)[v_marker.z] - 0.5) * 255.0 / DISTANCE_MULTIPLIER;
     float pixelWidth = dFdx(uv.x) * float(textureSize(u_markerAtlas, 0).x);
-    float alpha = v_color.a * clamp(dist / pixelWidth + 0.5f, 0.f, 1.f);
+    float alpha = v_color.a * clamp(dist / pixelWidth + 0.5, 0.0, 1.0);
     if(alpha < ALPHA_THRESHOLD) {
         discard;
     }

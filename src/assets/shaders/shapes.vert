@@ -13,9 +13,9 @@ out float v_scanline; // in [0, u_numScanlines]
 flat out float v_hsw; // half stroke width, in data dimensions
 
 void main() {
-    vec2 worldPos = u_viewportToWorldMatrix * vec3(a_viewportPos, 1.f);
-    v_pos = u_worldToDataMatrix * vec3(worldPos, 1.f);
+    vec2 worldPos = u_viewportToWorldMatrix * vec3(a_viewportPos, 1.0);
+    v_pos = u_worldToDataMatrix * vec3(worldPos, 1.0);
     v_scanline = float(u_numScanlines) * (v_pos.y - u_objectBounds[1]) / (u_objectBounds[3] - u_objectBounds[1]);
-    v_hsw = 0.5f * u_strokeWidth * length(u_worldToDataMatrix[0]);
-    gl_Position = vec4((2.f * a_viewportPos - 1.f) * vec2(1.f, -1.f), 0.f, 1.f);
+    v_hsw = 0.5 * u_strokeWidth * length(u_worldToDataMatrix[0]);
+    gl_Position = vec4((2.0 * a_viewportPos - 1.0) * vec2(1.0, -1.0), 0.0, 1.0);
 }

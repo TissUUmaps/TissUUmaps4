@@ -6,7 +6,7 @@
 #define N_MARKERS_PER_CHANNEL 16u // MARKER_ATLAS_GRID_SIZE * MARKER_ATLAS_GRID_SIZE
 #define MARKER_ATLAS_GRID_SIZE 4u
 
-#define DISCARD gl_PointSize = 0.f; gl_Position = vec4(2.f, 2.f, 0.f, 1.f); v_marker = uvec3(0); v_color = vec4(0.f); return;
+#define DISCARD gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 0.0, 1.0); v_marker = uvec3(0); v_color = vec4(0.0); return;
 
 uniform mat3x2 u_worldToViewportMatrix;
 uniform float u_pointSizeFactor;
@@ -35,10 +35,10 @@ flat out uvec3 v_marker;
 
 // unpacks a uint-packed 8-bit RGBA color
 vec4 unpackColor(uint color) {
-    float r = float((color >> 24) & 0xFFu) / 255.f;
-    float g = float((color >> 16) & 0xFFu) / 255.f;
-    float b = float((color >> 8) & 0xFFu) / 255.f;
-    float a = float(color & 0xFFu) / 255.f;
+    float r = float((color >> 24) & 0xFFu) / 255.0;
+    float g = float((color >> 16) & 0xFFu) / 255.0;
+    float b = float((color >> 8) & 0xFFu) / 255.0;
+    float a = float(color & 0xFFu) / 255.0;
     return vec4(r, g, b, a);
 }
 
@@ -55,18 +55,18 @@ void main() {
         DISCARD;
     }
     mat4x2 dataToWorldMatrix = transpose(transposedDataToWorldMatrices[a_objectIndex]);
-    vec2 worldPosition = dataToWorldMatrix * vec4(a_x, a_y, 1.f, 0.f);
-    vec2 viewportPosition = u_worldToViewportMatrix * vec3(worldPosition, 1.f); // in [0, 1]
-    gl_Position = vec4((2.f * viewportPosition - 1.f) * vec2(1.f, -1.f), 0.f, 1.f);
-    if(gl_Position.x < -1.f || gl_Position.x > 1.f || gl_Position.y < -1.f || gl_Position.y > 1.f) {
+    vec2 worldPosition = dataToWorldMatrix * vec4(a_x, a_y, 1.0, 0.0);
+    vec2 viewportPosition = u_worldToViewportMatrix * vec3(worldPosition, 1.0); // in [0, 1]
+    gl_Position = vec4((2.0 * viewportPosition - 1.0) * vec2(1.0, -1.0), 0.0, 1.0);
+    if(gl_Position.x < -1.0 || gl_Position.x > 1.0 || gl_Position.y < -1.0 || gl_Position.y > 1.0) {
         DISCARD;
     }
     gl_PointSize = a_size * u_pointSizeFactor;
-    if(gl_PointSize == 0.f) {
+    if(gl_PointSize == 0.0) {
         DISCARD;
     }
     v_color = unpackColor(a_color);
-    if(v_color.a == 0.f) {
+    if(v_color.a == 0.0) {
         DISCARD;
     }
     v_marker = markerAtlasCoords(a_markerIndex);

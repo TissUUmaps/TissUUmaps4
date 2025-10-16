@@ -53,7 +53,7 @@ vec4 texel(sampler2D sampler, uint w, uint offset) {
 
 // checks if a given x coordinate falls into an occupied bin of an 128-bit occupancy mask
 bool occupancy(float x, float xmin, float xmax, vec4 occupancyMask) {
-    uint bin = min(uint(128.f * (x - xmin) / (xmax - xmin)), 127u);
+    uint bin = min(uint(128.0 * (x - xmin) / (xmax - xmin)), 127u);
     uint value = floatBitsToUint(occupancyMask[bin >> 5]);
     uint bitMask = 1u << (bin & 0x1Fu);
     return (value & bitMask) != 0u;
@@ -71,7 +71,7 @@ float pointToLineSegmentDist(vec2 p, vec2 v0, vec2 v1) {
     vec2 u = normalize(v1 - v0); // unit vector of line segment
     vec2 n = vec2(u.y, -u.x); // unit normal vector to line segment
     vec2 t = mat2(u, n) * (p - v0); // coordinates of p in the (u, n) basis
-    if(0.f < t.x && t.x < length(v1 - v0)) { // perpendicular projection falls onto line segment
+    if(0.0 < t.x && t.x < length(v1 - v0)) { // perpendicular projection falls onto line segment
         return abs(t.y); // distance is the absolute normal coordinate
     }
     return min(length(p - v0), length(p - v1)); // distance to closest endpoint
@@ -81,7 +81,7 @@ float pointToLineSegmentDist(vec2 p, vec2 v0, vec2 v1) {
 // https://web.archive.org/web/20210504233957/http://geomalgorithms.com/a03-_inclusion.html
 int windingNumber(vec2 p, sampler2D sampler, uint w, uint offset, uint n, float hsw, out float minDist) {
     int wn = 0;
-    minDist = 1e38f;
+    minDist = 1e38;
     for(uint i = 0u; i < n; ++i) {
         vec4 e = texel(sampler, w, offset + i);
         vec2 v0 = vec2(e[0], e[1]);
@@ -92,11 +92,11 @@ int windingNumber(vec2 p, sampler2D sampler, uint w, uint offset, uint n, float 
         vec2 v0e = v0 - delta;
         vec2 v1e = v1 + delta;
         if(v0e.y <= p.y) { // edge starts on/below point
-            if(v1e.y > p.y && isPointLeftOfLine(p, v0e, v1e) > 0.f) { // edge ends stricly above point, and point is strictly left of edge
+            if(v1e.y > p.y && isPointLeftOfLine(p, v0e, v1e) > 0.0) { // edge ends stricly above point, and point is strictly left of edge
                 wn++;
             }
         } else { // edge starts stricly above point
-            if(v1e.y <= p.y && isPointLeftOfLine(p, v0e, v1e) < 0.f) { // edge ends on/below point, and point is strictly right of edge
+            if(v1e.y <= p.y && isPointLeftOfLine(p, v0e, v1e) < 0.0) { // edge ends on/below point, and point is strictly right of edge
                 wn--;
             }
         }
@@ -106,15 +106,15 @@ int windingNumber(vec2 p, sampler2D sampler, uint w, uint offset, uint n, float 
 
 // unpacks a uint-packed 8-bit RGBA color
 vec4 unpackColor(uint color) {
-    float r = float((color >> 24) & 0xFFu) / 255.f;
-    float g = float((color >> 16) & 0xFFu) / 255.f;
-    float b = float((color >> 8) & 0xFFu) / 255.f;
-    float a = float(color & 0xFFu) / 255.f;
+    float r = float((color >> 24) & 0xFFu) / 255.0;
+    float g = float((color >> 16) & 0xFFu) / 255.0;
+    float b = float((color >> 8) & 0xFFu) / 255.0;
+    float a = float(color & 0xFFu) / 255.0;
     return vec4(r, g, b, a);
 }
 
 void main() {
-    fragColor = vec4(0.f);
+    fragColor = vec4(0.0);
     // get scanline info
     uint scanlineInfoOffset = clamp(uint(v_scanline), 0u, u_numScanlines - 1u);
     vec4 scanlineInfo = texel(u_scanlineData, SCANLINE_DATA_WIDTH, scanlineInfoOffset);
@@ -125,7 +125,7 @@ void main() {
     }
     // check occupancy mask
     vec4 occupancyMask = texel(u_scanlineData, SCANLINE_DATA_WIDTH, scanlineOffset);
-    float occupancyMaskBinWidth = (u_objectBounds[2] - u_objectBounds[0]) / 128.f; // in data dimensions
+    float occupancyMaskBinWidth = (u_objectBounds[2] - u_objectBounds[0]) / 128.0; // in data dimensions
     bool occupied = occupancy(v_pos.x, u_objectBounds[0], u_objectBounds[2], occupancyMask);
     for(float dx = occupancyMaskBinWidth; !occupied && dx <= v_hsw; dx += occupancyMaskBinWidth) {
         if(occupancy(v_pos.x - dx, u_objectBounds[0], u_objectBounds[2], occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], u_objectBounds[2], occupancyMask)) {
@@ -148,11 +148,11 @@ void main() {
                 if(minDist < v_hsw) { // point is inside stroke area
                     vec4 strokeColor = unpackColor(floatBitsToUint(shapeProperties[1]));
                     strokeColor.rgb = strokeColor.rgb * strokeColor.a; // premultiply
-                    fragColor = strokeColor + (1.f - strokeColor.a) * fragColor;
+                    fragColor = strokeColor + (1.0 - strokeColor.a) * fragColor;
                 } else { // point is inside fill area
                     vec4 fillColor = unpackColor(floatBitsToUint(shapeProperties[0]));
                     fillColor.rgb = fillColor.rgb * fillColor.a; // premultiply
-                    fragColor = fillColor + (1.f - fillColor.a) * fragColor;
+                    fragColor = fillColor + (1.0 - fillColor.a) * fragColor;
                 }
             }
         }
