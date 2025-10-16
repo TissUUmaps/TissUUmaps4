@@ -147,10 +147,12 @@ void main() {
                 vec4 shapeProperties = texel(u_shapeData, SHAPE_DATA_WIDTH, shapeIndex);
                 if(minDist < v_hsw) { // point is inside stroke area
                     vec4 strokeColor = unpackColor(floatBitsToUint(shapeProperties[1]));
-                    // TODO update fragColor
+                    strokeColor.rgb = strokeColor.rgb * strokeColor.a; // premultiply
+                    fragColor = strokeColor + (1.f - strokeColor.a) * fragColor;
                 } else { // point is inside fill area
                     vec4 fillColor = unpackColor(floatBitsToUint(shapeProperties[0]));
-                    // TODO update fragColor
+                    fillColor.rgb = fillColor.rgb * fillColor.a; // premultiply
+                    fragColor = fillColor + (1.f - fillColor.a) * fragColor;
                 }
             }
         }
