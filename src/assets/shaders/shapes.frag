@@ -52,8 +52,9 @@ vec4 texel(sampler2D sampler, uint w, uint offset) {
 }
 
 // checks if a given x coordinate falls into an occupied bin of an 128-bit occupancy mask
-bool occupancy(float x, float xmin, float xmax, vec4 occupancyMask) {
-    uint bin = min(uint(128.0 * (x - xmin) / (xmax - xmin)), 127u);
+bool occupancy(float x, float xMin, float width, vec4 occupancyMask) {
+    float xNorm = (x - xMin) / width;
+    uint bin = min(uint(128.0 * xNorm), 127u);
     uint value = floatBitsToUint(occupancyMask[bin >> 5]);
     uint bitMask = 1u << (bin & 0x1Fu);
     return (value & bitMask) != 0u;
@@ -67,14 +68,24 @@ float isPointLeftOfLine(vec2 p, vec2 v0, vec2 v1) {
 
 // computes the minimum distance from point p to the line segment v0-v1
 // https://web.archive.org/web/20210507021429/http://geomalgorithms.com/a02-_lines.html
-float pointToLineSegmentDist(vec2 p, vec2 v0, vec2 v1) {
-    vec2 u = normalize(v1 - v0); // unit vector of line segment
-    vec2 n = vec2(u.y, -u.x); // unit normal vector to line segment
-    vec2 t = mat2(u, n) * (p - v0); // coordinates of p in the (u, n) basis
-    if(0.0 < t.x && t.x < length(v1 - v0)) { // perpendicular projection falls onto line segment
-        return abs(t.y); // distance is the absolute normal coordinate
+float pointToSegmentDist(vec2 p, vec2 v0, vec2 v1) {
+    vec2 v0ToP = p - v0;
+    vec2 segment = v1 - v0;
+    float segmentLen = length(segment);
+    if(segmentLen <= 0.0) {
+        return length(v0ToP);
     }
-    return min(length(p - v0), length(p - v1)); // distance to closest endpoint
+    vec2 unitSegment = segment / segmentLen;
+    float segmentCoord = dot(unitSegment, v0ToP);
+    if(segmentCoord <= 0.0) {
+        return length(v0ToP);
+    }
+    if(segmentCoord >= segmentLen) {
+        return length(p - v1);
+    }
+    vec2 unitSegmentNormal = vec2(unitSegment.y, -unitSegment.x);
+    float segmentNormalCoord = dot(unitSegmentNormal, v0ToP);
+    return abs(segmentNormalCoord);
 }
 
 // computes the winding number for a given point p and n edges stored in data starting at offset
@@ -83,20 +94,25 @@ int windingNumber(vec2 p, sampler2D sampler, uint w, uint offset, uint n, float 
     int wn = 0;
     minDist = 1e38;
     for(uint i = 0u; i < n; ++i) {
-        vec4 e = texel(sampler, w, offset + i);
-        vec2 v0 = vec2(e[0], e[1]);
-        vec2 v1 = vec2(e[2], e[3]);
-        minDist = min(minDist, pointToLineSegmentDist(p, v0, v1));
+        vec4 edge = texel(sampler, w, offset + i);
+        vec2 v0 = vec2(edge[0], edge[1]);
+        vec2 v1 = vec2(edge[2], edge[3]);
+        vec2 e = v1 - v0;
+        float len = length(e);
+        if(len <= 0.0) {
+            continue;
+        }
+        minDist = min(minDist, pointToSegmentDist(p, v0, v1));
         // extend edge by half stroke width on both ends
-        vec2 delta = hsw * normalize(v1 - v0);
-        vec2 v0e = v0 - delta;
-        vec2 v1e = v1 + delta;
-        if(v0e.y <= p.y) { // edge starts on/below point
-            if(v1e.y > p.y && isPointLeftOfLine(p, v0e, v1e) > 0.0) { // edge ends stricly above point, and point is strictly left of edge
+        vec2 delta = hsw * e / len;
+        vec2 v0long = v0 - delta;
+        vec2 v1long = v1 + delta;
+        if(v0long.y <= p.y) { // edge starts on/below point
+            if(v1long.y > p.y && isPointLeftOfLine(p, v0long, v1long) > 0.0) { // edge ends stricly above point, and point is strictly left of edge
                 wn++;
             }
         } else { // edge starts stricly above point
-            if(v1e.y <= p.y && isPointLeftOfLine(p, v0e, v1e) < 0.0) { // edge ends on/below point, and point is strictly right of edge
+            if(v1long.y <= p.y && isPointLeftOfLine(p, v0long, v1long) < 0.0) { // edge ends on/below point, and point is strictly right of edge
                 wn--;
             }
         }
@@ -114,7 +130,14 @@ vec4 unpackColor(uint color) {
 }
 
 void main() {
-    fragColor = vec4(0.0);
+    float objectWidth = u_objectBounds[2] - u_objectBounds[0];
+    float objectHeight = u_objectBounds[3] - u_objectBounds[1];
+    if(u_numScanlines == 0u || objectWidth <= 0.0 || objectHeight <= 0.0) {
+        discard; // no scanlines or invalid object bounds
+    }
+    if(v_pos.x < u_objectBounds[0] - v_hsw || v_pos.x > u_objectBounds[2] + v_hsw || v_pos.y < u_objectBounds[1] - v_hsw || v_pos.y > u_objectBounds[3] + v_hsw) {
+        discard; // out of object bounds
+    }
     // get scanline info
     uint scanlineInfoOffset = clamp(uint(v_scanline), 0u, u_numScanlines - 1u);
     vec4 scanlineInfo = texel(u_scanlineData, SCANLINE_DATA_WIDTH, scanlineInfoOffset);
@@ -125,10 +148,9 @@ void main() {
     }
     // check occupancy mask
     vec4 occupancyMask = texel(u_scanlineData, SCANLINE_DATA_WIDTH, scanlineOffset);
-    float occupancyMaskBinWidth = (u_objectBounds[2] - u_objectBounds[0]) / 128.0; // in data dimensions
-    bool occupied = occupancy(v_pos.x, u_objectBounds[0], u_objectBounds[2], occupancyMask);
-    for(float dx = occupancyMaskBinWidth; !occupied && dx <= v_hsw; dx += occupancyMaskBinWidth) {
-        if(occupancy(v_pos.x - dx, u_objectBounds[0], u_objectBounds[2], occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], u_objectBounds[2], occupancyMask)) {
+    bool occupied = occupancy(v_pos.x, u_objectBounds[0], objectWidth, occupancyMask);
+    for(float dx = objectWidth / 128.0; !occupied && dx <= v_hsw; dx += objectWidth / 128.0) {
+        if(occupancy(v_pos.x - dx, u_objectBounds[0], objectWidth, occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], objectWidth, occupancyMask)) {
             occupied = true;
         }
     }
@@ -136,6 +158,7 @@ void main() {
         discard; // no shapes on this scanline near the given x coordinate
     }
     // iterate over scanline shapes
+    fragColor = vec4(0.0);
     uint shapeOffset = scanlineOffset + 1u;
     for(uint i = 0u; i < shapeCount; ++i) {
         vec4 shapeInfo = texel(u_scanlineData, SCANLINE_DATA_WIDTH, shapeOffset);
