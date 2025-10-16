@@ -108,10 +108,10 @@ int windingNumber(vec2 p, sampler2D sampler, uint w, uint offset, uint n, float 
         vec2 v0long = v0 - delta;
         vec2 v1long = v1 + delta;
         if(v0long.y <= p.y) { // edge starts on/below point
-            if(v1long.y > p.y && isPointLeftOfLine(p, v0long, v1long) > 0.0) { // edge ends stricly above point, and point is strictly left of edge
+            if(v1long.y > p.y && isPointLeftOfLine(p, v0long, v1long) > 0.0) { // edge ends strictly above point, and point is strictly left of edge
                 wn++;
             }
-        } else { // edge starts stricly above point
+        } else { // edge starts strictly above point
             if(v1long.y <= p.y && isPointLeftOfLine(p, v0long, v1long) < 0.0) { // edge ends on/below point, and point is strictly right of edge
                 wn--;
             }
