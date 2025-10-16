@@ -8,11 +8,12 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#implicit_defaults
 precision highp float; // no default otherwise
 precision highp int; // defaults to mediump otherwise
+precision highp sampler2D; // defaults to mediump otherwise
 
 // Signed distance fields (SDFs),
 // pre-multiplied by DISTANCE_MULTIPLIER,
 // and quantized into unsigned 8-bit integers
-uniform highp sampler2D u_markerAtlas;
+uniform sampler2D u_markerAtlas;
 
 flat in vec4 v_color;
 flat in uvec3 v_marker;

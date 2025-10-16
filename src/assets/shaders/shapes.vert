@@ -10,12 +10,12 @@ layout(location = 0) in vec2 a_viewportPos; // viewport corner, in [0, 1]
 
 out vec2 v_pos; // in data dimensions
 out float v_scanline; // in [0, u_numScanlines]
-flat out float v_halfStrokeWidth; // in data dimensions
+flat out float v_hsw; // half stroke width, in data dimensions
 
 void main() {
     vec2 worldPos = u_viewportToWorldMatrix * vec3(a_viewportPos, 1.f);
     v_pos = u_worldToDataMatrix * vec3(worldPos, 1.f);
     v_scanline = float(u_numScanlines) * (v_pos.y - u_objectBounds[1]) / (u_objectBounds[3] - u_objectBounds[1]);
-    v_halfStrokeWidth = 0.5f * u_strokeWidth * length(u_worldToDataMatrix[0]);
+    v_hsw = 0.5f * u_strokeWidth * length(u_worldToDataMatrix[0]);
     gl_Position = vec4((2.f * a_viewportPos - 1.f) * vec2(1.f, -1.f), 0.f, 1.f);
 }
