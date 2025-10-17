@@ -193,4 +193,27 @@ export default class WebGLUtils {
     gl.bufferSubData(target, offset * data.BYTES_PER_ELEMENT, data);
     gl.bindBuffer(target, null);
   }
+
+  static enableAlphaBlending(gl: WebGL2RenderingContext): void {
+    // enable alpha blending / over operator (Porter & Duff)
+    // https://en.wikipedia.org/wiki/Alpha_compositing
+    // https://learnopengl.com/Advanced-OpenGL/Blending
+    // https://www.khronos.org/opengl/wiki/Blending
+    // https://www.realtimerendering.com/blog/gpus-prefer-premultiplication/
+    gl.enable(gl.BLEND);
+    gl.blendEquation(gl.FUNC_ADD);
+    gl.blendFuncSeparate(
+      gl.ONE, // alpha is premultiplied in fragment shader
+      gl.ONE_MINUS_SRC_ALPHA,
+      gl.ONE,
+      gl.ONE_MINUS_SRC_ALPHA,
+    );
+  }
+
+  static disableAlphaBlending(gl: WebGL2RenderingContext): void {
+    // restore default blending state
+    gl.disable(gl.BLEND);
+    gl.blendEquation(gl.FUNC_ADD);
+    gl.blendFuncSeparate(gl.ONE, gl.ZERO, gl.ONE, gl.ZERO);
+  }
 }

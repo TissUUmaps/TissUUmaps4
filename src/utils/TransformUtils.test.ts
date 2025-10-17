@@ -85,4 +85,20 @@ describe("TransformUtils", () => {
       expect(m[7]).not.toBe(0);
     });
   });
+
+  describe("asGLMat3x2", () => {
+    it("should convert mat3 to mat3x2 format", () => {
+      const m = mat3.fromValues(1, 2, 0, 3, 4, 0, 5, 6, 1);
+      const mat3x2 = TransformUtils.asGLMat3x2(m);
+      expect(mat3x2).toEqual([1, 2, 3, 4, 5, 6]);
+    });
+  });
+
+  describe("transposeAsGLMat2x4", () => {
+    it("should transpose mat3 and convert to mat2x4 format", () => {
+      const m = mat3.fromValues(1, 2, 0, 3, 4, 0, 5, 6, 1);
+      const mat2x4 = TransformUtils.transposeAsGLMat2x4(m);
+      expect(mat2x4).toEqual([1, 3, 5, 0, 2, 4, 6, 0]);
+    });
+  });
 });

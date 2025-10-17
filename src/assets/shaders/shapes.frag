@@ -9,7 +9,7 @@ precision highp int; // defaults to mediump otherwise
 precision highp sampler2D; // defaults to lowp otherwise
 
 uniform uint u_numScanlines;
-uniform vec4 u_objectBounds; // (xmin, ymin, xmax, ymax), in data dimensions
+uniform vec4 u_objectBounds; // (x, y, width, height), in data dimensions
 
 /*
  * Scanline data (RGBA32F data texture)
@@ -130,12 +130,10 @@ vec4 unpackColor(uint color) {
 }
 
 void main() {
-    float objectWidth = u_objectBounds[2] - u_objectBounds[0];
-    float objectHeight = u_objectBounds[3] - u_objectBounds[1];
-    if(u_numScanlines == 0u || objectWidth <= 0.0 || objectHeight <= 0.0) {
+    if(u_numScanlines == 0u || u_objectBounds[2] <= 0.0 || u_objectBounds[3] <= 0.0) {
         discard; // no scanlines or invalid object bounds
     }
-    if(v_pos.x < u_objectBounds[0] - v_hsw || v_pos.x > u_objectBounds[2] + v_hsw || v_pos.y < u_objectBounds[1] - v_hsw || v_pos.y > u_objectBounds[3] + v_hsw) {
+    if(v_pos.x < u_objectBounds[0] - v_hsw || v_pos.x > u_objectBounds[0] + u_objectBounds[2] + v_hsw || v_pos.y < u_objectBounds[1] - v_hsw || v_pos.y > u_objectBounds[1] + u_objectBounds[3] + v_hsw) {
         discard; // out of object bounds
     }
     // get scanline info
@@ -148,9 +146,9 @@ void main() {
     }
     // check occupancy mask
     vec4 occupancyMask = texel(u_scanlineData, SCANLINE_DATA_WIDTH, scanlineOffset);
-    bool occupied = occupancy(v_pos.x, u_objectBounds[0], objectWidth, occupancyMask);
-    for(float dx = objectWidth / 128.0; !occupied && dx <= v_hsw; dx += objectWidth / 128.0) {
-        if(occupancy(v_pos.x - dx, u_objectBounds[0], objectWidth, occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], objectWidth, occupancyMask)) {
+    bool occupied = occupancy(v_pos.x, u_objectBounds[0], u_objectBounds[2], occupancyMask);
+    for(float dx = u_objectBounds[2] / 128.0; !occupied && dx <= v_hsw; dx += u_objectBounds[2] / 128.0) {
+        if(occupancy(v_pos.x - dx, u_objectBounds[0], u_objectBounds[2], occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], u_objectBounds[2], occupancyMask)) {
             occupied = true;
         }
     }

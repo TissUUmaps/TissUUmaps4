@@ -132,6 +132,12 @@ export type ViewerOptions = Omit<OpenSeadragon.Options, "element"> & {
 export type DrawOptions = {
   /** Point size factor */
   pointSizeFactor: number;
+
+  /** Shape stroke width */
+  shapeStrokeWidth: number;
+
+  /** Number of scanlines per shapes object */
+  numShapesScanlines: number;
 };
 
 export type Point = [number, number];

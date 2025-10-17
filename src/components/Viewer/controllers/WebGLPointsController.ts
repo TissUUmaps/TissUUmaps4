@@ -1,5 +1,3 @@
-import { mat3 } from "gl-matrix";
-
 import markersUrl from "../../../assets/markers/markers.png?url";
 import pointsFragmentShader from "../../../assets/shaders/points.frag?raw";
 import pointsVertexShader from "../../../assets/shaders/points.vert?raw";
@@ -245,22 +243,12 @@ export default class WebGLPointsController extends WebGLControllerBase {
       this._uniformBlockIndices.objectsUBO,
       WebGLPointsController._BINDING_POINTS.OBJECTS_UBO,
     );
-    const worldToViewportMatrix =
-      WebGLPointsController.createWorldToViewportMatrix(viewport);
-    // gl-matrix, like OpenGL, uses column-major order.
-    // In OpenGL, mat3x2 has three columns and two rows.
-    const worldToViewportMatrixAsGLMat3x2 = [
-      worldToViewportMatrix[0],
-      worldToViewportMatrix[1],
-      worldToViewportMatrix[3],
-      worldToViewportMatrix[4],
-      worldToViewportMatrix[6],
-      worldToViewportMatrix[7],
-    ];
     this._gl.uniformMatrix3x2fv(
       this._uniformLocations.worldToViewportMatrix,
       false,
-      worldToViewportMatrixAsGLMat3x2,
+      TransformUtils.asGLMat3x2(
+        WebGLPointsController.createWorldToViewportMatrix(viewport),
+      ),
     );
     this._gl.uniform1f(
       this._uniformLocations.pointSizeFactor,
@@ -272,28 +260,9 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._gl.activeTexture(this._gl.TEXTURE0);
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
     this._gl.uniform1i(this._uniformLocations.markerAtlas, 0);
-    this._gl.enable(this._gl.BLEND);
-    // alpha blending / over operator (Porter & Duff)
-    // https://en.wikipedia.org/wiki/Alpha_compositing
-    // https://learnopengl.com/Advanced-OpenGL/Blending
-    // https://www.khronos.org/opengl/wiki/Blending
-    // https://www.realtimerendering.com/blog/gpus-prefer-premultiplication/
-    this._gl.blendEquation(this._gl.FUNC_ADD);
-    this._gl.blendFuncSeparate(
-      this._gl.ONE, // alpha is premultiplied in fragment shader
-      this._gl.ONE_MINUS_SRC_ALPHA,
-      this._gl.ONE,
-      this._gl.ONE_MINUS_SRC_ALPHA,
-    );
+    WebGLUtils.enableAlphaBlending(this._gl);
     this._gl.drawArrays(this._gl.POINTS, 0, this._nPoints);
-    this._gl.blendEquation(this._gl.FUNC_ADD);
-    this._gl.blendFuncSeparate(
-      this._gl.ONE,
-      this._gl.ZERO,
-      this._gl.ONE,
-      this._gl.ZERO,
-    );
-    this._gl.disable(this._gl.BLEND);
+    WebGLUtils.disableAlphaBlending(this._gl);
     this._gl.bindVertexArray(null);
     this._gl.useProgram(null);
   }
@@ -555,30 +524,15 @@ export default class WebGLPointsController extends WebGLControllerBase {
           },
         },
       });
-      const m = mat3.create();
-      if (ref.layerConfig.flip) {
-        const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
-        mat3.multiply(m, flipMatrix, m);
-      }
-      const dataToLayerMatrix = TransformUtils.toMatrix(
-        ref.layerConfig.transform,
+      objectsUBOData.set(
+        TransformUtils.transposeAsGLMat2x4(
+          WebGLPointsController.createDataToWorldMatrix(
+            ref.layer,
+            ref.layerConfig,
+          ),
+        ),
+        i * 8,
       );
-      mat3.multiply(m, dataToLayerMatrix, m);
-      const layerToWorldMatrix = TransformUtils.toMatrix(ref.layer.transform);
-      mat3.multiply(m, layerToWorldMatrix, m);
-      // gl-matrix, like OpenGL, uses column-major order.
-      // In OpenGL, mat2x4 has two columns and four rows.
-      const transposedDataToWorldMatrixAsGLMat2x4 = [
-        m[0],
-        m[3],
-        m[6],
-        0,
-        m[1],
-        m[4],
-        m[7],
-        0,
-      ];
-      objectsUBOData.set(transposedDataToWorldMatrixAsGLMat2x4, i * 8);
       offset += nPoints;
       i++;
     }

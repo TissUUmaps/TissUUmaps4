@@ -42,4 +42,18 @@ export default class TransformUtils {
     }
     return m;
   }
+
+  /** Converts m to a mat3x2 */
+  static asGLMat3x2(m: mat3): number[] {
+    // gl-matrix, like OpenGL, uses column-major order.
+    // In OpenGL, mat3x2 has three columns and two rows.
+    return [m[0], m[1], m[3], m[4], m[6], m[7]];
+  }
+
+  /** Transposes m and converts the transposed matrix to a mat2x4 */
+  static transposeAsGLMat2x4(m: mat3): number[] {
+    // gl-matrix, like OpenGL, uses column-major order.
+    // In OpenGL, mat2x4 has two columns and four rows.
+    return [m[0], m[3], m[6], 0, m[1], m[4], m[7], 0];
+  }
 }

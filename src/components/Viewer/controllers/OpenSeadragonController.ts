@@ -33,18 +33,6 @@ type BaseTiledImageState = {
   deferredDelete?: boolean;
 };
 
-type ImageTiledImageState = BaseTiledImageState & {
-  image: CompleteImage;
-  rawLayerConfig: ImageLayerConfig;
-};
-
-type LabelsTiledImageState = BaseTiledImageState & {
-  labels: CompleteLabels;
-  rawLayerConfig: LabelsLayerConfig;
-};
-
-type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
-
 export default class OpenSeadragonController {
   private readonly _viewer: OpenSeadragon.Viewer;
   private readonly _tiledImageStates: TiledImageState[] = [];
@@ -581,6 +569,18 @@ export default class OpenSeadragonController {
     return visibility ? opacity : 0;
   }
 }
+
+type ImageTiledImageState = BaseTiledImageState & {
+  image: CompleteImage;
+  rawLayerConfig: ImageLayerConfig;
+};
+
+type LabelsTiledImageState = BaseTiledImageState & {
+  labels: CompleteLabels;
+  rawLayerConfig: LabelsLayerConfig;
+};
+
+type TiledImageState = ImageTiledImageState | LabelsTiledImageState;
 
 // add missing OpenSeadragon types
 declare module "openseadragon" {
