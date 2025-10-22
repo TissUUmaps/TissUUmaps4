@@ -514,7 +514,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
       this._gl.R32UI,
       WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
       Math.ceil(
-        colorData.length / WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH,
+        colorData.length / WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
       ),
       this._gl.RED_INTEGER,
       this._gl.UNSIGNED_INT,
