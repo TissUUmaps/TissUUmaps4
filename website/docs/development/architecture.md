@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Architecture
 
-This project follows best practices for React projects (components, state management, hooks, etc).
+This project follows best practices for React projects (components, state management, hooks, options object pattern, etc).
 
 User and developer documentation is hosted in the same repository ("monorepo").
 

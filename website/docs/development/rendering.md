@@ -6,11 +6,11 @@ sidebar_position: 4
 
 **OpenSeadragon** is used for displaying images and labels. OpenSeadragon was chosen over other alternatives for maturity (stability, large community, active development) and legacy (TissUUmaps 3) reasons.
 
-The **WebGL 2** API is used for rendering points and shapes. WebGL was chosen over WebGPU for browser compatibility (e.g. Firefox) and legacy (TissUUmaps 3) reasons.
+Custom **WebGL 2** shaders are used for rendering points and shapes. WebGL was chosen over WebGPU for browser compatibility (e.g. Firefox) and legacy (TissUUmaps 3) reasons.
 
 ## Images
 
-Custom tile sources are used to enable additional file formats (e.g. TIFF).
+Custom tile sources are used to enable additional file formats (e.g. TIFF, Zarr).
 
 ## Labels
 
@@ -18,41 +18,37 @@ Custom tile sources are used to enable loading of 8/16/32-bit unsigned integer l
 
 ## Points
 
-Since point attributes (marker, size, color, visibility, opacity, ...) are configurable for each individual point, points are rendered naively (i.e., no instancing). To enable partial attribute updates, data is loaded using separate buffers for each coordinate/property. However, color, visibility and opacity are packed into a single 32-bit RGBA value for memory efficiency. Marker shapes are loaded from a "marker atlas" texture, which holds signed distance fields that have been pre-multiplied by a constant factor and quantized into unsigned 8-bit integers for memory efficiency.
+All point clouds are rendered in a single pass (i.e., a single draw call) using flat buffers. Both the vertex shader and the fragment shader are executed once for each point. Since point attributes (marker, size, color, visibility, opacity, ...) are individually configurable for each point, points are rendered naively (i.e., no instancing).
+
+To enable partial attribute updates, data is loaded using separate buffers for each coordinate/property. However, point color, visibility and opacity values are packed into joint 32-bit RGBA values for memory efficiency. Marker shapes are loaded from a "marker atlas" texture, which holds signed distance fields (SDFs) that have been pre-multiplied by a constant factor and quantized into unsigned 8-bit integers for memory efficiency.
 
 ## Shapes
 
-For shapes, the following two alternative approaches have been considered:
+Shapes are rendered in multiple passes (i.e., one draw call per shape cloud) using separate data textures for each shape cloud. A "compute shader approach" is employed, where the vertex shader merely runs on the viewport corners (i.e., executed precisly four times) and the fragment shader implements a custom rendering pipeline (i.e., executed for all fragments of the entire viewport).
 
-### Standard approach
+Partial updates are enabled implicitly by using separate data textures for each shape cloud (update individual shape clouds) and each property (update individual shape cloud properties). However, shape fill/stroke color, visibility and opacity values are packed into joint 32-bit RGBA values for memory efficiency.
 
-Overview:
+The custom rendering pipeline is based on scanline rendering, with the following modifications/optimizations:
 
-1. Triangulate shapes on the CPU, e.g. using [earcut](https://github.com/mapbox/earcut)
-   - If necessary, only triangulate visible shapes --> quadtree?
-   - If necessary, only re-triangulate when necessary (e.g. drawing)
-2. Transfer triangle coordinates to the GPU using an element array buffer
-   - If necessary, only transfer visible triangles --> quadtree?
-3. Call `gl.drawElements()` with `gl.TRIANGLES` and `count = # triangles`
-   - The vertex shader will run once for every vertex and output `gl_Position` (interpolated) and varyings such as `v_color` and `v_opacity` (both flat)
-   - The fragment shader will run once for every pixel of every triangle (i.e., overdraw will result in several runs for the same pixel) and output `color`
+- Scanline data (edge lists) are stored in separate data textures for each shape cloud
+- Scanlines relate to the shape cloud bounds (as opposed to viewport/world bounds) to allow for infinite worlds
+- Each scanline holds a one-dimensional bounding box and a 128-bit occupancy mask for rapidly discarding fragments
+- For each scanline, edges are processed separately for each shape to ensure proper compositing
+- Each shape holds a one-dimensional bounding box for rapidly skipping shapes
+- An optimized winding number algorithm is used for point-in-polygon testing
+- An optimized point-to-segment distance algorithm is used for stroke drawing
 
-### Compute shader approach
+Specifically, the approach works as follows:
 
-Overview:
+- Construct scanline data for each shape cloud on the CPU and transfer them into data textures on the GPU
+- For each shape cloud, call `gl.drawArrays()` with `gl.TRIANGLE_STRIP` for the viewport bounding box (single quad)
+  - The vertex shader will run once per viewport corner, converting viewport coordinates to data coordinates
+  - The fragment shader will run once for each fragment in the viewport:
+    1. Determine the current scanline from the (interpolated) scanline varying
+    2. Check the scanline bounding box and occupancy mask to quickly discard empty viewport fragments
+    3. For each shape in the scanline potentially overlapping with the current fragment (check shape bounding box), compute the winding number and the minimum point-to-segment distance for the current fragment; if the current fragment is close enough to one of the shape's segments, blend the fragment color with the shape's stroke color; otherwise, if the current fragment is within the shape (positive winding number), blend the fragment color with the shape's fill color
 
-- Construct an edge table and occupancy mask on the CPU
-- Provide the edge table/occupancy mask to the GPU using a custom data textures
-  - If necessary, only transfer visible data --> quadtree?
-- Call `gl.drawArraysInstanced()` with `gl.TRIANGLE_STRIP` and `instanceCount = 1` for a single quad (global bounding box)
-  - The vertex shader will run once and merely passes through quad coordinates
-  - The fragment shader will run once for each pixel in the global bounding box:
-    1. Check global occupancy mask to quickly discard fragments in empty areas
-    2. Based on their bounding boxes (stored in edge table), collect shapes (paths) that are potentially overlapping with the current fragment position
-    3. For each path, calculate the winding number (scanline intersection testing); also, calculate the minimum distance from the current fragment to all line segments of the path
-    4. Determine if the current fragment is inside the paths or close enough to be part of the shapes' strokes. If yes, compute the fill/stroke color and opacity of the fragment using standard alpha blending (separate fill/stroke opacities are used for anti-aliasing)
-
-### Comparison
+This approach has been chosen over a "standard approach" primarily to avoid CPU-side triangulation, reduce memory usage (no need to store triangles), enable thick outlines (strokes), allow for high-quality anti-aliasing, and for legacy (TissUUmaps 3) reasons.
 
 |                                  | Standard approach                                                                                                                          | Compute shader approach                                                                                              |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
@@ -65,6 +61,12 @@ Overview:
 | **Anti-aliasing**                | Low quality (MSAA)                                                                                                                         | **High quality** (sub-pixel precision in distance calculation)                                                       |
 | **Implementation / maintenance** | **Easy**                                                                                                                                   | Difficult                                                                                                            |
 
-### Decision
+Standard approach (dismissed):
 
-TODO
+1. Triangulate shapes on the CPU, e.g. using [earcut](https://github.com/mapbox/earcut)
+   - If necessary, only triangulate visible shapes --> quadtree?
+   - If necessary, only re-triangulate when necessary (e.g. drawing)
+2. Transfer triangle coordinates into a flat element array buffer on the GPU (cf. points rendering)
+3. Call `gl.drawElements()` with `gl.TRIANGLES` and `count = # triangles`
+   - The vertex shader will run once for every vertex and output shape-specific (flat) varyings such as `v_color`
+   - The fragment shader will run once for every triangle fragment (i.e., overdraw will result in several runs for the same pixel)

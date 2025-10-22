@@ -18,7 +18,7 @@ export default function Home() {
         </div>
       </header>
       <main>
-        <div className={styles.content}>Content goes here...</div>
+        <div className={styles.content}>Coming soon.</div>
       </main>
     </Layout>
   );
