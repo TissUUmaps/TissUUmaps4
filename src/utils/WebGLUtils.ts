@@ -162,13 +162,14 @@ export default class WebGLUtils {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texStorage2D(gl.TEXTURE_2D, 1, internalformat, width, height);
     if (data !== undefined) {
-      gl.texImage2D(
+      // texStorage2D creates immutable storage, so we need to use texSubImage2D instead of texImage2D
+      gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,
-        internalformat,
+        0,
+        0,
         width,
         height,
-        0,
         format,
         type,
         data,
