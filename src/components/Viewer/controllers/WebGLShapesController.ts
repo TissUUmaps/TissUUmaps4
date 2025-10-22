@@ -44,8 +44,8 @@ export default class WebGLShapesController extends WebGLControllerBase {
     shapeFillColors: WebGLUniformLocation;
     shapeStrokeColors: WebGLUniformLocation;
   };
-  private _glShapesStates: GLShapesState[] = [];
   private _numScanlines: number = 512; // default value should match DEFAULT_PROJECT_DRAW_OPTIONS.numShapesScanlines
+  private _glShapes: GLShapes[] = [];
 
   constructor(gl: WebGL2RenderingContext) {
     super(gl);
@@ -122,10 +122,10 @@ export default class WebGLShapesController extends WebGLControllerBase {
       signal,
     });
     signal?.throwIfAborted();
-    const glShapesStatesByRef = this._cleanGLShapes(refs);
-    this._glShapesStates = await this._createOrUpdateGLShapes(
+    const glShapesByRef = this._cleanGLShapes(refs);
+    this._glShapes = await this._createOrUpdateGLShapes(
       refs,
-      glShapesStatesByRef,
+      glShapesByRef,
       colorMaps,
       visibilityMaps,
       opacityMaps,
@@ -156,10 +156,10 @@ export default class WebGLShapesController extends WebGLControllerBase {
     this._gl.uniform1i(this._uniformLocations.shapeFillColors, 2);
     this._gl.uniform1i(this._uniformLocations.shapeStrokeColors, 3);
     WebGLUtils.enableAlphaBlending(this._gl);
-    for (const glShapesState of this._glShapesStates) {
+    for (const glShapes of this._glShapes) {
       const worldToDataMatrix = WebGLShapesController.createWorldToDataMatrix(
-        glShapesState.ref.layer,
-        glShapesState.ref.layerConfig,
+        glShapes.ref.layer,
+        glShapes.ref.layerConfig,
       );
       this._gl.uniformMatrix3x2fv(
         this._uniformLocations.worldToDataMatrix,
@@ -168,25 +168,22 @@ export default class WebGLShapesController extends WebGLControllerBase {
       );
       this._gl.uniform4f(
         this._uniformLocations.objectBounds,
-        glShapesState.objectBounds.x,
-        glShapesState.objectBounds.y,
-        glShapesState.objectBounds.width,
-        glShapesState.objectBounds.height,
+        glShapes.objectBounds.x,
+        glShapes.objectBounds.y,
+        glShapes.objectBounds.width,
+        glShapes.objectBounds.height,
       );
       this._gl.activeTexture(this._gl.TEXTURE1);
-      this._gl.bindTexture(
-        this._gl.TEXTURE_2D,
-        glShapesState.scanlineDataTexture,
-      );
+      this._gl.bindTexture(this._gl.TEXTURE_2D, glShapes.scanlineDataTexture);
       this._gl.activeTexture(this._gl.TEXTURE2);
       this._gl.bindTexture(
         this._gl.TEXTURE_2D,
-        glShapesState.shapeFillColorsTexture,
+        glShapes.shapeFillColorsTexture,
       );
       this._gl.activeTexture(this._gl.TEXTURE3);
       this._gl.bindTexture(
         this._gl.TEXTURE_2D,
-        glShapesState.shapeStrokeColorsTexture,
+        glShapes.shapeStrokeColorsTexture,
       );
       this._gl.drawArrays(this._gl.TRIANGLE_STRIP, 0, 4);
     }
@@ -196,10 +193,10 @@ export default class WebGLShapesController extends WebGLControllerBase {
 
   destroy(): void {
     this._gl.deleteProgram(this._program);
-    for (const glShapesState of this._glShapesStates) {
-      this._destroyGLShapesState(glShapesState);
+    for (const glShapes of this._glShapes) {
+      this._destroyGLShapes(glShapes);
     }
-    this._glShapesStates = [];
+    this._glShapes = [];
   }
 
   private async _loadShapes(
@@ -244,30 +241,30 @@ export default class WebGLShapesController extends WebGLControllerBase {
     return refs;
   }
 
-  private _cleanGLShapes(refs: ShapesRef[]): Map<ShapesRef, GLShapesState> {
-    const glShapesStatesByRef = new Map<ShapesRef, GLShapesState>();
-    for (let i = 0; i < this._glShapesStates.length; i++) {
-      const glShapesState = this._glShapesStates[i]!;
+  private _cleanGLShapes(refs: ShapesRef[]): Map<ShapesRef, GLShapes> {
+    const glShapesByRef = new Map<ShapesRef, GLShapes>();
+    for (let i = 0; i < this._glShapes.length; i++) {
+      const glShapes = this._glShapes[i]!;
       const ref = refs.find(
         (ref) =>
-          ref.layer.id === glShapesState.ref.layer.id &&
-          ref.shapes.id === glShapesState.ref.shapes.id &&
-          ref.rawLayerConfig === glShapesState.ref.rawLayerConfig,
+          ref.layer.id === glShapes.ref.layer.id &&
+          ref.shapes.id === glShapes.ref.shapes.id &&
+          ref.rawLayerConfig === glShapes.ref.rawLayerConfig,
       );
       if (ref !== undefined) {
-        glShapesStatesByRef.set(ref, glShapesState);
+        glShapesByRef.set(ref, glShapes);
       } else {
-        const [glShapesState] = this._glShapesStates.splice(i, 1);
-        this._destroyGLShapesState(glShapesState!);
+        const [glShapes] = this._glShapes.splice(i, 1);
+        this._destroyGLShapes(glShapes!);
         i--;
       }
     }
-    return glShapesStatesByRef;
+    return glShapesByRef;
   }
 
   private async _createOrUpdateGLShapes(
     refs: ShapesRef[],
-    glShapesStatesByRef: Map<ShapesRef, GLShapesState>,
+    glShapesByRef: Map<ShapesRef, GLShapes>,
     colorMaps: Map<string, ColorMap>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
@@ -276,20 +273,20 @@ export default class WebGLShapesController extends WebGLControllerBase {
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
     options: { signal?: AbortSignal } = {},
-  ): Promise<GLShapesState[]> {
+  ): Promise<GLShapes[]> {
     const { signal } = options;
     signal?.throwIfAborted();
-    const glShapesStates = [];
+    const newGLShapes = [];
     for (const ref of refs) {
       const numShapes = ref.data.getLength();
-      const glShapesState = glShapesStatesByRef.get(ref);
-      let objectBounds = glShapesState?.objectBounds;
-      let scanlineDataTexture = glShapesState?.scanlineDataTexture;
+      const glShapes = glShapesByRef.get(ref);
+      let objectBounds = glShapes?.objectBounds;
+      let scanlineDataTexture = glShapes?.scanlineDataTexture;
       if (
-        glShapesState === undefined ||
+        glShapes === undefined ||
         objectBounds === undefined ||
         scanlineDataTexture === undefined ||
-        glShapesState.numShapes !== numShapes
+        glShapes.numShapes !== numShapes
       ) {
         const multiPolygons = await ref.data.loadMultiPolygons({ signal });
         signal?.throwIfAborted();
@@ -300,29 +297,28 @@ export default class WebGLShapesController extends WebGLControllerBase {
         );
         signal?.throwIfAborted();
       }
-      let shapeFillColorsTexture = glShapesState?.shapeFillColorsTexture;
+      let shapeFillColorsTexture = glShapes?.shapeFillColorsTexture;
       if (
-        glShapesState === undefined ||
+        glShapes === undefined ||
         shapeFillColorsTexture === undefined ||
-        glShapesState.current.layer.visibility !== ref.layer.visibility ||
-        glShapesState.current.layer.opacity !== ref.layer.opacity ||
-        glShapesState.current.shapes.visibility !== ref.shapes.visibility ||
-        glShapesState.current.shapes.opacity !== ref.shapes.opacity ||
-        glShapesState.current.shapes.shapeFillVisibility !==
+        glShapes.current.layer.visibility !== ref.layer.visibility ||
+        glShapes.current.layer.opacity !== ref.layer.opacity ||
+        glShapes.current.shapes.visibility !== ref.shapes.visibility ||
+        glShapes.current.shapes.opacity !== ref.shapes.opacity ||
+        glShapes.current.shapes.shapeFillVisibility !==
           ref.shapes.shapeFillVisibility ||
-        glShapesState.current.shapes.shapeFillVisibilityMap !==
+        glShapes.current.shapes.shapeFillVisibilityMap !==
           ref.shapes.shapeFillVisibilityMap ||
-        glShapesState.current.shapes.shapeFillOpacity !==
+        glShapes.current.shapes.shapeFillOpacity !==
           ref.shapes.shapeFillOpacity ||
-        glShapesState.current.shapes.shapeFillOpacityMap !==
+        glShapes.current.shapes.shapeFillOpacityMap !==
           ref.shapes.shapeFillOpacityMap ||
-        glShapesState.current.shapes.shapeFillColor !==
-          ref.shapes.shapeFillColor ||
-        glShapesState.current.shapes.shapeFillColorRange !==
+        glShapes.current.shapes.shapeFillColor !== ref.shapes.shapeFillColor ||
+        glShapes.current.shapes.shapeFillColorRange !==
           ref.shapes.shapeFillColorRange ||
-        glShapesState.current.shapes.shapeFillColorPalette !==
+        glShapes.current.shapes.shapeFillColorPalette !==
           ref.shapes.shapeFillColorPalette ||
-        glShapesState.current.shapes.shapeFillColorMap !==
+        glShapes.current.shapes.shapeFillColorMap !==
           ref.shapes.shapeFillColorMap
       ) {
         shapeFillColorsTexture = await this._createShapeFillColorsTexture(
@@ -335,29 +331,29 @@ export default class WebGLShapesController extends WebGLControllerBase {
         );
         signal?.throwIfAborted();
       }
-      let shapeStrokeColorsTexture = glShapesState?.shapeStrokeColorsTexture;
+      let shapeStrokeColorsTexture = glShapes?.shapeStrokeColorsTexture;
       if (
-        glShapesState === undefined ||
+        glShapes === undefined ||
         shapeStrokeColorsTexture === undefined ||
-        glShapesState.current.layer.visibility !== ref.layer.visibility ||
-        glShapesState.current.layer.opacity !== ref.layer.opacity ||
-        glShapesState.current.shapes.visibility !== ref.shapes.visibility ||
-        glShapesState.current.shapes.opacity !== ref.shapes.opacity ||
-        glShapesState.current.shapes.shapeStrokeVisibility !==
+        glShapes.current.layer.visibility !== ref.layer.visibility ||
+        glShapes.current.layer.opacity !== ref.layer.opacity ||
+        glShapes.current.shapes.visibility !== ref.shapes.visibility ||
+        glShapes.current.shapes.opacity !== ref.shapes.opacity ||
+        glShapes.current.shapes.shapeStrokeVisibility !==
           ref.shapes.shapeStrokeVisibility ||
-        glShapesState.current.shapes.shapeStrokeVisibilityMap !==
+        glShapes.current.shapes.shapeStrokeVisibilityMap !==
           ref.shapes.shapeStrokeVisibilityMap ||
-        glShapesState.current.shapes.shapeStrokeOpacity !==
+        glShapes.current.shapes.shapeStrokeOpacity !==
           ref.shapes.shapeStrokeOpacity ||
-        glShapesState.current.shapes.shapeStrokeOpacityMap !==
+        glShapes.current.shapes.shapeStrokeOpacityMap !==
           ref.shapes.shapeStrokeOpacityMap ||
-        glShapesState.current.shapes.shapeStrokeColor !==
+        glShapes.current.shapes.shapeStrokeColor !==
           ref.shapes.shapeStrokeColor ||
-        glShapesState.current.shapes.shapeStrokeColorRange !==
+        glShapes.current.shapes.shapeStrokeColorRange !==
           ref.shapes.shapeStrokeColorRange ||
-        glShapesState.current.shapes.shapeStrokeColorPalette !==
+        glShapes.current.shapes.shapeStrokeColorPalette !==
           ref.shapes.shapeStrokeColorPalette ||
-        glShapesState.current.shapes.shapeStrokeColorMap !==
+        glShapes.current.shapes.shapeStrokeColorMap !==
           ref.shapes.shapeStrokeColorMap
       ) {
         shapeStrokeColorsTexture = await this._createShapeStrokeColorsTexture(
@@ -370,7 +366,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
         );
         signal?.throwIfAborted();
       }
-      glShapesStates.push({
+      newGLShapes.push({
         ref,
         numShapes,
         objectBounds,
@@ -405,7 +401,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
         },
       });
     }
-    return glShapesStates;
+    return newGLShapes;
   }
 
   private _createScanlineDataTexture(
@@ -582,10 +578,10 @@ export default class WebGLShapesController extends WebGLControllerBase {
     return shapeStrokeColorsTexture;
   }
 
-  private _destroyGLShapesState(glShapesState: GLShapesState): void {
-    this._gl.deleteTexture(glShapesState.scanlineDataTexture);
-    this._gl.deleteTexture(glShapesState.shapeFillColorsTexture);
-    this._gl.deleteTexture(glShapesState.shapeStrokeColorsTexture);
+  private _destroyGLShapes(glShapes: GLShapes): void {
+    this._gl.deleteTexture(glShapes.scanlineDataTexture);
+    this._gl.deleteTexture(glShapes.shapeFillColorsTexture);
+    this._gl.deleteTexture(glShapes.shapeStrokeColorsTexture);
   }
 }
 
@@ -597,7 +593,7 @@ type ShapesRef = {
   data: ShapesData;
 };
 
-type GLShapesState = {
+type GLShapes = {
   ref: ShapesRef;
   numShapes: number;
   objectBounds: Rect;
