@@ -62,5 +62,20 @@
         "loadColumns": ["global_X_pos", "global_Y_pos"]
       }
     }
+  ],
+  "shapes": [
+    {
+      "id": "masks",
+      "name": "Masks",
+      "dataSource": {
+        "type": "geojson",
+        "url": "https://user.it.uu.se/~chrav452/TissUUmaps4/data/breast/TissueA_regions.json"
+      },
+      "layerConfigs": [
+        {
+          "layerId": "breast"
+        }
+      ]
+    }
   ]
 }
