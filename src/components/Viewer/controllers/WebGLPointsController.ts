@@ -55,8 +55,8 @@ export default class WebGLPointsController extends WebGLControllerBase {
   };
   private readonly _vao: WebGLVertexArrayObject;
   private _markerAtlasTexture: WebGLTexture | undefined;
-  private _bufferSliceStates: PointsBufferSliceState[] = [];
   private _currentBufferSize: number = 0;
+  private _bufferSliceStates: PointsBufferSliceState[] = [];
 
   constructor(gl: WebGL2RenderingContext) {
     super(gl);

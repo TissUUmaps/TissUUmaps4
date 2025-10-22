@@ -75,7 +75,6 @@ export default class ShapeUtils {
               for (let bin = firstBin; bin <= lastBin; bin++) {
                 scanline.occupancyMask[bin >> 5]! |= 1 << (bin & 0x1f);
               }
-              // TODO update scanline occupancy mask
               const scanlineShape = scanline.shapes.get(shapeIndex);
               const scanlineShapeEdge: ScanlineShapeEdge = { v0, v1 };
               if (scanlineShape === undefined) {

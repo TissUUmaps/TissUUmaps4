@@ -42,8 +42,12 @@ export default class WebGLController {
     });
   }
 
-  setDrawOptions(drawOptions: DrawOptions): void {
+  setDrawOptions(drawOptions: DrawOptions): { syncShapes: boolean } {
     this._drawOptions = drawOptions;
+    const syncShapes = this._shapesController.setNumScanlines(
+      drawOptions.numShapesScanlines,
+    );
+    return { syncShapes };
   }
 
   async initialize(

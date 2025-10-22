@@ -98,7 +98,21 @@ export default class WebGLShapesController extends WebGLControllerBase {
     };
   }
 
-  // TODO react to changes in numScanlines
+  setNumScanlines(numScanlines: number): boolean {
+    let sync = false;
+    if (numScanlines !== this._numScanlines) {
+      // invalidate scanline data textures
+      this._glShapes.forEach((glShapes) => {
+        if (glShapes.scanlineDataTexture !== undefined) {
+          this._gl.deleteTexture(glShapes.scanlineDataTexture);
+        }
+        glShapes.scanlineDataTexture = undefined;
+      });
+      sync = true;
+    }
+    this._numScanlines = numScanlines;
+    return sync;
+  }
 
   async synchronize(
     layerMap: Map<string, CompleteLayer>,
@@ -157,6 +171,9 @@ export default class WebGLShapesController extends WebGLControllerBase {
     this._gl.uniform1i(this._uniformLocations.shapeStrokeColors, 3);
     WebGLUtils.enableAlphaBlending(this._gl);
     for (const glShapes of this._glShapes) {
+      if (glShapes.scanlineDataTexture === undefined) {
+        continue; // scanline data texture is currently being regenerated
+      }
       const worldToDataMatrix = WebGLShapesController.createWorldToDataMatrix(
         glShapes.ref.layer,
         glShapes.ref.layerConfig,
@@ -579,7 +596,9 @@ export default class WebGLShapesController extends WebGLControllerBase {
   }
 
   private _destroyGLShapes(glShapes: GLShapes): void {
-    this._gl.deleteTexture(glShapes.scanlineDataTexture);
+    if (glShapes.scanlineDataTexture !== undefined) {
+      this._gl.deleteTexture(glShapes.scanlineDataTexture);
+    }
     this._gl.deleteTexture(glShapes.shapeFillColorsTexture);
     this._gl.deleteTexture(glShapes.shapeStrokeColorsTexture);
   }
@@ -597,7 +616,7 @@ type GLShapes = {
   ref: ShapesRef;
   numShapes: number;
   objectBounds: Rect;
-  scanlineDataTexture: WebGLTexture;
+  scanlineDataTexture?: WebGLTexture;
   shapeFillColorsTexture: WebGLTexture;
   shapeStrokeColorsTexture: WebGLTexture;
   current: {

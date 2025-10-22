@@ -4,6 +4,7 @@ import { useBoundStore } from "../../store/boundStore";
 import { Rect } from "../../types";
 import WebGLController from "./controllers/WebGLController";
 
+const syncShapesPassCycle = Number.MAX_SAFE_INTEGER - 1;
 const drawPassCycle = Number.MAX_SAFE_INTEGER - 1;
 
 export default function useWebGL(
@@ -14,6 +15,7 @@ export default function useWebGL(
   const controllerRef = useRef<WebGLController | null>(null);
 
   const [initialized, setInitialized] = useState<boolean>(false);
+  const [syncShapesPass, setSyncShapesPass] = useState<number>(0);
   const [drawPass, setDrawPass] = useState<number>(0);
 
   const layerMap = useBoundStore((state) => state.layerMap);
@@ -66,7 +68,10 @@ export default function useWebGL(
   // set draw options and redraw upon configuration changes
   useEffect(() => {
     if (controllerRef.current !== null) {
-      controllerRef.current.setDrawOptions(drawOptions);
+      const { syncShapes } = controllerRef.current.setDrawOptions(drawOptions);
+      if (syncShapes) {
+        setSyncShapesPass((p) => (p + 1) % syncShapesPassCycle);
+      }
       setDrawPass((p) => (p + 1) % drawPassCycle);
     }
   }, [drawOptions]);
@@ -146,6 +151,7 @@ export default function useWebGL(
       abortController.abort("WebGL cleanup");
     };
   }, [
+    syncShapesPass,
     layerMap,
     shapesMap,
     colorMaps,
