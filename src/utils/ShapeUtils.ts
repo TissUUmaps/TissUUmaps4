@@ -50,26 +50,31 @@ export default class ShapeUtils {
             if (v0.x === v1.x && v0.y === v1.y) {
               continue; // ignore zero-length edges
             }
+            const xMin = Math.min(v0.x, v1.x);
+            const xMax = Math.max(v0.x, v1.x);
             const yMin = Math.min(v0.y, v1.y);
             const yMax = Math.max(v0.y, v1.y);
+            const xMinNorm = (xMin - objectBounds.x) / objectBounds.width;
+            const xMaxNorm = (xMax - objectBounds.x) / objectBounds.width;
             const yMinNorm = (yMin - objectBounds.y) / objectBounds.height;
             const yMaxNorm = (yMax - objectBounds.y) / objectBounds.height;
-            const firstScanlineIndex = Math.max(
+            const firstBin = Math.max(Math.floor(128 * xMinNorm), 0);
+            const lastBin = Math.min(Math.ceil(128 * xMaxNorm), 127);
+            const firstScanline = Math.max(
               Math.floor(numScanlines * yMinNorm),
               0,
             );
-            const lastScanlineIndex = Math.min(
+            const lastScanline = Math.min(
               Math.ceil(numScanlines * yMaxNorm),
               numScanlines - 1,
             );
-            for (
-              let scanlineIndex = firstScanlineIndex;
-              scanlineIndex <= lastScanlineIndex;
-              scanlineIndex++
-            ) {
-              const scanline = scanlines[scanlineIndex]!;
+            for (let s = firstScanline; s <= lastScanline; s++) {
+              const scanline = scanlines[s]!;
               scanline.xMin = Math.min(scanline.xMin, v0.x, v1.x);
               scanline.xMax = Math.max(scanline.xMax, v0.x, v1.x);
+              for (let bin = firstBin; bin <= lastBin; bin++) {
+                scanline.occupancyMask[bin >> 5]! |= 1 << (bin & 0x1f);
+              }
               // TODO update scanline occupancy mask
               const scanlineShape = scanline.shapes.get(shapeIndex);
               const scanlineShapeEdge: ScanlineShapeEdge = { v0, v1 };
