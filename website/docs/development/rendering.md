@@ -18,7 +18,7 @@ Custom tile sources are used to enable loading of 8/16/32-bit unsigned integer l
 
 ## Points
 
-Since point attributes (marker, size, color, visibility, opacity, ...) are configurable for each individual point, points are rendered naively (i.e., no instancing). To enable partial attribute updates, data is loaded using separate buffers. However, color, visibility and opacity are packed into a single 32-bit RGBA value for memory efficiency. Marker shapes are loaded from a "marker atlas" texture, which holds signed distance fields that have been pre-multiplied by a constant factor and quantized into unsigned 8-bit integers for memory efficiency.
+Since point attributes (marker, size, color, visibility, opacity, ...) are configurable for each individual point, points are rendered naively (i.e., no instancing). To enable partial attribute updates, data is loaded using separate buffers for each coordinate/property. However, color, visibility and opacity are packed into a single 32-bit RGBA value for memory efficiency. Marker shapes are loaded from a "marker atlas" texture, which holds signed distance fields that have been pre-multiplied by a constant factor and quantized into unsigned 8-bit integers for memory efficiency.
 
 ## Shapes
 
