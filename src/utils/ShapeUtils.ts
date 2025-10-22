@@ -103,11 +103,16 @@ export default class ShapeUtils {
     scanlines: Scanline[],
     numScanlineShapes: number,
     numScanlineShapeEdges: number,
+    options: { padToWidth?: number } = {},
   ): Float32Array {
-    const scanlineDataLength =
+    const { padToWidth } = options;
+    let scanlineDataLength =
       8 * scanlines.length + // scanline infos and headers
       4 * numScanlineShapes + // scanline shape headers
       4 * numScanlineShapeEdges; // scanline shape edges
+    if (padToWidth && scanlineDataLength % padToWidth !== 0) {
+      scanlineDataLength += padToWidth - (scanlineDataLength % padToWidth);
+    }
     const scanlineData = new Float32Array(scanlineDataLength);
     const uint32ScanlineDataView = new Uint32Array(scanlineData.buffer);
     let currentScanlineInfoOffset = 0;

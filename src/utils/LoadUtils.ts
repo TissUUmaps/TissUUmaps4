@@ -24,11 +24,15 @@ export default class LoadUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options: { signal?: AbortSignal } = {},
+    options: { signal?: AbortSignal; padToWidth?: number } = {},
   ): Promise<Uint8Array> {
-    const { signal } = options;
+    const { signal, padToWidth } = options;
     signal?.throwIfAborted();
-    const data = new Uint8Array(n);
+    let dataLength = n;
+    if (padToWidth && dataLength % padToWidth !== 0) {
+      dataLength += padToWidth - (dataLength % padToWidth);
+    }
+    const data = new Uint8Array(dataLength);
     if (isTableValuesColumn(markerConfig)) {
       // table column contains marker values
       const tableData = await loadTableByID(markerConfig.tableId, {
@@ -81,7 +85,7 @@ export default class LoadUtils {
       }
     } else if (markerConfig === "random") {
       // random markers from marker palette
-      for (let i = 0; i < data.length; i++) {
+      for (let i = 0; i < n; i++) {
         data[i] =
           MARKER_PALETTE[Math.floor(Math.random() * MARKER_PALETTE.length)]!;
       }
@@ -102,11 +106,19 @@ export default class LoadUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options: { signal?: AbortSignal; sizeFactor?: number } = {},
+    options: {
+      signal?: AbortSignal;
+      padToWidth?: number;
+      sizeFactor?: number;
+    } = {},
   ): Promise<Float32Array> {
-    const { signal, sizeFactor = 1 } = options;
+    const { signal, padToWidth, sizeFactor = 1 } = options;
     signal?.throwIfAborted();
-    const data = new Float32Array(n);
+    let dataLength = n;
+    if (padToWidth && dataLength % padToWidth !== 0) {
+      dataLength += padToWidth - (dataLength % padToWidth);
+    }
+    const data = new Float32Array(dataLength);
     if (isTableValuesColumn(sizeConfig)) {
       // table column contains size values
       const tableData = await loadTableByID(sizeConfig.tableId, {
@@ -179,11 +191,15 @@ export default class LoadUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options: { signal?: AbortSignal } = {},
+    options: { signal?: AbortSignal; padToWidth?: number } = {},
   ): Promise<Uint32Array> {
-    const { signal } = options;
+    const { signal, padToWidth } = options;
     signal?.throwIfAborted();
-    const data = new Uint32Array(n);
+    let dataLength = n;
+    if (padToWidth && dataLength % padToWidth !== 0) {
+      dataLength += padToWidth - (dataLength % padToWidth);
+    }
+    const data = new Uint32Array(dataLength);
     if (isTableValuesColumn(colorConfig)) {
       // table column contains continuous values
       const palette =
@@ -282,7 +298,7 @@ export default class LoadUtils {
           : undefined;
       if (palette !== undefined) {
         // color palette found, map random colors from palette
-        for (let i = 0; i < data.length; i++) {
+        for (let i = 0; i < n; i++) {
           const color = palette[Math.floor(Math.random() * palette.length)]!;
           data[i] = ColorUtils.packColor(color);
         }
@@ -296,7 +312,7 @@ export default class LoadUtils {
     }
     // combine color with visibility and opacity
     signal?.throwIfAborted();
-    for (let i = 0; i < data.length; i++) {
+    for (let i = 0; i < n; i++) {
       data[i] =
         (data[i]! << 8) + (visibilityData[i]! > 0 ? opacityData[i]! : 0);
     }
@@ -313,11 +329,15 @@ export default class LoadUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options: { signal?: AbortSignal } = {},
+    options: { signal?: AbortSignal; padToWidth?: number } = {},
   ): Promise<Uint8Array> {
-    const { signal } = options;
+    const { signal, padToWidth } = options;
     signal?.throwIfAborted();
-    const data = new Uint8Array(n);
+    let dataLength = n;
+    if (padToWidth && dataLength % padToWidth !== 0) {
+      dataLength += padToWidth - (dataLength % padToWidth);
+    }
+    const data = new Uint8Array(dataLength);
     if (isTableValuesColumn(visibilityConfig)) {
       // table column contains visibility values
       const tableData = await loadTableByID(visibilityConfig.tableId, {
@@ -381,11 +401,19 @@ export default class LoadUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options: { signal?: AbortSignal; opacityFactor?: number } = {},
+    options: {
+      signal?: AbortSignal;
+      padToWidth?: number;
+      opacityFactor?: number;
+    } = {},
   ): Promise<Uint8Array> {
-    const { signal, opacityFactor = 1 } = options;
+    const { signal, padToWidth, opacityFactor = 1 } = options;
     signal?.throwIfAborted();
-    const data = new Uint8Array(n);
+    let dataLength = n;
+    if (padToWidth && dataLength % padToWidth !== 0) {
+      dataLength += padToWidth - (dataLength % padToWidth);
+    }
+    const data = new Uint8Array(dataLength);
     if (isTableValuesColumn(opacityConfig)) {
       // table column contains opacity values
       const tableData = await loadTableByID(opacityConfig.tableId, {

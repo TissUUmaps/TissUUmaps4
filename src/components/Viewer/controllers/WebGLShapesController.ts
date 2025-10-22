@@ -437,15 +437,14 @@ export default class WebGLShapesController extends WebGLControllerBase {
       scanlines,
       numScanlineShapes,
       numScanlineShapeEdges,
+      { padToWidth: 4 * WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH },
     );
     const scanlineDataTexture = WebGLUtils.createDataTexture(
       this._gl,
       this._gl.RGBA32F,
       WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH,
-      Math.ceil(
-        scanlineData.length /
-          (4 * WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH),
-      ),
+      scanlineData.length /
+        (4 * WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH),
       this._gl.RGBA,
       this._gl.FLOAT,
       scanlineData,
@@ -483,7 +482,10 @@ export default class WebGLShapesController extends WebGLControllerBase {
         DEFAULT_SHAPE_FILL_VISIBILITY,
         visibilityMaps,
         loadTableByID,
-        { signal },
+        {
+          signal,
+          padToWidth: WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
+        },
       );
       signal?.throwIfAborted();
       const opacityData = await LoadUtils.loadOpacityData(
@@ -493,7 +495,11 @@ export default class WebGLShapesController extends WebGLControllerBase {
         DEFAULT_SHAPE_FILL_OPACITY,
         opacityMaps,
         loadTableByID,
-        { signal, opacityFactor: ref.layer.opacity * ref.shapes.opacity },
+        {
+          signal,
+          padToWidth: WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
+          opacityFactor: ref.layer.opacity * ref.shapes.opacity,
+        },
       );
       signal?.throwIfAborted();
       colorData = await LoadUtils.loadColorData(
@@ -507,7 +513,10 @@ export default class WebGLShapesController extends WebGLControllerBase {
         opacityData,
         colorMaps,
         loadTableByID,
-        { signal },
+        {
+          signal,
+          padToWidth: WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
+        },
       );
       signal?.throwIfAborted();
     }
@@ -515,10 +524,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
       this._gl,
       this._gl.R32UI,
       WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
-      Math.ceil(
-        colorData.length /
-          WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
-      ),
+      colorData.length / WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
       this._gl.RED_INTEGER,
       this._gl.UNSIGNED_INT,
       colorData,
@@ -556,7 +562,10 @@ export default class WebGLShapesController extends WebGLControllerBase {
         DEFAULT_SHAPE_STROKE_VISIBILITY,
         visibilityMaps,
         loadTableByID,
-        { signal },
+        {
+          signal,
+          padToWidth: WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
+        },
       );
       signal?.throwIfAborted();
       const opacityData = await LoadUtils.loadOpacityData(
@@ -566,7 +575,11 @@ export default class WebGLShapesController extends WebGLControllerBase {
         DEFAULT_SHAPE_STROKE_OPACITY,
         opacityMaps,
         loadTableByID,
-        { signal, opacityFactor: ref.layer.opacity * ref.shapes.opacity },
+        {
+          signal,
+          padToWidth: WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
+          opacityFactor: ref.layer.opacity * ref.shapes.opacity,
+        },
       );
       signal?.throwIfAborted();
       colorData = await LoadUtils.loadColorData(
@@ -580,7 +593,10 @@ export default class WebGLShapesController extends WebGLControllerBase {
         opacityData,
         colorMaps,
         loadTableByID,
-        { signal },
+        {
+          signal,
+          padToWidth: WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
+        },
       );
       signal?.throwIfAborted();
     }
@@ -588,10 +604,8 @@ export default class WebGLShapesController extends WebGLControllerBase {
       this._gl,
       this._gl.R32UI,
       WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
-      Math.ceil(
-        colorData.length /
-          WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
-      ),
+      colorData.length /
+        WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
       this._gl.RED_INTEGER,
       this._gl.UNSIGNED_INT,
       colorData,
