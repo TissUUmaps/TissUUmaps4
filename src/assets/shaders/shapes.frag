@@ -96,32 +96,26 @@ float pointToSegmentDist(vec2 p, vec2 v0, vec2 v1) {
 
 // computes the winding number for a given point p and n edges stored in data starting at offset
 // https://web.archive.org/web/20210504233957/http://geomalgorithms.com/a03-_inclusion.html
-int windingNumber(vec2 p, sampler2D sampler, uint textureWidth, uint offset, uint numEdges, float halfStrokeWidth, out float minDist) {
+int windingNumber(vec2 p, sampler2D sampler, uint textureWidth, uint offset, uint numEdges, out float minDist) {
     int wn = 0;
     minDist = 1e38;
     for(uint i = 0u; i < numEdges; ++i) {
         vec4 edge = texel(sampler, textureWidth, offset + i);
         vec2 v0 = vec2(edge[0], edge[1]);
         vec2 v1 = vec2(edge[2], edge[3]);
-        vec2 e = v1 - v0;
-        float len = length(e);
-        if(len <= 0.0) {
+        if(length(v1 - v0) <= 0.0) {
             continue;
         }
-        minDist = min(minDist, pointToSegmentDist(p, v0, v1));
-        // extend edge by half stroke width on both ends
-        vec2 delta = halfStrokeWidth * e / len;
-        vec2 v0long = v0 - delta;
-        vec2 v1long = v1 + delta;
-        if(v0long.y <= p.y) { // edge starts on/below point
-            if(v1long.y > p.y && isPointLeftOfLine(p, v0long, v1long) > 0.0) { // edge ends strictly above point, and point is strictly left of edge
+        if(v0.y <= p.y) { // edge starts on/below point
+            if(v1.y > p.y && isPointLeftOfLine(p, v0, v1) > 0.0) { // edge ends strictly above point, and point is strictly left of edge
                 wn++;
             }
         } else { // edge starts strictly above point
-            if(v1long.y <= p.y && isPointLeftOfLine(p, v0long, v1long) < 0.0) { // edge ends on/below point, and point is strictly right of edge
+            if(v1.y <= p.y && isPointLeftOfLine(p, v0, v1) < 0.0) { // edge ends on/below point, and point is strictly right of edge
                 wn--;
             }
         }
+        minDist = min(minDist, pointToSegmentDist(p, v0, v1));
     }
     return wn;
 }
@@ -170,18 +164,17 @@ void main() {
         uint numEdges = floatBitsToUint(shapeInfo[1]);
         if(numEdges > 0u && v_pos.x >= shapeInfo[2] - v_hsw && v_pos.x <= shapeInfo[3] + v_hsw) {
             float minDist;
-            if(windingNumber(v_pos, u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset + 1u, numEdges, v_hsw, minDist) > 0) { // point is inside shape
-                if(minDist < v_hsw) { // point is inside stroke area
-                    uvec4 strokeColorTexel = utexel(u_shapeStrokeColors, SHAPE_STROKE_COLORS_TEXTURE_WIDTH, shapeIndex);
-                    vec4 strokeColor = unpackColor(strokeColorTexel[0]);
-                    strokeColor.rgb = strokeColor.rgb * strokeColor.a; // premultiply
-                    fragColor = strokeColor + (1.0 - strokeColor.a) * fragColor;
-                } else { // point is inside fill area
-                    uvec4 fillColorTexel = utexel(u_shapeFillColors, SHAPE_FILL_COLORS_TEXTURE_WIDTH, shapeIndex);
-                    vec4 fillColor = unpackColor(fillColorTexel[0]);
-                    fillColor.rgb = fillColor.rgb * fillColor.a; // premultiply
-                    fragColor = fillColor + (1.0 - fillColor.a) * fragColor;
-                }
+            int wn = windingNumber(v_pos, u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset + 1u, numEdges, minDist);
+            if(minDist < v_hsw) { // point is inside stroke area
+                uvec4 strokeColorTexel = utexel(u_shapeStrokeColors, SHAPE_STROKE_COLORS_TEXTURE_WIDTH, shapeIndex);
+                vec4 strokeColor = unpackColor(strokeColorTexel[0]);
+                strokeColor.rgb = strokeColor.rgb * strokeColor.a; // premultiply
+                fragColor = strokeColor + (1.0 - strokeColor.a) * fragColor;
+            } else if(wn > 0) { // point is inside fill area
+                uvec4 fillColorTexel = utexel(u_shapeFillColors, SHAPE_FILL_COLORS_TEXTURE_WIDTH, shapeIndex);
+                vec4 fillColor = unpackColor(fillColorTexel[0]);
+                fillColor.rgb = fillColor.rgb * fillColor.a; // premultiply
+                fragColor = fillColor + (1.0 - fillColor.a) * fragColor;
             }
         }
         shapeOffset += 1u + numEdges;
