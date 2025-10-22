@@ -303,9 +303,8 @@ export default class OpenSeadragonController {
       if (ref !== undefined) {
         tiledImageStatesByRef.set(ref, tiledImageState);
       } else {
-        if (tiledImageState.loaded) {
-          const tiledImage = this._viewer.world.getItemAt(i);
-          this._viewer.world.removeItem(tiledImage);
+        if (tiledImageState.tiledImage !== undefined) {
+          this._viewer.world.removeItem(tiledImageState.tiledImage);
         } else {
           tiledImageState.deferredDelete = true;
         }
@@ -340,16 +339,15 @@ export default class OpenSeadragonController {
         tiledImageState = this._createTiledImage(i, ref);
       } else {
         const currentIndex = this._tiledImageStates.indexOf(tiledImageState);
-        const tiledImage = this._viewer.world.getItemAt(currentIndex);
         if (currentIndex !== i) {
-          if (tiledImageState.loaded) {
-            this._viewer.world.setItemIndex(tiledImage, i);
+          if (tiledImageState.tiledImage !== undefined) {
+            this._viewer.world.setItemIndex(tiledImageState.tiledImage, i);
           } else {
             tiledImageState.deferredIndex = i;
           }
         }
-        if (tiledImageState.loaded) {
-          this._updateTiledImage(tiledImage, tiledImageState);
+        if (tiledImageState.tiledImage !== undefined) {
+          this._updateTiledImage(tiledImageState);
         } else {
           tiledImageState.deferredUpdate = true;
         }
@@ -374,32 +372,32 @@ export default class OpenSeadragonController {
       // flipped: layerConfig.flip ?? layerConfigDefaults.flip,
       opacity: OpenSeadragonController._calculateOpacity(ref),
       success: (event) => {
-        const tiledImage = (
+        tiledImageState.tiledImage = (
           event as unknown as { item: OpenSeadragon.TiledImage }
         ).item;
-        tiledImageState.imageWidth = tiledImage.getContentSize().x;
-        tiledImageState.imageHeight = tiledImage.getContentSize().y;
         if (
           tiledImageState.deferredIndex !== undefined &&
           tiledImageState.deferredIndex !== index
         ) {
           this._viewer.world.setItemIndex(
-            tiledImage,
+            tiledImageState.tiledImage,
             tiledImageState.deferredIndex,
           );
           tiledImageState.deferredIndex = undefined;
         }
         if (tiledImageState.deferredUpdate) {
-          this._updateTiledImage(tiledImage, tiledImageState);
+          this._updateTiledImage(tiledImageState);
           tiledImageState.deferredUpdate = undefined;
         } else {
           // always update transform
-          this._updateTiledImageTransform(tiledImage, tiledImageState);
+          this._updateTiledImageTransform(tiledImageState);
         }
-        this._viewer.viewport.fitBounds(tiledImage.getBounds(), true);
-        tiledImageState.loaded = true;
+        this._viewer.viewport.fitBounds(
+          tiledImageState.tiledImage.getBounds(),
+          true,
+        );
         if (tiledImageState.deferredDelete) {
-          this._viewer.world.removeItem(tiledImage);
+          this._viewer.world.removeItem(tiledImageState.tiledImage);
           tiledImageState.deferredDelete = undefined;
         }
       },
@@ -407,33 +405,36 @@ export default class OpenSeadragonController {
     return tiledImageState;
   }
 
-  private _updateTiledImage(
-    tiledImage: OpenSeadragon.TiledImage,
-    tiledImageState: TiledImageState,
-  ): void {
-    if (tiledImage.getFlip() !== tiledImageState.ref.layerConfig.flip) {
-      tiledImage.setFlip(tiledImageState.ref.layerConfig.flip);
+  private _updateTiledImage(tiledImageState: TiledImageState): void {
+    if (tiledImageState.tiledImage === undefined) {
+      throw new Error("Cannot update tiled image before it is created");
+    }
+    if (
+      tiledImageState.tiledImage.getFlip() !==
+      tiledImageState.ref.layerConfig.flip
+    ) {
+      tiledImageState.tiledImage.setFlip(tiledImageState.ref.layerConfig.flip);
     }
     const opacity = OpenSeadragonController._calculateOpacity(
       tiledImageState.ref,
     );
-    if (tiledImage.getOpacity() !== opacity) {
-      tiledImage.setOpacity(opacity);
+    if (tiledImageState.tiledImage.getOpacity() !== opacity) {
+      tiledImageState.tiledImage.setOpacity(opacity);
     }
-    this._updateTiledImageTransform(tiledImage, tiledImageState);
+    this._updateTiledImageTransform(tiledImageState);
   }
 
-  private _updateTiledImageTransform(
-    tiledImage: OpenSeadragon.TiledImage,
-    tiledImageState: TiledImageState,
-  ): void {
+  private _updateTiledImageTransform(tiledImageState: TiledImageState): void {
+    if (tiledImageState.tiledImage === undefined) {
+      throw new Error("Cannot update tiled image before it is created");
+    }
     const m = mat3.create();
     const dataToLayerMatrix = TransformUtils.toMatrix(
       tiledImageState.ref.layerConfig.transform,
       {
         rotationCenter: {
-          x: tiledImageState.imageWidth! / 2,
-          y: tiledImageState.imageHeight! / 2,
+          x: tiledImageState.tiledImage.getContentSize().x / 2,
+          y: tiledImageState.tiledImage.getContentSize().y / 2,
         },
       },
     );
@@ -443,21 +444,29 @@ export default class OpenSeadragonController {
     );
     mat3.multiply(m, layerToWorldMatrix, m);
     const dataToWorldTransform = TransformUtils.fromMatrix(m);
-    const bounds = tiledImage.getBounds();
-    if (tiledImage.getFlip() !== tiledImageState.ref.layerConfig.flip) {
-      tiledImage.setFlip(tiledImageState.ref.layerConfig.flip);
+    const bounds = tiledImageState.tiledImage.getBounds();
+    if (
+      tiledImageState.tiledImage.getFlip() !==
+      tiledImageState.ref.layerConfig.flip
+    ) {
+      tiledImageState.tiledImage.setFlip(tiledImageState.ref.layerConfig.flip);
     }
-    const width = tiledImageState.imageWidth! * dataToWorldTransform.scale;
+    const width =
+      tiledImageState.tiledImage.getContentSize().x *
+      dataToWorldTransform.scale;
     if (bounds.width !== width) {
-      tiledImage.setWidth(width, true);
+      tiledImageState.tiledImage.setWidth(width, true); // implicitly updates height to maintain aspect ratio
     }
     const rotation = dataToWorldTransform.rotation;
-    if (tiledImage.getRotation() !== rotation) {
-      tiledImage.setRotation(rotation, true);
+    if (tiledImageState.tiledImage.getRotation() !== rotation) {
+      tiledImageState.tiledImage.setRotation(rotation, true);
     }
     const { x, y } = dataToWorldTransform.translation;
     if (bounds.x !== x || bounds.y !== y) {
-      tiledImage.setPosition(new OpenSeadragon.Point(x, y), true);
+      tiledImageState.tiledImage.setPosition(
+        new OpenSeadragon.Point(x, y),
+        true,
+      );
     }
   }
 
@@ -489,12 +498,10 @@ type ObjectRef = ImageRef | LabelsRef;
 
 type TiledImageState = {
   ref: ObjectRef;
-  loaded?: boolean;
-  imageWidth?: number;
-  imageHeight?: number;
   deferredIndex?: number;
   deferredUpdate?: boolean;
   deferredDelete?: boolean;
+  tiledImage?: OpenSeadragon.TiledImage;
 };
 
 // add missing OpenSeadragon types
