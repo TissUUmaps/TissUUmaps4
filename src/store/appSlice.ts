@@ -13,6 +13,12 @@ import {
   completeDefaultImageDataSource,
 } from "../data/loaders/default";
 import {
+  GEOJSON_SHAPES_DATA_SOURCE,
+  GeoJSONShapesDataLoader,
+  GeoJSONShapesDataSource,
+  completeGeoJSONShapesDataSource,
+} from "../data/loaders/geojson";
+import {
   PARQUET_TABLE_DATA_SOURCE,
   ParquetTableDataLoader,
   ParquetTableDataSource,
@@ -152,7 +158,18 @@ const initialAppSliceState: AppSliceState = {
         ),
     ],
   ]),
-  shapesDataLoaderFactories: new Map<string, ShapesDataLoaderFactory>(),
+  shapesDataLoaderFactories: new Map<string, ShapesDataLoaderFactory>([
+    [
+      GEOJSON_SHAPES_DATA_SOURCE,
+      (dataSource, projectDir) =>
+        new GeoJSONShapesDataLoader(
+          completeGeoJSONShapesDataSource(
+            dataSource as GeoJSONShapesDataSource,
+          ),
+          projectDir,
+        ),
+    ],
+  ]),
   tableDataLoaderFactories: new Map<string, TableDataLoaderFactory>([
     [
       CSV_TABLE_DATA_SOURCE,
