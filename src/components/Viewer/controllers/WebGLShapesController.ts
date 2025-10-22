@@ -3,6 +3,7 @@ import shapesVertexShader from "../../../assets/shaders/shapes.vert?raw";
 import { ShapesData } from "../../../data/shapes";
 import { TableData } from "../../../data/table";
 import { CompleteLayer } from "../../../model/layer";
+import { DEFAULT_PROJECT_DRAW_OPTIONS } from "../../../model/project";
 import {
   CompleteShapes,
   CompleteShapesLayerConfig,
@@ -44,7 +45,8 @@ export default class WebGLShapesController extends WebGLControllerBase {
     shapeFillColors: WebGLUniformLocation;
     shapeStrokeColors: WebGLUniformLocation;
   };
-  private _numScanlines: number = 512; // default value should match DEFAULT_PROJECT_DRAW_OPTIONS.numShapesScanlines
+  private _numScanlines: number =
+    DEFAULT_PROJECT_DRAW_OPTIONS.numShapesScanlines;
   private _glShapes: GLShapes[] = [];
 
   constructor(gl: WebGL2RenderingContext) {
@@ -514,7 +516,8 @@ export default class WebGLShapesController extends WebGLControllerBase {
       this._gl.R32UI,
       WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
       Math.ceil(
-        colorData.length / WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
+        colorData.length /
+          WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
       ),
       this._gl.RED_INTEGER,
       this._gl.UNSIGNED_INT,
@@ -586,7 +589,8 @@ export default class WebGLShapesController extends WebGLControllerBase {
       this._gl.R32UI,
       WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
       Math.ceil(
-        colorData.length / WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
+        colorData.length /
+          WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
       ),
       this._gl.RED_INTEGER,
       this._gl.UNSIGNED_INT,
