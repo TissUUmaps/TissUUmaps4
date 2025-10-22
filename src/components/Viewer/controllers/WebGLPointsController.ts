@@ -434,7 +434,6 @@ export default class WebGLPointsController extends WebGLControllerBase {
         bufferSliceChanged ||
         bufferSlice.current.points.pointMarker !== ref.points.pointMarker ||
         bufferSlice.current.points.pointMarkerMap !== ref.points.pointMarkerMap
-        // TODO react to changes in marker maps
       ) {
         const markerIndexData = await LoadUtils.loadMarkerIndexData(
           numPoints,
@@ -467,7 +466,6 @@ export default class WebGLPointsController extends WebGLControllerBase {
           ref.points.pointSizeFactor ||
         bufferSlice.current.layerConfig.transform.scale !==
           ref.layerConfig.transform.scale
-        // TODO react to changes in size maps
       ) {
         let sizeFactor = ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
         if (ref.points.pointSizeUnit === "data") {
@@ -516,7 +514,6 @@ export default class WebGLPointsController extends WebGLControllerBase {
         bufferSlice.current.points.pointColorPalette !==
           ref.points.pointColorPalette ||
         bufferSlice.current.points.pointColorMap !== ref.points.pointColorMap
-        // TODO react to changes in color, visibility, and opacity maps
       ) {
         let colorData;
         if (
