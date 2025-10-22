@@ -103,7 +103,7 @@ int windingNumber(vec2 p, sampler2D sampler, uint textureWidth, uint offset, uin
         vec4 edge = texel(sampler, textureWidth, offset + i);
         vec2 v0 = vec2(edge[0], edge[1]);
         vec2 v1 = vec2(edge[2], edge[3]);
-        if(length(v1 - v0) <= 0.0) {
+        if(v0.x == v1.x && v0.y == v1.y) {
             continue;
         }
         if(v0.y <= p.y) { // edge starts on/below point
