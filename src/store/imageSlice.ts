@@ -12,8 +12,14 @@ export type ImageSliceState = {
 
 export type ImageSliceActions = {
   addImage: (image: CompleteImage, index?: number) => void;
-  loadImage: (image: CompleteImage, signal?: AbortSignal) => Promise<ImageData>;
-  loadImageByID: (imageId: string, signal?: AbortSignal) => Promise<ImageData>;
+  loadImage: (
+    image: CompleteImage,
+    options: { signal?: AbortSignal },
+  ) => Promise<ImageData>;
+  loadImageByID: (
+    imageId: string,
+    options: { signal?: AbortSignal },
+  ) => Promise<ImageData>;
   unloadImage: (image: CompleteImage) => void;
   unloadImageByID: (imageId: string) => void;
   deleteImage: (image: CompleteImage) => void;
@@ -41,7 +47,8 @@ export const createImageSlice: BoundStoreStateCreator<ImageSlice> = (
       );
     });
   },
-  loadImage: async (image, signal) => {
+  loadImage: async (image, options: { signal?: AbortSignal } = {}) => {
+    const { signal } = options;
     signal?.throwIfAborted();
     const state = get();
     let imageData = state.imageDataCache.get(image.dataSource);
@@ -61,21 +68,22 @@ export const createImageSlice: BoundStoreStateCreator<ImageSlice> = (
       state.projectDir,
       state.loadTableByID,
     );
-    imageData = await imageDataLoader.loadImage(signal);
+    imageData = await imageDataLoader.loadImage({ signal });
     signal?.throwIfAborted();
     set((draft) => {
       draft.imageDataCache.set(image.dataSource, imageData);
     });
     return imageData;
   },
-  loadImageByID: async (imageId, signal) => {
+  loadImageByID: async (imageId, options: { signal?: AbortSignal } = {}) => {
+    const { signal } = options;
     signal?.throwIfAborted();
     const state = get();
     const image = state.imageMap.get(imageId);
     if (image === undefined) {
       throw new Error(`Image with ID ${imageId} not found.`);
     }
-    return state.loadImage(image, signal);
+    return state.loadImage(image, { signal });
   },
   unloadImage: (image) => {
     const state = get();

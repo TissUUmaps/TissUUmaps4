@@ -3,9 +3,12 @@ import { Color } from "../types";
 export default class ColorUtils {
   static parseColorPalette(
     str: string,
-    sep: string = " ",
-    maxValue: number = 1,
+    options: {
+      sep?: string;
+      maxValue?: number;
+    } = {},
   ): Color[] {
+    const { sep = " ", maxValue = 1 } = options;
     return str
       .split("\n")
       .filter((line) => line.trim().length > 0)

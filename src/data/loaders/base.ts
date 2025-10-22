@@ -33,7 +33,7 @@ export abstract class AbstractImageDataLoader<
   extends AbstractDataLoader<TImageDataSource>
   implements ImageDataLoader<TImageData>
 {
-  abstract loadImage(signal?: AbortSignal): Promise<TImageData>;
+  abstract loadImage(options: { signal?: AbortSignal }): Promise<TImageData>;
 }
 
 export abstract class AbstractLabelsDataLoader<
@@ -43,7 +43,7 @@ export abstract class AbstractLabelsDataLoader<
   extends AbstractDataLoader<TLabelsDataSource>
   implements LabelsDataLoader<TLabelsData>
 {
-  abstract loadLabels(signal?: AbortSignal): Promise<TLabelsData>;
+  abstract loadLabels(options: { signal?: AbortSignal }): Promise<TLabelsData>;
 }
 
 export abstract class AbstractPointsDataLoader<
@@ -53,7 +53,7 @@ export abstract class AbstractPointsDataLoader<
   extends AbstractDataLoader<TPointsDataSource>
   implements PointsDataLoader<TPointsData>
 {
-  abstract loadPoints(signal?: AbortSignal): Promise<TPointsData>;
+  abstract loadPoints(options: { signal?: AbortSignal }): Promise<TPointsData>;
 }
 
 export abstract class AbstractShapesDataLoader<
@@ -63,7 +63,7 @@ export abstract class AbstractShapesDataLoader<
   extends AbstractDataLoader<TShapesDataSource>
   implements ShapesDataLoader<TShapesData>
 {
-  abstract loadShapes(signal?: AbortSignal): Promise<TShapesData>;
+  abstract loadShapes(options: { signal?: AbortSignal }): Promise<TShapesData>;
 }
 
 export abstract class AbstractTableDataLoader<
@@ -73,5 +73,5 @@ export abstract class AbstractTableDataLoader<
   extends AbstractDataLoader<TTableDataSource>
   implements TableDataLoader<TTableData>
 {
-  abstract loadTable(signal?: AbortSignal): Promise<TTableData>;
+  abstract loadTable(options: { signal?: AbortSignal }): Promise<TTableData>;
 }

@@ -78,8 +78,7 @@ describe("TransformUtils", () => {
 
     it("should apply rotation around a center", () => {
       const tf: Partial<SimilarityTransform> = { rotation: 90, scale: 1 };
-      const center = { x: 2, y: 3 };
-      const m = TransformUtils.toMatrix(tf, center);
+      const m = TransformUtils.toMatrix(tf, { rotationCenter: { x: 2, y: 3 } });
       // After rotating 90 degrees around (2,3), the translation part should not be zero
       expect(m[6]).not.toBe(0);
       expect(m[7]).not.toBe(0);

@@ -2,13 +2,6 @@ import OpenSeadragon from "openseadragon";
 
 import { CATEGORICAL_COLOR_PALETTES } from "./palettes";
 
-export type Rect = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
 export type IntArray = Int8Array | Int16Array | Int32Array;
 export type UintArray = Uint8Array | Uint16Array | Uint32Array;
 export type FloatArray = Float32Array | Float64Array; // Float16Array will be part of ECMAScript 2025
@@ -51,17 +44,24 @@ export enum Marker {
   Gaussian,
 }
 
-/** Similarity transform */
-export type SimilarityTransform = {
-  /** Scale factor */
-  scale: number;
-
-  /** Rotation around origin, in degrees */
-  rotation: number;
-
-  /** Translation, applied after scaling and rotation */
-  translation: { x: number; y: number };
+export type ValueMap<TValue> = {
+  values: { [key: string]: TValue };
+  defaultValue?: TValue;
 };
+
+export type NamedValueMap<TValue> = {
+  id: string;
+  name: string;
+} & ValueMap<TValue>;
+
+export type ColorMap = ValueMap<Color> & {
+  palette?: keyof typeof CATEGORICAL_COLOR_PALETTES;
+};
+
+export type NamedColorMap = {
+  id: string;
+  name: string;
+} & ColorMap;
 
 /** Link to a table column that holds values */
 export type TableValuesColumn = {
@@ -95,24 +95,17 @@ export function isTableGroupsColumn(x: unknown): x is TableGroupsColumn {
   );
 }
 
-export type ValueMap<TValue> = {
-  values: { [key: string]: TValue };
-  defaultValue?: TValue;
+/** Similarity transform */
+export type SimilarityTransform = {
+  /** Scale factor */
+  scale: number;
+
+  /** Rotation around origin, in degrees */
+  rotation: number;
+
+  /** Translation, applied after scaling and rotation */
+  translation: { x: number; y: number };
 };
-
-export type NamedValueMap<TValue> = {
-  id: string;
-  name: string;
-} & ValueMap<TValue>;
-
-export type ColorMap = ValueMap<Color> & {
-  palette?: keyof typeof CATEGORICAL_COLOR_PALETTES;
-};
-
-export type NamedColorMap = {
-  id: string;
-  name: string;
-} & ColorMap;
 
 /** OpenSeadragon viewer options */
 export type ViewerOptions = Omit<OpenSeadragon.Options, "element"> & {
@@ -140,13 +133,22 @@ export type DrawOptions = {
   numShapesScanlines: number;
 };
 
-export type Point = [number, number];
-
-export type Polygon = {
-  shell: Point[];
-  holes: Point[][];
+export type Rect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 export type MultiPolygon = {
   polygons: Polygon[];
 };
+
+export type Polygon = {
+  shell: Path;
+  holes: Path[];
+};
+
+export type Path = Vertex[];
+
+export type Vertex = { x: number; y: number };

@@ -38,14 +38,23 @@ export default function useWebGL(
 
   // initialize the WebGL controller
   useEffect(() => {
+    const abortController = new AbortController();
     if (parent !== null) {
       const canvas = parent.appendChild(WebGLController.createCanvas());
       controllerRef.current = new WebGLController(canvas);
-      controllerRef.current.initialize().then(() => {
-        setInitialized(true);
-      }, console.error);
+      controllerRef.current.initialize({ signal: abortController.signal }).then(
+        () => {
+          setInitialized(true);
+        },
+        (reason) => {
+          if (!abortController.signal.aborted) {
+            console.error(reason);
+          }
+        },
+      );
     }
     return () => {
+      abortController.abort("WebGL cleanup");
       if (controllerRef.current !== null) {
         controllerRef.current.destroy();
         controllerRef.current = null;
@@ -77,7 +86,7 @@ export default function useWebGL(
           opacityMaps,
           loadPoints,
           loadTableByID,
-          abortController.signal,
+          { signal: abortController.signal },
         )
         .then(
           () => {
@@ -115,9 +124,12 @@ export default function useWebGL(
         .synchronizeShapes(
           layerMap,
           shapesMap,
+          colorMaps,
+          visibilityMaps,
+          opacityMaps,
           loadShapes,
           loadTableByID,
-          abortController.signal,
+          { signal: abortController.signal },
         )
         .then(
           () => {
@@ -136,6 +148,9 @@ export default function useWebGL(
   }, [
     layerMap,
     shapesMap,
+    colorMaps,
+    visibilityMaps,
+    opacityMaps,
     projectDir,
     shapesDataLoaderFactories,
     loadShapes,

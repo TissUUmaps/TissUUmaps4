@@ -118,13 +118,14 @@ export default function App() {
     const abortController = new AbortController();
     const params = new URLSearchParams(window.location.search);
     const projectUrl = params.get(PROJECT_URL_PARAM) ?? DEFAULT_PROJECT_URL;
-    loadProjectFromURL(projectUrl, abortController.signal, true).catch(
-      (reason) => {
-        if (!abortController.signal.aborted) {
-          console.error(reason);
-        }
-      },
-    );
+    loadProjectFromURL(projectUrl, {
+      signal: abortController.signal,
+      quiet: true,
+    }).catch((reason) => {
+      if (!abortController.signal.aborted) {
+        console.error(reason);
+      }
+    });
     return () => {
       abortController.abort("app cleanup");
       clearProject();

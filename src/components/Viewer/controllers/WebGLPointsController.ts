@@ -15,18 +15,8 @@ import {
   PointsLayerConfig,
   completePointsLayerConfig,
 } from "../../../model/points";
-import { COLOR_PALETTES, MARKER_PALETTE } from "../../../palettes";
-import {
-  ColorMap,
-  DrawOptions,
-  Marker,
-  Rect,
-  ValueMap,
-  isTableGroupsColumn,
-  isTableValuesColumn,
-} from "../../../types";
-import ColorUtils from "../../../utils/ColorUtils";
-import HashUtils from "../../../utils/HashUtils";
+import { ColorMap, DrawOptions, Marker, Rect, ValueMap } from "../../../types";
+import LoadUtils from "../../../utils/LoadUtils";
 import TransformUtils from "../../../utils/TransformUtils";
 import WebGLUtils from "../../../utils/WebGLUtils";
 import WebGLControllerBase from "./WebGLControllerBase";
@@ -66,7 +56,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
   private readonly _vao: WebGLVertexArrayObject;
   private _markerAtlasTexture: WebGLTexture | undefined;
   private _bufferSlices: PointsBufferSlice[] = [];
-  private _nPoints: number = 0;
+  private _numPoints: number = 0;
 
   constructor(gl: WebGL2RenderingContext) {
     super(gl);
@@ -110,9 +100,9 @@ export default class WebGLPointsController extends WebGLControllerBase {
     };
     WebGLUtils.resizeBuffer(
       this._gl,
+      gl.UNIFORM_BUFFER,
       this._buffers.objectsUBO,
       WebGLPointsController._MAX_N_OBJECTS * 8 * Float32Array.BYTES_PER_ELEMENT,
-      gl.UNIFORM_BUFFER,
       gl.DYNAMIC_DRAW,
     );
     // create and configure VAO
@@ -120,6 +110,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._gl.bindVertexArray(this._vao);
     WebGLUtils.configureVertexFloatAttribute(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.x,
       WebGLPointsController._ATTRIB_LOCATIONS.X,
       1,
@@ -127,6 +118,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     );
     WebGLUtils.configureVertexFloatAttribute(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.y,
       WebGLPointsController._ATTRIB_LOCATIONS.Y,
       1,
@@ -134,6 +126,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     );
     WebGLUtils.configureVertexFloatAttribute(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.size,
       WebGLPointsController._ATTRIB_LOCATIONS.SIZE,
       1,
@@ -141,6 +134,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     );
     WebGLUtils.configureVertexIntAttribute(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.color,
       WebGLPointsController._ATTRIB_LOCATIONS.COLOR,
       1,
@@ -148,6 +142,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     );
     WebGLUtils.configureVertexIntAttribute(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.markerIndex,
       WebGLPointsController._ATTRIB_LOCATIONS.MARKER_INDEX,
       1,
@@ -155,6 +150,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     );
     WebGLUtils.configureVertexIntAttribute(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.objectIndex,
       WebGLPointsController._ATTRIB_LOCATIONS.OBJECT_INDEX,
       1,
@@ -163,12 +159,15 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._gl.bindVertexArray(null);
   }
 
-  async initialize(signal?: AbortSignal): Promise<WebGLPointsController> {
+  async initialize(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<WebGLPointsController> {
+    const { signal } = options;
     signal?.throwIfAborted();
-    this._markerAtlasTexture = await WebGLUtils.loadTexture(
+    this._markerAtlasTexture = await WebGLUtils.loadImageTextureFromUrl(
       this._gl,
       markersUrl,
-      signal,
+      { mipmap: true, signal },
     );
     signal?.throwIfAborted();
     return this;
@@ -184,21 +183,19 @@ export default class WebGLPointsController extends WebGLControllerBase {
     opacityMaps: Map<string, ValueMap<number>>,
     loadPoints: (
       points: CompletePoints,
-      signal?: AbortSignal,
+      options: { signal?: AbortSignal },
     ) => Promise<PointsData>,
     loadTableByID: (
       tableId: string,
-      signal?: AbortSignal,
+      options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<void> {
+    const { signal } = options;
     signal?.throwIfAborted();
-    const refs = await this._collectPoints(
-      layerMap,
-      pointsMap,
-      loadPoints,
+    const refs = await this._loadPoints(layerMap, pointsMap, loadPoints, {
       signal,
-    );
+    });
     signal?.throwIfAborted();
     if (refs.length > WebGLPointsController._MAX_N_OBJECTS) {
       console.warn(
@@ -207,12 +204,12 @@ export default class WebGLPointsController extends WebGLControllerBase {
       refs.length = WebGLPointsController._MAX_N_OBJECTS;
     }
     let buffersResized = false;
-    const nPoints = refs.reduce((s, ref) => s + ref.data.getLength(), 0);
-    if (this._nPoints !== nPoints) {
-      this._resizeBuffers(nPoints);
+    const numPoints = refs.reduce((sum, ref) => sum + ref.data.getLength(), 0);
+    if (this._numPoints !== numPoints) {
+      this._resizePointBuffers(numPoints);
       buffersResized = true;
     }
-    const newBufferSlices = await this._loadPoints(
+    this._bufferSlices = await this._loadPointBuffers(
       refs,
       markerMaps,
       sizeMaps,
@@ -221,14 +218,13 @@ export default class WebGLPointsController extends WebGLControllerBase {
       opacityMaps,
       buffersResized,
       loadTableByID,
-      signal,
+      { signal },
     );
     signal?.throwIfAborted();
-    this._bufferSlices = newBufferSlices;
   }
 
   draw(viewport: Rect, drawOptions: DrawOptions): void {
-    if (this._nPoints === 0 || this._markerAtlasTexture === undefined) {
+    if (this._numPoints === 0 || this._markerAtlasTexture === undefined) {
       return;
     }
     this._gl.useProgram(this._program);
@@ -261,7 +257,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
     this._gl.uniform1i(this._uniformLocations.markerAtlas, 0);
     WebGLUtils.enableAlphaBlending(this._gl);
-    this._gl.drawArrays(this._gl.POINTS, 0, this._nPoints);
+    this._gl.drawArrays(this._gl.POINTS, 0, this._numPoints);
     WebGLUtils.disableAlphaBlending(this._gl);
     this._gl.bindVertexArray(null);
     this._gl.useProgram(null);
@@ -278,49 +274,62 @@ export default class WebGLPointsController extends WebGLControllerBase {
     }
   }
 
-  private _resizeBuffers(nPoints: number): void {
+  private _resizePointBuffers(numPoints: number): void {
     WebGLUtils.resizeBuffer(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.x,
-      nPoints * Float32Array.BYTES_PER_ELEMENT,
+      numPoints * Float32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.y,
-      nPoints * Float32Array.BYTES_PER_ELEMENT,
+      numPoints * Float32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.size,
-      nPoints * Float32Array.BYTES_PER_ELEMENT,
+      numPoints * Float32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.color,
-      nPoints * Uint32Array.BYTES_PER_ELEMENT,
+      numPoints * Uint32Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.markerIndex,
-      nPoints * Uint8Array.BYTES_PER_ELEMENT,
+      numPoints * Uint8Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
+      this._gl.ARRAY_BUFFER,
       this._buffers.objectIndex,
-      nPoints * Uint8Array.BYTES_PER_ELEMENT,
+      numPoints * Uint8Array.BYTES_PER_ELEMENT,
+      this._gl.STATIC_DRAW,
     );
-    this._nPoints = nPoints;
+    this._numPoints = numPoints;
   }
 
-  private async _collectPoints(
+  private async _loadPoints(
     layerMap: Map<string, CompleteLayer>,
     pointsMap: Map<string, CompletePoints>,
     loadPoints: (
       points: CompletePoints,
-      signal?: AbortSignal,
+      options: { signal?: AbortSignal },
     ) => Promise<PointsData>,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<PointsRef[]> {
+    const { signal } = options;
     signal?.throwIfAborted();
     const refs: PointsRef[] = [];
     for (const layer of layerMap.values()) {
@@ -328,9 +337,9 @@ export default class WebGLPointsController extends WebGLControllerBase {
         for (const rawLayerConfig of points.layerConfigs.filter(
           (rawLayerConfig) => rawLayerConfig.layerId === layer.id,
         )) {
-          let data = null;
+          let data;
           try {
-            data = await loadPoints(points, signal);
+            data = await loadPoints(points, { signal });
           } catch (error) {
             if (!signal?.aborted) {
               console.error(
@@ -340,7 +349,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
             }
           }
           signal?.throwIfAborted();
-          if (data !== null) {
+          if (data !== undefined) {
             refs.push({
               layer: layer,
               points: points,
@@ -355,7 +364,7 @@ export default class WebGLPointsController extends WebGLControllerBase {
     return refs;
   }
 
-  private async _loadPoints(
+  private async _loadPointBuffers(
     refs: PointsRef[],
     markerMaps: Map<string, ValueMap<Marker>>,
     sizeMaps: Map<string, ValueMap<number>>,
@@ -365,24 +374,25 @@ export default class WebGLPointsController extends WebGLControllerBase {
     buffersResized: boolean,
     loadTableByID: (
       tableId: string,
-      signal?: AbortSignal,
+      options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<PointsBufferSlice[]> {
+    const { signal } = options;
     signal?.throwIfAborted();
-    let i = 0;
     let offset = 0;
     const newBufferSlices: PointsBufferSlice[] = [];
     const objectsUBOData = new Float32Array(
       WebGLPointsController._MAX_N_OBJECTS * 8,
     );
-    for (const ref of refs) {
-      const nPoints = ref.data.getLength();
-      const bufferSlice = this._bufferSlices[i];
+    for (let objectIndex = 0; objectIndex < refs.length; objectIndex++) {
+      const ref = refs[objectIndex]!;
+      const numPoints = ref.data.getLength();
+      const bufferSlice = this._bufferSlices[objectIndex];
       const bufferSliceChanged =
         buffersResized ||
         bufferSlice === undefined ||
-        bufferSlice.nPoints !== nPoints ||
+        bufferSlice.numPoints !== numPoints ||
         bufferSlice.offset !== offset ||
         bufferSlice.ref.layer !== ref.layer ||
         bufferSlice.ref.points !== ref.points ||
@@ -392,17 +402,33 @@ export default class WebGLPointsController extends WebGLControllerBase {
         bufferSliceChanged ||
         bufferSlice.current.layerConfig.x !== ref.layerConfig.x
       ) {
-        const data = await ref.data.loadCoordinates(ref.layerConfig.x, signal);
+        const data = await ref.data.loadCoordinates(ref.layerConfig.x, {
+          signal,
+        });
         signal?.throwIfAborted();
-        WebGLUtils.loadBuffer(this._gl, this._buffers.x, data, offset);
+        WebGLUtils.loadBuffer(
+          this._gl,
+          this._gl.ARRAY_BUFFER,
+          this._buffers.x,
+          data,
+          { offset },
+        );
       }
       if (
         bufferSliceChanged ||
         bufferSlice.current.layerConfig.y !== ref.layerConfig.y
       ) {
-        const data = await ref.data.loadCoordinates(ref.layerConfig.y, signal);
+        const data = await ref.data.loadCoordinates(ref.layerConfig.y, {
+          signal,
+        });
         signal?.throwIfAborted();
-        WebGLUtils.loadBuffer(this._gl, this._buffers.y, data, offset);
+        WebGLUtils.loadBuffer(
+          this._gl,
+          this._gl.ARRAY_BUFFER,
+          this._buffers.y,
+          data,
+          { offset },
+        );
       }
       if (
         bufferSliceChanged ||
@@ -410,18 +436,22 @@ export default class WebGLPointsController extends WebGLControllerBase {
         bufferSlice.current.points.pointMarkerMap !== ref.points.pointMarkerMap
         // TODO react to changes in marker maps
       ) {
-        const markerIndexData = await this._loadPointMarkerIndexData(
-          ref,
+        const markerIndexData = await LoadUtils.loadMarkerIndexData(
+          numPoints,
+          ref.points.pointMarker,
+          ref.points.pointMarkerMap,
+          DEFAULT_POINT_MARKER,
           markerMaps,
           loadTableByID,
-          signal,
+          { signal },
         );
         signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
           this._gl,
+          this._gl.ARRAY_BUFFER,
           this._buffers.markerIndex,
           markerIndexData,
-          offset,
+          { offset },
         );
       }
       if (
@@ -439,14 +469,33 @@ export default class WebGLPointsController extends WebGLControllerBase {
           ref.layerConfig.transform.scale
         // TODO react to changes in size maps
       ) {
-        const sizeData = await this._loadPointSizeData(
-          ref,
+        let sizeFactor = ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
+        if (ref.points.pointSizeUnit === "data") {
+          sizeFactor *= ref.layerConfig.transform.scale;
+        }
+        if (
+          ref.points.pointSizeUnit === "data" ||
+          ref.points.pointSizeUnit === "layer"
+        ) {
+          sizeFactor *= ref.layer.transform.scale;
+        }
+        const sizeData = await LoadUtils.loadSizeData(
+          numPoints,
+          ref.points.pointSize,
+          ref.points.pointSizeMap,
+          DEFAULT_POINT_SIZE,
           sizeMaps,
           loadTableByID,
-          signal,
+          { signal, sizeFactor },
         );
         signal?.throwIfAborted();
-        WebGLUtils.loadBuffer(this._gl, this._buffers.size, sizeData, offset);
+        WebGLUtils.loadBuffer(
+          this._gl,
+          this._gl.ARRAY_BUFFER,
+          this._buffers.size,
+          sizeData,
+          { offset },
+        );
       }
       if (
         bufferSliceChanged ||
@@ -469,29 +518,71 @@ export default class WebGLPointsController extends WebGLControllerBase {
         bufferSlice.current.points.pointColorMap !== ref.points.pointColorMap
         // TODO react to changes in color, visibility, and opacity maps
       ) {
-        const colorData = await this._loadPointColorData(
-          ref,
-          colorMaps,
-          visibilityMaps,
-          opacityMaps,
-          loadTableByID,
-          signal,
-        );
+        let colorData;
+        if (
+          ref.layer.visibility === false ||
+          ref.layer.opacity === 0 ||
+          ref.points.visibility === false ||
+          ref.points.opacity === 0
+        ) {
+          colorData = new Uint32Array(numPoints).fill(0);
+        } else {
+          const visibilityData = await LoadUtils.loadVisibilityData(
+            numPoints,
+            ref.points.pointVisibility,
+            ref.points.pointVisibilityMap,
+            DEFAULT_POINT_VISIBILITY,
+            visibilityMaps,
+            loadTableByID,
+            { signal },
+          );
+          signal?.throwIfAborted();
+          const opacityData = await LoadUtils.loadOpacityData(
+            numPoints,
+            ref.points.pointOpacity,
+            ref.points.pointOpacityMap,
+            DEFAULT_POINT_OPACITY,
+            opacityMaps,
+            loadTableByID,
+            { signal, opacityFactor: ref.layer.opacity * ref.points.opacity },
+          );
+          signal?.throwIfAborted();
+          colorData = await LoadUtils.loadColorData(
+            numPoints,
+            ref.points.pointColor,
+            ref.points.pointColorRange,
+            ref.points.pointColorPalette,
+            ref.points.pointColorMap,
+            DEFAULT_POINT_COLOR,
+            visibilityData,
+            opacityData,
+            colorMaps,
+            loadTableByID,
+            { signal },
+          );
+        }
         signal?.throwIfAborted();
-        WebGLUtils.loadBuffer(this._gl, this._buffers.color, colorData, offset);
+        WebGLUtils.loadBuffer(
+          this._gl,
+          this._gl.ARRAY_BUFFER,
+          this._buffers.color,
+          colorData,
+          { offset },
+        );
       }
       if (bufferSliceChanged) {
         WebGLUtils.loadBuffer(
           this._gl,
+          this._gl.ARRAY_BUFFER,
           this._buffers.objectIndex,
-          new Uint8Array(nPoints).fill(i),
-          offset,
+          new Uint8Array(numPoints).fill(objectIndex),
+          { offset },
         );
       }
       newBufferSlices.push({
         ref: ref,
         offset: offset,
-        nPoints: nPoints,
+        numPoints: numPoints,
         current: {
           layer: {
             visibility: ref.layer.visibility,
@@ -531,460 +622,17 @@ export default class WebGLPointsController extends WebGLControllerBase {
             ref.layerConfig,
           ),
         ),
-        i * 8,
+        objectIndex * 8,
       );
-      offset += nPoints;
-      i++;
+      offset += numPoints;
     }
-    WebGLUtils.loadBuffer(this._gl, this._buffers.objectsUBO, objectsUBOData);
+    WebGLUtils.loadBuffer(
+      this._gl,
+      this._gl.ARRAY_BUFFER,
+      this._buffers.objectsUBO,
+      objectsUBOData,
+    );
     return newBufferSlices;
-  }
-
-  private async _loadPointMarkerIndexData(
-    ref: PointsRef,
-    markerMaps: Map<string, ValueMap<Marker>>,
-    loadTableByID: (
-      tableId: string,
-      signal?: AbortSignal,
-    ) => Promise<TableData>,
-    signal?: AbortSignal,
-  ): Promise<Uint8Array> {
-    signal?.throwIfAborted();
-    const data = new Uint8Array(ref.data.getLength());
-    if (isTableValuesColumn(ref.points.pointMarker)) {
-      // table column contains marker values
-      const tableData = await loadTableByID(
-        ref.points.pointMarker.tableId,
-        signal,
-      );
-      signal?.throwIfAborted();
-      const tableValues = await tableData.loadColumn<string>(
-        ref.points.pointMarker.valuesCol,
-        signal,
-      );
-      signal?.throwIfAborted();
-      for (let i = 0; i < tableValues.length; i++) {
-        data[i] = Marker[tableValues[i]! as keyof typeof Marker];
-      }
-    } else if (isTableGroupsColumn(ref.points.pointMarker)) {
-      // table column contains group names
-      const tableData = await loadTableByID(
-        ref.points.pointMarker.tableId,
-        signal,
-      );
-      signal?.throwIfAborted();
-      const tableGroups = await tableData.loadColumn(
-        ref.points.pointMarker.groupsCol,
-        signal,
-      );
-      signal?.throwIfAborted();
-      let markerMap;
-      if (ref.points.pointMarkerMap !== undefined) {
-        markerMap =
-          typeof ref.points.pointMarkerMap === "string"
-            ? markerMaps.get(ref.points.pointMarkerMap)
-            : ref.points.pointMarkerMap;
-      }
-      if (markerMap !== undefined) {
-        // marker map found, map group names to markers
-        const groupValues = new Map(Object.entries(markerMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const value =
-            groupValues.get(group) ?? // first, try to get group-specific marker
-            markerMap.defaultValue ?? // then, fallback to marker map default
-            DEFAULT_POINT_MARKER; // finally, fallback to default marker
-          data[i] = value;
-        }
-      } else {
-        // no marker map found, fallback to marker palette
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const markerIndex = HashUtils.djb2(group) % MARKER_PALETTE.length;
-          data[i] = MARKER_PALETTE[markerIndex]!;
-        }
-      }
-    } else if (ref.points.pointMarker === "random") {
-      // random markers from marker palette
-      for (let i = 0; i < data.length; i++) {
-        const markerIndex = Math.floor(Math.random() * MARKER_PALETTE.length);
-        data[i] = MARKER_PALETTE[markerIndex]!;
-      }
-    } else {
-      // uniform marker for all points
-      data.fill(ref.points.pointMarker);
-    }
-    return data;
-  }
-
-  private async _loadPointSizeData(
-    ref: PointsRef,
-    sizeMaps: Map<string, ValueMap<number>>,
-    loadTableByID: (
-      tableId: string,
-      signal?: AbortSignal,
-    ) => Promise<TableData>,
-    signal?: AbortSignal,
-  ): Promise<Float32Array> {
-    signal?.throwIfAborted();
-    let sizeFactor = ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
-    if (ref.points.pointSizeUnit === "data") {
-      sizeFactor *= ref.layerConfig.transform.scale;
-    }
-    if (
-      ref.points.pointSizeUnit === "data" ||
-      ref.points.pointSizeUnit === "layer"
-    ) {
-      sizeFactor *= ref.layer.transform.scale;
-    }
-    const data = new Float32Array(ref.data.getLength());
-    if (isTableValuesColumn(ref.points.pointSize)) {
-      // table column contains size values
-      const tableData = await loadTableByID(
-        ref.points.pointSize.tableId,
-        signal,
-      );
-      signal?.throwIfAborted();
-      const tableValues = await tableData.loadColumn<number>(
-        ref.points.pointSize.valuesCol,
-        signal,
-      );
-      signal?.throwIfAborted();
-      for (let i = 0; i < tableValues.length; i++) {
-        data[i] = tableValues[i]! * sizeFactor;
-      }
-    } else if (isTableGroupsColumn(ref.points.pointSize)) {
-      // table column contains group names
-      let sizeMap = undefined;
-      if (ref.points.pointSizeMap !== undefined) {
-        sizeMap =
-          typeof ref.points.pointSizeMap === "string"
-            ? sizeMaps.get(ref.points.pointSizeMap)
-            : ref.points.pointSizeMap;
-      }
-      if (sizeMap !== undefined) {
-        // size map found, load group names
-        const tableData = await loadTableByID(
-          ref.points.pointSize.tableId,
-          signal,
-        );
-        signal?.throwIfAborted();
-        const tableGroups = await tableData.loadColumn(
-          ref.points.pointSize.groupsCol,
-          signal,
-        );
-        signal?.throwIfAborted();
-        // map group names to sizes
-        const groupValues = new Map(Object.entries(sizeMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const value =
-            groupValues.get(group) ?? // first, try to get group-specific size
-            sizeMap.defaultValue ?? // then, fallback to size map default
-            DEFAULT_POINT_SIZE; // finally, fallback to default size
-          data[i] = value * sizeFactor;
-        }
-      } else {
-        // no size map found, fallback to default size
-        data.fill(DEFAULT_POINT_SIZE * sizeFactor);
-      }
-    } else {
-      // uniform size for all points
-      data.fill(ref.points.pointSize * sizeFactor);
-    }
-    return data;
-  }
-
-  private async _loadPointColorData(
-    ref: PointsRef,
-    colorMaps: Map<string, ColorMap>,
-    visibilityMaps: Map<string, ValueMap<boolean>>,
-    opacityMaps: Map<string, ValueMap<number>>,
-    loadTableByID: (
-      tableId: string,
-      signal?: AbortSignal,
-    ) => Promise<TableData>,
-    signal?: AbortSignal,
-  ): Promise<Uint32Array> {
-    signal?.throwIfAborted();
-    // check if points are visible at all
-    if (
-      ref.layer.visibility === false ||
-      ref.layer.opacity === 0 ||
-      ref.points.visibility === false ||
-      ref.points.opacity === 0
-    ) {
-      return new Uint32Array(ref.data.getLength()).fill(0);
-    }
-    const data = new Uint32Array(ref.data.getLength());
-    if (isTableValuesColumn(ref.points.pointColor)) {
-      // table column contains continuous values
-      const palette =
-        ref.points.pointColorPalette !== undefined
-          ? COLOR_PALETTES[ref.points.pointColorPalette]
-          : undefined;
-      if (palette !== undefined) {
-        // color palette found, load values
-        const tableData = await loadTableByID(
-          ref.points.pointColor.tableId,
-          signal,
-        );
-        signal?.throwIfAborted();
-        const tableValues = await tableData.loadColumn<number>(
-          ref.points.pointColor.valuesCol,
-          signal,
-        );
-        signal?.throwIfAborted();
-        // determine value range
-        let vmin, vmax;
-        if (ref.points.pointColorRange !== undefined) {
-          [vmin, vmax] = ref.points.pointColorRange;
-        } else {
-          vmin = tableValues[0]!;
-          vmax = tableValues[0]!;
-          for (let i = 1; i < tableValues.length; i++) {
-            const value = tableValues[i]!;
-            if (value < vmin) {
-              vmin = value;
-            }
-            if (value > vmax) {
-              vmax = value;
-            }
-          }
-        }
-        // map values to colors
-        for (let i = 0; i < tableValues.length; i++) {
-          let value = tableValues[i]!;
-          // clamp value to [vmin, vmax]
-          if (value < vmin) {
-            value = vmin!;
-          } else if (value > vmax) {
-            value = vmax!;
-          }
-          // rescale and map value to color
-          value = (value - vmin) / (vmax - vmin);
-          const colorIndex = Math.floor(value * palette.length);
-          data[i] = ColorUtils.packColor(palette[colorIndex]!);
-        }
-      } else {
-        // no color palette found, fallback to default color
-        data.fill(ColorUtils.packColor(DEFAULT_POINT_COLOR));
-      }
-    } else if (isTableGroupsColumn(ref.points.pointColor)) {
-      // table column contains group names
-      let colorMap = undefined;
-      if (ref.points.pointColorMap !== undefined) {
-        colorMap =
-          typeof ref.points.pointColorMap === "string"
-            ? colorMaps.get(ref.points.pointColorMap)
-            : ref.points.pointColorMap;
-      }
-      if (colorMap !== undefined) {
-        // color map found, load group names
-        const tableData = await loadTableByID(
-          ref.points.pointColor.tableId,
-          signal,
-        );
-        signal?.throwIfAborted();
-        const tableGroups = await tableData.loadColumn(
-          ref.points.pointColor.groupsCol,
-          signal,
-        );
-        signal?.throwIfAborted();
-        // map group names to colors
-        const palette =
-          colorMap.palette !== undefined
-            ? COLOR_PALETTES[colorMap.palette]
-            : undefined;
-        const groupValues = new Map(Object.entries(colorMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const value =
-            groupValues.get(group) ?? // first, try to get group-specific color
-            palette?.[HashUtils.djb2(group) % palette.length] ?? // then, fallback to color map palette
-            colorMap.defaultValue ?? // then, fallback to color map default
-            DEFAULT_POINT_COLOR; // finally, fallback to default color
-          data[i] = ColorUtils.packColor(value);
-        }
-      } else {
-        // no color map found, fallback to default color
-        data.fill(ColorUtils.packColor(DEFAULT_POINT_COLOR));
-      }
-    } else if (ref.points.pointColor === "randomFromPalette") {
-      // random colors from color palette
-      const palette =
-        ref.points.pointColorPalette !== undefined
-          ? COLOR_PALETTES[ref.points.pointColorPalette]
-          : undefined;
-      if (palette !== undefined) {
-        // color palette found, map random colors from palette
-        for (let i = 0; i < data.length; i++) {
-          const colorIndex = Math.floor(Math.random() * palette.length);
-          data[i] = ColorUtils.packColor(palette[colorIndex]!);
-        }
-      } else {
-        // no color palette found, fallback to default color
-        data.fill(ColorUtils.packColor(DEFAULT_POINT_COLOR));
-      }
-    } else {
-      // uniform color for all points
-      data.fill(ColorUtils.packColor(ref.points.pointColor));
-    }
-    // combine color with visibility and opacity
-    const visibilityData = await this._loadPointVisibilityData(
-      ref,
-      visibilityMaps,
-      loadTableByID,
-      signal,
-    );
-    signal?.throwIfAborted();
-    const opacityData = await this._loadPointOpacityData(
-      ref,
-      opacityMaps,
-      loadTableByID,
-      signal,
-    );
-    signal?.throwIfAborted();
-    for (let i = 0; i < data.length; i++) {
-      data[i] =
-        (data[i]! << 8) + (visibilityData[i]! > 0 ? opacityData[i]! : 0);
-    }
-    return data;
-  }
-
-  private async _loadPointVisibilityData(
-    ref: PointsRef,
-    visibilityMaps: Map<string, ValueMap<boolean>>,
-    loadTableByID: (
-      tableId: string,
-      signal?: AbortSignal,
-    ) => Promise<TableData>,
-    signal?: AbortSignal,
-  ): Promise<Uint8Array> {
-    signal?.throwIfAborted();
-    const data = new Uint8Array(ref.data.getLength());
-    if (isTableValuesColumn(ref.points.pointVisibility)) {
-      // table column contains visibility values
-      const tableData = await loadTableByID(
-        ref.points.pointVisibility.tableId,
-        signal,
-      );
-      signal?.throwIfAborted();
-      const tableValues = await tableData.loadColumn<number>(
-        ref.points.pointVisibility.valuesCol,
-        signal,
-      );
-      signal?.throwIfAborted();
-      data.set(tableValues);
-    } else if (isTableGroupsColumn(ref.points.pointVisibility)) {
-      // table column contains group names
-      let visibilityMap = undefined;
-      if (ref.points.pointVisibilityMap !== undefined) {
-        visibilityMap =
-          typeof ref.points.pointVisibilityMap === "string"
-            ? visibilityMaps.get(ref.points.pointVisibilityMap)
-            : ref.points.pointVisibilityMap;
-      }
-      if (visibilityMap !== undefined) {
-        // visibility map found, load group names
-        const tableData = await loadTableByID(
-          ref.points.pointVisibility.tableId,
-          signal,
-        );
-        signal?.throwIfAborted();
-        const tableGroups = await tableData.loadColumn(
-          ref.points.pointVisibility.groupsCol,
-          signal,
-        );
-        signal?.throwIfAborted();
-        // map group names to visibilities
-        const groupValues = new Map(Object.entries(visibilityMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const value =
-            groupValues.get(group) ?? // first, try to get group-specific visibility
-            visibilityMap.defaultValue ?? // then, fallback to visibility map default
-            DEFAULT_POINT_VISIBILITY; // finally, fallback to default visibility
-          data[i] = value ? 1 : 0;
-        }
-      } else {
-        // no visibility map found, fallback to default visibility
-        data.fill(DEFAULT_POINT_VISIBILITY ? 1 : 0);
-      }
-    } else {
-      // uniform visibility for all points
-      data.fill(ref.points.pointVisibility ? 1 : 0);
-    }
-    return data;
-  }
-
-  private async _loadPointOpacityData(
-    ref: PointsRef,
-    opacityMaps: Map<string, ValueMap<number>>,
-    loadTableByID: (
-      tableId: string,
-      signal?: AbortSignal,
-    ) => Promise<TableData>,
-    signal?: AbortSignal,
-  ): Promise<Uint8Array> {
-    signal?.throwIfAborted();
-    const opacityFactor = ref.layer.opacity * ref.points.opacity;
-    const data = new Uint8Array(ref.data.getLength());
-    if (isTableValuesColumn(ref.points.pointOpacity)) {
-      // table column contains opacity values
-      const tableData = await loadTableByID(
-        ref.points.pointOpacity.tableId,
-        signal,
-      );
-      signal?.throwIfAborted();
-      const tableValues = await tableData.loadColumn<number>(
-        ref.points.pointOpacity.valuesCol,
-        signal,
-      );
-      signal?.throwIfAborted();
-      for (let i = 0; i < tableValues.length; i++) {
-        data[i] = Math.round(opacityFactor * tableValues[i]! * 255);
-      }
-    } else if (isTableGroupsColumn(ref.points.pointOpacity)) {
-      // table column contains group names
-      let opacityMap = undefined;
-      if (ref.points.pointOpacityMap !== undefined) {
-        opacityMap =
-          typeof ref.points.pointOpacityMap === "string"
-            ? opacityMaps.get(ref.points.pointOpacityMap)
-            : ref.points.pointOpacityMap;
-      }
-      if (opacityMap !== undefined) {
-        // opacity map found, load group names
-        const tableData = await loadTableByID(
-          ref.points.pointOpacity.tableId,
-          signal,
-        );
-        signal?.throwIfAborted();
-        const tableGroups = await tableData.loadColumn(
-          ref.points.pointOpacity.groupsCol,
-          signal,
-        );
-        signal?.throwIfAborted();
-        // map group names to opacities
-        const groupValues = new Map(Object.entries(opacityMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const value =
-            groupValues.get(group) ?? // first, try to get group-specific opacity
-            opacityMap.defaultValue ?? // then, fallback to opacity map default
-            DEFAULT_POINT_OPACITY; // finally, fallback to default opacity
-          data[i] = Math.round(opacityFactor * value * 255);
-        }
-      } else {
-        // no opacity map found, fallback to default opacity
-        data.fill(Math.round(opacityFactor * DEFAULT_POINT_OPACITY * 255));
-      }
-    } else {
-      // uniform opacity for all points
-      data.fill(Math.round(opacityFactor * ref.points.pointOpacity * 255));
-    }
-    return data;
   }
 }
 
@@ -999,7 +647,7 @@ type PointsRef = {
 type PointsBufferSlice = {
   ref: PointsRef;
   offset: number;
-  nPoints: number;
+  numPoints: number;
   current: {
     layer: Pick<
       CompleteLayer,

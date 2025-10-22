@@ -14,8 +14,11 @@ export default class TransformUtils {
 
   static toMatrix(
     tf: Partial<SimilarityTransform>,
-    rotationCenter?: { x: number; y: number },
+    options: {
+      rotationCenter?: { x: number; y: number };
+    } = {},
   ): mat3 {
+    const { rotationCenter } = options;
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,
     // so we need to apply transformations in reverse order.
     const m = mat3.create();

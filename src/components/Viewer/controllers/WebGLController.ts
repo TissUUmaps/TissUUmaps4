@@ -8,6 +8,8 @@ export default class WebGLController {
   static readonly MAX_CANVAS_SIZE = 4096;
   static readonly DEFAULT_DRAW_OPTIONS: DrawOptions = {
     pointSizeFactor: 1,
+    shapeStrokeWidth: 1,
+    numShapesScanlines: 512,
   };
 
   private readonly _canvas: HTMLCanvasElement;
@@ -44,9 +46,12 @@ export default class WebGLController {
     this._drawOptions = drawOptions;
   }
 
-  async initialize(signal?: AbortSignal): Promise<WebGLController> {
+  async initialize(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<WebGLController> {
+    const { signal } = options;
     signal?.throwIfAborted();
-    await this._pointsController.initialize(signal);
+    await this._pointsController.initialize({ signal });
     signal?.throwIfAborted();
     return this;
   }

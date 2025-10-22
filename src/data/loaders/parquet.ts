@@ -39,9 +39,12 @@ export class ParquetTableDataLoader extends AbstractTableDataLoader<
   CompleteParquetTableDataSource,
   ParquetTableData
 > {
-  async loadTable(signal?: AbortSignal): Promise<ParquetTableData> {
+  async loadTable(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<ParquetTableData> {
+    const { signal } = options;
     signal?.throwIfAborted();
-    const buffer = await this._loadParquet(signal);
+    const buffer = await this._loadParquet({ signal });
     signal?.throwIfAborted();
     const metadata = await hyparquet.parquetMetadataAsync(buffer);
     signal?.throwIfAborted();
@@ -49,8 +52,9 @@ export class ParquetTableDataLoader extends AbstractTableDataLoader<
   }
 
   private async _loadParquet(
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<hyparquet.AsyncBuffer> {
+    const { signal } = options;
     signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
@@ -99,8 +103,9 @@ export class ParquetTableData implements TableData {
 
   async loadColumn<T>(
     column: string,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<MappableArrayLike<T>> {
+    const { signal } = options;
     signal?.throwIfAborted();
     const data = await parquetReadColumn({
       file: this._buffer,

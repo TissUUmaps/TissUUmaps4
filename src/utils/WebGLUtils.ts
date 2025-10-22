@@ -3,9 +3,9 @@ import { TypedArray } from "../types";
 export default class WebGLUtils {
   static init(
     canvas: HTMLCanvasElement,
-    options?: WebGLContextAttributes,
+    contextAttributes?: WebGLContextAttributes,
   ): WebGL2RenderingContext {
-    const gl = canvas.getContext("webgl2", options);
+    const gl = canvas.getContext("webgl2", contextAttributes);
     if (gl === null) {
       throw new Error("WebGL 2.0 is not supported by the browser.");
     }
@@ -81,10 +81,10 @@ export default class WebGLUtils {
 
   static resizeBuffer(
     gl: WebGL2RenderingContext,
+    target: GLenum,
     buffer: WebGLBuffer,
     size: GLsizeiptr,
-    target: GLenum = gl.ARRAY_BUFFER,
-    usage: GLenum = gl.STATIC_DRAW,
+    usage: GLenum,
   ): void {
     gl.bindBuffer(target, buffer);
     gl.bufferData(target, size, usage);
@@ -101,16 +101,19 @@ export default class WebGLUtils {
 
   static configureVertexFloatAttribute(
     gl: WebGL2RenderingContext,
+    target: GLenum,
     buffer: WebGLBuffer,
     index: number,
     size: number,
     type: GLenum,
-    normalized: boolean = false,
-    stride: number = 0,
-    offset: number = 0,
-    divisor: number = 0,
-    target: GLenum = gl.ARRAY_BUFFER,
+    options: {
+      normalized?: boolean;
+      stride?: number;
+      offset?: number;
+      divisor?: number;
+    } = {},
   ): void {
+    const { normalized = false, stride = 0, offset = 0, divisor = 0 } = options;
     gl.bindBuffer(target, buffer);
     gl.enableVertexAttribArray(index);
     gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
@@ -120,15 +123,18 @@ export default class WebGLUtils {
 
   static configureVertexIntAttribute(
     gl: WebGL2RenderingContext,
+    target: GLenum,
     buffer: WebGLBuffer,
     index: number,
     size: number,
     type: GLenum,
-    stride: number = 0,
-    offset: number = 0,
-    divisor: number = 1,
-    target: GLenum = gl.ARRAY_BUFFER,
+    options: {
+      stride?: number;
+      offset?: number;
+      divisor?: number;
+    } = {},
   ): void {
+    const { stride = 0, offset = 0, divisor = 0 } = options;
     gl.bindBuffer(target, buffer);
     gl.enableVertexAttribArray(index);
     gl.vertexAttribIPointer(index, size, type, stride, offset);
@@ -136,25 +142,93 @@ export default class WebGLUtils {
     gl.bindBuffer(target, null);
   }
 
-  static async loadTexture(
+  static createDataTexture(
+    gl: WebGL2RenderingContext,
+    internalformat: GLenum,
+    width: number,
+    height: number,
+    format: GLenum,
+    type: GLenum,
+    data?: TypedArray,
+  ): WebGLTexture {
+    const texture = gl.createTexture();
+    if (texture === null) {
+      throw new Error("Failed to create texture.");
+    }
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, internalformat, width, height);
+    if (data !== undefined) {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        internalformat,
+        width,
+        height,
+        0,
+        format,
+        type,
+        data,
+      );
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    return texture;
+  }
+
+  static loadDataTexture(
+    gl: WebGL2RenderingContext,
+    texture: WebGLTexture,
+    width: number,
+    height: number,
+    format: GLenum,
+    type: GLenum,
+    data: TypedArray,
+    offset: number = 0,
+  ): void {
+    // textures are row-major
+    const xoffset = offset % width;
+    const yoffset = Math.floor(offset / width);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      xoffset,
+      yoffset,
+      width,
+      height,
+      format,
+      type,
+      data,
+    );
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
+  static async loadImageTextureFromUrl(
     gl: WebGL2RenderingContext,
     url: string,
-    signal?: AbortSignal,
+    options: {
+      mipmap?: boolean;
+      signal?: AbortSignal;
+    } = {},
   ): Promise<WebGLTexture> {
+    const { mipmap = false, signal } = options;
     signal?.throwIfAborted();
     const texture = gl.createTexture();
     if (texture === null) {
       throw new Error("Failed to create texture.");
     }
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(
       gl.TEXTURE_2D,
       gl.TEXTURE_MIN_FILTER,
-      gl.LINEAR_MIPMAP_LINEAR,
+      mipmap ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR,
     );
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.bindTexture(gl.TEXTURE_2D, null);
     await new Promise<void>((resolve, reject) => {
       const img = new Image();
@@ -168,7 +242,9 @@ export default class WebGLUtils {
           gl.UNSIGNED_BYTE,
           img,
         );
-        gl.generateMipmap(gl.TEXTURE_2D);
+        if (mipmap) {
+          gl.generateMipmap(gl.TEXTURE_2D);
+        }
         gl.bindTexture(gl.TEXTURE_2D, null);
         resolve();
       };
@@ -184,11 +260,14 @@ export default class WebGLUtils {
 
   static loadBuffer(
     gl: WebGL2RenderingContext,
+    target: GLenum,
     buffer: WebGLBuffer,
     data: Exclude<TypedArray, Float64Array>,
-    offset: number = 0,
-    target: GLenum = gl.ARRAY_BUFFER,
+    options: {
+      offset?: number;
+    } = {},
   ): void {
+    const { offset = 0 } = options;
     gl.bindBuffer(target, buffer);
     gl.bufferSubData(target, offset * data.BYTES_PER_ELEMENT, data);
     gl.bindBuffer(target, null);

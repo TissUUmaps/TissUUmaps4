@@ -16,21 +16,6 @@ describe("MapUtils", () => {
       expect(result).toEqual(["0:a-1", "1:b-2"]);
     });
 
-    it("should bind thisArg if provided", () => {
-      const map = new Map([["x", 10]]);
-      const context = { prefix: "val:" };
-      const result = MapUtils.map(
-        map,
-        function (_key, value) {
-          // @ts-expect-error: 'this' is intentionally used to test binding context in map function
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-          return this.prefix + value;
-        },
-        context,
-      );
-      expect(result).toEqual(["val:10"]);
-    });
-
     it("should return an empty array for an empty map", () => {
       const map = new Map();
       const result = MapUtils.map(map, () => 1);

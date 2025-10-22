@@ -50,9 +50,12 @@ export class TIFFLabelsDataLoader extends AbstractLabelsDataLoader<
   CompleteTIFFLabelsDataSource,
   TIFFLabelsData
 > {
-  async loadLabels(signal?: AbortSignal): Promise<TIFFLabelsData> {
+  async loadLabels(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<TIFFLabelsData> {
+    const { signal } = options;
     signal?.throwIfAborted();
-    const tiff = await this._loadTIFF(signal);
+    const tiff = await this._loadTIFF({ signal });
     signal?.throwIfAborted();
     const imageCount = await tiff.getImageCount();
     signal?.throwIfAborted();
@@ -90,7 +93,10 @@ export class TIFFLabelsDataLoader extends AbstractLabelsDataLoader<
     );
   }
 
-  private async _loadTIFF(signal?: AbortSignal): Promise<geotiff.GeoTIFF> {
+  private async _loadTIFF(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<geotiff.GeoTIFF> {
+    const { signal } = options;
     signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
@@ -156,8 +162,9 @@ export class TIFFLabelsData implements LabelsData {
     level: number,
     x: number,
     y: number,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<UintArray> {
+    const { signal } = options;
     signal?.throwIfAborted();
     const image = this._levels[level]!;
     const tile = await image.getTileOrStrip(x, y, 0, pool, signal);
