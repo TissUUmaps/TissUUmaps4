@@ -24,13 +24,13 @@ export default class LoadUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options: { signal?: AbortSignal; padToWidth?: number } = {},
+    options: { signal?: AbortSignal; paddingMultiple?: number } = {},
   ): Promise<Uint8Array> {
-    const { signal, padToWidth } = options;
+    const { signal, paddingMultiple } = options;
     signal?.throwIfAborted();
     let dataLength = n;
-    if (padToWidth && dataLength % padToWidth !== 0) {
-      dataLength += padToWidth - (dataLength % padToWidth);
+    if (paddingMultiple && dataLength % paddingMultiple !== 0) {
+      dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
     const data = new Uint8Array(dataLength);
     if (isTableValuesColumn(markerConfig)) {
@@ -108,15 +108,15 @@ export default class LoadUtils {
     ) => Promise<TableData>,
     options: {
       signal?: AbortSignal;
-      padToWidth?: number;
+      paddingMultiple?: number;
       sizeFactor?: number;
     } = {},
   ): Promise<Float32Array> {
-    const { signal, padToWidth, sizeFactor = 1 } = options;
+    const { signal, paddingMultiple, sizeFactor = 1.0 } = options;
     signal?.throwIfAborted();
     let dataLength = n;
-    if (padToWidth && dataLength % padToWidth !== 0) {
-      dataLength += padToWidth - (dataLength % padToWidth);
+    if (paddingMultiple && dataLength % paddingMultiple !== 0) {
+      dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
     const data = new Float32Array(dataLength);
     if (isTableValuesColumn(sizeConfig)) {
@@ -191,13 +191,13 @@ export default class LoadUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options: { signal?: AbortSignal; padToWidth?: number } = {},
+    options: { signal?: AbortSignal; paddingMultiple?: number } = {},
   ): Promise<Uint32Array> {
-    const { signal, padToWidth } = options;
+    const { signal, paddingMultiple } = options;
     signal?.throwIfAborted();
     let dataLength = n;
-    if (padToWidth && dataLength % padToWidth !== 0) {
-      dataLength += padToWidth - (dataLength % padToWidth);
+    if (paddingMultiple && dataLength % paddingMultiple !== 0) {
+      dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
     const data = new Uint32Array(dataLength);
     if (isTableValuesColumn(colorConfig)) {
@@ -313,8 +313,11 @@ export default class LoadUtils {
     // combine color with visibility and opacity
     signal?.throwIfAborted();
     for (let i = 0; i < n; i++) {
-      data[i] =
-        (data[i]! << 8) + (visibilityData[i]! > 0 ? opacityData[i]! : 0);
+      // bitwise operators coerce operands to signed 32-bit integers,
+      // so we need to use the unsigned right shift operator >>> 0
+      // to convert large results back to unsigned 32-bit integers
+      const c = (data[i]! << 8) >>> 0;
+      data[i] = c + (visibilityData[i]! > 0 ? opacityData[i]! : 0);
     }
     return data;
   }
@@ -329,13 +332,13 @@ export default class LoadUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options: { signal?: AbortSignal; padToWidth?: number } = {},
+    options: { signal?: AbortSignal; paddingMultiple?: number } = {},
   ): Promise<Uint8Array> {
-    const { signal, padToWidth } = options;
+    const { signal, paddingMultiple } = options;
     signal?.throwIfAborted();
     let dataLength = n;
-    if (padToWidth && dataLength % padToWidth !== 0) {
-      dataLength += padToWidth - (dataLength % padToWidth);
+    if (paddingMultiple && dataLength % paddingMultiple !== 0) {
+      dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
     const data = new Uint8Array(dataLength);
     if (isTableValuesColumn(visibilityConfig)) {
@@ -403,15 +406,15 @@ export default class LoadUtils {
     ) => Promise<TableData>,
     options: {
       signal?: AbortSignal;
-      padToWidth?: number;
+      paddingMultiple?: number;
       opacityFactor?: number;
     } = {},
   ): Promise<Uint8Array> {
-    const { signal, padToWidth, opacityFactor = 1 } = options;
+    const { signal, paddingMultiple, opacityFactor = 1.0 } = options;
     signal?.throwIfAborted();
     let dataLength = n;
-    if (padToWidth && dataLength % padToWidth !== 0) {
-      dataLength += padToWidth - (dataLength % padToWidth);
+    if (paddingMultiple && dataLength % paddingMultiple !== 0) {
+      dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
     const data = new Uint8Array(dataLength);
     if (isTableValuesColumn(opacityConfig)) {

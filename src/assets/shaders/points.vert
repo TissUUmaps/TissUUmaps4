@@ -38,7 +38,7 @@ vec4 unpackColor(uint color) {
     float r = float((color >> 24) & 0xFFu) / 255.0;
     float g = float((color >> 16) & 0xFFu) / 255.0;
     float b = float((color >> 8) & 0xFFu) / 255.0;
-    float a = float(color & 0xFFu) / 255.0;
+    float a = float((color >> 0) & 0xFFu) / 255.0;
     return vec4(r, g, b, a);
 }
 

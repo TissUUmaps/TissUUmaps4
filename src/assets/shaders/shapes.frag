@@ -59,7 +59,7 @@ uvec4 utexel(usampler2D sampler, uint textureWidth, uint offset) {
 
 // checks if a given x coordinate falls into an occupied bin of an 128-bit occupancy mask
 bool occupancy(float x, float xmin, float objectWidth, vec4 occupancyMask) {
-    float xNorm = (x - xmin) / objectWidth;
+    float xNorm = clamp((x - xmin) / objectWidth, 0.0, 1.0);
     uint bin = min(uint(128.0 * xNorm), 127u);
     uint value = floatBitsToUint(occupancyMask[bin >> 5]);
     uint bitMask = 1u << (bin & 0x1Fu);
@@ -77,21 +77,21 @@ float isPointLeftOfLine(vec2 p, vec2 v0, vec2 v1) {
 float pointToSegmentDist(vec2 p, vec2 v0, vec2 v1) {
     vec2 v0ToP = p - v0;
     vec2 segment = v1 - v0;
-    float segmentLen = length(segment);
-    if(segmentLen <= 0.0) {
+    float segmentLength = length(segment);
+    if(segmentLength <= 0.0) {
         return length(v0ToP);
     }
-    vec2 unitSegment = segment / segmentLen;
-    float segmentCoord = dot(unitSegment, v0ToP);
-    if(segmentCoord <= 0.0) {
+    vec2 unitSegment = segment / segmentLength;
+    float pointOnSegment = dot(unitSegment, v0ToP);
+    if(pointOnSegment <= 0.0) {
         return length(v0ToP);
     }
-    if(segmentCoord >= segmentLen) {
+    if(pointOnSegment >= segmentLength) {
         return length(p - v1);
     }
     vec2 unitSegmentNormal = vec2(unitSegment.y, -unitSegment.x);
-    float segmentNormalCoord = dot(unitSegmentNormal, v0ToP);
-    return abs(segmentNormalCoord);
+    float pointOnSegmentNormal = dot(unitSegmentNormal, v0ToP);
+    return abs(pointOnSegmentNormal);
 }
 
 // computes the winding number for a given point p and n edges stored in data starting at offset
@@ -125,7 +125,7 @@ vec4 unpackColor(uint color) {
     float r = float((color >> 24) & 0xFFu) / 255.0;
     float g = float((color >> 16) & 0xFFu) / 255.0;
     float b = float((color >> 8) & 0xFFu) / 255.0;
-    float a = float(color & 0xFFu) / 255.0;
+    float a = float((color >> 0) & 0xFFu) / 255.0;
     return vec4(r, g, b, a);
 }
 
@@ -146,13 +146,13 @@ void main() {
     }
     // check occupancy mask
     vec4 occupancyMask = texel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineOffset);
-    bool occupied = occupancy(v_pos.x, u_objectBounds[0], u_objectBounds[2], occupancyMask);
-    for(float dx = u_objectBounds[2] / 128.0; !occupied && dx <= v_hsw; dx += u_objectBounds[2] / 128.0) {
+    bool empty = !occupancy(v_pos.x, u_objectBounds[0], u_objectBounds[2], occupancyMask);
+    for(float dx = u_objectBounds[2] / 128.0; empty && dx <= v_hsw; dx += u_objectBounds[2] / 128.0) {
         if(occupancy(v_pos.x - dx, u_objectBounds[0], u_objectBounds[2], occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], u_objectBounds[2], occupancyMask)) {
-            occupied = true;
+            empty = false;
         }
     }
-    if(!occupied) {
+    if(empty) {
         discard; // no shapes on this scanline near the given x coordinate
     }
     // iterate over scanline shapes

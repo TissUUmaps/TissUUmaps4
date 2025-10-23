@@ -27,17 +27,18 @@ export default class ShapeUtils {
     objectBounds: Rect,
   ): {
     scanlines: Scanline[];
-    numScanlineShapes: number;
-    numScanlineShapeEdges: number;
+    totalNumScanlineShapes: number;
+    totalNumScanlineShapeEdges: number;
   } {
+    const { x: bx, y: by, width: bw, height: bh } = objectBounds;
     const scanlines: Scanline[] = Array.from({ length: numScanlines }, () => ({
       xMin: Infinity,
       xMax: -Infinity,
       shapes: new Map<number, ScanlineShape>(),
       occupancyMask: [0, 0, 0, 0],
     }));
-    let numScanlineShapes = 0,
-      numScanlineShapeEdges = 0;
+    let totalNumScanlineShapes = 0,
+      totalNumScanlineShapeEdges = 0;
     for (let shapeIndex = 0; shapeIndex < multiPolygons.length; shapeIndex++) {
       for (const polygon of multiPolygons[shapeIndex]!.polygons) {
         for (const path of [polygon.shell, ...polygon.holes]) {
@@ -54,99 +55,101 @@ export default class ShapeUtils {
             const xMax = Math.max(v0.x, v1.x);
             const yMin = Math.min(v0.y, v1.y);
             const yMax = Math.max(v0.y, v1.y);
-            const xMinNorm = (xMin - objectBounds.x) / objectBounds.width;
-            const xMaxNorm = (xMax - objectBounds.x) / objectBounds.width;
-            const yMinNorm = (yMin - objectBounds.y) / objectBounds.height;
-            const yMaxNorm = (yMax - objectBounds.y) / objectBounds.height;
-            const firstBin = Math.max(Math.floor(128 * xMinNorm), 0);
-            const lastBin = Math.min(Math.ceil(128 * xMaxNorm), 127);
-            const firstScanline = Math.max(
-              Math.floor(numScanlines * yMinNorm),
+            const xMinNorm = Math.min(Math.max(0.0, (xMin - bx) / bw), 1.0);
+            const xMaxNorm = Math.min(Math.max(0.0, (xMax - bx) / bw), 1.0);
+            const yMinNorm = Math.min(Math.max(0.0, (yMin - by) / bh), 1.0);
+            const yMaxNorm = Math.min(Math.max(0.0, (yMax - by) / bh), 1.0);
+            const firstBin = Math.max(0, Math.floor(128.0 * xMinNorm));
+            const lastBin = Math.min(Math.ceil(128.0 * xMaxNorm), 127);
+            const firstScanlineIndex = Math.max(
               0,
+              Math.floor(numScanlines * yMinNorm),
             );
-            const lastScanline = Math.min(
+            const lastScanlineIndex = Math.min(
               Math.ceil(numScanlines * yMaxNorm),
               numScanlines - 1,
             );
-            for (let s = firstScanline; s <= lastScanline; s++) {
+            for (let s = firstScanlineIndex; s <= lastScanlineIndex; s++) {
               const scanline = scanlines[s]!;
               scanline.xMin = Math.min(scanline.xMin, v0.x, v1.x);
               scanline.xMax = Math.max(scanline.xMax, v0.x, v1.x);
               for (let bin = firstBin; bin <= lastBin; bin++) {
-                scanline.occupancyMask[bin >> 5]! |= 1 << (bin & 0x1f);
+                // bitwise operators coerce operands to signed 32-bit integers,
+                // so we need to use the unsigned right shift operator >>> 0
+                // to convert large results back to unsigned 32-bit integers
+                scanline.occupancyMask[bin >> 5]! |= (1 << (bin & 0x1f)) >>> 0;
+                scanline.occupancyMask[bin >> 5]! >>>= 0;
               }
               const scanlineShape = scanline.shapes.get(shapeIndex);
-              const scanlineShapeEdge: ScanlineShapeEdge = { v0, v1 };
               if (scanlineShape === undefined) {
-                const newScanlineShape: ScanlineShape = {
-                  xMin: Math.min(v0.x, v1.x),
-                  xMax: Math.max(v0.x, v1.x),
-                  edges: [scanlineShapeEdge],
-                };
-                scanline.shapes.set(shapeIndex, newScanlineShape);
-                numScanlineShapes++;
+                scanline.shapes.set(shapeIndex, {
+                  xMin,
+                  xMax,
+                  edges: [{ v0, v1 }],
+                });
+                totalNumScanlineShapes++;
               } else {
-                scanlineShape.xMin = Math.min(scanlineShape.xMin, v0.x, v1.x);
-                scanlineShape.xMax = Math.max(scanlineShape.xMax, v0.x, v1.x);
-                scanlineShape.edges.push(scanlineShapeEdge);
+                scanlineShape.xMin = Math.min(scanlineShape.xMin, xMin);
+                scanlineShape.xMax = Math.max(scanlineShape.xMax, xMax);
+                scanlineShape.edges.push({ v0, v1 });
               }
-              numScanlineShapeEdges++;
+              totalNumScanlineShapeEdges++;
             }
           }
         }
       }
     }
-    return { scanlines, numScanlineShapes, numScanlineShapeEdges };
+    return { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges };
   }
 
   static packScanlines(
     scanlines: Scanline[],
-    numScanlineShapes: number,
-    numScanlineShapeEdges: number,
-    options: { padToWidth?: number } = {},
-  ): Float32Array {
-    const { padToWidth } = options;
-    let scanlineDataLength =
-      8 * scanlines.length + // scanline infos and headers
-      4 * numScanlineShapes + // scanline shape headers
-      4 * numScanlineShapeEdges; // scanline shape edges
-    if (padToWidth && scanlineDataLength % padToWidth !== 0) {
-      scanlineDataLength += padToWidth - (scanlineDataLength % padToWidth);
+    totalNumScanlineShapes: number,
+    totalNumScanlineShapeEdges: number,
+    options: { paddingMultiple?: number } = {},
+  ): ArrayBuffer {
+    const { paddingMultiple } = options;
+    let dataLength =
+      4 * scanlines.length + // header -> scanline info S
+      4 * scanlines.length + // scanline S -> scanline header
+      4 * totalNumScanlineShapes + // scanline S -> shape P -> shape header
+      4 * totalNumScanlineShapeEdges; // scanline S -> shape P -> edge E
+    if (paddingMultiple && dataLength % paddingMultiple !== 0) {
+      dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
-    const scanlineData = new Float32Array(scanlineDataLength);
-    const uint32ScanlineDataView = new Uint32Array(scanlineData.buffer);
-    let currentScanlineInfoOffset = 0;
-    let currentScanlineOffset = 4 * scanlines.length;
+    const buffer = new ArrayBuffer(4 * dataLength); // 4 bytes per 32-bit value
+    const float32Data = new Float32Array(buffer);
+    const uint32Data = new Uint32Array(buffer);
+    let currentScanlineInfoOffset = 0,
+      currentScanlineOffset = 4 * scanlines.length;
     for (const scanline of scanlines) {
       // scanline info
-      uint32ScanlineDataView.set(
+      uint32Data.set(
         [currentScanlineOffset, scanline.shapes.size],
         currentScanlineInfoOffset,
       );
-      scanlineData.set(
+      float32Data.set(
         [scanline.xMin, scanline.xMax],
         currentScanlineInfoOffset + 2,
       );
       currentScanlineInfoOffset += 4;
-      // scanline header/occupancy mask
-      uint32ScanlineDataView.set(scanline.occupancyMask, currentScanlineOffset);
-      // scanline shapes
+      // scanline
+      uint32Data.set(scanline.occupancyMask, currentScanlineOffset);
       let currentScanlineShapeOffset = currentScanlineOffset + 4;
       for (const [shapeIndex, scanlineShape] of scanline.shapes) {
-        // scanline shape header
-        uint32ScanlineDataView.set(
+        // scanline shape
+        uint32Data.set(
           [shapeIndex, scanlineShape.edges.length],
           currentScanlineShapeOffset,
         );
-        scanlineData.set(
+        float32Data.set(
           [scanlineShape.xMin, scanlineShape.xMax],
           currentScanlineShapeOffset + 2,
         );
-        // scanline shape edges
         let currentScanlineShapeEdgeOffset = currentScanlineShapeOffset + 4;
         for (const scanlineShapeEdge of scanlineShape.edges) {
           // scanline shape edge
-          scanlineData.set(
+          float32Data.set(
             [
               scanlineShapeEdge.v0.x,
               scanlineShapeEdge.v0.y,
@@ -161,7 +164,7 @@ export default class ShapeUtils {
       }
       currentScanlineOffset = currentScanlineShapeOffset;
     }
-    return scanlineData;
+    return buffer;
   }
 }
 

@@ -427,24 +427,26 @@ export default class WebGLShapesController extends WebGLControllerBase {
     multiPolygons: MultiPolygon[],
     objectBounds: Rect,
   ): WebGLTexture {
-    const { scanlines, numScanlineShapes, numScanlineShapeEdges } =
+    const numValuesPerTextureLine =
+      4 * WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH; // 4 values per RGBA32F texel
+    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
       ShapeUtils.createScanlines(
         this._numScanlines,
         multiPolygons,
         objectBounds,
       );
-    const scanlineData = ShapeUtils.packScanlines(
+    const scanlineBuffer = ShapeUtils.packScanlines(
       scanlines,
-      numScanlineShapes,
-      numScanlineShapeEdges,
-      { padToWidth: 4 * WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH },
+      totalNumScanlineShapes,
+      totalNumScanlineShapeEdges,
+      { paddingMultiple: numValuesPerTextureLine },
     );
+    const scanlineData = new Float32Array(scanlineBuffer);
     const scanlineDataTexture = WebGLUtils.createDataTexture(
       this._gl,
       this._gl.RGBA32F,
       WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH,
-      scanlineData.length /
-        (4 * WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH),
+      scanlineData.length / numValuesPerTextureLine,
       this._gl.RGBA,
       this._gl.FLOAT,
       scanlineData,
@@ -466,6 +468,8 @@ export default class WebGLShapesController extends WebGLControllerBase {
     const { signal } = options;
     signal?.throwIfAborted();
     const numShapes = ref.data.getLength();
+    const numValuesPerTextureLine =
+      1 * WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH; // 1 value per R32UI texel
     let colorData;
     if (
       ref.layer.visibility === false ||
@@ -482,10 +486,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
         DEFAULT_SHAPE_FILL_VISIBILITY,
         visibilityMaps,
         loadTableByID,
-        {
-          signal,
-          padToWidth: WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
-        },
+        { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
       const opacityData = await LoadUtils.loadOpacityData(
@@ -497,7 +498,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
         loadTableByID,
         {
           signal,
-          padToWidth: WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
+          paddingMultiple: numValuesPerTextureLine,
           opacityFactor: ref.layer.opacity * ref.shapes.opacity,
         },
       );
@@ -513,10 +514,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
         opacityData,
         colorMaps,
         loadTableByID,
-        {
-          signal,
-          padToWidth: WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
-        },
+        { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
     }
@@ -524,7 +522,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
       this._gl,
       this._gl.R32UI,
       WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
-      colorData.length / WebGLShapesController._SHAPE_FILL_COLORS_TEXTURE_WIDTH,
+      colorData.length / numValuesPerTextureLine,
       this._gl.RED_INTEGER,
       this._gl.UNSIGNED_INT,
       colorData,
@@ -545,6 +543,9 @@ export default class WebGLShapesController extends WebGLControllerBase {
   ): Promise<WebGLTexture> {
     const { signal } = options;
     signal?.throwIfAborted();
+    const numShapes = ref.data.getLength();
+    const numValuesPerTextureLine =
+      1 * WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH; // 1 value per R32UI texel
     let colorData;
     if (
       ref.layer.visibility === false ||
@@ -552,9 +553,8 @@ export default class WebGLShapesController extends WebGLControllerBase {
       ref.shapes.visibility === false ||
       ref.shapes.opacity === 0
     ) {
-      colorData = new Uint32Array(ref.data.getLength()).fill(0);
+      colorData = new Uint32Array(numShapes).fill(0);
     } else {
-      const numShapes = ref.data.getLength();
       const visibilityData = await LoadUtils.loadVisibilityData(
         numShapes,
         ref.shapes.shapeStrokeVisibility,
@@ -562,10 +562,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
         DEFAULT_SHAPE_STROKE_VISIBILITY,
         visibilityMaps,
         loadTableByID,
-        {
-          signal,
-          padToWidth: WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
-        },
+        { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
       const opacityData = await LoadUtils.loadOpacityData(
@@ -577,7 +574,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
         loadTableByID,
         {
           signal,
-          padToWidth: WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
+          paddingMultiple: numValuesPerTextureLine,
           opacityFactor: ref.layer.opacity * ref.shapes.opacity,
         },
       );
@@ -593,10 +590,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
         opacityData,
         colorMaps,
         loadTableByID,
-        {
-          signal,
-          padToWidth: WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
-        },
+        { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
     }
@@ -604,8 +598,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
       this._gl,
       this._gl.R32UI,
       WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
-      colorData.length /
-        WebGLShapesController._SHAPE_STROKE_COLORS_TEXTURE_WIDTH,
+      colorData.length / numValuesPerTextureLine,
       this._gl.RED_INTEGER,
       this._gl.UNSIGNED_INT,
       colorData,
