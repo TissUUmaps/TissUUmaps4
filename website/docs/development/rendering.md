@@ -24,7 +24,7 @@ To enable partial attribute updates, data is loaded using separate buffers for e
 
 ## Shapes
 
-Shapes are rendered in multiple passes (i.e., one draw call per shape cloud) using separate data textures for each shape cloud. A "compute shader approach" is employed, where the vertex shader merely runs on the viewport corners (i.e., executed precisly four times) and the fragment shader implements a custom rendering pipeline (i.e., executed for all fragments of the entire viewport).
+Shapes are rendered in multiple passes (i.e., one draw call per shape cloud) using separate data textures for each shape cloud. A "compute shader approach" is employed, where the vertex shader merely runs on the viewport corners (i.e., executed precisely four times) and the fragment shader implements a custom rendering pipeline (i.e., executed for all fragments of the entire viewport).
 
 Partial updates are enabled implicitly by using separate data textures for each shape cloud (update individual shape clouds) and each property (update individual shape cloud properties). However, shape fill/stroke color, visibility and opacity values are packed into joint 32-bit RGBA values for memory efficiency.
 
