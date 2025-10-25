@@ -88,7 +88,7 @@ export const DEFAULT_RENDERED_DATA_OBJECT_VISIBILITY: boolean = true;
 /**
  * Default opacity of {@link RenderedDataObject}
  */
-export const DEFAULT_RENDERED_DATA_OBJECT_OPACITY: number = 1.0;
+export const DEFAULT_RENDERED_DATA_OBJECT_OPACITY: number = 1;
 
 /**
  * A data object that can be rendered

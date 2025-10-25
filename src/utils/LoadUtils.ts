@@ -12,6 +12,7 @@ import {
 } from "../types";
 import ColorUtils from "./ColorUtils";
 import HashUtils from "./HashUtils";
+import MathUtils from "./MathUtils";
 
 export default class LoadUtils {
   static async loadMarkerIndexData(
@@ -112,7 +113,7 @@ export default class LoadUtils {
       sizeFactor?: number;
     } = {},
   ): Promise<Float32Array> {
-    const { signal, paddingMultiple, sizeFactor = 1.0 } = options;
+    const { signal, paddingMultiple, sizeFactor = 1 } = options;
     signal?.throwIfAborted();
     let dataLength = n;
     if (paddingMultiple && dataLength % paddingMultiple !== 0) {
@@ -313,10 +314,7 @@ export default class LoadUtils {
     // combine color with visibility and opacity
     signal?.throwIfAborted();
     for (let i = 0; i < n; i++) {
-      // bitwise operators coerce operands to signed 32-bit integers,
-      // so we need to use the unsigned right shift operator >>> 0
-      // to convert large results back to unsigned 32-bit integers
-      const c = (data[i]! << 8) >>> 0;
+      const c = MathUtils.safeLeftShift(data[i]!, 8);
       data[i] = c + (visibilityData[i]! > 0 ? opacityData[i]! : 0);
     }
     return data;
@@ -410,7 +408,7 @@ export default class LoadUtils {
       opacityFactor?: number;
     } = {},
   ): Promise<Uint8Array> {
-    const { signal, paddingMultiple, opacityFactor = 1.0 } = options;
+    const { signal, paddingMultiple, opacityFactor = 1 } = options;
     signal?.throwIfAborted();
     let dataLength = n;
     if (paddingMultiple && dataLength % paddingMultiple !== 0) {

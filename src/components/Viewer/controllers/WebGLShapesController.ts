@@ -22,9 +22,10 @@ import {
   MultiPolygon,
   Rect,
   ValueMap,
+  Vertex,
 } from "../../../types";
 import LoadUtils from "../../../utils/LoadUtils";
-import ShapeUtils from "../../../utils/ShapeUtils";
+import MathUtils from "../../../utils/MathUtils";
 import TransformUtils from "../../../utils/TransformUtils";
 import WebGLUtils from "../../../utils/WebGLUtils";
 import WebGLControllerBase from "./WebGLControllerBase";
@@ -309,7 +310,7 @@ export default class WebGLShapesController extends WebGLControllerBase {
       ) {
         const multiPolygons = await ref.data.loadMultiPolygons({ signal });
         signal?.throwIfAborted();
-        objectBounds = ShapeUtils.getBounds(multiPolygons);
+        objectBounds = WebGLShapesController._getObjectBounds(multiPolygons);
         scanlineDataTexture = this._createScanlineDataTexture(
           multiPolygons,
           objectBounds,
@@ -430,12 +431,12 @@ export default class WebGLShapesController extends WebGLControllerBase {
     const numValuesPerTextureLine =
       4 * WebGLShapesController._SCANLINE_DATA_TEXTURE_WIDTH; // 4 values per RGBA32F texel
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      ShapeUtils.createScanlines(
+      WebGLShapesController._createScanlines(
         this._numScanlines,
         multiPolygons,
         objectBounds,
       );
-    const scanlineBuffer = ShapeUtils.packScanlines(
+    const scanlineBuffer = WebGLShapesController._packScanlines(
       scanlines,
       totalNumScanlineShapes,
       totalNumScanlineShapeEdges,
@@ -613,6 +614,215 @@ export default class WebGLShapesController extends WebGLControllerBase {
     this._gl.deleteTexture(glShapes.shapeFillColorsTexture);
     this._gl.deleteTexture(glShapes.shapeStrokeColorsTexture);
   }
+
+  private static _getObjectBounds(multiPolygons: MultiPolygon[]): Rect {
+    let xMin = Infinity,
+      yMin = Infinity,
+      xMax = -Infinity,
+      yMax = -Infinity;
+    for (const multiPolygon of multiPolygons) {
+      for (const polygon of multiPolygon.polygons) {
+        for (const path of [polygon.shell, ...polygon.holes]) {
+          for (const vertex of path) {
+            xMin = Math.min(xMin, vertex.x);
+            yMin = Math.min(yMin, vertex.y);
+            xMax = Math.max(xMax, vertex.x);
+            yMax = Math.max(yMax, vertex.y);
+          }
+        }
+      }
+    }
+    return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
+  }
+
+  private static _createScanlines(
+    numScanlines: number,
+    multiPolygons: MultiPolygon[],
+    objectBounds: Rect,
+  ): {
+    scanlines: Scanline[];
+    totalNumScanlineShapes: number;
+    totalNumScanlineShapeEdges: number;
+  } {
+    const scanlines: Scanline[] = Array.from({ length: numScanlines }, () => ({
+      xMin: Infinity,
+      xMax: -Infinity,
+      shapes: new Map<number, ScanlineShape>(),
+      occupancyMask: [0, 0, 0, 0],
+    }));
+    let totalNumScanlineShapes = 0;
+    let totalNumScanlineShapeEdges = 0;
+    for (let shapeIndex = 0; shapeIndex < multiPolygons.length; shapeIndex++) {
+      for (const polygon of multiPolygons[shapeIndex]!.polygons) {
+        // compute shape xMin/xMax/occupancy mask
+        let xMin = Infinity,
+          xMax = -Infinity,
+          yMin = Infinity,
+          yMax = -Infinity;
+        for (const v of polygon.shell) {
+          xMin = Math.min(xMin, v.x);
+          xMax = Math.max(xMax, v.x);
+          yMin = Math.min(yMin, v.y);
+          yMax = Math.max(yMax, v.y);
+        }
+        const firstScanlineIndex = MathUtils.clamp(
+          Math.floor(
+            (numScanlines * (yMin - objectBounds.y)) / objectBounds.height,
+          ),
+          0,
+          numScanlines - 1,
+        );
+        const lastScanlineIndex = MathUtils.clamp(
+          Math.ceil(
+            (numScanlines * (yMax - objectBounds.y)) / objectBounds.height,
+          ),
+          0,
+          numScanlines - 1,
+        );
+        const firstOccupancyMaskBin = MathUtils.clamp(
+          Math.floor((128 * (xMin - objectBounds.x)) / objectBounds.width),
+          0,
+          127,
+        );
+        const lastOccupancyMaskBin = MathUtils.clamp(
+          Math.ceil((128 * (xMax - objectBounds.x)) / objectBounds.width),
+          0,
+          127,
+        );
+        for (
+          let scanlineIndex = firstScanlineIndex;
+          scanlineIndex <= lastScanlineIndex;
+          scanlineIndex++
+        ) {
+          const scanline = scanlines[scanlineIndex]!;
+          scanline.xMin = Math.min(scanline.xMin, xMin);
+          scanline.xMax = Math.max(scanline.xMax, xMax);
+          // TODO Compute per-scanline occupancy mask bin ranges for better precision
+          // (i.e. accurately rasterize shapes instead of just their bounding boxes).
+          // Also, consider rasterizing holes (temporary per-shape occupancy masks).
+          for (
+            let occupancyMaskBin = firstOccupancyMaskBin;
+            occupancyMaskBin <= lastOccupancyMaskBin;
+            occupancyMaskBin++
+          ) {
+            const occupancyMaskIndex = occupancyMaskBin >> 5;
+            scanline.occupancyMask[occupancyMaskIndex] = MathUtils.safeOr(
+              scanline.occupancyMask[occupancyMaskIndex]!,
+              MathUtils.safeLeftShift(1, occupancyMaskBin & 0x1f),
+            );
+          }
+          const scanlineShape = scanline.shapes.get(shapeIndex);
+          if (scanlineShape === undefined) {
+            scanline.shapes.set(shapeIndex, {
+              xMin: xMin,
+              xMax: xMax,
+              edges: [],
+            });
+            totalNumScanlineShapes++;
+          } else {
+            scanlineShape.xMin = Math.min(scanlineShape.xMin, xMin);
+            scanlineShape.xMax = Math.max(scanlineShape.xMax, xMax);
+          }
+        }
+        // add shape edges to scanlines
+        for (const path of [polygon.shell, ...polygon.holes]) {
+          for (let i = 0; i < path.length; ++i) {
+            const v0 = path[(i + 0) % path.length]!;
+            const v1 = path[(i + 1) % path.length]!;
+            if (v0.x === v1.x && v0.y === v1.y) {
+              continue; // ignore zero-length edges
+            }
+            const firstEdgeScanlineIndex = MathUtils.clamp(
+              Math.floor(
+                (numScanlines * (Math.min(v0.y, v1.y) - objectBounds.y)) /
+                  objectBounds.height,
+              ),
+              0,
+              numScanlines - 1,
+            );
+            const lastEdgeScanlineIndex = MathUtils.clamp(
+              Math.ceil(
+                (numScanlines * (Math.max(v0.y, v1.y) - objectBounds.y)) /
+                  objectBounds.height,
+              ),
+              0,
+              numScanlines - 1,
+            );
+            for (
+              let scanlineIndex = firstEdgeScanlineIndex;
+              scanlineIndex <= lastEdgeScanlineIndex;
+              scanlineIndex++
+            ) {
+              const scanline = scanlines[scanlineIndex]!;
+              const scanlineShape = scanline.shapes.get(shapeIndex)!;
+              scanlineShape.edges.push({ v0, v1 });
+              totalNumScanlineShapeEdges++;
+            }
+          }
+        }
+      }
+    }
+    return { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges };
+  }
+
+  private static _packScanlines(
+    scanlines: Scanline[],
+    totalNumScanlineShapes: number,
+    totalNumScanlineShapeEdges: number,
+    options: { paddingMultiple?: number } = {},
+  ): ArrayBuffer {
+    const { paddingMultiple } = options;
+    let dataLength =
+      4 * scanlines.length + // header -> scanline info S
+      4 * scanlines.length + // scanline S -> scanline header
+      4 * totalNumScanlineShapes + // scanline S -> shape P -> shape header
+      4 * totalNumScanlineShapeEdges; // scanline S -> shape P -> edge E
+    if (paddingMultiple && dataLength % paddingMultiple !== 0) {
+      dataLength += paddingMultiple - (dataLength % paddingMultiple);
+    }
+    const buffer = new ArrayBuffer(4 * dataLength); // 4 bytes per 32-bit value
+    const float32Data = new Float32Array(buffer);
+    const uint32Data = new Uint32Array(buffer);
+    let currentScanlineTexelOffset = scanlines.length;
+    for (let s = 0; s < scanlines.length; s++) {
+      const scanline = scanlines[s]!;
+      // header
+      uint32Data.set([currentScanlineTexelOffset, scanline.shapes.size], 4 * s);
+      float32Data.set([scanline.xMin, scanline.xMax], 4 * s + 2);
+      // scanline
+      uint32Data.set(scanline.occupancyMask, 4 * currentScanlineTexelOffset);
+      let currentScanlineShapeTexelOffset = currentScanlineTexelOffset + 1;
+      for (const [shapeIndex, scanlineShape] of scanline.shapes) {
+        // scanline shape
+        uint32Data.set(
+          [shapeIndex, scanlineShape.edges.length],
+          4 * currentScanlineShapeTexelOffset,
+        );
+        float32Data.set(
+          [scanlineShape.xMin, scanlineShape.xMax],
+          4 * currentScanlineShapeTexelOffset + 2,
+        );
+        let currentScanlineShapeEdgeTexelOffset =
+          currentScanlineShapeTexelOffset + 1;
+        for (const scanlineShapeEdge of scanlineShape.edges) {
+          // scanline shape edge
+          float32Data.set(
+            [
+              scanlineShapeEdge.v0.x,
+              scanlineShapeEdge.v0.y,
+              scanlineShapeEdge.v1.x,
+              scanlineShapeEdge.v1.y,
+            ],
+            4 * currentScanlineShapeEdgeTexelOffset,
+          );
+          currentScanlineShapeEdgeTexelOffset++;
+        }
+        currentScanlineShapeTexelOffset = currentScanlineShapeEdgeTexelOffset;
+      }
+      currentScanlineTexelOffset = currentScanlineShapeTexelOffset;
+    }
+    return buffer;
+  }
 }
 
 type ShapesRef = {
@@ -655,3 +865,23 @@ type GLShapes = {
     >;
   };
 };
+
+type Scanline = {
+  xMin: number;
+  xMax: number;
+  shapes: Map<number, ScanlineShape>;
+  occupancyMask: ScanlineOccupancyMask;
+};
+
+type ScanlineShape = {
+  xMin: number;
+  xMax: number;
+  edges: ScanlineShapeEdge[];
+};
+
+type ScanlineShapeEdge = {
+  v0: Vertex;
+  v1: Vertex;
+};
+
+type ScanlineOccupancyMask = [number, number, number, number];

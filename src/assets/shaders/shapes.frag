@@ -18,7 +18,7 @@ uniform vec4 u_objectBounds; // (x, y, width, height), in data dimensions
  *
  * Memory layout: [header, scanline 0, scanline 1, ..., scanline N]
  *   Header: [scanline info 1, scanline info 2, ..., scanline info N]
- *     Scanline info = (offset, shape count M, xmin, xmax)
+ *     Scanline info = (texel offset, shape count M, xmin, xmax)
  *   Scanline: [scanline header, shape 1, shape 2, ..., shape M]
  *     Scanline header = (occupancy mask = 4 * 32 = 128 bits)
  *     Shape: [shape header, edge 1, edge 2, ..., edge L]
