@@ -79,14 +79,9 @@ export default function useOpenSeadragon() {
     const abortController = new AbortController();
     if (controllerRef.current !== null) {
       controllerRef.current
-        .synchronize(
-          layerMap,
-          imageMap,
-          labelsMap,
-          loadImage,
-          loadLabels,
-          abortController.signal,
-        )
+        .synchronize(layerMap, imageMap, labelsMap, loadImage, loadLabels, {
+          signal: abortController.signal,
+        })
         .catch((reason) => {
           if (!abortController.signal.aborted) {
             console.error(reason);

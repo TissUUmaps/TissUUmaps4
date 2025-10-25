@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Plugins
 
-The complete Zustand store is exposed to plugins via `window.tissuumaps`. Plugins can for example query the current state using `window.tissuumaps.getState().myproperty`, call functions using `window.tissuumaps.getState().myfunction(...)`, or update the application state using `window.tissuumaps.setState((state) => { state.myproperty = myvalue; })`.
+The entire Zustand store is exposed to plugins via `window.tissuumaps`. Plugins can for example get the current value of `myProperty` using `window.tissuumaps.getState().myProperty`, set its value to `myValue` using `window.tissuumaps.setState((state) => { state.myProperty = myValue; })`, or call the state function `myFunction` using `window.tissuumaps.getState().myFunction(...)`.
 
 The following global events are available on `window`:
 

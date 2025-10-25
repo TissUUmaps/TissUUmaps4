@@ -49,9 +49,12 @@ export class ZarrLabelsDataLoader extends AbstractLabelsDataLoader<
   CompleteZarrLabelsDataSource,
   ZarrLabelsData
 > {
-  async loadLabels(signal?: AbortSignal): Promise<ZarrLabelsData> {
+  async loadLabels(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<ZarrLabelsData> {
+    const { signal } = options;
     signal?.throwIfAborted();
-    const store = await this._loadZarr(signal);
+    const store = await this._loadZarr({ signal });
     signal?.throwIfAborted();
     const root = await zarrita.open(store);
     signal?.throwIfAborted();
@@ -83,8 +86,9 @@ export class ZarrLabelsDataLoader extends AbstractLabelsDataLoader<
   }
 
   private async _loadZarr(
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<zarrita.AsyncReadable> {
+    const { signal } = options;
     signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
@@ -158,8 +162,9 @@ export class ZarrLabelsData implements LabelsData {
     _level: number,
     _x: number,
     _y: number,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<UintArray> {
+    const { signal } = options;
     signal?.throwIfAborted();
     // TODO ZarrLabelsData.loadTile
     throw new Error("Method not implemented.");

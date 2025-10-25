@@ -14,11 +14,11 @@ export type LabelsSliceActions = {
   addLabels: (labels: CompleteLabels, index?: number) => void;
   loadLabels: (
     labels: CompleteLabels,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal },
   ) => Promise<LabelsData>;
   loadLabelsByID: (
     labelsId: string,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal },
   ) => Promise<LabelsData>;
   unloadLabels: (labels: CompleteLabels) => void;
   unloadLabelsByID: (labelsId: string) => void;
@@ -47,7 +47,8 @@ export const createLabelsSlice: BoundStoreStateCreator<LabelsSlice> = (
       );
     });
   },
-  loadLabels: async (labels, signal) => {
+  loadLabels: async (labels, options: { signal?: AbortSignal } = {}) => {
+    const { signal } = options;
     signal?.throwIfAborted();
     const state = get();
     let labelsData = state.labelsDataCache.get(labels.dataSource);
@@ -67,21 +68,22 @@ export const createLabelsSlice: BoundStoreStateCreator<LabelsSlice> = (
       state.projectDir,
       state.loadTableByID,
     );
-    labelsData = await labelsDataLoader.loadLabels(signal);
+    labelsData = await labelsDataLoader.loadLabels({ signal });
     signal?.throwIfAborted();
     set((draft) => {
       draft.labelsDataCache.set(labels.dataSource, labelsData);
     });
     return labelsData;
   },
-  loadLabelsByID: async (labelsId, signal) => {
+  loadLabelsByID: async (labelsId, options: { signal?: AbortSignal } = {}) => {
+    const { signal } = options;
     signal?.throwIfAborted();
     const state = get();
     const labels = state.labelsMap.get(labelsId);
     if (labels === undefined) {
       throw new Error(`Labels with ID ${labelsId} not found.`);
     }
-    return state.loadLabels(labels, signal);
+    return state.loadLabels(labels, { signal });
   },
   unloadLabels: (labels) => {
     const state = get();

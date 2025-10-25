@@ -2,11 +2,7 @@ export default class MapUtils {
   static map<K, V, T>(
     map: Map<K, V>,
     callbackfn: (key: K, value: V, index: number, map: Map<K, V>) => T,
-    thisArg?: unknown,
   ): T[] {
-    if (thisArg) {
-      callbackfn = callbackfn.bind(thisArg);
-    }
     const results: T[] = [];
     for (const [key, value] of map) {
       const result = callbackfn(key, value, results.length, map);

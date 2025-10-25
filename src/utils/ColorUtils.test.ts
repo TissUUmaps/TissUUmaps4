@@ -15,7 +15,10 @@ describe("ColorUtils", () => {
 
     it("parses a color palette with custom separator and maxValue", () => {
       const str = "0,0,0\n0.5,0.5,0.5\n1,1,1";
-      const result = ColorUtils.parseColorPalette(str, ",", 1);
+      const result = ColorUtils.parseColorPalette(str, {
+        sep: ",",
+        maxValue: 1,
+      });
       expect(result).toEqual([
         { r: 0, g: 0, b: 0 },
         { r: 127.5, g: 127.5, b: 127.5 },

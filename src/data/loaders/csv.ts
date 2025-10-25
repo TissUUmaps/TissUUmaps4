@@ -67,7 +67,10 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
   CompleteCSVTableDataSource,
   CSVTableData
 > {
-  async loadTable(signal?: AbortSignal): Promise<CSVTableData> {
+  async loadTable(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<CSVTableData> {
+    const { signal } = options;
     signal?.throwIfAborted();
     let n = 0;
     let allColumnNames = this.dataSource.columns;
@@ -226,8 +229,9 @@ export class CSVTableData implements TableData {
 
   async loadColumn<T>(
     column: string,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<MappableArrayLike<T>> {
+    const { signal } = options;
     signal?.throwIfAborted();
     if (!this._columns.includes(column)) {
       throw new Error(`Column "${column}" does not exist.`);

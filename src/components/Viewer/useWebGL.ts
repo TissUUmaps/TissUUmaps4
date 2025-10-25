@@ -4,6 +4,7 @@ import { useBoundStore } from "../../store/boundStore";
 import { Rect } from "../../types";
 import WebGLController from "./controllers/WebGLController";
 
+const syncShapesPassCycle = Number.MAX_SAFE_INTEGER - 1;
 const drawPassCycle = Number.MAX_SAFE_INTEGER - 1;
 
 export default function useWebGL(
@@ -14,6 +15,7 @@ export default function useWebGL(
   const controllerRef = useRef<WebGLController | null>(null);
 
   const [initialized, setInitialized] = useState<boolean>(false);
+  const [syncShapesPass, setSyncShapesPass] = useState<number>(0);
   const [drawPass, setDrawPass] = useState<number>(0);
 
   const layerMap = useBoundStore((state) => state.layerMap);
@@ -38,14 +40,23 @@ export default function useWebGL(
 
   // initialize the WebGL controller
   useEffect(() => {
+    const abortController = new AbortController();
     if (parent !== null) {
       const canvas = parent.appendChild(WebGLController.createCanvas());
       controllerRef.current = new WebGLController(canvas);
-      controllerRef.current.initialize().then(() => {
-        setInitialized(true);
-      }, console.error);
+      controllerRef.current.initialize({ signal: abortController.signal }).then(
+        () => {
+          setInitialized(true);
+        },
+        (reason) => {
+          if (!abortController.signal.aborted) {
+            console.error(reason);
+          }
+        },
+      );
     }
     return () => {
+      abortController.abort("WebGL cleanup");
       if (controllerRef.current !== null) {
         controllerRef.current.destroy();
         controllerRef.current = null;
@@ -57,7 +68,10 @@ export default function useWebGL(
   // set draw options and redraw upon configuration changes
   useEffect(() => {
     if (controllerRef.current !== null) {
-      controllerRef.current.setDrawOptions(drawOptions);
+      const { syncShapes } = controllerRef.current.setDrawOptions(drawOptions);
+      if (syncShapes) {
+        setSyncShapesPass((p) => (p + 1) % syncShapesPassCycle);
+      }
       setDrawPass((p) => (p + 1) % drawPassCycle);
     }
   }, [drawOptions]);
@@ -77,7 +91,7 @@ export default function useWebGL(
           opacityMaps,
           loadPoints,
           loadTableByID,
-          abortController.signal,
+          { signal: abortController.signal },
         )
         .then(
           () => {
@@ -115,9 +129,12 @@ export default function useWebGL(
         .synchronizeShapes(
           layerMap,
           shapesMap,
+          colorMaps,
+          visibilityMaps,
+          opacityMaps,
           loadShapes,
           loadTableByID,
-          abortController.signal,
+          { signal: abortController.signal },
         )
         .then(
           () => {
@@ -134,8 +151,12 @@ export default function useWebGL(
       abortController.abort("WebGL cleanup");
     };
   }, [
+    syncShapesPass,
     layerMap,
     shapesMap,
+    colorMaps,
+    visibilityMaps,
+    opacityMaps,
     projectDir,
     shapesDataLoaderFactories,
     loadShapes,

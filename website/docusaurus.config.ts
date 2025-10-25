@@ -19,7 +19,7 @@ function injectTypeDocSidebar(items) {
 
 const config: Config = {
   title: "TissUUmaps",
-  tagline: "spatial omics visualization made simple",
+  tagline: "spatial biology visualization made simple",
   favicon: "img/favicon.ico",
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
