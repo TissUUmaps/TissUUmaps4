@@ -29,7 +29,7 @@ And if you like the project, but just don't have time to contribute, that's fine
 This project and everyone participating in it is governed by the
 [TissUUmaps 4 Code of Conduct](https://github.com/TissUUmaps/TissUUmaps4/blob/main/CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
-to [biif@scilifelab.se](mailto:biif@scilifelab.se).
+to any [current member](CONTRIBUTORS.md) of the core team.
 
 ## I Have a Question
 
@@ -72,7 +72,7 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 
 #### How Do I Submit a Good Bug Report?
 
-You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead sensitive bugs must be sent by email to [biif@scilifelab.se](mailto:biif@scilifelab.se).
+You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead sensitive bugs must be sent by email to any [current member](CONTRIBUTORS.md) of the core team.
 
 We use GitHub issues to track bugs and errors. If you run into an issue with the project:
 
@@ -124,7 +124,7 @@ It is recommended to follow the [Conventional Commits](https://www.conventionalc
 
 ## Join The Project Team
 
-Please get in touch with a [current member](CONTRIBUTORS.md) if you would like to join the project team.
+Please get in touch with any [current member](CONTRIBUTORS.md) of the core team if you would like to join the project team.
 
 ## Attribution
 
