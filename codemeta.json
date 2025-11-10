@@ -10,9 +10,9 @@
         "type": "Organization",
         "name": "SciLifeLab / Uppsala University"
       },
-      "email": "jonas.windhager@scilifelab.se",
-      "familyName": "Windhager",
-      "givenName": "Jonas"
+      "email": "christophe.avenel@scilifelab.se",
+      "familyName": "Avenel",
+      "givenName": "Christophe"
     },
     {
       "id": "_:author_2",
@@ -21,9 +21,9 @@
         "type": "Organization",
         "name": "SciLifeLab / Uppsala University"
       },
-      "email": "christophe.avenel@scilifelab.se",
-      "familyName": "Avenel",
-      "givenName": "Christophe"
+      "email": "jonas.windhager@scilifelab.se",
+      "familyName": "Windhager",
+      "givenName": "Jonas"
     }
   ],
   "codeRepository": "git+https://github.com/TissUUmaps/TissUUmaps4",
