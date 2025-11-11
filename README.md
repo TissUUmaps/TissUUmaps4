@@ -3,16 +3,16 @@
 [![Release](https://img.shields.io/github/v/release/TissUUmaps/TissUUmaps4?label=release)](https://github.com/TissUUmaps/TissUUmaps4/releases)
 [![Issues](https://img.shields.io/github/issues/TissUUmaps/TissUUmaps4?label=issues)](https://github.com/TissUUmaps/TissUUmaps4/issues)
 [![Pull requests](https://img.shields.io/github/issues-pr/TissUUmaps/TissUUmaps4?label=pr)](https://github.com/TissUUmaps/TissUUmaps4/pulls)
-[![Continuous integration](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps4/ci?label=ci)](https://github.com/TissUUmaps/TissUUmaps4/actions/workflows/ci.yaml)
-[![Continuous deployment](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps4/cd?label=cd)](https://github.com/TissUUmaps/TissUUmaps4/actions/workflows/cd.yaml)
+[![Continuous integration](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps4/ci.yaml?label=ci)](https://github.com/TissUUmaps/TissUUmaps4/actions/workflows/ci.yaml)
+[![Continuous deployment](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps4/cd.yaml?label=cd)](https://github.com/TissUUmaps/TissUUmaps4/actions/workflows/cd.yaml)
 [![Coverage](https://img.shields.io/codecov/c/github/TissUUmaps/TissUUmaps4?label=coverage)](https://app.codecov.io/gh/TissUUmaps/TissUUmaps4)
 [![Deployment](https://img.shields.io/github/deployments/TissUUmaps/TissUUmaps4/github-pages?label=deployment)](https://tissuumaps.github.io/TissUUmaps4/live/)
 [![Contributors](https://img.shields.io/github/all-contributors/TissUUmaps/TissUUmaps4?label=contributors)](CONTRIBUTORS.md)
 [![License](https://img.shields.io/github/license/TissUUmaps/TissUUmaps4?label=license)](LICENSE)
 
-A brief description of what this project does and who it's for
+TissUUmaps is a community-oriented web application for the GPU-accellerated visualization, annotation and sharing of spatial biology data.
 
-TissUUmaps is under active development.
+**This tool is under active development**. Please do not hesitate to [submit a feature request](https://github.com/TissUUmaps/TissUUmaps4/issues/new/choose).
 
 ## Prerequisites
 
