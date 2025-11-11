@@ -1,0 +1,53 @@
+name: Bug Report
+description: Report a bug.
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report this bug!
+  - type: textarea
+    id: bug-report
+    attributes:
+      label: Bug report
+      description: Please provide a clear and concise description of the bug.
+      placeholder: What went wrong? What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Please provide a list of steps to reproduce the bug.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Please provide a clear and concise description of what you expected to happen.
+      placeholder: What did you expect to happen?
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Please state your operating system, web browser incl. version, GPU model and driver version (if applicable), TissUUmaps version, and any other relevant information related to your environment.
+      placeholder: |
+        Operating system: Windows 11 64-bit Version 24H2
+        Web browser: Chrome 142.0.7444.60
+        GPU: NVIDIA GeForce RTX 4070 8GB, driver 576.83
+        TissUUmaps version: 4.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Please provide any additional information or context regarding the problem here.
+      placeholder: Add any other context about the problem here.
