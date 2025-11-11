@@ -1,4 +1,4 @@
-# Contributing to TissUUmaps 4
+# Contributing to TissUUmaps
 
 First off, thanks for taking the time to contribute! ❤️
 
@@ -27,7 +27,7 @@ And if you like the project, but just don't have time to contribute, that's fine
 ## Code of Conduct
 
 This project and everyone participating in it is governed by the
-[TissUUmaps 4 Code of Conduct](https://github.com/TissUUmaps/TissUUmaps4/blob/main/CODE_OF_CONDUCT.md).
+[TissUUmaps Code of Conduct](https://github.com/TissUUmaps/TissUUmaps4/blob/main/CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
 to any [current member](CONTRIBUTORS.md) of the core team.
 
@@ -89,7 +89,7 @@ Once it's filed:
 
 ### Suggesting Enhancements
 
-This section guides you through submitting an enhancement suggestion for TissUUmaps 4, **including completely new features and minor improvements to existing functionality**. Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
+This section guides you through submitting an enhancement suggestion for TissUUmaps, **including completely new features and minor improvements to existing functionality**. Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
 
 #### Before Submitting an Enhancement
 
@@ -106,7 +106,7 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/TissUU
 - Provide a **step-by-step description of the suggested enhancement** in as many details as possible.
 - **Describe the current behavior** and **explain which behavior you expected to see instead** and why. At this point you can also tell which alternatives do not work for you.
 - You may want to **include screenshots or screen recordings** which help you demonstrate the steps or point out the part which the suggestion is related to.
-- **Explain why this enhancement would be useful** to most TissUUmaps 4 users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
+- **Explain why this enhancement would be useful** to most TissUUmaps users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
 
 ### Your First Code Contribution
 

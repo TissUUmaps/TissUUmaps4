@@ -1,4 +1,4 @@
-# Code of Conduct - TissUUmaps 4
+# Code of Conduct - TissUUmaps
 
 ## Our Pledge
 

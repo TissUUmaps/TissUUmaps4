@@ -1,4 +1,7 @@
 {
     "projectName": "TissUUmaps4",
-    "projectOwner": "TissUUmaps"
+    "projectOwner": "TissUUmaps",
+    "files": [
+        "CONTRIBUTORS.md"
+    ]
 }

@@ -28,7 +28,7 @@
   ],
   "codeRepository": "git+https://github.com/TissUUmaps/TissUUmaps4",
   "license": "https://spdx.org/licenses/MIT",
-  "name": "TissUUmaps 4",
+  "name": "TissUUmaps",
   "programmingLanguage": "TypeScript",
   "relatedLink": "https://tissuumaps.github.io/TissUUmaps4/",
   "issueTracker": "https://github.com/TissUUmaps/TissUUmaps4/issues"
