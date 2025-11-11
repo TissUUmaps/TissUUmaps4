@@ -1,5 +1,21 @@
 {
   "projectName": "TissUUmaps4",
   "projectOwner": "TissUUmaps",
-  "files": ["CONTRIBUTORS.md"]
+  "files": [
+    "CONTRIBUTORS.md"
+  ],
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributorsPerLine": 7,
+  "contributors": [
+    {
+      "login": "jwindhager",
+      "name": "Jonas Windhager",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7105759?v=4",
+      "profile": "https://www.windhager.io",
+      "contributions": [
+        "code"
+      ]
+    }
+  ]
 }
