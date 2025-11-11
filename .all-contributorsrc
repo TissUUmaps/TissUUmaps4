@@ -20,6 +20,17 @@
         "projectManagement",
         "review"
       ]
+    },
+    {
+      "login": "cavenel",
+      "name": "Christophe Avenel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6164758?v=4",
+      "profile": "https://github.com/cavenel",
+      "contributions": [
+        "code",
+        "ideas",
+        "review"
+      ]
     }
   ]
 }
