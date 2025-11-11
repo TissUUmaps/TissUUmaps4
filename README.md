@@ -34,7 +34,7 @@ Alternatively, open [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps4/l
 
 ## Documentation
 
-[Documentation](ttps://tissuumaps.github.io/TissUUmaps4/docs/)
+[Documentation](https://tissuumaps.github.io/TissUUmaps4/docs/)
 
 ## Contributors
 
