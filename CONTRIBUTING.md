@@ -114,7 +114,7 @@ Please refer to the [Documentation](https://tissuumaps.github.io/TissUUmaps4/doc
 
 ### Improving The Documentation
 
-Please refer to the [Documentation](https://tissuumaps.github.io/TissUUmaps4/docs/) for instructions how to improve the documention.
+Please refer to the [Documentation](https://tissuumaps.github.io/TissUUmaps4/docs/) for instructions how to improve the documentation.
 
 ## Styleguides
 
