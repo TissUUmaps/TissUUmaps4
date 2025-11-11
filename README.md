@@ -10,7 +10,7 @@
 [![Contributors](https://img.shields.io/github/all-contributors/TissUUmaps/TissUUmaps4?label=contributors)](CONTRIBUTORS.md)
 [![License](https://img.shields.io/github/license/TissUUmaps/TissUUmaps4?label=license)](LICENSE)
 
-TissUUmaps is a community-oriented web application for the GPU-accelerated visualization, annotation and sharing of spatial biology data.
+TissUUmaps is a GPU-accelerated web application for visualizing, annotating and sharing spatial biology data.
 
 **This tool is under active development**. Please do not hesitate to [submit a feature request](https://github.com/TissUUmaps/TissUUmaps4/issues/new/choose).
 
