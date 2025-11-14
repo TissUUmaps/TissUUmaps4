@@ -34,7 +34,10 @@ export class DefaultImageDataLoader extends AbstractImageDataLoader<
   CompleteDefaultImageDataSource,
   DefaultImageData
 > {
-  async loadImage(signal?: AbortSignal): Promise<DefaultImageData> {
+  async loadImage(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<DefaultImageData> {
+    const { signal } = options;
     signal?.throwIfAborted();
     if (this.dataSource.tileSourceConfig !== undefined) {
       if (

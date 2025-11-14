@@ -14,11 +14,11 @@ export type PointsSliceActions = {
   addPoints: (points: CompletePoints, index?: number) => void;
   loadPoints: (
     points: CompletePoints,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal },
   ) => Promise<PointsData>;
   loadPointsByID: (
     pointsId: string,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal },
   ) => Promise<PointsData>;
   unloadPoints: (points: CompletePoints) => void;
   unloadPointsByID: (pointsId: string) => void;
@@ -47,7 +47,8 @@ export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
       );
     });
   },
-  loadPoints: async (points, signal) => {
+  loadPoints: async (points, options: { signal?: AbortSignal } = {}) => {
+    const { signal } = options;
     signal?.throwIfAborted();
     const state = get();
     let pointsData = state.pointsDataCache.get(points.dataSource);
@@ -67,21 +68,22 @@ export const createPointsSlice: BoundStoreStateCreator<PointsSlice> = (
       state.projectDir,
       state.loadTableByID,
     );
-    pointsData = await pointsDataLoader.loadPoints(signal);
+    pointsData = await pointsDataLoader.loadPoints({ signal });
     signal?.throwIfAborted();
     set((draft) => {
       draft.pointsDataCache.set(points.dataSource, pointsData);
     });
     return pointsData;
   },
-  loadPointsByID: async (pointsId, signal) => {
+  loadPointsByID: async (pointsId, options: { signal?: AbortSignal } = {}) => {
+    const { signal } = options;
     signal?.throwIfAborted();
     const state = get();
     const points = state.pointsMap.get(pointsId);
     if (points === undefined) {
       throw new Error(`Points with ID ${pointsId} not found.`);
     }
-    return state.loadPoints(points, signal);
+    return state.loadPoints(points, { signal });
   },
   unloadPoints: (points) => {
     const state = get();

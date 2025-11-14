@@ -42,7 +42,7 @@ export class TablePointsDataLoader extends AbstractPointsDataLoader<
 > {
   private readonly _loadTableByID: (
     tableId: string,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal },
   ) => Promise<TableData>;
 
   constructor(
@@ -54,12 +54,14 @@ export class TablePointsDataLoader extends AbstractPointsDataLoader<
     this._loadTableByID = loadTableByID;
   }
 
-  async loadPoints(signal?: AbortSignal): Promise<PointsData> {
+  async loadPoints(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<PointsData> {
+    const { signal } = options;
     signal?.throwIfAborted();
-    const tableData = await this._loadTableByID(
-      this.dataSource.tableId,
+    const tableData = await this._loadTableByID(this.dataSource.tableId, {
       signal,
-    );
+    });
     signal?.throwIfAborted();
     return new TablePointsData(tableData, this.dataSource.dimensionColumns);
   }
@@ -84,10 +86,13 @@ export class TablePointsData implements PointsData {
 
   async loadCoordinates(
     dimension: string,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal } = {},
   ): Promise<Float32Array> {
+    const { signal } = options;
     signal?.throwIfAborted();
-    const coords = await this._tableData.loadColumn<number>(dimension, signal);
+    const coords = await this._tableData.loadColumn<number>(dimension, {
+      signal,
+    });
     signal?.throwIfAborted();
     return coords instanceof Float32Array ? coords : Float32Array.from(coords);
   }
