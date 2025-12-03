@@ -656,13 +656,13 @@ export default class WebGLShapesController extends WebGLControllerBase {
       for (const polygon of multiPolygons[shapeIndex]!.polygons) {
         // compute shape xMin/xMax/occupancy mask
         let xMin = Infinity,
-          xMax = -Infinity,
           yMin = Infinity,
+          xMax = -Infinity,
           yMax = -Infinity;
         for (const v of polygon.shell) {
           xMin = Math.min(xMin, v.x);
-          xMax = Math.max(xMax, v.x);
           yMin = Math.min(yMin, v.y);
+          xMax = Math.max(xMax, v.x);
           yMax = Math.max(yMax, v.y);
         }
         const firstScanlineIndex = MathUtils.clamp(

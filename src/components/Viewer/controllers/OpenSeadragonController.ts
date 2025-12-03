@@ -17,7 +17,7 @@ import {
 } from "../../../model/labels";
 import { CompleteLayer } from "../../../model/layer";
 import { DEFAULT_PROJECT_VIEWER_OPTIONS } from "../../../model/project";
-import { Rect, ViewerOptions } from "../../../types";
+import { ViewerOptions } from "../../../types";
 import TransformUtils from "../../../utils/TransformUtils";
 
 export default class OpenSeadragonController {
@@ -32,25 +32,12 @@ export default class OpenSeadragonController {
 
   constructor(
     viewerElement: HTMLElement,
-    containerResizedHandler: (newContainerSize: {
-      width: number;
-      height: number;
-    }) => void,
-    viewportChangedHandler: (newViewportBounds: Rect) => void,
+    viewerInit?: (viewer: OpenSeadragon.Viewer) => void,
   ) {
     this._viewer = new OpenSeadragon.Viewer({
       ...DEFAULT_PROJECT_VIEWER_OPTIONS,
       // do not forget to exclude properties from the ViewerOptions type when setting them here
       element: viewerElement,
-    });
-    this._viewer.addHandler("resize", (event) => {
-      containerResizedHandler({
-        width: event.newContainerSize.x,
-        height: event.newContainerSize.y,
-      });
-    });
-    this._viewer.addHandler("viewport-change", () => {
-      viewportChangedHandler(this.getViewportBounds());
     });
     this._viewer.addHandler("canvas-key", (event) => {
       // disable key bindings for rotation and flipping
@@ -59,21 +46,9 @@ export default class OpenSeadragonController {
         event.preventDefaultAction = true;
       }
     });
-  }
-
-  getViewerCanvas(): HTMLElement {
-    return this._viewer.canvas;
-  }
-
-  getContainerSize(): { width: number; height: number } {
-    const containerSize = this._viewer.viewport.getContainerSize();
-    return { width: containerSize.x, height: containerSize.y };
-  }
-
-  getViewportBounds(): Rect {
-    // OpenSeadragon.Viewport.getBounds(current):
-    // Returns the bounds of the visible area in viewport coordinates
-    return this._viewer.viewport.getBounds(true);
+    if (viewerInit !== undefined) {
+      viewerInit(this._viewer);
+    }
   }
 
   setViewerOptions(viewerOptions: ViewerOptions): void {

@@ -13,10 +13,11 @@ export default class WebGLController {
   };
 
   private readonly _canvas: HTMLCanvasElement;
+  private _viewport: Rect;
+  private _drawOptions: DrawOptions;
   private _gl: WebGL2RenderingContext;
   private _pointsController: WebGLPointsController;
   private _shapesController: WebGLShapesController;
-  private _drawOptions: DrawOptions = WebGLController.DEFAULT_DRAW_OPTIONS;
 
   static createCanvas(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
@@ -27,8 +28,10 @@ export default class WebGLController {
     return canvas;
   }
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, viewport: Rect) {
     this._canvas = canvas;
+    this._viewport = viewport;
+    this._drawOptions = WebGLController.DEFAULT_DRAW_OPTIONS;
     this._gl = WebGLController._createWebGLContext(this._canvas);
     this._pointsController = new WebGLPointsController(this._gl);
     this._shapesController = new WebGLShapesController(this._gl);
@@ -42,12 +45,28 @@ export default class WebGLController {
     });
   }
 
-  setDrawOptions(drawOptions: DrawOptions): { syncShapes: boolean } {
+  setViewport(viewport: Rect): boolean {
+    if (
+      this._viewport.x !== viewport.x ||
+      this._viewport.y !== viewport.y ||
+      this._viewport.width !== viewport.width ||
+      this._viewport.height !== viewport.height
+    ) {
+      this._viewport = viewport;
+      return true;
+    }
+    return false;
+  }
+
+  setDrawOptions(drawOptions: DrawOptions): {
+    syncPoints: boolean;
+    syncShapes: boolean;
+  } {
     this._drawOptions = drawOptions;
     const syncShapes = this._shapesController.setNumScanlines(
       drawOptions.numShapesScanlines,
     );
-    return { syncShapes };
+    return { syncPoints: false, syncShapes };
   }
 
   async initialize(
@@ -72,7 +91,8 @@ export default class WebGLController {
     return await this._shapesController.synchronize(...args);
   }
 
-  resize(width: number, height: number): void {
+  resizeCanvas(size: { width: number; height: number }): boolean {
+    let { width, height } = size;
     width *= window.devicePixelRatio;
     height *= window.devicePixelRatio;
     if (width <= 0 || height <= 0) {
@@ -86,16 +106,20 @@ export default class WebGLController {
       width = Math.floor(width * scale);
       height = Math.floor(height * scale);
     }
-    this._canvas.width = width;
-    this._canvas.height = height;
-    this._gl.viewport(0, 0, width, height);
+    if (this._canvas.width !== width && this._canvas.height !== height) {
+      this._canvas.width = width;
+      this._canvas.height = height;
+      this._gl.viewport(0, 0, width, height);
+      return true;
+    }
+    return false;
   }
 
-  draw(viewport: Rect): void {
+  draw(): void {
     this._gl.clearColor(0, 0, 0, 0);
     this._gl.clear(this._gl.COLOR_BUFFER_BIT);
-    this._pointsController.draw(viewport, this._drawOptions);
-    this._shapesController.draw(viewport, this._drawOptions);
+    this._pointsController.draw(this._viewport, this._drawOptions);
+    this._shapesController.draw(this._viewport, this._drawOptions);
   }
 
   destroy(): void {

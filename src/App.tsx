@@ -127,7 +127,7 @@ export default function App() {
       }
     });
     return () => {
-      abortController.abort("app cleanup");
+      abortController.abort();
       clearProject();
     };
   }, [clearProject, loadProjectFromURL]);

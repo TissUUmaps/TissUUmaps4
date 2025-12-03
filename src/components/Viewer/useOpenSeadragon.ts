@@ -4,15 +4,20 @@ import { useBoundStore } from "../../store/boundStore";
 import { Rect } from "../../types";
 import OpenSeadragonController from "./controllers/OpenSeadragonController";
 
-export default function useOpenSeadragon() {
-  const controllerRef = useRef<OpenSeadragonController | null>(null);
-
-  const [viewerCanvas, setViewerCanvas] = useState<HTMLElement | null>(null);
-  const [containerSize, setContainerSize] = useState<{
+export default function useOpenSeadragon(options: {
+  containerResizedHandler?: (newContainerSize: {
     width: number;
     height: number;
-  } | null>(null);
-  const [viewportBounds, setViewportBounds] = useState<Rect | null>(null);
+  }) => void;
+  viewportChangedHandler?: (newViewport: Rect) => void;
+}) {
+  const { containerResizedHandler, viewportChangedHandler } = options;
+
+  const controllerRef = useRef<OpenSeadragonController | null>(null);
+  const [viewerState, setViewerState] = useState<{
+    canvas: HTMLElement | null;
+    initialViewport: Rect | null;
+  }>({ canvas: null, initialViewport: null });
 
   const layerMap = useBoundStore((state) => state.layerMap);
   const imageMap = useBoundStore((state) => state.imageMap);
@@ -37,59 +42,90 @@ export default function useOpenSeadragon() {
   // use a ref callback for initializing the OpenSeadragon viewer
   // (note: ref callbacks are always executed before useEffect hooks)
   // https://react.dev/reference/react-dom/components/common#ref-callback
-  const ref = useCallback((viewerElement: HTMLDivElement | null) => {
-    if (viewerElement !== null) {
-      controllerRef.current = new OpenSeadragonController(
-        viewerElement,
-        (newContainerSize) => setContainerSize(newContainerSize),
-        (newViewportBounds) => setViewportBounds(newViewportBounds),
-      );
-      setViewerCanvas(controllerRef.current.getViewerCanvas());
-      setContainerSize(controllerRef.current.getContainerSize());
-      setViewportBounds(controllerRef.current.getViewportBounds());
-    }
-    // React 19 added cleanup functions for ref callbacks
-    return () => {
-      if (controllerRef.current !== null) {
-        controllerRef.current.destroy();
-        controllerRef.current = null;
+  const viewerElementRef = useCallback(
+    (viewerElement: HTMLDivElement | null) => {
+      if (viewerElement !== null) {
+        console.debug("Initializing OpenSeadragon");
+        const controller = new OpenSeadragonController(
+          viewerElement,
+          (viewer) => {
+            if (containerResizedHandler !== undefined) {
+              viewer.addHandler("resize", (event) => {
+                containerResizedHandler({
+                  width: event.newContainerSize.x,
+                  height: event.newContainerSize.y,
+                });
+              });
+            }
+            if (viewportChangedHandler !== undefined) {
+              viewer.addHandler("viewport-change", () => {
+                viewportChangedHandler(viewer.viewport.getBounds(true));
+              });
+            }
+            setViewerState({
+              canvas: viewer.canvas,
+              initialViewport: viewer.viewport.getBounds(true),
+            });
+          },
+        );
+        controllerRef.current = controller;
       }
-    };
-  }, []);
+      // React 19 added cleanup functions for ref callbacks
+      return () => {
+        const controller = controllerRef.current;
+        if (controller !== null) {
+          console.debug("Destroying OpenSeadragon");
+          controller.destroy();
+          controllerRef.current = null;
+        }
+      };
+    },
+    [containerResizedHandler, viewportChangedHandler],
+  );
 
-  // set OpenSeadragon viewer options
   useEffect(() => {
-    if (controllerRef.current !== null) {
-      controllerRef.current.setViewerOptions(viewerOptions);
+    console.debug("Setting OpenSeadragon viewer options");
+    const controller = controllerRef.current;
+    if (controller !== null) {
+      controller.setViewerOptions(viewerOptions);
     }
   }, [viewerOptions]);
 
-  // configure OpenSeadragon animation handlers
   useEffect(() => {
-    if (controllerRef.current !== null) {
-      controllerRef.current.configureAnimationHandlers(
+    console.debug("Configuring OpenSeadragon animation handlers");
+    const controller = controllerRef.current;
+    if (controller !== null) {
+      controller.configureAnimationHandlers(
         viewerAnimationStartOptions,
         viewerAnimationFinishOptions,
       );
     }
   }, [viewerAnimationStartOptions, viewerAnimationFinishOptions]);
 
-  // synchronize OpenSeadragon viewer upon layer/image/labels changes
   useEffect(() => {
+    console.debug("Synchronizing OpenSeadragon viewer");
+    const controller = controllerRef.current;
     const abortController = new AbortController();
-    if (controllerRef.current !== null) {
-      controllerRef.current
+    if (controller !== null) {
+      controller
         .synchronize(layerMap, imageMap, labelsMap, loadImage, loadLabels, {
           signal: abortController.signal,
         })
-        .catch((reason) => {
-          if (!abortController.signal.aborted) {
-            console.error(reason);
-          }
-        });
+        .then(
+          () => {
+            if (!abortController.signal.aborted) {
+              console.debug("OpenSeadragon viewer synchronized");
+            }
+          },
+          (reason) => {
+            if (!abortController.signal.aborted) {
+              console.error(reason);
+            }
+          },
+        );
     }
     return () => {
-      abortController.abort("OpenSeadragon cleanup");
+      abortController.abort();
     };
   }, [
     layerMap,
@@ -102,5 +138,5 @@ export default function useOpenSeadragon() {
     loadLabels,
   ]);
 
-  return { ref, viewerCanvas, containerSize, viewportBounds };
+  return { viewerElementRef, viewerState };
 }
