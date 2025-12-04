@@ -157,12 +157,12 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
     if (!response.ok) {
       if (quiet) {
         console.warn(
-          `Failed to load project from ${url}: ${response.statusText}`,
+          `Failed to load project from ${url}: ${response.status} ${response.statusText}`,
         );
         return;
       } else {
         throw new Error(
-          `Failed to load project from ${url}: ${response.statusText}`,
+          `Failed to load project from ${url}: ${response.status} ${response.statusText}`,
         );
       }
     }
