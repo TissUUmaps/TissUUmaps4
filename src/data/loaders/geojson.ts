@@ -44,7 +44,6 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     const geo = await this._loadGeoJSON({ signal });
     signal?.throwIfAborted();
     const multipolygons = this._parseGeoJSONToMultiPolygons(geo);
-    signal?.throwIfAborted();
     return new GeoJSONShapesData(multipolygons);
   }
 
@@ -59,16 +58,19 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
       const file = await fh.getFile();
       signal?.throwIfAborted();
       const text = await file.text();
+      signal?.throwIfAborted();
       return JSON.parse(text) as GeoJSON.GeoJSON; // TODO: Validate
     }
     if (this.dataSource.url !== undefined) {
       const resp = await fetch(this.dataSource.url, { signal });
+      signal?.throwIfAborted();
       if (!resp.ok) {
         throw new Error(
           `Failed to fetch GeoJSON: ${resp.status} ${resp.statusText}`,
         );
       }
       const text = await resp.text();
+      signal?.throwIfAborted();
       return JSON.parse(text) as GeoJSON.GeoJSON; // TODO: Validate
     }
     if (this.dataSource.path !== undefined) {
