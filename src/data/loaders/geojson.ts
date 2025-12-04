@@ -1,4 +1,4 @@
-import type * as GeoJSON from "geojson";
+import * as GeoJSON from "geojson";
 
 import {
   ShapesDataSource,
