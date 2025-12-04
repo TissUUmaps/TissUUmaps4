@@ -10,6 +10,7 @@ export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
   plugins: [react(), tailwindcss(), nodePolyfills(), viteSingleFile()],
   test: {
+    include: ["src/**/*.test.{js,jsx,ts,tsx}"],
     globals: true, // https://testing-library.com/docs/react-testing-library/setup#auto-cleanup-in-vitest
     environment: "jsdom",
   },
