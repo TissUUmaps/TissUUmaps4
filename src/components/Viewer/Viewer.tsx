@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { Rect } from "../../types";
 import useOpenSeadragon from "./useOpenSeadragon";
@@ -6,7 +6,7 @@ import useWebGL from "./useWebGL";
 
 export default function Viewer() {
   const glRef = useRef<ReturnType<typeof useWebGL> | null>(null);
-  const osContainerResizedHandler = useCallback(
+  const resizeGLCanvas = useCallback(
     (newContainerSize: { width: number; height: number }) => {
       const gl = glRef.current;
       if (gl !== null) {
@@ -15,16 +15,19 @@ export default function Viewer() {
     },
     [],
   );
-  const osViewportChangedHandler = useCallback((newViewport: Rect) => {
+  const setGLViewport = useCallback((newViewport: Rect) => {
     const gl = glRef.current;
     if (gl !== null) {
       gl.setViewport(newViewport);
     }
   }, []);
   const { viewerElementRef, viewerState } = useOpenSeadragon({
-    containerResizedHandler: osContainerResizedHandler,
-    viewportChangedHandler: osViewportChangedHandler,
+    containerResizedHandler: resizeGLCanvas,
+    viewportChangedHandler: setGLViewport,
   });
-  glRef.current = useWebGL(viewerState.canvas, viewerState.initialViewport);
+  const gl = useWebGL(viewerState.canvas, viewerState.initialViewport);
+  useEffect(() => {
+    glRef.current = gl;
+  }, [gl]);
   return <div ref={viewerElementRef} className="size-full bg-white" />;
 }
