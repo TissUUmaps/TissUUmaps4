@@ -43,7 +43,8 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     signal?.throwIfAborted();
     const geo = await this._loadGeoJSON({ signal });
     signal?.throwIfAborted();
-    const multipolygons = this._parseGeoJSONToMultiPolygons(geo);
+    const multipolygons =
+      GeoJSONShapesDataLoader._parseGeoJSONToMultiPolygons(geo);
     return new GeoJSONShapesData(multipolygons);
   }
 
@@ -79,27 +80,31 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     throw new Error("A URL or workspace path is required to load data.");
   }
 
-  private _parseGeoJSONToMultiPolygons(obj: GeoJSON.GeoJSON): MultiPolygon[] {
+  private static _parseGeoJSONToMultiPolygons(
+    obj: GeoJSON.GeoJSON,
+  ): MultiPolygon[] {
     switch (obj.type) {
       case "FeatureCollection":
         // Collect the MultiPolygons of every feature and flatten them.
         return obj.features.flatMap((f) =>
-          this._geometryToMultiPolygons(f?.geometry ?? null),
+          GeoJSONShapesDataLoader._geometryToMultiPolygons(f?.geometry ?? null),
         );
 
       case "Feature":
-        return this._geometryToMultiPolygons(obj.geometry);
+        return GeoJSONShapesDataLoader._geometryToMultiPolygons(obj.geometry);
 
       case "Polygon":
       case "MultiPolygon":
-        return this._geometryToMultiPolygons(obj as GeoJSON.Geometry);
+        return GeoJSONShapesDataLoader._geometryToMultiPolygons(
+          obj as GeoJSON.Geometry,
+        );
 
       default:
         return [];
     }
   }
 
-  private _geometryToMultiPolygons(
+  private static _geometryToMultiPolygons(
     geometry: GeoJSON.Geometry | null,
   ): MultiPolygon[] {
     if (!geometry) return [];
@@ -108,7 +113,11 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
       case "Polygon":
         return [
           {
-            polygons: [this._coordinatesToPolygon(geometry.coordinates)],
+            polygons: [
+              GeoJSONShapesDataLoader._coordinatesToPolygon(
+                geometry.coordinates,
+              ),
+            ],
           },
         ];
 
@@ -116,7 +125,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
         return [
           {
             polygons: geometry.coordinates.map((coords) =>
-              this._coordinatesToPolygon(coords),
+              GeoJSONShapesDataLoader._coordinatesToPolygon(coords),
             ),
           },
         ];
@@ -127,7 +136,9 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
   }
 
   /** Convert a GeoJSON polygon coordinate array to a Polygon shape. */
-  private _coordinatesToPolygon(coordinates: GeoJSON.Position[][]): Polygon {
+  private static _coordinatesToPolygon(
+    coordinates: GeoJSON.Position[][],
+  ): Polygon {
     if (!Array.isArray(coordinates) || coordinates.length === 0) {
       return { shell: [], holes: [] };
     }
@@ -136,16 +147,16 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     const [shellCoordinates, ...holeCoordinates] = coordinates;
 
     const shell: Path = (shellCoordinates ?? []).map((pos) =>
-      this._toVertex(pos),
+      GeoJSONShapesDataLoader._toVertex(pos),
     );
     const holes: Path[] = holeCoordinates.map((ring) =>
-      ring.map((pos) => this._toVertex(pos)),
+      ring.map((pos) => GeoJSONShapesDataLoader._toVertex(pos)),
     );
 
     return { shell, holes };
   }
 
-  private _toVertex([x, y]: GeoJSON.Position): Vertex {
+  private static _toVertex([x, y]: GeoJSON.Position): Vertex {
     return {
       x: Number(x),
       y: Number(y),
