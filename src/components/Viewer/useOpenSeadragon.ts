@@ -15,7 +15,7 @@ export default function useOpenSeadragon(options: {
 
   const controllerRef = useRef<OpenSeadragonController | null>(null);
   const [viewerState, setViewerState] = useState<{
-    canvas: HTMLElement | null;
+    canvas: Element | null;
     initialViewport: Rect | null;
   }>({ canvas: null, initialViewport: null });
 

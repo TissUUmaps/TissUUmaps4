@@ -478,18 +478,3 @@ type TiledImageState = {
   deferredDelete?: boolean;
   tiledImage?: OpenSeadragon.TiledImage;
 };
-
-// add missing OpenSeadragon types
-declare module "openseadragon" {
-  interface Viewer {
-    immediateRender: boolean | undefined;
-  }
-
-  interface TiledImage {
-    immediateRender: boolean | undefined;
-  }
-
-  interface Options {
-    drawer?: "canvas" | "webgl";
-  }
-}

@@ -1,20 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { useBoundStore } from "../../store/boundStore";
 import { Rect } from "../../types";
 import WebGLController from "./controllers/WebGLController";
 
-const syncPointsPassCycle = Number.MAX_SAFE_INTEGER - 1;
-const syncShapesPassCycle = Number.MAX_SAFE_INTEGER - 1;
-
 export default function useWebGL(
-  parent: HTMLElement | null,
+  parent: Element | null,
   initialViewport: Rect | null,
 ) {
   const controllerRef = useRef<WebGLController | null>(null);
   const [initialized, setInitialized] = useState<boolean>(false);
-  const [syncPointsPass, setSyncPointsPass] = useState<number>(0);
-  const [syncShapesPass, setSyncShapesPass] = useState<number>(0);
+  const [syncPoints, dispatchSyncPoints] = useReducer((x) => x + 1, 0);
+  const [syncShapes, dispatchSyncShapes] = useReducer((x) => x + 1, 0);
 
   const layerMap = useBoundStore((state) => state.layerMap);
   const pointsMap = useBoundStore((state) => state.pointsMap);
@@ -78,10 +75,10 @@ export default function useWebGL(
       const { syncPoints, syncShapes } = controller.setDrawOptions(drawOptions);
       controller.draw();
       if (syncPoints) {
-        setSyncPointsPass((p) => (p + 1) % syncPointsPassCycle);
+        dispatchSyncPoints();
       }
       if (syncShapes) {
-        setSyncShapesPass((p) => (p + 1) % syncShapesPassCycle);
+        dispatchSyncShapes();
       }
     }
   }, [drawOptions]);
@@ -122,7 +119,7 @@ export default function useWebGL(
       abortController.abort();
     };
   }, [
-    syncPointsPass,
+    syncPoints,
     layerMap,
     pointsMap,
     markerMaps,
@@ -170,7 +167,7 @@ export default function useWebGL(
       abortController.abort();
     };
   }, [
-    syncShapesPass,
+    syncShapes,
     layerMap,
     shapesMap,
     colorMaps,
