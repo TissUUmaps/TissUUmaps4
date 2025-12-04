@@ -67,4 +67,6 @@ Overview:
 
 ### Decision
 
-TODO
+A compute shader approach is used, primarily for memory usage reasons and to support advanced (thickness, corners) outlines without additional memory overhead. The impact on GPU shading performance was considered acceptable based on prior experience with TissUUmaps 3.
+
+CPU load was considered irrelevant for the decision following some benchmarking of the [earcut](https://github.com/mapbox/earcut) library/algorithm on cell labels data from prior TissUUmaps 3 deployments. Similarly, data transfer, blending and anti-aliasing were not considered deciding factors.
