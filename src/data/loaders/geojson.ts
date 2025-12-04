@@ -49,7 +49,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
 
   private async _loadGeoJSON(
     options: { signal?: AbortSignal } = {},
-  ): Promise<GeoJSON.GeoJSON> {
+  ): Promise<GeoJSON.GeoJSON<GeoJSON.Geometry | null>> {
     const { signal } = options;
     signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
@@ -59,7 +59,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
       signal?.throwIfAborted();
       const text = await file.text();
       signal?.throwIfAborted();
-      return JSON.parse(text) as GeoJSON.GeoJSON; // TODO Validate GeoJSON
+      return JSON.parse(text) as GeoJSON.GeoJSON<GeoJSON.Geometry | null>; // TODO Validate GeoJSON
     }
     if (this.dataSource.url !== undefined) {
       const response = await fetch(this.dataSource.url, { signal });
@@ -71,7 +71,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
       }
       const text = await response.text();
       signal?.throwIfAborted();
-      return JSON.parse(text) as GeoJSON.GeoJSON; // TODO Validate GeoJSON
+      return JSON.parse(text) as GeoJSON.GeoJSON<GeoJSON.Geometry | null>; // TODO Validate GeoJSON
     }
     if (this.dataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
@@ -79,14 +79,23 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     throw new Error("A URL or workspace path is required to load data.");
   }
 
-  private static _parseGeoJSON(geo: GeoJSON.GeoJSON): MultiPolygon[] {
+  private static _parseGeoJSON(
+    geo: GeoJSON.GeoJSON<GeoJSON.Geometry | null>,
+  ): MultiPolygon[] {
+    if (geo === null) {
+      return [];
+    }
     switch (geo.type) {
       case "FeatureCollection":
         return geo.features.flatMap((feature) =>
-          GeoJSONShapesDataLoader._parseGeoJSONGeometry(feature.geometry),
+          feature.geometry !== null
+            ? GeoJSONShapesDataLoader._parseGeoJSONGeometry(feature.geometry)
+            : [],
         );
       case "Feature":
-        return GeoJSONShapesDataLoader._parseGeoJSONGeometry(geo.geometry);
+        return geo.geometry !== null
+          ? GeoJSONShapesDataLoader._parseGeoJSONGeometry(geo.geometry)
+          : [];
       case "GeometryCollection":
         return geo.geometries.flatMap((geometry) =>
           GeoJSONShapesDataLoader._parseGeoJSONGeometry(geometry),
@@ -128,7 +137,10 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     rings: GeoJSON.Position[][],
   ): Polygon {
     const [shellRing, ...holeRings] = rings;
-    const shell = shellRing!.map((pos) => ({ x: pos[0]!, y: pos[1]! }));
+    if (shellRing === undefined) {
+      throw new Error("Polygon has no outer ring.");
+    }
+    const shell = shellRing.map((pos) => ({ x: pos[0]!, y: pos[1]! }));
     const holes = holeRings.map((holeRing) =>
       holeRing.map((pos) => ({ x: pos[0]!, y: pos[1]! })),
     );
