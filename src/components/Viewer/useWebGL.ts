@@ -10,8 +10,8 @@ export default function useWebGL(
 ) {
   const controllerRef = useRef<WebGLController | null>(null);
   const [initialized, setInitialized] = useState<boolean>(false);
-  const [syncPoints, dispatchSyncPoints] = useReducer((x) => x + 1, 0);
-  const [syncShapes, dispatchSyncShapes] = useReducer((x) => x + 1, 0);
+  const [syncPoints, dispatchSyncPoints] = useReducer((pass) => pass + 1, 0);
+  const [syncShapes, dispatchSyncShapes] = useReducer((pass) => pass + 1, 0);
 
   const layerMap = useBoundStore((state) => state.layerMap);
   const pointsMap = useBoundStore((state) => state.pointsMap);

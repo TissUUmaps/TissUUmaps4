@@ -110,7 +110,7 @@ export type SimilarityTransform = {
 /** OpenSeadragon viewer options */
 export type ViewerOptions = Omit<OpenSeadragon.Options, "element"> & {
   // References to DOM elements cannot be handled by Zustand!
-  navigatorElement?: undefined;
+  navigatorElement?: never;
   toolbar?: string;
   zoomInButton?: string;
   zoomOutButton?: string;
@@ -120,7 +120,7 @@ export type ViewerOptions = Omit<OpenSeadragon.Options, "element"> & {
   rotateRightButton?: string;
   previousButton?: string;
   nextButton?: string;
-  referenceStripElement?: undefined;
+  referenceStripElement?: never;
 };
 
 /** WebGL draw options */
