@@ -5,7 +5,7 @@ import {
   ShapesDataSourceKeysWithDefaults,
   completeShapesDataSource,
 } from "../../model/shapes";
-import { MultiPolygon, Path, Polygon, Vertex } from "../../types";
+import { MultiPolygon, Polygon } from "../../types";
 import { ShapesData } from "../shapes";
 import { AbstractShapesDataLoader } from "./base";
 
@@ -43,9 +43,8 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     signal?.throwIfAborted();
     const geo = await this._loadGeoJSON({ signal });
     signal?.throwIfAborted();
-    const multipolygons =
-      GeoJSONShapesDataLoader._parseGeoJSONToMultiPolygons(geo);
-    return new GeoJSONShapesData(multipolygons);
+    const multiPolygons = GeoJSONShapesDataLoader._parseGeoJSON(geo);
+    return new GeoJSONShapesData(multiPolygons);
   }
 
   private async _loadGeoJSON(
@@ -60,19 +59,19 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
       signal?.throwIfAborted();
       const text = await file.text();
       signal?.throwIfAborted();
-      return JSON.parse(text) as GeoJSON.GeoJSON; // TODO: Validate
+      return JSON.parse(text) as GeoJSON.GeoJSON; // TODO Validate GeoJSON
     }
     if (this.dataSource.url !== undefined) {
-      const resp = await fetch(this.dataSource.url, { signal });
+      const response = await fetch(this.dataSource.url, { signal });
       signal?.throwIfAborted();
-      if (!resp.ok) {
+      if (!response.ok) {
         throw new Error(
-          `Failed to fetch GeoJSON: ${resp.status} ${resp.statusText}`,
+          `Failed to load GeoJSON from ${this.dataSource.url}: ${response.status} ${response.statusText}`,
         );
       }
-      const text = await resp.text();
+      const text = await response.text();
       signal?.throwIfAborted();
-      return JSON.parse(text) as GeoJSON.GeoJSON; // TODO: Validate
+      return JSON.parse(text) as GeoJSON.GeoJSON; // TODO Validate GeoJSON
     }
     if (this.dataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
@@ -80,87 +79,60 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     throw new Error("A URL or workspace path is required to load data.");
   }
 
-  private static _parseGeoJSONToMultiPolygons(
-    obj: GeoJSON.GeoJSON,
-  ): MultiPolygon[] {
-    switch (obj.type) {
+  private static _parseGeoJSON(geo: GeoJSON.GeoJSON): MultiPolygon[] {
+    switch (geo.type) {
       case "FeatureCollection":
-        // Collect the MultiPolygons of every feature and flatten them.
-        return obj.features.flatMap((f) =>
-          GeoJSONShapesDataLoader._geometryToMultiPolygons(f?.geometry ?? null),
+        return geo.features.flatMap((feature) =>
+          GeoJSONShapesDataLoader._parseGeoJSONGeometry(feature.geometry),
         );
-
       case "Feature":
-        return GeoJSONShapesDataLoader._geometryToMultiPolygons(obj.geometry);
-
-      case "Polygon":
-      case "MultiPolygon":
-        return GeoJSONShapesDataLoader._geometryToMultiPolygons(
-          obj as GeoJSON.Geometry,
+        return GeoJSONShapesDataLoader._parseGeoJSONGeometry(geo.geometry);
+      case "GeometryCollection":
+        return geo.geometries.flatMap((geometry) =>
+          GeoJSONShapesDataLoader._parseGeoJSONGeometry(geometry),
         );
-
       default:
-        return [];
+        return GeoJSONShapesDataLoader._parseGeoJSONGeometry(geo);
     }
   }
 
-  private static _geometryToMultiPolygons(
-    geometry: GeoJSON.Geometry | null,
+  private static _parseGeoJSONGeometry(
+    geometry: GeoJSON.Geometry,
   ): MultiPolygon[] {
-    if (!geometry) return [];
-
     switch (geometry.type) {
       case "Polygon":
         return [
           {
             polygons: [
-              GeoJSONShapesDataLoader._coordinatesToPolygon(
+              GeoJSONShapesDataLoader._parseGeoJSONGeometryRings(
                 geometry.coordinates,
               ),
             ],
           },
         ];
-
       case "MultiPolygon":
         return [
           {
-            polygons: geometry.coordinates.map((coords) =>
-              GeoJSONShapesDataLoader._coordinatesToPolygon(coords),
+            polygons: geometry.coordinates.map((rings) =>
+              GeoJSONShapesDataLoader._parseGeoJSONGeometryRings(rings),
             ),
           },
         ];
-
       default:
-        return []; // TODO: Handle other geometry types.
+        console.warn(`Unsupported GeoJSON geometry type: ${geometry.type}`);
+        return [];
     }
   }
 
-  /** Convert a GeoJSON polygon coordinate array to a Polygon shape. */
-  private static _coordinatesToPolygon(
-    coordinates: GeoJSON.Position[][],
+  private static _parseGeoJSONGeometryRings(
+    rings: GeoJSON.Position[][],
   ): Polygon {
-    if (!Array.isArray(coordinates) || coordinates.length === 0) {
-      return { shell: [], holes: [] };
-    }
-
-    // First ring is the exterior shell; the rest (if any) are holes.
-    const [shellCoordinates, ...holeCoordinates] = coordinates;
-
-    const shell: Path = (shellCoordinates ?? []).map((pos) =>
-      GeoJSONShapesDataLoader._toVertex(pos),
+    const [shellRing, ...holeRings] = rings;
+    const shell = shellRing!.map((pos) => ({ x: pos[0]!, y: pos[1]! }));
+    const holes = holeRings.map((holeRing) =>
+      holeRing.map((pos) => ({ x: pos[0]!, y: pos[1]! })),
     );
-    const holes: Path[] = holeCoordinates.map((ring) =>
-      ring.map((pos) => GeoJSONShapesDataLoader._toVertex(pos)),
-    );
-
     return { shell, holes };
-  }
-
-  private static _toVertex([x, y]: GeoJSON.Position): Vertex {
-    return {
-      x: Number(x),
-      y: Number(y),
-    };
   }
 }
 
