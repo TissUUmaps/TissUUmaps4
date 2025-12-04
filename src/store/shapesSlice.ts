@@ -14,11 +14,11 @@ export type ShapesSliceActions = {
   addShapes: (shapes: CompleteShapes, index?: number) => void;
   loadShapes: (
     shapes: CompleteShapes,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
   loadShapesByID: (
     shapesId: string,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
   unloadShapes: (shapes: CompleteShapes) => void;
   unloadShapesByID: (shapesId: string) => void;
@@ -47,7 +47,8 @@ export const createShapesSlice: BoundStoreStateCreator<ShapesSlice> = (
       );
     });
   },
-  loadShapes: async (shapes, signal) => {
+  loadShapes: async (shapes, options: { signal?: AbortSignal } = {}) => {
+    const { signal } = options;
     signal?.throwIfAborted();
     const state = get();
     let shapesData = state.shapesDataCache.get(shapes.dataSource);
@@ -67,21 +68,22 @@ export const createShapesSlice: BoundStoreStateCreator<ShapesSlice> = (
       state.projectDir,
       state.loadTableByID,
     );
-    shapesData = await shapesDataLoader.loadShapes(signal);
+    shapesData = await shapesDataLoader.loadShapes({ signal });
     signal?.throwIfAborted();
     set((draft) => {
       draft.shapesDataCache.set(shapes.dataSource, shapesData);
     });
     return shapesData;
   },
-  loadShapesByID: async (shapesId, signal) => {
+  loadShapesByID: async (shapesId, options: { signal?: AbortSignal } = {}) => {
+    const { signal } = options;
     signal?.throwIfAborted();
     const state = get();
     const shapes = state.shapesMap.get(shapesId);
     if (shapes === undefined) {
       throw new Error(`Shapes with ID ${shapesId} not found.`);
     }
-    return state.loadShapes(shapes, signal);
+    return state.loadShapes(shapes, { signal });
   },
   unloadShapes: (shapes) => {
     const state = get();

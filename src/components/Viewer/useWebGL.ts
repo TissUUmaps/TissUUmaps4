@@ -1,20 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useBoundStore } from "../../store/boundStore";
 import { Rect } from "../../types";
 import WebGLController from "./controllers/WebGLController";
 
-const drawPassCycle = Number.MAX_SAFE_INTEGER - 1;
+const syncPointsPassCycle = Number.MAX_SAFE_INTEGER - 1;
+const syncShapesPassCycle = Number.MAX_SAFE_INTEGER - 1;
 
 export default function useWebGL(
   parent: HTMLElement | null,
-  containerSize: { width: number; height: number } | null,
-  viewportBounds: Rect | null,
+  initialViewport: Rect | null,
 ) {
   const controllerRef = useRef<WebGLController | null>(null);
-
   const [initialized, setInitialized] = useState<boolean>(false);
-  const [drawPass, setDrawPass] = useState<number>(0);
+  const [syncPointsPass, setSyncPointsPass] = useState<number>(0);
+  const [syncShapesPass, setSyncShapesPass] = useState<number>(0);
 
   const layerMap = useBoundStore((state) => state.layerMap);
   const pointsMap = useBoundStore((state) => state.pointsMap);
@@ -36,37 +36,62 @@ export default function useWebGL(
   const loadShapes = useBoundStore((state) => state.loadShapes);
   const loadTableByID = useBoundStore((state) => state.loadTableByID);
 
-  // initialize the WebGL controller
   useEffect(() => {
-    if (parent !== null) {
-      const canvas = parent.appendChild(WebGLController.createCanvas());
-      controllerRef.current = new WebGLController(canvas);
-      controllerRef.current.initialize().then(() => {
-        setInitialized(true);
-      }, console.error);
+    const abortController = new AbortController();
+    if (parent !== null && initialViewport !== null) {
+      console.debug("Initializing WebGL");
+      const canvas = WebGLController.createCanvas();
+      parent.appendChild(canvas);
+      const controller = new WebGLController(canvas, initialViewport);
+      controllerRef.current = controller;
+      controller.initialize({ signal: abortController.signal }).then(
+        (controller) => {
+          if (!abortController.signal.aborted) {
+            setInitialized(true);
+            console.debug("WebGL initialized");
+            controller.draw();
+          }
+        },
+        (reason) => {
+          if (!abortController.signal.aborted) {
+            console.error("Failed to initialize WebGL:", reason);
+          }
+        },
+      );
     }
     return () => {
-      if (controllerRef.current !== null) {
-        controllerRef.current.destroy();
+      abortController.abort();
+      const controller = controllerRef.current;
+      if (controller !== null) {
+        console.debug("Destroying WebGL");
+        controller.destroy();
         controllerRef.current = null;
       }
       setInitialized(false);
     };
-  }, [parent]);
+  }, [parent, initialViewport]);
 
-  // set draw options and redraw upon configuration changes
   useEffect(() => {
-    if (controllerRef.current !== null) {
-      controllerRef.current.setDrawOptions(drawOptions);
-      setDrawPass((p) => (p + 1) % drawPassCycle);
+    console.debug("Setting draw options");
+    const controller = controllerRef.current;
+    if (controller !== null) {
+      const { syncPoints, syncShapes } = controller.setDrawOptions(drawOptions);
+      controller.draw();
+      if (syncPoints) {
+        setSyncPointsPass((p) => (p + 1) % syncPointsPassCycle);
+      }
+      if (syncShapes) {
+        setSyncShapesPass((p) => (p + 1) % syncShapesPassCycle);
+      }
     }
   }, [drawOptions]);
 
-  // synchronize points and redraw upon layer/points changes
   useEffect(() => {
     const abortController = new AbortController();
-    if (controllerRef.current !== null) {
-      controllerRef.current
+    const controller = controllerRef.current;
+    if (controller !== null) {
+      console.debug("Synchronizing points");
+      controller
         .synchronizePoints(
           layerMap,
           pointsMap,
@@ -77,23 +102,27 @@ export default function useWebGL(
           opacityMaps,
           loadPoints,
           loadTableByID,
-          abortController.signal,
+          { signal: abortController.signal },
         )
         .then(
           () => {
-            setDrawPass((p) => (p + 1) % drawPassCycle);
+            if (!abortController.signal.aborted) {
+              console.debug("Points synchronized");
+              controller.draw();
+            }
           },
           (reason) => {
             if (!abortController.signal.aborted) {
-              console.error(reason);
+              console.error("Failed to synchronize points:", reason);
             }
           },
         );
     }
     return () => {
-      abortController.abort("WebGL cleanup");
+      abortController.abort();
     };
   }, [
+    syncPointsPass,
     layerMap,
     pointsMap,
     markerMaps,
@@ -107,61 +136,79 @@ export default function useWebGL(
     loadTableByID,
   ]);
 
-  // synchronize shapes and redraw upon layer/shapes changes
   useEffect(() => {
     const abortController = new AbortController();
-    if (controllerRef.current !== null) {
-      controllerRef.current
+    const controller = controllerRef.current;
+    if (controller !== null) {
+      console.debug("Synchronizing shapes");
+      controller
         .synchronizeShapes(
           layerMap,
           shapesMap,
+          colorMaps,
+          visibilityMaps,
+          opacityMaps,
           loadShapes,
           loadTableByID,
-          abortController.signal,
+          { signal: abortController.signal },
         )
         .then(
           () => {
-            setDrawPass((p) => (p + 1) % drawPassCycle);
+            if (!abortController.signal.aborted) {
+              console.debug("Shapes synchronized");
+              controller.draw();
+            }
           },
           (reason) => {
             if (!abortController.signal.aborted) {
-              console.error(reason);
+              console.error("Failed to synchronize shapes:", reason);
             }
           },
         );
     }
     return () => {
-      abortController.abort("WebGL cleanup");
+      abortController.abort();
     };
   }, [
+    syncShapesPass,
     layerMap,
     shapesMap,
+    colorMaps,
+    visibilityMaps,
+    opacityMaps,
     projectDir,
     shapesDataLoaderFactories,
     loadShapes,
     loadTableByID,
   ]);
 
-  // resize and redraw upon canvas size changes
-  useEffect(() => {
-    if (
-      initialized &&
-      containerSize !== null &&
-      controllerRef.current !== null
-    ) {
-      controllerRef.current.resize(containerSize.width, containerSize.height);
-      setDrawPass((p) => (p + 1) % drawPassCycle);
-    }
-  }, [initialized, containerSize]);
+  const resizeCanvas = useCallback(
+    (size: { width: number; height: number }) => {
+      const controller = controllerRef.current;
+      if (initialized && controller !== null) {
+        console.debug("Resizing WebGL canvas to", size);
+        const canvasResized = controller.resizeCanvas(size);
+        if (canvasResized) {
+          controller.draw();
+        }
+      }
+    },
+    [initialized],
+  );
 
-  // redraw when necessary (incl. viewport changes)
-  useEffect(() => {
-    if (
-      initialized &&
-      viewportBounds !== null &&
-      controllerRef.current !== null
-    ) {
-      controllerRef.current.draw(viewportBounds);
-    }
-  }, [drawPass, initialized, viewportBounds]);
+  const setViewport = useCallback(
+    (viewport: Rect) => {
+      const controller = controllerRef.current;
+      if (initialized && viewport !== null && controller !== null) {
+        console.debug("Setting WebGL viewport to", viewport);
+        const viewportChanged = controller.setViewport(viewport);
+        if (viewportChanged) {
+          controller.draw();
+        }
+      }
+    },
+    [initialized],
+  );
+
+  return { resizeCanvas, setViewport };
 }

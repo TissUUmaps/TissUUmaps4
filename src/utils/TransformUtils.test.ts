@@ -78,11 +78,26 @@ describe("TransformUtils", () => {
 
     it("should apply rotation around a center", () => {
       const tf: Partial<SimilarityTransform> = { rotation: 90, scale: 1 };
-      const center = { x: 2, y: 3 };
-      const m = TransformUtils.toMatrix(tf, center);
+      const m = TransformUtils.toMatrix(tf, { rotationCenter: { x: 2, y: 3 } });
       // After rotating 90 degrees around (2,3), the translation part should not be zero
       expect(m[6]).not.toBe(0);
       expect(m[7]).not.toBe(0);
+    });
+  });
+
+  describe("asGLMat3x2", () => {
+    it("should convert mat3 to mat3x2 format", () => {
+      const m = mat3.fromValues(1, 2, 0, 3, 4, 0, 5, 6, 1);
+      const mat3x2 = TransformUtils.asGLMat3x2(m);
+      expect(mat3x2).toEqual([1, 2, 3, 4, 5, 6]);
+    });
+  });
+
+  describe("transposeAsGLMat2x4", () => {
+    it("should transpose mat3 and convert to mat2x4 format", () => {
+      const m = mat3.fromValues(1, 2, 0, 3, 4, 0, 5, 6, 1);
+      const mat2x4 = TransformUtils.transposeAsGLMat2x4(m);
+      expect(mat2x4).toEqual([1, 3, 5, 0, 2, 4, 6, 0]);
     });
   });
 });

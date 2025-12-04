@@ -42,12 +42,14 @@ export type ProjectSliceActions = {
   // TODO actions for maps, drawOptions, viewerOptions
   loadProject: (
     project: CompleteProject,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal },
   ) => Promise<void>;
   loadProjectFromURL: (
     url: string,
-    signal?: AbortSignal,
-    quiet?: boolean,
+    options: {
+      signal?: AbortSignal;
+      quiet?: boolean;
+    },
   ) => Promise<void>;
   clearProject: () => void;
 };
@@ -62,7 +64,8 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
       draft.projectName = name;
     });
   },
-  loadProject: async (project, signal) => {
+  loadProject: async (project, options: { signal?: AbortSignal } = {}) => {
+    const { signal } = options;
     signal?.throwIfAborted();
     const state = get();
     state.clearImages();
@@ -98,7 +101,7 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
       for (const rawTable of project.tables) {
         const table = completeTable(rawTable);
         state.addTable(table);
-        loadDataObjectPromises.push(state.loadTable(table, signal));
+        loadDataObjectPromises.push(state.loadTable(table, { signal }));
       }
     }
     await Promise.all(loadDataObjectPromises);
@@ -109,34 +112,44 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
       for (const rawImage of project.images) {
         const image = completeImage(rawImage);
         state.addImage(image);
-        loadRenderedDataObjectPromises.push(state.loadImage(image, signal));
+        loadRenderedDataObjectPromises.push(state.loadImage(image, { signal }));
       }
     }
     if (project.labels !== undefined) {
       for (const rawLabels of project.labels) {
         const labels = completeLabels(rawLabels);
         state.addLabels(labels);
-        loadRenderedDataObjectPromises.push(state.loadLabels(labels, signal));
+        loadRenderedDataObjectPromises.push(
+          state.loadLabels(labels, { signal }),
+        );
       }
     }
     if (project.points !== undefined) {
       for (const rawPoints of project.points) {
         const points = completePoints(rawPoints);
         state.addPoints(points);
-        loadRenderedDataObjectPromises.push(state.loadPoints(points, signal));
+        loadRenderedDataObjectPromises.push(
+          state.loadPoints(points, { signal }),
+        );
       }
     }
     if (project.shapes !== undefined) {
       for (const rawShapes of project.shapes) {
         const shapes = completeShapes(rawShapes);
         state.addShapes(shapes);
-        loadRenderedDataObjectPromises.push(state.loadShapes(shapes, signal));
+        loadRenderedDataObjectPromises.push(
+          state.loadShapes(shapes, { signal }),
+        );
       }
     }
     await Promise.all(loadRenderedDataObjectPromises);
     signal?.throwIfAborted();
   },
-  loadProjectFromURL: async (url, signal, quiet) => {
+  loadProjectFromURL: async (
+    url,
+    options: { signal?: AbortSignal; quiet?: boolean } = {},
+  ) => {
+    const { signal, quiet = false } = options;
     signal?.throwIfAborted();
     const state = get();
     const response = await fetch(url);
@@ -144,19 +157,19 @@ export const createProjectSlice: BoundStoreStateCreator<ProjectSlice> = (
     if (!response.ok) {
       if (quiet) {
         console.warn(
-          `Failed to load project from ${url}: ${response.statusText}`,
+          `Failed to load project from ${url}: ${response.status} ${response.statusText}`,
         );
         return;
       } else {
         throw new Error(
-          `Failed to load project from ${url}: ${response.statusText}`,
+          `Failed to load project from ${url}: ${response.status} ${response.statusText}`,
         );
       }
     }
     const rawProject = (await response.json()) as Project; // TODO validate project
     signal?.throwIfAborted();
     const project = completeProject(rawProject);
-    await state.loadProject(project);
+    await state.loadProject(project, { signal });
     signal?.throwIfAborted();
   },
   clearProject: () => {

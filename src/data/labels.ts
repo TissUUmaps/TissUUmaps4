@@ -3,6 +3,20 @@ import { UintArray } from "../types";
 import { Data, DataLoader } from "./base";
 import { TableData } from "./table";
 
+export type LabelsDataLoaderFactory = (
+  dataSource: LabelsDataSource,
+  projectDir: FileSystemDirectoryHandle | null,
+  loadTableByID: (
+    tableId: string,
+    options: { signal?: AbortSignal },
+  ) => Promise<TableData>,
+) => LabelsDataLoader<LabelsData>;
+
+export interface LabelsDataLoader<TLabelsData extends LabelsData>
+  extends DataLoader {
+  loadLabels(options: { signal?: AbortSignal }): Promise<TLabelsData>;
+}
+
 export interface LabelsData extends Data {
   getWidth(level?: number): number;
   getHeight(level?: number): number;
@@ -14,17 +28,6 @@ export interface LabelsData extends Data {
     level: number,
     x: number,
     y: number,
-    signal?: AbortSignal,
+    options: { signal?: AbortSignal },
   ): Promise<UintArray>;
 }
-
-export interface LabelsDataLoader<TLabelsData extends LabelsData>
-  extends DataLoader {
-  loadLabels(signal?: AbortSignal): Promise<TLabelsData>;
-}
-
-export type LabelsDataLoaderFactory = (
-  dataSource: LabelsDataSource,
-  projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (tableId: string, signal?: AbortSignal) => Promise<TableData>,
-) => LabelsDataLoader<LabelsData>;

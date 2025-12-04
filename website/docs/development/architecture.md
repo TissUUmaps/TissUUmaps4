@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Architecture
 
-This project follows best practices for React projects (components, state management, hooks, etc).
+This project follows best practices for React projects (components, state management, hooks, options object pattern, etc).
 
 User and developer documentation is hosted in the same repository ("monorepo").
 
@@ -20,7 +20,7 @@ Data loaders (e.g. a specific table data loader) offer functionality for loading
 
 ## State management
 
-A single Zustand store is being used, which is distributed over several slices. The main slices are `appSlice` (transient application state), `projectSlice` (persistent project information) and data type-specific slices that hold project data and also get persisted.
+A single Zustand store is being used, which is distributed over several slices. The main slices are `appSlice` (transient application state), `projectSlice` (persistent project information) and data type-specific slices that hold project data (transient in-memory data and persistent metadata).
 
 ## React components
 

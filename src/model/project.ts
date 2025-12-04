@@ -18,6 +18,8 @@ import { Table } from "./table";
  */
 export const DEFAULT_PROJECT_DRAW_OPTIONS: DrawOptions = {
   pointSizeFactor: 1,
+  shapeStrokeWidth: 1,
+  numShapesScanlines: 512,
 };
 
 /**
