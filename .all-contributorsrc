@@ -1,0 +1,36 @@
+{
+  "projectName": "TissUUmaps4",
+  "projectOwner": "TissUUmaps",
+  "files": [
+    "CONTRIBUTORS.md"
+  ],
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributorsPerLine": 7,
+  "contributors": [
+    {
+      "login": "jwindhager",
+      "name": "Jonas Windhager",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7105759?v=4",
+      "profile": "https://www.windhager.io",
+      "contributions": [
+        "code",
+        "doc",
+        "ideas",
+        "projectManagement",
+        "review"
+      ]
+    },
+    {
+      "login": "cavenel",
+      "name": "Christophe Avenel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6164758?v=4",
+      "profile": "https://github.com/cavenel",
+      "contributions": [
+        "code",
+        "ideas",
+        "review"
+      ]
+    }
+  ]
+}
