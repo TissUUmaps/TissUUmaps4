@@ -36,6 +36,7 @@
     "dev": "pnpm --filter tissuumaps dev",
     "docs": "pnpm --filter docs start",
     "build": "pnpm --filter !docs -r build && pnpm run --filter docs build",
+    "build:nodocs": "pnpm --filter !docs -r build",
     "clean": "rm -rf node_modules && pnpm -r clean"
   },
   "lint-staged": {

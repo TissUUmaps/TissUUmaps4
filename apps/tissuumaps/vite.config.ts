@@ -2,16 +2,12 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
-import { type Plugin, type PluginOption, defineConfig } from "vite";
+import { defineConfig } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss() as Plugin[],
-    viteSingleFile() as PluginOption,
-  ],
+  plugins: [react(), tailwindcss(), viteSingleFile()],
   build: {
     chunkSizeWarningLimit: 2048,
   },

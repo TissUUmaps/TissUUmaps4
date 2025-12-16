@@ -7,7 +7,13 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  globalIgnores(["**/coverage", "**/dist", "**/node_modules"]),
+  globalIgnores([
+    "**/.docusaurus",
+    "**/build",
+    "**/coverage",
+    "**/dist",
+    "**/node_modules",
+  ]),
   //eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,

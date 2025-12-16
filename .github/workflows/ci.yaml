@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Build project
-        run: pnpm run build
+        run: pnpm run build:nodocs
       - name: Run linter
         run: pnpm run lint
       - name: Check formatting
