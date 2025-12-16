@@ -29,16 +29,11 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install
-      - name: Build documentation
-        working-directory: ./app/docs
-        run: pnpm run build
-        env:
-          DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
-      - name: Build TissUUmaps
-        working-directory: ./app/tissuumaps
+      - name: Build project
         run: pnpm run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
+          DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
       - name: Prepare deployment
         run: |
           mkdir ./_site
