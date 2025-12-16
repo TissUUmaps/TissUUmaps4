@@ -35,7 +35,7 @@
     "test": "vitest run --coverage",
     "dev": "pnpm --filter tissuumaps dev",
     "docs": "pnpm --filter docs start",
-    "build": "pnpm -r build",
+    "build": "pnpm --filter !docs -r build && pnpm run --filter docs build",
     "clean": "rm -rf node_modules && pnpm -r clean"
   },
   "lint-staged": {
