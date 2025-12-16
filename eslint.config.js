@@ -1,42 +1,44 @@
-import eslint from "@eslint/js";
-import eslintConfigPrettier from "eslint-config-prettier";
-import react from "eslint-plugin-react";
+import js from "@eslint/js";
+import eslintConfigPrettier from "eslint-config-prettier/flat";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
+import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-export default tseslint.config(
-  { ignores: ["coverage", "dist"] },
+export default defineConfig([
+  globalIgnores(["**/coverage", "**/dist", "**/node_modules"]),
+  //eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  js.configs.recommended,
+  tseslint.configs.recommendedTypeChecked,
+  // General
   {
-    extends: [
-      eslint.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
-    ],
-    files: ["src/**/*.{js,jsx,ts,tsx}"],
+    files: ["**/*.{js,jsx,ts,tsx}"],
     languageOptions: {
-      ecmaVersion: 2020,
+      ecmaVersion: 2022,
+      //eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       globals: globals.browser,
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ["*.js", "*.ts"],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    settings: { react: { version: "detect" } },
-    plugins: {
-      react,
-      "react-hooks": reactHooks,
-      "react-refresh": reactRefresh,
-    },
-    rules: {
-      ...react.configs.recommended.rules,
-      ...react.configs["jsx-runtime"].rules,
-      ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true },
-      ],
-    },
+  },
+  // React
+  {
+    files: [
+      "apps/tissuumaps/**/*.{js,jsx,ts,tsx}",
+      "packages/@tissuumaps-viewer/**/*.{js,jsx,ts,tsx}",
+    ],
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    extends: [
+      //eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      reactHooks.configs.flat.recommended,
+      //eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      reactRefresh.configs.vite,
+    ],
   },
   eslintConfigPrettier,
-);
+]);

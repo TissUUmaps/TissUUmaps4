@@ -11,22 +11,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
       - name: Set up Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: lts/*
-          cache: npm
+          cache: pnpm
       - name: Install dependencies
-        run: npm ci
-      - name: Run ESLint
-        run: npm run lint
-      - name: Run Prettier
-        run: npm run format:check
-      - name: Run Vitest with coverage
-        run: npm run test:coverage
+        run: pnpm install
+      - name: Run linter
+        run: pnpm run lint
+      - name: Check formatting
+        run: pnpm run format:check
+      - name: Run tests
+        run: pnpm run test
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage
           path: ./coverage

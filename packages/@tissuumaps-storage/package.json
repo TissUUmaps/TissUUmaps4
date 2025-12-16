@@ -1,0 +1,61 @@
+{
+  "name": "@tissuumaps/storage",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/tissuumaps-storage.d.ts",
+  "module": "./dist/tissuumaps-storage.js",
+  "main": "./dist/tissuumaps-storage.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/tissuumaps-storage.d.ts",
+      "import": "./dist/tissuumaps-storage.js",
+      "require": "./dist/tissuumaps-storage.cjs"
+    },
+    "./csv": {
+      "types": "./dist/tissuumaps-storage-csv.d.ts",
+      "import": "./dist/tissuumaps-storage-csv.js",
+      "require": "./dist/tissuumaps-storage-csv.cjs"
+    },
+    "./geojson": {
+      "types": "./dist/tissuumaps-storage-geojson.d.ts",
+      "import": "./dist/tissuumaps-storage-geojson.js",
+      "require": "./dist/tissuumaps-storage-geojson.cjs"
+    },
+    "./openseadragon": {
+      "types": "./dist/tissuumaps-storage-openseadragon.d.ts",
+      "import": "./dist/tissuumaps-storage-openseadragon.js",
+      "require": "./dist/tissuumaps-storage-openseadragon.cjs"
+    },
+    "./parquet": {
+      "types": "./dist/tissuumaps-storage-parquet.d.ts",
+      "import": "./dist/tissuumaps-storage-parquet.js",
+      "require": "./dist/tissuumaps-storage-parquet.cjs"
+    },
+    "./table": {
+      "types": "./dist/tissuumaps-storage-table.d.ts",
+      "import": "./dist/tissuumaps-storage-table.js",
+      "require": "./dist/tissuumaps-storage-table.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@tissuumaps/core": "workspace:*",
+    "geojson": "^0.5.0",
+    "hyparquet": "^1.23.0",
+    "hyparquet-compressors": "^1.1.1",
+    "papaparse": "^5.5.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/papaparse": "^5.5.1"
+  }
+}
