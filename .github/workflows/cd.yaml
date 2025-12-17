@@ -37,8 +37,8 @@ jobs:
       - name: Prepare deployment
         run: |
           mkdir ./_site
-          mv ./app/docs/build ./_site/docs
-          mv ./app/tissuumaps/dist ./_site/live
+          mv ./apps/docs/build ./_site/docs
+          mv ./apps/tissuumaps/dist ./_site/live
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
