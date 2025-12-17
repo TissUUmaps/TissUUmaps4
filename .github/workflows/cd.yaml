@@ -30,9 +30,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Build project
-        run: |
-          pnpm run build:nodocs
-          pnpm run --filter docs build
+        run: pnpm run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/

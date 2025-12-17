@@ -14,7 +14,6 @@ export default defineConfig([
     "**/dist",
     "**/node_modules",
   ]),
-  //eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
   // General
@@ -22,13 +21,31 @@ export default defineConfig([
     files: ["**/*.{js,jsx,ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2022,
-      //eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       globals: globals.browser,
       parserOptions: {
         projectService: {
-          allowDefaultProject: ["*.js", "*.ts"],
+          defaultProject: "tsconfig.node.json",
+          allowDefaultProject: [
+            "eslint.config.js",
+            "vitest.config.ts",
+            "apps/*/vite.config.ts",
+            "packages/*/vite.config.ts",
+          ],
         },
         tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  // Tests
+  {
+    files: [
+      "apps/*/src/**/*.test.{js,jsx,ts,tsx}",
+      "packages/*/src/**/*.test.{js,jsx,ts,tsx}",
+    ],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ["apps/*/tsconfig.test.json", "packages/*/tsconfig.test.json"],
       },
     },
   },
@@ -38,13 +55,7 @@ export default defineConfig([
       "apps/tissuumaps/**/*.{js,jsx,ts,tsx}",
       "packages/@tissuumaps-viewer/**/*.{js,jsx,ts,tsx}",
     ],
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    extends: [
-      //eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      reactHooks.configs.flat.recommended,
-      //eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      reactRefresh.configs.vite,
-    ],
+    extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
   },
   eslintConfigPrettier,
 ]);

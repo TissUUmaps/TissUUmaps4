@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "files": [
-    "dist"
+    "./dist"
   ],
   "types": "./dist/tissuumaps-plugins.d.ts",
   "module": "./dist/tissuumaps-plugins.js",

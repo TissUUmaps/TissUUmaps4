@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [
     dts({
       bundleTypes: true,
-      tsconfigPath: resolve(__dirname, "tsconfig.lib.json"),
+      tsconfigPath: resolve(__dirname, "tsconfig.json"),
     }),
     react(),
   ],
@@ -33,13 +33,14 @@ export default defineConfig({
   },
   test: {
     include: [
-      "src/**/*.test.js",
-      "src/**/*.test.jsx",
-      "src/**/*.test.ts",
-      "src/**/*.test.tsx",
+      "./src/**/*.test.js",
+      "./src/**/*.test.jsx",
+      "./src/**/*.test.ts",
+      "./src/**/*.test.tsx",
     ],
     typecheck: {
       tsconfig: resolve(__dirname, "tsconfig.test.json"),
     },
+    environment: "jsdom",
   },
 });

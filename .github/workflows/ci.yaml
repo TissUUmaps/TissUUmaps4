@@ -21,10 +21,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install
-      - name: Build project
-        run: |
-          pnpm run build:nodocs
-          pnpm run --filter docs build
+      - name: Build packages
+        run: pnpm run build:packages
       - name: Run linter
         run: pnpm run lint
       - name: Check formatting

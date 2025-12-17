@@ -21,5 +21,6 @@ export default defineConfig({
     typecheck: {
       tsconfig: resolve(__dirname, "tsconfig.test.json"),
     },
+    environment: "jsdom",
   },
 });

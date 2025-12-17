@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 onlyBuiltDependencies:
+  - canvas
   - core-js
   - core-js-pure
   - esbuild

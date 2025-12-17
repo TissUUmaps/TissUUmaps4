@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     dts({
       bundleTypes: true,
-      tsconfigPath: resolve(__dirname, "tsconfig.lib.json"),
+      tsconfigPath: resolve(__dirname, "tsconfig.json"),
     }),
   ],
   build: {
@@ -32,7 +32,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["src/**/*.test.js", "src/**/*.test.ts"],
+    include: ["./src/**/*.test.js", "./src/**/*.test.ts"],
     typecheck: {
       tsconfig: resolve(__dirname, "tsconfig.test.json"),
     },

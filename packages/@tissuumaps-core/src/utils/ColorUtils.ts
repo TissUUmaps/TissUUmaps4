@@ -1,4 +1,9 @@
-import { type Color } from "../types";
+// circular dependency:
+// - /types re-exports /types/valueMap
+// - /types/valueMap imports /palettes
+// - /palettes imports ColorUtils
+// --> import directly from /types/color to break the cycle
+import { type Color } from "../types/color";
 
 export class ColorUtils {
   static parseColorPalette(
