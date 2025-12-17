@@ -1,0 +1,32 @@
+{
+  "name": "@tissuumaps/core",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "./dist"
+  ],
+  "types": "./dist/tissuumaps-core.d.ts",
+  "module": "./dist/tissuumaps-core.js",
+  "main": "./dist/tissuumaps-core.umd.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/tissuumaps-core.d.ts",
+      "import": "./dist/tissuumaps-core.js",
+      "require": "./dist/tissuumaps-core.umd.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "clean": "rm -rf dist node_modules"
+  },
+  "devDependencies": {
+    "@types/openseadragon": "^5.0.1"
+  },
+  "dependencies": {
+    "gl-matrix": "^3.4.4",
+    "openseadragon": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

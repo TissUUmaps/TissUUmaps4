@@ -1,0 +1,38 @@
+{
+  "name": "@tissuumaps/viewer",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "./dist"
+  ],
+  "types": "./dist/tissuumaps-viewer.d.ts",
+  "module": "./dist/tissuumaps-viewer.js",
+  "main": "./dist/tissuumaps-viewer.umd.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/tissuumaps-viewer.d.ts",
+      "import": "./dist/tissuumaps-viewer.js",
+      "require": "./dist/tissuumaps-viewer.umd.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@tissuumaps/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

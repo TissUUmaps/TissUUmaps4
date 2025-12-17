@@ -1,0 +1,33 @@
+{
+  "name": "@tissuumaps/plugins",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "./dist"
+  ],
+  "types": "./dist/tissuumaps-plugins.d.ts",
+  "module": "./dist/tissuumaps-plugins.js",
+  "main": "./dist/tissuumaps-plugins.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/tissuumaps-plugins.d.ts",
+      "import": "./dist/tissuumaps-plugins.js",
+      "require": "./dist/tissuumaps-plugins.cjs"
+    },
+    "./spatialdata": {
+      "types": "./dist/tissuumaps-plugins-spatialdata.d.ts",
+      "import": "./dist/tissuumaps-plugins-spatialdata.js",
+      "require": "./dist/tissuumaps-plugins-spatialdata.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@tissuumaps/core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,42 +1,61 @@
-import eslint from "@eslint/js";
-import eslintConfigPrettier from "eslint-config-prettier";
-import react from "eslint-plugin-react";
+import js from "@eslint/js";
+import eslintConfigPrettier from "eslint-config-prettier/flat";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
+import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-export default tseslint.config(
-  { ignores: ["coverage", "dist"] },
+export default defineConfig([
+  globalIgnores([
+    "**/.docusaurus",
+    "**/build",
+    "**/coverage",
+    "**/dist",
+    "**/node_modules",
+  ]),
+  js.configs.recommended,
+  tseslint.configs.recommendedTypeChecked,
+  // General
   {
-    extends: [
-      eslint.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
-    ],
-    files: ["src/**/*.{js,jsx,ts,tsx}"],
+    files: ["**/*.{js,jsx,ts,tsx}"],
     languageOptions: {
-      ecmaVersion: 2020,
+      ecmaVersion: 2022,
       globals: globals.browser,
       parserOptions: {
-        projectService: true,
+        projectService: {
+          defaultProject: "tsconfig.node.json",
+          allowDefaultProject: [
+            "eslint.config.js",
+            "vitest.config.ts",
+            "apps/*/vite.config.ts",
+            "packages/*/vite.config.ts",
+          ],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    settings: { react: { version: "detect" } },
-    plugins: {
-      react,
-      "react-hooks": reactHooks,
-      "react-refresh": reactRefresh,
-    },
-    rules: {
-      ...react.configs.recommended.rules,
-      ...react.configs["jsx-runtime"].rules,
-      ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true },
-      ],
+  },
+  // Tests
+  {
+    files: [
+      "apps/*/src/**/*.test.{js,jsx,ts,tsx}",
+      "packages/*/src/**/*.test.{js,jsx,ts,tsx}",
+    ],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ["apps/*/tsconfig.test.json", "packages/*/tsconfig.test.json"],
+      },
     },
   },
+  // React
+  {
+    files: [
+      "apps/tissuumaps/**/*.{js,jsx,ts,tsx}",
+      "packages/@tissuumaps-viewer/**/*.{js,jsx,ts,tsx}",
+    ],
+    extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
+  },
   eslintConfigPrettier,
-);
+]);

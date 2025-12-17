@@ -1,0 +1,81 @@
+{
+  "name": "Breast",
+  "layers": [
+    {
+      "id": "breast",
+      "name": "Breast"
+    }
+  ],
+  "images": [
+    {
+      "id": "he",
+      "name": "H&E",
+      "dataSource": {
+        "type": "openseadragon",
+        "url": "https://user.it.uu.se/~chrav452/TissUUmaps4/data/breast/TissueA_HnE.dzi"
+      },
+      "layerConfigs": [
+        {
+          "layerId": "breast"
+        }
+      ]
+    },
+    {
+      "id": "dapi",
+      "name": "DAPI",
+      "dataSource": {
+        "type": "openseadragon",
+        "url": "https://user.it.uu.se/~chrav452/TissUUmaps4/data/breast/TissueA_Fluo.dzi"
+      },
+      "layerConfigs": [
+        {
+          "layerId": "breast"
+        }
+      ]
+    }
+  ],
+  "points": [
+    {
+      "id": "iss",
+      "name": "ISS",
+      "dataSource": {
+        "type": "table",
+        "tableId": "iss",
+        "dimensionColumns": ["global_X_pos", "global_Y_pos"]
+      },
+      "layerConfigs": [
+        {
+          "layerId": "breast",
+          "x": "global_X_pos",
+          "y": "global_Y_pos"
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "id": "iss",
+      "name": "ISS",
+      "dataSource": {
+        "type": "csv",
+        "url": "https://user.it.uu.se/~chrav452/TissUUmaps4/data/breast/TissueA.csv",
+        "loadColumns": ["global_X_pos", "global_Y_pos"]
+      }
+    }
+  ],
+  "shapes": [
+    {
+      "id": "masks",
+      "name": "Masks",
+      "dataSource": {
+        "type": "geojson",
+        "url": "https://user.it.uu.se/~chrav452/TissUUmaps4/data/breast/TissueA_regions.json"
+      },
+      "layerConfigs": [
+        {
+          "layerId": "breast"
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
 .all-contributorsrc
-website/.docusaurus
-website/build
-website/docs/api
+apps/docs/.docusaurus/
+apps/docs/build/
+apps/docs/docs/api/
