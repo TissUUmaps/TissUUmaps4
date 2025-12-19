@@ -1,6 +1,7 @@
-import { projectDefaults } from "../model";
-import { type DrawOptions, type Rect } from "../types";
-import { WebGLUtils } from "../utils";
+import { projectDefaults } from "../model/project";
+import { type Rect } from "../types/geometry";
+import { type DrawOptions } from "../types/options";
+import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLPointsController } from "./WebGLPointsController";
 import { WebGLShapesController } from "./WebGLShapesController";
 

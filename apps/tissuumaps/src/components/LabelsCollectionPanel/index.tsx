@@ -1,5 +1,5 @@
 import { useTissUUmaps } from "../../store";
-import { MapUtils } from "../../utils";
+import { MapUtils } from "../../utils/MapUtils";
 import { LabelsPanel } from "./LabelsPanel";
 
 export function LabelsCollectionPanel() {

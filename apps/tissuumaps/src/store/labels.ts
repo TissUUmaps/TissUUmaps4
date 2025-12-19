@@ -4,8 +4,8 @@ import {
   type LabelsDataSource,
 } from "@tissuumaps/core";
 
-import { MapUtils } from "../utils";
-import { type TissUUmapsStateCreator } from "./store";
+import { MapUtils } from "../utils/MapUtils";
+import { type TissUUmapsStateCreator } from "./index";
 
 export type LabelsSlice = LabelsSliceState & LabelsSliceActions;
 

@@ -14,11 +14,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        "tissuumaps-plugins": resolve(__dirname, "src/index.ts"),
-        "tissuumaps-plugins-spatialdata": resolve(
-          __dirname,
-          "src/spatialdata.ts",
-        ),
+        index: resolve(__dirname, "src/index.ts"),
+        spatialdata: resolve(__dirname, "src/spatialdata/index.ts"),
       },
       formats: ["es", "cjs"],
     },

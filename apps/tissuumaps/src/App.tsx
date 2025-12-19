@@ -10,14 +10,12 @@ import { useShallow } from "zustand/shallow";
 import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
 
 import "./App.css";
-import {
-  ImageCollectionPanel,
-  LabelsCollectionPanel,
-  PointsCollectionPanel,
-  ProjectPanel,
-  ShapesCollectionPanel,
-  TableCollectionPanel,
-} from "./components";
+import { ImageCollectionPanel } from "./components/ImageCollectionPanel";
+import { LabelsCollectionPanel } from "./components/LabelsCollectionPanel";
+import { PointsCollectionPanel } from "./components/PointsCollectionPanel";
+import { ProjectPanel } from "./components/ProjectPanel";
+import { ShapesCollectionPanel } from "./components/ShapesCollectionPanel";
+import { TableCollectionPanel } from "./components/TableCollectionPanel";
 import { useTissUUmaps } from "./store";
 
 declare global {

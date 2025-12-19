@@ -1,17 +1,14 @@
 import { mat3 } from "gl-matrix";
 import OpenSeadragon from "openseadragon";
 
-import {
-  type Image,
-  type ImageLayerConfig,
-  type Labels,
-  type LabelsLayerConfig,
-  type Layer,
-  projectDefaults,
-} from "../model";
-import { type ImageData, type LabelsData } from "../storage";
-import { type ViewerOptions } from "../types";
-import { TransformUtils } from "../utils";
+import { type Image, type ImageLayerConfig } from "../model/image";
+import { type Labels, type LabelsLayerConfig } from "../model/labels";
+import { type Layer } from "../model/layer";
+import { projectDefaults } from "../model/project";
+import { type ImageData } from "../storage/image";
+import { type LabelsData } from "../storage/labels";
+import { type ViewerOptions } from "../types/options";
+import { TransformUtils } from "../utils/TransformUtils";
 
 export class OpenSeadragonController {
   private readonly _viewer: OpenSeadragon.Viewer;

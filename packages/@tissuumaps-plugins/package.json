@@ -5,19 +5,19 @@
   "files": [
     "./dist"
   ],
-  "types": "./dist/tissuumaps-plugins.d.ts",
-  "module": "./dist/tissuumaps-plugins.js",
-  "main": "./dist/tissuumaps-plugins.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "exports": {
     ".": {
-      "types": "./dist/tissuumaps-plugins.d.ts",
-      "import": "./dist/tissuumaps-plugins.js",
-      "require": "./dist/tissuumaps-plugins.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
-    "./spatialdata": {
-      "types": "./dist/tissuumaps-plugins-spatialdata.d.ts",
-      "import": "./dist/tissuumaps-plugins-spatialdata.js",
-      "require": "./dist/tissuumaps-plugins-spatialdata.cjs"
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "require": "./dist/*.cjs"
     }
   },
   "scripts": {

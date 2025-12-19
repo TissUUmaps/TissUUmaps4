@@ -1,12 +1,8 @@
 import { colorPalettes } from "../palettes";
-import {
-  type Color,
-  type ColorMap,
-  Marker,
-  type TableGroupsRef,
-  type TableValuesRef,
-  type ValueMap,
-} from "../types";
+import { type Color } from "../types/color";
+import { Marker } from "../types/marker";
+import { type TableGroupsRef, type TableValuesRef } from "../types/tableRef";
+import { type ColorMap, type ValueMap } from "../types/valueMap";
 import {
   type DataSource,
   type LayerConfig,

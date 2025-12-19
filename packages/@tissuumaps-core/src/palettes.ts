@@ -1,7 +1,8 @@
 import batlow from "./assets/palettes/batlow.txt?raw";
 import batlowS from "./assets/palettes/batlowS.txt?raw";
-import { type Color, Marker } from "./types";
-import { ColorUtils } from "./utils";
+import { type Color } from "./types/color";
+import { Marker } from "./types/marker";
+import { ColorUtils } from "./utils/ColorUtils";
 
 export const markerPalette = [
   Marker.Cross,

@@ -1,49 +1,10 @@
 import * as GeoJSON from "geojson";
 
-import {
-  type MultiPolygon,
-  type Polygon,
-  type RawShapesDataSource,
-  type ShapesData,
-  type ShapesDataSource,
-  createShapesDataSource,
-} from "@tissuumaps/core";
+import { type MultiPolygon, type Polygon } from "@tissuumaps/core";
 
-import { AbstractShapesDataLoader } from "./base";
-
-export const geoJSONShapesDataSourceType = "geojson";
-export const geoJSONShapesDataSourceDefaults = {};
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawGeoJSONShapesDataSource extends RawShapesDataSource<
-  typeof geoJSONShapesDataSourceType
-> {}
-
-export type GeoJSONShapesDataSource = ShapesDataSource<
-  typeof geoJSONShapesDataSourceType
-> &
-  Required<
-    Pick<
-      RawGeoJSONShapesDataSource,
-      keyof typeof geoJSONShapesDataSourceDefaults
-    >
-  > &
-  Omit<
-    RawGeoJSONShapesDataSource,
-    | keyof ShapesDataSource<typeof geoJSONShapesDataSourceType>
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof geoJSONShapesDataSourceDefaults
-  >;
-
-export function createGeoJSONShapesDataSource(
-  rawGeoJSONShapesDataSource: RawGeoJSONShapesDataSource,
-): GeoJSONShapesDataSource {
-  return {
-    ...createShapesDataSource(rawGeoJSONShapesDataSource),
-    ...geoJSONShapesDataSourceDefaults,
-    ...rawGeoJSONShapesDataSource,
-  };
-}
+import { AbstractShapesDataLoader } from "../base";
+import { GeoJSONShapesData } from "./GeoJSONShapesData";
+import { type GeoJSONShapesDataSource } from "./GeoJSONShapesDataSource";
 
 export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
   GeoJSONShapesDataSource,
@@ -159,25 +120,4 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     );
     return { shell, holes };
   }
-}
-
-export class GeoJSONShapesData implements ShapesData {
-  private readonly _multiPolygons: MultiPolygon[];
-
-  constructor(multiPolygons: MultiPolygon[]) {
-    this._multiPolygons = multiPolygons;
-  }
-
-  getLength(): number {
-    return this._multiPolygons.length;
-  }
-
-  loadMultiPolygons({ signal }: { signal?: AbortSignal } = {}): Promise<
-    MultiPolygon[]
-  > {
-    signal?.throwIfAborted();
-    return Promise.resolve(this._multiPolygons);
-  }
-
-  destroy(): void {}
 }

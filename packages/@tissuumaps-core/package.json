@@ -5,14 +5,14 @@
   "files": [
     "./dist"
   ],
-  "types": "./dist/tissuumaps-core.d.ts",
-  "module": "./dist/tissuumaps-core.js",
-  "main": "./dist/tissuumaps-core.umd.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "main": "./dist/index.umd.cjs",
   "exports": {
     ".": {
-      "types": "./dist/tissuumaps-core.d.ts",
-      "import": "./dist/tissuumaps-core.js",
-      "require": "./dist/tissuumaps-core.umd.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.umd.cjs"
     }
   },
   "scripts": {

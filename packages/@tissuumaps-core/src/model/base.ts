@@ -1,4 +1,5 @@
-import { type SimilarityTransform, type TableValuesRef } from "../types";
+import { type TableValuesRef } from "../types/tableRef";
+import { type SimilarityTransform } from "../types/transform";
 
 export const modelDefaults = {};
 

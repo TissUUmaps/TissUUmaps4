@@ -1,15 +1,14 @@
 import { colorPalettes, markerPalette } from "../palettes";
-import { type TableData } from "../storage";
+import { type TableData } from "../storage/table";
+import { type Color } from "../types/color";
+import { Marker } from "../types/marker";
 import {
-  type Color,
-  type ColorMap,
-  Marker,
   type TableGroupsRef,
   type TableValuesRef,
-  type ValueMap,
   isTableGroupsRef,
   isTableValuesRef,
-} from "../types";
+} from "../types/tableRef";
+import { type ColorMap, type ValueMap } from "../types/valueMap";
 import { ColorUtils } from "./ColorUtils";
 import { HashUtils } from "./HashUtils";
 import { MathUtils } from "./MathUtils";
