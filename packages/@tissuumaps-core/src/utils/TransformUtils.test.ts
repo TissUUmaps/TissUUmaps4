@@ -1,7 +1,7 @@
 import { mat3 } from "gl-matrix";
 import { describe, expect, it } from "vitest";
 
-import { type SimilarityTransform } from "../types";
+import { type SimilarityTransform } from "../types/transform";
 import { TransformUtils } from "./TransformUtils";
 
 describe("TransformUtils", () => {
