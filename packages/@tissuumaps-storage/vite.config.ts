@@ -14,15 +14,12 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        "tissuumaps-storage": resolve(__dirname, "src/index.ts"),
-        "tissuumaps-storage-csv": resolve(__dirname, "src/csv.ts"),
-        "tissuumaps-storage-geojson": resolve(__dirname, "src/geojson.ts"),
-        "tissuumaps-storage-openseadragon": resolve(
-          __dirname,
-          "src/openseadragon.ts",
-        ),
-        "tissuumaps-storage-parquet": resolve(__dirname, "src/parquet.ts"),
-        "tissuumaps-storage-table": resolve(__dirname, "src/table.ts"),
+        index: resolve(__dirname, "src/index.ts"),
+        csv: resolve(__dirname, "src/csv/index.ts"),
+        geojson: resolve(__dirname, "src/geojson/index.ts"),
+        openseadragon: resolve(__dirname, "src/openseadragon/index.ts"),
+        parquet: resolve(__dirname, "src/parquet/index.ts"),
+        table: resolve(__dirname, "src/table/index.ts"),
       },
       formats: ["es", "cjs"],
     },

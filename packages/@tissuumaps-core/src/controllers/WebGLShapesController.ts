@@ -1,22 +1,21 @@
 import shapesFragmentShader from "../assets/shaders/shapes.frag?raw";
 import shapesVertexShader from "../assets/shaders/shapes.vert?raw";
+import { type Layer } from "../model/layer";
+import { projectDefaults } from "../model/project";
 import {
-  type Layer,
   type Shapes,
   type ShapesLayerConfig,
-  projectDefaults,
   shapesDefaults,
-} from "../model";
-import { type ShapesData, type TableData } from "../storage";
-import {
-  type ColorMap,
-  type DrawOptions,
-  type MultiPolygon,
-  type Rect,
-  type ValueMap,
-  type Vertex,
-} from "../types";
-import { LoadUtils, MathUtils, TransformUtils, WebGLUtils } from "../utils";
+} from "../model/shapes";
+import { type ShapesData } from "../storage/shapes";
+import { type TableData } from "../storage/table";
+import { type MultiPolygon, type Rect, type Vertex } from "../types/geometry";
+import { type DrawOptions } from "../types/options";
+import { type ColorMap, type ValueMap } from "../types/valueMap";
+import { LoadUtils } from "../utils/LoadUtils";
+import { MathUtils } from "../utils/MathUtils";
+import { TransformUtils } from "../utils/TransformUtils";
+import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLControllerBase } from "./WebGLControllerBase";
 
 export class WebGLShapesController extends WebGLControllerBase {

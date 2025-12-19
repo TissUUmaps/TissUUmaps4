@@ -1,4 +1,4 @@
-import { type SimilarityTransform } from "../types";
+import { type SimilarityTransform } from "../types/transform";
 import { type Model, type RawModel, createModel } from "./base";
 
 export const layerDefaults = {

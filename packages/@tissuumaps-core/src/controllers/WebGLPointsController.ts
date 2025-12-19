@@ -1,21 +1,21 @@
 import markersUrl from "../assets/markers/markers.png?url";
 import pointsFragmentShader from "../assets/shaders/points.frag?raw";
 import pointsVertexShader from "../assets/shaders/points.vert?raw";
+import { type Layer } from "../model/layer";
 import {
-  type Layer,
   type Points,
   type PointsLayerConfig,
   pointsDefaults,
-} from "../model";
-import { type PointsData, type TableData } from "../storage";
-import {
-  type ColorMap,
-  type DrawOptions,
-  Marker,
-  type Rect,
-  type ValueMap,
-} from "../types";
-import { LoadUtils, TransformUtils, WebGLUtils } from "../utils";
+} from "../model/points";
+import { type PointsData } from "../storage/points";
+import { type TableData } from "../storage/table";
+import { type Rect } from "../types/geometry";
+import { Marker } from "../types/marker";
+import { type DrawOptions } from "../types/options";
+import { type ColorMap, type ValueMap } from "../types/valueMap";
+import { LoadUtils } from "../utils/LoadUtils";
+import { TransformUtils } from "../utils/TransformUtils";
+import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLControllerBase } from "./WebGLControllerBase";
 
 export class WebGLPointsController extends WebGLControllerBase {

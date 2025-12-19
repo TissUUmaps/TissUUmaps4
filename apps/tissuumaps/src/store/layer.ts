@@ -1,7 +1,7 @@
 import { type Layer } from "@tissuumaps/core";
 
-import { MapUtils } from "../utils";
-import { type TissUUmapsStateCreator } from "./store";
+import { type TissUUmapsStateCreator } from ".";
+import { MapUtils } from "../utils/MapUtils";
 
 export type LayerSlice = LayerSliceState & LayerSliceActions;
 

@@ -15,7 +15,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
       formats: ["es", "umd"],
-      fileName: "tissuumaps-core",
+      fileName: "index",
       name: "TissUUmapsCore", // UMD global name
     },
   },

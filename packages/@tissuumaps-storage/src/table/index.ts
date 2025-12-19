@@ -6,7 +6,7 @@ import {
   createPointsDataSource,
 } from "@tissuumaps/core";
 
-import { AbstractPointsDataLoader } from "./base";
+import { AbstractPointsDataLoader } from "../base";
 
 // TODO TableShapesDataLoader
 

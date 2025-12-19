@@ -2,7 +2,8 @@ import { type HTMLProps, useCallback, useEffect, useRef } from "react";
 
 import { type Rect } from "@tissuumaps/core";
 
-import { useOpenSeadragon, useWebGL } from "../../hooks";
+import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
+import { useWebGL } from "../../hooks/useWebGL";
 
 export function Viewer(props: HTMLProps<HTMLDivElement>) {
   const glRef = useRef<ReturnType<typeof useWebGL> | null>(null);

@@ -10,7 +10,7 @@ import {
   projectDefaults,
 } from "@tissuumaps/core";
 
-import { type TissUUmapsStateCreator } from "./store";
+import { type TissUUmapsStateCreator } from ".";
 
 export type ProjectSlice = ProjectSliceState & ProjectSliceActions;
 

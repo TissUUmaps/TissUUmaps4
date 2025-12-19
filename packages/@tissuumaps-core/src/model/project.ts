@@ -1,10 +1,6 @@
-import {
-  type DrawOptions,
-  type Marker,
-  type NamedColorMap,
-  type NamedValueMap,
-  type ViewerOptions,
-} from "../types";
+import { type Marker } from "../types/marker";
+import { type DrawOptions, type ViewerOptions } from "../types/options";
+import { type NamedColorMap, type NamedValueMap } from "../types/valueMap";
 import { type Model, type RawModel, createModel } from "./base";
 import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";

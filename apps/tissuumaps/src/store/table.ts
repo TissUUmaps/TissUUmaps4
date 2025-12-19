@@ -4,8 +4,8 @@ import {
   type TableDataSource,
 } from "@tissuumaps/core";
 
-import { MapUtils } from "../utils";
-import { type TissUUmapsStateCreator } from "./store";
+import { type TissUUmapsStateCreator } from ".";
+import { MapUtils } from "../utils/MapUtils";
 
 export type TableSlice = TableSliceState & TableSliceActions;
 

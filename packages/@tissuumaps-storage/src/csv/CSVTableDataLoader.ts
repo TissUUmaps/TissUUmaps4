@@ -1,69 +1,10 @@
 import * as papaparse from "papaparse";
 
-import {
-  type MappableArrayLike,
-  type RawTableDataSource,
-  type TableData,
-  type TableDataSource,
-  type TypedArray,
-  createTableDataSource,
-} from "@tissuumaps/core";
+import { type TypedArray } from "@tissuumaps/core";
 
-import { AbstractTableDataLoader } from "./base";
-
-export const csvTableDataSourceType = "csv";
-export const csvTableDataSourceDefaults = {
-  chunkSize: 10000,
-  parseConfig: {
-    delimiter: ",",
-  },
-};
-
-export interface RawCSVTableDataSource extends RawTableDataSource<
-  typeof csvTableDataSourceType
-> {
-  columns?: string[];
-  loadColumns?: string[];
-  chunkSize?: number;
-  parseConfig?: Pick<
-    papaparse.ParseConfig,
-    | "delimiter"
-    | "newline"
-    | "quoteChar"
-    | "escapeChar"
-    | "preview"
-    | "comments"
-    | "fastMode"
-    | "skipFirstNLines"
-  > &
-    Pick<papaparse.ParseLocalConfig, "encoding"> &
-    Pick<
-      papaparse.ParseRemoteConfig,
-      "downloadRequestHeaders" | "downloadRequestBody" | "withCredentials"
-    >;
-}
-
-export type CSVTableDataSource = TableDataSource<
-  typeof csvTableDataSourceType
-> &
-  Required<
-    Pick<RawCSVTableDataSource, keyof typeof csvTableDataSourceDefaults>
-  > &
-  Omit<
-    RawCSVTableDataSource,
-    | keyof TableDataSource<typeof csvTableDataSourceType>
-    | keyof typeof csvTableDataSourceDefaults
-  >;
-
-export function createCSVTableDataSource(
-  rawCSVTableDataSource: RawCSVTableDataSource,
-): CSVTableDataSource {
-  return {
-    ...createTableDataSource(rawCSVTableDataSource),
-    ...csvTableDataSourceDefaults,
-    ...rawCSVTableDataSource,
-  };
-}
+import { AbstractTableDataLoader } from "../base";
+import { CSVTableData } from "./CSVTableData";
+import { type CSVTableDataSource } from "./CSVTableDataSource";
 
 export class CSVTableDataLoader extends AbstractTableDataLoader<
   CSVTableDataSource,
@@ -203,46 +144,4 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
     }
     throw new Error("A URL or workspace path is required to load data.");
   }
-}
-
-export class CSVTableData implements TableData {
-  private readonly _length: number;
-  private readonly _columns: string[];
-  private readonly _columnData: (string[] | TypedArray)[];
-
-  constructor(
-    length: number,
-    columns: string[],
-    columnData: (string[] | TypedArray)[],
-  ) {
-    this._length = length;
-    this._columns = columns;
-    this._columnData = columnData;
-  }
-
-  getLength(): number {
-    return this._length;
-  }
-
-  getColumns(): string[] {
-    return this._columns;
-  }
-
-  async loadColumn<T>(
-    column: string,
-    { signal }: { signal?: AbortSignal } = {},
-  ): Promise<MappableArrayLike<T>> {
-    signal?.throwIfAborted();
-    if (!this._columns.includes(column)) {
-      throw new Error(`Column "${column}" does not exist.`);
-    }
-    const columnIndex = this._columns.indexOf(column);
-    const columnData = await Promise.resolve(
-      this._columnData[columnIndex]! as unknown as MappableArrayLike<T>,
-    );
-    signal?.throwIfAborted();
-    return columnData;
-  }
-
-  destroy(): void {}
 }
