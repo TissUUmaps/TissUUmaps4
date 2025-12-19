@@ -2,7 +2,7 @@ import { type PointsData, type TableData } from "@tissuumaps/core";
 
 import { AbstractPointsDataLoader } from "../base";
 import { TablePointsData } from "./TablePointsData";
-import { type TablePointsDataSource } from "./index";
+import { type TablePointsDataSource } from "./TablePointsDataSource";
 
 export class TablePointsDataLoader extends AbstractPointsDataLoader<
   TablePointsDataSource,
