@@ -38,7 +38,7 @@ import {
   tablePointsDataSourceType,
 } from "@tissuumaps/storage";
 
-import { type TissUUmapsStateCreator } from ".";
+import { type TissUUmapsStateCreator } from "./index";
 
 export type AppSlice = AppSliceState & AppSliceActions;
 

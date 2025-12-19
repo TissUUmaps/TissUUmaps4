@@ -4,8 +4,8 @@ import {
   type ShapesDataSource,
 } from "@tissuumaps/core";
 
-import { type TissUUmapsStateCreator } from ".";
 import { MapUtils } from "../utils/MapUtils";
+import { type TissUUmapsStateCreator } from "./index";
 
 export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
 
