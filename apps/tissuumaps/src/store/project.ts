@@ -57,12 +57,7 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
   loadProject: async (project, { signal }: { signal?: AbortSignal } = {}) => {
     signal?.throwIfAborted();
     const state = get();
-    state.clearImages();
-    state.clearLabels();
-    state.clearPoints();
-    state.clearShapes();
-    state.clearTables();
-    state.clearLayers();
+    state.clearProject();
     set((draft) => {
       draft.projectName = project.name;
       draft.markerMaps = new Map(project.markerMaps?.map((m) => [m.id, m]));
@@ -85,7 +80,7 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
     const loadDataObjectPromises = [];
     for (const table of project.tables) {
       state.addTable(table);
-      loadDataObjectPromises.push(state.loadTable(table, { signal }));
+      loadDataObjectPromises.push(state.loadTable(table.id, { signal }));
     }
     await Promise.all(loadDataObjectPromises);
     signal?.throwIfAborted();
@@ -93,19 +88,27 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
     const loadRenderedDataObjectPromises = [];
     for (const image of project.images) {
       state.addImage(image);
-      loadRenderedDataObjectPromises.push(state.loadImage(image, { signal }));
+      loadRenderedDataObjectPromises.push(
+        state.loadImage(image.id, { signal }),
+      );
     }
     for (const labels of project.labels) {
       state.addLabels(labels);
-      loadRenderedDataObjectPromises.push(state.loadLabels(labels, { signal }));
+      loadRenderedDataObjectPromises.push(
+        state.loadLabels(labels.id, { signal }),
+      );
     }
     for (const points of project.points) {
       state.addPoints(points);
-      loadRenderedDataObjectPromises.push(state.loadPoints(points, { signal }));
+      loadRenderedDataObjectPromises.push(
+        state.loadPoints(points.id, { signal }),
+      );
     }
     for (const shapes of project.shapes) {
       state.addShapes(shapes);
-      loadRenderedDataObjectPromises.push(state.loadShapes(shapes, { signal }));
+      loadRenderedDataObjectPromises.push(
+        state.loadShapes(shapes.id, { signal }),
+      );
     }
     await Promise.all(loadRenderedDataObjectPromises);
     signal?.throwIfAborted();

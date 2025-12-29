@@ -14,8 +14,11 @@ export class OpenSeadragonController {
   private readonly _viewer: OpenSeadragon.Viewer;
   private _tiledImageStates: TiledImageState[] = [];
   private _animationMemory?: {
-    viewerValues: Partial<ViewerOptions>;
-    tiledImageValues: Map<OpenSeadragon.TiledImage, Partial<ViewerOptions>>;
+    viewerOptions: Partial<ViewerOptions>;
+    tiledImageViewerOptions: Map<
+      OpenSeadragon.TiledImage,
+      Partial<ViewerOptions>
+    >;
   };
   private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
   private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
@@ -94,43 +97,43 @@ export class OpenSeadragonController {
     }
     this._animationStartHandler = () => {
       this._animationMemory = {
-        viewerValues: {},
-        tiledImageValues: new Map(),
+        viewerOptions: {},
+        tiledImageViewerOptions: new Map(),
       };
       for (const key of Object.keys(viewerAnimationStartOptions)) {
         // @ts-expect-error: dynamic property access
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        this._animationMemory.viewerValues[key] = this._viewer[key];
+        this._animationMemory.viewerOptions[key] = this._viewer[key];
       }
       for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
         const tiledImage = this._viewer.world.getItemAt(i);
-        const tiledImageValues: Partial<ViewerOptions> = {};
-        for (const property of Object.keys(viewerAnimationStartOptions)) {
-          if (property in tiledImage) {
+        const tiledImageViewerOptions: Partial<ViewerOptions> = {};
+        for (const key of Object.keys(viewerAnimationStartOptions)) {
+          if (key in tiledImage) {
             // @ts-expect-error: dynamic property access
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            tiledImageValues[property] = tiledImage[property];
+            tiledImageViewerOptions[key] = tiledImage[key];
           }
         }
-        this._animationMemory.tiledImageValues.set(
+        this._animationMemory.tiledImageViewerOptions.set(
           tiledImage,
-          tiledImageValues,
+          tiledImageViewerOptions,
         );
       }
       this.setViewerOptions(viewerAnimationStartOptions);
     };
     this._animationFinishHandler = () => {
       this.setViewerOptions({
-        ...this._animationMemory?.viewerValues,
+        ...this._animationMemory?.viewerOptions,
         ...viewerAnimationFinishOptions,
       });
       for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
         const tiledImage = this._viewer.world.getItemAt(i);
-        const tiledImageValues = {
-          ...this._animationMemory?.tiledImageValues.get(tiledImage),
+        const tiledImageViewerOptions = {
+          ...this._animationMemory?.tiledImageViewerOptions.get(tiledImage),
           ...viewerAnimationFinishOptions,
         };
-        for (const [key, value] of Object.entries(tiledImageValues)) {
+        for (const [key, value] of Object.entries(tiledImageViewerOptions)) {
           // @ts-expect-error: dynamic property access
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           tiledImage[key] = value;
@@ -143,24 +146,24 @@ export class OpenSeadragonController {
   }
 
   async synchronize(
-    layerMap: Map<string, Layer>,
-    imageMap: Map<string, Image>,
-    labelsMap: Map<string, Labels>,
+    layers: Layer[],
+    images: Image[],
+    labels: Labels[],
     loadImage: (
-      image: Image,
+      imageId: string,
       options: { signal?: AbortSignal },
     ) => Promise<ImageData>,
     loadLabels: (
-      labels: Labels,
+      labelsId: string,
       options: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
     { signal }: { signal?: AbortSignal } = {},
   ): Promise<void> {
     signal?.throwIfAborted();
     const refs = await this._loadObjects(
-      layerMap,
-      imageMap,
-      labelsMap,
+      layers,
+      images,
+      labels,
       loadImage,
       loadLabels,
       { signal },
@@ -179,23 +182,23 @@ export class OpenSeadragonController {
   }
 
   private async _loadObjects(
-    layerMap: Map<string, Layer>,
-    imageMap: Map<string, Image>,
-    labelsMap: Map<string, Labels>,
+    layers: Layer[],
+    images: Image[],
+    labels: Labels[],
     loadImage: (
-      image: Image,
+      imageId: string,
       options: { signal?: AbortSignal },
     ) => Promise<ImageData>,
     loadLabels: (
-      labels: Labels,
+      labelsId: string,
       options: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
     { signal }: { signal?: AbortSignal } = {},
   ): Promise<ObjectRef[]> {
     signal?.throwIfAborted();
     const refs: ObjectRef[] = [];
-    for (const layer of layerMap.values()) {
-      for (const image of imageMap.values()) {
+    for (const layer of layers) {
+      for (const image of images) {
         for (let i = 0; i < image.layerConfigs.length; i++) {
           const layerConfig = image.layerConfigs[i]!;
           if (layerConfig.layerId !== layer.id) {
@@ -203,7 +206,7 @@ export class OpenSeadragonController {
           }
           let data;
           try {
-            data = await loadImage(image, { signal });
+            data = await loadImage(image.id, { signal });
           } catch (error) {
             console.error(`Failed to load image with ID '${image.id}'`, error);
           }
@@ -213,18 +216,18 @@ export class OpenSeadragonController {
           }
         }
       }
-      for (const labels of labelsMap.values()) {
-        for (let i = 0; i < labels.layerConfigs.length; i++) {
-          const layerConfig = labels.layerConfigs[i]!;
+      for (const currentLabels of labels) {
+        for (let i = 0; i < currentLabels.layerConfigs.length; i++) {
+          const layerConfig = currentLabels.layerConfigs[i]!;
           if (layerConfig.layerId !== layer.id) {
             continue;
           }
           let data;
           try {
-            data = await loadLabels(labels, { signal });
+            data = await loadLabels(currentLabels.id, { signal });
           } catch (error) {
             console.error(
-              `Failed to load labels with ID '${labels.id}'`,
+              `Failed to load labels with ID '${currentLabels.id}'`,
               error,
             );
           }
@@ -232,7 +235,7 @@ export class OpenSeadragonController {
           if (data !== undefined) {
             refs.push({
               layer,
-              labels,
+              labels: currentLabels,
               layerConfig,
               layerConfigIndex: i,
               data,

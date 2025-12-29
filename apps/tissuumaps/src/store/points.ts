@@ -1,33 +1,29 @@
+import { deepEqual } from "fast-equals";
+
 import {
   type Points,
   type PointsData,
   type PointsDataSource,
 } from "@tissuumaps/core";
 
-import { MapUtils } from "../utils/MapUtils";
 import { type TissUUmapsStateCreator } from "./index";
 
 export type PointsSlice = PointsSliceState & PointsSliceActions;
 
 export type PointsSliceState = {
-  pointsMap: Map<string, Points>;
-  pointsDataCache: Map<PointsDataSource, PointsData>;
+  points: Points[];
+  _pointsDataCache: { dataSource: PointsDataSource; data: PointsData }[];
 };
 
 export type PointsSliceActions = {
   addPoints: (points: Points, index?: number) => void;
+  movePoints: (pointsId: string, newIndex: number) => void;
   loadPoints: (
-    points: Points,
-    options: { signal?: AbortSignal },
-  ) => Promise<PointsData>;
-  loadPointsByID: (
     pointsId: string,
     options: { signal?: AbortSignal },
   ) => Promise<PointsData>;
-  unloadPoints: (points: Points) => void;
-  unloadPointsByID: (pointsId: string) => void;
-  deletePoints: (points: Points) => void;
-  deletePointsByID: (pointsId: string) => void;
+  unloadPoints: (pointsId: string) => void;
+  deletePoints: (pointsId: string) => void;
   clearPoints: () => void;
 };
 
@@ -38,99 +34,97 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
   ...initialPointsSliceState,
   addPoints: (points, index) => {
     const state = get();
-    const oldPoints = state.pointsMap.get(points.id);
-    if (oldPoints !== undefined) {
-      state.unloadPoints(oldPoints);
+    if (state.points.find((x) => x.id === points.id) !== undefined) {
+      throw new Error(`Points with ID ${points.id} already exists.`);
     }
     set((draft) => {
-      draft.pointsMap = MapUtils.cloneAndSpliceSet(
-        draft.pointsMap,
-        points.id,
-        points,
-        index,
-      );
+      draft.points.splice(index ?? draft.points.length, 0, points);
     });
   },
-  loadPoints: async (points, { signal }: { signal?: AbortSignal } = {}) => {
+  movePoints: (pointsId, newIndex) => {
+    const state = get();
+    const oldIndex = state.points.findIndex((points) => points.id === pointsId);
+    if (oldIndex === -1) {
+      throw new Error(`Points with ID ${pointsId} not found.`);
+    }
+    if (oldIndex !== newIndex) {
+      set((draft) => {
+        const [points] = draft.points.splice(oldIndex, 1);
+        draft.points.splice(newIndex, 0, points!);
+      });
+    }
+  },
+  loadPoints: async (pointsId, { signal }: { signal?: AbortSignal } = {}) => {
     signal?.throwIfAborted();
     const state = get();
-    let pointsData = state.pointsDataCache.get(points.dataSource);
-    if (pointsData !== undefined) {
-      return pointsData;
+    const points = state.points.find((points) => points.id === pointsId);
+    if (points === undefined) {
+      throw new Error(`Points with ID ${pointsId} not found.`);
     }
-    const pointsDataLoaderFactory = state.pointsDataLoaderFactories.get(
+    const cache = state._pointsDataCache.find(({ dataSource }) =>
+      deepEqual(dataSource, points.dataSource),
+    );
+    if (cache !== undefined) {
+      return cache.data;
+    }
+    const dataLoaderFactory = state.pointsDataLoaderFactories.get(
       points.dataSource.type,
     );
-    if (pointsDataLoaderFactory === undefined) {
+    if (dataLoaderFactory === undefined) {
       throw new Error(
         `No points data loader found for type ${points.dataSource.type}.`,
       );
     }
-    const pointsDataLoader = pointsDataLoaderFactory(
+    const dataLoader = dataLoaderFactory(
       points.dataSource,
       state.projectDir,
-      state.loadTableByID,
+      state.loadTable,
     );
-    pointsData = await pointsDataLoader.loadPoints({ signal });
+    const data = await dataLoader.loadPoints({ signal });
     signal?.throwIfAborted();
     set((draft) => {
-      draft.pointsDataCache.set(points.dataSource, pointsData);
+      draft._pointsDataCache.push({ dataSource: points.dataSource, data });
     });
-    return pointsData;
+    return data;
   },
-  loadPointsByID: async (
-    pointsId,
-    { signal }: { signal?: AbortSignal } = {},
-  ) => {
-    signal?.throwIfAborted();
+  unloadPoints: (pointsId) => {
     const state = get();
-    const points = state.pointsMap.get(pointsId);
+    const points = state.points.find((points) => points.id === pointsId);
     if (points === undefined) {
       throw new Error(`Points with ID ${pointsId} not found.`);
     }
-    return state.loadPoints(points, { signal });
+    const cacheIndex = state._pointsDataCache.findIndex(({ dataSource }) =>
+      deepEqual(dataSource, points.dataSource),
+    );
+    if (cacheIndex !== -1) {
+      const cache = state._pointsDataCache[cacheIndex]!;
+      set((draft) => {
+        draft._pointsDataCache.splice(cacheIndex, 1);
+      });
+      cache.data.destroy();
+    }
   },
-  unloadPoints: (points) => {
+  deletePoints: (pointsId) => {
     const state = get();
-    const pointsData = state.pointsDataCache.get(points.dataSource);
+    const index = state.points.findIndex((points) => points.id === pointsId);
+    if (index === -1) {
+      throw new Error(`Points with ID ${pointsId} not found.`);
+    }
+    state.unloadPoints(pointsId);
     set((draft) => {
-      draft.pointsDataCache.delete(points.dataSource);
+      draft.points.splice(index, 1);
     });
-    pointsData?.destroy();
-  },
-  unloadPointsByID: (pointsId) => {
-    const state = get();
-    const points = state.pointsMap.get(pointsId);
-    if (points === undefined) {
-      throw new Error(`Points with ID ${pointsId} not found.`);
-    }
-    state.unloadPoints(points);
-  },
-  deletePoints: (points) => {
-    const state = get();
-    state.unloadPoints(points);
-    set((draft) => {
-      draft.pointsMap.delete(points.id);
-    });
-  },
-  deletePointsByID: (pointsId) => {
-    const state = get();
-    const points = state.pointsMap.get(pointsId);
-    if (points === undefined) {
-      throw new Error(`Points with ID ${pointsId} not found.`);
-    }
-    state.deletePoints(points);
   },
   clearPoints: () => {
     const state = get();
-    state.pointsMap.forEach((points) => {
-      state.deletePoints(points);
-    });
+    while (state.points.length > 0) {
+      state.deletePoints(state.points[0]!.id);
+    }
     set(initialPointsSliceState);
   },
 });
 
 const initialPointsSliceState: PointsSliceState = {
-  pointsMap: new Map(),
-  pointsDataCache: new Map(),
+  points: [],
+  _pointsDataCache: [],
 };

@@ -1,34 +1,30 @@
+import { deepEqual } from "fast-equals";
+
 import {
   type Image,
   type ImageData,
   type ImageDataSource,
 } from "@tissuumaps/core";
 
-import { MapUtils } from "../utils/MapUtils";
 import { type TissUUmapsStateCreator } from "./index";
 
 export type ImageSlice = ImageSliceState & ImageSliceActions;
 
 export type ImageSliceState = {
-  imageMap: Map<string, Image>;
-  imageDataCache: Map<ImageDataSource, ImageData>;
+  images: Image[];
+  _imageDataCache: { dataSource: ImageDataSource; data: ImageData }[];
 };
 
 export type ImageSliceActions = {
   addImage: (image: Image, index?: number) => void;
+  moveImage: (imageId: string, newIndex: number) => void;
+  deleteImage: (imageId: string) => void;
+  clearImages: () => void;
   loadImage: (
-    image: Image,
-    options: { signal?: AbortSignal },
-  ) => Promise<ImageData>;
-  loadImageByID: (
     imageId: string,
     options: { signal?: AbortSignal },
   ) => Promise<ImageData>;
-  unloadImage: (image: Image) => void;
-  unloadImageByID: (imageId: string) => void;
-  deleteImage: (image: Image) => void;
-  deleteImageByID: (imageId: string) => void;
-  clearImages: () => void;
+  unloadImage: (imageId: string) => void;
 };
 
 export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
@@ -38,96 +34,97 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
   ...initialImageSliceState,
   addImage: (image, index) => {
     const state = get();
-    const oldImage = state.imageMap.get(image.id);
-    if (oldImage !== undefined) {
-      state.unloadImage(oldImage);
+    if (state.images.find((x) => x.id === image.id) !== undefined) {
+      throw new Error(`Image with ID ${image.id} already exists.`);
     }
     set((draft) => {
-      draft.imageMap = MapUtils.cloneAndSpliceSet(
-        draft.imageMap,
-        image.id,
-        image,
-        index,
-      );
+      draft.images.splice(index ?? draft.images.length, 0, image);
     });
   },
-  loadImage: async (image, { signal }: { signal?: AbortSignal } = {}) => {
+  moveImage: (imageId, newIndex) => {
+    const state = get();
+    const oldIndex = state.images.findIndex((image) => image.id === imageId);
+    if (oldIndex === -1) {
+      throw new Error(`Image with ID ${imageId} not found.`);
+    }
+    if (oldIndex !== newIndex) {
+      set((draft) => {
+        const [image] = draft.images.splice(oldIndex, 1);
+        draft.images.splice(newIndex, 0, image!);
+      });
+    }
+  },
+  loadImage: async (imageId, { signal } = {}) => {
     signal?.throwIfAborted();
     const state = get();
-    let imageData = state.imageDataCache.get(image.dataSource);
-    if (imageData !== undefined) {
-      return imageData;
+    const image = state.images.find((image) => image.id === imageId);
+    if (image === undefined) {
+      throw new Error(`Image with ID ${imageId} not found.`);
     }
-    const imageDataLoaderFactory = state.imageDataLoaderFactories.get(
+    const cache = state._imageDataCache.find(({ dataSource }) =>
+      deepEqual(dataSource, image.dataSource),
+    );
+    if (cache !== undefined) {
+      return cache.data;
+    }
+    const dataLoaderFactory = state.imageDataLoaderFactories.get(
       image.dataSource.type,
     );
-    if (imageDataLoaderFactory === undefined) {
+    if (dataLoaderFactory === undefined) {
       throw new Error(
         `No image data loader found for type ${image.dataSource.type}.`,
       );
     }
-    const imageDataLoader = imageDataLoaderFactory(
+    const dataLoader = dataLoaderFactory(
       image.dataSource,
       state.projectDir,
-      state.loadTableByID,
+      state.loadTable,
     );
-    imageData = await imageDataLoader.loadImage({ signal });
+    const data = await dataLoader.loadImage({ signal });
     signal?.throwIfAborted();
     set((draft) => {
-      draft.imageDataCache.set(image.dataSource, imageData);
+      draft._imageDataCache.push({ dataSource: image.dataSource, data });
     });
-    return imageData;
+    return data;
   },
-  loadImageByID: async (imageId, { signal }: { signal?: AbortSignal } = {}) => {
-    signal?.throwIfAborted();
+  unloadImage: (imageId) => {
     const state = get();
-    const image = state.imageMap.get(imageId);
+    const image = state.images.find((image) => image.id === imageId);
     if (image === undefined) {
       throw new Error(`Image with ID ${imageId} not found.`);
     }
-    return state.loadImage(image, { signal });
+    const cacheIndex = state._imageDataCache.findIndex(({ dataSource }) =>
+      deepEqual(dataSource, image.dataSource),
+    );
+    if (cacheIndex !== -1) {
+      const cache = state._imageDataCache[cacheIndex]!;
+      set((draft) => {
+        draft._imageDataCache.splice(cacheIndex, 1);
+      });
+      cache.data.destroy();
+    }
   },
-  unloadImage: (image) => {
+  deleteImage: (imageId) => {
     const state = get();
-    const imageData = state.imageDataCache.get(image.dataSource);
+    const index = state.images.findIndex((image) => image.id === imageId);
+    if (index === -1) {
+      throw new Error(`Image with ID ${imageId} not found.`);
+    }
+    state.unloadImage(imageId);
     set((draft) => {
-      draft.imageDataCache.delete(image.dataSource);
+      draft.images.splice(index, 1);
     });
-    imageData?.destroy();
-  },
-  unloadImageByID: (imageId) => {
-    const state = get();
-    const image = state.imageMap.get(imageId);
-    if (image === undefined) {
-      throw new Error(`Image with ID ${imageId} not found.`);
-    }
-    state.unloadImage(image);
-  },
-  deleteImage: (image) => {
-    const state = get();
-    state.unloadImage(image);
-    set((draft) => {
-      draft.imageMap.delete(image.id);
-    });
-  },
-  deleteImageByID: (imageId) => {
-    const state = get();
-    const image = state.imageMap.get(imageId);
-    if (image === undefined) {
-      throw new Error(`Image with ID ${imageId} not found.`);
-    }
-    state.deleteImage(image);
   },
   clearImages: () => {
     const state = get();
-    state.imageMap.forEach((image) => {
-      state.deleteImage(image);
-    });
+    while (state.images.length > 0) {
+      state.deleteImage(state.images[0]!.id);
+    }
     set(initialImageSliceState);
   },
 });
 
 const initialImageSliceState: ImageSliceState = {
-  imageMap: new Map(),
-  imageDataCache: new Map(),
+  images: [],
+  _imageDataCache: [],
 };

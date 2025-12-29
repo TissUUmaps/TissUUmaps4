@@ -1,7 +1,6 @@
 import { type Labels } from "@tissuumaps/core";
 
 type LabelsSettingsPanelProps = {
-  labelsId: string;
   labels: Labels;
 };
 

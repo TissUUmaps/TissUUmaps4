@@ -1,15 +1,13 @@
 import { useTissUUmaps } from "../../store";
-import { MapUtils } from "../../utils/MapUtils";
 import { LabelsPanel } from "./LabelsPanel";
 
 export function LabelsCollectionPanel() {
-  const labelsMap = useTissUUmaps((state) => state.labelsMap);
+  const labels = useTissUUmaps((state) => state.labels);
   return (
     <>
-      {labelsMap &&
-        MapUtils.map(labelsMap, (labelsId, labels) => (
-          <LabelsPanel key={labelsId} labelsId={labelsId} labels={labels} />
-        ))}
+      {labels.map((currentLabels) => (
+        <LabelsPanel key={currentLabels.id} labels={currentLabels} />
+      ))}
     </>
   );
 }

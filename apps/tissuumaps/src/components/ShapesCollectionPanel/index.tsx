@@ -1,15 +1,13 @@
 import { useTissUUmaps } from "../../store";
-import { MapUtils } from "../../utils/MapUtils";
 import { ShapesPanel } from "./ShapesPanel";
 
 export function ShapesCollectionPanel() {
-  const shapesMap = useTissUUmaps((state) => state.shapesMap);
+  const shapes = useTissUUmaps((state) => state.shapes);
   return (
     <>
-      {shapesMap &&
-        MapUtils.map(shapesMap, (shapesId, shapes) => (
-          <ShapesPanel key={shapesId} shapesId={shapesId} shapes={shapes} />
-        ))}
+      {shapes.map((currentShapes) => (
+        <ShapesPanel key={currentShapes.id} shapes={currentShapes} />
+      ))}
     </>
   );
 }

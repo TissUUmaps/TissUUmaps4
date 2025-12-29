@@ -106,25 +106,23 @@ export class WebGLShapesController extends WebGLControllerBase {
   }
 
   async synchronize(
-    layerMap: Map<string, Layer>,
-    shapesMap: Map<string, Shapes>,
+    layers: Layer[],
+    shapes: Shapes[],
     colorMaps: Map<string, ColorMap>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
     loadShapes: (
-      shapes: Shapes,
+      shapesId: string,
       options: { signal?: AbortSignal },
     ) => Promise<ShapesData>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
     { signal }: { signal?: AbortSignal } = {},
   ): Promise<void> {
     signal?.throwIfAborted();
-    const refs = await this._loadShapes(layerMap, shapesMap, loadShapes, {
-      signal,
-    });
+    const refs = await this._loadShapes(layers, shapes, loadShapes, { signal });
     signal?.throwIfAborted();
     const glShapesByRef = this._cleanGLShapes(refs);
     this._glShapes = await this._createOrUpdateGLShapes(
@@ -133,7 +131,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       colorMaps,
       visibilityMaps,
       opacityMaps,
-      loadTableByID,
+      loadTable,
       { signal },
     );
     signal?.throwIfAborted();
@@ -207,29 +205,29 @@ export class WebGLShapesController extends WebGLControllerBase {
   }
 
   private async _loadShapes(
-    layerMap: Map<string, Layer>,
-    shapesMap: Map<string, Shapes>,
+    layers: Layer[],
+    shapes: Shapes[],
     loadShapes: (
-      shapes: Shapes,
+      shapesId: string,
       options: { signal?: AbortSignal },
     ) => Promise<ShapesData>,
     { signal }: { signal?: AbortSignal } = {},
   ): Promise<ShapesRef[]> {
     signal?.throwIfAborted();
     const refs: ShapesRef[] = [];
-    for (const layer of layerMap.values()) {
-      for (const shapes of shapesMap.values()) {
-        for (let i = 0; i < shapes.layerConfigs.length; i++) {
-          const layerConfig = shapes.layerConfigs[i]!;
+    for (const layer of layers) {
+      for (const currentShapes of shapes) {
+        for (let i = 0; i < currentShapes.layerConfigs.length; i++) {
+          const layerConfig = currentShapes.layerConfigs[i]!;
           if (layerConfig.layerId !== layer.id) {
             continue;
           }
           let data;
           try {
-            data = await loadShapes(shapes, { signal });
+            data = await loadShapes(currentShapes.id, { signal });
           } catch (error) {
             console.error(
-              `Failed to load shapes with ID '${shapes.id}'`,
+              `Failed to load shapes with ID '${currentShapes.id}'`,
               error,
             );
           }
@@ -237,7 +235,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           if (data !== undefined) {
             refs.push({
               layer,
-              shapes,
+              shapes: currentShapes,
               layerConfig,
               layerConfigIndex: i,
               data,
@@ -276,7 +274,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     colorMaps: Map<string, ColorMap>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -333,7 +331,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           colorMaps,
           visibilityMaps,
           opacityMaps,
-          loadTableByID,
+          loadTable,
           { signal },
         );
         signal?.throwIfAborted();
@@ -368,7 +366,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           colorMaps,
           visibilityMaps,
           opacityMaps,
-          loadTableByID,
+          loadTable,
           { signal },
         );
         signal?.throwIfAborted();
@@ -447,7 +445,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     colorMaps: Map<string, ColorMap>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -472,7 +470,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.shapes.shapeFillVisibilityMap,
         shapesDefaults.shapeFillVisibility,
         visibilityMaps,
-        loadTableByID,
+        loadTable,
         { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
@@ -482,7 +480,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.shapes.shapeFillOpacityMap,
         shapesDefaults.shapeFillOpacity,
         opacityMaps,
-        loadTableByID,
+        loadTable,
         {
           signal,
           paddingMultiple: numValuesPerTextureLine,
@@ -500,7 +498,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         visibilityData,
         opacityData,
         colorMaps,
-        loadTableByID,
+        loadTable,
         { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
@@ -522,7 +520,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     colorMaps: Map<string, ColorMap>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -547,7 +545,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.shapes.shapeStrokeVisibilityMap,
         shapesDefaults.shapeStrokeVisibility,
         visibilityMaps,
-        loadTableByID,
+        loadTable,
         { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
@@ -557,7 +555,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.shapes.shapeStrokeOpacityMap,
         shapesDefaults.shapeStrokeOpacity,
         opacityMaps,
-        loadTableByID,
+        loadTable,
         {
           signal,
           paddingMultiple: numValuesPerTextureLine,
@@ -575,7 +573,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         visibilityData,
         opacityData,
         colorMaps,
-        loadTableByID,
+        loadTable,
         { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();

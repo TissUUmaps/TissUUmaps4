@@ -1,7 +1,6 @@
 import { type Table } from "@tissuumaps/core";
 
 type TableSettingsPanelProps = {
-  tableId: string;
   table: Table;
 };
 

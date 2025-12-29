@@ -54,24 +54,24 @@ export type AppSliceState = {
 export type AppSliceActions = {
   setProjectDir: (dir: FileSystemDirectoryHandle | null) => void;
   registerImageDataLoader: (
-    type: string,
-    factory: ImageDataLoaderFactory,
+    imageDataSourceType: string,
+    imageDataLoaderFactory: ImageDataLoaderFactory,
   ) => void;
   registerLabelsDataLoader: (
-    type: string,
-    factory: LabelsDataLoaderFactory,
+    labelsDataSourceType: string,
+    labelsDataLoaderFactory: LabelsDataLoaderFactory,
   ) => void;
   registerPointsDataLoader: (
-    type: string,
-    factory: PointsDataLoaderFactory,
+    pointsDataSourceType: string,
+    pointsDataLoaderFactory: PointsDataLoaderFactory,
   ) => void;
   registerShapesDataLoader: (
-    type: string,
-    factory: ShapesDataLoaderFactory,
+    shapesDataSourceType: string,
+    shapesDataLoaderFactory: ShapesDataLoaderFactory,
   ) => void;
   registerTableDataLoader: (
-    type: string,
-    factory: TableDataLoaderFactory,
+    tableDataSourceType: string,
+    tableDataLoaderFactory: TableDataLoaderFactory,
   ) => void;
 };
 
@@ -83,29 +83,44 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
     });
     // TODO reload data if necessary
   },
-  registerImageDataLoader: (type, factory) => {
+  registerImageDataLoader: (imageDataSourceType, imageDataLoaderFactory) => {
     set((draft) => {
-      draft.imageDataLoaderFactories.set(type, factory);
+      draft.imageDataLoaderFactories.set(
+        imageDataSourceType,
+        imageDataLoaderFactory,
+      );
     });
   },
-  registerLabelsDataLoader: (type, factory) => {
+  registerLabelsDataLoader: (labelsDataSourceType, labelsDataLoaderFactory) => {
     set((draft) => {
-      draft.labelsDataLoaderFactories.set(type, factory);
+      draft.labelsDataLoaderFactories.set(
+        labelsDataSourceType,
+        labelsDataLoaderFactory,
+      );
     });
   },
-  registerPointsDataLoader: (type, factory) => {
+  registerPointsDataLoader: (pointsDataSourceType, pointsDataLoaderFactory) => {
     set((draft) => {
-      draft.pointsDataLoaderFactories.set(type, factory);
+      draft.pointsDataLoaderFactories.set(
+        pointsDataSourceType,
+        pointsDataLoaderFactory,
+      );
     });
   },
-  registerShapesDataLoader: (type, factory) => {
+  registerShapesDataLoader: (shapesDataSourceType, shapesDataLoaderFactory) => {
     set((draft) => {
-      draft.shapesDataLoaderFactories.set(type, factory);
+      draft.shapesDataLoaderFactories.set(
+        shapesDataSourceType,
+        shapesDataLoaderFactory,
+      );
     });
   },
-  registerTableDataLoader: (type, factory) => {
+  registerTableDataLoader: (tableDataSourceType, tableDataLoaderFactory) => {
     set((draft) => {
-      draft.tableDataLoaderFactories.set(type, factory);
+      draft.tableDataLoaderFactories.set(
+        tableDataSourceType,
+        tableDataLoaderFactory,
+      );
     });
   },
 });
@@ -128,13 +143,13 @@ const initialAppSliceState: AppSliceState = {
   pointsDataLoaderFactories: new Map<string, PointsDataLoaderFactory>([
     [
       tablePointsDataSourceType,
-      (rawDataSource, projectDir, loadTableByID) =>
+      (rawDataSource, projectDir, loadTable) =>
         new TablePointsDataLoader(
           createTablePointsDataSource(
             rawDataSource as RawTablePointsDataSource,
           ),
           projectDir,
-          loadTableByID,
+          loadTable,
         ),
     ],
   ]),
@@ -175,7 +190,7 @@ const initialAppSliceState: AppSliceState = {
 type ImageDataLoaderFactory = (
   rawDataSource: RawImageDataSource,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (
+  loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
   ) => Promise<TableData>,
@@ -184,7 +199,7 @@ type ImageDataLoaderFactory = (
 type LabelsDataLoaderFactory = (
   dataSource: RawLabelsDataSource,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (
+  loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
   ) => Promise<TableData>,
@@ -193,7 +208,7 @@ type LabelsDataLoaderFactory = (
 export type PointsDataLoaderFactory = (
   dataSource: RawPointsDataSource,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (
+  loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
   ) => Promise<TableData>,
@@ -202,7 +217,7 @@ export type PointsDataLoaderFactory = (
 export type ShapesDataLoaderFactory = (
   dataSource: RawShapesDataSource,
   projectDir: FileSystemDirectoryHandle | null,
-  loadTableByID: (
+  loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
   ) => Promise<TableData>,

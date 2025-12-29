@@ -12,9 +12,9 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
 
   const {
     projectDir,
-    layerMap,
-    pointsMap,
-    shapesMap,
+    layers,
+    points,
+    shapes,
     markerMaps,
     sizeMaps,
     colorMaps,
@@ -23,7 +23,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     drawOptions,
     loadPoints,
     loadShapes,
-    loadTableByID,
+    loadTable,
   } = useViewer();
 
   useEffect(() => {
@@ -83,15 +83,15 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
       console.debug("Synchronizing points");
       controller
         .synchronizePoints(
-          layerMap,
-          pointsMap,
+          layers,
+          points,
           markerMaps,
           sizeMaps,
           colorMaps,
           visibilityMaps,
           opacityMaps,
           loadPoints,
-          loadTableByID,
+          loadTable,
           { signal: abortController.signal },
         )
         .then(
@@ -113,8 +113,8 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     };
   }, [
     syncPoints,
-    layerMap,
-    pointsMap,
+    layers,
+    points,
     markerMaps,
     sizeMaps,
     colorMaps,
@@ -122,7 +122,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     opacityMaps,
     projectDir,
     loadPoints,
-    loadTableByID,
+    loadTable,
   ]);
 
   useEffect(() => {
@@ -132,13 +132,13 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
       console.debug("Synchronizing shapes");
       controller
         .synchronizeShapes(
-          layerMap,
-          shapesMap,
+          layers,
+          shapes,
           colorMaps,
           visibilityMaps,
           opacityMaps,
           loadShapes,
-          loadTableByID,
+          loadTable,
           { signal: abortController.signal },
         )
         .then(
@@ -160,14 +160,14 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     };
   }, [
     syncShapes,
-    layerMap,
-    shapesMap,
+    layers,
+    shapes,
     colorMaps,
     visibilityMaps,
     opacityMaps,
     projectDir,
     loadShapes,
-    loadTableByID,
+    loadTable,
   ]);
 
   const resizeCanvas = useCallback(
