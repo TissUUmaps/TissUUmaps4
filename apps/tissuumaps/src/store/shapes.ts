@@ -1,33 +1,29 @@
+import { deepEqual } from "fast-equals";
+
 import {
   type Shapes,
   type ShapesData,
   type ShapesDataSource,
 } from "@tissuumaps/core";
 
-import { MapUtils } from "../utils/MapUtils";
 import { type TissUUmapsStateCreator } from "./index";
 
 export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
 
 export type ShapesSliceState = {
-  shapesMap: Map<string, Shapes>;
-  shapesDataCache: Map<ShapesDataSource, ShapesData>;
+  shapes: Shapes[];
+  _shapesDataCache: { dataSource: ShapesDataSource; data: ShapesData }[];
 };
 
 export type ShapesSliceActions = {
   addShapes: (shapes: Shapes, index?: number) => void;
+  moveShapes: (shapesId: string, newIndex: number) => void;
   loadShapes: (
-    shapes: Shapes,
-    options: { signal?: AbortSignal },
-  ) => Promise<ShapesData>;
-  loadShapesByID: (
     shapesId: string,
     options: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
-  unloadShapes: (shapes: Shapes) => void;
-  unloadShapesByID: (shapesId: string) => void;
-  deleteShapes: (shapes: Shapes) => void;
-  deleteShapesByID: (shapesId: string) => void;
+  unloadShapes: (shapesId: string) => void;
+  deleteShapes: (shapesId: string) => void;
   clearShapes: () => void;
 };
 
@@ -38,99 +34,97 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
   ...initialShapesSliceState,
   addShapes: (shapes, index) => {
     const state = get();
-    const oldShapes = state.shapesMap.get(shapes.id);
-    if (oldShapes !== undefined) {
-      state.unloadShapes(oldShapes);
+    if (state.shapes.find((x) => x.id === shapes.id) !== undefined) {
+      throw new Error(`Shapes with ID ${shapes.id} already exists.`);
     }
     set((draft) => {
-      draft.shapesMap = MapUtils.cloneAndSpliceSet(
-        draft.shapesMap,
-        shapes.id,
-        shapes,
-        index,
-      );
+      draft.shapes.splice(index ?? draft.shapes.length, 0, shapes);
     });
   },
-  loadShapes: async (shapes, { signal }: { signal?: AbortSignal } = {}) => {
+  moveShapes: (shapesId, newIndex) => {
+    const state = get();
+    const oldIndex = state.shapes.findIndex((shapes) => shapes.id === shapesId);
+    if (oldIndex === -1) {
+      throw new Error(`Shapes with ID ${shapesId} not found.`);
+    }
+    if (oldIndex !== newIndex) {
+      set((draft) => {
+        const [shapes] = draft.shapes.splice(oldIndex, 1);
+        draft.shapes.splice(newIndex, 0, shapes!);
+      });
+    }
+  },
+  loadShapes: async (shapesId, { signal }: { signal?: AbortSignal } = {}) => {
     signal?.throwIfAborted();
     const state = get();
-    let shapesData = state.shapesDataCache.get(shapes.dataSource);
-    if (shapesData !== undefined) {
-      return shapesData;
+    const shapes = state.shapes.find((shapes) => shapes.id === shapesId);
+    if (shapes === undefined) {
+      throw new Error(`Shapes with ID ${shapesId} not found.`);
     }
-    const shapesDataLoaderFactory = state.shapesDataLoaderFactories.get(
+    const cache = state._shapesDataCache.find(({ dataSource }) =>
+      deepEqual(dataSource, shapes.dataSource),
+    );
+    if (cache !== undefined) {
+      return cache.data;
+    }
+    const dataLoaderFactory = state.shapesDataLoaderFactories.get(
       shapes.dataSource.type,
     );
-    if (shapesDataLoaderFactory === undefined) {
+    if (dataLoaderFactory === undefined) {
       throw new Error(
         `No shapes data loader found for type ${shapes.dataSource.type}.`,
       );
     }
-    const shapesDataLoader = shapesDataLoaderFactory(
+    const dataLoader = dataLoaderFactory(
       shapes.dataSource,
       state.projectDir,
-      state.loadTableByID,
+      state.loadTable,
     );
-    shapesData = await shapesDataLoader.loadShapes({ signal });
+    const data = await dataLoader.loadShapes({ signal });
     signal?.throwIfAborted();
     set((draft) => {
-      draft.shapesDataCache.set(shapes.dataSource, shapesData);
+      draft._shapesDataCache.push({ dataSource: shapes.dataSource, data });
     });
-    return shapesData;
+    return data;
   },
-  loadShapesByID: async (
-    shapesId,
-    { signal }: { signal?: AbortSignal } = {},
-  ) => {
-    signal?.throwIfAborted();
+  unloadShapes: (shapesId) => {
     const state = get();
-    const shapes = state.shapesMap.get(shapesId);
+    const shapes = state.shapes.find((shapes) => shapes.id === shapesId);
     if (shapes === undefined) {
       throw new Error(`Shapes with ID ${shapesId} not found.`);
     }
-    return state.loadShapes(shapes, { signal });
+    const cacheIndex = state._shapesDataCache.findIndex(({ dataSource }) =>
+      deepEqual(dataSource, shapes.dataSource),
+    );
+    if (cacheIndex !== -1) {
+      const cache = state._shapesDataCache[cacheIndex]!;
+      set((draft) => {
+        draft._shapesDataCache.splice(cacheIndex, 1);
+      });
+      cache.data.destroy();
+    }
   },
-  unloadShapes: (shapes) => {
+  deleteShapes: (shapesId) => {
     const state = get();
-    const shapesData = state.shapesDataCache.get(shapes.dataSource);
+    const index = state.shapes.findIndex((shapes) => shapes.id === shapesId);
+    if (index === -1) {
+      throw new Error(`Shapes with ID ${shapesId} not found.`);
+    }
+    state.unloadShapes(shapesId);
     set((draft) => {
-      draft.shapesDataCache.delete(shapes.dataSource);
+      draft.shapes.splice(index, 1);
     });
-    shapesData?.destroy();
-  },
-  unloadShapesByID: (shapesId) => {
-    const state = get();
-    const shapes = state.shapesMap.get(shapesId);
-    if (shapes === undefined) {
-      throw new Error(`Shapes with ID ${shapesId} not found.`);
-    }
-    state.unloadShapes(shapes);
-  },
-  deleteShapes: (shapes) => {
-    const state = get();
-    state.unloadShapes(shapes);
-    set((draft) => {
-      draft.shapesMap.delete(shapes.id);
-    });
-  },
-  deleteShapesByID: (shapesId) => {
-    const state = get();
-    const shapes = state.shapesMap.get(shapesId);
-    if (shapes === undefined) {
-      throw new Error(`Shapes with ID ${shapesId} not found.`);
-    }
-    state.deleteShapes(shapes);
   },
   clearShapes: () => {
     const state = get();
-    state.shapesMap.forEach((shapes) => {
-      state.deleteShapes(shapes);
-    });
+    while (state.shapes.length > 0) {
+      state.deleteShapes(state.shapes[0]!.id);
+    }
     set(initialShapesSliceState);
   },
 });
 
 const initialShapesSliceState: ShapesSliceState = {
-  shapesMap: new Map(),
-  shapesDataCache: new Map(),
+  shapes: [],
+  _shapesDataCache: [],
 };

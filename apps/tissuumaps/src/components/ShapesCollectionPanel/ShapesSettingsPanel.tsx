@@ -1,7 +1,6 @@
 import { type Shapes } from "@tissuumaps/core";
 
 type ShapesSettingsPanelProps = {
-  shapesId: string;
   shapes: Shapes;
 };
 

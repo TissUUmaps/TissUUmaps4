@@ -36,16 +36,53 @@ export default defineConfig([
       },
     },
   },
-  // Tests
+  // Tests - apps/tissuumaps
   {
-    files: [
-      "apps/*/src/**/*.test.{js,jsx,ts,tsx}",
-      "packages/*/src/**/*.test.{js,jsx,ts,tsx}",
-    ],
+    files: ["apps/tissuumaps/src/**/*.test.{js,jsx,ts,tsx}"],
     languageOptions: {
       parserOptions: {
         projectService: false,
-        project: ["apps/*/tsconfig.test.json", "packages/*/tsconfig.test.json"],
+        project: "./apps/tissuumaps/tsconfig.test.json",
+      },
+    },
+  },
+  // Tests - packages/@tissuumaps-core
+  {
+    files: ["packages/@tissuumaps-core/src/**/*.test.{js,ts}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: "./packages/@tissuumaps-core/tsconfig.test.json",
+      },
+    },
+  },
+  // Tests - packages/@tissuumaps-storage
+  {
+    files: ["packages/@tissuumaps-storage/src/**/*.test.{js,ts}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: "./packages/@tissuumaps-storage/tsconfig.test.json",
+      },
+    },
+  },
+  // Tests - packages/@tissuumaps-plugins
+  {
+    files: ["packages/@tissuumaps-plugins/src/**/*.test.{js,ts}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: "./packages/@tissuumaps-plugins/tsconfig.test.json",
+      },
+    },
+  },
+  // Tests - packages/@tissuumaps-viewer
+  {
+    files: ["packages/@tissuumaps-viewer/src/**/*.test.{js,jsx,ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: "./packages/@tissuumaps-viewer/tsconfig.test.json",
       },
     },
   },

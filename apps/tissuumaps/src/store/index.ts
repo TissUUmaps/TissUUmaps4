@@ -1,4 +1,9 @@
-import { type StateCreator, create } from "zustand";
+import {
+  type StateCreator,
+  type StoreApi,
+  type UseBoundStore,
+  create,
+} from "zustand";
 import { immer } from "zustand/middleware/immer";
 
 import { type AppSlice, createAppSlice } from "./app";
@@ -26,15 +31,16 @@ export type TissUUmapsState = AppSlice &
   ShapesSlice &
   TableSlice;
 
-export const useTissUUmaps = create<TissUUmapsState>()(
-  immer((...a) => ({
-    ...createAppSlice(...a),
-    ...createProjectSlice(...a),
-    ...createLayerSlice(...a),
-    ...createImageSlice(...a),
-    ...createLabelsSlice(...a),
-    ...createPointsSlice(...a),
-    ...createShapesSlice(...a),
-    ...createTableSlice(...a),
-  })),
-);
+export const useTissUUmaps: UseBoundStore<StoreApi<TissUUmapsState>> =
+  create<TissUUmapsState>()(
+    immer((...a) => ({
+      ...createAppSlice(...a),
+      ...createProjectSlice(...a),
+      ...createLayerSlice(...a),
+      ...createImageSlice(...a),
+      ...createLabelsSlice(...a),
+      ...createPointsSlice(...a),
+      ...createShapesSlice(...a),
+      ...createTableSlice(...a),
+    })),
+  );

@@ -1,15 +1,13 @@
 import { useTissUUmaps } from "../../store";
-import { MapUtils } from "../../utils/MapUtils";
 import { ImagePanel } from "./ImagePanel";
 
 export function ImageCollectionPanel() {
-  const imageMap = useTissUUmaps((state) => state.imageMap);
+  const images = useTissUUmaps((state) => state.images);
   return (
     <>
-      {imageMap &&
-        MapUtils.map(imageMap, (imageId, image) => (
-          <ImagePanel key={imageId} imageId={imageId} image={image} />
-        ))}
+      {images.map((image) => (
+        <ImagePanel key={image.id} image={image} />
+      ))}
     </>
   );
 }

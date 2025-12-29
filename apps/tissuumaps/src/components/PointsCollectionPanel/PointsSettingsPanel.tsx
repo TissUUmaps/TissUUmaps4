@@ -1,7 +1,6 @@
 import { type Points } from "@tissuumaps/core";
 
 type PointsSettingsPanelProps = {
-  pointsId: string;
   points: Points;
 };
 

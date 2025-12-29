@@ -1,15 +1,13 @@
 import { useTissUUmaps } from "../../store";
-import { MapUtils } from "../../utils/MapUtils";
 import { PointsPanel } from "./PointsPanel";
 
 export function PointsCollectionPanel() {
-  const pointsMap = useTissUUmaps((state) => state.pointsMap);
+  const points = useTissUUmaps((state) => state.points);
   return (
     <>
-      {pointsMap &&
-        MapUtils.map(pointsMap, (pointsId, points) => (
-          <PointsPanel key={pointsId} pointsId={pointsId} points={points} />
-        ))}
+      {points.map((currentPoints) => (
+        <PointsPanel key={currentPoints.id} points={currentPoints} />
+      ))}
     </>
   );
 }

@@ -1,15 +1,13 @@
 import { useTissUUmaps } from "../../store";
-import { MapUtils } from "../../utils/MapUtils";
 import { TablePanel } from "./TablePanel";
 
 export function TableCollectionPanel() {
-  const tableMap = useTissUUmaps((state) => state.tableMap);
+  const tables = useTissUUmaps((state) => state.tables);
   return (
     <>
-      {tableMap &&
-        MapUtils.map(tableMap, (tableId, table) => (
-          <TablePanel key={tableId} tableId={tableId} table={table} />
-        ))}
+      {tables.map((table) => (
+        <TablePanel key={table.id} table={table} />
+      ))}
     </>
   );
 }

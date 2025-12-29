@@ -1,7 +1,6 @@
 import { type Image } from "@tissuumaps/core";
 
 type ImageSettingsPanelProps = {
-  imageId: string;
   image: Image;
 };
 

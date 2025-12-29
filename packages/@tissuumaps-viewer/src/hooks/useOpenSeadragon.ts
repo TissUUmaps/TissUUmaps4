@@ -22,9 +22,9 @@ export function useOpenSeadragon({
 
   const {
     projectDir,
-    layerMap,
-    imageMap,
-    labelsMap,
+    layers,
+    images,
+    labels,
     viewerOptions,
     viewerAnimationStartOptions,
     viewerAnimationFinishOptions,
@@ -101,7 +101,7 @@ export function useOpenSeadragon({
     const abortController = new AbortController();
     if (controller !== null) {
       controller
-        .synchronize(layerMap, imageMap, labelsMap, loadImage, loadLabels, {
+        .synchronize(layers, images, labels, loadImage, loadLabels, {
           signal: abortController.signal,
         })
         .then(
@@ -120,7 +120,7 @@ export function useOpenSeadragon({
     return () => {
       abortController.abort();
     };
-  }, [projectDir, layerMap, imageMap, labelsMap, loadImage, loadLabels]);
+  }, [projectDir, layers, images, labels, loadImage, loadLabels]);
 
   return { viewerElementRef, viewerState };
 }

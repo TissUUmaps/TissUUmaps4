@@ -20,11 +20,11 @@ import type {
 
 export interface ViewerAdapter {
   projectDir: FileSystemDirectoryHandle | null;
-  layerMap: Map<string, Layer>;
-  imageMap: Map<string, Image>;
-  labelsMap: Map<string, Labels>;
-  pointsMap: Map<string, Points>;
-  shapesMap: Map<string, Shapes>;
+  layers: Layer[];
+  images: Image[];
+  labels: Labels[];
+  points: Points[];
+  shapes: Shapes[];
   markerMaps: Map<string, ValueMap<Marker>>;
   sizeMaps: Map<string, ValueMap<number>>;
   colorMaps: Map<string, ColorMap>;
@@ -35,22 +35,22 @@ export interface ViewerAdapter {
   viewerAnimationFinishOptions: ViewerOptions;
   drawOptions: DrawOptions;
   loadImage: (
-    image: Image,
+    imageId: string,
     options: { signal?: AbortSignal },
   ) => Promise<ImageData>;
   loadLabels: (
-    labels: Labels,
+    labelsId: string,
     options: { signal?: AbortSignal },
   ) => Promise<LabelsData>;
   loadPoints: (
-    points: Points,
+    pointsId: string,
     options: { signal?: AbortSignal },
   ) => Promise<PointsData>;
   loadShapes: (
-    shapes: Shapes,
+    shapesId: string,
     options: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
-  loadTableByID: (
+  loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
   ) => Promise<TableData>;

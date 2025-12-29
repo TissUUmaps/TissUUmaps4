@@ -107,11 +107,11 @@ export function App() {
   const adapter = useTissUUmaps(
     useShallow((state) => ({
       projectDir: state.projectDir,
-      layerMap: state.layerMap,
-      imageMap: state.imageMap,
-      labelsMap: state.labelsMap,
-      pointsMap: state.pointsMap,
-      shapesMap: state.shapesMap,
+      layers: state.layers,
+      images: state.images,
+      labels: state.labels,
+      points: state.points,
+      shapes: state.shapes,
       markerMaps: state.markerMaps,
       sizeMaps: state.sizeMaps,
       colorMaps: state.colorMaps,
@@ -125,7 +125,7 @@ export function App() {
       loadLabels: state.loadLabels,
       loadPoints: state.loadPoints,
       loadShapes: state.loadShapes,
-      loadTableByID: state.loadTableByID,
+      loadTable: state.loadTable,
       // rerender upon changes to data loader factories
       _imageDataLoaderFactories: state.imageDataLoaderFactories,
       _labelsDataLoaderFactories: state.labelsDataLoaderFactories,

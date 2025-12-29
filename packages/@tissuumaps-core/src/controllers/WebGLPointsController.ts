@@ -170,27 +170,25 @@ export class WebGLPointsController extends WebGLControllerBase {
   }
 
   async synchronize(
-    layerMap: Map<string, Layer>,
-    pointsMap: Map<string, Points>,
+    layers: Layer[],
+    points: Points[],
     markerMaps: Map<string, ValueMap<Marker>>,
     sizeMaps: Map<string, ValueMap<number>>,
     colorMaps: Map<string, ColorMap>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
     loadPoints: (
-      points: Points,
+      pointsId: string,
       options: { signal?: AbortSignal },
     ) => Promise<PointsData>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
     { signal }: { signal?: AbortSignal } = {},
   ): Promise<void> {
     signal?.throwIfAborted();
-    const refs = await this._loadPoints(layerMap, pointsMap, loadPoints, {
-      signal,
-    });
+    const refs = await this._loadPoints(layers, points, loadPoints, { signal });
     signal?.throwIfAborted();
     if (refs.length > WebGLPointsController._maxNumObjects) {
       console.warn(
@@ -212,7 +210,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       visibilityMaps,
       opacityMaps,
       buffersResized,
-      loadTableByID,
+      loadTable,
       { signal },
     );
     signal?.throwIfAborted();
@@ -319,30 +317,30 @@ export class WebGLPointsController extends WebGLControllerBase {
   }
 
   private async _loadPoints(
-    layerMap: Map<string, Layer>,
-    pointsMap: Map<string, Points>,
+    layers: Layer[],
+    points: Points[],
     loadPoints: (
-      points: Points,
+      pointsId: string,
       options: { signal?: AbortSignal },
     ) => Promise<PointsData>,
     { signal }: { signal?: AbortSignal } = {},
   ): Promise<PointsRef[]> {
     signal?.throwIfAborted();
     const refs: PointsRef[] = [];
-    for (const layer of layerMap.values()) {
-      for (const points of pointsMap.values()) {
-        for (let i = 0; i < points.layerConfigs.length; i++) {
-          const layerConfig = points.layerConfigs[i]!;
+    for (const layer of layers) {
+      for (const currentPoints of points) {
+        for (let i = 0; i < currentPoints.layerConfigs.length; i++) {
+          const layerConfig = currentPoints.layerConfigs[i]!;
           if (layerConfig.layerId !== layer.id) {
             continue;
           }
           let data;
           try {
-            data = await loadPoints(points, { signal });
+            data = await loadPoints(currentPoints.id, { signal });
           } catch (error) {
             if (!signal?.aborted) {
               console.error(
-                `Failed to load points with ID '${points.id}'`,
+                `Failed to load points with ID '${currentPoints.id}'`,
                 error,
               );
             }
@@ -351,7 +349,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           if (data !== undefined) {
             refs.push({
               layer,
-              points,
+              points: currentPoints,
               layerConfig,
               layerConfigIndex: i,
               data,
@@ -371,7 +369,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
     buffersResized: boolean,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -441,7 +439,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.points.pointMarkerMap,
           pointsDefaults.pointMarker,
           markerMaps,
-          loadTableByID,
+          loadTable,
           { signal },
         );
         signal?.throwIfAborted();
@@ -485,7 +483,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.points.pointSizeMap,
           pointsDefaults.pointSize,
           sizeMaps,
-          loadTableByID,
+          loadTable,
           { signal, sizeFactor },
         );
         signal?.throwIfAborted();
@@ -534,7 +532,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             ref.points.pointVisibilityMap,
             pointsDefaults.pointVisibility,
             visibilityMaps,
-            loadTableByID,
+            loadTable,
             { signal },
           );
           signal?.throwIfAborted();
@@ -544,7 +542,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             ref.points.pointOpacityMap,
             pointsDefaults.pointOpacity,
             opacityMaps,
-            loadTableByID,
+            loadTable,
             { signal, opacityFactor: ref.layer.opacity * ref.points.opacity },
           );
           signal?.throwIfAborted();
@@ -558,7 +556,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             visibilityData,
             opacityData,
             colorMaps,
-            loadTableByID,
+            loadTable,
             { signal },
           );
         }

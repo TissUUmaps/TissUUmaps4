@@ -1,33 +1,29 @@
+import { deepEqual } from "fast-equals";
+
 import {
   type Table,
   type TableData,
   type TableDataSource,
 } from "@tissuumaps/core";
 
-import { MapUtils } from "../utils/MapUtils";
 import { type TissUUmapsStateCreator } from "./index";
 
 export type TableSlice = TableSliceState & TableSliceActions;
 
 export type TableSliceState = {
-  tableMap: Map<string, Table>;
-  tableDataCache: Map<TableDataSource, TableData>;
+  tables: Table[];
+  _tableDataCache: { dataSource: TableDataSource; data: TableData }[];
 };
 
 export type TableSliceActions = {
   addTable: (table: Table, index?: number) => void;
+  moveTable: (tableId: string, newIndex: number) => void;
   loadTable: (
-    table: Table,
-    options: { signal?: AbortSignal },
-  ) => Promise<TableData>;
-  loadTableByID: (
     tableId: string,
     options: { signal?: AbortSignal },
   ) => Promise<TableData>;
-  unloadTable: (table: Table) => void;
-  unloadTableByID: (tableId: string) => void;
-  deleteTable: (table: Table) => void;
-  deleteTableByID: (tableId: string) => void;
+  unloadTable: (tableId: string) => void;
+  deleteTable: (tableId: string) => void;
   clearTables: () => void;
 };
 
@@ -38,95 +34,93 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
   ...initialTableSliceState,
   addTable: (table, index) => {
     const state = get();
-    const oldTable = state.tableMap.get(table.id);
-    if (oldTable !== undefined) {
-      state.unloadTable(oldTable);
+    if (state.tables.find((x) => x.id === table.id) !== undefined) {
+      throw new Error(`Table with ID ${table.id} already exists.`);
     }
     set((draft) => {
-      draft.tableMap = MapUtils.cloneAndSpliceSet(
-        draft.tableMap,
-        table.id,
-        table,
-        index,
-      );
+      draft.tables.splice(index ?? draft.tables.length, 0, table);
     });
   },
-  loadTable: async (table, { signal }: { signal?: AbortSignal } = {}) => {
+  moveTable: (tableId, newIndex) => {
+    const state = get();
+    const oldIndex = state.tables.findIndex((table) => table.id === tableId);
+    if (oldIndex === -1) {
+      throw new Error(`Table with ID ${tableId} not found.`);
+    }
+    if (oldIndex !== newIndex) {
+      set((draft) => {
+        const [table] = draft.tables.splice(oldIndex, 1);
+        draft.tables.splice(newIndex, 0, table!);
+      });
+    }
+  },
+  loadTable: async (tableId, { signal }: { signal?: AbortSignal } = {}) => {
     signal?.throwIfAborted();
     const state = get();
-    let tableData = state.tableDataCache.get(table.dataSource);
-    if (tableData !== undefined) {
-      return tableData;
+    const table = state.tables.find((table) => table.id === tableId);
+    if (table === undefined) {
+      throw new Error(`Table with ID ${tableId} not found.`);
     }
-    const tableDataLoaderFactory = state.tableDataLoaderFactories.get(
+    const cache = state._tableDataCache.find(({ dataSource }) =>
+      deepEqual(dataSource, table.dataSource),
+    );
+    if (cache !== undefined) {
+      return cache.data;
+    }
+    const dataLoaderFactory = state.tableDataLoaderFactories.get(
       table.dataSource.type,
     );
-    if (tableDataLoaderFactory === undefined) {
+    if (dataLoaderFactory === undefined) {
       throw new Error(
         `No table data loader found for type ${table.dataSource.type}.`,
       );
     }
-    const tableDataLoader = tableDataLoaderFactory(
-      table.dataSource,
-      state.projectDir,
+    const dataLoader = dataLoaderFactory(table.dataSource, state.projectDir);
+    const data = await dataLoader.loadTable({ signal });
+    signal?.throwIfAborted();
+    set((draft) => {
+      draft._tableDataCache.push({ dataSource: table.dataSource, data });
+    });
+    return data;
+  },
+  unloadTable: (tableId) => {
+    const state = get();
+    const table = state.tables.find((table) => table.id === tableId);
+    if (table === undefined) {
+      throw new Error(`Table with ID ${tableId} not found.`);
+    }
+    const cacheIndex = state._tableDataCache.findIndex(({ dataSource }) =>
+      deepEqual(dataSource, table.dataSource),
     );
-    tableData = await tableDataLoader.loadTable({ signal });
-    signal?.throwIfAborted();
-    set((draft) => {
-      draft.tableDataCache.set(table.dataSource, tableData);
-    });
-    return tableData;
+    if (cacheIndex !== -1) {
+      const cache = state._tableDataCache[cacheIndex]!;
+      set((draft) => {
+        draft._tableDataCache.splice(cacheIndex, 1);
+      });
+      cache.data.destroy();
+    }
   },
-  loadTableByID: async (tableId, { signal }: { signal?: AbortSignal } = {}) => {
-    signal?.throwIfAborted();
+  deleteTable: (tableId) => {
     const state = get();
-    const table = state.tableMap.get(tableId);
-    if (table === undefined) {
+    const index = state.tables.findIndex((table) => table.id === tableId);
+    if (index === -1) {
       throw new Error(`Table with ID ${tableId} not found.`);
     }
-    return state.loadTable(table, { signal });
-  },
-  unloadTable: (table) => {
-    const state = get();
-    const tableData = state.tableDataCache.get(table.dataSource);
+    state.unloadTable(tableId);
     set((draft) => {
-      draft.tableDataCache.delete(table.dataSource);
+      draft.tables.splice(index, 1);
     });
-    tableData?.destroy();
-  },
-  unloadTableByID: (tableId) => {
-    const state = get();
-    const table = state.tableMap.get(tableId);
-    if (table === undefined) {
-      throw new Error(`Table with ID ${tableId} not found.`);
-    }
-    state.unloadTable(table);
-  },
-  deleteTable: (table) => {
-    const state = get();
-    state.unloadTable(table);
-    set((draft) => {
-      draft.tableMap.delete(table.id);
-    });
-  },
-  deleteTableByID: (tableId) => {
-    const state = get();
-    const table = state.tableMap.get(tableId);
-    if (table === undefined) {
-      throw new Error(`Table with ID ${tableId} not found.`);
-    }
-    state.deleteTable(table);
   },
   clearTables: () => {
     const state = get();
-    state.tableMap.forEach((table) => {
-      state.deleteTable(table);
-    });
+    while (state.tables.length > 0) {
+      state.deleteTable(state.tables[0]!.id);
+    }
     set(initialTableSliceState);
   },
 });
 
 const initialTableSliceState: TableSliceState = {
-  tableMap: new Map(),
-  tableDataCache: new Map(),
+  tables: [],
+  _tableDataCache: [],
 };

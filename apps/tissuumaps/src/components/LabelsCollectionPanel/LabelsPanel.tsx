@@ -3,14 +3,13 @@ import { type Labels } from "@tissuumaps/core";
 import { LabelsSettingsPanel } from "./LabelsSettingsPanel";
 
 type LabelsPanelProps = {
-  labelsId: string;
   labels: Labels;
 };
 
 export function LabelsPanel(props: LabelsPanelProps) {
   return (
     <>
-      <LabelsSettingsPanel labelsId={props.labelsId} labels={props.labels} />
+      <LabelsSettingsPanel labels={props.labels} />
     </>
   );
 }

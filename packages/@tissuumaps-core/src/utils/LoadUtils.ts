@@ -20,7 +20,7 @@ export class LoadUtils {
     markerMapConfig: string | ValueMap<Marker> | undefined,
     defaultMarker: Marker,
     markerMaps: Map<string, ValueMap<Marker>>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -37,7 +37,7 @@ export class LoadUtils {
     const data = new Uint8Array(dataLength);
     if (isTableValuesRef(markerConfig)) {
       // table column contains marker values
-      const tableData = await loadTableByID(markerConfig.tableId, {
+      const tableData = await loadTable(markerConfig.tableId, {
         signal,
       });
       signal?.throwIfAborted();
@@ -51,7 +51,7 @@ export class LoadUtils {
       }
     } else if (isTableGroupsRef(markerConfig)) {
       // table column contains group names
-      const tableData = await loadTableByID(markerConfig.tableId, {
+      const tableData = await loadTable(markerConfig.tableId, {
         signal,
       });
       signal?.throwIfAborted();
@@ -104,7 +104,7 @@ export class LoadUtils {
     sizeMapConfig: string | ValueMap<number> | undefined,
     defaultSize: number,
     sizeMaps: Map<string, ValueMap<number>>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -126,7 +126,7 @@ export class LoadUtils {
     const data = new Float32Array(dataLength);
     if (isTableValuesRef(sizeConfig)) {
       // table column contains size values
-      const tableData = await loadTableByID(sizeConfig.tableId, {
+      const tableData = await loadTable(sizeConfig.tableId, {
         signal,
       });
       signal?.throwIfAborted();
@@ -149,7 +149,7 @@ export class LoadUtils {
       }
       if (sizeMap !== undefined) {
         // size map found, load group names
-        const tableData = await loadTableByID(sizeConfig.tableId, {
+        const tableData = await loadTable(sizeConfig.tableId, {
           signal,
         });
         signal?.throwIfAborted();
@@ -188,7 +188,7 @@ export class LoadUtils {
     visibilityData: Uint8Array,
     opacityData: Uint8Array,
     colorMaps: Map<string, ColorMap>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -211,7 +211,7 @@ export class LoadUtils {
           : undefined;
       if (palette !== undefined) {
         // color palette found, load values
-        const tableData = await loadTableByID(colorConfig.tableId, {
+        const tableData = await loadTable(colorConfig.tableId, {
           signal,
         });
         signal?.throwIfAborted();
@@ -266,7 +266,7 @@ export class LoadUtils {
       }
       if (colorMap !== undefined) {
         // color map found, load group names
-        const tableData = await loadTableByID(colorConfig.tableId, {
+        const tableData = await loadTable(colorConfig.tableId, {
           signal,
         });
         signal?.throwIfAborted();
@@ -328,7 +328,7 @@ export class LoadUtils {
     visibilityMapConfig: string | ValueMap<boolean> | undefined,
     defaultVisibility: boolean,
     visibilityMaps: Map<string, ValueMap<boolean>>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -345,7 +345,7 @@ export class LoadUtils {
     const data = new Uint8Array(dataLength);
     if (isTableValuesRef(visibilityConfig)) {
       // table column contains visibility values
-      const tableData = await loadTableByID(visibilityConfig.tableId, {
+      const tableData = await loadTable(visibilityConfig.tableId, {
         signal,
       });
       signal?.throwIfAborted();
@@ -366,7 +366,7 @@ export class LoadUtils {
       }
       if (visibilityMap !== undefined) {
         // visibility map found, load group names
-        const tableData = await loadTableByID(visibilityConfig.tableId, {
+        const tableData = await loadTable(visibilityConfig.tableId, {
           signal,
         });
         signal?.throwIfAborted();
@@ -402,7 +402,7 @@ export class LoadUtils {
     opacityMapConfig: string | ValueMap<number> | undefined,
     defaultOpacity: number,
     opacityMaps: Map<string, ValueMap<number>>,
-    loadTableByID: (
+    loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -424,7 +424,7 @@ export class LoadUtils {
     const data = new Uint8Array(dataLength);
     if (isTableValuesRef(opacityConfig)) {
       // table column contains opacity values
-      const tableData = await loadTableByID(opacityConfig.tableId, {
+      const tableData = await loadTable(opacityConfig.tableId, {
         signal,
       });
       signal?.throwIfAborted();
@@ -447,7 +447,7 @@ export class LoadUtils {
       }
       if (opacityMap !== undefined) {
         // opacity map found, load group names
-        const tableData = await loadTableByID(opacityConfig.tableId, {
+        const tableData = await loadTable(opacityConfig.tableId, {
           signal,
         });
         signal?.throwIfAborted();
