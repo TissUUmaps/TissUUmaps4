@@ -25,6 +25,13 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
         { signal },
       );
       signal?.throwIfAborted();
+      for (let i = 0; i < ids.length; i++) {
+        if (!Number.isInteger(ids[i])) {
+          throw new Error(
+            `ID column "${this.dataSource.idColumn}" contains non-integer values.`,
+          );
+        }
+      }
       index = Array.from(ids);
     }
     return new CSVTableData(n, data, columns, index);
