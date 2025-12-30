@@ -557,7 +557,7 @@ export class LoadUtils {
       }
     } else if (isTableGroupsRef(opacityConfig)) {
       // table column contains group names
-      let opacityMap = undefined;
+      let opacityMap;
       if (opacityMapConfig !== undefined) {
         const configuredOpacityMap =
           typeof opacityMapConfig === "string"
