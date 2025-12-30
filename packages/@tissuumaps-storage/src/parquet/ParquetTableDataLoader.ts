@@ -1,7 +1,10 @@
 import * as hyparquet from "hyparquet";
 
 import { AbstractTableDataLoader } from "../base";
-import { ParquetTableData } from "./ParquetTableData";
+import {
+  ParquetTableData,
+  loadParquetTableDataColumn,
+} from "./ParquetTableData";
 import { type ParquetTableDataSource } from "./ParquetTableDataSource";
 
 export class ParquetTableDataLoader extends AbstractTableDataLoader<
@@ -16,7 +19,18 @@ export class ParquetTableDataLoader extends AbstractTableDataLoader<
     signal?.throwIfAborted();
     const metadata = await hyparquet.parquetMetadataAsync(buffer);
     signal?.throwIfAborted();
-    return new ParquetTableData(buffer, metadata);
+    let index;
+    if (this.dataSource.idColumn !== undefined) {
+      const ids = await loadParquetTableDataColumn<number>(
+        this.dataSource.idColumn,
+        buffer,
+        metadata,
+        { signal },
+      );
+      signal?.throwIfAborted();
+      index = ids instanceof Uint16Array ? ids : new Uint16Array(ids);
+    }
+    return new ParquetTableData(buffer, metadata, index);
   }
 
   private async _loadParquet({

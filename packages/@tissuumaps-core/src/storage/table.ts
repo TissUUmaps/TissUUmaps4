@@ -1,5 +1,5 @@
 import { type MappableArrayLike } from "../types/array";
-import { type Data, type DataLoader } from "./base";
+import { type DataLoader, type ItemsData } from "./base";
 
 export interface TableDataLoader<
   TTableData extends TableData,
@@ -7,8 +7,7 @@ export interface TableDataLoader<
   loadTable(options: { signal?: AbortSignal }): Promise<TTableData>;
 }
 
-export interface TableData extends Data {
-  getLength(): number;
+export interface TableData extends ItemsData {
   getColumns(): string[];
   loadColumn<T>(
     column: string,

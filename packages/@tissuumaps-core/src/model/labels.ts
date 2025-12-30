@@ -48,9 +48,9 @@ export interface RawLabels extends RawRenderedDataObject<
    *
    * Used when {@link labelColor} is specified as a table column holding continuous numerical values.
    *
-   * @defaultValue `undefined` (i.e., the range of values in the specified column is used)
+   * @defaultValue `undefined` (i.e., fall back to "minmax", emitting a warning when in use)
    */
-  labelColorRange?: [number, number];
+  labelColorRange?: [number, number] | "minmax";
 
   /**
    * Color palette to which clipped and rescaled numerical values are mapped

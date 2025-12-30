@@ -7,10 +7,11 @@ import {
 export const geoJSONShapesDataSourceType = "geojson";
 export const geoJSONShapesDataSourceDefaults = {};
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawGeoJSONShapesDataSource extends RawShapesDataSource<
   typeof geoJSONShapesDataSourceType
-> {}
+> {
+  idProperty?: string;
+}
 
 export type GeoJSONShapesDataSource = ShapesDataSource<
   typeof geoJSONShapesDataSourceType

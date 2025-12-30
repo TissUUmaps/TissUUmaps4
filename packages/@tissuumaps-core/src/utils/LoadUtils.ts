@@ -15,7 +15,7 @@ import { MathUtils } from "./MathUtils";
 
 export class LoadUtils {
   static async loadMarkerIndexData(
-    n: number,
+    ids: Uint16Array | number[],
     markerConfig: Marker | TableValuesRef | TableGroupsRef | "random",
     markerMapConfig: string | ValueMap<Marker> | undefined,
     defaultMarker: Marker,
@@ -30,7 +30,7 @@ export class LoadUtils {
     }: { signal?: AbortSignal; paddingMultiple?: number } = {},
   ): Promise<Uint8Array> {
     signal?.throwIfAborted();
-    let dataLength = n;
+    let dataLength = ids.length;
     if (paddingMultiple && dataLength % paddingMultiple !== 0) {
       dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
@@ -41,65 +41,82 @@ export class LoadUtils {
         signal,
       });
       signal?.throwIfAborted();
+      const tableIds = tableData.getIndex();
       const tableValues = await tableData.loadColumn<string>(
         markerConfig.valuesCol,
         { signal },
       );
       signal?.throwIfAborted();
-      for (let i = 0; i < tableValues.length; i++) {
-        data[i] = Marker[tableValues[i]! as keyof typeof Marker];
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]!;
+        const tableIndex = tableIds.indexOf(id);
+        if (tableIndex !== -1) {
+          data[i] = Marker[tableValues[tableIndex]! as keyof typeof Marker];
+        } else {
+          console.warn(`ID ${id} not found in table ${markerConfig.tableId}`);
+          data[i] = defaultMarker;
+        }
       }
     } else if (isTableGroupsRef(markerConfig)) {
       // table column contains group names
+      let markerMap;
+      if (markerMapConfig !== undefined) {
+        const configuredMarkerMap =
+          typeof markerMapConfig === "string"
+            ? markerMaps.get(markerMapConfig)
+            : markerMapConfig;
+        if (configuredMarkerMap !== undefined) {
+          markerMap = {
+            values: new Map(Object.entries(configuredMarkerMap.values)),
+            defaultValue: configuredMarkerMap.defaultValue,
+          };
+        } else {
+          console.warn(`Marker map ${markerMapConfig as string} not found`);
+        }
+      }
       const tableData = await loadTable(markerConfig.tableId, {
         signal,
       });
       signal?.throwIfAborted();
+      const tableIds = tableData.getIndex();
       const tableGroups = await tableData.loadColumn(markerConfig.groupsCol, {
         signal,
       });
       signal?.throwIfAborted();
-      let markerMap;
-      if (markerMapConfig !== undefined) {
-        markerMap =
-          typeof markerMapConfig === "string"
-            ? markerMaps.get(markerMapConfig)
-            : markerMapConfig;
-      }
-      if (markerMap !== undefined) {
-        // marker map found, map group names to markers
-        const groupValues = new Map(Object.entries(markerMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const marker =
-            groupValues.get(group) ?? // first, try to get group-specific marker
-            markerMap.defaultValue ?? // then, fallback to marker map default
-            defaultMarker; // finally, fallback to default marker
-          data[i] = marker;
-        }
-      } else {
-        // no marker map found, fallback to marker palette
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          data[i] =
-            markerPalette[HashUtils.djb2(group) % markerPalette.length]!;
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]!;
+        const tableIndex = tableIds.indexOf(id);
+        if (tableIndex !== -1) {
+          const group = JSON.stringify(tableGroups[tableIndex]!);
+          if (markerMap !== undefined) {
+            data[i] =
+              markerMap.values.get(group) ?? // first, try to get group-specific marker
+              markerMap.defaultValue ?? // then, fallback to marker map default
+              defaultMarker; // finally, fallback to default marker
+          } else {
+            data[i] =
+              markerPalette[HashUtils.djb2(group) % markerPalette.length]!;
+          }
+        } else {
+          console.warn(`ID ${id} not found in table ${markerConfig.tableId}`);
+          data[i] = defaultMarker;
         }
       }
     } else if (markerConfig === "random") {
       // random markers from marker palette
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < ids.length; i++) {
         data[i] =
           markerPalette[Math.floor(Math.random() * markerPalette.length)]!;
       }
     } else {
       // uniform marker
-      data.fill(markerConfig);
+      data.fill(markerConfig, 0, ids.length);
     }
     return data;
   }
 
   static async loadSizeData(
-    n: number,
+    ids: Uint16Array | number[],
     sizeConfig: number | TableValuesRef | TableGroupsRef,
     sizeMapConfig: string | ValueMap<number> | undefined,
     defaultSize: number,
@@ -119,7 +136,7 @@ export class LoadUtils {
     } = {},
   ): Promise<Float32Array> {
     signal?.throwIfAborted();
-    let dataLength = n;
+    let dataLength = ids.length;
     if (paddingMultiple && dataLength % paddingMultiple !== 0) {
       dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
@@ -130,58 +147,79 @@ export class LoadUtils {
         signal,
       });
       signal?.throwIfAborted();
+      const tableIds = tableData.getIndex();
       const tableValues = await tableData.loadColumn<number>(
         sizeConfig.valuesCol,
         { signal },
       );
       signal?.throwIfAborted();
-      for (let i = 0; i < tableValues.length; i++) {
-        data[i] = tableValues[i]! * sizeFactor;
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]!;
+        const tableIndex = tableIds.indexOf(id);
+        if (tableIndex !== -1) {
+          data[i] = tableValues[tableIndex]! * sizeFactor;
+        } else {
+          console.warn(`ID ${id} not found in table ${sizeConfig.tableId}`);
+          data[i] = defaultSize * sizeFactor;
+        }
       }
     } else if (isTableGroupsRef(sizeConfig)) {
       // table column contains group names
-      let sizeMap = undefined;
+      let sizeMap;
       if (sizeMapConfig !== undefined) {
-        sizeMap =
+        const configuredSizeMap =
           typeof sizeMapConfig === "string"
             ? sizeMaps.get(sizeMapConfig)
             : sizeMapConfig;
+        if (configuredSizeMap !== undefined) {
+          sizeMap = {
+            values: new Map(Object.entries(configuredSizeMap.values)),
+            defaultValue: configuredSizeMap.defaultValue,
+          };
+        } else {
+          console.warn(`Size map ${sizeMapConfig as string} not found`);
+        }
       }
       if (sizeMap !== undefined) {
-        // size map found, load group names
         const tableData = await loadTable(sizeConfig.tableId, {
           signal,
         });
         signal?.throwIfAborted();
+        const tableIds = tableData.getIndex();
         const tableGroups = await tableData.loadColumn(sizeConfig.groupsCol, {
           signal,
         });
         signal?.throwIfAborted();
-        // map group names to sizes
-        const groupValues = new Map(Object.entries(sizeMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const size =
-            groupValues.get(group) ?? // first, try to get group-specific size
-            sizeMap.defaultValue ?? // then, fallback to size map default
-            defaultSize; // finally, fallback to default size
-          data[i] = size * sizeFactor;
+        for (let i = 0; i < ids.length; i++) {
+          const id = ids[i]!;
+          const tableIndex = tableIds.indexOf(id);
+          if (tableIndex !== -1) {
+            const group = JSON.stringify(tableGroups[tableIndex]!);
+            const size =
+              sizeMap.values.get(group) ?? // first, try to get group-specific size
+              sizeMap.defaultValue ?? // then, fallback to size map default
+              defaultSize; // finally, fallback to default size
+            data[i] = size * sizeFactor;
+          } else {
+            console.warn(`ID ${id} not found in table ${sizeConfig.tableId}`);
+            data[i] = defaultSize * sizeFactor;
+          }
         }
       } else {
-        // no size map found, fallback to default size
-        data.fill(defaultSize * sizeFactor);
+        console.warn("Size map not configured or found");
+        data.fill(defaultSize * sizeFactor, 0, ids.length);
       }
     } else {
       // uniform size
-      data.fill(sizeConfig * sizeFactor);
+      data.fill(sizeConfig * sizeFactor, 0, ids.length);
     }
     return data;
   }
 
   static async loadColorData(
-    n: number,
+    ids: Uint16Array | number[],
     colorConfig: Color | TableValuesRef | TableGroupsRef | "randomFromPalette",
-    colorRangeConfig: [number, number] | undefined,
+    colorRangeConfig: [number, number] | "minmax" | undefined,
     colorPaletteConfig: keyof typeof colorPalettes | undefined,
     colorMapConfig: string | ColorMap | undefined,
     defaultColor: Color,
@@ -198,71 +236,96 @@ export class LoadUtils {
     }: { signal?: AbortSignal; paddingMultiple?: number } = {},
   ): Promise<Uint32Array> {
     signal?.throwIfAborted();
-    let dataLength = n;
+    let dataLength = ids.length;
     if (paddingMultiple && dataLength % paddingMultiple !== 0) {
       dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
     const data = new Uint32Array(dataLength);
     if (isTableValuesRef(colorConfig)) {
       // table column contains continuous values
-      const palette =
+      const colorPalette =
         colorPaletteConfig !== undefined
           ? colorPalettes[colorPaletteConfig]
           : undefined;
-      if (palette !== undefined) {
-        // color palette found, load values
+      if (colorPalette !== undefined) {
         const tableData = await loadTable(colorConfig.tableId, {
           signal,
         });
         signal?.throwIfAborted();
+        const tableIds = tableData.getIndex();
         const tableValues = await tableData.loadColumn<number>(
           colorConfig.valuesCol,
           { signal },
         );
         signal?.throwIfAborted();
-        // determine value range
         let vmin, vmax;
-        if (colorRangeConfig !== undefined) {
+        if (colorRangeConfig !== undefined && colorRangeConfig !== "minmax") {
           [vmin, vmax] = colorRangeConfig;
         } else {
-          vmin = tableValues[0]!;
-          vmax = tableValues[0]!;
-          for (let i = 1; i < tableValues.length; i++) {
-            const value = tableValues[i]!;
-            if (value < vmin) {
-              vmin = value;
+          if (colorRangeConfig === undefined) {
+            console.warn("Color range not specified, using min-max scaling");
+          }
+          const values = [];
+          for (const id of ids) {
+            const tableIndex = tableIds.indexOf(id);
+            if (tableIndex !== -1) {
+              values.push(tableValues[tableIndex]!);
             }
-            if (value > vmax) {
-              vmax = value;
-            }
+          }
+          if (values.length > 0) {
+            [vmin, vmax] = [Math.min(...values), Math.max(...values)];
+          } else {
+            console.warn("No values found, using [0, 1] for color range");
+            [vmin, vmax] = [0, 1];
           }
         }
-        // map values to colors
-        for (let i = 0; i < tableValues.length; i++) {
-          let value = tableValues[i]!;
-          // clamp value to [vmin, vmax]
-          if (value < vmin) {
-            value = vmin!;
-          } else if (value > vmax) {
-            value = vmax!;
+        for (let i = 0; i < ids.length; i++) {
+          const id = ids[i]!;
+          const tableIndex = tableIds.indexOf(id);
+          if (tableIndex !== -1) {
+            let value = tableValues[tableIndex]!;
+            if (value < vmin) {
+              value = vmin;
+            } else if (value > vmax) {
+              value = vmax;
+            }
+            value = (value - vmin) / (vmax - vmin);
+            const color =
+              colorPalette[Math.floor(value * colorPalette.length)]!;
+            data[i] = ColorUtils.packColor(color);
+          } else {
+            console.warn(`ID ${id} not found in table ${colorConfig.tableId}`);
+            data[i] = ColorUtils.packColor(defaultColor);
           }
-          // rescale and map value to color
-          value = (value - vmin) / (vmax - vmin);
-          const color = palette[Math.floor(value * palette.length)]!;
-          data[i] = ColorUtils.packColor(color);
         }
       } else {
-        // no color palette found, fallback to default color
-        data.fill(ColorUtils.packColor(defaultColor));
+        console.warn("Color palette not configured or found");
+        data.fill(ColorUtils.packColor(defaultColor), 0, ids.length);
       }
     } else if (isTableGroupsRef(colorConfig)) {
       // table column contains group names
-      let colorMap = undefined;
+      let colorMap;
       if (colorMapConfig !== undefined) {
-        colorMap =
+        const configuredColorMap =
           typeof colorMapConfig === "string"
             ? colorMaps.get(colorMapConfig)
             : colorMapConfig;
+        if (configuredColorMap !== undefined) {
+          let colorMapPalette;
+          if (configuredColorMap.palette !== undefined) {
+            colorMapPalette = colorPalettes[configuredColorMap.palette];
+            if (colorMapPalette === undefined) {
+              console.warn(
+                `Color map palette ${configuredColorMap.palette} not found`,
+              );
+            }
+          }
+          colorMap = {
+            values: new Map(Object.entries(configuredColorMap.values)),
+            defaultValue: configuredColorMap.defaultValue,
+            palette: colorMapPalette,
+          };
+        }
       }
       if (colorMap !== undefined) {
         // color map found, load group names
@@ -270,52 +333,56 @@ export class LoadUtils {
           signal,
         });
         signal?.throwIfAborted();
+        const tableIds = tableData.getIndex();
         const tableGroups = await tableData.loadColumn(colorConfig.groupsCol, {
           signal,
         });
         signal?.throwIfAborted();
-        // map group names to colors
-        const palette =
-          colorMap.palette !== undefined
-            ? colorPalettes[colorMap.palette]
-            : undefined;
-        const groupValues = new Map(Object.entries(colorMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const color =
-            groupValues.get(group) ?? // first, try to get group-specific color
-            palette?.[HashUtils.djb2(group) % palette.length] ?? // then, fallback to color map palette
-            colorMap.defaultValue ?? // then, fallback to color map default
-            defaultColor; // finally, fallback to default color
-          data[i] = ColorUtils.packColor(color);
+        for (let i = 0; i < ids.length; i++) {
+          const id = ids[i]!;
+          const tableIndex = tableIds.indexOf(id);
+          if (tableIndex !== -1) {
+            const group = JSON.stringify(tableGroups[tableIndex]!);
+            const color =
+              colorMap.values.get(group) ?? // first, try to get group-specific color
+              colorMap.palette?.[
+                HashUtils.djb2(group) % colorMap.palette.length
+              ] ?? // then, fallback to color map palette
+              colorMap.defaultValue ?? // then, fallback to color map default
+              defaultColor; // finally, fallback to default color
+            data[i] = ColorUtils.packColor(color);
+          } else {
+            console.warn(`ID ${id} not found in table ${colorConfig.tableId}`);
+            data[i] = ColorUtils.packColor(defaultColor);
+          }
         }
       } else {
-        // no color map found, fallback to default color
-        data.fill(ColorUtils.packColor(defaultColor));
+        console.warn("Color map not configured or found");
+        data.fill(ColorUtils.packColor(defaultColor), 0, ids.length);
       }
     } else if (colorConfig === "randomFromPalette") {
       // random colors from color palette
-      const palette =
+      const colorPalette =
         colorPaletteConfig !== undefined
           ? colorPalettes[colorPaletteConfig]
           : undefined;
-      if (palette !== undefined) {
-        // color palette found, map random colors from palette
-        for (let i = 0; i < n; i++) {
-          const color = palette[Math.floor(Math.random() * palette.length)]!;
+      if (colorPalette !== undefined) {
+        for (let i = 0; i < ids.length; i++) {
+          const color =
+            colorPalette[Math.floor(Math.random() * colorPalette.length)]!;
           data[i] = ColorUtils.packColor(color);
         }
       } else {
-        // no color palette found, fallback to default color
-        data.fill(ColorUtils.packColor(defaultColor));
+        console.warn("Color palette not configured or found");
+        data.fill(ColorUtils.packColor(defaultColor), 0, ids.length);
       }
     } else {
       // uniform color
-      data.fill(ColorUtils.packColor(colorConfig));
+      data.fill(ColorUtils.packColor(colorConfig), 0, ids.length);
     }
     // combine color with visibility and opacity
     signal?.throwIfAborted();
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < ids.length; i++) {
       const c = MathUtils.safeLeftShift(data[i]!, 8);
       data[i] = c + (visibilityData[i]! > 0 ? opacityData[i]! : 0);
     }
@@ -323,7 +390,7 @@ export class LoadUtils {
   }
 
   static async loadVisibilityData(
-    n: number,
+    ids: Uint16Array | number[],
     visibilityConfig: boolean | TableValuesRef | TableGroupsRef,
     visibilityMapConfig: string | ValueMap<boolean> | undefined,
     defaultVisibility: boolean,
@@ -338,7 +405,7 @@ export class LoadUtils {
     }: { signal?: AbortSignal; paddingMultiple?: number } = {},
   ): Promise<Uint8Array> {
     signal?.throwIfAborted();
-    let dataLength = n;
+    let dataLength = ids.length;
     if (paddingMultiple && dataLength % paddingMultiple !== 0) {
       dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
@@ -349,55 +416,84 @@ export class LoadUtils {
         signal,
       });
       signal?.throwIfAborted();
+      const tableIds = tableData.getIndex();
       const tableValues = await tableData.loadColumn<number>(
         visibilityConfig.valuesCol,
         { signal },
       );
       signal?.throwIfAborted();
-      data.set(tableValues);
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]!;
+        const tableIndex = tableIds.indexOf(id);
+        if (tableIndex !== -1) {
+          data[i] = tableValues[tableIndex]!;
+        } else {
+          console.warn(
+            `ID ${id} not found in table ${visibilityConfig.tableId}`,
+          );
+          data[i] = defaultVisibility ? 1 : 0;
+        }
+      }
     } else if (isTableGroupsRef(visibilityConfig)) {
       // table column contains group names
-      let visibilityMap = undefined;
+      let visibilityMap;
       if (visibilityMapConfig !== undefined) {
-        visibilityMap =
+        const configuredVisibilityMap =
           typeof visibilityMapConfig === "string"
             ? visibilityMaps.get(visibilityMapConfig)
             : visibilityMapConfig;
+        if (configuredVisibilityMap !== undefined) {
+          visibilityMap = {
+            values: new Map(Object.entries(configuredVisibilityMap.values)),
+            defaultValue: configuredVisibilityMap.defaultValue,
+          };
+        } else {
+          console.warn(
+            `Visibility map ${visibilityMapConfig as string} not found`,
+          );
+        }
       }
       if (visibilityMap !== undefined) {
-        // visibility map found, load group names
         const tableData = await loadTable(visibilityConfig.tableId, {
           signal,
         });
         signal?.throwIfAborted();
+        const tableIds = tableData.getIndex();
         const tableGroups = await tableData.loadColumn(
           visibilityConfig.groupsCol,
           { signal },
         );
         signal?.throwIfAborted();
-        // map group names to visibilities
-        const groupValues = new Map(Object.entries(visibilityMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const visibility =
-            groupValues.get(group) ?? // first, try to get group-specific visibility
-            visibilityMap.defaultValue ?? // then, fallback to visibility map default
-            defaultVisibility; // finally, fallback to default visibility
-          data[i] = visibility ? 1 : 0;
+        for (let i = 0; i < ids.length; i++) {
+          const id = ids[i]!;
+          const tableIndex = tableIds.indexOf(id);
+          if (tableIndex !== -1) {
+            const group = JSON.stringify(tableGroups[tableIndex]!);
+            const visibility =
+              visibilityMap.values.get(group) ?? // first, try to get group-specific visibility
+              visibilityMap.defaultValue ?? // then, fallback to visibility map default
+              defaultVisibility; // finally, fallback to default visibility
+            data[i] = visibility ? 1 : 0;
+          } else {
+            console.warn(
+              `ID ${id} not found in table ${visibilityConfig.tableId}`,
+            );
+            data[i] = defaultVisibility ? 1 : 0;
+          }
         }
       } else {
-        // no visibility map found, fallback to default visibility
-        data.fill(defaultVisibility ? 1 : 0);
+        console.warn("Visibility map not configured or found");
+        data.fill(defaultVisibility ? 1 : 0, 0, ids.length);
       }
     } else {
       // uniform visibility
-      data.fill(visibilityConfig ? 1 : 0);
+      data.fill(visibilityConfig ? 1 : 0, 0, ids.length);
     }
     return data;
   }
 
   static async loadOpacityData(
-    n: number,
+    ids: Uint16Array | number[],
     opacityConfig: number | TableValuesRef | TableGroupsRef,
     opacityMapConfig: string | ValueMap<number> | undefined,
     defaultOpacity: number,
@@ -417,7 +513,7 @@ export class LoadUtils {
     } = {},
   ): Promise<Uint8Array> {
     signal?.throwIfAborted();
-    let dataLength = n;
+    let dataLength = ids.length;
     if (paddingMultiple && dataLength % paddingMultiple !== 0) {
       dataLength += paddingMultiple - (dataLength % paddingMultiple);
     }
@@ -428,46 +524,67 @@ export class LoadUtils {
         signal,
       });
       signal?.throwIfAborted();
+      const tableIds = tableData.getIndex();
       const tableValues = await tableData.loadColumn<number>(
         opacityConfig.valuesCol,
         { signal },
       );
       signal?.throwIfAborted();
-      for (let i = 0; i < tableValues.length; i++) {
-        data[i] = Math.round(opacityFactor * tableValues[i]! * 255);
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]!;
+        const tableIndex = tableIds.indexOf(id);
+        if (tableIndex !== -1) {
+          data[i] = Math.round(opacityFactor * tableValues[i]! * 255);
+        } else {
+          console.warn(`ID ${id} not found in table ${opacityConfig.tableId}`);
+          data[i] = Math.round(opacityFactor * defaultOpacity * 255);
+        }
       }
     } else if (isTableGroupsRef(opacityConfig)) {
       // table column contains group names
       let opacityMap = undefined;
       if (opacityMapConfig !== undefined) {
-        opacityMap =
+        const configuredOpacityMap =
           typeof opacityMapConfig === "string"
             ? opacityMaps.get(opacityMapConfig)
             : opacityMapConfig;
+        if (configuredOpacityMap !== undefined) {
+          opacityMap = {
+            values: new Map(Object.entries(configuredOpacityMap.values)),
+            defaultValue: configuredOpacityMap.defaultValue,
+          };
+        }
       }
       if (opacityMap !== undefined) {
-        // opacity map found, load group names
         const tableData = await loadTable(opacityConfig.tableId, {
           signal,
         });
         signal?.throwIfAborted();
+        const tableIds = tableData.getIndex();
         const tableGroups = await tableData.loadColumn(
           opacityConfig.groupsCol,
           { signal },
         );
         signal?.throwIfAborted();
-        // map group names to opacities
-        const groupValues = new Map(Object.entries(opacityMap.values));
-        for (let i = 0; i < tableGroups.length; i++) {
-          const group = JSON.stringify(tableGroups[i]!);
-          const opacity =
-            groupValues.get(group) ?? // first, try to get group-specific opacity
-            opacityMap.defaultValue ?? // then, fallback to opacity map default
-            defaultOpacity; // finally, fallback to default opacity
-          data[i] = Math.round(opacityFactor * opacity * 255);
+        for (let i = 0; i < ids.length; i++) {
+          const id = ids[i]!;
+          const tableIndex = tableIds.indexOf(id);
+          if (tableIndex !== -1) {
+            const group = JSON.stringify(tableGroups[tableIndex]!);
+            const opacity =
+              opacityMap.values.get(group) ?? // first, try to get group-specific opacity
+              opacityMap.defaultValue ?? // then, fallback to opacity map default
+              defaultOpacity; // finally, fallback to default opacity
+            data[i] = Math.round(opacityFactor * opacity * 255);
+          } else {
+            console.warn(
+              `ID ${id} not found in table ${opacityConfig.tableId}`,
+            );
+            data[i] = Math.round(opacityFactor * defaultOpacity * 255);
+          }
         }
       } else {
-        // no opacity map found, fallback to default opacity
+        console.warn("Opacity map not configured or found");
         data.fill(Math.round(opacityFactor * defaultOpacity * 255));
       }
     } else {
