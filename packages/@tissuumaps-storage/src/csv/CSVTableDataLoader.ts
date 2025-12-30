@@ -49,9 +49,9 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
         }[]
       | undefined;
     if (columns !== undefined && filteredColumns !== undefined) {
-      filteredColumnInfos = filteredColumns.map((columnName) => ({
-        name: columnName,
-        index: columns!.indexOf(columnName),
+      filteredColumnInfos = filteredColumns.map((column) => ({
+        name: column,
+        index: columns!.indexOf(column),
         chunks: [],
         currentChunk: [],
         isNaN: false,
@@ -65,9 +65,9 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
       ) {
         columns = results.data;
         filteredColumns ??= columns;
-        filteredColumnInfos = filteredColumns.map((columnName) => ({
-          name: columnName,
-          index: columns!.indexOf(columnName),
+        filteredColumnInfos = filteredColumns.map((column) => ({
+          name: column,
+          index: columns!.indexOf(column),
           chunks: [],
           currentChunk: [],
           isNaN: false,
