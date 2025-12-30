@@ -280,9 +280,13 @@ export class LoadUtils {
           if (values.length > 0) {
             [vmin, vmax] = [Math.min(...values), Math.max(...values)];
           } else {
-            console.warn("No values found, using [0, 1] for color range");
+            console.warn("No values found, using [0, 1] color range instead");
             [vmin, vmax] = [0, 1];
           }
+        }
+        if (vmax <= vmin) {
+          console.warn("Invalid color range, using [0, 1] color range instead");
+          [vmin, vmax] = [0, 1];
         }
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
