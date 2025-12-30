@@ -585,11 +585,15 @@ export class LoadUtils {
         }
       } else {
         console.warn("Opacity map not configured or found");
-        data.fill(Math.round(opacityFactor * defaultOpacity * 255), 0, ids.length);
+        data.fill(
+          Math.round(opacityFactor * defaultOpacity * 255),
+          0,
+          ids.length,
+        );
       }
     } else {
       // uniform opacity
-      data.fill(Math.round(opacityFactor * opacityConfig * 255));
+      data.fill(Math.round(opacityFactor * opacityConfig * 255), 0, ids.length);
     }
     return data;
   }
