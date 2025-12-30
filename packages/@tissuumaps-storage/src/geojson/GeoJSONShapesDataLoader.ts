@@ -29,7 +29,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
         const id = feature.properties?.[idProperty] as unknown;
         if (id === undefined || typeof id !== "number") {
           throw new Error(
-            `Feature is missing numeric ID property '${this.dataSource.idProperty}'.`,
+            `Feature is missing numeric ID property '${idProperty}'.`,
           );
         }
         return id;
