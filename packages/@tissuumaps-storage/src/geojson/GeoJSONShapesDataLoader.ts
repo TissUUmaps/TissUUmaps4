@@ -27,10 +27,12 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
       }
       index = geo.features.map((feature) => {
         const id = feature.properties?.[idProperty] as unknown;
-        if (id === undefined || typeof id !== "number") {
-          throw new Error(
-            `Feature is missing numeric ID property '${idProperty}'.`,
-          );
+        if (
+          id === undefined ||
+          typeof id !== "number" ||
+          !Number.isInteger(id)
+        ) {
+          throw new Error(`Feature is missing integer ID '${idProperty}'.`);
         }
         return id;
       });
