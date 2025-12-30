@@ -56,7 +56,7 @@ export interface RawShapes extends RawRenderedDataObject<
    *
    * Used when {@link shapeFillColor} is specified as a table column holding continuous numerical values.
    *
-   * @defaultValue `undefined` (i.e.,  fall back to "minmax", emitting a warning when in use)
+   * @defaultValue `undefined` (i.e., fall back to "minmax", emitting a warning when in use)
    */
   shapeFillColorRange?: [number, number] | "minmax";
 
