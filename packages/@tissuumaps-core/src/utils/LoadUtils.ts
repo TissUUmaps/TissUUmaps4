@@ -334,6 +334,8 @@ export class LoadUtils {
             defaultValue: configuredColorMap.defaultValue,
             palette: colorMapPalette,
           };
+        } else {
+          console.warn(`Color map ${colorMapConfig as string} not found`);
         }
       }
       if (colorMap !== undefined) {
@@ -566,6 +568,8 @@ export class LoadUtils {
             values: new Map(Object.entries(configuredOpacityMap.values)),
             defaultValue: configuredOpacityMap.defaultValue,
           };
+        } else {
+          console.warn(`Opacity map ${opacityMapConfig as string} not found`);
         }
       }
       if (opacityMap !== undefined) {
