@@ -1,4 +1,4 @@
-import { type Data, type DataLoader } from "./base";
+import { type DataLoader, type ItemsData } from "./base";
 
 export interface PointsDataLoader<
   TPointsData extends PointsData,
@@ -6,8 +6,7 @@ export interface PointsDataLoader<
   loadPoints(options: { signal?: AbortSignal }): Promise<TPointsData>;
 }
 
-export interface PointsData extends Data {
-  getLength(): number;
+export interface PointsData extends ItemsData {
   getDimensions(): string[];
   loadCoordinates(
     dimension: string,

@@ -1,4 +1,4 @@
-import * as GeoJSON from "geojson";
+import * as geojson from "geojson";
 
 import { type MultiPolygon, type Polygon } from "@tissuumaps/core";
 
@@ -17,13 +17,33 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     const geo = await this._loadGeoJSON({ signal });
     signal?.throwIfAborted();
     const multiPolygons = GeoJSONShapesDataLoader._parseGeoJSON(geo);
-    return new GeoJSONShapesData(multiPolygons);
+    let index;
+    const idProperty = this.dataSource.idProperty;
+    if (idProperty !== undefined) {
+      if (geo === null || geo.type !== "FeatureCollection") {
+        throw new Error(
+          "ID properties can only be used with GeoJSON FeatureCollections.",
+        );
+      }
+      index = geo.features.map((feature) => {
+        const id = feature.properties?.[idProperty] as unknown;
+        if (
+          id === undefined ||
+          typeof id !== "number" ||
+          !Number.isInteger(id)
+        ) {
+          throw new Error(`Feature is missing integer ID '${idProperty}'.`);
+        }
+        return id;
+      });
+    }
+    return new GeoJSONShapesData(multiPolygons, index);
   }
 
   private async _loadGeoJSON({
     signal,
   }: { signal?: AbortSignal } = {}): Promise<
-    GeoJSON.GeoJSON<GeoJSON.Geometry | null>
+    geojson.GeoJSON<geojson.Geometry | null>
   > {
     signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
@@ -33,7 +53,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
       signal?.throwIfAborted();
       const text = await file.text();
       signal?.throwIfAborted();
-      return JSON.parse(text) as GeoJSON.GeoJSON<GeoJSON.Geometry | null>; // TODO Validate GeoJSON
+      return JSON.parse(text) as geojson.GeoJSON<geojson.Geometry | null>; // TODO Validate GeoJSON
     }
     if (this.dataSource.url !== undefined) {
       const response = await fetch(this.dataSource.url, { signal });
@@ -45,7 +65,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
       }
       const text = await response.text();
       signal?.throwIfAborted();
-      return JSON.parse(text) as GeoJSON.GeoJSON<GeoJSON.Geometry | null>; // TODO Validate GeoJSON
+      return JSON.parse(text) as geojson.GeoJSON<geojson.Geometry | null>; // TODO Validate GeoJSON
     }
     if (this.dataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
@@ -54,7 +74,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
   }
 
   private static _parseGeoJSON(
-    geo: GeoJSON.GeoJSON<GeoJSON.Geometry | null>,
+    geo: geojson.GeoJSON<geojson.Geometry | null>,
   ): MultiPolygon[] {
     if (geo === null) {
       return [];
@@ -80,7 +100,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
   }
 
   private static _parseGeoJSONGeometry(
-    geometry: GeoJSON.Geometry,
+    geometry: geojson.Geometry,
   ): MultiPolygon[] {
     switch (geometry.type) {
       case "Polygon":
@@ -108,7 +128,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
   }
 
   private static _parseGeoJSONGeometryRings(
-    rings: GeoJSON.Position[][],
+    rings: geojson.Position[][],
   ): Polygon {
     const [shellRing, ...holeRings] = rings;
     if (shellRing === undefined) {

@@ -13,6 +13,10 @@ export class TablePointsData implements PointsData {
     return this._tableData.getLength();
   }
 
+  getIndex(): number[] {
+    return this._tableData.getIndex();
+  }
+
   getDimensions(): string[] {
     return this._dimensionColumns ?? this._tableData.getColumns();
   }

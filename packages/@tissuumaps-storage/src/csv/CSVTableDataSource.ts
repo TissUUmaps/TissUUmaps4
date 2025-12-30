@@ -18,6 +18,7 @@ export interface RawCSVTableDataSource extends RawTableDataSource<
   typeof csvTableDataSourceType
 > {
   columns?: string[];
+  idColumn?: string;
   loadColumns?: string[];
   chunkSize?: number;
   parseConfig?: Pick<

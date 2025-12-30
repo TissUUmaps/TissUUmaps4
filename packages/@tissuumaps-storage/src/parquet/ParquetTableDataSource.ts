@@ -10,6 +10,7 @@ export const parquetTableDataSourceDefaults = {};
 export interface RawParquetTableDataSource extends RawTableDataSource<
   typeof parquetTableDataSourceType
 > {
+  idColumn?: string;
   headers?: { [headerName: string]: string };
 }
 

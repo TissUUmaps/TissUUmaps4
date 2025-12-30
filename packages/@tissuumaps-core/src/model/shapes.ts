@@ -56,9 +56,9 @@ export interface RawShapes extends RawRenderedDataObject<
    *
    * Used when {@link shapeFillColor} is specified as a table column holding continuous numerical values.
    *
-   * @defaultValue `undefined` (i.e., the range of values in the specified column is used)
+   * @defaultValue `undefined` (i.e., fall back to "minmax", emitting a warning when in use)
    */
-  shapeFillColorRange?: [number, number];
+  shapeFillColorRange?: [number, number] | "minmax";
 
   /**
    * Color palette to which clipped and rescaled numerical values are mapped
@@ -160,9 +160,9 @@ export interface RawShapes extends RawRenderedDataObject<
    *
    * Used when {@link shapeStrokeColor} is specified as a table column holding continuous numerical values.
    *
-   * @defaultValue `undefined` (i.e., the range of values in the specified column is used)
+   * @defaultValue `undefined` (i.e., fall back to "minmax", emitting a warning when in use)
    */
-  shapeStrokeColorRange?: [number, number];
+  shapeStrokeColorRange?: [number, number] | "minmax";
 
   /**
    * Color palette to which clipped and rescaled numerical values are mapped

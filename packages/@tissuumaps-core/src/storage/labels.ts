@@ -1,5 +1,5 @@
 import { type UintArray } from "../types/array";
-import { type Data, type DataLoader } from "./base";
+import { type DataLoader, type ItemsData } from "./base";
 
 export interface LabelsDataLoader<
   TLabelsData extends LabelsData,
@@ -7,13 +7,13 @@ export interface LabelsDataLoader<
   loadLabels(options: { signal?: AbortSignal }): Promise<TLabelsData>;
 }
 
-export interface LabelsData extends Data {
+export interface LabelsData extends ItemsData {
   getWidth(level?: number): number;
   getHeight(level?: number): number;
   getLevelCount(): number;
   getLevelScale(level: number): number;
-  getTileWidth(level: number): number | undefined;
-  getTileHeight(level: number): number | undefined;
+  getTileWidth(level: number): number;
+  getTileHeight(level: number): number;
   loadTile(
     level: number,
     x: number,

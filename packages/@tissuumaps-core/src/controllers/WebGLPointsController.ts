@@ -434,7 +434,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.points.pointMarkerMap
       ) {
         const markerIndexData = await LoadUtils.loadMarkerIndexData(
-          numPoints,
+          ref.data.getIndex(),
           ref.points.pointMarker,
           ref.points.pointMarkerMap,
           pointsDefaults.pointMarker,
@@ -478,7 +478,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           sizeFactor *= ref.layer.transform.scale;
         }
         const sizeData = await LoadUtils.loadSizeData(
-          numPoints,
+          ref.data.getIndex(),
           ref.points.pointSize,
           ref.points.pointSizeMap,
           pointsDefaults.pointSize,
@@ -527,7 +527,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           colorData = new Uint32Array(numPoints).fill(0);
         } else {
           const visibilityData = await LoadUtils.loadVisibilityData(
-            numPoints,
+            ref.data.getIndex(),
             ref.points.pointVisibility,
             ref.points.pointVisibilityMap,
             pointsDefaults.pointVisibility,
@@ -537,7 +537,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           );
           signal?.throwIfAborted();
           const opacityData = await LoadUtils.loadOpacityData(
-            numPoints,
+            ref.data.getIndex(),
             ref.points.pointOpacity,
             ref.points.pointOpacityMap,
             pointsDefaults.pointOpacity,
@@ -547,7 +547,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           );
           signal?.throwIfAborted();
           colorData = await LoadUtils.loadColorData(
-            numPoints,
+            ref.data.getIndex(),
             ref.points.pointColor,
             ref.points.pointColorRange,
             ref.points.pointColorPalette,
@@ -579,9 +579,9 @@ export class WebGLPointsController extends WebGLControllerBase {
         );
       }
       newBufferSliceStates.push({
-        ref: ref,
-        offset: offset,
-        numPoints: numPoints,
+        ref,
+        offset,
+        numPoints,
         current: {
           layer: {
             visibility: ref.layer.visibility,

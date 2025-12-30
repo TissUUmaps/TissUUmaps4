@@ -1,5 +1,5 @@
 import { type MultiPolygon } from "../types/geometry";
-import { type Data, type DataLoader } from "./base";
+import { type DataLoader, type ItemsData } from "./base";
 
 export interface ShapesDataLoader<
   TShapesData extends ShapesData,
@@ -7,7 +7,6 @@ export interface ShapesDataLoader<
   loadShapes: (options: { signal?: AbortSignal }) => Promise<TShapesData>;
 }
 
-export interface ShapesData extends Data {
-  getLength(): number;
+export interface ShapesData extends ItemsData {
   loadMultiPolygons(options: { signal?: AbortSignal }): Promise<MultiPolygon[]>;
 }

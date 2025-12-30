@@ -93,12 +93,12 @@ export class WebGLShapesController extends WebGLControllerBase {
     let sync = false;
     if (numScanlines !== this._numScanlines) {
       // invalidate scanline data textures
-      this._glShapes.forEach((glShapes) => {
+      for (const glShapes of this._glShapes) {
         if (glShapes.scanlineDataTexture !== undefined) {
           this._gl.deleteTexture(glShapes.scanlineDataTexture);
         }
         glShapes.scanlineDataTexture = undefined;
-      });
+      }
       sync = true;
     }
     this._numScanlines = numScanlines;
@@ -452,7 +452,6 @@ export class WebGLShapesController extends WebGLControllerBase {
     { signal }: { signal?: AbortSignal } = {},
   ): Promise<WebGLTexture> {
     signal?.throwIfAborted();
-    const numShapes = ref.data.getLength();
     const numValuesPerTextureLine =
       1 * WebGLShapesController._shapeFillColorsTextureWidth; // 1 value per R32UI texel
     let colorData;
@@ -462,10 +461,10 @@ export class WebGLShapesController extends WebGLControllerBase {
       ref.shapes.visibility === false ||
       ref.shapes.opacity === 0
     ) {
-      colorData = new Uint32Array(numShapes).fill(0);
+      colorData = new Uint32Array(ref.data.getLength()).fill(0);
     } else {
       const visibilityData = await LoadUtils.loadVisibilityData(
-        numShapes,
+        ref.data.getIndex(),
         ref.shapes.shapeFillVisibility,
         ref.shapes.shapeFillVisibilityMap,
         shapesDefaults.shapeFillVisibility,
@@ -475,7 +474,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       );
       signal?.throwIfAborted();
       const opacityData = await LoadUtils.loadOpacityData(
-        numShapes,
+        ref.data.getIndex(),
         ref.shapes.shapeFillOpacity,
         ref.shapes.shapeFillOpacityMap,
         shapesDefaults.shapeFillOpacity,
@@ -489,7 +488,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       );
       signal?.throwIfAborted();
       colorData = await LoadUtils.loadColorData(
-        numShapes,
+        ref.data.getIndex(),
         ref.shapes.shapeFillColor,
         ref.shapes.shapeFillColorRange,
         ref.shapes.shapeFillColorPalette,
@@ -527,7 +526,6 @@ export class WebGLShapesController extends WebGLControllerBase {
     { signal }: { signal?: AbortSignal } = {},
   ): Promise<WebGLTexture> {
     signal?.throwIfAborted();
-    const numShapes = ref.data.getLength();
     const numValuesPerTextureLine =
       1 * WebGLShapesController._shapeStrokeColorsTextureWidth; // 1 value per R32UI texel
     let colorData;
@@ -537,10 +535,10 @@ export class WebGLShapesController extends WebGLControllerBase {
       ref.shapes.visibility === false ||
       ref.shapes.opacity === 0
     ) {
-      colorData = new Uint32Array(numShapes).fill(0);
+      colorData = new Uint32Array(ref.data.getLength()).fill(0);
     } else {
       const visibilityData = await LoadUtils.loadVisibilityData(
-        numShapes,
+        ref.data.getIndex(),
         ref.shapes.shapeStrokeVisibility,
         ref.shapes.shapeStrokeVisibilityMap,
         shapesDefaults.shapeStrokeVisibility,
@@ -550,7 +548,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       );
       signal?.throwIfAborted();
       const opacityData = await LoadUtils.loadOpacityData(
-        numShapes,
+        ref.data.getIndex(),
         ref.shapes.shapeStrokeOpacity,
         ref.shapes.shapeStrokeOpacityMap,
         shapesDefaults.shapeStrokeOpacity,
@@ -564,7 +562,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       );
       signal?.throwIfAborted();
       colorData = await LoadUtils.loadColorData(
-        numShapes,
+        ref.data.getIndex(),
         ref.shapes.shapeStrokeColor,
         ref.shapes.shapeStrokeColorRange,
         ref.shapes.shapeStrokeColorPalette,

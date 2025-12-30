@@ -4,23 +4,52 @@ import {
   type TypedArray,
 } from "@tissuumaps/core";
 
+export async function loadCSVTableDataColumn<T>(
+  column: string,
+  columns: string[],
+  data: (string[] | TypedArray)[],
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<MappableArrayLike<T>> {
+  signal?.throwIfAborted();
+  const columnIndex = columns.indexOf(column);
+  if (columnIndex === -1) {
+    throw new Error(`Column "${column}" does not exist.`);
+  }
+  const columnData = await Promise.resolve(
+    data[columnIndex]! as unknown as MappableArrayLike<T>,
+  );
+  signal?.throwIfAborted();
+  return columnData;
+}
+
 export class CSVTableData implements TableData {
-  private readonly _length: number;
+  private readonly _n: number;
   private readonly _columns: string[];
-  private readonly _columnData: (string[] | TypedArray)[];
+  private readonly _data: (string[] | TypedArray)[];
+  private _index?: number[];
 
   constructor(
-    length: number,
+    n: number,
+    data: (string[] | TypedArray)[],
     columns: string[],
-    columnData: (string[] | TypedArray)[],
+    index?: number[],
   ) {
-    this._length = length;
+    this._n = n;
+    this._data = data;
     this._columns = columns;
-    this._columnData = columnData;
+    this._index = index;
   }
 
   getLength(): number {
-    return this._length;
+    return this._n;
+  }
+
+  getIndex(): number[] {
+    if (this._index === undefined) {
+      console.warn("No ID column specified, using sequential IDs instead");
+      this._index = Array.from({ length: this._n }, (_, i) => i);
+    }
+    return this._index;
   }
 
   getColumns(): string[] {
@@ -29,18 +58,14 @@ export class CSVTableData implements TableData {
 
   async loadColumn<T>(
     column: string,
-    { signal }: { signal?: AbortSignal } = {},
+    options: { signal?: AbortSignal } = {},
   ): Promise<MappableArrayLike<T>> {
-    signal?.throwIfAborted();
-    if (!this._columns.includes(column)) {
-      throw new Error(`Column "${column}" does not exist.`);
-    }
-    const columnIndex = this._columns.indexOf(column);
-    const columnData = await Promise.resolve(
-      this._columnData[columnIndex]! as unknown as MappableArrayLike<T>,
+    return await loadCSVTableDataColumn(
+      column,
+      this._columns,
+      this._data,
+      options,
     );
-    signal?.throwIfAborted();
-    return columnData;
   }
 
   destroy(): void {}
