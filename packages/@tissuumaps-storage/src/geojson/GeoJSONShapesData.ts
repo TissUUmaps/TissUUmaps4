@@ -2,12 +2,9 @@ import { type MultiPolygon, type ShapesData } from "@tissuumaps/core";
 
 export class GeoJSONShapesData implements ShapesData {
   private readonly _multiPolygons: MultiPolygon[];
-  private _index: Uint16Array | number[] | undefined;
+  private _index?: number[];
 
-  constructor(
-    multiPolygons: MultiPolygon[],
-    index: Uint16Array | number[] | undefined,
-  ) {
+  constructor(multiPolygons: MultiPolygon[], index?: number[]) {
     this._multiPolygons = multiPolygons;
     this._index = index;
   }
@@ -16,7 +13,7 @@ export class GeoJSONShapesData implements ShapesData {
     return this._multiPolygons.length;
   }
 
-  getIndex(): Uint16Array | number[] {
+  getIndex(): number[] {
     if (this._index === undefined) {
       console.warn("No ID property specified, using sequential IDs instead");
       this._index = Array.from(

@@ -13,7 +13,7 @@ export class TablePointsData implements PointsData {
     return this._tableData.getLength();
   }
 
-  getIndex(): Uint16Array | number[] {
+  getIndex(): number[] {
     return this._tableData.getIndex();
   }
 

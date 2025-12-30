@@ -25,7 +25,7 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
         { signal },
       );
       signal?.throwIfAborted();
-      index = ids instanceof Uint16Array ? ids : new Uint16Array(ids);
+      index = Array.from(ids);
     }
     return new CSVTableData(n, data, columns, index);
   }

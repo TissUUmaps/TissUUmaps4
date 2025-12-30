@@ -15,7 +15,7 @@ import { MathUtils } from "./MathUtils";
 
 export class LoadUtils {
   static async loadMarkerIndexData(
-    ids: Uint16Array | number[],
+    ids: number[],
     markerConfig: Marker | TableValuesRef | TableGroupsRef | "random",
     markerMapConfig: string | ValueMap<Marker> | undefined,
     defaultMarker: Marker,
@@ -42,6 +42,7 @@ export class LoadUtils {
       });
       signal?.throwIfAborted();
       const tableIds = tableData.getIndex();
+      const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
       const tableValues = await tableData.loadColumn<string>(
         markerConfig.valuesCol,
         { signal },
@@ -49,8 +50,8 @@ export class LoadUtils {
       signal?.throwIfAborted();
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
-        const tableIndex = tableIds.indexOf(id);
-        if (tableIndex !== -1) {
+        const tableIndex = tableIndices.get(id);
+        if (tableIndex !== undefined) {
           data[i] = Marker[tableValues[tableIndex]! as keyof typeof Marker];
         } else {
           console.warn(`ID ${id} not found in table ${markerConfig.tableId}`);
@@ -79,14 +80,15 @@ export class LoadUtils {
       });
       signal?.throwIfAborted();
       const tableIds = tableData.getIndex();
+      const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
       const tableGroups = await tableData.loadColumn(markerConfig.groupsCol, {
         signal,
       });
       signal?.throwIfAborted();
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
-        const tableIndex = tableIds.indexOf(id);
-        if (tableIndex !== -1) {
+        const tableIndex = tableIndices.get(id);
+        if (tableIndex !== undefined) {
           const group = JSON.stringify(tableGroups[tableIndex]!);
           if (markerMap !== undefined) {
             data[i] =
@@ -116,7 +118,7 @@ export class LoadUtils {
   }
 
   static async loadSizeData(
-    ids: Uint16Array | number[],
+    ids: number[],
     sizeConfig: number | TableValuesRef | TableGroupsRef,
     sizeMapConfig: string | ValueMap<number> | undefined,
     defaultSize: number,
@@ -148,6 +150,7 @@ export class LoadUtils {
       });
       signal?.throwIfAborted();
       const tableIds = tableData.getIndex();
+      const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
       const tableValues = await tableData.loadColumn<number>(
         sizeConfig.valuesCol,
         { signal },
@@ -155,8 +158,8 @@ export class LoadUtils {
       signal?.throwIfAborted();
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
-        const tableIndex = tableIds.indexOf(id);
-        if (tableIndex !== -1) {
+        const tableIndex = tableIndices.get(id);
+        if (tableIndex !== undefined) {
           data[i] = tableValues[tableIndex]! * sizeFactor;
         } else {
           console.warn(`ID ${id} not found in table ${sizeConfig.tableId}`);
@@ -186,14 +189,15 @@ export class LoadUtils {
         });
         signal?.throwIfAborted();
         const tableIds = tableData.getIndex();
+        const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
         const tableGroups = await tableData.loadColumn(sizeConfig.groupsCol, {
           signal,
         });
         signal?.throwIfAborted();
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
-          const tableIndex = tableIds.indexOf(id);
-          if (tableIndex !== -1) {
+          const tableIndex = tableIndices.get(id);
+          if (tableIndex !== undefined) {
             const group = JSON.stringify(tableGroups[tableIndex]!);
             const size =
               sizeMap.values.get(group) ?? // first, try to get group-specific size
@@ -217,7 +221,7 @@ export class LoadUtils {
   }
 
   static async loadColorData(
-    ids: Uint16Array | number[],
+    ids: number[],
     colorConfig: Color | TableValuesRef | TableGroupsRef | "randomFromPalette",
     colorRangeConfig: [number, number] | "minmax" | undefined,
     colorPaletteConfig: keyof typeof colorPalettes | undefined,
@@ -253,6 +257,7 @@ export class LoadUtils {
         });
         signal?.throwIfAborted();
         const tableIds = tableData.getIndex();
+        const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
         const tableValues = await tableData.loadColumn<number>(
           colorConfig.valuesCol,
           { signal },
@@ -267,8 +272,8 @@ export class LoadUtils {
           }
           const values = [];
           for (const id of ids) {
-            const tableIndex = tableIds.indexOf(id);
-            if (tableIndex !== -1) {
+            const tableIndex = tableIndices.get(id);
+            if (tableIndex !== undefined) {
               values.push(tableValues[tableIndex]!);
             }
           }
@@ -281,8 +286,8 @@ export class LoadUtils {
         }
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
-          const tableIndex = tableIds.indexOf(id);
-          if (tableIndex !== -1) {
+          const tableIndex = tableIndices.get(id);
+          if (tableIndex !== undefined) {
             let value = tableValues[tableIndex]!;
             if (value < vmin) {
               value = vmin;
@@ -334,14 +339,15 @@ export class LoadUtils {
         });
         signal?.throwIfAborted();
         const tableIds = tableData.getIndex();
+        const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
         const tableGroups = await tableData.loadColumn(colorConfig.groupsCol, {
           signal,
         });
         signal?.throwIfAborted();
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
-          const tableIndex = tableIds.indexOf(id);
-          if (tableIndex !== -1) {
+          const tableIndex = tableIndices.get(id);
+          if (tableIndex !== undefined) {
             const group = JSON.stringify(tableGroups[tableIndex]!);
             const color =
               colorMap.values.get(group) ?? // first, try to get group-specific color
@@ -390,7 +396,7 @@ export class LoadUtils {
   }
 
   static async loadVisibilityData(
-    ids: Uint16Array | number[],
+    ids: number[],
     visibilityConfig: boolean | TableValuesRef | TableGroupsRef,
     visibilityMapConfig: string | ValueMap<boolean> | undefined,
     defaultVisibility: boolean,
@@ -417,6 +423,7 @@ export class LoadUtils {
       });
       signal?.throwIfAborted();
       const tableIds = tableData.getIndex();
+      const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
       const tableValues = await tableData.loadColumn<number>(
         visibilityConfig.valuesCol,
         { signal },
@@ -424,8 +431,8 @@ export class LoadUtils {
       signal?.throwIfAborted();
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
-        const tableIndex = tableIds.indexOf(id);
-        if (tableIndex !== -1) {
+        const tableIndex = tableIndices.get(id);
+        if (tableIndex !== undefined) {
           data[i] = tableValues[tableIndex]!;
         } else {
           console.warn(
@@ -459,6 +466,7 @@ export class LoadUtils {
         });
         signal?.throwIfAborted();
         const tableIds = tableData.getIndex();
+        const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
         const tableGroups = await tableData.loadColumn(
           visibilityConfig.groupsCol,
           { signal },
@@ -466,8 +474,8 @@ export class LoadUtils {
         signal?.throwIfAborted();
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
-          const tableIndex = tableIds.indexOf(id);
-          if (tableIndex !== -1) {
+          const tableIndex = tableIndices.get(id);
+          if (tableIndex !== undefined) {
             const group = JSON.stringify(tableGroups[tableIndex]!);
             const visibility =
               visibilityMap.values.get(group) ?? // first, try to get group-specific visibility
@@ -493,7 +501,7 @@ export class LoadUtils {
   }
 
   static async loadOpacityData(
-    ids: Uint16Array | number[],
+    ids: number[],
     opacityConfig: number | TableValuesRef | TableGroupsRef,
     opacityMapConfig: string | ValueMap<number> | undefined,
     defaultOpacity: number,
@@ -525,6 +533,7 @@ export class LoadUtils {
       });
       signal?.throwIfAborted();
       const tableIds = tableData.getIndex();
+      const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
       const tableValues = await tableData.loadColumn<number>(
         opacityConfig.valuesCol,
         { signal },
@@ -532,9 +541,9 @@ export class LoadUtils {
       signal?.throwIfAborted();
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
-        const tableIndex = tableIds.indexOf(id);
-        if (tableIndex !== -1) {
-          data[i] = Math.round(opacityFactor * tableValues[i]! * 255);
+        const tableIndex = tableIndices.get(id);
+        if (tableIndex !== undefined) {
+          data[i] = Math.round(opacityFactor * tableValues[tableIndex]! * 255);
         } else {
           console.warn(`ID ${id} not found in table ${opacityConfig.tableId}`);
           data[i] = Math.round(opacityFactor * defaultOpacity * 255);
@@ -561,6 +570,7 @@ export class LoadUtils {
         });
         signal?.throwIfAborted();
         const tableIds = tableData.getIndex();
+        const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
         const tableGroups = await tableData.loadColumn(
           opacityConfig.groupsCol,
           { signal },
@@ -568,8 +578,8 @@ export class LoadUtils {
         signal?.throwIfAborted();
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
-          const tableIndex = tableIds.indexOf(id);
-          if (tableIndex !== -1) {
+          const tableIndex = tableIndices.get(id);
+          if (tableIndex !== undefined) {
             const group = JSON.stringify(tableGroups[tableIndex]!);
             const opacity =
               opacityMap.values.get(group) ?? // first, try to get group-specific opacity

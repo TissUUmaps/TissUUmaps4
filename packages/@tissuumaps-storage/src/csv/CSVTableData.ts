@@ -26,13 +26,13 @@ export class CSVTableData implements TableData {
   private readonly _n: number;
   private readonly _columns: string[];
   private readonly _data: (string[] | TypedArray)[];
-  private _index: Uint16Array | number[] | undefined;
+  private _index?: number[];
 
   constructor(
     n: number,
     data: (string[] | TypedArray)[],
     columns: string[],
-    index: Uint16Array | number[] | undefined,
+    index?: number[],
   ) {
     this._n = n;
     this._data = data;
@@ -44,7 +44,7 @@ export class CSVTableData implements TableData {
     return this._n;
   }
 
-  getIndex(): Uint16Array | number[] {
+  getIndex(): number[] {
     if (this._index === undefined) {
       console.warn("No ID column specified, using sequential IDs instead");
       this._index = Array.from({ length: this._n }, (_, i) => i);

@@ -25,7 +25,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
           "ID properties can only be used with GeoJSON FeatureCollections.",
         );
       }
-      const ids = geo.features.map((feature) => {
+      index = geo.features.map((feature) => {
         const id = feature.properties?.[idProperty] as unknown;
         if (id === undefined || typeof id !== "number") {
           throw new Error(
@@ -34,7 +34,6 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
         }
         return id;
       });
-      index = new Uint16Array(ids);
     }
     return new GeoJSONShapesData(multiPolygons, index);
   }

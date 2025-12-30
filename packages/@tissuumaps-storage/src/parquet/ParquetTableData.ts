@@ -25,12 +25,12 @@ export class ParquetTableData implements TableData {
   private readonly _buffer: hyparquet.AsyncBuffer;
   private readonly _metadata: hyparquet.FileMetaData;
   private readonly _columns: string[];
-  private _index: Uint16Array | number[] | undefined;
+  private _index?: number[];
 
   constructor(
     buffer: hyparquet.AsyncBuffer,
     metadata: hyparquet.FileMetaData,
-    index: Uint16Array | number[] | undefined,
+    index?: number[],
   ) {
     this._buffer = buffer;
     this._metadata = metadata;
@@ -44,7 +44,7 @@ export class ParquetTableData implements TableData {
     return Number(this._metadata.num_rows);
   }
 
-  getIndex(): Uint16Array | number[] {
+  getIndex(): number[] {
     if (this._index === undefined) {
       console.warn("No ID column specified, using sequential IDs instead");
       this._index = Array.from(

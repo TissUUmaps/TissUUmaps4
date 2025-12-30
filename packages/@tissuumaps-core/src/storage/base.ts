@@ -7,5 +7,5 @@ export interface Data {
 
 export interface ItemsData extends Data {
   getLength(): number;
-  getIndex(): Uint16Array | number[];
+  getIndex(): number[];
 }
