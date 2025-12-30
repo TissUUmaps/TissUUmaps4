@@ -48,15 +48,19 @@ export class LoadUtils {
         { signal },
       );
       signal?.throwIfAborted();
+      let nmiss = 0;
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
         const tableIndex = tableIndices.get(id);
         if (tableIndex !== undefined) {
           data[i] = Marker[tableValues[tableIndex]! as keyof typeof Marker];
         } else {
-          console.warn(`ID ${id} not found in table ${markerConfig.tableId}`);
           data[i] = defaultMarker;
+          nmiss++;
         }
+      }
+      if (nmiss > 0) {
+        console.warn(`${nmiss} IDs missing in table ${markerConfig.tableId}`);
       }
     } else if (isTableGroupsRef(markerConfig)) {
       // table column contains group names
@@ -85,6 +89,7 @@ export class LoadUtils {
         signal,
       });
       signal?.throwIfAborted();
+      let nmiss = 0;
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
         const tableIndex = tableIndices.get(id);
@@ -100,9 +105,12 @@ export class LoadUtils {
               markerPalette[HashUtils.djb2(group) % markerPalette.length]!;
           }
         } else {
-          console.warn(`ID ${id} not found in table ${markerConfig.tableId}`);
           data[i] = defaultMarker;
+          nmiss++;
         }
+      }
+      if (nmiss > 0) {
+        console.warn(`${nmiss} IDs missing in table ${markerConfig.tableId}`);
       }
     } else if (markerConfig === "random") {
       // random markers from marker palette
@@ -156,15 +164,19 @@ export class LoadUtils {
         { signal },
       );
       signal?.throwIfAborted();
+      let nmiss = 0;
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
         const tableIndex = tableIndices.get(id);
         if (tableIndex !== undefined) {
           data[i] = tableValues[tableIndex]! * sizeFactor;
         } else {
-          console.warn(`ID ${id} not found in table ${sizeConfig.tableId}`);
           data[i] = defaultSize * sizeFactor;
+          nmiss++;
         }
+      }
+      if (nmiss > 0) {
+        console.warn(`${nmiss} IDs missing in table ${sizeConfig.tableId}`);
       }
     } else if (isTableGroupsRef(sizeConfig)) {
       // table column contains group names
@@ -194,6 +206,7 @@ export class LoadUtils {
           signal,
         });
         signal?.throwIfAborted();
+        let nmiss = 0;
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
           const tableIndex = tableIndices.get(id);
@@ -205,9 +218,12 @@ export class LoadUtils {
               defaultSize; // finally, fallback to default size
             data[i] = size * sizeFactor;
           } else {
-            console.warn(`ID ${id} not found in table ${sizeConfig.tableId}`);
             data[i] = defaultSize * sizeFactor;
+            nmiss++;
           }
+        }
+        if (nmiss > 0) {
+          console.warn(`${nmiss} IDs missing in table ${sizeConfig.tableId}`);
         }
       } else {
         console.warn("Size map not configured or found");
@@ -288,6 +304,7 @@ export class LoadUtils {
           console.warn("Invalid color range, using [0, 1] color range instead");
           [vmin, vmax] = [0, 1];
         }
+        let nmiss = 0;
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
           const tableIndex = tableIndices.get(id);
@@ -303,9 +320,12 @@ export class LoadUtils {
               colorPalette[Math.floor(value * colorPalette.length)]!;
             data[i] = ColorUtils.packColor(color);
           } else {
-            console.warn(`ID ${id} not found in table ${colorConfig.tableId}`);
             data[i] = ColorUtils.packColor(defaultColor);
+            nmiss++;
           }
+        }
+        if (nmiss > 0) {
+          console.warn(`${nmiss} IDs missing in table ${colorConfig.tableId}`);
         }
       } else {
         console.warn("Color palette not configured or found");
@@ -350,6 +370,7 @@ export class LoadUtils {
           signal,
         });
         signal?.throwIfAborted();
+        let nmiss = 0;
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
           const tableIndex = tableIndices.get(id);
@@ -364,9 +385,12 @@ export class LoadUtils {
               defaultColor; // finally, fallback to default color
             data[i] = ColorUtils.packColor(color);
           } else {
-            console.warn(`ID ${id} not found in table ${colorConfig.tableId}`);
             data[i] = ColorUtils.packColor(defaultColor);
+            nmiss++;
           }
+        }
+        if (nmiss > 0) {
+          console.warn(`${nmiss} IDs missing in table ${colorConfig.tableId}`);
         }
       } else {
         console.warn("Color map not configured or found");
@@ -435,17 +459,21 @@ export class LoadUtils {
         { signal },
       );
       signal?.throwIfAborted();
+      let nmiss = 0;
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
         const tableIndex = tableIndices.get(id);
         if (tableIndex !== undefined) {
           data[i] = tableValues[tableIndex]!;
         } else {
-          console.warn(
-            `ID ${id} not found in table ${visibilityConfig.tableId}`,
-          );
           data[i] = defaultVisibility ? 1 : 0;
+          nmiss++;
         }
+      }
+      if (nmiss > 0) {
+        console.warn(
+          `${nmiss} IDs missing in table ${visibilityConfig.tableId}`,
+        );
       }
     } else if (isTableGroupsRef(visibilityConfig)) {
       // table column contains group names
@@ -478,6 +506,7 @@ export class LoadUtils {
           { signal },
         );
         signal?.throwIfAborted();
+        let nmiss = 0;
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
           const tableIndex = tableIndices.get(id);
@@ -489,11 +518,14 @@ export class LoadUtils {
               defaultVisibility; // finally, fallback to default visibility
             data[i] = visibility ? 1 : 0;
           } else {
-            console.warn(
-              `ID ${id} not found in table ${visibilityConfig.tableId}`,
-            );
             data[i] = defaultVisibility ? 1 : 0;
+            nmiss++;
           }
+        }
+        if (nmiss > 0) {
+          console.warn(
+            `${nmiss} IDs missing in table ${visibilityConfig.tableId}`,
+          );
         }
       } else {
         console.warn("Visibility map not configured or found");
@@ -545,15 +577,19 @@ export class LoadUtils {
         { signal },
       );
       signal?.throwIfAborted();
+      let nmiss = 0;
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]!;
         const tableIndex = tableIndices.get(id);
         if (tableIndex !== undefined) {
           data[i] = Math.round(opacityFactor * tableValues[tableIndex]! * 255);
         } else {
-          console.warn(`ID ${id} not found in table ${opacityConfig.tableId}`);
           data[i] = Math.round(opacityFactor * defaultOpacity * 255);
+          nmiss++;
         }
+      }
+      if (nmiss > 0) {
+        console.warn(`${nmiss} IDs missing in table ${opacityConfig.tableId}`);
       }
     } else if (isTableGroupsRef(opacityConfig)) {
       // table column contains group names
@@ -584,6 +620,7 @@ export class LoadUtils {
           { signal },
         );
         signal?.throwIfAborted();
+        let nmiss = 0;
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i]!;
           const tableIndex = tableIndices.get(id);
@@ -595,11 +632,14 @@ export class LoadUtils {
               defaultOpacity; // finally, fallback to default opacity
             data[i] = Math.round(opacityFactor * opacity * 255);
           } else {
-            console.warn(
-              `ID ${id} not found in table ${opacityConfig.tableId}`,
-            );
             data[i] = Math.round(opacityFactor * defaultOpacity * 255);
+            nmiss++;
           }
+        }
+        if (nmiss > 0) {
+          console.warn(
+            `${nmiss} IDs missing in table ${opacityConfig.tableId}`,
+          );
         }
       } else {
         console.warn("Opacity map not configured or found");
