@@ -19,7 +19,8 @@ export class GeoJSONShapesData implements ShapesData {
   getIndex(): Uint16Array | number[] {
     if (this._index === undefined) {
       console.warn("No ID property specified, using sequential IDs instead");
-      this._index = new Uint16Array(this._multiPolygons.length).map(
+      this._index = Array.from(
+        { length: this._multiPolygons.length },
         (_, i) => i,
       );
     }

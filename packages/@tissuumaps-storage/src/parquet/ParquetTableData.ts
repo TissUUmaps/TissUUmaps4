@@ -47,7 +47,8 @@ export class ParquetTableData implements TableData {
   getIndex(): Uint16Array | number[] {
     if (this._index === undefined) {
       console.warn("No ID column specified, using sequential IDs instead");
-      this._index = new Uint16Array(Number(this._metadata.num_rows)).map(
+      this._index = Array.from(
+        { length: Number(this._metadata.num_rows) },
         (_, i) => i,
       );
     }

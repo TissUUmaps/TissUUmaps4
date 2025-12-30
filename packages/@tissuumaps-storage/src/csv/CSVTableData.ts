@@ -47,7 +47,7 @@ export class CSVTableData implements TableData {
   getIndex(): Uint16Array | number[] {
     if (this._index === undefined) {
       console.warn("No ID column specified, using sequential IDs instead");
-      this._index = new Uint16Array(this._n).map((_, i) => i);
+      this._index = Array.from({ length: this._n }, (_, i) => i);
     }
     return this._index;
   }
