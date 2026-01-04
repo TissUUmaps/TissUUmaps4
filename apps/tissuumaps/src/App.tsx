@@ -10,12 +10,12 @@ import { useShallow } from "zustand/shallow";
 import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
 
 import "./App.css";
-import { ImageCollectionPanel } from "./components/ImageCollectionPanel";
-import { LabelsCollectionPanel } from "./components/LabelsCollectionPanel";
-import { PointsCollectionPanel } from "./components/PointsCollectionPanel";
-import { ProjectPanel } from "./components/ProjectPanel";
-import { ShapesCollectionPanel } from "./components/ShapesCollectionPanel";
-import { TableCollectionPanel } from "./components/TableCollectionPanel";
+import { ImagesTab } from "./components/tabs/ImagesTab";
+import { LabelsTab } from "./components/tabs/LabelsTab";
+import { PointsTab } from "./components/tabs/PointsTab";
+import { ProjectTab } from "./components/tabs/ProjectTab";
+import { ShapesTab } from "./components/tabs/ShapesTab";
+import { TablesTab } from "./components/tabs/TablesTab";
 import { useTissUUmaps } from "./store";
 
 declare global {
@@ -26,12 +26,12 @@ declare global {
 
 const dockviewComponents = {
   viewer: () => <Viewer className="size-full bg-white" />,
-  projectPanel: () => <ProjectPanel />,
-  imageCollectionPanel: () => <ImageCollectionPanel />,
-  labelsCollectionPanel: () => <LabelsCollectionPanel />,
-  pointsCollectionPanel: () => <PointsCollectionPanel />,
-  shapesCollectionPanel: () => <ShapesCollectionPanel />,
-  tableCollectionPanel: () => <TableCollectionPanel />,
+  projectTab: () => <ProjectTab />,
+  imagesTab: () => <ImagesTab />,
+  labelsTab: () => <LabelsTab />,
+  pointsTab: () => <PointsTab />,
+  shapesTab: () => <ShapesTab />,
+  tablesTab: () => <TablesTab />,
 };
 
 const dockviewTabComponents = {
@@ -50,9 +50,9 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
     component: "viewer",
   });
   const projectPanel = event.api.addPanel({
-    id: "projectPanel",
+    id: "projectTab",
     title: "Project",
-    component: "projectPanel",
+    component: "projectTab",
     tabComponent: "nonClosableTab",
     initialWidth: 600,
     position: {
@@ -61,37 +61,37 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
     },
   });
   event.api.addPanel({
-    id: "imageCollectionPanel",
+    id: "imagesTab",
     title: "Images",
-    component: "imageCollectionPanel",
+    component: "imagesTab",
     tabComponent: "nonClosableTab",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "labelsCollectionPanel",
+    id: "labelsTab",
     title: "Labels",
-    component: "labelsCollectionPanel",
+    component: "labelsTab",
     tabComponent: "nonClosableTab",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "pointsCollectionPanel",
+    id: "pointsTab",
     title: "Points",
-    component: "pointsCollectionPanel",
+    component: "pointsTab",
     tabComponent: "nonClosableTab",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "shapesCollectionPanel",
+    id: "shapesTab",
     title: "Shapes",
-    component: "shapesCollectionPanel",
+    component: "shapesTab",
     tabComponent: "nonClosableTab",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "tableCollectionPanel",
+    id: "tablesTab",
     title: "Tables",
-    component: "tableCollectionPanel",
+    component: "tablesTab",
     tabComponent: "nonClosableTab",
     position: { referenceGroup: projectPanel.group },
   });
