@@ -2,6 +2,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
+import path from "path";
 import { defineConfig } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
@@ -22,5 +23,11 @@ export default defineConfig({
       tsconfig: resolve(__dirname, "tsconfig.test.json"),
     },
     environment: "jsdom",
+  },
+  // shadcn/ui
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
   },
 });
