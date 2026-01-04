@@ -18,7 +18,7 @@
     "@tissuumaps/plugins": "workspace:*",
     "@tissuumaps/storage": "workspace:*",
     "@tissuumaps/viewer": "workspace:*",
-    "dockview-react": "^4.13.0",
+    "dockview-react": "^4.13.1",
     "fast-equals": "^6.0.0",
     "immer": "^11.1.3",
     "react": "^19.2.3",
