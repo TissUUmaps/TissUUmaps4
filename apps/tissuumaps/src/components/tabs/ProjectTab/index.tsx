@@ -88,7 +88,12 @@ export function ProjectTab() {
             }}
             hidden
           />
-          <Button onClick={() => loadProjectFileInputRef.current?.click()}>
+          <Button
+            onClick={(event) => {
+              event.preventDefault();
+              loadProjectFileInputRef.current?.click();
+            }}
+          >
             Load project
           </Button>
         </div>

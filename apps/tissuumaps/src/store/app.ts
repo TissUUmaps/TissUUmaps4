@@ -43,6 +43,7 @@ import { type TissUUmapsStateCreator } from "./index";
 export type AppSlice = AppSliceState & AppSliceActions;
 
 export type AppSliceState = {
+  dark: boolean;
   projectDir: FileSystemDirectoryHandle | null;
   imageDataLoaderFactories: Map<string, ImageDataLoaderFactory>;
   labelsDataLoaderFactories: Map<string, LabelsDataLoaderFactory>;
@@ -52,6 +53,7 @@ export type AppSliceState = {
 };
 
 export type AppSliceActions = {
+  setDark: (dark: boolean) => void;
   setProjectDir: (dir: FileSystemDirectoryHandle | null) => void;
   registerImageDataLoader: (
     imageDataSourceType: string,
@@ -77,6 +79,11 @@ export type AppSliceActions = {
 
 export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
   ...initialAppSliceState,
+  setDark: (dark) => {
+    set((draft) => {
+      draft.dark = dark;
+    });
+  },
   setProjectDir: (dir) => {
     set((draft) => {
       draft.projectDir = dir;
@@ -126,6 +133,7 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
 });
 
 const initialAppSliceState: AppSliceState = {
+  dark: false,
   projectDir: null,
   imageDataLoaderFactories: new Map<string, ImageDataLoaderFactory>([
     [
