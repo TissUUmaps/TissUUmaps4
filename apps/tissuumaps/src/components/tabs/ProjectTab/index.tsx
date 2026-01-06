@@ -1,4 +1,3 @@
-import { ProjectSettingsDialog } from "@/components/dialogs/ProjectSettingsDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,8 +8,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useTissUUmaps } from "@/store";
 import { useCallback, useRef } from "react";
+
+import { useTissUUmaps } from "../../../store";
+import { ProjectSettings } from "./ProjectSettings";
 
 export function ProjectTab() {
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -69,7 +70,7 @@ export function ProjectTab() {
             <DialogHeader>
               <DialogTitle>Project settings</DialogTitle>
             </DialogHeader>
-            <ProjectSettingsDialog />
+            <ProjectSettings />
           </DialogContent>
         </Dialog>
       </div>
