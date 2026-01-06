@@ -3,6 +3,8 @@ import {
   DockviewReact,
   type DockviewReadyEvent,
   type IDockviewPanelHeaderProps,
+  themeDark,
+  themeLight,
 } from "dockview-react";
 import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
@@ -25,7 +27,7 @@ declare global {
 }
 
 const dockviewComponents = {
-  viewer: () => <Viewer className="size-full bg-white" />,
+  viewer: () => <Viewer className="size-full" />,
   projectTab: () => <ProjectTab />,
   imagesTab: () => <ImagesTab />,
   labelsTab: () => <LabelsTab />,
@@ -38,25 +40,27 @@ const dockviewTabComponents = {
   closableTab: (props: IDockviewPanelHeaderProps) => {
     return <DockviewDefaultTab hideClose={false} {...props} />;
   },
-  nonClosableTab: (props: IDockviewPanelHeaderProps) => {
+  persistentTab: (props: IDockviewPanelHeaderProps) => {
     return <DockviewDefaultTab hideClose={true} {...props} />;
   },
 };
 
 const onDockviewReady = (event: DockviewReadyEvent) => {
-  const viewer = event.api.addPanel({
+  const viewerPanel = event.api.addPanel({
     id: "viewer",
     title: "Viewer",
     component: "viewer",
   });
+  viewerPanel.group.header.hidden = true;
+  viewerPanel.group.locked = true;
   const projectPanel = event.api.addPanel({
     id: "projectTab",
     title: "Project",
     component: "projectTab",
-    tabComponent: "nonClosableTab",
+    tabComponent: "persistentTab",
     initialWidth: 600,
     position: {
-      referencePanel: viewer,
+      referencePanel: viewerPanel,
       direction: "right",
     },
   });
@@ -64,47 +68,46 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
     id: "imagesTab",
     title: "Images",
     component: "imagesTab",
-    tabComponent: "nonClosableTab",
+    tabComponent: "persistentTab",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
     id: "labelsTab",
     title: "Labels",
     component: "labelsTab",
-    tabComponent: "nonClosableTab",
+    tabComponent: "persistentTab",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
     id: "pointsTab",
     title: "Points",
     component: "pointsTab",
-    tabComponent: "nonClosableTab",
+    tabComponent: "persistentTab",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
     id: "shapesTab",
     title: "Shapes",
     component: "shapesTab",
-    tabComponent: "nonClosableTab",
+    tabComponent: "persistentTab",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
     id: "tablesTab",
     title: "Tables",
     component: "tablesTab",
-    tabComponent: "nonClosableTab",
+    tabComponent: "persistentTab",
     position: { referenceGroup: projectPanel.group },
   });
-  viewer.group.header.hidden = true;
-  viewer.group.locked = true;
   projectPanel.api.setActive();
 };
 
-const projectUrlParam = "project";
-const defaultProjectUrl = "project.json";
-
 export function App() {
-  const adapter = useTissUUmaps(
+  const dark = useTissUUmaps((state) => state.dark);
+  const clearProject = useTissUUmaps((state) => state.clearProject);
+  const loadProjectFromURL = useTissUUmaps((state) => state.loadProjectFromURL);
+
+  const viewerAdapter = useTissUUmaps(
     useShallow((state) => ({
       projectDir: state.projectDir,
       layers: state.layers,
@@ -135,10 +138,7 @@ export function App() {
     })),
   );
 
-  const clearProject = useTissUUmaps((state) => state.clearProject);
-  const loadProjectFromURL = useTissUUmaps((state) => state.loadProjectFromURL);
-
-  // make store available to plugins
+  // plugins
   useEffect(() => {
     window.TissUUmaps = useTissUUmaps;
     return () => {
@@ -146,11 +146,11 @@ export function App() {
     };
   }, []);
 
-  // load project, if available
+  // load project
   useEffect(() => {
     const abortController = new AbortController();
     const params = new URLSearchParams(window.location.search);
-    const projectUrl = params.get(projectUrlParam) ?? defaultProjectUrl;
+    const projectUrl = params.get("project") ?? "project.json";
     loadProjectFromURL(projectUrl, {
       signal: abortController.signal,
       quiet: true,
@@ -166,11 +166,13 @@ export function App() {
   }, [clearProject, loadProjectFromURL]);
 
   return (
-    <div className="w-screen h-screen overflow-hidden">
-      <ViewerProvider adapter={adapter}>
+    // https://tailwindcss.com/docs/dark-mode
+    <div className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}>
+      <ViewerProvider adapter={viewerAdapter}>
         <DockviewReact
           components={dockviewComponents}
           tabComponents={dockviewTabComponents}
+          theme={dark ? themeDark : themeLight}
           onReady={onDockviewReady}
         />
       </ViewerProvider>
