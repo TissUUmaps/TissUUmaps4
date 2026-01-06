@@ -1,4 +1,4 @@
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,10 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { type HTMLProps, useCallback, useRef } from "react";
 
 import { useTissUUmaps } from "../../../store";
-import { ProjectSettings } from "./ProjectSettings";
+import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
 export function ProjectPanel(props: HTMLProps<HTMLDivElement>) {
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -72,14 +71,14 @@ export function ProjectPanel(props: HTMLProps<HTMLDivElement>) {
           </Field>
           <Field>
             <Dialog>
-              <DialogTrigger className={cn(buttonVariants())}>
+              <DialogTrigger render={<Button />}>
                 Show project settings
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Project settings</DialogTitle>
                 </DialogHeader>
-                <ProjectSettings />
+                <ProjectSettingsDialog />
               </DialogContent>
             </Dialog>
           </Field>

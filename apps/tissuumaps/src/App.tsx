@@ -35,7 +35,7 @@ const projectPanelId = "projectPanel";
 const dockviewComponents = {
   ViewerPanel: () => <Viewer className="size-full" />,
   ProjectPanel: () => <ProjectPanel className="m-4" />,
-  ImagesPanel: () => <ImagesPanel />,
+  ImagesPanel: () => <ImagesPanel className="m-4" />,
   LabelsPanel: () => <LabelsPanel />,
   PointsPanel: () => <PointsPanel />,
   ShapesPanel: () => <ShapesPanel />,
