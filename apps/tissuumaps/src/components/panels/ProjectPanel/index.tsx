@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,12 +8,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { useCallback, useRef } from "react";
 
 import { useTissUUmaps } from "../../../store";
 import { ProjectSettings } from "./ProjectSettings";
 
-export function ProjectTab() {
+export function ProjectPanel() {
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const projectName = useTissUUmaps((state) => state.projectName);
@@ -63,8 +64,8 @@ export function ProjectTab() {
       </div>
       <div>
         <Dialog>
-          <DialogTrigger>
-            <Button>Project settings</Button>
+          <DialogTrigger className={cn(buttonVariants())}>
+            Project settings
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
