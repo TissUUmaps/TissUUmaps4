@@ -1,23 +1,27 @@
+import { Button } from "@/components/ui/button";
 import {
   DockviewDefaultTab,
   DockviewReact,
   type DockviewReadyEvent,
+  type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
   themeDark,
   themeLight,
 } from "dockview-react";
-import { useEffect } from "react";
+import { Moon, Sun } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useShallow } from "zustand/shallow";
 
 import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
 
 import "./App.css";
-import { ImagesTab } from "./components/tabs/ImagesTab";
-import { LabelsTab } from "./components/tabs/LabelsTab";
-import { PointsTab } from "./components/tabs/PointsTab";
-import { ProjectTab } from "./components/tabs/ProjectTab";
-import { ShapesTab } from "./components/tabs/ShapesTab";
-import { TablesTab } from "./components/tabs/TablesTab";
+import { ImagesPanel } from "./components/panels/ImagesPanel";
+import { LabelsPanel } from "./components/panels/LabelsPanel";
+import { PointsPanel } from "./components/panels/PointsPanel";
+import { ProjectPanel } from "./components/panels/ProjectPanel";
+import { ShapesPanel } from "./components/panels/ShapesPanel";
+import { TablesPanel } from "./components/panels/TablesPanel";
 import { useTissUUmaps } from "./store";
 
 declare global {
@@ -26,38 +30,40 @@ declare global {
   }
 }
 
+const projectPanelId = "projectPanel";
+
 const dockviewComponents = {
-  viewer: () => <Viewer className="size-full" />,
-  projectTab: () => <ProjectTab />,
-  imagesTab: () => <ImagesTab />,
-  labelsTab: () => <LabelsTab />,
-  pointsTab: () => <PointsTab />,
-  shapesTab: () => <ShapesTab />,
-  tablesTab: () => <TablesTab />,
+  ViewerPanel: () => <Viewer className="size-full" />,
+  ProjectPanel: () => <ProjectPanel />,
+  ImagesPanel: () => <ImagesPanel />,
+  LabelsPanel: () => <LabelsPanel />,
+  PointsPanel: () => <PointsPanel />,
+  ShapesPanel: () => <ShapesPanel />,
+  TablesPanel: () => <TablesPanel />,
 };
 
 const dockviewTabComponents = {
-  closableTab: (props: IDockviewPanelHeaderProps) => {
+  ClosablePanelHeader: (props: IDockviewPanelHeaderProps) => {
     return <DockviewDefaultTab hideClose={false} {...props} />;
   },
-  persistentTab: (props: IDockviewPanelHeaderProps) => {
+  PersistentPanelHeader: (props: IDockviewPanelHeaderProps) => {
     return <DockviewDefaultTab hideClose={true} {...props} />;
   },
 };
 
 const onDockviewReady = (event: DockviewReadyEvent) => {
   const viewerPanel = event.api.addPanel({
-    id: "viewer",
+    id: "viewerPanel",
     title: "Viewer",
-    component: "viewer",
+    component: "ViewerPanel",
   });
   viewerPanel.group.header.hidden = true;
   viewerPanel.group.locked = true;
   const projectPanel = event.api.addPanel({
-    id: "projectTab",
+    id: projectPanelId,
     title: "Project",
-    component: "projectTab",
-    tabComponent: "persistentTab",
+    component: "ProjectPanel",
+    tabComponent: "PersistentPanelHeader",
     initialWidth: 600,
     position: {
       referencePanel: viewerPanel,
@@ -65,45 +71,48 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
     },
   });
   event.api.addPanel({
-    id: "imagesTab",
+    id: "imagesPanel",
     title: "Images",
-    component: "imagesTab",
-    tabComponent: "persistentTab",
+    component: "ImagesPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "labelsTab",
+    id: "labelsPanel",
     title: "Labels",
-    component: "labelsTab",
-    tabComponent: "persistentTab",
+    component: "LabelsPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "pointsTab",
+    id: "pointsPanel",
     title: "Points",
-    component: "pointsTab",
-    tabComponent: "persistentTab",
+    component: "PointsPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "shapesTab",
+    id: "shapesPanel",
     title: "Shapes",
-    component: "shapesTab",
-    tabComponent: "persistentTab",
+    component: "ShapesPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "tablesTab",
+    id: "tablesPanel",
     title: "Tables",
-    component: "tablesTab",
-    tabComponent: "persistentTab",
+    component: "TablesPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   projectPanel.api.setActive();
 };
 
 export function App() {
+  const [toolbarElement, setToolbarElement] = useState<Element | null>(null);
+
   const dark = useTissUUmaps((state) => state.dark);
+  const setDark = useTissUUmaps((state) => state.setDark);
   const clearProject = useTissUUmaps((state) => state.clearProject);
   const loadProjectFromURL = useTissUUmaps((state) => state.loadProjectFromURL);
 
@@ -165,6 +174,17 @@ export function App() {
     };
   }, [clearProject, loadProjectFromURL]);
 
+  const DockviewToolbarHeaderActions = useCallback(
+    (props: IDockviewHeaderActionsProps) => {
+      if (props.group.panels.find((panel) => panel.id === projectPanelId)) {
+        // Dockview does not re-render group headers upon state changes
+        // --> we use a portal to render a React component that does
+        return <div ref={setToolbarElement} />;
+      }
+    },
+    [setToolbarElement],
+  );
+
   return (
     // https://tailwindcss.com/docs/dark-mode
     <div className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}>
@@ -172,9 +192,19 @@ export function App() {
         <DockviewReact
           components={dockviewComponents}
           tabComponents={dockviewTabComponents}
+          rightHeaderActionsComponent={DockviewToolbarHeaderActions}
           theme={dark ? themeDark : themeLight}
           onReady={onDockviewReady}
         />
+        {toolbarElement &&
+          createPortal(
+            <>
+              <Button onClick={() => setDark(!dark)}>
+                {dark ? <Sun /> : <Moon />}
+              </Button>
+            </>,
+            toolbarElement,
+          )}
       </ViewerProvider>
     </div>
   );
