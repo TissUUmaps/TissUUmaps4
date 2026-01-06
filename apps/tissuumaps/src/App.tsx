@@ -34,7 +34,7 @@ const projectPanelId = "projectPanel";
 
 const dockviewComponents = {
   ViewerPanel: () => <Viewer className="size-full" />,
-  ProjectPanel: () => <ProjectPanel />,
+  ProjectPanel: () => <ProjectPanel className="m-4" />,
   ImagesPanel: () => <ImagesPanel />,
   LabelsPanel: () => <LabelsPanel />,
   PointsPanel: () => <PointsPanel />,
@@ -64,7 +64,7 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
     title: "Project",
     component: "ProjectPanel",
     tabComponent: "PersistentPanelHeader",
-    initialWidth: 600,
+    initialWidth: 400,
     position: {
       referencePanel: viewerPanel,
       direction: "right",
