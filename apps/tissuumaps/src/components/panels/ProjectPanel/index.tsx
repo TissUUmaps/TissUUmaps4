@@ -6,15 +6,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useCallback, useRef } from "react";
+import { type HTMLProps, useCallback, useRef } from "react";
 
 import { useTissUUmaps } from "../../../store";
 import { ProjectSettings } from "./ProjectSettings";
 
-export function ProjectPanel() {
+export function ProjectPanel(props: HTMLProps<HTMLDivElement>) {
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const projectName = useTissUUmaps((state) => state.projectName);
@@ -52,61 +57,71 @@ export function ProjectPanel() {
   }, [saveProject]);
 
   return (
-    <div>
-      <div>
-        <Label htmlFor="projectName">Project name</Label>
-        <Input
-          type="text"
-          id="projectName"
-          value={projectName}
-          onChange={(event) => setProjectName(event.target.value)}
-        />
-      </div>
-      <div>
-        <Dialog>
-          <DialogTrigger className={cn(buttonVariants())}>
-            Project settings
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Project settings</DialogTitle>
-            </DialogHeader>
-            <ProjectSettings />
-          </DialogContent>
-        </Dialog>
-      </div>
-      <div>
-        <div>
-          <Input
-            ref={loadProjectFileInputRef}
-            type="file"
-            onChange={(event) => {
-              event.preventDefault();
-              const file = event.target.files?.[0];
-              if (file !== undefined) {
-                loadProjectFromFile(file);
-              }
-            }}
-            hidden
-          />
-          <Button
-            onClick={(event) => {
-              event.preventDefault();
-              loadProjectFileInputRef.current?.click();
-            }}
-          >
-            Load project
-          </Button>
-        </div>
-        <Button
-          onClick={(event) => {
-            event.preventDefault();
-            downloadProject();
-          }}
-        >
-          Save project
-        </Button>
-      </div>
+    <div {...props}>
+      <FieldGroup>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="projectName">Project name</FieldLabel>
+            <Input
+              type="text"
+              id="projectName"
+              placeholder="My awesome project"
+              value={projectName}
+              onChange={(event) => setProjectName(event.target.value)}
+            />
+          </Field>
+          <Field>
+            <Dialog>
+              <DialogTrigger className={cn(buttonVariants())}>
+                Show project settings
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Project settings</DialogTitle>
+                </DialogHeader>
+                <ProjectSettings />
+              </DialogContent>
+            </Dialog>
+          </Field>
+        </FieldGroup>
+        <FieldSeparator />
+        <FieldGroup>
+          <div className="grid grid-cols-2">
+            <Field>
+              <Input
+                ref={loadProjectFileInputRef}
+                type="file"
+                onChange={(event) => {
+                  event.preventDefault();
+                  const file = event.target.files?.[0];
+                  if (file !== undefined) {
+                    loadProjectFromFile(file);
+                  }
+                }}
+                hidden
+              />
+              <Button
+                onClick={(event) => {
+                  event.preventDefault();
+                  loadProjectFileInputRef.current?.click();
+                }}
+              >
+                Load project
+              </Button>
+            </Field>
+            <Field>
+              <Button
+                onClick={(event) => {
+                  event.preventDefault();
+                  downloadProject();
+                }}
+              >
+                Save project
+              </Button>
+            </Field>
+          </div>
+        </FieldGroup>
+      </FieldGroup>
     </div>
   );
 }
