@@ -4,14 +4,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Sortable,
-  SortableContent,
-  SortableItem,
-  SortableItemHandle,
-} from "@/components/ui/sortable";
+import { DragDropProvider } from "@dnd-kit/react";
+import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { GripVertical } from "lucide-react";
-import type { HTMLProps } from "react";
+import { type HTMLProps } from "react";
+
+import type { Image } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import { ImageItem } from "./ImageItem";
@@ -22,33 +20,40 @@ export function ImagesPanel(props: HTMLProps<HTMLDivElement>) {
 
   return (
     <div {...props}>
-      <Sortable
-        value={images}
-        getItemValue={(image) => image.id}
-        onMove={(event) =>
-          moveImage(images[event.activeIndex]!.id, event.overIndex)
-        }
+      <DragDropProvider
+        onDragEnd={(event) => {
+          const { source, canceled } = event.operation;
+          if (isSortable(source) && !canceled) {
+            // dnd-kit optimistically updates the DOM
+            // https://github.com/clauderic/dnd-kit/issues/1564
+            moveImage(source.id as string, source.index);
+          }
+        }}
       >
         <Accordion multiple>
-          <SortableContent>
-            {images.map((image) => (
-              <SortableItem key={image.id} value={image.id} asChild>
-                <AccordionItem>
-                  <AccordionTrigger>
-                    <SortableItemHandle>
-                      <GripVertical />
-                    </SortableItemHandle>
-                    {image.name}
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <ImageItem image={image} />
-                  </AccordionContent>
-                </AccordionItem>
-              </SortableItem>
-            ))}
-          </SortableContent>
+          {images.map((image, index) => (
+            <SortableImageItem key={image.id} image={image} index={index} />
+          ))}
         </Accordion>
-      </Sortable>
+      </DragDropProvider>
+    </div>
+  );
+}
+
+function SortableImageItem({ image, index }: { image: Image; index: number }) {
+  const { ref, handleRef } = useSortable({ id: image.id, index });
+
+  return (
+    <div ref={ref}>
+      <AccordionItem>
+        <AccordionTrigger>
+          <GripVertical ref={handleRef} />
+          {image.name}
+        </AccordionTrigger>
+        <AccordionContent>
+          <ImageItem image={image} />
+        </AccordionContent>
+      </AccordionItem>
     </div>
   );
 }
