@@ -32,7 +32,7 @@ export function PointsPanel(props: HTMLProps<HTMLDivElement>) {
       >
         <Accordion multiple>
           {points.map((currentPoints, index) => (
-            <SortablePointsItem
+            <SortablePointsPanelItem
               key={currentPoints.id}
               points={currentPoints}
               index={index}
@@ -44,7 +44,7 @@ export function PointsPanel(props: HTMLProps<HTMLDivElement>) {
   );
 }
 
-function SortablePointsItem({
+function SortablePointsPanelItem({
   points,
   index,
 }: {
