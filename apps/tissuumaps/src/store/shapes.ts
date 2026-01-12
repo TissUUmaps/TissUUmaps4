@@ -17,6 +17,7 @@ export type ShapesSliceState = {
 
 export type ShapesSliceActions = {
   addShapes: (shapes: Shapes, index?: number) => void;
+  setShapes: (shapesId: string, shapes: Shapes) => void;
   moveShapes: (shapesId: string, newIndex: number) => void;
   loadShapes: (
     shapesId: string,
@@ -39,6 +40,16 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
     }
     set((draft) => {
       draft.shapes.splice(index ?? draft.shapes.length, 0, shapes);
+    });
+  },
+  setShapes: (shapesId, shapes) => {
+    const state = get();
+    const index = state.shapes.findIndex((x) => x.id === shapesId);
+    if (index === -1) {
+      throw new Error(`Shapes with ID ${shapesId} not found.`);
+    }
+    set((draft) => {
+      draft.shapes[index] = shapes;
     });
   },
   moveShapes: (shapesId, newIndex) => {
