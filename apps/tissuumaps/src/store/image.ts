@@ -17,6 +17,7 @@ export type ImageSliceState = {
 
 export type ImageSliceActions = {
   addImage: (image: Image, index?: number) => void;
+  setImage: (imageId: string, image: Image) => void;
   moveImage: (imageId: string, newIndex: number) => void;
   deleteImage: (imageId: string) => void;
   clearImages: () => void;
@@ -39,6 +40,16 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
     }
     set((draft) => {
       draft.images.splice(index ?? draft.images.length, 0, image);
+    });
+  },
+  setImage: (imageId, image) => {
+    const state = get();
+    const index = state.images.findIndex((x) => x.id === imageId);
+    if (index === -1) {
+      throw new Error(`Image with ID ${imageId} not found.`);
+    }
+    set((draft) => {
+      draft.images[index] = image;
     });
   },
   moveImage: (imageId, newIndex) => {
