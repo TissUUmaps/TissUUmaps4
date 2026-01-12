@@ -17,6 +17,7 @@ export type LabelsSliceState = {
 
 export type LabelsSliceActions = {
   addLabels: (labels: Labels, index?: number) => void;
+  setLabels: (labelsId: string, labels: Labels) => void;
   moveLabels: (labelsId: string, newIndex: number) => void;
   loadLabels: (
     labelsId: string,
@@ -39,6 +40,16 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
     }
     set((draft) => {
       draft.labels.splice(index ?? draft.labels.length, 0, labels);
+    });
+  },
+  setLabels: (labelsId, labels) => {
+    const state = get();
+    const index = state.labels.findIndex((x) => x.id === labelsId);
+    if (index === -1) {
+      throw new Error(`Labels with ID ${labelsId} not found.`);
+    }
+    set((draft) => {
+      draft.labels[index] = labels;
     });
   },
   moveLabels: (labelsId, newIndex) => {

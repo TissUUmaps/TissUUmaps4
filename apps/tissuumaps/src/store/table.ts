@@ -17,6 +17,7 @@ export type TableSliceState = {
 
 export type TableSliceActions = {
   addTable: (table: Table, index?: number) => void;
+  setTable: (tableId: string, table: Table) => void;
   moveTable: (tableId: string, newIndex: number) => void;
   loadTable: (
     tableId: string,
@@ -39,6 +40,16 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
     }
     set((draft) => {
       draft.tables.splice(index ?? draft.tables.length, 0, table);
+    });
+  },
+  setTable: (tableId, table) => {
+    const state = get();
+    const index = state.tables.findIndex((x) => x.id === tableId);
+    if (index === -1) {
+      throw new Error(`Table with ID ${tableId} not found.`);
+    }
+    set((draft) => {
+      draft.tables[index] = table;
     });
   },
   moveTable: (tableId, newIndex) => {

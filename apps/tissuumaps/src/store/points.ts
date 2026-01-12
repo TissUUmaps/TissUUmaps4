@@ -17,6 +17,7 @@ export type PointsSliceState = {
 
 export type PointsSliceActions = {
   addPoints: (points: Points, index?: number) => void;
+  setPoints: (pointsId: string, points: Points) => void;
   movePoints: (pointsId: string, newIndex: number) => void;
   loadPoints: (
     pointsId: string,
@@ -39,6 +40,16 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
     }
     set((draft) => {
       draft.points.splice(index ?? draft.points.length, 0, points);
+    });
+  },
+  setPoints: (pointsId, points) => {
+    const state = get();
+    const index = state.points.findIndex((x) => x.id === pointsId);
+    if (index === -1) {
+      throw new Error(`Points with ID ${pointsId} not found.`);
+    }
+    set((draft) => {
+      draft.points[index] = points;
     });
   },
   movePoints: (pointsId, newIndex) => {
