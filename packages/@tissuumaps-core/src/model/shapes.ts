@@ -1,7 +1,7 @@
 import { colorPalettes } from "../palettes";
 import { type Color } from "../types/color";
 import { type TableGroupsRef, type TableValuesRef } from "../types/tableRef";
-import { type ColorMap, type ValueMap } from "../types/valueMap";
+import { type ValueMap } from "../types/valueMap";
 import {
   type DataSource,
   type LayerConfig,
@@ -82,7 +82,7 @@ export interface RawShapes extends RawRenderedDataObject<
    *
    * @defaultValue `undefined` (i.e., all groups default to {@link shapesDefaults.shapeFillColor})
    */
-  shapeFillColorMap?: string | ColorMap;
+  shapeFillColorMap?: string | ValueMap<Color>;
 
   /**
    * Shape fill visibility
@@ -186,7 +186,7 @@ export interface RawShapes extends RawRenderedDataObject<
    *
    * @defaultValue `undefined` (i.e., all groups default to {@link shapesDefaults.shapeStrokeColor})
    */
-  shapeStrokeColorMap?: string | ColorMap;
+  shapeStrokeColorMap?: string | ValueMap<Color>;
 
   /**
    * Shape stroke visibility

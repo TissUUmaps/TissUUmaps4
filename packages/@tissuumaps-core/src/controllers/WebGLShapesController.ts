@@ -9,9 +9,10 @@ import {
 } from "../model/shapes";
 import { type ShapesData } from "../storage/shapes";
 import { type TableData } from "../storage/table";
+import { type Color } from "../types/color";
 import { type MultiPolygon, type Rect, type Vertex } from "../types/geometry";
 import { type DrawOptions } from "../types/options";
-import { type ColorMap, type ValueMap } from "../types/valueMap";
+import { type ValueMap } from "../types/valueMap";
 import { LoadUtils } from "../utils/LoadUtils";
 import { MathUtils } from "../utils/MathUtils";
 import { TransformUtils } from "../utils/TransformUtils";
@@ -108,7 +109,7 @@ export class WebGLShapesController extends WebGLControllerBase {
   async synchronize(
     layers: Layer[],
     shapes: Shapes[],
-    colorMaps: Map<string, ColorMap>,
+    colorMaps: Map<string, ValueMap<Color>>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
     loadShapes: (
@@ -271,7 +272,7 @@ export class WebGLShapesController extends WebGLControllerBase {
   private async _createOrUpdateGLShapes(
     refs: ShapesRef[],
     glShapesByRef: Map<ShapesRef, GLShapes>,
-    colorMaps: Map<string, ColorMap>,
+    colorMaps: Map<string, ValueMap<Color>>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
     loadTable: (
@@ -442,7 +443,7 @@ export class WebGLShapesController extends WebGLControllerBase {
 
   private async _createShapeFillColorsTexture(
     ref: ShapesRef,
-    colorMaps: Map<string, ColorMap>,
+    colorMaps: Map<string, ValueMap<Color>>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
     loadTable: (
@@ -516,7 +517,7 @@ export class WebGLShapesController extends WebGLControllerBase {
 
   private async _createShapeStrokeColorsTexture(
     ref: ShapesRef,
-    colorMaps: Map<string, ColorMap>,
+    colorMaps: Map<string, ValueMap<Color>>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
     loadTable: (

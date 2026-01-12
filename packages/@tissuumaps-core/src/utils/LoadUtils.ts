@@ -8,7 +8,7 @@ import {
   isTableGroupsRef,
   isTableValuesRef,
 } from "../types/tableRef";
-import { type ColorMap, type ValueMap } from "../types/valueMap";
+import { type ValueMap } from "../types/valueMap";
 import { ColorUtils } from "./ColorUtils";
 import { HashUtils } from "./HashUtils";
 import { MathUtils } from "./MathUtils";
@@ -241,11 +241,11 @@ export class LoadUtils {
     colorConfig: Color | TableValuesRef | TableGroupsRef | "randomFromPalette",
     colorRangeConfig: [number, number] | "minmax" | undefined,
     colorPaletteConfig: keyof typeof colorPalettes | undefined,
-    colorMapConfig: string | ColorMap | undefined,
+    colorMapConfig: string | ValueMap<Color> | undefined,
     defaultColor: Color,
     visibilityData: Uint8Array,
     opacityData: Uint8Array,
-    colorMaps: Map<string, ColorMap>,
+    colorMaps: Map<string, ValueMap<Color>>,
     loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
@@ -340,19 +340,9 @@ export class LoadUtils {
             ? colorMaps.get(colorMapConfig)
             : colorMapConfig;
         if (configuredColorMap !== undefined) {
-          let colorMapPalette;
-          if (configuredColorMap.palette !== undefined) {
-            colorMapPalette = colorPalettes[configuredColorMap.palette];
-            if (colorMapPalette === undefined) {
-              console.warn(
-                `Color map palette ${configuredColorMap.palette} not found`,
-              );
-            }
-          }
           colorMap = {
             values: new Map(Object.entries(configuredColorMap.values)),
             defaultValue: configuredColorMap.defaultValue,
-            palette: colorMapPalette,
           };
         } else {
           console.warn(`Color map ${colorMapConfig as string} not found`);
@@ -378,9 +368,6 @@ export class LoadUtils {
             const group = JSON.stringify(tableGroups[tableIndex]!);
             const color =
               colorMap.values.get(group) ?? // first, try to get group-specific color
-              colorMap.palette?.[
-                HashUtils.djb2(group) % colorMap.palette.length
-              ] ?? // then, fallback to color map palette
               colorMap.defaultValue ?? // then, fallback to color map default
               defaultColor; // finally, fallback to default color
             data[i] = ColorUtils.packColor(color);

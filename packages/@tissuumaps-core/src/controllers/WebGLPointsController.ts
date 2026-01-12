@@ -9,10 +9,11 @@ import {
 } from "../model/points";
 import { type PointsData } from "../storage/points";
 import { type TableData } from "../storage/table";
+import { type Color } from "../types/color";
 import { type Rect } from "../types/geometry";
 import { Marker } from "../types/marker";
 import { type DrawOptions } from "../types/options";
-import { type ColorMap, type ValueMap } from "../types/valueMap";
+import { type ValueMap } from "../types/valueMap";
 import { LoadUtils } from "../utils/LoadUtils";
 import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
@@ -174,7 +175,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     points: Points[],
     markerMaps: Map<string, ValueMap<Marker>>,
     sizeMaps: Map<string, ValueMap<number>>,
-    colorMaps: Map<string, ColorMap>,
+    colorMaps: Map<string, ValueMap<Color>>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
     loadPoints: (
@@ -365,7 +366,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     refs: PointsRef[],
     markerMaps: Map<string, ValueMap<Marker>>,
     sizeMaps: Map<string, ValueMap<number>>,
-    colorMaps: Map<string, ColorMap>,
+    colorMaps: Map<string, ValueMap<Color>>,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     opacityMaps: Map<string, ValueMap<number>>,
     buffersResized: boolean,

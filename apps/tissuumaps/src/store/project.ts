@@ -1,5 +1,5 @@
 import {
-  type ColorMap,
+  type Color,
   type DrawOptions,
   Marker,
   type Project,
@@ -18,7 +18,7 @@ export type ProjectSliceState = {
   projectName: string;
   markerMaps: Map<string, ValueMap<Marker>>;
   sizeMaps: Map<string, ValueMap<number>>;
-  colorMaps: Map<string, ColorMap>;
+  colorMaps: Map<string, ValueMap<Color>>;
   visibilityMaps: Map<string, ValueMap<boolean>>;
   opacityMaps: Map<string, ValueMap<number>>;
   drawOptions: DrawOptions;

@@ -1,6 +1,7 @@
+import { type Color } from "../types/color";
 import { type Marker } from "../types/marker";
 import { type DrawOptions, type ViewerOptions } from "../types/options";
-import { type NamedColorMap, type NamedValueMap } from "../types/valueMap";
+import { type NamedValueMap } from "../types/valueMap";
 import { type Model, type RawModel, createModel } from "./base";
 import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";
@@ -104,7 +105,7 @@ export interface RawProject extends RawModel {
   /**
    * Color maps
    */
-  colorMaps?: NamedColorMap[];
+  colorMaps?: NamedValueMap<Color>[];
 
   /**
    * Visibility maps

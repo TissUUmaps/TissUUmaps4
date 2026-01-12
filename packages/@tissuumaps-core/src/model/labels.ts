@@ -1,7 +1,7 @@
 import { colorPalettes } from "../palettes";
 import { type Color } from "../types/color";
 import { type TableGroupsRef, type TableValuesRef } from "../types/tableRef";
-import { type ColorMap, type ValueMap } from "../types/valueMap";
+import { type ValueMap } from "../types/valueMap";
 import {
   type DataSource,
   type LayerConfig,
@@ -74,7 +74,7 @@ export interface RawLabels extends RawRenderedDataObject<
    *
    * @defaultValue `undefined` (i.e., all groups default to {@link labelsDefaults.labelColor})
    */
-  labelColorMap?: string | ColorMap;
+  labelColorMap?: string | ValueMap<Color>;
 
   /**
    * Label visibility
