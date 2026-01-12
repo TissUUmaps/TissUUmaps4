@@ -12,7 +12,7 @@ import type { HTMLProps } from "react";
 import type { Points } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
-import { PointsItem } from "./PointsItem";
+import { PointsPanelItem } from "./PointsPanelItem";
 
 export function PointsPanel(props: HTMLProps<HTMLDivElement>) {
   const points = useTissUUmaps((state) => state.points);
@@ -61,7 +61,7 @@ function SortablePointsItem({
           {points.name}
         </AccordionTrigger>
         <AccordionContent>
-          <PointsItem points={points} />
+          <PointsPanelItem points={points} />
         </AccordionContent>
       </AccordionItem>
     </div>

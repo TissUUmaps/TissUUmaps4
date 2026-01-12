@@ -12,7 +12,7 @@ import { type HTMLProps } from "react";
 import type { Image } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
-import { ImageItem } from "./ImageItem";
+import { ImagesPanelItem } from "./ImagesPanelItem";
 
 export function ImagesPanel(props: HTMLProps<HTMLDivElement>) {
   const images = useTissUUmaps((state) => state.images);
@@ -51,7 +51,7 @@ function SortableImageItem({ image, index }: { image: Image; index: number }) {
           {image.name}
         </AccordionTrigger>
         <AccordionContent>
-          <ImageItem image={image} />
+          <ImagesPanelItem image={image} />
         </AccordionContent>
       </AccordionItem>
     </div>
