@@ -32,7 +32,11 @@ export function ImagesPanel(props: HTMLProps<HTMLDivElement>) {
       >
         <Accordion multiple>
           {images.map((image, index) => (
-            <SortableImageItem key={image.id} image={image} index={index} />
+            <SortableImagesPanelItem
+              key={image.id}
+              image={image}
+              index={index}
+            />
           ))}
         </Accordion>
       </DragDropProvider>
@@ -40,7 +44,13 @@ export function ImagesPanel(props: HTMLProps<HTMLDivElement>) {
   );
 }
 
-function SortableImageItem({ image, index }: { image: Image; index: number }) {
+function SortableImagesPanelItem({
+  image,
+  index,
+}: {
+  image: Image;
+  index: number;
+}) {
   const { ref, handleRef } = useSortable({ id: image.id, index });
 
   return (
