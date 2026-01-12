@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 
 import type {
-  ColorMap,
+  Color,
   DrawOptions,
   Image,
   ImageData,
@@ -27,7 +27,7 @@ export interface ViewerAdapter {
   shapes: Shapes[];
   markerMaps: Map<string, ValueMap<Marker>>;
   sizeMaps: Map<string, ValueMap<number>>;
-  colorMaps: Map<string, ColorMap>;
+  colorMaps: Map<string, ValueMap<Color>>;
   visibilityMaps: Map<string, ValueMap<boolean>>;
   opacityMaps: Map<string, ValueMap<number>>;
   viewerOptions: ViewerOptions;

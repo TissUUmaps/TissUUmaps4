@@ -2,7 +2,7 @@ import { colorPalettes } from "../palettes";
 import { type Color } from "../types/color";
 import { Marker } from "../types/marker";
 import { type TableGroupsRef, type TableValuesRef } from "../types/tableRef";
-import { type ColorMap, type ValueMap } from "../types/valueMap";
+import { type ValueMap } from "../types/valueMap";
 import {
   type DataSource,
   type LayerConfig,
@@ -157,7 +157,7 @@ export interface RawPoints extends RawRenderedDataObject<
    *
    * @defaultValue `undefined` (i.e., all groups default to {@link pointsDefaults.pointColor})
    */
-  pointColorMap?: string | ColorMap;
+  pointColorMap?: string | ValueMap<Color>;
 
   /**
    * Point visibility
