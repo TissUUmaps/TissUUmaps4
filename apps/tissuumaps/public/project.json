@@ -16,7 +16,7 @@
       },
       "layerConfigs": [
         {
-          "layerId": "breast"
+          "layer": "breast"
         }
       ]
     },
@@ -29,7 +29,7 @@
       },
       "layerConfigs": [
         {
-          "layerId": "breast"
+          "layer": "breast"
         }
       ]
     }
@@ -45,7 +45,7 @@
       },
       "layerConfigs": [
         {
-          "layerId": "breast",
+          "layer": "breast",
           "x": "global_X_pos",
           "y": "global_Y_pos"
         }
@@ -73,7 +73,7 @@
       },
       "layerConfigs": [
         {
-          "layerId": "breast"
+          "layer": "breast"
         }
       ]
     }

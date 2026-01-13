@@ -22,7 +22,6 @@ export * from "./types/color";
 export * from "./types/geometry";
 export * from "./types/marker";
 export * from "./types/options";
-export * from "./types/tableRef";
 export * from "./types/transform";
 export * from "./types/valueMap";
 

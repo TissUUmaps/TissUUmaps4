@@ -1,3 +1,5 @@
+import { deepEqual } from "fast-equals";
+
 import shapesFragmentShader from "../assets/shaders/shapes.frag?raw";
 import shapesVertexShader from "../assets/shaders/shapes.vert?raw";
 import { type Layer } from "../model/layer";
@@ -220,7 +222,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       for (const currentShapes of shapes) {
         for (let i = 0; i < currentShapes.layerConfigs.length; i++) {
           const layerConfig = currentShapes.layerConfigs[i]!;
-          if (layerConfig.layerId !== layer.id) {
+          if (layerConfig.layer !== layer.id) {
             continue;
           }
           let data;
@@ -311,21 +313,18 @@ export class WebGLShapesController extends WebGLControllerBase {
         glShapes.current.layer.opacity !== ref.layer.opacity ||
         glShapes.current.shapes.visibility !== ref.shapes.visibility ||
         glShapes.current.shapes.opacity !== ref.shapes.opacity ||
-        glShapes.current.shapes.shapeFillVisibility !==
-          ref.shapes.shapeFillVisibility ||
-        glShapes.current.shapes.shapeFillVisibilityMap !==
-          ref.shapes.shapeFillVisibilityMap ||
-        glShapes.current.shapes.shapeFillOpacity !==
-          ref.shapes.shapeFillOpacity ||
-        glShapes.current.shapes.shapeFillOpacityMap !==
-          ref.shapes.shapeFillOpacityMap ||
-        glShapes.current.shapes.shapeFillColor !== ref.shapes.shapeFillColor ||
-        glShapes.current.shapes.shapeFillColorRange !==
-          ref.shapes.shapeFillColorRange ||
-        glShapes.current.shapes.shapeFillColorPalette !==
-          ref.shapes.shapeFillColorPalette ||
-        glShapes.current.shapes.shapeFillColorMap !==
-          ref.shapes.shapeFillColorMap
+        !deepEqual(
+          glShapes.current.shapes.shapeFillVisibility,
+          ref.shapes.shapeFillVisibility,
+        ) ||
+        !deepEqual(
+          glShapes.current.shapes.shapeFillOpacity,
+          ref.shapes.shapeFillOpacity,
+        ) ||
+        !deepEqual(
+          glShapes.current.shapes.shapeFillColor,
+          ref.shapes.shapeFillColor,
+        )
       ) {
         shapeFillColorsTexture = await this._createShapeFillColorsTexture(
           ref,
@@ -345,22 +344,18 @@ export class WebGLShapesController extends WebGLControllerBase {
         glShapes.current.layer.opacity !== ref.layer.opacity ||
         glShapes.current.shapes.visibility !== ref.shapes.visibility ||
         glShapes.current.shapes.opacity !== ref.shapes.opacity ||
-        glShapes.current.shapes.shapeStrokeVisibility !==
-          ref.shapes.shapeStrokeVisibility ||
-        glShapes.current.shapes.shapeStrokeVisibilityMap !==
-          ref.shapes.shapeStrokeVisibilityMap ||
-        glShapes.current.shapes.shapeStrokeOpacity !==
-          ref.shapes.shapeStrokeOpacity ||
-        glShapes.current.shapes.shapeStrokeOpacityMap !==
-          ref.shapes.shapeStrokeOpacityMap ||
-        glShapes.current.shapes.shapeStrokeColor !==
-          ref.shapes.shapeStrokeColor ||
-        glShapes.current.shapes.shapeStrokeColorRange !==
-          ref.shapes.shapeStrokeColorRange ||
-        glShapes.current.shapes.shapeStrokeColorPalette !==
-          ref.shapes.shapeStrokeColorPalette ||
-        glShapes.current.shapes.shapeStrokeColorMap !==
-          ref.shapes.shapeStrokeColorMap
+        !deepEqual(
+          glShapes.current.shapes.shapeStrokeVisibility,
+          ref.shapes.shapeStrokeVisibility,
+        ) ||
+        !deepEqual(
+          glShapes.current.shapes.shapeStrokeOpacity,
+          ref.shapes.shapeStrokeOpacity,
+        ) ||
+        !deepEqual(
+          glShapes.current.shapes.shapeStrokeColor,
+          ref.shapes.shapeStrokeColor,
+        )
       ) {
         shapeStrokeColorsTexture = await this._createShapeStrokeColorsTexture(
           ref,
@@ -387,22 +382,16 @@ export class WebGLShapesController extends WebGLControllerBase {
           shapes: {
             visibility: ref.shapes.visibility,
             opacity: ref.shapes.opacity,
-            shapeFillColor: ref.shapes.shapeFillColor,
-            shapeFillColorRange: ref.shapes.shapeFillColorRange,
-            shapeFillColorPalette: ref.shapes.shapeFillColorPalette,
-            shapeFillColorMap: ref.shapes.shapeFillColorMap,
-            shapeFillVisibility: ref.shapes.shapeFillVisibility,
-            shapeFillVisibilityMap: ref.shapes.shapeFillVisibilityMap,
-            shapeFillOpacity: ref.shapes.shapeFillOpacity,
-            shapeFillOpacityMap: ref.shapes.shapeFillOpacityMap,
-            shapeStrokeColor: ref.shapes.shapeStrokeColor,
-            shapeStrokeColorRange: ref.shapes.shapeStrokeColorRange,
-            shapeStrokeColorPalette: ref.shapes.shapeStrokeColorPalette,
-            shapeStrokeColorMap: ref.shapes.shapeStrokeColorMap,
-            shapeStrokeVisibility: ref.shapes.shapeStrokeVisibility,
-            shapeStrokeVisibilityMap: ref.shapes.shapeStrokeVisibilityMap,
-            shapeStrokeOpacity: ref.shapes.shapeStrokeOpacity,
-            shapeStrokeOpacityMap: ref.shapes.shapeStrokeOpacityMap,
+            shapeFillColor: structuredClone(ref.shapes.shapeFillColor),
+            shapeFillVisibility: structuredClone(
+              ref.shapes.shapeFillVisibility,
+            ),
+            shapeFillOpacity: structuredClone(ref.shapes.shapeFillOpacity),
+            shapeStrokeColor: structuredClone(ref.shapes.shapeStrokeColor),
+            shapeStrokeVisibility: structuredClone(
+              ref.shapes.shapeStrokeVisibility,
+            ),
+            shapeStrokeOpacity: structuredClone(ref.shapes.shapeStrokeOpacity),
           },
         },
       });
@@ -467,23 +456,21 @@ export class WebGLShapesController extends WebGLControllerBase {
       const visibilityData = await LoadUtils.loadVisibilityData(
         ref.data.getIndex(),
         ref.shapes.shapeFillVisibility,
-        ref.shapes.shapeFillVisibilityMap,
-        shapesDefaults.shapeFillVisibility,
         visibilityMaps,
+        shapesDefaults.shapeFillVisibility.value,
         loadTable,
-        { signal, paddingMultiple: numValuesPerTextureLine },
+        { signal, padding: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
       const opacityData = await LoadUtils.loadOpacityData(
         ref.data.getIndex(),
         ref.shapes.shapeFillOpacity,
-        ref.shapes.shapeFillOpacityMap,
-        shapesDefaults.shapeFillOpacity,
         opacityMaps,
+        shapesDefaults.shapeFillOpacity.value,
         loadTable,
         {
           signal,
-          paddingMultiple: numValuesPerTextureLine,
+          padding: numValuesPerTextureLine,
           opacityFactor: ref.layer.opacity * ref.shapes.opacity,
         },
       );
@@ -491,15 +478,12 @@ export class WebGLShapesController extends WebGLControllerBase {
       colorData = await LoadUtils.loadColorData(
         ref.data.getIndex(),
         ref.shapes.shapeFillColor,
-        ref.shapes.shapeFillColorRange,
-        ref.shapes.shapeFillColorPalette,
-        ref.shapes.shapeFillColorMap,
-        shapesDefaults.shapeFillColor,
+        colorMaps,
+        shapesDefaults.shapeFillColor.value,
+        loadTable,
+        { signal, padding: numValuesPerTextureLine },
         visibilityData,
         opacityData,
-        colorMaps,
-        loadTable,
-        { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
     }
@@ -541,23 +525,21 @@ export class WebGLShapesController extends WebGLControllerBase {
       const visibilityData = await LoadUtils.loadVisibilityData(
         ref.data.getIndex(),
         ref.shapes.shapeStrokeVisibility,
-        ref.shapes.shapeStrokeVisibilityMap,
-        shapesDefaults.shapeStrokeVisibility,
         visibilityMaps,
+        shapesDefaults.shapeStrokeVisibility.value,
         loadTable,
-        { signal, paddingMultiple: numValuesPerTextureLine },
+        { signal, padding: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
       const opacityData = await LoadUtils.loadOpacityData(
         ref.data.getIndex(),
         ref.shapes.shapeStrokeOpacity,
-        ref.shapes.shapeStrokeOpacityMap,
-        shapesDefaults.shapeStrokeOpacity,
         opacityMaps,
+        shapesDefaults.shapeStrokeOpacity.value,
         loadTable,
         {
           signal,
-          paddingMultiple: numValuesPerTextureLine,
+          padding: numValuesPerTextureLine,
           opacityFactor: ref.layer.opacity * ref.shapes.opacity,
         },
       );
@@ -565,15 +547,12 @@ export class WebGLShapesController extends WebGLControllerBase {
       colorData = await LoadUtils.loadColorData(
         ref.data.getIndex(),
         ref.shapes.shapeStrokeColor,
-        ref.shapes.shapeStrokeColorRange,
-        ref.shapes.shapeStrokeColorPalette,
-        ref.shapes.shapeStrokeColorMap,
-        shapesDefaults.shapeStrokeColor,
+        colorMaps,
+        shapesDefaults.shapeStrokeColor.value,
+        loadTable,
+        { signal, padding: numValuesPerTextureLine },
         visibilityData,
         opacityData,
-        colorMaps,
-        loadTable,
-        { signal, paddingMultiple: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
     }
@@ -828,21 +807,11 @@ type GLShapes = {
       | "visibility"
       | "opacity"
       | "shapeFillColor"
-      | "shapeFillColorRange"
-      | "shapeFillColorPalette"
-      | "shapeFillColorMap"
       | "shapeFillVisibility"
-      | "shapeFillVisibilityMap"
       | "shapeFillOpacity"
-      | "shapeFillOpacityMap"
       | "shapeStrokeColor"
-      | "shapeStrokeColorRange"
-      | "shapeStrokeColorPalette"
-      | "shapeStrokeColorMap"
       | "shapeStrokeVisibility"
-      | "shapeStrokeVisibilityMap"
       | "shapeStrokeOpacity"
-      | "shapeStrokeOpacityMap"
     >;
   };
 };

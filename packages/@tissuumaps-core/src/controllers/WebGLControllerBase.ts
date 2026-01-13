@@ -1,6 +1,6 @@
 import { mat3 } from "gl-matrix";
 
-import type { LayerConfig } from "../model/base";
+import { type LayerConfig } from "../model/base";
 import { type Layer } from "../model/layer";
 import { type Rect } from "../types/geometry";
 import { TransformUtils } from "../utils/TransformUtils";

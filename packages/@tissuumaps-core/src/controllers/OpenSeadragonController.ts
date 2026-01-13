@@ -201,7 +201,7 @@ export class OpenSeadragonController {
       for (const image of images) {
         for (let i = 0; i < image.layerConfigs.length; i++) {
           const layerConfig = image.layerConfigs[i]!;
-          if (layerConfig.layerId !== layer.id) {
+          if (layerConfig.layer !== layer.id) {
             continue;
           }
           let data;
@@ -219,7 +219,7 @@ export class OpenSeadragonController {
       for (const currentLabels of labels) {
         for (let i = 0; i < currentLabels.layerConfigs.length; i++) {
           const layerConfig = currentLabels.layerConfigs[i]!;
-          if (layerConfig.layerId !== layer.id) {
+          if (layerConfig.layer !== layer.id) {
             continue;
           }
           let data;

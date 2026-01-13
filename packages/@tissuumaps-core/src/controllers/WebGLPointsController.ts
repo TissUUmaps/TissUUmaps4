@@ -1,3 +1,5 @@
+import { deepEqual } from "fast-equals";
+
 import markersUrl from "../assets/markers/markers.png?url";
 import pointsFragmentShader from "../assets/shaders/points.frag?raw";
 import pointsVertexShader from "../assets/shaders/points.vert?raw";
@@ -332,7 +334,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       for (const currentPoints of points) {
         for (let i = 0; i < currentPoints.layerConfigs.length; i++) {
           const layerConfig = currentPoints.layerConfigs[i]!;
-          if (layerConfig.layerId !== layer.id) {
+          if (layerConfig.layer !== layer.id) {
             continue;
           }
           let data;
@@ -429,17 +431,16 @@ export class WebGLPointsController extends WebGLControllerBase {
       }
       if (
         bufferSliceChanged ||
-        bufferSliceState.current.points.pointMarker !==
-          ref.points.pointMarker ||
-        bufferSliceState.current.points.pointMarkerMap !==
-          ref.points.pointMarkerMap
+        !deepEqual(
+          bufferSliceState.current.points.pointMarker,
+          ref.points.pointMarker,
+        )
       ) {
-        const markerIndexData = await LoadUtils.loadMarkerIndexData(
+        const markerIndexData = await LoadUtils.loadMarkerData(
           ref.data.getIndex(),
           ref.points.pointMarker,
-          ref.points.pointMarkerMap,
-          pointsDefaults.pointMarker,
           markerMaps,
+          pointsDefaults.pointMarker.value,
           loadTable,
           { signal },
         );
@@ -458,32 +459,27 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.layer.transform.scale ||
         bufferSliceState.current.layer.pointSizeFactor !==
           ref.layer.pointSizeFactor ||
-        bufferSliceState.current.points.pointSize !== ref.points.pointSize ||
-        bufferSliceState.current.points.pointSizeMap !==
-          ref.points.pointSizeMap ||
-        bufferSliceState.current.points.pointSizeUnit !==
-          ref.points.pointSizeUnit ||
+        !deepEqual(
+          bufferSliceState.current.points.pointSize,
+          ref.points.pointSize,
+        ) ||
         bufferSliceState.current.points.pointSizeFactor !==
           ref.points.pointSizeFactor ||
         bufferSliceState.current.layerConfig.transform.scale !==
           ref.layerConfig.transform.scale
       ) {
         let sizeFactor = ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
-        if (ref.points.pointSizeUnit === "data") {
+        if (ref.points.pointSize.unit === "data") {
           sizeFactor *= ref.layerConfig.transform.scale;
-        }
-        if (
-          ref.points.pointSizeUnit === "data" ||
-          ref.points.pointSizeUnit === "layer"
-        ) {
+          sizeFactor *= ref.layer.transform.scale;
+        } else if (ref.points.pointSize.unit === "layer") {
           sizeFactor *= ref.layer.transform.scale;
         }
         const sizeData = await LoadUtils.loadSizeData(
           ref.data.getIndex(),
           ref.points.pointSize,
-          ref.points.pointSizeMap,
-          pointsDefaults.pointSize,
           sizeMaps,
+          pointsDefaults.pointSize.value,
           loadTable,
           { signal, sizeFactor },
         );
@@ -502,21 +498,18 @@ export class WebGLPointsController extends WebGLControllerBase {
         bufferSliceState.current.layer.opacity !== ref.layer.opacity ||
         bufferSliceState.current.points.visibility !== ref.points.visibility ||
         bufferSliceState.current.points.opacity !== ref.points.opacity ||
-        bufferSliceState.current.points.pointVisibility !==
-          ref.points.pointVisibility ||
-        bufferSliceState.current.points.pointVisibilityMap !==
-          ref.points.pointVisibilityMap ||
-        bufferSliceState.current.points.pointOpacity !==
-          ref.points.pointOpacity ||
-        bufferSliceState.current.points.pointOpacityMap !==
-          ref.points.pointOpacityMap ||
-        bufferSliceState.current.points.pointColor !== ref.points.pointColor ||
-        bufferSliceState.current.points.pointColorRange !==
-          ref.points.pointColorRange ||
-        bufferSliceState.current.points.pointColorPalette !==
-          ref.points.pointColorPalette ||
-        bufferSliceState.current.points.pointColorMap !==
-          ref.points.pointColorMap
+        !deepEqual(
+          bufferSliceState.current.points.pointVisibility,
+          ref.points.pointVisibility,
+        ) ||
+        !deepEqual(
+          bufferSliceState.current.points.pointOpacity,
+          ref.points.pointOpacity,
+        ) ||
+        !deepEqual(
+          bufferSliceState.current.points.pointColor,
+          ref.points.pointColor,
+        )
       ) {
         let colorData;
         if (
@@ -530,9 +523,8 @@ export class WebGLPointsController extends WebGLControllerBase {
           const visibilityData = await LoadUtils.loadVisibilityData(
             ref.data.getIndex(),
             ref.points.pointVisibility,
-            ref.points.pointVisibilityMap,
-            pointsDefaults.pointVisibility,
             visibilityMaps,
+            pointsDefaults.pointVisibility.value,
             loadTable,
             { signal },
           );
@@ -540,9 +532,8 @@ export class WebGLPointsController extends WebGLControllerBase {
           const opacityData = await LoadUtils.loadOpacityData(
             ref.data.getIndex(),
             ref.points.pointOpacity,
-            ref.points.pointOpacityMap,
-            pointsDefaults.pointOpacity,
             opacityMaps,
+            pointsDefaults.pointOpacity.value,
             loadTable,
             { signal, opacityFactor: ref.layer.opacity * ref.points.opacity },
           );
@@ -550,15 +541,12 @@ export class WebGLPointsController extends WebGLControllerBase {
           colorData = await LoadUtils.loadColorData(
             ref.data.getIndex(),
             ref.points.pointColor,
-            ref.points.pointColorRange,
-            ref.points.pointColorPalette,
-            ref.points.pointColorMap,
-            pointsDefaults.pointColor,
-            visibilityData,
-            opacityData,
             colorMaps,
+            pointsDefaults.pointColor.value,
             loadTable,
             { signal },
+            visibilityData,
+            opacityData,
           );
         }
         signal?.throwIfAborted();
@@ -593,20 +581,12 @@ export class WebGLPointsController extends WebGLControllerBase {
           points: {
             visibility: ref.points.visibility,
             opacity: ref.points.opacity,
-            pointMarker: ref.points.pointMarker,
-            pointMarkerMap: ref.points.pointMarkerMap,
-            pointSize: ref.points.pointSize,
-            pointSizeMap: ref.points.pointSizeMap,
-            pointSizeUnit: ref.points.pointSizeUnit,
+            pointMarker: structuredClone(ref.points.pointMarker),
+            pointSize: structuredClone(ref.points.pointSize),
+            pointColor: structuredClone(ref.points.pointColor),
+            pointVisibility: structuredClone(ref.points.pointVisibility),
+            pointOpacity: structuredClone(ref.points.pointOpacity),
             pointSizeFactor: ref.points.pointSizeFactor,
-            pointColor: ref.points.pointColor,
-            pointColorRange: ref.points.pointColorRange,
-            pointColorPalette: ref.points.pointColorPalette,
-            pointColorMap: ref.points.pointColorMap,
-            pointVisibility: ref.points.pointVisibility,
-            pointVisibilityMap: ref.points.pointVisibilityMap,
-            pointOpacity: ref.points.pointOpacity,
-            pointOpacityMap: ref.points.pointOpacityMap,
           },
           layerConfig: {
             x: ref.layerConfig.x,
@@ -658,19 +638,11 @@ type PointsBufferSliceState = {
       | "visibility"
       | "opacity"
       | "pointMarker"
-      | "pointMarkerMap"
       | "pointSize"
-      | "pointSizeMap"
-      | "pointSizeUnit"
-      | "pointSizeFactor"
       | "pointColor"
-      | "pointColorRange"
-      | "pointColorPalette"
-      | "pointColorMap"
       | "pointVisibility"
-      | "pointVisibilityMap"
       | "pointOpacity"
-      | "pointOpacityMap"
+      | "pointSizeFactor"
     >;
     layerConfig: Pick<PointsLayerConfig, "x" | "y" | "transform">;
   };

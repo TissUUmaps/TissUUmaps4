@@ -1,4 +1,3 @@
-import { type TableValuesRef } from "../types/tableRef";
 import { type SimilarityTransform } from "../types/transform";
 
 export const modelDefaults = {};
@@ -225,7 +224,7 @@ export interface RawLayerConfig extends RawModel {
    * - An ID of an existing Layer
    * - A table column holding the layer ID values for each item
    */
-  layerId: string | TableValuesRef;
+  layer: string | { table: string; column: string };
 
   /**
    * Horizontal reflection, applied before transformation

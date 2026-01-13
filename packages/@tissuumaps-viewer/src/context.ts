@@ -1,21 +1,21 @@
 import { createContext, useContext } from "react";
 
-import type {
-  Color,
-  DrawOptions,
-  Image,
-  ImageData,
-  Labels,
-  LabelsData,
-  Layer,
-  Marker,
-  Points,
-  PointsData,
-  Shapes,
-  ShapesData,
-  TableData,
-  ValueMap,
-  ViewerOptions,
+import {
+  type Color,
+  type DrawOptions,
+  type Image,
+  type ImageData,
+  type Labels,
+  type LabelsData,
+  type Layer,
+  type Marker,
+  type Points,
+  type PointsData,
+  type Shapes,
+  type ShapesData,
+  type TableData,
+  type ValueMap,
+  type ViewerOptions,
 } from "@tissuumaps/core";
 
 export interface ViewerAdapter {

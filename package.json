@@ -6,11 +6,11 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@microsoft/api-extractor": "^7.55.2",
-    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
-    "@types/node": "^25.0.3",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "@types/node": "^25.0.8",
     "@vitejs/plugin-react": "^5.1.2",
-    "@vitest/coverage-v8": "^4.0.16",
-    "canvas": "^3.2.0",
+    "@vitest/coverage-v8": "^4.0.17",
+    "canvas": "^3.2.1",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -21,10 +21,10 @@
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.50.1",
+    "typescript-eslint": "^8.53.0",
     "unplugin-dts": "1.0.0-beta.6",
-    "vite": "^7.3.0",
-    "vitest": "^4.0.16"
+    "vite": "^7.3.1",
+    "vitest": "^4.0.17"
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",

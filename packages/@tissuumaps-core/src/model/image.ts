@@ -101,7 +101,7 @@ export interface RawImageLayerConfig extends RawLayerConfig {
   /**
    * Layer ID
    */
-  layerId: string;
+  layer: string;
 }
 
 /**
