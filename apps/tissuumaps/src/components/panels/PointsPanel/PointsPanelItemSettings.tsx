@@ -9,8 +9,9 @@ import { type MouseEvent, useState } from "react";
 
 import {
   type Points,
-  isTableGroupsRef,
-  isTableValuesRef,
+  isGroupByConfig,
+  isRandomConfig,
+  isValueConfig,
 } from "@tissuumaps/core";
 
 const Setting = {
@@ -23,11 +24,11 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
   >(null);
 
   let colorMode: "Color" | "TableValuesRef" | "TableGroupsRef" | "Random";
-  if (isTableValuesRef(points.pointColor)) {
+  if (isValueConfig(points.pointColor)) {
     colorMode = "TableValuesRef";
-  } else if (isTableGroupsRef(points.pointColor)) {
+  } else if (isGroupByConfig(points.pointColor)) {
     colorMode = "TableGroupsRef";
-  } else if (points.pointColor === "randomFromPalette") {
+  } else if (isRandomConfig(points.pointColor)) {
     colorMode = "Random";
   } else {
     colorMode = "Color";
