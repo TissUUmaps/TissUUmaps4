@@ -33,8 +33,8 @@ export class WebGLPointsController extends WebGLControllerBase {
     Y: 1,
     SIZE: 2,
     COLOR: 3,
-    MARKER_INDEX: 4,
-    OBJECT_INDEX: 5,
+    MARKER: 4,
+    OBJECT: 5,
   };
   private static readonly _bindingPoints = {
     OBJECTS_UBO: 0,
@@ -54,8 +54,8 @@ export class WebGLPointsController extends WebGLControllerBase {
     y: WebGLBuffer;
     size: WebGLBuffer;
     color: WebGLBuffer;
-    markerIndex: WebGLBuffer;
-    objectIndex: WebGLBuffer;
+    marker: WebGLBuffer;
+    object: WebGLBuffer;
     objectsUBO: WebGLBuffer;
   };
   private readonly _vao: WebGLVertexArrayObject;
@@ -99,8 +99,8 @@ export class WebGLPointsController extends WebGLControllerBase {
       y: WebGLUtils.createBuffer(this._gl),
       size: WebGLUtils.createBuffer(this._gl),
       color: WebGLUtils.createBuffer(this._gl),
-      markerIndex: WebGLUtils.createBuffer(this._gl),
-      objectIndex: WebGLUtils.createBuffer(this._gl),
+      marker: WebGLUtils.createBuffer(this._gl),
+      object: WebGLUtils.createBuffer(this._gl),
       objectsUBO: WebGLUtils.createBuffer(this._gl),
     };
     WebGLUtils.resizeBuffer(
@@ -148,16 +148,16 @@ export class WebGLPointsController extends WebGLControllerBase {
     WebGLUtils.configureVertexIntAttribute(
       this._gl,
       this._gl.ARRAY_BUFFER,
-      this._buffers.markerIndex,
-      WebGLPointsController._attribLocations.MARKER_INDEX,
+      this._buffers.marker,
+      WebGLPointsController._attribLocations.MARKER,
       1,
       this._gl.UNSIGNED_BYTE,
     );
     WebGLUtils.configureVertexIntAttribute(
       this._gl,
       this._gl.ARRAY_BUFFER,
-      this._buffers.objectIndex,
-      WebGLPointsController._attribLocations.OBJECT_INDEX,
+      this._buffers.object,
+      WebGLPointsController._attribLocations.OBJECT,
       1,
       this._gl.UNSIGNED_BYTE,
     );
@@ -310,14 +310,14 @@ export class WebGLPointsController extends WebGLControllerBase {
     WebGLUtils.resizeBuffer(
       this._gl,
       this._gl.ARRAY_BUFFER,
-      this._buffers.markerIndex,
+      this._buffers.marker,
       n * Uint8Array.BYTES_PER_ELEMENT,
       this._gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
       this._gl,
       this._gl.ARRAY_BUFFER,
-      this._buffers.objectIndex,
+      this._buffers.object,
       n * Uint8Array.BYTES_PER_ELEMENT,
       this._gl.STATIC_DRAW,
     );
@@ -389,10 +389,10 @@ export class WebGLPointsController extends WebGLControllerBase {
       WebGLPointsController._maxNumObjects * 8,
     );
     const newBufferSliceStates: PointsBufferSliceState[] = [];
-    for (let objectIndex = 0; objectIndex < refs.length; objectIndex++) {
-      const ref = refs[objectIndex]!;
+    for (let i = 0; i < refs.length; i++) {
+      const ref = refs[i]!;
       const numPoints = ref.data.getLength();
-      const bufferSliceState = this._bufferSliceStates[objectIndex];
+      const bufferSliceState = this._bufferSliceStates[i];
       const bufferSliceChanged =
         buffersResized ||
         bufferSliceState === undefined ||
@@ -441,7 +441,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.points.pointMarker,
         )
       ) {
-        const markerIndexData = await LoadUtils.loadMarkerData(
+        const markerData = await LoadUtils.loadMarkerData(
           ref.data.getIndex(),
           ref.points.pointMarker,
           markerMaps,
@@ -453,8 +453,8 @@ export class WebGLPointsController extends WebGLControllerBase {
         WebGLUtils.loadBuffer(
           this._gl,
           this._gl.ARRAY_BUFFER,
-          this._buffers.markerIndex,
-          markerIndexData,
+          this._buffers.marker,
+          markerData,
           { offset },
         );
       }
@@ -567,8 +567,8 @@ export class WebGLPointsController extends WebGLControllerBase {
         WebGLUtils.loadBuffer(
           this._gl,
           this._gl.ARRAY_BUFFER,
-          this._buffers.objectIndex,
-          new Uint8Array(numPoints).fill(objectIndex),
+          this._buffers.object,
+          new Uint8Array(numPoints).fill(i),
           { offset },
         );
       }
@@ -607,7 +607,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             ref.layerConfig,
           ),
         ),
-        objectIndex * 8,
+        i * 8,
       );
       offset += numPoints;
     }
