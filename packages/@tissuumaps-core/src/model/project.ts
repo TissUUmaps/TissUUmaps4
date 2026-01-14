@@ -1,59 +1,38 @@
-import { type Color } from "../types/color";
-import { type Marker } from "../types/marker";
-import { type DrawOptions, type ViewerOptions } from "../types/options";
-import { type NamedValueMap } from "../types/valueMap";
 import { type Model, type RawModel, createModel } from "./base";
+import { defaultDrawOptions, defaultViewerOptions } from "./constants";
 import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";
 import { type Layer, type RawLayer, createLayer } from "./layer";
 import { type Points, type RawPoints, createPoints } from "./points";
 import { type RawShapes, type Shapes, createShapes } from "./shapes";
 import { type RawTable, type Table, createTable } from "./table";
+import {
+  type Color,
+  type DrawOptions,
+  type Marker,
+  type NamedValueMap,
+  type ViewerOptions,
+} from "./types";
 
+/**
+ * Default values for {@link RawProject}
+ */
 export const projectDefaults = {
   markerMaps: [],
   sizeMaps: [],
   colorMaps: [],
   visibilityMaps: [],
   opacityMaps: [],
-  drawOptions: {
-    pointSizeFactor: 1,
-    shapeStrokeWidth: 1,
-    numShapesScanlines: 512,
-  } as DrawOptions,
-  viewerOptions: {
-    minZoomImageRatio: 0,
-    maxZoomPixelRatio: Infinity,
-    preserveImageSizeOnResize: true,
-    visibilityRatio: 0,
-    animationTime: 0,
-    gestureSettingsMouse: {
-      flickEnabled: false,
-    },
-    gestureSettingsTouch: {
-      flickEnabled: false,
-    },
-    gestureSettingsPen: {
-      flickEnabled: false,
-    },
-    gestureSettingsUnknown: {
-      flickEnabled: false,
-    },
-    zoomPerClick: 1,
-    showNavigator: true,
-    navigatorPosition: "BOTTOM_LEFT",
-    maxImageCacheCount: 2000,
-    showNavigationControl: false,
-    imageSmoothingEnabled: false,
-  } as ViewerOptions,
+  drawOptions: defaultDrawOptions,
+  viewerOptions: defaultViewerOptions,
   viewerAnimationStartOptions: {
     immediateRender: false,
     imageLoaderLimit: 1,
-  } as ViewerOptions,
+  },
   viewerAnimationFinishOptions: {
     immediateRender: true, // set to true, even if initially set to false
-  } as ViewerOptions,
-};
+  },
+} as const satisfies Partial<RawProject>;
 
 /** A TissUUmaps project */
 export interface RawProject extends RawModel {
@@ -147,7 +126,7 @@ export interface RawProject extends RawModel {
 }
 
 /**
- * A {@link RawProject} with default values applied
+ * A {@link RawProject} with {@link projectDefaults} applied
  */
 export type Project = Model &
   Required<Pick<RawProject, keyof typeof projectDefaults>> &
@@ -167,7 +146,7 @@ export type Project = Model &
   };
 
 /**
- * Creates a {@link Project} from a {@link RawProject} by applying default values
+ * Creates a {@link Project} from a {@link RawProject} by applying {@link projectDefaults}
  *
  * @param rawProject - The raw project
  * @returns The complete project with default values applied
@@ -175,8 +154,8 @@ export type Project = Model &
 export function createProject(rawProject: RawProject): Project {
   return {
     ...createModel(rawProject),
-    ...projectDefaults,
-    ...rawProject,
+    ...structuredClone(projectDefaults),
+    ...structuredClone(rawProject),
     layers: rawProject.layers?.map(createLayer) ?? [],
     images: rawProject.images?.map(createImage) ?? [],
     labels: rawProject.labels?.map(createLabels) ?? [],

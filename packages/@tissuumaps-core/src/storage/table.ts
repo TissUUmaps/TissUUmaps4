@@ -1,4 +1,4 @@
-import { type MappableArrayLike } from "../types/array";
+import { type MappableArrayLike } from "../types";
 import { type DataLoader, type ItemsData } from "./base";
 
 export interface TableDataLoader<

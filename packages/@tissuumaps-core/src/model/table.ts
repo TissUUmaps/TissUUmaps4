@@ -7,7 +7,10 @@ import {
   createDataSource,
 } from "./base";
 
-export const tableDefaults = {};
+/**
+ * Default values for {@link RawTable}
+ */
+export const tableDefaults = {} as const satisfies Partial<RawTable>;
 
 /**
  * Tabular data
@@ -16,7 +19,7 @@ export const tableDefaults = {};
 export interface RawTable extends RawDataObject<RawTableDataSource<string>> {}
 
 /**
- * A {@link RawTable} with default values applied
+ * A {@link RawTable} with {@link tableDefaults} applied
  */
 export type Table = DataObject<TableDataSource<string>> &
   Required<Pick<RawTable, keyof typeof tableDefaults>> &
@@ -28,7 +31,7 @@ export type Table = DataObject<TableDataSource<string>> &
   >;
 
 /**
- * Creates a {@link Table} from a {@link RawTable} by applying default values
+ * Creates a {@link Table} from a {@link RawTable} by applying {@link tableDefaults}
  *
  * @param rawTable - The raw table
  * @returns The complete table with default values applied
@@ -36,13 +39,18 @@ export type Table = DataObject<TableDataSource<string>> &
 export function createTable(rawTable: RawTable): Table {
   return {
     ...createDataObject(rawTable),
-    ...tableDefaults,
-    ...rawTable,
+    ...structuredClone(tableDefaults),
+    ...structuredClone(rawTable),
     dataSource: createTableDataSource(rawTable.dataSource),
   };
 }
 
-export const tableDataSourceDefaults = {};
+/**
+ * Default values for {@link RawTableDataSource}
+ */
+export const tableDataSourceDefaults = {} as const satisfies Partial<
+  RawTableDataSource<string>
+>;
 
 /**
  * A data source for tabular data
@@ -53,7 +61,7 @@ export interface RawTableDataSource<
 > extends RawDataSource<TType> {}
 
 /**
- * A {@link RawTableDataSource} with default values applied
+ * A {@link RawTableDataSource} with {@link tableDataSourceDefaults} applied
  */
 export type TableDataSource<TType extends string = string> = DataSource<TType> &
   Required<
@@ -67,7 +75,7 @@ export type TableDataSource<TType extends string = string> = DataSource<TType> &
   >;
 
 /**
- * Creates a {@link TableDataSource} from a {@link RawTableDataSource} by applying default values
+ * Creates a {@link TableDataSource} from a {@link RawTableDataSource} by applying {@link tableDataSourceDefaults}
  *
  * @param rawTableDataSource - The raw table data source
  * @returns The complete table data source with default values applied
@@ -77,7 +85,7 @@ export function createTableDataSource<TType extends string>(
 ): TableDataSource<TType> {
   return {
     ...createDataSource(rawTableDataSource),
-    ...tableDataSourceDefaults,
-    ...rawTableDataSource,
+    ...structuredClone(tableDataSourceDefaults),
+    ...structuredClone(rawTableDataSource),
   };
 }

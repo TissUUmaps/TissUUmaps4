@@ -1,7 +1,10 @@
-import { type TableValuesRef } from "../types/tableRef";
-import { type SimilarityTransform } from "../types/transform";
+import { identityTransform } from "./constants";
+import { type SimilarityTransform } from "./types";
 
-export const modelDefaults = {};
+/**
+ * Default values for {@link RawModel}
+ */
+export const modelDefaults = {} as const satisfies Partial<RawModel>;
 
 /**
  * A model
@@ -10,7 +13,7 @@ export const modelDefaults = {};
 export interface RawModel {}
 
 /**
- * A {@link RawModel} with default values applied
+ * A {@link RawModel} with {@link modelDefaults} applied
  */
 export type Model = object &
   Required<Pick<RawModel, keyof typeof modelDefaults>> &
@@ -23,16 +26,21 @@ export type Model = object &
   >;
 
 /**
- * Creates a {@link Model} from a {@link RawModel} by applying default values
+ * Creates a {@link Model} from a {@link RawModel} by applying {@link modelDefaults}
  *
  * @param rawModel - The raw model
  * @returns The complete model with default values applied
  */
 export function createModel(rawModel: RawModel): Model {
-  return { ...modelDefaults, ...rawModel };
+  return { ...structuredClone(modelDefaults), ...structuredClone(rawModel) };
 }
 
-export const dataObjectDefaults = {};
+/**
+ * Default values for {@link RawDataObject}
+ */
+export const dataObjectDefaults = {} as const satisfies Partial<
+  RawDataObject<RawDataSource<string>>
+>;
 
 /**
  * A data object
@@ -51,7 +59,7 @@ export interface RawDataObject<
 }
 
 /**
- * A {@link RawDataObject} with default values applied
+ * A {@link RawDataObject} with {@link dataObjectDefaults} applied
  */
 export type DataObject<TDataSource extends DataSource<string>> = Model &
   Required<Pick<RawDataObject<TDataSource>, keyof typeof dataObjectDefaults>> &
@@ -64,7 +72,7 @@ export type DataObject<TDataSource extends DataSource<string>> = Model &
   >;
 
 /**
- * Creates a {@link DataObject} from a {@link RawDataObject} by applying default values
+ * Creates a {@link DataObject} from a {@link RawDataObject} by applying {@link dataObjectDefaults}
  *
  * @param rawDataObject - The raw data object
  * @returns The complete data object with default values applied
@@ -75,17 +83,22 @@ export function createDataObject<
 >(rawDataObject: RawDataObject<TRawDataSource>): DataObject<DataSource<TType>> {
   return {
     ...createModel(rawDataObject),
-    ...dataObjectDefaults,
-    ...rawDataObject,
+    ...structuredClone(dataObjectDefaults),
+    ...structuredClone(rawDataObject),
     dataSource: createDataSource(rawDataObject.dataSource),
   };
 }
 
+/**
+ * Default values for {@link RawRenderedDataObject}
+ */
 export const renderedDataObjectDefaults = {
   visibility: true,
   opacity: 1,
   layerConfigs: [],
-};
+} as const satisfies Partial<
+  RawRenderedDataObject<RawDataSource<string>, RawLayerConfig>
+>;
 
 /**
  * A data object that can be rendered
@@ -115,7 +128,7 @@ export interface RawRenderedDataObject<
 }
 
 /**
- * A {@link RawRenderedDataObject} with default values applied
+ * A {@link RawRenderedDataObject} with {@link renderedDataObjectDefaults} applied
  */
 export type RenderedDataObject<
   TDataSource extends DataSource<string>,
@@ -133,7 +146,7 @@ export type RenderedDataObject<
   >;
 
 /**
- * Creates a {@link RenderedDataObject} from a {@link RawRenderedDataObject} by applying default values
+ * Creates a {@link RenderedDataObject} from a {@link RawRenderedDataObject} by applying {@link renderedDataObjectDefaults}
  *
  * @param rawRenderedDataObject - The raw rendered data object
  * @returns The complete rendered data object with default values applied
@@ -147,14 +160,19 @@ export function createRenderedDataObject<
 ): RenderedDataObject<DataSource<TType>, LayerConfig> {
   return {
     ...createDataObject(rawRenderedDataObject),
-    ...renderedDataObjectDefaults,
-    ...rawRenderedDataObject,
+    ...structuredClone(renderedDataObjectDefaults),
+    ...structuredClone(rawRenderedDataObject),
     layerConfigs:
       rawRenderedDataObject.layerConfigs?.map(createLayerConfig) ?? [],
   };
 }
 
-export const dataSourceDefaults = {};
+/**
+ * Default values for {@link RawDataSource}
+ */
+export const dataSourceDefaults = {} as const satisfies Partial<
+  RawDataSource<string>
+>;
 
 /**
  * A data source for data objects
@@ -177,7 +195,7 @@ export interface RawDataSource<TType extends string = string> extends RawModel {
 }
 
 /**
- * A {@link RawDataSource} with default values applied
+ * A {@link RawDataSource} with {@link dataSourceDefaults} applied
  */
 export type DataSource<TType extends string = string> = Model &
   Required<Pick<RawDataSource<TType>, keyof typeof dataSourceDefaults>> &
@@ -190,7 +208,7 @@ export type DataSource<TType extends string = string> = Model &
   >;
 
 /**
- * Creates a {@link DataSource} from a {@link RawDataSource} by applying default values
+ * Creates a {@link DataSource} from a {@link RawDataSource} by applying {@link dataSourceDefaults}
  *
  * @param rawDataSource - The raw data source
  * @returns The complete data source with default values applied
@@ -200,19 +218,17 @@ export function createDataSource<TType extends string>(
 ): DataSource<TType> {
   return {
     ...createModel(rawDataSource),
-    ...dataSourceDefaults,
-    ...rawDataSource,
+    ...structuredClone(dataSourceDefaults),
+    ...structuredClone(rawDataSource),
   };
 }
-
+/**
+ * Default values for {@link RawLayerConfig}
+ */
 export const layerConfigDefaults = {
   flip: false,
-  transform: {
-    scale: 1,
-    rotation: 0,
-    translation: { x: 0, y: 0 },
-  },
-};
+  transform: identityTransform,
+} as const satisfies Partial<RawLayerConfig>;
 
 /**
  * A layer-specific display configuration for rendered data objects
@@ -225,7 +241,7 @@ export interface RawLayerConfig extends RawModel {
    * - An ID of an existing Layer
    * - A table column holding the layer ID values for each item
    */
-  layerId: string | TableValuesRef;
+  layer: string | { table: string; column: string };
 
   /**
    * Horizontal reflection, applied before transformation
@@ -243,7 +259,7 @@ export interface RawLayerConfig extends RawModel {
 }
 
 /**
- * A {@link RawLayerConfig} with default values applied
+ * A {@link RawLayerConfig} with {@link layerConfigDefaults} applied
  */
 export type LayerConfig = Model &
   Required<Pick<RawLayerConfig, keyof typeof layerConfigDefaults>> &
@@ -254,7 +270,7 @@ export type LayerConfig = Model &
   >;
 
 /**
- * Creates a {@link LayerConfig} from a {@link RawLayerConfig} by applying default values
+ * Creates a {@link LayerConfig} from a {@link RawLayerConfig} by applying {@link layerConfigDefaults}
  *
  * @param rawLayerConfig - The raw layer configuration
  * @returns The complete layer configuration with default values applied
@@ -262,7 +278,7 @@ export type LayerConfig = Model &
 export function createLayerConfig(rawLayerConfig: RawLayerConfig): LayerConfig {
   return {
     ...createModel(rawLayerConfig),
-    ...layerConfigDefaults,
-    ...rawLayerConfig,
+    ...structuredClone(layerConfigDefaults),
+    ...structuredClone(rawLayerConfig),
   };
 }

@@ -23,6 +23,7 @@
     "@types/openseadragon": "^5.0.1"
   },
   "dependencies": {
+    "fast-equals": "^6.0.0",
     "gl-matrix": "^3.4.4",
     "openseadragon": "^5.0.1"
   },

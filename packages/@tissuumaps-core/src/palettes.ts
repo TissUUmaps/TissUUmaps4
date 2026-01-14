@@ -1,7 +1,6 @@
 import batlow from "./assets/palettes/batlow.txt?raw";
 import batlowS from "./assets/palettes/batlowS.txt?raw";
-import { type Color } from "./types/color";
-import { Marker } from "./types/marker";
+import { type Color, Marker } from "./model/types";
 import { ColorUtils } from "./utils/ColorUtils";
 
 export const markerPalette = [

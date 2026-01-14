@@ -26,9 +26,9 @@ layout(std140) uniform ObjectsUBO {
 layout(location = 0) in float a_x;
 layout(location = 1) in float a_y;
 layout(location = 2) in float a_size;
-layout(location = 3) in uint a_color;
-layout(location = 4) in uint a_markerIndex;
-layout(location = 5) in uint a_objectIndex;
+layout(location = 3) in uint a_color; // packed 8-bit RGBA
+layout(location = 4) in uint a_marker; // marker index
+layout(location = 5) in uint a_object; // object index
 
 flat out vec4 v_color;
 flat out uvec3 v_marker;
@@ -43,18 +43,18 @@ vec4 unpackColor(uint color) {
 }
 
 // returns (col, row, channel) for a given marker index in the marker atlas
-uvec3 markerAtlasCoords(uint markerIndex) {
-    uint col = (markerIndex % N_MARKERS_PER_CHANNEL) % MARKER_ATLAS_GRID_SIZE;
-    uint row = (markerIndex % N_MARKERS_PER_CHANNEL) / MARKER_ATLAS_GRID_SIZE;
-    uint channel = markerIndex / N_MARKERS_PER_CHANNEL;
+uvec3 markerAtlasCoords(uint marker) {
+    uint col = (marker % N_MARKERS_PER_CHANNEL) % MARKER_ATLAS_GRID_SIZE;
+    uint row = (marker % N_MARKERS_PER_CHANNEL) / MARKER_ATLAS_GRID_SIZE;
+    uint channel = marker / N_MARKERS_PER_CHANNEL;
     return uvec3(col, row, channel);
 }
 
 void main() {
-    if(a_markerIndex >= MAX_N_MARKERS || a_objectIndex >= MAX_N_OBJECTS) {
+    if(a_marker >= MAX_N_MARKERS || a_object >= MAX_N_OBJECTS) {
         DISCARD;
     }
-    mat4x2 dataToWorldMatrix = transpose(transposedDataToWorldMatrices[a_objectIndex]);
+    mat4x2 dataToWorldMatrix = transpose(transposedDataToWorldMatrices[a_object]);
     vec2 worldPosition = dataToWorldMatrix * vec4(a_x, a_y, 1.0, 0.0);
     vec2 viewportPosition = u_worldToViewportMatrix * vec3(worldPosition, 1.0); // in [0, 1]
     gl_Position = vec4((2.0 * viewportPosition - 1.0) * vec2(1.0, -1.0), 0.0, 1.0);
@@ -69,5 +69,5 @@ void main() {
     if(v_color.a == 0.0) {
         DISCARD;
     }
-    v_marker = markerAtlasCoords(a_markerIndex);
+    v_marker = markerAtlasCoords(a_marker);
 }

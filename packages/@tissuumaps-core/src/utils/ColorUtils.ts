@@ -1,4 +1,4 @@
-import { type Color } from "../types/color";
+import { type Color } from "../model/types";
 
 export class ColorUtils {
   static parseColorPalette(

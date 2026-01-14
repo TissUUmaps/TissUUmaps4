@@ -1,4 +1,4 @@
-import { type UintArray } from "../types/array";
+import { type UintArray } from "../types";
 import { type DataLoader, type ItemsData } from "./base";
 
 export interface LabelsDataLoader<

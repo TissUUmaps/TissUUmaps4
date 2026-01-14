@@ -1,6 +1,6 @@
-import { projectDefaults } from "../model/project";
-import { type Rect } from "../types/geometry";
-import { type DrawOptions } from "../types/options";
+import { defaultDrawOptions } from "../model/constants";
+import { type DrawOptions } from "../model/types";
+import { type Rect } from "../types";
 import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLPointsController } from "./WebGLPointsController";
 import { WebGLShapesController } from "./WebGLShapesController";
@@ -8,7 +8,6 @@ import { WebGLShapesController } from "./WebGLShapesController";
 export class WebGLController {
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas#maximum_canvas_size
   private static readonly _maxCanvasSize = 4096;
-  private static readonly _defaultDrawOptions = projectDefaults.drawOptions;
 
   private readonly _canvas: HTMLCanvasElement;
   private _viewport: Rect;
@@ -29,7 +28,7 @@ export class WebGLController {
   constructor(canvas: HTMLCanvasElement, viewport: Rect) {
     this._canvas = canvas;
     this._viewport = viewport;
-    this._drawOptions = WebGLController._defaultDrawOptions;
+    this._drawOptions = structuredClone(defaultDrawOptions);
     this._gl = WebGLController._createWebGLContext(this._canvas);
     this._pointsController = new WebGLPointsController(this._gl);
     this._shapesController = new WebGLShapesController(this._gl);

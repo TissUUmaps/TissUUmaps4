@@ -1,4 +1,4 @@
-import { type MultiPolygon } from "../types/geometry";
+import { type MultiPolygon } from "../types";
 import { type DataLoader, type ItemsData } from "./base";
 
 export interface ShapesDataLoader<
