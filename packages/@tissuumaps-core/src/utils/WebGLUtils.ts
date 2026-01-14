@@ -1,4 +1,4 @@
-import { type TypedArray } from "../types/array";
+import { type TypedArray } from "../types";
 
 export class WebGLUtils {
   static init(

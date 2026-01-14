@@ -1,12 +1,4 @@
 import {
-  type ColorConfig,
-  type MarkerConfig,
-  type OpacityConfig,
-  type SizeConfig,
-  type VisibilityConfig,
-} from "../types/config";
-import { Marker } from "../types/marker";
-import {
   type DataSource,
   type LayerConfig,
   type RawDataSource,
@@ -17,15 +9,32 @@ import {
   createLayerConfig,
   createRenderedDataObject,
 } from "./base";
+import {
+  type ColorConfig,
+  type MarkerConfig,
+  type OpacityConfig,
+  type SizeConfig,
+  type VisibilityConfig,
+} from "./configs";
+import {
+  defaultPointColor,
+  defaultPointMarker,
+  defaultPointOpacity,
+  defaultPointSize,
+  defaultPointVisibility,
+} from "./constants";
 
+/**
+ * Default values for {@link RawPoints}
+ */
 export const pointsDefaults = {
-  pointMarker: { value: Marker.Disc },
-  pointSize: { value: 1 },
-  pointColor: { value: { r: 255, g: 255, b: 255 } },
-  pointVisibility: { value: true },
-  pointOpacity: { value: 1 },
+  pointMarker: { value: defaultPointMarker },
+  pointSize: { value: defaultPointSize },
+  pointColor: { value: defaultPointColor },
+  pointVisibility: { value: defaultPointVisibility },
+  pointOpacity: { value: defaultPointOpacity },
   pointSizeFactor: 1,
-};
+} as const satisfies Partial<RawPoints>;
 
 /**
  * A two-dimensional point cloud
@@ -34,16 +43,56 @@ export interface RawPoints extends RawRenderedDataObject<
   RawPointsDataSource<string>,
   RawPointsLayerConfig
 > {
+  /**
+   * Point marker
+   *
+   * @defaultValue {@link pointsDefaults.pointMarker}
+   */
   pointMarker?: MarkerConfig;
+
+  /**
+   * Point size
+   *
+   * @defaultValue {@link pointsDefaults.pointSize}
+   */
   pointSize?: SizeConfig;
+
+  /**
+   * Point color
+   *
+   * @defaultValue {@link pointsDefaults.pointColor}
+   */
   pointColor?: ColorConfig;
+
+  /**
+   * Point visibility
+   *
+   * @defaultValue {@link pointsDefaults.pointVisibility}
+   */
   pointVisibility?: VisibilityConfig;
+
+  /**
+   * Point opacity
+   *
+   * @defaultValue {@link pointsDefaults.pointOpacity}
+   */
   pointOpacity?: OpacityConfig;
+
+  /**
+   * Object-level point size scaling factor
+   *
+   * A unitless scaling factor by which all point sizes are multiplied.
+   *
+   * Can be used to adjust the size of points without changing individual point sizes or the size unit.
+   * Note that point sizes are also affected by {@link "./layer".RawLayer.pointSizeFactor} and {@link "./project".RawProject.drawOptions}.
+   *
+   * @defaultValue {@link pointsDefaults.pointSizeFactor}
+   */
   pointSizeFactor?: number;
 }
 
 /**
- * A {@link RawPoints} object with default values applied
+ * A {@link RawPoints} object with {@link pointsDefaults} applied
  */
 export type Points = RenderedDataObject<
   PointsDataSource<string>,
@@ -57,7 +106,7 @@ export type Points = RenderedDataObject<
   >;
 
 /**
- * Creates a {@link Points} from a {@link RawPoints} by applying default values
+ * Creates a {@link Points} from a {@link RawPoints} by applying {@link pointsDefaults}
  *
  * @param rawPoints - The raw points
  * @returns The complete points with default values applied
@@ -65,14 +114,19 @@ export type Points = RenderedDataObject<
 export function createPoints(rawPoints: RawPoints): Points {
   return {
     ...createRenderedDataObject(rawPoints),
-    ...pointsDefaults,
-    ...rawPoints,
+    ...structuredClone(pointsDefaults),
+    ...structuredClone(rawPoints),
     dataSource: createPointsDataSource(rawPoints.dataSource),
     layerConfigs: rawPoints.layerConfigs?.map(createPointsLayerConfig) ?? [],
   };
 }
 
-export const pointsDataSourceDefaults = {};
+/**
+ * Default values for {@link RawPointsDataSource}
+ */
+export const pointsDataSourceDefaults = {} as const satisfies Partial<
+  RawPointsDataSource<string>
+>;
 
 /**
  * A data source for two-dimensional point clouds
@@ -83,7 +137,7 @@ export interface RawPointsDataSource<
 > extends RawDataSource<TType> {}
 
 /**
- * A {@link RawPointsDataSource} with default values applied
+ * A {@link RawPointsDataSource} with {@link pointsDataSourceDefaults} applied
  */
 export type PointsDataSource<TType extends string = string> =
   DataSource<TType> &
@@ -98,7 +152,7 @@ export type PointsDataSource<TType extends string = string> =
     >;
 
 /**
- * Creates a {@link PointsDataSource} from a {@link RawPointsDataSource} by applying default values
+ * Creates a {@link PointsDataSource} from a {@link RawPointsDataSource} by applying {@link pointsDataSourceDefaults}
  *
  * @param rawPointsDataSource - The raw points data source
  * @returns The complete points data source with default values applied
@@ -108,12 +162,16 @@ export function createPointsDataSource<TType extends string>(
 ): PointsDataSource<TType> {
   return {
     ...createDataSource(rawPointsDataSource),
-    ...pointsDataSourceDefaults,
-    ...rawPointsDataSource,
+    ...structuredClone(pointsDataSourceDefaults),
+    ...structuredClone(rawPointsDataSource),
   };
 }
 
-export const pointsLayerConfigDefaults = {};
+/**
+ * Default values for {@link RawPointsLayerConfig}
+ */
+export const pointsLayerConfigDefaults =
+  {} as const satisfies Partial<RawPointsLayerConfig>;
 
 /**
  * A layer-specific display configuration for two-dimensional point clouds
@@ -135,7 +193,7 @@ export interface RawPointsLayerConfig extends RawLayerConfig {
 }
 
 /**
- * A {@link RawPointsLayerConfig} with default values applied
+ * A {@link RawPointsLayerConfig} with {@link pointsLayerConfigDefaults} applied
  */
 export type PointsLayerConfig = LayerConfig &
   Required<Pick<RawPointsLayerConfig, keyof typeof pointsLayerConfigDefaults>> &
@@ -147,7 +205,7 @@ export type PointsLayerConfig = LayerConfig &
   >;
 
 /**
- * Creates a {@link PointsLayerConfig} from a {@link RawPointsLayerConfig} by applying default values
+ * Creates a {@link PointsLayerConfig} from a {@link RawPointsLayerConfig} by applying {@link pointsLayerConfigDefaults}
  *
  * @param rawPointsLayerConfig - The raw points layer configuration
  * @returns The complete points layer configuration with default values applied
@@ -157,7 +215,7 @@ export function createPointsLayerConfig(
 ): PointsLayerConfig {
   return {
     ...createLayerConfig(rawPointsLayerConfig),
-    ...pointsLayerConfigDefaults,
-    ...rawPointsLayerConfig,
+    ...structuredClone(pointsLayerConfigDefaults),
+    ...structuredClone(rawPointsLayerConfig),
   };
 }

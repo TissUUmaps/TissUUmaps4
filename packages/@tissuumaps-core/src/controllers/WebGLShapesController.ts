@@ -2,19 +2,21 @@ import { deepEqual } from "fast-equals";
 
 import shapesFragmentShader from "../assets/shaders/shapes.frag?raw";
 import shapesVertexShader from "../assets/shaders/shapes.vert?raw";
-import { type Layer } from "../model/layer";
-import { projectDefaults } from "../model/project";
 import {
-  type Shapes,
-  type ShapesLayerConfig,
-  shapesDefaults,
-} from "../model/shapes";
+  defaultDrawOptions,
+  defaultShapeFillColor,
+  defaultShapeFillOpacity,
+  defaultShapeFillVisibility,
+  defaultShapeStrokeColor,
+  defaultShapeStrokeOpacity,
+  defaultShapeStrokeVisibility,
+} from "../model/constants";
+import { type Layer } from "../model/layer";
+import { type Shapes, type ShapesLayerConfig } from "../model/shapes";
+import { type Color, type DrawOptions, type ValueMap } from "../model/types";
 import { type ShapesData } from "../storage/shapes";
 import { type TableData } from "../storage/table";
-import { type Color } from "../types/color";
-import { type MultiPolygon, type Rect, type Vertex } from "../types/geometry";
-import { type DrawOptions } from "../types/options";
-import { type ValueMap } from "../types/valueMap";
+import { type MultiPolygon, type Rect, type Vertex } from "../types";
 import { LoadUtils } from "../utils/LoadUtils";
 import { MathUtils } from "../utils/MathUtils";
 import { TransformUtils } from "../utils/TransformUtils";
@@ -37,8 +39,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     shapeFillColors: WebGLUniformLocation;
     shapeStrokeColors: WebGLUniformLocation;
   };
-  private _numScanlines: number =
-    projectDefaults.drawOptions.numShapesScanlines;
+  private _numScanlines: number = defaultDrawOptions.numShapesScanlines;
   private _glShapes: GLShapes[] = [];
 
   constructor(gl: WebGL2RenderingContext) {
@@ -457,7 +458,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.data.getIndex(),
         ref.shapes.shapeFillVisibility,
         visibilityMaps,
-        shapesDefaults.shapeFillVisibility.value,
+        defaultShapeFillVisibility,
         loadTable,
         { signal, padding: numValuesPerTextureLine },
       );
@@ -466,7 +467,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.data.getIndex(),
         ref.shapes.shapeFillOpacity,
         opacityMaps,
-        shapesDefaults.shapeFillOpacity.value,
+        defaultShapeFillOpacity,
         loadTable,
         {
           signal,
@@ -479,7 +480,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.data.getIndex(),
         ref.shapes.shapeFillColor,
         colorMaps,
-        shapesDefaults.shapeFillColor.value,
+        defaultShapeFillColor,
         loadTable,
         { signal, padding: numValuesPerTextureLine },
         visibilityData,
@@ -526,7 +527,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.data.getIndex(),
         ref.shapes.shapeStrokeVisibility,
         visibilityMaps,
-        shapesDefaults.shapeStrokeVisibility.value,
+        defaultShapeStrokeVisibility,
         loadTable,
         { signal, padding: numValuesPerTextureLine },
       );
@@ -535,7 +536,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.data.getIndex(),
         ref.shapes.shapeStrokeOpacity,
         opacityMaps,
-        shapesDefaults.shapeStrokeOpacity.value,
+        defaultShapeStrokeOpacity,
         loadTable,
         {
           signal,
@@ -548,7 +549,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         ref.data.getIndex(),
         ref.shapes.shapeStrokeColor,
         colorMaps,
-        shapesDefaults.shapeStrokeColor.value,
+        defaultShapeStrokeColor,
         loadTable,
         { signal, padding: numValuesPerTextureLine },
         visibilityData,

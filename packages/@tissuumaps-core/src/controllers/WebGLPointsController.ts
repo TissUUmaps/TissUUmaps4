@@ -3,19 +3,24 @@ import { deepEqual } from "fast-equals";
 import markersUrl from "../assets/markers/markers.png?url";
 import pointsFragmentShader from "../assets/shaders/points.frag?raw";
 import pointsVertexShader from "../assets/shaders/points.vert?raw";
-import { type Layer } from "../model/layer";
 import {
-  type Points,
-  type PointsLayerConfig,
-  pointsDefaults,
-} from "../model/points";
+  defaultPointColor,
+  defaultPointMarker,
+  defaultPointOpacity,
+  defaultPointSize,
+  defaultPointVisibility,
+} from "../model/constants";
+import { type Layer } from "../model/layer";
+import { type Points, type PointsLayerConfig } from "../model/points";
+import {
+  type Color,
+  type DrawOptions,
+  Marker,
+  type ValueMap,
+} from "../model/types";
 import { type PointsData } from "../storage/points";
 import { type TableData } from "../storage/table";
-import { type Color } from "../types/color";
-import { type Rect } from "../types/geometry";
-import { Marker } from "../types/marker";
-import { type DrawOptions } from "../types/options";
-import { type ValueMap } from "../types/valueMap";
+import { type Rect } from "../types";
 import { LoadUtils } from "../utils/LoadUtils";
 import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
@@ -440,7 +445,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.data.getIndex(),
           ref.points.pointMarker,
           markerMaps,
-          pointsDefaults.pointMarker.value,
+          defaultPointMarker,
           loadTable,
           { signal },
         );
@@ -479,7 +484,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.data.getIndex(),
           ref.points.pointSize,
           sizeMaps,
-          pointsDefaults.pointSize.value,
+          defaultPointSize,
           loadTable,
           { signal, sizeFactor },
         );
@@ -524,7 +529,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             ref.data.getIndex(),
             ref.points.pointVisibility,
             visibilityMaps,
-            pointsDefaults.pointVisibility.value,
+            defaultPointVisibility,
             loadTable,
             { signal },
           );
@@ -533,7 +538,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             ref.data.getIndex(),
             ref.points.pointOpacity,
             opacityMaps,
-            pointsDefaults.pointOpacity.value,
+            defaultPointOpacity,
             loadTable,
             { signal, opacityFactor: ref.layer.opacity * ref.points.opacity },
           );
@@ -542,7 +547,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             ref.data.getIndex(),
             ref.points.pointColor,
             colorMaps,
-            pointsDefaults.pointColor.value,
+            defaultPointColor,
             loadTable,
             { signal },
             visibilityData,

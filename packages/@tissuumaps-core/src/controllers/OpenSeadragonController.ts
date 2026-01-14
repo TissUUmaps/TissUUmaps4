@@ -1,13 +1,13 @@
 import { mat3 } from "gl-matrix";
 import OpenSeadragon from "openseadragon";
 
+import { defaultViewerOptions } from "../model/constants";
 import { type Image, type ImageLayerConfig } from "../model/image";
 import { type Labels, type LabelsLayerConfig } from "../model/labels";
 import { type Layer } from "../model/layer";
-import { projectDefaults } from "../model/project";
+import { type ViewerOptions } from "../model/types";
 import { type ImageData } from "../storage/image";
 import { type LabelsData } from "../storage/labels";
-import { type ViewerOptions } from "../types/options";
 import { TransformUtils } from "../utils/TransformUtils";
 
 export class OpenSeadragonController {
@@ -28,7 +28,7 @@ export class OpenSeadragonController {
     viewerInit?: (viewer: OpenSeadragon.Viewer) => void,
   ) {
     this._viewer = new OpenSeadragon.Viewer({
-      ...projectDefaults.viewerOptions,
+      ...structuredClone(defaultViewerOptions),
       // do not forget to exclude properties from the ViewerOptions type when setting them here
       element: viewerElement,
     });
@@ -333,7 +333,7 @@ export class OpenSeadragonController {
             })(),
       index: index,
       // https://github.com/openseadragon/openseadragon/issues/2765
-      // flipped: layerConfig.flip ?? layerConfigDefaults.flip,
+      // flipped: layerConfig.flip,
       opacity: OpenSeadragonController._calculateOpacity(ref),
       success: (event) => {
         tiledImageState.tiledImage = (

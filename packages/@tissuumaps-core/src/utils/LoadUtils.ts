@@ -1,27 +1,21 @@
-import { colorPalettes, markerPalette } from "../palettes";
-import { type TableData } from "../storage/table";
-import { type Color } from "../types/color";
 import {
   type ColorConfig,
   type MarkerConfig,
   type OpacityConfig,
   type SizeConfig,
   type VisibilityConfig,
+  getActiveConfigSource,
   isFromConfig,
   isGroupByConfig,
   isRandomConfig,
   isValueConfig,
-} from "../types/config";
-import { Marker } from "../types/marker";
-import { type ValueMap } from "../types/valueMap";
+} from "../model/configs";
+import { type Color, Marker, type ValueMap } from "../model/types";
+import { colorPalettes, markerPalette } from "../palettes";
+import type { TableData } from "../storage/table";
 import { ColorUtils } from "./ColorUtils";
 import { HashUtils } from "./HashUtils";
 import { MathUtils } from "./MathUtils";
-
-export type LoadTableFunction = (
-  tableId: string,
-  options: { signal?: AbortSignal },
-) => Promise<TableData>;
 
 export class LoadUtils {
   static async loadMarkerData(
@@ -29,7 +23,10 @@ export class LoadUtils {
     markerConfig: MarkerConfig,
     markerMaps: Map<string, ValueMap<Marker>>,
     defaultMarker: Marker,
-    loadTable: LoadTableFunction,
+    loadTable: (
+      tableId: string,
+      options: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     { signal, padding }: { signal?: AbortSignal; padding?: number } = {},
   ): Promise<Uint8Array> {
     signal?.throwIfAborted();
@@ -38,11 +35,12 @@ export class LoadUtils {
       dataLength += padding - (dataLength % padding);
     }
     const data = new Uint8Array(dataLength);
-    if (isValueConfig(markerConfig)) {
+    const activeConfigSource = getActiveConfigSource(markerConfig);
+    if (activeConfigSource === "value" && isValueConfig(markerConfig)) {
       const marker = markerConfig.value;
       const markerIndex = marker as number;
       data.fill(markerIndex, 0, ids.length);
-    } else if (isFromConfig(markerConfig)) {
+    } else if (activeConfigSource === "from" && isFromConfig(markerConfig)) {
       const tableData = await loadTable(markerConfig.from.table, { signal });
       signal?.throwIfAborted();
       const tableIds = tableData.getIndex();
@@ -68,7 +66,10 @@ export class LoadUtils {
       if (e > 0) {
         console.warn(`${e} IDs missing in table ${markerConfig.from.table}`);
       }
-    } else if (isGroupByConfig(markerConfig)) {
+    } else if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(markerConfig)
+    ) {
       let markerMap;
       if (typeof markerConfig.groupBy.map === "string") {
         markerMap = markerMaps.get(markerConfig.groupBy.map);
@@ -119,7 +120,8 @@ export class LoadUtils {
       if (e > 0) {
         console.warn(`${e} IDs missing in table ${markerConfig.groupBy.table}`);
       }
-    } else {
+    } else // activeConfigSource === undefined
+    {
       const markerIndex = defaultMarker as number;
       data.fill(markerIndex, 0, ids.length);
     }
@@ -131,7 +133,10 @@ export class LoadUtils {
     sizeConfig: SizeConfig,
     sizeMaps: Map<string, ValueMap<number>>,
     defaultSize: number,
-    loadTable: LoadTableFunction,
+    loadTable: (
+      tableId: string,
+      options: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     {
       signal,
       padding,
@@ -148,10 +153,11 @@ export class LoadUtils {
       dataLength += padding - (dataLength % padding);
     }
     const data = new Float32Array(dataLength);
-    if (isValueConfig(sizeConfig)) {
+    const activeConfigSource = getActiveConfigSource(sizeConfig);
+    if (activeConfigSource === "value" && isValueConfig(sizeConfig)) {
       const scaledSize = sizeConfig.value * sizeFactor;
       data.fill(scaledSize, 0, ids.length);
-    } else if (isFromConfig(sizeConfig)) {
+    } else if (activeConfigSource === "from" && isFromConfig(sizeConfig)) {
       const tableData = await loadTable(sizeConfig.from.table, { signal });
       signal?.throwIfAborted();
       const tableIds = tableData.getIndex();
@@ -178,7 +184,10 @@ export class LoadUtils {
       if (e > 0) {
         console.warn(`${e} IDs missing in table ${sizeConfig.from.table}`);
       }
-    } else if (isGroupByConfig(sizeConfig)) {
+    } else if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(sizeConfig)
+    ) {
       let sizeMap;
       if (typeof sizeConfig.groupBy.map === "string") {
         sizeMap = sizeMaps.get(sizeConfig.groupBy.map);
@@ -227,7 +236,8 @@ export class LoadUtils {
         const scaledSize = defaultSize * sizeFactor;
         data.fill(scaledSize, 0, ids.length);
       }
-    } else {
+    } else // activeConfigSource === undefined
+    {
       const scaledSize = defaultSize * sizeFactor;
       data.fill(scaledSize, 0, ids.length);
     }
@@ -239,7 +249,10 @@ export class LoadUtils {
     colorConfig: ColorConfig,
     colorMaps: Map<string, ValueMap<Color>>,
     defaultColor: Color,
-    loadTable: LoadTableFunction,
+    loadTable: (
+      tableId: string,
+      options: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     { signal, padding }: { signal?: AbortSignal; padding?: number } = {},
     visibilityData: Uint8Array,
     opacityData: Uint8Array,
@@ -250,10 +263,11 @@ export class LoadUtils {
       dataLength += padding - (dataLength % padding);
     }
     const data = new Uint32Array(dataLength);
-    if (isValueConfig(colorConfig)) {
+    const activeConfigSource = getActiveConfigSource(colorConfig);
+    if (activeConfigSource === "value" && isValueConfig(colorConfig)) {
       const packedColor = ColorUtils.packColor(colorConfig.value);
       data.fill(packedColor, 0, ids.length);
-    } else if (isFromConfig(colorConfig)) {
+    } else if (activeConfigSource === "from" && isFromConfig(colorConfig)) {
       const colorPalette = colorPalettes[colorConfig.from.palette];
       if (colorPalette !== undefined) {
         const tableData = await loadTable(colorConfig.from.table, { signal });
@@ -317,7 +331,10 @@ export class LoadUtils {
         const packedColor = ColorUtils.packColor(defaultColor);
         data.fill(packedColor, 0, ids.length);
       }
-    } else if (isGroupByConfig(colorConfig)) {
+    } else if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(colorConfig)
+    ) {
       let colorMap;
       if (typeof colorConfig.groupBy.map === "string") {
         colorMap = colorMaps.get(colorConfig.groupBy.map);
@@ -370,7 +387,7 @@ export class LoadUtils {
         const packedColor = ColorUtils.packColor(defaultColor);
         data.fill(packedColor, 0, ids.length);
       }
-    } else if (isRandomConfig(colorConfig)) {
+    } else if (activeConfigSource === "random" && isRandomConfig(colorConfig)) {
       const colorPalette = colorPalettes[colorConfig.random.palette];
       if (colorPalette !== undefined) {
         for (let i = 0; i < ids.length; i++) {
@@ -384,7 +401,8 @@ export class LoadUtils {
         const packedColor = ColorUtils.packColor(defaultColor);
         data.fill(packedColor, 0, ids.length);
       }
-    } else {
+    } else // activeConfigSource === undefined
+    {
       const packedColor = ColorUtils.packColor(defaultColor);
       data.fill(packedColor, 0, ids.length);
     }
@@ -400,7 +418,10 @@ export class LoadUtils {
     visibilityConfig: VisibilityConfig,
     visibilityMaps: Map<string, ValueMap<boolean>>,
     defaultVisibility: boolean,
-    loadTable: LoadTableFunction,
+    loadTable: (
+      tableId: string,
+      options: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     { signal, padding }: { signal?: AbortSignal; padding?: number } = {},
   ): Promise<Uint8Array> {
     signal?.throwIfAborted();
@@ -409,10 +430,14 @@ export class LoadUtils {
       dataLength += padding - (dataLength % padding);
     }
     const data = new Uint8Array(dataLength);
-    if (isValueConfig(visibilityConfig)) {
+    const activeConfigSource = getActiveConfigSource(visibilityConfig);
+    if (activeConfigSource === "value" && isValueConfig(visibilityConfig)) {
       const numericVisibility = visibilityConfig.value ? 1 : 0;
       data.fill(numericVisibility, 0, ids.length);
-    } else if (isFromConfig(visibilityConfig)) {
+    } else if (
+      activeConfigSource === "from" &&
+      isFromConfig(visibilityConfig)
+    ) {
       const tableData = await loadTable(visibilityConfig.from.table, {
         signal,
       });
@@ -442,7 +467,10 @@ export class LoadUtils {
           `${e} IDs missing in table ${visibilityConfig.from.table}`,
         );
       }
-    } else if (isGroupByConfig(visibilityConfig)) {
+    } else if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(visibilityConfig)
+    ) {
       let visibilityMap;
       if (typeof visibilityConfig.groupBy.map === "string") {
         visibilityMap = visibilityMaps.get(visibilityConfig.groupBy.map);
@@ -497,7 +525,8 @@ export class LoadUtils {
         const numericVisibility = defaultVisibility ? 1 : 0;
         data.fill(numericVisibility, 0, ids.length);
       }
-    } else {
+    } else // activeConfigSource === undefined
+    {
       const numericVisibility = defaultVisibility ? 1 : 0;
       data.fill(numericVisibility, 0, ids.length);
     }
@@ -509,7 +538,10 @@ export class LoadUtils {
     opacityConfig: OpacityConfig,
     opacityMaps: Map<string, ValueMap<number>>,
     defaultOpacity: number,
-    loadTable: LoadTableFunction,
+    loadTable: (
+      tableId: string,
+      options: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     {
       signal,
       padding,
@@ -526,11 +558,12 @@ export class LoadUtils {
       dataLength += padding - (dataLength % padding);
     }
     const data = new Uint8Array(dataLength);
-    if (isValueConfig(opacityConfig)) {
+    const activeConfigSource = getActiveConfigSource(opacityConfig);
+    if (activeConfigSource === "value" && isValueConfig(opacityConfig)) {
       const scaledOpacity = opacityFactor * opacityConfig.value;
       const scaledOpacityInt = Math.round(scaledOpacity * 255);
       data.fill(scaledOpacityInt, 0, ids.length);
-    } else if (isFromConfig(opacityConfig)) {
+    } else if (activeConfigSource === "from" && isFromConfig(opacityConfig)) {
       const tableData = await loadTable(opacityConfig.from.table, { signal });
       signal?.throwIfAborted();
       const tableIds = tableData.getIndex();
@@ -558,7 +591,10 @@ export class LoadUtils {
       if (e > 0) {
         console.warn(`${e} IDs missing in table ${opacityConfig.from.table}`);
       }
-    } else if (isGroupByConfig(opacityConfig)) {
+    } else if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(opacityConfig)
+    ) {
       let opacityMap;
       if (typeof opacityConfig.groupBy.map === "string") {
         opacityMap = opacityMaps.get(opacityConfig.groupBy.map);
@@ -614,7 +650,8 @@ export class LoadUtils {
         const scaledOpacityInt = Math.round(scaledOpacity * 255);
         data.fill(scaledOpacityInt, 0, ids.length);
       }
-    } else {
+    } else // activeConfigSource === undefined
+    {
       const scaledOpacity = opacityFactor * defaultOpacity;
       const scaledOpacityInt = Math.round(scaledOpacity * 255);
       data.fill(scaledOpacityInt, 0, ids.length);

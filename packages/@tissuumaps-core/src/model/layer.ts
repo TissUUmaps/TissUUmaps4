@@ -1,16 +1,16 @@
-import { type SimilarityTransform } from "../types/transform";
 import { type Model, type RawModel, createModel } from "./base";
+import { identityTransform } from "./constants";
+import { type SimilarityTransform } from "./types";
 
+/**
+ * Default values for {@link RawLayer}
+ */
 export const layerDefaults = {
-  transform: {
-    scale: 1,
-    rotation: 0,
-    translation: { x: 0, y: 0 },
-  } as SimilarityTransform,
+  transform: identityTransform,
   visibility: true,
   opacity: 1,
   pointSizeFactor: 1,
-};
+} as const satisfies Partial<RawLayer>;
 
 /**
  * A named collection of rendered data objects sharing the same (e.g. physical) coordinate system
@@ -53,7 +53,7 @@ export interface RawLayer extends RawModel {
    * A unitless scaling factor by which all point sizes are multiplied.
    *
    * Can be used to adjust the size of all points in a layer relative to other layers.
-   * Note that point sizes are also affected by {@link "./project".Project.drawOptions} as well as {@link "./points".RawPoints}-specific settings.
+   * Note that point sizes are also affected by {@link "./project".RawProject.drawOptions} as well as {@link "./points".RawPoints}-specific settings.
    *
    * @defaultValue {@link layerDefaults.pointSizeFactor}
    */
@@ -61,7 +61,7 @@ export interface RawLayer extends RawModel {
 }
 
 /**
- * A {@link RawLayer} with default values applied
+ * A {@link RawLayer} with {@link layerDefaults} applied
  */
 export type Layer = Model &
   Required<Pick<RawLayer, keyof typeof layerDefaults>> &
@@ -72,7 +72,7 @@ export type Layer = Model &
   >;
 
 /**
- * Creates a {@link Layer} from a {@link RawLayer} by applying default values
+ * Creates a {@link Layer} from a {@link RawLayer} by applying {@link layerDefaults}
  *
  * @param rawLayer - The raw layer
  * @returns The complete layer with default values applied
@@ -80,7 +80,7 @@ export type Layer = Model &
 export function createLayer(rawLayer: RawLayer): Layer {
   return {
     ...createModel(rawLayer),
-    ...layerDefaults,
-    ...rawLayer,
+    ...structuredClone(layerDefaults),
+    ...structuredClone(rawLayer),
   };
 }

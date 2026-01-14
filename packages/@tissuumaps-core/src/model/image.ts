@@ -10,7 +10,10 @@ import {
   createRenderedDataObject,
 } from "./base";
 
-export const imageDefaults = {};
+/**
+ * Default values for {@link RawImage}
+ */
+export const imageDefaults = {} as const satisfies Partial<RawImage>;
 
 /**
  * A two-dimensional raster image
@@ -22,7 +25,7 @@ export interface RawImage extends RawRenderedDataObject<
 > {}
 
 /**
- * A {@link RawImage} with default values applied
+ * A {@link RawImage} with {@link imageDefaults} applied
  */
 export type Image = RenderedDataObject<
   ImageDataSource<string>,
@@ -37,7 +40,7 @@ export type Image = RenderedDataObject<
   >;
 
 /**
- * Creates a {@link Image} from a {@link RawImage} by applying default values
+ * Creates a {@link Image} from a {@link RawImage} by applying {@link imageDefaults}
  *
  * @param rawImage - The raw image
  * @returns The complete image with default values applied
@@ -45,14 +48,19 @@ export type Image = RenderedDataObject<
 export function createImage(rawImage: RawImage): Image {
   return {
     ...createRenderedDataObject(rawImage),
-    ...imageDefaults,
-    ...rawImage,
+    ...structuredClone(imageDefaults),
+    ...structuredClone(rawImage),
     dataSource: createImageDataSource(rawImage.dataSource),
     layerConfigs: rawImage.layerConfigs?.map(createImageLayerConfig) ?? [],
   };
 }
 
-export const imageDataSourceDefaults = {};
+/**
+ * Default values for {@link RawImageDataSource}
+ */
+export const imageDataSourceDefaults = {} as const satisfies Partial<
+  RawImageDataSource<string>
+>;
 
 /**
  * A data source for two-dimensional raster images
@@ -63,7 +71,7 @@ export interface RawImageDataSource<
 > extends RawDataSource<TType> {}
 
 /**
- * A {@link RawImageDataSource} with default values applied
+ * A {@link RawImageDataSource} with {@link imageDataSourceDefaults} applied
  */
 export type ImageDataSource<TType extends string = string> = DataSource<TType> &
   Required<
@@ -77,7 +85,7 @@ export type ImageDataSource<TType extends string = string> = DataSource<TType> &
   >;
 
 /**
- * Creates a {@link ImageDataSource} from a {@link RawImageDataSource} by applying default values
+ * Creates a {@link ImageDataSource} from a {@link RawImageDataSource} by applying {@link imageDataSourceDefaults}
  *
  * @param rawImageDataSource - The raw image data source
  * @returns The complete image data source with default values applied
@@ -87,12 +95,16 @@ export function createImageDataSource<TType extends string>(
 ): ImageDataSource<TType> {
   return {
     ...createDataSource(rawImageDataSource),
-    ...imageDataSourceDefaults,
-    ...rawImageDataSource,
+    ...structuredClone(imageDataSourceDefaults),
+    ...structuredClone(rawImageDataSource),
   };
 }
 
-export const imageLayerConfigDefaults = {};
+/**
+ * Default values for {@link RawImageLayerConfig}
+ */
+export const imageLayerConfigDefaults =
+  {} as const satisfies Partial<RawImageLayerConfig>;
 
 /**
  * A layer-specific display configuration for two-dimensional raster images
@@ -105,7 +117,7 @@ export interface RawImageLayerConfig extends RawLayerConfig {
 }
 
 /**
- * A {@link RawImageLayerConfig} with default values applied
+ * A {@link RawImageLayerConfig} with {@link imageLayerConfigDefaults} applied
  */
 export type ImageLayerConfig = LayerConfig &
   Required<Pick<RawImageLayerConfig, keyof typeof imageLayerConfigDefaults>> &
@@ -117,7 +129,7 @@ export type ImageLayerConfig = LayerConfig &
   >;
 
 /**
- * Creates a {@link ImageLayerConfig} from a {@link RawImageLayerConfig} by applying default values
+ * Creates a {@link ImageLayerConfig} from a {@link RawImageLayerConfig} by applying {@link imageLayerConfigDefaults}
  *
  * @param rawImageLayerConfig - The raw image layer configuration
  * @returns The complete image layer configuration with default values applied
@@ -127,7 +139,7 @@ export function createImageLayerConfig(
 ): ImageLayerConfig {
   return {
     ...createLayerConfig(rawImageLayerConfig),
-    ...imageLayerConfigDefaults,
-    ...rawImageLayerConfig,
+    ...structuredClone(imageLayerConfigDefaults),
+    ...structuredClone(rawImageLayerConfig),
   };
 }
