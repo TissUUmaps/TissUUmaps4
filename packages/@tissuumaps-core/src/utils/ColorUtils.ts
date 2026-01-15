@@ -27,26 +27,24 @@ export class ColorUtils {
       });
   }
 
-  static parseColor(colorStr: string): Color {
-    if (colorStr.startsWith("#") && colorStr.length === 7) {
-      const r = parseInt(colorStr.slice(1, 3), 16);
-      const g = parseInt(colorStr.slice(3, 5), 16);
-      const b = parseInt(colorStr.slice(5, 7), 16);
-      return { r, g, b };
-    }
-    if (colorStr.startsWith("rgb(") && colorStr.endsWith(")")) {
-      const parts = colorStr.slice(4, -1).split(",");
-      if (parts.length === 3) {
-        const r = parseInt(parts[0]!, 10);
-        const g = parseInt(parts[1]!, 10);
-        const b = parseInt(parts[2]!, 10);
-        return { r, g, b };
-      }
-    }
-    throw new Error(`Invalid color string: ${colorStr}`);
-  }
-
   static packColor(color: Color): number {
     return (color.r << 16) | (color.g << 8) | color.b;
+  }
+
+  static fromHex(hex: string): Color {
+    if (!/^#([0-9A-Fa-f]{6})$/.test(hex)) {
+      throw new Error(`Invalid hex color: ${hex}`);
+    }
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return { r, g, b };
+  }
+
+  static toHex(color: Color): string {
+    const rHex = color.r.toString(16).padStart(2, "0");
+    const gHex = color.g.toString(16).padStart(2, "0");
+    const bHex = color.b.toString(16).padStart(2, "0");
+    return `#${rHex}${gHex}${bHex}`;
   }
 }
