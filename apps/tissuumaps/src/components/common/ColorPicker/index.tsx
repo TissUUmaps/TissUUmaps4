@@ -8,58 +8,49 @@ import {
 } from "@/components/ui/popover";
 import { Square } from "lucide-react";
 import { useEffect, useId, useState } from "react";
-import { RgbaColorPicker } from "react-colorful";
+import { HexColorPicker } from "react-colorful";
 
-import { type Color } from "@tissuumaps/core";
+import { type Color, ColorUtils } from "@tissuumaps/core";
 
 export function ColorPicker({
   color,
-  opacity,
   onColorChange,
-  onOpacityChange,
   className,
 }: {
   color: Color;
-  opacity: number;
   onColorChange: (newColor: Color) => void;
-  onOpacityChange: (newOpacity: number) => void;
   className?: string;
 }) {
   const rId = useId();
   const gId = useId();
   const bId = useId();
-  const aId = useId();
 
   const [r, setR] = useState<number>(color.r);
   const [g, setG] = useState<number>(color.g);
   const [b, setB] = useState<number>(color.b);
-  const [a, setA] = useState<number>(opacity);
 
   useEffect(() => {
     if (color.r !== r || color.g !== g || color.b !== b) {
       onColorChange({ r, g, b });
     }
-    if (opacity !== a) {
-      onOpacityChange(a);
-    }
-  }, [r, g, b, a, color, opacity, onColorChange, onOpacityChange]);
+  }, [r, g, b, color, onColorChange]);
 
   return (
     <Popover>
       <PopoverTrigger render={<Button className={className} />}>
-        Pick color <Square fill={`rgb(${r}, ${g}, ${b})`} opacity={a} />
+        Pick color <Square fill={`rgb(${r}, ${g}, ${b})`} />
       </PopoverTrigger>
       <PopoverContent>
-        <RgbaColorPicker
-          color={{ r, g, b, a }}
-          onChange={({ r, g, b, a }) => {
+        <HexColorPicker
+          color={ColorUtils.toHex({ r, g, b })}
+          onChange={(hex) => {
+            const { r, g, b } = ColorUtils.fromHex(hex);
             setR(r);
             setG(g);
             setB(b);
-            setA(a);
           }}
         />
-        <FieldGroup className="grid grid-cols-4 w-full">
+        <FieldGroup className="grid grid-cols-3 w-full">
           <Field>
             <FieldLabel htmlFor={rId}>R</FieldLabel>
             <Input
@@ -91,18 +82,6 @@ export function ColorPicker({
               min={0}
               max={255}
               onChange={(event) => setB(Number(event.target.value))}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor={aId}>A</FieldLabel>
-            <Input
-              id={aId}
-              type="number"
-              value={a}
-              min={0}
-              max={1}
-              step={0.01}
-              onChange={(event) => setA(Number(event.target.value))}
             />
           </Field>
         </FieldGroup>

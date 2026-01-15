@@ -42,10 +42,6 @@ function ColorValueControl({
     <ColorPicker
       color={currentValue ?? defaultValue}
       onColorChange={setCurrentValue}
-      opacity={1} // TODO
-      onOpacityChange={() => {
-        // TODO
-      }}
       className={className}
     />
   );
