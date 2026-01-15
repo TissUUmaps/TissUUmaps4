@@ -40,36 +40,6 @@ describe("ColorUtils", () => {
     });
   });
 
-  describe("parseColor", () => {
-    it("parses hex color", () => {
-      expect(ColorUtils.parseColor("#ff00aa")).toEqual({
-        r: 255,
-        g: 0,
-        b: 170,
-      });
-    });
-
-    it("parses rgb() color", () => {
-      expect(ColorUtils.parseColor("rgb(10,20,30)")).toEqual({
-        r: 10,
-        g: 20,
-        b: 30,
-      });
-    });
-
-    it("throws on invalid color string", () => {
-      expect(() => ColorUtils.parseColor("notacolor")).toThrow(
-        /Invalid color string/,
-      );
-      expect(() => ColorUtils.parseColor("#fff")).toThrow(
-        /Invalid color string/,
-      );
-      expect(() => ColorUtils.parseColor("rgb(1,2)")).toThrow(
-        /Invalid color string/,
-      );
-    });
-  });
-
   describe("packColor", () => {
     it("packs a color to a number", () => {
       expect(ColorUtils.packColor({ r: 1, g: 2, b: 3 })).toBe(
@@ -83,6 +53,31 @@ describe("ColorUtils", () => {
 
     it("packs black color", () => {
       expect(ColorUtils.packColor({ r: 0, g: 0, b: 0 })).toBe(0x000000);
+    });
+  });
+
+  describe("fromHex", () => {
+    it("converts hex to color", () => {
+      expect(ColorUtils.fromHex("#010203")).toEqual({ r: 1, g: 2, b: 3 });
+    });
+
+    it("throws on invalid hex", () => {
+      expect(() => ColorUtils.fromHex("010203")).toThrow(/Invalid hex color/);
+      expect(() => ColorUtils.fromHex("#GGHHII")).toThrow(/Invalid hex color/);
+    });
+  });
+
+  describe("toHex", () => {
+    it("converts color to hex", () => {
+      expect(ColorUtils.toHex({ r: 1, g: 2, b: 3 })).toBe("#010203");
+    });
+
+    it("converts white color to hex", () => {
+      expect(ColorUtils.toHex({ r: 255, g: 255, b: 255 })).toBe("#ffffff");
+    });
+
+    it("converts black color to hex", () => {
+      expect(ColorUtils.toHex({ r: 0, g: 0, b: 0 })).toBe("#000000");
     });
   });
 });
