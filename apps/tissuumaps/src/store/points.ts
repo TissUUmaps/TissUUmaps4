@@ -17,15 +17,15 @@ export type PointsSliceState = {
 
 export type PointsSliceActions = {
   addPoints: (points: Points, index?: number) => void;
-  setPoints: (pointsId: string, points: Points) => void;
+  updatePoints: (pointsId: string, updates: Partial<Points>) => void;
   movePoints: (pointsId: string, newIndex: number) => void;
+  deletePoints: (pointsId: string) => void;
+  clearPoints: () => void;
   loadPoints: (
     pointsId: string,
     options: { signal?: AbortSignal },
   ) => Promise<PointsData>;
   unloadPoints: (pointsId: string) => void;
-  deletePoints: (pointsId: string) => void;
-  clearPoints: () => void;
 };
 
 export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
@@ -42,14 +42,14 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
       draft.points.splice(index ?? draft.points.length, 0, points);
     });
   },
-  setPoints: (pointsId, points) => {
+  updatePoints: (pointsId, updates) => {
     const state = get();
-    const index = state.points.findIndex((x) => x.id === pointsId);
+    const index = state.points.findIndex((points) => points.id === pointsId);
     if (index === -1) {
       throw new Error(`Points with ID ${pointsId} not found.`);
     }
     set((draft) => {
-      draft.points[index] = points;
+      draft.points[index] = { ...draft.points[index]!, ...updates };
     });
   },
   movePoints: (pointsId, newIndex) => {
@@ -64,6 +64,24 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
         draft.points.splice(newIndex, 0, points!);
       });
     }
+  },
+  deletePoints: (pointsId) => {
+    const state = get();
+    const index = state.points.findIndex((points) => points.id === pointsId);
+    if (index === -1) {
+      throw new Error(`Points with ID ${pointsId} not found.`);
+    }
+    state.unloadPoints(pointsId);
+    set((draft) => {
+      draft.points.splice(index, 1);
+    });
+  },
+  clearPoints: () => {
+    const state = get();
+    while (state.points.length > 0) {
+      state.deletePoints(state.points[0]!.id);
+    }
+    set(initialPointsSliceState);
   },
   loadPoints: async (pointsId, { signal }: { signal?: AbortSignal } = {}) => {
     signal?.throwIfAborted();
@@ -114,24 +132,6 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
       });
       cache.data.destroy();
     }
-  },
-  deletePoints: (pointsId) => {
-    const state = get();
-    const index = state.points.findIndex((points) => points.id === pointsId);
-    if (index === -1) {
-      throw new Error(`Points with ID ${pointsId} not found.`);
-    }
-    state.unloadPoints(pointsId);
-    set((draft) => {
-      draft.points.splice(index, 1);
-    });
-  },
-  clearPoints: () => {
-    const state = get();
-    while (state.points.length > 0) {
-      state.deletePoints(state.points[0]!.id);
-    }
-    set(initialPointsSliceState);
   },
 });
 

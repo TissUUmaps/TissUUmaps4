@@ -11,6 +11,8 @@ import { useState } from "react";
 
 import { type Points, defaultPointColor } from "@tissuumaps/core";
 
+import { useTissUUmaps } from "../../../store";
+
 const Setting = {
   Color: "color",
 } as const;
@@ -20,12 +22,14 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
     (typeof Setting)[keyof typeof Setting] | null
   >(null);
 
+  const updatePoints = useTissUUmaps((state) => state.updatePoints);
+
   return (
     <ColorControlContextProvider
       colorConfig={points.pointColor}
-      onColorConfigChange={() => {
-        // TODO
-      }}
+      onColorConfigChange={(newColorConfig) =>
+        updatePoints(points.id, { pointColor: newColorConfig })
+      }
       defaultColorConfigSource="value"
     >
       <Collapsible
