@@ -71,10 +71,12 @@ export class LoadUtils {
       isGroupByConfig(markerConfig)
     ) {
       let markerMap;
-      if (typeof markerConfig.groupBy.map === "string") {
-        markerMap = markerMaps.get(markerConfig.groupBy.map);
+      if (markerConfig.groupBy.projectMap !== undefined) {
+        markerMap = markerMaps.get(markerConfig.groupBy.projectMap);
         if (markerMap === undefined) {
-          console.warn(`Marker map ${markerConfig.groupBy.map} not found`);
+          console.warn(
+            `Marker map ${markerConfig.groupBy.projectMap} not found`,
+          );
         }
       } else {
         markerMap = markerConfig.groupBy.map;
@@ -189,10 +191,10 @@ export class LoadUtils {
       isGroupByConfig(sizeConfig)
     ) {
       let sizeMap;
-      if (typeof sizeConfig.groupBy.map === "string") {
-        sizeMap = sizeMaps.get(sizeConfig.groupBy.map);
+      if (sizeConfig.groupBy.projectMap !== undefined) {
+        sizeMap = sizeMaps.get(sizeConfig.groupBy.projectMap);
         if (sizeMap === undefined) {
-          console.warn(`Size map ${sizeConfig.groupBy.map} not found`);
+          console.warn(`Size map ${sizeConfig.groupBy.projectMap} not found`);
         }
       } else {
         sizeMap = sizeConfig.groupBy.map;
@@ -336,10 +338,10 @@ export class LoadUtils {
       isGroupByConfig(colorConfig)
     ) {
       let colorMap;
-      if (typeof colorConfig.groupBy.map === "string") {
-        colorMap = colorMaps.get(colorConfig.groupBy.map);
+      if (colorConfig.groupBy.projectMap !== undefined) {
+        colorMap = colorMaps.get(colorConfig.groupBy.projectMap);
         if (colorMap === undefined) {
-          console.warn(`Color map ${colorConfig.groupBy.map} not found`);
+          console.warn(`Color map ${colorConfig.groupBy.projectMap} not found`);
         }
       } else {
         colorMap = colorConfig.groupBy.map;
@@ -475,11 +477,11 @@ export class LoadUtils {
       isGroupByConfig(visibilityConfig)
     ) {
       let visibilityMap;
-      if (typeof visibilityConfig.groupBy.map === "string") {
-        visibilityMap = visibilityMaps.get(visibilityConfig.groupBy.map);
+      if (visibilityConfig.groupBy.projectMap !== undefined) {
+        visibilityMap = visibilityMaps.get(visibilityConfig.groupBy.projectMap);
         if (visibilityMap === undefined) {
           console.warn(
-            `Visibility map ${visibilityConfig.groupBy.map} not found`,
+            `Visibility map ${visibilityConfig.groupBy.projectMap} not found`,
           );
         }
       } else {
@@ -599,10 +601,12 @@ export class LoadUtils {
       isGroupByConfig(opacityConfig)
     ) {
       let opacityMap;
-      if (typeof opacityConfig.groupBy.map === "string") {
-        opacityMap = opacityMaps.get(opacityConfig.groupBy.map);
+      if (opacityConfig.groupBy.projectMap !== undefined) {
+        opacityMap = opacityMaps.get(opacityConfig.groupBy.projectMap);
         if (opacityMap === undefined) {
-          console.warn(`Opacity map ${opacityConfig.groupBy.map} not found`);
+          console.warn(
+            `Opacity map ${opacityConfig.groupBy.projectMap} not found`,
+          );
         }
       } else {
         opacityMap = opacityConfig.groupBy.map;
