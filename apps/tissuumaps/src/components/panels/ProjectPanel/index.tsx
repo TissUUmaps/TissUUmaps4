@@ -13,12 +13,13 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { type HTMLProps, useCallback, useRef } from "react";
+import { useCallback, useId, useRef } from "react";
 
 import { useTissUUmaps } from "../../../store";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
-export function ProjectPanel(props: HTMLProps<HTMLDivElement>) {
+export function ProjectPanel({ className }: { className?: string }) {
+  const projectNameId = useId();
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const projectName = useTissUUmaps((state) => state.projectName);
@@ -56,71 +57,67 @@ export function ProjectPanel(props: HTMLProps<HTMLDivElement>) {
   }, [saveProject]);
 
   return (
-    <div {...props}>
+    <FieldGroup className={className}>
       <FieldGroup>
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="projectName">Project name</FieldLabel>
-            <Input
-              type="text"
-              id="projectName"
-              placeholder="My awesome project"
-              value={projectName}
-              onChange={(event) => setProjectName(event.target.value)}
-            />
-          </Field>
-          <Field>
-            <Dialog>
-              <DialogTrigger render={<Button />}>
-                Show project settings
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Project settings</DialogTitle>
-                </DialogHeader>
-                <ProjectSettingsDialog />
-              </DialogContent>
-            </Dialog>
-          </Field>
-        </FieldGroup>
-        <FieldSeparator />
-        <FieldGroup>
-          <div className="grid grid-cols-2">
-            <Field>
-              <Input
-                ref={loadProjectFileInputRef}
-                type="file"
-                onChange={(event) => {
-                  event.preventDefault();
-                  const file = event.target.files?.[0];
-                  if (file !== undefined) {
-                    loadProjectFromFile(file);
-                  }
-                }}
-                hidden
-              />
-              <Button
-                onClick={(event) => {
-                  event.preventDefault();
-                  loadProjectFileInputRef.current?.click();
-                }}
-              >
-                Load project
-              </Button>
-            </Field>
-            <Field>
-              <Button
-                onClick={(event) => {
-                  event.preventDefault();
-                  downloadProject();
-                }}
-              >
-                Save project
-              </Button>
-            </Field>
-          </div>
-        </FieldGroup>
+        <Field>
+          <FieldLabel htmlFor={projectNameId}>Project name</FieldLabel>
+          <Input
+            type="text"
+            id={projectNameId}
+            placeholder="My awesome project"
+            value={projectName}
+            onChange={(event) => setProjectName(event.target.value)}
+          />
+        </Field>
+        <Field>
+          <Dialog>
+            <DialogTrigger render={<Button />}>
+              Show project settings
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Project settings</DialogTitle>
+              </DialogHeader>
+              <ProjectSettingsDialog />
+            </DialogContent>
+          </Dialog>
+        </Field>
       </FieldGroup>
-    </div>
+      <FieldSeparator />
+      <FieldGroup className="grid grid-cols-2">
+        <Field>
+          <Input
+            ref={loadProjectFileInputRef}
+            type="file"
+            onChange={(event) => {
+              event.preventDefault();
+              const file = event.target.files?.[0];
+              if (file !== undefined) {
+                loadProjectFromFile(file);
+              }
+            }}
+            hidden
+          />
+          <Button
+            onClick={(event) => {
+              event.preventDefault();
+              loadProjectFileInputRef.current?.click();
+            }}
+          >
+            Load project
+          </Button>
+        </Field>
+        <Field>
+          <Button
+            onClick={(event) => {
+              event.preventDefault();
+              downloadProject();
+            }}
+          >
+            Save project
+          </Button>
+        </Field>
+      </FieldGroup>
+    </FieldGroup>
   );
 }

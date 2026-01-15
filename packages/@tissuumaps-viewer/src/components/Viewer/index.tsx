@@ -1,11 +1,11 @@
-import { type HTMLProps, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { type Rect } from "@tissuumaps/core";
 
 import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
 import { useWebGL } from "../../hooks/useWebGL";
 
-export function Viewer(props: HTMLProps<HTMLDivElement>) {
+export function Viewer({ className }: { className?: string }) {
   const glRef = useRef<ReturnType<typeof useWebGL> | null>(null);
   const resizeGLCanvas = useCallback(
     (newContainerSize: { width: number; height: number }) => {
@@ -30,5 +30,5 @@ export function Viewer(props: HTMLProps<HTMLDivElement>) {
   useEffect(() => {
     glRef.current = gl;
   }, [gl]);
-  return <div ref={viewerElementRef} {...props} />;
+  return <div ref={viewerElementRef} className={className} />;
 }
