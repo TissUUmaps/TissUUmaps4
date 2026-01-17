@@ -1,9 +1,13 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { useColorControlContext } from "./context";
+import { useColorConfigContext } from "./context";
 
-export function ColorSourceControl({ className }: { className?: string }) {
-  const { currentSource, setCurrentSource } = useColorControlContext();
+export function ColorConfigSourceToggleGroup({
+  className,
+}: {
+  className?: string;
+}) {
+  const { currentSource, setCurrentSource } = useColorConfigContext();
   return (
     <ToggleGroup
       value={[currentSource]}

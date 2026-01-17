@@ -4,7 +4,7 @@ import { type Color, type ColorConfig, type ValueMap } from "@tissuumaps/core";
 
 type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 
-interface ColorControlContextValue {
+interface ColorConfigContextValue {
   currentSource: ColorConfigSource;
   currentValue: Color | undefined;
   currentFromTable: string | undefined;
@@ -33,13 +33,16 @@ interface ColorControlContextValue {
   setCurrentRandomPalette: (newCurrentRandomPalette: string) => void;
 }
 
-export const ColorControlContext =
-  createContext<ColorControlContextValue | null>(null);
+export const ColorConfigContext = createContext<ColorConfigContextValue | null>(
+  null,
+);
 
-export function useColorControlContext(): ColorControlContextValue {
-  const context = useContext(ColorControlContext);
+export function useColorConfigContext(): ColorConfigContextValue {
+  const context = useContext(ColorConfigContext);
   if (!context) {
-    throw new Error("ColorControl must be used within a ColorControlProvider");
+    throw new Error(
+      "ColorConfigControl must be used within a ColorConfigContextProvider",
+    );
   }
   return context;
 }
