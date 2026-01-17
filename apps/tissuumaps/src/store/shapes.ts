@@ -17,14 +17,15 @@ export type ShapesSliceState = {
 
 export type ShapesSliceActions = {
   addShapes: (shapes: Shapes, index?: number) => void;
+  updateShapes: (shapesId: string, updates: Partial<Shapes>) => void;
   moveShapes: (shapesId: string, newIndex: number) => void;
+  deleteShapes: (shapesId: string) => void;
+  clearShapes: () => void;
   loadShapes: (
     shapesId: string,
     options: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
   unloadShapes: (shapesId: string) => void;
-  deleteShapes: (shapesId: string) => void;
-  clearShapes: () => void;
 };
 
 export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
@@ -41,6 +42,16 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
       draft.shapes.splice(index ?? draft.shapes.length, 0, shapes);
     });
   },
+  updateShapes: (shapesId, updates) => {
+    const state = get();
+    const index = state.shapes.findIndex((shapes) => shapes.id === shapesId);
+    if (index === -1) {
+      throw new Error(`Shapes with ID ${shapesId} not found.`);
+    }
+    set((draft) => {
+      draft.shapes[index] = { ...draft.shapes[index]!, ...updates };
+    });
+  },
   moveShapes: (shapesId, newIndex) => {
     const state = get();
     const oldIndex = state.shapes.findIndex((shapes) => shapes.id === shapesId);
@@ -53,6 +64,24 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
         draft.shapes.splice(newIndex, 0, shapes!);
       });
     }
+  },
+  deleteShapes: (shapesId) => {
+    const state = get();
+    const index = state.shapes.findIndex((shapes) => shapes.id === shapesId);
+    if (index === -1) {
+      throw new Error(`Shapes with ID ${shapesId} not found.`);
+    }
+    state.unloadShapes(shapesId);
+    set((draft) => {
+      draft.shapes.splice(index, 1);
+    });
+  },
+  clearShapes: () => {
+    const state = get();
+    while (state.shapes.length > 0) {
+      state.deleteShapes(state.shapes[0]!.id);
+    }
+    set(initialShapesSliceState);
   },
   loadShapes: async (shapesId, { signal }: { signal?: AbortSignal } = {}) => {
     signal?.throwIfAborted();
@@ -103,24 +132,6 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
       });
       cache.data.destroy();
     }
-  },
-  deleteShapes: (shapesId) => {
-    const state = get();
-    const index = state.shapes.findIndex((shapes) => shapes.id === shapesId);
-    if (index === -1) {
-      throw new Error(`Shapes with ID ${shapesId} not found.`);
-    }
-    state.unloadShapes(shapesId);
-    set((draft) => {
-      draft.shapes.splice(index, 1);
-    });
-  },
-  clearShapes: () => {
-    const state = get();
-    while (state.shapes.length > 0) {
-      state.deleteShapes(state.shapes[0]!.id);
-    }
-    set(initialShapesSliceState);
   },
 });
 
