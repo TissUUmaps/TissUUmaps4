@@ -10,11 +10,11 @@ import {
   isValueConfig,
 } from "@tissuumaps/core";
 
-import { ColorControlContext } from "./context";
+import { ColorConfigContext } from "./context";
 
 type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 
-export function ColorControlContextProvider({
+export function ColorConfigContextProvider({
   colorConfig,
   onColorConfigChange,
   defaultColorConfigSource,
@@ -166,7 +166,7 @@ export function ColorControlContextProvider({
   ]);
 
   return (
-    <ColorControlContext.Provider
+    <ColorConfigContext.Provider
       value={{
         currentSource,
         currentValue,
@@ -195,6 +195,6 @@ export function ColorControlContextProvider({
       }}
     >
       {children}
-    </ColorControlContext.Provider>
+    </ColorConfigContext.Provider>
   );
 }
