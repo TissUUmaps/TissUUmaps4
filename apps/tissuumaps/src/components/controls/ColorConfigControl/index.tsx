@@ -5,38 +5,43 @@ import { useId } from "react";
 import { type Color } from "@tissuumaps/core";
 
 import { ColorPicker } from "../../common/ColorPicker";
-import { useColorControlContext } from "./context";
+import { useColorConfigContext } from "./context";
 
-export function ColorControl({
+export { ColorConfigContextProvider } from "./ColorConfigContextProvider";
+
+export function ColorConfigControl({
   defaultValue,
   className,
 }: {
   defaultValue: Color;
   className?: string;
 }) {
-  const { currentSource } = useColorControlContext();
+  const { currentSource } = useColorConfigContext();
   switch (currentSource) {
     case "value":
       return (
-        <ColorValueControl defaultValue={defaultValue} className={className} />
+        <ColorConfigValueControl
+          defaultValue={defaultValue}
+          className={className}
+        />
       );
     case "from":
-      return <ColorFromControl className={className} />;
+      return <ColorConfigFromControl className={className} />;
     case "groupBy":
-      return <ColorGroupByControl className={className} />;
+      return <ColorConfigGroupByControl className={className} />;
     case "random":
-      return <ColorRandomControl />;
+      return <ColorConfigRandomControl />;
   }
 }
 
-function ColorValueControl({
+function ColorConfigValueControl({
   defaultValue,
   className,
 }: {
   defaultValue: Color;
   className?: string;
 }) {
-  const { currentValue, setCurrentValue } = useColorControlContext();
+  const { currentValue, setCurrentValue } = useColorConfigContext();
 
   return (
     <ColorPicker
@@ -47,7 +52,7 @@ function ColorValueControl({
   );
 }
 
-function ColorFromControl({ className }: { className?: string }) {
+function ColorConfigFromControl({ className }: { className?: string }) {
   const fromRangeMinId = useId();
   const fromRangeMaxId = useId();
 
@@ -56,7 +61,7 @@ function ColorFromControl({ className }: { className?: string }) {
     currentFromRangeMax,
     setCurrentFromRangeMin,
     setCurrentFromRangeMax,
-  } = useColorControlContext();
+  } = useColorConfigContext();
 
   return (
     <div className={className}>
@@ -95,7 +100,7 @@ function ColorFromControl({ className }: { className?: string }) {
   );
 }
 
-function ColorGroupByControl({ className }: { className?: string }) {
+function ColorConfigGroupByControl({ className }: { className?: string }) {
   return (
     <div className={className}>
       {/* TODO table select */}
@@ -105,6 +110,8 @@ function ColorGroupByControl({ className }: { className?: string }) {
   );
 }
 
-function ColorRandomControl({ className }: { className?: string }) {
+function ColorConfigRandomControl({ className }: { className?: string }) {
   return <div className={className}>{/* TODO palette select */}</div>;
 }
+
+export { ColorConfigSourceToggleGroup } from "./ColorConfigSourceToggleGroup";

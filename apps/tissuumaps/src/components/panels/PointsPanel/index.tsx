@@ -1,9 +1,3 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { GripVertical } from "lucide-react";
@@ -11,6 +5,14 @@ import { GripVertical } from "lucide-react";
 import type { Points } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
+import {
+  PanelItemsAccordion,
+  PanelItemsAccordionHeader,
+  PanelItemsAccordionItem,
+  PanelItemsAccordionPanel,
+  PanelItemsAccordionTrigger,
+  PanelItemsAccordionTriggerIcon,
+} from "../../common/PanelItemsAccordion";
 import { PointsPanelItem } from "./PointsPanelItem";
 
 export function PointsPanel({ className }: { className?: string }) {
@@ -28,7 +30,7 @@ export function PointsPanel({ className }: { className?: string }) {
         }
       }}
     >
-      <Accordion className={className} multiple>
+      <PanelItemsAccordion className={className} multiple>
         {points.map((currentPoints, index) => (
           <SortablePointsPanelItem
             key={currentPoints.id}
@@ -36,7 +38,7 @@ export function PointsPanel({ className }: { className?: string }) {
             index={index}
           />
         ))}
-      </Accordion>
+      </PanelItemsAccordion>
     </DragDropProvider>
   );
 }
@@ -52,15 +54,16 @@ function SortablePointsPanelItem({
 
   return (
     <div ref={ref}>
-      <AccordionItem>
-        <AccordionTrigger>
+      <PanelItemsAccordionItem>
+        <PanelItemsAccordionHeader>
           <GripVertical ref={handleRef} />
-          {points.name}
-        </AccordionTrigger>
-        <AccordionContent>
+          <PanelItemsAccordionTrigger>{points.name}</PanelItemsAccordionTrigger>
+          <PanelItemsAccordionTriggerIcon className="ml-auto" />
+        </PanelItemsAccordionHeader>
+        <PanelItemsAccordionPanel>
           <PointsPanelItem points={points} />
-        </AccordionContent>
-      </AccordionItem>
+        </PanelItemsAccordionPanel>
+      </PanelItemsAccordionItem>
     </div>
   );
 }
