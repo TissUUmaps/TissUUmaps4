@@ -7,7 +7,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Square } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 
 import { type Color, ColorUtils } from "@tissuumaps/core";
@@ -21,10 +21,6 @@ export function ColorPicker({
   onColorChange: (newColor: Color) => void;
   className?: string;
 }) {
-  const rId = useId();
-  const gId = useId();
-  const bId = useId();
-
   const [r, setR] = useState<number>(color.r);
   const [g, setG] = useState<number>(color.g);
   const [b, setB] = useState<number>(color.b);
@@ -52,9 +48,8 @@ export function ColorPicker({
         />
         <FieldGroup className="grid grid-cols-3 w-full">
           <Field>
-            <FieldLabel htmlFor={rId}>R</FieldLabel>
+            <FieldLabel>R</FieldLabel>
             <Input
-              id={rId}
               type="number"
               value={r}
               min={0}
@@ -63,9 +58,8 @@ export function ColorPicker({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor={gId}>G</FieldLabel>
+            <FieldLabel>G</FieldLabel>
             <Input
-              id={gId}
               type="number"
               value={g}
               min={0}
@@ -74,9 +68,8 @@ export function ColorPicker({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor={bId}>B</FieldLabel>
+            <FieldLabel>B</FieldLabel>
             <Input
-              id={bId}
               type="number"
               value={b}
               min={0}

@@ -1,6 +1,5 @@
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useId } from "react";
 
 import { type Color } from "@tissuumaps/core";
 
@@ -53,9 +52,6 @@ function ColorConfigValueControl({
 }
 
 function ColorConfigFromControl({ className }: { className?: string }) {
-  const fromRangeMinId = useId();
-  const fromRangeMaxId = useId();
-
   const {
     currentFromRangeMin,
     currentFromRangeMax,
@@ -66,12 +62,11 @@ function ColorConfigFromControl({ className }: { className?: string }) {
   return (
     <div className={className}>
       {/* TODO table select */}
-      {/* TODO column select */}
+      {/* TODO column combobox */}
       <FieldGroup className="grid grid-cols-2">
         <Field>
-          <FieldLabel htmlFor={fromRangeMinId}>Min</FieldLabel>
+          <FieldLabel>Min</FieldLabel>
           <Input
-            id={fromRangeMinId}
             type="number"
             value={currentFromRangeMin ?? ""}
             onChange={(event) =>
@@ -82,9 +77,8 @@ function ColorConfigFromControl({ className }: { className?: string }) {
           />
         </Field>
         <Field>
-          <FieldLabel htmlFor={fromRangeMaxId}>Max</FieldLabel>
+          <FieldLabel>Max</FieldLabel>
           <Input
-            id={fromRangeMaxId}
             type="number"
             value={currentFromRangeMax ?? ""}
             onChange={(event) =>
@@ -104,7 +98,7 @@ function ColorConfigGroupByControl({ className }: { className?: string }) {
   return (
     <div className={className}>
       {/* TODO table select */}
-      {/* TODO column select */}
+      {/* TODO column combobox */}
       {/* TODO map select */}
     </div>
   );
