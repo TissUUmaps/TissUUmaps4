@@ -6,19 +6,18 @@ import type { Image } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import {
-  PanelItemsAccordion,
-  PanelItemsAccordionHeader,
-  PanelItemsAccordionItem,
-  PanelItemsAccordionPanel,
-  PanelItemsAccordionTrigger,
-  PanelItemsAccordionTriggerIcon,
-} from "../../common/PanelItemsAccordion";
+  Accordion,
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+  AccordionTriggerUpIcon,
+} from "../../common/accordion";
 import { ImagesPanelItem } from "./ImagesPanelItem";
 
 export function ImagesPanel({ className }: { className?: string }) {
   const images = useTissUUmaps((state) => state.images);
   const moveImage = useTissUUmaps((state) => state.moveImage);
-
   return (
     <DragDropProvider
       onDragEnd={(event) => {
@@ -30,34 +29,27 @@ export function ImagesPanel({ className }: { className?: string }) {
         }
       }}
     >
-      <PanelItemsAccordion className={className} multiple>
+      <Accordion className={className} multiple>
         {images.map((image, index) => (
-          <SortableImagesPanelItem key={image.id} image={image} index={index} />
+          <ImageAccordionItem key={image.id} image={image} index={index} />
         ))}
-      </PanelItemsAccordion>
+      </Accordion>
     </DragDropProvider>
   );
 }
 
-function SortableImagesPanelItem({
-  image,
-  index,
-}: {
-  image: Image;
-  index: number;
-}) {
+function ImageAccordionItem({ image, index }: { image: Image; index: number }) {
   const { ref, handleRef } = useSortable({ id: image.id, index });
-
   return (
-    <PanelItemsAccordionItem render={<div ref={ref} />}>
-      <PanelItemsAccordionHeader>
+    <AccordionItem render={<div ref={ref} />}>
+      <AccordionHeader>
         <GripVertical ref={handleRef} />
-        <PanelItemsAccordionTrigger>{image.name}</PanelItemsAccordionTrigger>
-        <PanelItemsAccordionTriggerIcon className="ml-auto" />
-      </PanelItemsAccordionHeader>
-      <PanelItemsAccordionPanel>
+        <AccordionTrigger>{image.name}</AccordionTrigger>
+        <AccordionTriggerUpIcon className="ml-auto" />
+      </AccordionHeader>
+      <AccordionPanel>
         <ImagesPanelItem image={image} />
-      </PanelItemsAccordionPanel>
-    </PanelItemsAccordionItem>
+      </AccordionPanel>
+    </AccordionItem>
   );
 }
