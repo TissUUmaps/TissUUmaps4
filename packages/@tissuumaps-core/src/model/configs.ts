@@ -117,7 +117,7 @@ export type GroupByConfig<
      *
      * Only used if {@link GroupByConfig.projectMap} is not specified.
      */
-    map: ValueMap<TValue>;
+    map?: ValueMap<TValue>;
   } & TGroupByExtra;
 };
 

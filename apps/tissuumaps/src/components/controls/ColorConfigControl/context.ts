@@ -6,31 +6,37 @@ type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 
 interface ColorConfigContextValue {
   currentSource: ColorConfigSource;
-  currentValue: Color | undefined;
-  currentFromTable: string | undefined;
-  currentFromColumn: string | undefined;
-  currentFromRangeMin: number | undefined;
-  currentFromRangeMax: number | undefined;
-  currentFromPalette: string | undefined;
-  currentGroupByTable: string | undefined;
-  currentGroupByColumn: string | undefined;
-  currentGroupByProjectMap: string | undefined;
-  currentGroupByMap: ValueMap<Color> | undefined;
-  currentRandomPalette: string | undefined;
+  currentValue: Color | null;
+  currentFromTable: string | null;
+  currentFromColumn: string | null;
+  currentFromRangeMin: number | undefined | null;
+  currentFromRangeMax: number | undefined | null;
+  currentFromPalette: string | null;
+  currentGroupByTable: string | null;
+  currentGroupByColumn: string | null;
+  currentGroupByProjectMap: string | undefined | null;
+  currentGroupByMap: ValueMap<Color> | undefined | null;
+  currentRandomPalette: string | null;
   setCurrentSource: (newCurrentSource: ColorConfigSource) => void;
-  setCurrentValue: (newCurrentValue: Color) => void;
-  setCurrentFromTable: (newCurrentFromTable: string) => void;
-  setCurrentFromColumn: (newCurrentFromColumn: string) => void;
-  setCurrentFromRangeMin: (newCurrentFromRangeMin: number | undefined) => void;
-  setCurrentFromRangeMax: (newCurrentFromRangeMax: number | undefined) => void;
-  setCurrentFromPalette: (newCurrentFromPalette: string) => void;
-  setCurrentGroupByTable: (newCurrentGroupByTable: string) => void;
-  setCurrentGroupByColumn: (newCurrentGroupByColumn: string) => void;
-  setCurrentGroupByProjectMap: (
-    newCurrentGroupByProjectMap: string | undefined,
+  setCurrentValue: (newCurrentValue: Color | null) => void;
+  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
+  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
+  setCurrentFromRangeMin: (
+    newCurrentFromRangeMin: number | undefined | null,
   ) => void;
-  setCurrentGroupByMap: (newCurrentGroupByMap: ValueMap<Color>) => void;
-  setCurrentRandomPalette: (newCurrentRandomPalette: string) => void;
+  setCurrentFromRangeMax: (
+    newCurrentFromRangeMax: number | undefined | null,
+  ) => void;
+  setCurrentFromPalette: (newCurrentFromPalette: string | null) => void;
+  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
+  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentGroupByProjectMap: (
+    newCurrentGroupByProjectMap: string | undefined | null,
+  ) => void;
+  setCurrentGroupByMap: (
+    newCurrentGroupByMap: ValueMap<Color> | undefined | null,
+  ) => void;
+  setCurrentRandomPalette: (newCurrentRandomPalette: string | null) => void;
 }
 
 export const ColorConfigContext = createContext<ColorConfigContextValue | null>(
