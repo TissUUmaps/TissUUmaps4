@@ -7,7 +7,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerRightIcon,
+  AccordionTriggerRightDownIcon,
 } from "../../common/accordion";
 import {
   ColorConfigContextProvider,
@@ -28,7 +28,7 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
       >
         <AccordionItem>
           <AccordionHeader>
-            <AccordionTriggerRightIcon />
+            <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Color</AccordionTrigger>
             <ColorConfigSourceToggleGroup className="ml-auto" />
           </AccordionHeader>

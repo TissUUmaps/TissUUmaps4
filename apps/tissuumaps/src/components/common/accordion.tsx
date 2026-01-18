@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
-import { ChevronRightIcon, ChevronUpIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
 
 export function Accordion({
   className,
@@ -51,7 +51,7 @@ export function AccordionTrigger({
   );
 }
 
-export function AccordionTriggerRightIcon({
+export function AccordionTriggerRightDownIcon({
   className,
   ...props
 }: Omit<AccordionPrimitive.Trigger.Props, "children">) {
@@ -60,12 +60,13 @@ export function AccordionTriggerRightIcon({
       className={cn("group/accordion-trigger", className)}
       {...props}
     >
-      <ChevronRightIcon className="group-aria-expanded/accordion-trigger:rotate-90" />
+      <ChevronRightIcon className="group-aria-expanded/accordion-trigger:hidden" />
+      <ChevronDownIcon className="hidden group-aria-expanded/accordion-trigger:inline" />
     </AccordionPrimitive.Trigger>
   );
 }
 
-export function AccordionTriggerUpIcon({
+export function AccordionTriggerUpDownIcon({
   className,
   ...props
 }: Omit<AccordionPrimitive.Trigger.Props, "children">) {
@@ -74,7 +75,8 @@ export function AccordionTriggerUpIcon({
       className={cn("group/accordion-trigger", className)}
       {...props}
     >
-      <ChevronUpIcon className="group-aria-expanded/accordion-trigger:rotate-180" />
+      <ChevronUpIcon className="group-aria-expanded/accordion-trigger:hidden" />
+      <ChevronDownIcon className="hidden group-aria-expanded/accordion-trigger:inline" />
     </AccordionPrimitive.Trigger>
   );
 }

@@ -11,7 +11,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerUpIcon,
+  AccordionTriggerUpDownIcon,
 } from "../../common/accordion";
 import { PointsPanelItem } from "./PointsPanelItem";
 
@@ -56,7 +56,7 @@ function PointsAccordionItem({
         <AccordionHeader>
           <GripVertical ref={handleRef} />
           <AccordionTrigger>{points.name}</AccordionTrigger>
-          <AccordionTriggerUpIcon className="ml-auto" />
+          <AccordionTriggerUpDownIcon className="ml-auto" />
         </AccordionHeader>
         <AccordionPanel>
           <PointsPanelItem points={points} />
