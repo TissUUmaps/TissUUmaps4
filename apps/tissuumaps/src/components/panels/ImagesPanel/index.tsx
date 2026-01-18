@@ -11,7 +11,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerUpIcon,
+  AccordionTriggerUpDownIcon,
 } from "../../common/accordion";
 import { ImagesPanelItem } from "./ImagesPanelItem";
 
@@ -45,7 +45,7 @@ function ImageAccordionItem({ image, index }: { image: Image; index: number }) {
       <AccordionHeader>
         <GripVertical ref={handleRef} />
         <AccordionTrigger>{image.name}</AccordionTrigger>
-        <AccordionTriggerUpIcon className="ml-auto" />
+        <AccordionTriggerUpDownIcon className="ml-auto" />
       </AccordionHeader>
       <AccordionPanel>
         <ImagesPanelItem image={image} />
