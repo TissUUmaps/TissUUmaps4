@@ -1,9 +1,9 @@
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 import { type Color } from "@tissuumaps/core";
 
-import { ColorPicker } from "../../common/ColorPicker";
+import { ColorPicker } from "../../common/color-picker";
+import { Field, FieldControl, FieldLabel } from "../../common/field";
 import { useColorConfigContext } from "./context";
 
 export { ColorConfigContextProvider } from "./ColorConfigContextProvider";
@@ -63,32 +63,40 @@ function ColorConfigFromControl({ className }: { className?: string }) {
     <div className={className}>
       {/* TODO table select */}
       {/* TODO column combobox */}
-      <FieldGroup className="grid grid-cols-2">
+      <div className="grid grid-cols-2">
         <Field>
           <FieldLabel>Min</FieldLabel>
-          <Input
-            type="number"
-            value={currentFromRangeMin ?? ""}
-            onChange={(event) =>
-              setCurrentFromRangeMin(
-                event.target.value ? Number(event.target.value) : undefined,
-              )
+          <FieldControl
+            render={
+              <Input
+                type="number"
+                value={currentFromRangeMin ?? ""}
+                onChange={(event) =>
+                  setCurrentFromRangeMin(
+                    event.target.value ? Number(event.target.value) : undefined,
+                  )
+                }
+              />
             }
           />
         </Field>
         <Field>
           <FieldLabel>Max</FieldLabel>
-          <Input
-            type="number"
-            value={currentFromRangeMax ?? ""}
-            onChange={(event) =>
-              setCurrentFromRangeMax(
-                event.target.value ? Number(event.target.value) : undefined,
-              )
+          <FieldControl
+            render={
+              <Input
+                type="number"
+                value={currentFromRangeMax ?? ""}
+                onChange={(event) =>
+                  setCurrentFromRangeMax(
+                    event.target.value ? Number(event.target.value) : undefined,
+                  )
+                }
+              />
             }
           />
         </Field>
-      </FieldGroup>
+      </div>
       {/* TODO palette select */}
     </div>
   );

@@ -6,19 +6,18 @@ import type { Points } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import {
-  PanelItemsAccordion,
-  PanelItemsAccordionHeader,
-  PanelItemsAccordionItem,
-  PanelItemsAccordionPanel,
-  PanelItemsAccordionTrigger,
-  PanelItemsAccordionTriggerIcon,
-} from "../../common/PanelItemsAccordion";
+  Accordion,
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+  AccordionTriggerUpIcon,
+} from "../../common/accordion";
 import { PointsPanelItem } from "./PointsPanelItem";
 
 export function PointsPanel({ className }: { className?: string }) {
   const points = useTissUUmaps((state) => state.points);
   const movePoints = useTissUUmaps((state) => state.movePoints);
-
   return (
     <DragDropProvider
       onDragEnd={(event) => {
@@ -30,20 +29,20 @@ export function PointsPanel({ className }: { className?: string }) {
         }
       }}
     >
-      <PanelItemsAccordion className={className} multiple>
+      <Accordion className={className} multiple>
         {points.map((currentPoints, index) => (
-          <SortablePointsPanelItem
+          <PointsAccordionItem
             key={currentPoints.id}
             points={currentPoints}
             index={index}
           />
         ))}
-      </PanelItemsAccordion>
+      </Accordion>
     </DragDropProvider>
   );
 }
 
-function SortablePointsPanelItem({
+function PointsAccordionItem({
   points,
   index,
 }: {
@@ -51,19 +50,18 @@ function SortablePointsPanelItem({
   index: number;
 }) {
   const { ref, handleRef } = useSortable({ id: points.id, index });
-
   return (
     <div ref={ref}>
-      <PanelItemsAccordionItem>
-        <PanelItemsAccordionHeader>
+      <AccordionItem>
+        <AccordionHeader>
           <GripVertical ref={handleRef} />
-          <PanelItemsAccordionTrigger>{points.name}</PanelItemsAccordionTrigger>
-          <PanelItemsAccordionTriggerIcon className="ml-auto" />
-        </PanelItemsAccordionHeader>
-        <PanelItemsAccordionPanel>
+          <AccordionTrigger>{points.name}</AccordionTrigger>
+          <AccordionTriggerUpIcon className="ml-auto" />
+        </AccordionHeader>
+        <AccordionPanel>
           <PointsPanelItem points={points} />
-        </PanelItemsAccordionPanel>
-      </PanelItemsAccordionItem>
+        </AccordionPanel>
+      </AccordionItem>
     </div>
   );
 }

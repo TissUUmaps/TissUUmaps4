@@ -6,16 +6,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useCallback, useRef } from "react";
 
 import { useTissUUmaps } from "../../../store";
+import { Field, FieldControl, FieldLabel } from "../../common/field";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
 export function ProjectPanel({ className }: { className?: string }) {
@@ -56,20 +51,24 @@ export function ProjectPanel({ className }: { className?: string }) {
   }, [saveProject]);
 
   return (
-    <FieldGroup className={className}>
-      <FieldGroup>
+    <div className={className}>
+      <div>
         <Field>
           <FieldLabel>Project name</FieldLabel>
-          <Input
-            type="text"
-            placeholder="My awesome project"
-            value={projectName}
-            onChange={(event) => setProjectName(event.target.value)}
+          <FieldControl
+            render={
+              <Input
+                type="text"
+                placeholder="My awesome project"
+                value={projectName}
+                onChange={(event) => setProjectName(event.target.value)}
+              />
+            }
           />
         </Field>
         <Field>
           <Dialog>
-            <DialogTrigger render={<Button />}>
+            <DialogTrigger render={<FieldControl render={<Button />} />}>
               Show project settings
             </DialogTrigger>
             <DialogContent>
@@ -80,9 +79,8 @@ export function ProjectPanel({ className }: { className?: string }) {
             </DialogContent>
           </Dialog>
         </Field>
-      </FieldGroup>
-      <FieldSeparator />
-      <FieldGroup className="grid grid-cols-2">
+      </div>
+      <div className="grid grid-cols-2">
         <Field>
           <Input
             ref={loadProjectFileInputRef}
@@ -96,26 +94,34 @@ export function ProjectPanel({ className }: { className?: string }) {
             }}
             hidden
           />
-          <Button
-            onClick={(event) => {
-              event.preventDefault();
-              loadProjectFileInputRef.current?.click();
-            }}
-          >
-            Load project
-          </Button>
+          <FieldControl
+            render={
+              <Button
+                onClick={(event) => {
+                  event.preventDefault();
+                  loadProjectFileInputRef.current?.click();
+                }}
+              >
+                Load project
+              </Button>
+            }
+          />
         </Field>
         <Field>
-          <Button
-            onClick={(event) => {
-              event.preventDefault();
-              downloadProject();
-            }}
-          >
-            Save project
-          </Button>
+          <FieldControl
+            render={
+              <Button
+                onClick={(event) => {
+                  event.preventDefault();
+                  downloadProject();
+                }}
+              >
+                Save project
+              </Button>
+            }
+          />
         </Field>
-      </FieldGroup>
-    </FieldGroup>
+      </div>
+    </div>
   );
 }

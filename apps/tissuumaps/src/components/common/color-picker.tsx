@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -11,6 +10,8 @@ import { useEffect, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 
 import { type Color, ColorUtils } from "@tissuumaps/core";
+
+import { Field, FieldControl, FieldLabel } from "./field";
 
 export function ColorPicker({
   color,
@@ -46,38 +47,50 @@ export function ColorPicker({
             setB(b);
           }}
         />
-        <FieldGroup className="grid grid-cols-3 w-full">
+        <div className="grid grid-cols-3 w-full">
           <Field>
             <FieldLabel>R</FieldLabel>
-            <Input
-              type="number"
-              value={r}
-              min={0}
-              max={255}
-              onChange={(event) => setR(Number(event.target.value))}
+            <FieldControl
+              render={
+                <Input
+                  type="number"
+                  value={r}
+                  min={0}
+                  max={255}
+                  onChange={(event) => setR(Number(event.target.value))}
+                />
+              }
             />
           </Field>
           <Field>
             <FieldLabel>G</FieldLabel>
-            <Input
-              type="number"
-              value={g}
-              min={0}
-              max={255}
-              onChange={(event) => setG(Number(event.target.value))}
+            <FieldControl
+              render={
+                <Input
+                  type="number"
+                  value={g}
+                  min={0}
+                  max={255}
+                  onChange={(event) => setG(Number(event.target.value))}
+                />
+              }
             />
           </Field>
           <Field>
             <FieldLabel>B</FieldLabel>
-            <Input
-              type="number"
-              value={b}
-              min={0}
-              max={255}
-              onChange={(event) => setB(Number(event.target.value))}
+            <FieldControl
+              render={
+                <Input
+                  type="number"
+                  value={b}
+                  min={0}
+                  max={255}
+                  onChange={(event) => setB(Number(event.target.value))}
+                />
+              }
             />
           </Field>
-        </FieldGroup>
+        </div>
       </PopoverContent>
     </Popover>
   );
