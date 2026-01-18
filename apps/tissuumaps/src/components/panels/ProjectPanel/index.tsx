@@ -13,13 +13,12 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useCallback, useId, useRef } from "react";
+import { useCallback, useRef } from "react";
 
 import { useTissUUmaps } from "../../../store";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
 export function ProjectPanel({ className }: { className?: string }) {
-  const projectNameId = useId();
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const projectName = useTissUUmaps((state) => state.projectName);
@@ -60,10 +59,9 @@ export function ProjectPanel({ className }: { className?: string }) {
     <FieldGroup className={className}>
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor={projectNameId}>Project name</FieldLabel>
+          <FieldLabel>Project name</FieldLabel>
           <Input
             type="text"
-            id={projectNameId}
             placeholder="My awesome project"
             value={projectName}
             onChange={(event) => setProjectName(event.target.value)}
