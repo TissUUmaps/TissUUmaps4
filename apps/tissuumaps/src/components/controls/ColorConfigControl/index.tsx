@@ -1,9 +1,11 @@
 import { Input } from "@/components/ui/input";
+import { useTissUUmaps } from "@/store";
 
-import { type Color } from "@tissuumaps/core";
+import { type Color, colorPalettes } from "@tissuumaps/core";
 
 import { ColorPicker } from "../../common/color-picker";
 import { Field, FieldControl, FieldLabel } from "../../common/field";
+import { SimpleSelect } from "../../common/simple-select";
 import { useColorConfigContext } from "./context";
 
 export { ColorConfigContextProvider } from "./ColorConfigContextProvider";
@@ -16,6 +18,7 @@ export function ColorConfigControl({
   className?: string;
 }) {
   const { currentSource } = useColorConfigContext();
+
   switch (currentSource) {
     case "value":
       return (
@@ -53,15 +56,27 @@ function ColorConfigValueControl({
 
 function ColorConfigFromControl({ className }: { className?: string }) {
   const {
+    currentFromTable,
     currentFromRangeMin,
     currentFromRangeMax,
+    currentFromPalette,
+    setCurrentFromTable,
     setCurrentFromRangeMin,
     setCurrentFromRangeMax,
+    setCurrentFromPalette,
   } = useColorConfigContext();
+
+  const tables = useTissUUmaps((state) => state.tables);
 
   return (
     <div className={className}>
-      {/* TODO table select */}
+      <SimpleSelect
+        items={tables}
+        itemLabel={(table) => table.name}
+        itemValue={(table) => table.id}
+        value={currentFromTable}
+        onValueChange={setCurrentFromTable}
+      />
       {/* TODO column combobox */}
       <div className="grid grid-cols-2">
         <Field>
@@ -97,23 +112,53 @@ function ColorConfigFromControl({ className }: { className?: string }) {
           />
         </Field>
       </div>
-      {/* TODO palette select */}
+      <SimpleSelect
+        items={Object.entries(colorPalettes)}
+        itemLabel={([paletteId]) => paletteId}
+        itemValue={([paletteId]) => paletteId}
+        value={currentFromPalette}
+        onValueChange={setCurrentFromPalette}
+      />
     </div>
   );
 }
 
 function ColorConfigGroupByControl({ className }: { className?: string }) {
+  const { currentGroupByTable, setCurrentGroupByTable } =
+    useColorConfigContext();
+
+  const tables = useTissUUmaps((state) => state.tables);
+
   return (
     <div className={className}>
-      {/* TODO table select */}
+      <SimpleSelect
+        items={tables}
+        itemLabel={(table) => table.name}
+        itemValue={(table) => table.id}
+        value={currentGroupByTable}
+        onValueChange={setCurrentGroupByTable}
+      />
       {/* TODO column combobox */}
-      {/* TODO map select */}
+      {/* TODO projectMap/map select */}
     </div>
   );
 }
 
 function ColorConfigRandomControl({ className }: { className?: string }) {
-  return <div className={className}>{/* TODO palette select */}</div>;
+  const { currentRandomPalette, setCurrentRandomPalette } =
+    useColorConfigContext();
+
+  return (
+    <div className={className}>
+      <SimpleSelect
+        items={Object.entries(colorPalettes)}
+        itemLabel={([paletteId]) => paletteId}
+        itemValue={([paletteId]) => paletteId}
+        value={currentRandomPalette}
+        onValueChange={setCurrentRandomPalette}
+      />
+    </div>
+  );
 }
 
 export { ColorConfigSourceToggleGroup } from "./ColorConfigSourceToggleGroup";
