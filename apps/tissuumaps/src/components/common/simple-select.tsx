@@ -1,37 +1,32 @@
-import { cn } from "@/lib/utils";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
+import { useMemo } from "react";
 
-export function SimpleSelect<TItem, TValue>({
+export function SimpleSelect<
+  TItem,
+  TValue,
+  TMultiple extends boolean | undefined = false,
+>({
   items,
   itemLabel,
   itemValue,
-  value,
-  onValueChange,
-  className,
+  ...props
 }: {
   items: TItem[];
   itemLabel: (item: TItem) => string;
   itemValue: (item: TItem) => TValue;
-  value?: TValue | null;
-  onValueChange?: (value: TValue | null) => void;
-  className?: string;
-}) {
-  return (
-    <SelectPrimitive.Root
-      items={items.map((item) => ({
+} & Omit<SelectPrimitive.Root.Props<TValue, TMultiple>, "items">) {
+  const selectItems = useMemo(
+    () =>
+      items.map((item) => ({
         label: itemLabel(item),
         value: itemValue(item),
-      }))}
-      value={value}
-      onValueChange={onValueChange}
-    >
-      <SelectPrimitive.Trigger
-        className={cn(
-          "flex flex-row items-center justify-between border rounded-md px-2 py-1",
-          className,
-        )}
-      >
+      })),
+    [items, itemLabel, itemValue],
+  );
+  return (
+    <SelectPrimitive.Root items={selectItems} {...props}>
+      <SelectPrimitive.Trigger className="flex flex-row items-center justify-between border rounded-md px-2 py-1">
         <SelectPrimitive.Value />
         <SelectPrimitive.Icon>
           <ChevronsUpDownIcon />
@@ -42,18 +37,16 @@ export function SimpleSelect<TItem, TValue>({
           <SelectPrimitive.Popup>
             <SelectPrimitive.ScrollUpArrow />
             <SelectPrimitive.List>
-              {items.map((item, index) => (
+              {selectItems.map(({ label, value }, index) => (
                 <SelectPrimitive.Item
                   key={index}
-                  value={itemValue(item)}
+                  value={value}
                   className="grid grid-cols-2 items-center"
                 >
                   <SelectPrimitive.ItemIndicator>
                     <CheckIcon />
                   </SelectPrimitive.ItemIndicator>
-                  <SelectPrimitive.ItemText>
-                    {itemLabel(item)}
-                  </SelectPrimitive.ItemText>
+                  <SelectPrimitive.ItemText>{label}</SelectPrimitive.ItemText>
                 </SelectPrimitive.Item>
               ))}
             </SelectPrimitive.List>
