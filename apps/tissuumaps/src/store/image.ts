@@ -35,7 +35,7 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
   ...initialImageSliceState,
   addImage: (image, index) => {
     const state = get();
-    if (state.images.find((x) => x.id === image.id) !== undefined) {
+    if (state.images.some((x) => x.id === image.id)) {
       throw new Error(`Image with ID ${image.id} already exists.`);
     }
     set((draft) => {

@@ -35,7 +35,7 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
   ...initialShapesSliceState,
   addShapes: (shapes, index) => {
     const state = get();
-    if (state.shapes.find((x) => x.id === shapes.id) !== undefined) {
+    if (state.shapes.some((x) => x.id === shapes.id)) {
       throw new Error(`Shapes with ID ${shapes.id} already exists.`);
     }
     set((draft) => {
