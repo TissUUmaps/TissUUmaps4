@@ -107,7 +107,7 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
               value={currentFromRangeMin ?? ""}
               onChange={(event) =>
                 setCurrentFromRangeMin(
-                  event.target.value ? Number(event.target.value) : undefined,
+                  event.target.value ? +event.target.value : undefined,
                 )
               }
             />
@@ -123,7 +123,7 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
               value={currentFromRangeMax ?? ""}
               onChange={(event) =>
                 setCurrentFromRangeMax(
-                  event.target.value ? Number(event.target.value) : undefined,
+                  event.target.value ? +event.target.value : undefined,
                 )
               }
             />
