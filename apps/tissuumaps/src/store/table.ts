@@ -35,7 +35,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
   ...initialTableSliceState,
   addTable: (table, index) => {
     const state = get();
-    if (state.tables.find((x) => x.id === table.id) !== undefined) {
+    if (state.tables.some((x) => x.id === table.id)) {
       throw new Error(`Table with ID ${table.id} already exists.`);
     }
     set((draft) => {

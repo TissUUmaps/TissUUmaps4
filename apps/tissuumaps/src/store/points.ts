@@ -35,7 +35,7 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
   ...initialPointsSliceState,
   addPoints: (points, index) => {
     const state = get();
-    if (state.points.find((x) => x.id === points.id) !== undefined) {
+    if (state.points.some((x) => x.id === points.id)) {
       throw new Error(`Points with ID ${points.id} already exists.`);
     }
     set((draft) => {

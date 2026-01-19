@@ -23,7 +23,7 @@ export const createLayerSlice: TissUUmapsStateCreator<LayerSlice> = (
   ...initialLayerSliceState,
   addLayer: (layer, index) => {
     const state = get();
-    if (state.layers.find((x) => x.id === layer.id) !== undefined) {
+    if (state.layers.some((x) => x.id === layer.id)) {
       throw new Error(`Layer with ID ${layer.id} already exists.`);
     }
     set((draft) => {

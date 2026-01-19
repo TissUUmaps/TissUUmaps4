@@ -35,7 +35,7 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
   ...initialLabelsSliceState,
   addLabels: (labels, index) => {
     const state = get();
-    if (state.labels.find((x) => x.id === labels.id) !== undefined) {
+    if (state.labels.some((x) => x.id === labels.id)) {
       throw new Error(`Labels with ID ${labels.id} already exists.`);
     }
     set((draft) => {
