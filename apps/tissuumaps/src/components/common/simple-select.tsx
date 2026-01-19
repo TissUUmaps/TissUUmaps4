@@ -13,8 +13,8 @@ export function SimpleSelect<TItem, TValue>({
   items: TItem[];
   itemLabel: (item: TItem) => string;
   itemValue: (item: TItem) => TValue;
-  value: TValue | null;
-  onValueChange: (value: TValue | null) => void;
+  value?: TValue | null;
+  onValueChange?: (value: TValue | null) => void;
   className?: string;
 }) {
   return (
