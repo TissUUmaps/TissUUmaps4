@@ -10,13 +10,15 @@ import { useColorConfigContext } from "./context";
 
 export { ColorConfigContextProvider } from "./ColorConfigContextProvider";
 
+export type ColorConfigControlProps = {
+  defaultValue: Color;
+  className?: string;
+};
+
 export function ColorConfigControl({
   defaultValue,
   className,
-}: {
-  defaultValue: Color;
-  className?: string;
-}) {
+}: ColorConfigControlProps) {
   const { currentSource } = useColorConfigContext();
 
   switch (currentSource) {
@@ -32,29 +34,36 @@ export function ColorConfigControl({
     case "groupBy":
       return <ColorConfigGroupByControl className={className} />;
     case "random":
-      return <ColorConfigRandomControl />;
+      return <ColorConfigRandomControl className={className} />;
   }
 }
+
+type ColorConfigValueControlProps = {
+  defaultValue: Color;
+  className?: string;
+};
 
 function ColorConfigValueControl({
   defaultValue,
   className,
-}: {
-  defaultValue: Color;
-  className?: string;
-}) {
+}: ColorConfigValueControlProps) {
   const { currentValue, setCurrentValue } = useColorConfigContext();
 
   return (
-    <ColorPicker
-      color={currentValue ?? defaultValue}
-      onColorChange={setCurrentValue}
-      className={className}
-    />
+    <div className={className}>
+      <ColorPicker
+        color={currentValue ?? defaultValue}
+        onColorChange={setCurrentValue}
+      />
+    </div>
   );
 }
 
-function ColorConfigFromControl({ className }: { className?: string }) {
+type ColorConfigFromControlProps = {
+  className?: string;
+};
+
+function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
   const {
     currentFromTable,
     currentFromRangeMin,
@@ -70,60 +79,82 @@ function ColorConfigFromControl({ className }: { className?: string }) {
 
   return (
     <div className={className}>
-      <SimpleSelect
-        items={tables}
-        itemLabel={(table) => table.name}
-        itemValue={(table) => table.id}
-        value={currentFromTable}
-        onValueChange={setCurrentFromTable}
-      />
-      {/* TODO column combobox */}
-      <div className="grid grid-cols-2">
-        <Field>
-          <FieldLabel>Min</FieldLabel>
-          <FieldControl
-            render={
-              <Input
-                type="number"
-                value={currentFromRangeMin ?? ""}
-                onChange={(event) =>
-                  setCurrentFromRangeMin(
-                    event.target.value ? Number(event.target.value) : undefined,
-                  )
-                }
-              />
-            }
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Max</FieldLabel>
-          <FieldControl
-            render={
-              <Input
-                type="number"
-                value={currentFromRangeMax ?? ""}
-                onChange={(event) =>
-                  setCurrentFromRangeMax(
-                    event.target.value ? Number(event.target.value) : undefined,
-                  )
-                }
-              />
-            }
-          />
-        </Field>
-      </div>
-      <SimpleSelect
-        items={Object.entries(colorPalettes)}
-        itemLabel={([paletteId]) => paletteId}
-        itemValue={([paletteId]) => paletteId}
-        value={currentFromPalette}
-        onValueChange={setCurrentFromPalette}
-      />
+      <Field>
+        <FieldLabel>Table</FieldLabel>
+        <FieldControl
+          render={
+            <SimpleSelect
+              items={tables}
+              itemLabel={(table) => table.name}
+              itemValue={(table) => table.id}
+              value={currentFromTable}
+              onValueChange={setCurrentFromTable}
+            />
+          }
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Column</FieldLabel>
+        {/* TODO column combobox */}
+        <FieldControl />
+      </Field>
+      <Field>
+        <FieldLabel>Min</FieldLabel>
+        <FieldControl
+          render={
+            <Input
+              type="number"
+              value={currentFromRangeMin ?? ""}
+              onChange={(event) =>
+                setCurrentFromRangeMin(
+                  event.target.value ? Number(event.target.value) : undefined,
+                )
+              }
+            />
+          }
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Max</FieldLabel>
+        <FieldControl
+          render={
+            <Input
+              type="number"
+              value={currentFromRangeMax ?? ""}
+              onChange={(event) =>
+                setCurrentFromRangeMax(
+                  event.target.value ? Number(event.target.value) : undefined,
+                )
+              }
+            />
+          }
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Palette</FieldLabel>
+        <FieldControl
+          render={
+            <SimpleSelect
+              items={Object.entries(colorPalettes)}
+              itemLabel={([paletteId]) => paletteId}
+              itemValue={([paletteId]) => paletteId}
+              value={currentFromPalette}
+              onValueChange={setCurrentFromPalette}
+            />
+          }
+        />
+      </Field>
     </div>
   );
 }
 
-function ColorConfigGroupByControl({ className }: { className?: string }) {
+type ColorConfigGroupByControlProps = {
+  className?: string;
+};
+
+function ColorConfigGroupByControl({
+  className,
+}: ColorConfigGroupByControlProps) {
   const { currentGroupByTable, setCurrentGroupByTable } =
     useColorConfigContext();
 
@@ -144,7 +175,13 @@ function ColorConfigGroupByControl({ className }: { className?: string }) {
   );
 }
 
-function ColorConfigRandomControl({ className }: { className?: string }) {
+type ColorConfigRandomControlProps = {
+  className?: string;
+};
+
+function ColorConfigRandomControl({
+  className,
+}: ColorConfigRandomControlProps) {
   const { currentRandomPalette, setCurrentRandomPalette } =
     useColorConfigContext();
 

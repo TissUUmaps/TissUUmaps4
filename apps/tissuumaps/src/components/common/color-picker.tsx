@@ -6,46 +6,32 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Square } from "lucide-react";
-import { useEffect, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 
 import { type Color, ColorUtils } from "@tissuumaps/core";
 
 import { Field, FieldControl, FieldLabel } from "./field";
 
+export type ColorPickerProps = {
+  color: Color;
+  onColorChange: (color: Color) => void;
+  className?: string;
+};
+
 export function ColorPicker({
   color,
   onColorChange,
   className,
-}: {
-  color: Color;
-  onColorChange: (newColor: Color) => void;
-  className?: string;
-}) {
-  const [r, setR] = useState<number>(color.r);
-  const [g, setG] = useState<number>(color.g);
-  const [b, setB] = useState<number>(color.b);
-
-  useEffect(() => {
-    if (color.r !== r || color.g !== g || color.b !== b) {
-      onColorChange({ r, g, b });
-    }
-  }, [r, g, b, color, onColorChange]);
-
+}: ColorPickerProps) {
   return (
     <Popover>
       <PopoverTrigger render={<Button className={className} />}>
-        Pick color <Square fill={`rgb(${r}, ${g}, ${b})`} />
+        Pick color <Square fill={`rgb(${color.r}, ${color.g}, ${color.b})`} />
       </PopoverTrigger>
       <PopoverContent>
         <HexColorPicker
-          color={ColorUtils.toHex({ r, g, b })}
-          onChange={(hex) => {
-            const { r, g, b } = ColorUtils.fromHex(hex);
-            setR(r);
-            setG(g);
-            setB(b);
-          }}
+          color={ColorUtils.toHex(color)}
+          onChange={(hex) => onColorChange(ColorUtils.fromHex(hex))}
         />
         <div className="grid grid-cols-3 w-full">
           <Field>
@@ -54,10 +40,12 @@ export function ColorPicker({
               render={
                 <Input
                   type="number"
-                  value={r}
+                  value={color.r}
                   min={0}
                   max={255}
-                  onChange={(event) => setR(Number(event.target.value))}
+                  onChange={(event) =>
+                    onColorChange({ ...color, r: +event.target.value })
+                  }
                 />
               }
             />
@@ -68,10 +56,12 @@ export function ColorPicker({
               render={
                 <Input
                   type="number"
-                  value={g}
+                  value={color.g}
                   min={0}
                   max={255}
-                  onChange={(event) => setG(Number(event.target.value))}
+                  onChange={(event) =>
+                    onColorChange({ ...color, g: +event.target.value })
+                  }
                 />
               }
             />
@@ -82,10 +72,12 @@ export function ColorPicker({
               render={
                 <Input
                   type="number"
-                  value={b}
+                  value={color.b}
                   min={0}
                   max={255}
-                  onChange={(event) => setB(Number(event.target.value))}
+                  onChange={(event) =>
+                    onColorChange({ ...color, b: +event.target.value })
+                  }
                 />
               }
             />

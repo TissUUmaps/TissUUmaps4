@@ -2,11 +2,14 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { useColorConfigContext } from "./context";
 
-export function ColorConfigSourceToggleGroup({
-  className,
-}: {
-  className?: string;
-}) {
+export type ColorConfigSourceToggleGroupProps = Omit<
+  Parameters<typeof ToggleGroup>[0],
+  "value" | "onValueChange"
+>;
+
+export function ColorConfigSourceToggleGroup(
+  props: ColorConfigSourceToggleGroupProps,
+) {
   const { currentSource, setCurrentSource } = useColorConfigContext();
   return (
     <ToggleGroup
@@ -14,7 +17,7 @@ export function ColorConfigSourceToggleGroup({
       onValueChange={(value) =>
         setCurrentSource(value[0] as typeof currentSource)
       }
-      className={className}
+      {...props}
     >
       <ToggleGroupItem value={"value" satisfies typeof currentSource}>
         value

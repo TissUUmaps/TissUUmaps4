@@ -14,17 +14,19 @@ import { ColorConfigContext } from "./context";
 
 type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 
+export type ColorConfigContextProviderProps = {
+  colorConfig: ColorConfig;
+  onColorConfigChange: (newColorConfig: ColorConfig) => void;
+  defaultColorConfigSource: ColorConfigSource;
+  children: ReactNode;
+};
+
 export function ColorConfigContextProvider({
   colorConfig,
   onColorConfigChange,
   defaultColorConfigSource,
   children,
-}: {
-  colorConfig: ColorConfig;
-  onColorConfigChange: (newColorConfig: ColorConfig) => void;
-  defaultColorConfigSource: ColorConfigSource;
-  children: ReactNode;
-}) {
+}: ColorConfigContextProviderProps) {
   const [currentSource, setCurrentSource] = useState<ColorConfigSource>(
     colorConfig.source ?? defaultColorConfigSource,
   );
