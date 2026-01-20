@@ -7,8 +7,8 @@ export interface PointsDataLoader<
 }
 
 export interface PointsData extends ItemsData {
-  suggestDimensionSearchValues(currentDimensionSearchValue: string): string[];
-  getDimensions(searchValue: string): string[];
+  suggestDimensionQueries(currentQuery: string): string[];
+  getDimension(query: string): string | null;
   loadCoordinates(
     dimension: string,
     options: { signal?: AbortSignal },

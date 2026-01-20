@@ -52,8 +52,12 @@ export class CSVTableData implements TableData {
     return this._index;
   }
 
-  suggestColumnSearchValues(currentColumnSearchValue: string): string[] {
-    return this.getColumns(currentColumnSearchValue);
+  suggestColumnQueries(currentQuery: string): string[] {
+    return this._columns.filter((column) => column.includes(currentQuery));
+  }
+
+  getColumn(query: string): string | null {
+    return this._columns.includes(query) ? query : null;
   }
 
   getColumns(searchValue: string): string[] {

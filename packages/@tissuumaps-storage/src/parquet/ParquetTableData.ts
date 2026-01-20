@@ -55,15 +55,12 @@ export class ParquetTableData implements TableData {
     return this._index;
   }
 
-  suggestColumnSearchValues(currentColumnSearchValue: string): string[] {
-    return this.getColumns(currentColumnSearchValue);
+  suggestColumnQueries(currentQuery: string): string[] {
+    return this._columns.filter((column) => column.includes(currentQuery));
   }
 
-  getColumns(searchValue: string): string[] {
-    searchValue = searchValue.toLowerCase();
-    return this._columns.filter((columns) =>
-      columns.toLowerCase().includes(searchValue),
-    );
+  getColumn(query: string): string | null {
+    return this._columns.includes(query) ? query : null;
   }
 
   async loadColumn<T>(
