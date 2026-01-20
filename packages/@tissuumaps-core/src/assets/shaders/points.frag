@@ -24,7 +24,7 @@ void main() {
     if(v_color.a == 0.0) {
         discard;
     }
-    vec2 uv = (float(v_marker.xy) + gl_PointCoord.xy) / float(MARKER_ATLAS_GRID_SIZE);
+    vec2 uv = (vec2(v_marker.xy) + gl_PointCoord.xy) / float(MARKER_ATLAS_GRID_SIZE);
     float dist = (texture(u_markerAtlas, uv, TEXTURE_LOD_BIAS)[v_marker.z] - 0.5) * 255.0 / DISTANCE_MULTIPLIER;
     float pixelWidth = dFdx(uv.x) * float(textureSize(u_markerAtlas, 0).x);
     float alpha = v_color.a * clamp(dist / pixelWidth + 0.5, 0.0, 1.0);
