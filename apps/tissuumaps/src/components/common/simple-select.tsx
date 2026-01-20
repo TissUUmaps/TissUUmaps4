@@ -10,7 +10,10 @@ export type SimpleSelectProps<
   items: TItem[];
   itemLabel: (item: TItem) => string;
   itemValue: (item: TItem) => TValue;
-} & Omit<SelectPrimitive.Root.Props<TValue, TMultiple>, "items">;
+} & Omit<
+  SelectPrimitive.Root.Props<TValue, TMultiple>,
+  "items" | "itemToStringLabel" | "itemToStringValue"
+>;
 
 export function SimpleSelect<
   TItem,
