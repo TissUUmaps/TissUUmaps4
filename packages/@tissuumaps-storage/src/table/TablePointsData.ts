@@ -17,8 +17,20 @@ export class TablePointsData implements PointsData {
     return this._tableData.getIndex();
   }
 
-  getDimensions(): string[] {
-    return this._dimensionColumns ?? this._tableData.getColumns();
+  suggestDimensionSearchValues(currentDimensionSearchValue: string): string[] {
+    return this._tableData.suggestColumnSearchValues(
+      currentDimensionSearchValue,
+    );
+  }
+
+  getDimensions(searchValue: string): string[] {
+    if (this._dimensionColumns !== undefined) {
+      searchValue = searchValue.toLowerCase();
+      return this._dimensionColumns.filter((columns) =>
+        columns.toLowerCase().includes(searchValue),
+      );
+    }
+    return this._tableData.getColumns(searchValue);
   }
 
   async loadCoordinates(
