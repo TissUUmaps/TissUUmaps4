@@ -135,7 +135,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       this._buffers.size,
       WebGLPointsController._attribLocations.SIZE,
       1,
-      this._gl.HALF_FLOAT,
+      this._gl.FLOAT,
     );
     WebGLUtils.configureVertexIntAttribute(
       this._gl,
