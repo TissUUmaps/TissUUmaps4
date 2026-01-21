@@ -5,7 +5,6 @@ import {
   type DockviewReadyEvent,
   type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
-  themeDark,
   themeLight,
 } from "dockview-react";
 import { Moon, Sun } from "lucide-react";
@@ -193,7 +192,7 @@ export function App() {
           components={dockviewComponents}
           tabComponents={dockviewTabComponents}
           rightHeaderActionsComponent={DockviewToolbarHeaderActions}
-          theme={dark ? themeDark : themeLight}
+          theme={themeLight}
           onReady={onDockviewReady}
         />
         {toolbarElement &&
