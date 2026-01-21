@@ -8,8 +8,8 @@ export interface TableDataLoader<
 }
 
 export interface TableData extends ItemsData {
-  suggestColumnQueries(currentQuery: string): string[];
-  getColumn(query: string): string | null;
+  suggestColumnQueries(currentQuery: string): Promise<string[]>;
+  getColumn(query: string): Promise<string | null>;
   loadColumn<T>(
     column: string,
     options: { signal?: AbortSignal },

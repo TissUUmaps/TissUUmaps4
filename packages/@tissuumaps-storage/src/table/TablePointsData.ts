@@ -17,17 +17,18 @@ export class TablePointsData implements PointsData {
     return this._tableData.getIndex();
   }
 
-  suggestDimensionQueries(currentQuery: string): string[] {
+  async suggestDimensionQueries(currentQuery: string): Promise<string[]> {
     if (this._dimensionColumns !== undefined) {
-      return this._dimensionColumns.filter((column) =>
+      const filteredColumns = this._dimensionColumns.filter((column) =>
         column.includes(currentQuery),
       );
+      return await Promise.resolve(filteredColumns);
     }
-    return this._tableData.suggestColumnQueries(currentQuery);
+    return await this._tableData.suggestColumnQueries(currentQuery);
   }
 
-  getDimension(query: string): string | null {
-    return this._tableData.getColumn(query);
+  async getDimension(query: string): Promise<string | null> {
+    return await this._tableData.getColumn(query);
   }
 
   async loadCoordinates(
