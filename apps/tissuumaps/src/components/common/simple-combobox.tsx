@@ -1,160 +1,165 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Fragment, useCallback, useRef, useState, useTransition } from "react";
 
-export type SimpleComboboxProps<
-  TItem,
-  TValue,
-  TMultiple extends boolean | undefined = false,
-> = {
-  items: TItem[];
-  itemLabel: (item: TItem) => string;
-  itemValue: (item: TItem) => TValue;
-} & Omit<
-  ComboboxPrimitive.Root.Props<TValue, TMultiple>,
-  "items" | "itemToStringLabel" | "itemToStringValue"
->;
-
-export function SimpleCombobox<
-  TItem,
-  TValue,
-  TMultiple extends boolean | undefined = false,
->({
-  items,
-  itemLabel,
-  itemValue,
-  ...props
-}: SimpleComboboxProps<TItem, TValue, TMultiple>) {
-  return (
-    <ComboboxPrimitive.Root items={items} {...props}>
-      <div className="flex flex-row items-center justify-between border rounded-md px-2 py-1">
-        <ComboboxPrimitive.Input />
-        <div className="flex flex-row items-center">
-          <ComboboxPrimitive.Clear>
-            <XIcon />
-          </ComboboxPrimitive.Clear>
-          <ComboboxPrimitive.Trigger>
-            <ChevronDownIcon />
-          </ComboboxPrimitive.Trigger>
-        </div>
-      </div>
-      <ComboboxPrimitive.Portal>
-        <ComboboxPrimitive.Positioner>
-          <ComboboxPrimitive.Popup>
-            <ComboboxPrimitive.Empty>Not found</ComboboxPrimitive.Empty>
-            <ComboboxPrimitive.List>
-              {items &&
-                items.map((item, index) => (
-                  <ComboboxPrimitive.Item
-                    key={index}
-                    value={itemValue(item)}
-                    className="grid grid-cols-2 items-center"
-                  >
-                    <ComboboxPrimitive.ItemIndicator>
-                      <CheckIcon />
-                    </ComboboxPrimitive.ItemIndicator>
-                    <div>{itemLabel(item)}</div>
-                  </ComboboxPrimitive.Item>
-                ))}
-            </ComboboxPrimitive.List>
-          </ComboboxPrimitive.Popup>
-        </ComboboxPrimitive.Positioner>
-      </ComboboxPrimitive.Portal>
-    </ComboboxPrimitive.Root>
-  );
-}
-
-export type SimpleSearchableComboboxProps<TItem> = {
-  getItem: (query: string) => TItem | null;
-  suggestQueries: (currentQuery: string) => string[];
+export type SimpleAsyncComboboxProps<TItem> = {
+  selectedItem?: TItem | null;
   onSelectedItemChange?: (item: TItem | null) => void;
+  getItem?: (query: string) => Promise<TItem | null>;
+  suggestQueries?: (currentQuery: string) => Promise<string[]>;
 } & Omit<
   ComboboxPrimitive.Root.Props<string, false>,
   "filter" | "items" | "inputValue" | "onInputValueChange" | "onValueChange"
 >;
 
-export function SimpleSearchableCombobox<TItem>({
+export function SimpleAsyncCombobox<TItem>({
+  selectedItem,
+  onSelectedItemChange,
   getItem,
   suggestQueries,
-  onSelectedItemChange,
   ...props
-}: SimpleSearchableComboboxProps<TItem>) {
-  const [inputValue, setInputValue] = useState<string>("");
-  const [queries, setQueries] = useState<string[]>(suggestQueries(""));
-  const [selectedItem, setSelectedItem] = useState<TItem | null>(null);
+}: SimpleAsyncComboboxProps<TItem>) {
+  const [currentQuery, setCurrentQuery] = useState<string>("");
 
-  const updateSelectedItem = useCallback(
-    (newSelectedItem: TItem | null) => {
-      if (newSelectedItem !== selectedItem) {
-        setSelectedItem(newSelectedItem);
-        if (onSelectedItemChange !== undefined) {
-          onSelectedItemChange(newSelectedItem);
-        }
-      }
-    },
-    [selectedItem, onSelectedItemChange],
-  );
-
-  const handleInputValueChange = useCallback(
-    (inputValue: string) => {
-      updateSelectedItem(getItem(inputValue));
-      setQueries(suggestQueries(inputValue));
-      setInputValue(inputValue);
-    },
-    [getItem, suggestQueries, updateSelectedItem],
-  );
-
-  const handleValueChange = useCallback(
-    (selectedQuery: string | null) => {
-      if (selectedQuery !== null) {
-        updateSelectedItem(getItem(selectedQuery));
-        setQueries(suggestQueries(selectedQuery));
-        setInputValue(selectedQuery);
+  const [suggestedQueries, setSuggestedQueries] = useState<string[]>([]);
+  const [isSuggestedQueriesTransitionPending, startSuggestedQueriesTransition] =
+    useTransition();
+  const suggestedQueriesTransitionAbortControllerRef =
+    useRef<AbortController | null>(null);
+  const updateSuggestedQueries = useCallback(
+    (currentQuery: string) => {
+      suggestedQueriesTransitionAbortControllerRef.current?.abort();
+      if (suggestQueries !== undefined) {
+        const controller = new AbortController();
+        suggestedQueriesTransitionAbortControllerRef.current = controller;
+        startSuggestedQueriesTransition(async () => {
+          const queries = await suggestQueries(currentQuery);
+          if (!controller.signal.aborted) {
+            startSuggestedQueriesTransition(() => setSuggestedQueries(queries));
+          }
+        });
       } else {
-        updateSelectedItem(null);
-        setQueries(suggestQueries(""));
-        setInputValue("");
+        suggestedQueriesTransitionAbortControllerRef.current = null;
+        setSuggestedQueries([]);
       }
     },
-    [getItem, suggestQueries, updateSelectedItem],
+    [suggestQueries],
   );
+
+  const [, startSelectedItemTransition] = useTransition();
+  const selectedItemTransitionAbortControllerRef =
+    useRef<AbortController | null>(null);
+  const updateSelectedItem = useCallback(
+    (selectedQuery: string | null) => {
+      selectedItemTransitionAbortControllerRef.current?.abort();
+      if (selectedQuery !== null && getItem !== undefined) {
+        const controller = new AbortController();
+        selectedItemTransitionAbortControllerRef.current = controller;
+        startSelectedItemTransition(async () => {
+          const selectedItem = await getItem(selectedQuery);
+          if (!controller.signal.aborted) {
+            startSelectedItemTransition(() => {
+              onSelectedItemChange?.(selectedItem);
+            });
+          }
+        });
+      } else {
+        selectedItemTransitionAbortControllerRef.current = null;
+        onSelectedItemChange?.(null);
+      }
+    },
+    [getItem, onSelectedItemChange],
+  );
+
+  function getStatus() {
+    if (isSuggestedQueriesTransitionPending) {
+      return (
+        <Fragment>
+          <span
+            aria-hidden
+            className="inline-block size-3 animate-spin rounded-full border border-current border-r-transparent rtl:border-r-current rtl:border-l-transparent"
+          />
+          Searching...
+        </Fragment>
+      );
+    }
+    if (!currentQuery) {
+      return selectedItem === null ? "Type to search" : null;
+    }
+    if (suggestedQueries.length === 0) {
+      return `No matches for "${currentQuery}"`;
+    }
+    return null;
+  }
+
+  function getEmptyMessage() {
+    if (
+      currentQuery &&
+      !isSuggestedQueriesTransitionPending &&
+      suggestedQueries.length == 0
+    ) {
+      return "Try a different search term.";
+    }
+    return null;
+  }
 
   return (
     <ComboboxPrimitive.Root
       filter={null}
-      items={queries}
-      inputValue={inputValue}
-      onInputValueChange={handleInputValueChange}
-      onValueChange={handleValueChange}
+      items={suggestedQueries}
+      inputValue={currentQuery}
+      onInputValueChange={(inputValue: string) => {
+        updateSuggestedQueries(inputValue);
+        setCurrentQuery(inputValue);
+      }}
+      onValueChange={(selectedValue: string | null) => {
+        updateSelectedItem(selectedValue);
+        setCurrentQuery("");
+      }}
       {...props}
     >
-      <div className="flex flex-row items-center justify-between border rounded-md px-2 py-1">
-        <ComboboxPrimitive.Input />
-        <div className="flex flex-row items-center">
-          <ComboboxPrimitive.Clear>
-            <XIcon />
+      <div className="relative flex flex-col gap-1 text-sm font-medium leading-5 text-gray-900 w-[16rem] md:w-[20rem] [&>input]:pr-8 has-[.combobox-clear]:[&>input]:pr-[calc(0.5rem+1.5rem*2)]">
+        <ComboboxPrimitive.Input className="box-border h-10 w-full rounded-md border border-gray-200 bg-[canvas] pl-3.5 text-base font-normal text-gray-900 focus:outline-2 focus:-outline-offset-1 focus:outline-blue-800" />
+        <div className="absolute bottom-0 right-2 flex h-10 items-center justify-center text-gray-600">
+          <ComboboxPrimitive.Clear
+            className="combobox-clear flex h-10 w-6 items-center justify-center rounded border-0 bg-transparent p-0"
+            aria-label="Clear selection"
+          >
+            <XIcon className="size-4" />
           </ComboboxPrimitive.Clear>
-          <ComboboxPrimitive.Trigger>
-            <ChevronDownIcon />
+          <ComboboxPrimitive.Trigger
+            className="flex h-10 w-6 items-center justify-center rounded border-0 bg-transparent p-0"
+            aria-label="Open popup"
+          >
+            <ChevronDownIcon className="size-4" />
           </ComboboxPrimitive.Trigger>
         </div>
       </div>
       <ComboboxPrimitive.Portal>
-        <ComboboxPrimitive.Positioner>
-          <ComboboxPrimitive.Popup>
-            <ComboboxPrimitive.Empty>Not found</ComboboxPrimitive.Empty>
+        <ComboboxPrimitive.Positioner className="outline-none" sideOffset={4}>
+          <ComboboxPrimitive.Popup
+            className="box-border w-(--anchor-width) max-h-[min(var(--available-height),23rem)] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto scroll-pb-2 scroll-pt-2 overscroll-contain rounded-md bg-[canvas] py-2 text-gray-900 shadow-[0_10px_15px_-3px_var(--color-gray-200),0_4px_6px_-4px_var(--color-gray-200)] outline outline-gray-200 transition-[transform,scale,opacity] data-ending-style:transition-none data-starting-style:scale-95 data-starting-style:opacity-0 dark:-outline-offset-1 dark:shadow-none dark:outline-gray-300"
+            aria-busy={isSuggestedQueriesTransitionPending || undefined}
+          >
+            <ComboboxPrimitive.Status className="flex items-center gap-2 py-1 pl-4 pr-5 text-sm text-gray-600 empty:hidden">
+              {getStatus()}
+            </ComboboxPrimitive.Status>
+            <ComboboxPrimitive.Empty className="px-4 py-2 text-[0.875rem] leading-4 text-gray-600 empty:hidden">
+              {getEmptyMessage()}
+            </ComboboxPrimitive.Empty>
             <ComboboxPrimitive.List>
-              {/* TODO virtualize */}
-              {queries.map((query, index) => (
+              {suggestedQueries.map((suggestedQuery, index) => (
                 <ComboboxPrimitive.Item
                   key={index}
-                  value={query}
-                  className="grid grid-cols-2 items-center"
+                  value={suggestedQuery}
+                  className="grid cursor-default select-none grid-cols-[0.75rem_1fr] items-start gap-2 py-2 pl-4 pr-5 text-base leading-[1.2rem] outline-none [@media(hover:hover)]:data-highlighted:relative [@media(hover:hover)]:data-highlighted:z-0 [@media(hover:hover)]:data-highlighted:text-gray-900 [@media(hover:hover)]:data-highlighted:before:absolute [@media(hover:hover)]:data-highlighted:before:inset-y-0 [@media(hover:hover)]:data-highlighted:before:inset-x-2 [@media(hover:hover)]:data-highlighted:before:z-[-1] [@media(hover:hover)]:data-highlighted:before:rounded [@media(hover:hover)]:data-highlighted:before:bg-gray-100 [@media(hover:hover)]:data-highlighted:before:content-['']"
                 >
-                  <ComboboxPrimitive.ItemIndicator>
-                    <CheckIcon />
+                  <ComboboxPrimitive.ItemIndicator className="col-start-1 mt-1">
+                    <CheckIcon className="size-3" />
                   </ComboboxPrimitive.ItemIndicator>
-                  <div>{query}</div>
+                  <div className="col-start-2 text-[0.8125rem] text-gray-600">
+                    {suggestedQuery}
+                  </div>
                 </ComboboxPrimitive.Item>
               ))}
             </ComboboxPrimitive.List>

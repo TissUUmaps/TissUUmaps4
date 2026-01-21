@@ -1,7 +1,9 @@
+import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { Input } from "@/components/ui/input";
 import { useTissUUmaps } from "@/store";
+import { useEffect, useState } from "react";
 
-import { type Color, colorPalettes } from "@tissuumaps/core";
+import { type Color, type TableData, colorPalettes } from "@tissuumaps/core";
 
 import { ColorPicker } from "../../common/color-picker";
 import { Field, FieldControl, FieldLabel } from "../../common/field";
@@ -66,16 +68,42 @@ type ColorConfigFromControlProps = {
 function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
   const {
     currentFromTable,
+    currentFromColumn,
     currentFromRangeMin,
     currentFromRangeMax,
     currentFromPalette,
     setCurrentFromTable,
+    setCurrentFromColumn,
     setCurrentFromRangeMin,
     setCurrentFromRangeMax,
     setCurrentFromPalette,
   } = useColorConfigContext();
 
   const tables = useTissUUmaps((state) => state.tables);
+  const loadTable = useTissUUmaps((state) => state.loadTable);
+
+  const [currentFromTableData, setCurrentFromTableData] =
+    useState<TableData | null>(null);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    async function loadCurrentFromTableData() {
+      if (currentFromTable) {
+        const tableData = await loadTable(currentFromTable, {
+          signal: abortController.signal,
+        });
+        if (!abortController.signal.aborted) {
+          setCurrentFromTableData(tableData);
+        }
+      }
+    }
+
+    loadCurrentFromTableData().catch(console.error);
+    return () => {
+      abortController.abort();
+    };
+  }, [currentFromTable, loadTable]);
 
   return (
     <div className={className}>
@@ -95,6 +123,20 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
       </Field>
       <Field>
         <FieldLabel>Column</FieldLabel>
+        <FieldControl
+          render={
+            <SimpleAsyncCombobox
+              selectedItem={currentFromColumn}
+              onSelectedItemChange={setCurrentFromColumn}
+              getItem={currentFromTableData?.getColumn.bind(
+                currentFromTableData,
+              )}
+              suggestQueries={currentFromTableData?.suggestColumnQueries.bind(
+                currentFromTableData,
+              )}
+            />
+          }
+        />
         {/* TODO column combobox */}
         <FieldControl />
       </Field>
