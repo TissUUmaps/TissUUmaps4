@@ -100,6 +100,7 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
     }
 
     loadCurrentFromTableData().catch(console.error);
+
     return () => {
       abortController.abort();
     };
@@ -126,8 +127,8 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
         <FieldControl
           render={
             <SimpleAsyncCombobox
-              selectedItem={currentFromColumn}
-              onSelectedItemChange={setCurrentFromColumn}
+              item={currentFromColumn}
+              onItemChange={setCurrentFromColumn}
               getItem={currentFromTableData?.getColumn.bind(
                 currentFromTableData,
               )}
@@ -137,8 +138,6 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
             />
           }
         />
-        {/* TODO column combobox */}
-        <FieldControl />
       </Field>
       <Field>
         <FieldLabel>Min</FieldLabel>
@@ -197,10 +196,39 @@ type ColorConfigGroupByControlProps = {
 function ColorConfigGroupByControl({
   className,
 }: ColorConfigGroupByControlProps) {
-  const { currentGroupByTable, setCurrentGroupByTable } =
-    useColorConfigContext();
+  const {
+    currentGroupByTable,
+    currentGroupByColumn,
+    setCurrentGroupByTable,
+    setCurrentGroupByColumn,
+  } = useColorConfigContext();
 
   const tables = useTissUUmaps((state) => state.tables);
+  const loadTable = useTissUUmaps((state) => state.loadTable);
+
+  const [currentGroupByTableData, setCurrentGroupByTableData] =
+    useState<TableData | null>(null);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    async function loadCurrentGroupByTableData() {
+      if (currentGroupByTable) {
+        const tableData = await loadTable(currentGroupByTable, {
+          signal: abortController.signal,
+        });
+        if (!abortController.signal.aborted) {
+          setCurrentGroupByTableData(tableData);
+        }
+      }
+    }
+
+    loadCurrentGroupByTableData().catch(console.error);
+
+    return () => {
+      abortController.abort();
+    };
+  }, [currentGroupByTable, loadTable]);
 
   return (
     <div className={className}>
@@ -211,7 +239,20 @@ function ColorConfigGroupByControl({
         value={currentGroupByTable}
         onValueChange={setCurrentGroupByTable}
       />
-      {/* TODO column combobox */}
+      <FieldControl
+        render={
+          <SimpleAsyncCombobox
+            item={currentGroupByColumn}
+            onItemChange={setCurrentGroupByColumn}
+            getItem={currentGroupByTableData?.getColumn.bind(
+              currentGroupByTableData,
+            )}
+            suggestQueries={currentGroupByTableData?.suggestColumnQueries.bind(
+              currentGroupByTableData,
+            )}
+          />
+        }
+      />
       {/* TODO projectMap/map select */}
     </div>
   );

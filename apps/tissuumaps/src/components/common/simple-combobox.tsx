@@ -1,27 +1,41 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
-import { Fragment, useCallback, useRef, useState, useTransition } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 export type SimpleAsyncComboboxProps<TItem> = {
-  selectedItem?: TItem | null;
-  onSelectedItemChange?: (item: TItem | null) => void;
-  getItem?: (query: string) => Promise<TItem | null>;
   suggestQueries?: (currentQuery: string) => Promise<string[]>;
+  getItem?: (query: string) => Promise<TItem | null>;
+  item?: TItem | null;
+  onItemChange?: (item: TItem | null) => void;
 } & Omit<
   ComboboxPrimitive.Root.Props<string, false>,
-  "filter" | "items" | "inputValue" | "onInputValueChange" | "onValueChange"
+  | "filter"
+  | "items"
+  | "value"
+  | "onValueChange"
+  | "inputValue"
+  | "onInputValueChange"
 >;
 
 export function SimpleAsyncCombobox<TItem>({
-  selectedItem,
-  onSelectedItemChange,
-  getItem,
   suggestQueries,
+  getItem,
+  item,
+  onItemChange,
   ...props
 }: SimpleAsyncComboboxProps<TItem>) {
   const [currentQuery, setCurrentQuery] = useState<string>("");
+  const [suggestedQueries, setSuggestedQueries] = useState<string[] | null>(
+    null,
+  );
 
-  const [suggestedQueries, setSuggestedQueries] = useState<string[]>([]);
   const [isSuggestedQueriesTransitionPending, startSuggestedQueriesTransition] =
     useTransition();
   const suggestedQueriesTransitionAbortControllerRef =
@@ -58,18 +72,20 @@ export function SimpleAsyncCombobox<TItem>({
         startSelectedItemTransition(async () => {
           const selectedItem = await getItem(selectedQuery);
           if (!controller.signal.aborted) {
-            startSelectedItemTransition(() => {
-              onSelectedItemChange?.(selectedItem);
-            });
+            startSelectedItemTransition(() => onItemChange?.(selectedItem));
           }
         });
       } else {
         selectedItemTransitionAbortControllerRef.current = null;
-        onSelectedItemChange?.(null);
+        onItemChange?.(null);
       }
     },
-    [getItem, onSelectedItemChange],
+    [getItem, onItemChange],
   );
+
+  useEffect(() => {
+    startSuggestedQueriesTransition(() => updateSuggestedQueries(""));
+  }, [updateSuggestedQueries]);
 
   function getStatus() {
     if (isSuggestedQueriesTransitionPending) {
@@ -84,9 +100,9 @@ export function SimpleAsyncCombobox<TItem>({
       );
     }
     if (!currentQuery) {
-      return selectedItem === null ? "Type to search" : null;
+      return item === null ? "Type to search" : null;
     }
-    if (suggestedQueries.length === 0) {
+    if (suggestedQueries !== null && suggestedQueries.length === 0) {
       return `No matches for "${currentQuery}"`;
     }
     return null;
@@ -95,8 +111,9 @@ export function SimpleAsyncCombobox<TItem>({
   function getEmptyMessage() {
     if (
       currentQuery &&
-      !isSuggestedQueriesTransitionPending &&
-      suggestedQueries.length == 0
+      suggestedQueries !== null &&
+      suggestedQueries.length == 0 &&
+      !isSuggestedQueriesTransitionPending
     ) {
       return "Try a different search term.";
     }
@@ -106,7 +123,7 @@ export function SimpleAsyncCombobox<TItem>({
   return (
     <ComboboxPrimitive.Root
       filter={null}
-      items={suggestedQueries}
+      items={suggestedQueries ?? []}
       inputValue={currentQuery}
       onInputValueChange={(inputValue: string) => {
         updateSuggestedQueries(inputValue);
@@ -148,7 +165,7 @@ export function SimpleAsyncCombobox<TItem>({
               {getEmptyMessage()}
             </ComboboxPrimitive.Empty>
             <ComboboxPrimitive.List>
-              {suggestedQueries.map((suggestedQuery, index) => (
+              {suggestedQueries?.map((suggestedQuery, index) => (
                 <ComboboxPrimitive.Item
                   key={index}
                   value={suggestedQuery}
