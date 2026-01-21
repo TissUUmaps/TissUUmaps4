@@ -35,7 +35,7 @@ export function SimpleSelect<
   );
   return (
     <SelectPrimitive.Root items={memoizedItems} {...props}>
-      <SelectPrimitive.Trigger className="flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border border-gray-200 pr-3 pl-3.5 text-base bg-[canvas] text-gray-900 select-none hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 data-popup-open:bg-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-300">
+      <SelectPrimitive.Trigger className="flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border pr-3 pl-3.5 select-none hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 data-popup-open:bg-gray-100 dark:bg-input/30 text-foreground">
         <SelectPrimitive.Value className="data-placeholder:opacity-60" />
         <SelectPrimitive.Icon className="flex">
           <ChevronsUpDownIcon />
