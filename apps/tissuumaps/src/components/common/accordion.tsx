@@ -25,7 +25,7 @@ export function AccordionHeader({
 }: AccordionPrimitive.Header.Props) {
   return (
     <AccordionPrimitive.Header
-      className={cn("flex flex-row items-center", className)}
+      className={cn("flex flex-row items-center text-foreground", className)}
       {...props}
     >
       {children}
