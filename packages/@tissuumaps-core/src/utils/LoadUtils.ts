@@ -140,11 +140,9 @@ export class LoadUtils {
     {
       signal,
       padding,
-      sizeFactor = 1,
     }: {
       signal?: AbortSignal;
       padding?: number;
-      sizeFactor?: number;
     } = {},
   ): Promise<Float32Array> {
     signal?.throwIfAborted();
@@ -155,8 +153,7 @@ export class LoadUtils {
     const data = new Float32Array(dataLength);
     const activeConfigSource = getActiveConfigSource(sizeConfig);
     if (activeConfigSource === "value" && isValueConfig(sizeConfig)) {
-      const scaledSize = sizeConfig.value * sizeFactor;
-      data.fill(scaledSize, 0, ids.length);
+      data.fill(sizeConfig.value, 0, ids.length);
     } else if (activeConfigSource === "from" && isFromConfig(sizeConfig)) {
       const tableData = await loadTable(sizeConfig.from.table, { signal });
       signal?.throwIfAborted();
@@ -172,12 +169,9 @@ export class LoadUtils {
         const id = ids[i]!;
         const tableIndex = tableIndices.get(id);
         if (tableIndex !== undefined) {
-          const size = tableValues[tableIndex]!;
-          const scaledSize = size * sizeFactor;
-          data[i] = scaledSize;
+          data[i] = tableValues[tableIndex]!;
         } else {
-          const scaledSize = defaultSize * sizeFactor;
-          data[i] = scaledSize;
+          data[i] = defaultSize;
           e++;
         }
       }
@@ -217,15 +211,12 @@ export class LoadUtils {
           const tableIndex = tableIndices.get(id);
           if (tableIndex !== undefined) {
             const group = JSON.stringify(tableGroups[tableIndex]!);
-            const size =
+            data[i] =
               sizeMap.values.get(group) ?? // first, try to get group-specific size
               sizeMap.defaultValue ?? // then, fallback to size map default
               defaultSize; // finally, fallback to default size
-            const scaledSize = size * sizeFactor;
-            data[i] = scaledSize;
           } else {
-            const scaledSize = defaultSize * sizeFactor;
-            data[i] = scaledSize;
+            data[i] = defaultSize;
             e++;
           }
         }
@@ -233,13 +224,11 @@ export class LoadUtils {
           console.warn(`${e} IDs missing in table ${sizeConfig.groupBy.table}`);
         }
       } else {
-        const scaledSize = defaultSize * sizeFactor;
-        data.fill(scaledSize, 0, ids.length);
+        data.fill(defaultSize, 0, ids.length);
       }
     } else // activeConfigSource === undefined
     {
-      const scaledSize = defaultSize * sizeFactor;
-      data.fill(scaledSize, 0, ids.length);
+      data.fill(defaultSize, 0, ids.length);
     }
     return data;
   }

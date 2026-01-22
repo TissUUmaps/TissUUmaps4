@@ -42,8 +42,11 @@ export class WebGLPointsController extends WebGLControllerBase {
 
   private readonly _program: WebGLProgram;
   private readonly _uniformLocations: {
+    globalPointSizeFactor: WebGLUniformLocation;
     worldToViewportMatrix: WebGLUniformLocation;
-    pointSizeFactor: WebGLUniformLocation;
+    viewportSize: WebGLUniformLocation;
+    canvasSize: WebGLUniformLocation;
+    devicePixelRatio: WebGLUniformLocation;
     markerAtlas: WebGLUniformLocation;
   };
   private readonly _uniformBlockIndices: {
@@ -73,15 +76,30 @@ export class WebGLPointsController extends WebGLControllerBase {
     );
     // get uniform locations
     this._uniformLocations = {
+      globalPointSizeFactor: WebGLUtils.getUniformLocation(
+        this._gl,
+        this._program,
+        "u_globalPointSizeFactor",
+      ),
       worldToViewportMatrix: WebGLUtils.getUniformLocation(
         this._gl,
         this._program,
         "u_worldToViewportMatrix",
       ),
-      pointSizeFactor: WebGLUtils.getUniformLocation(
+      viewportSize: WebGLUtils.getUniformLocation(
         this._gl,
         this._program,
-        "u_pointSizeFactor",
+        "u_viewportSize",
+      ),
+      canvasSize: WebGLUtils.getUniformLocation(
+        this._gl,
+        this._program,
+        "u_canvasSize",
+      ),
+      devicePixelRatio: WebGLUtils.getUniformLocation(
+        this._gl,
+        this._program,
+        "u_devicePixelRatio",
       ),
       markerAtlas: WebGLUtils.getUniformLocation(
         this._gl,
@@ -105,10 +123,10 @@ export class WebGLPointsController extends WebGLControllerBase {
     };
     WebGLUtils.resizeBuffer(
       this._gl,
-      gl.UNIFORM_BUFFER,
+      this._gl.UNIFORM_BUFFER,
       this._buffers.objectsUBO,
-      WebGLPointsController._maxNumObjects * 8 * Float32Array.BYTES_PER_ELEMENT,
-      gl.DYNAMIC_DRAW,
+      WebGLPointsController._maxNumObjects * 9 * Float32Array.BYTES_PER_ELEMENT,
+      this._gl.DYNAMIC_DRAW,
     );
     // create and configure VAO
     this._vao = WebGLUtils.createVertexArray(this._gl);
@@ -243,6 +261,10 @@ export class WebGLPointsController extends WebGLControllerBase {
       this._uniformBlockIndices.objectsUBO,
       WebGLPointsController._bindingPoints.OBJECTS_UBO,
     );
+    this._gl.uniform1f(
+      this._uniformLocations.globalPointSizeFactor,
+      drawOptions.pointSizeFactor,
+    );
     this._gl.uniformMatrix3x2fv(
       this._uniformLocations.worldToViewportMatrix,
       false,
@@ -250,12 +272,19 @@ export class WebGLPointsController extends WebGLControllerBase {
         WebGLPointsController.createWorldToViewportMatrix(viewport),
       ),
     );
+    this._gl.uniform2f(
+      this._uniformLocations.viewportSize,
+      viewport.width,
+      viewport.height,
+    );
+    this._gl.uniform2f(
+      this._uniformLocations.canvasSize,
+      this._gl.canvas.width,
+      this._gl.canvas.height,
+    );
     this._gl.uniform1f(
-      this._uniformLocations.pointSizeFactor,
-      drawOptions.pointSizeFactor * // global (world) scale factor
-        (1 / viewport.width) * // scale to viewport space (in [0, 1])
-        this._gl.canvas.width * // scale viewport space to browser pixels
-        window.devicePixelRatio, // scale browser pixels to device pixels
+      this._uniformLocations.devicePixelRatio,
+      window.devicePixelRatio,
     );
     this._gl.activeTexture(this._gl.TEXTURE0);
     this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
@@ -386,7 +415,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     signal?.throwIfAborted();
     let offset = 0;
     const objectsUBOData = new Float32Array(
-      WebGLPointsController._maxNumObjects * 8,
+      WebGLPointsController._maxNumObjects * 9,
     );
     const newBufferSliceStates: PointsBufferSliceState[] = [];
     for (let i = 0; i < refs.length; i++) {
@@ -460,33 +489,18 @@ export class WebGLPointsController extends WebGLControllerBase {
       }
       if (
         bufferSliceChanged ||
-        bufferSliceState.current.layer.transform.scale !==
-          ref.layer.transform.scale ||
-        bufferSliceState.current.layer.pointSizeFactor !==
-          ref.layer.pointSizeFactor ||
         !deepEqual(
           bufferSliceState.current.points.pointSize,
           ref.points.pointSize,
-        ) ||
-        bufferSliceState.current.points.pointSizeFactor !==
-          ref.points.pointSizeFactor ||
-        bufferSliceState.current.layerConfig.transform.scale !==
-          ref.layerConfig.transform.scale
+        )
       ) {
-        let sizeFactor = ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
-        if (ref.points.pointSize.unit === "data") {
-          sizeFactor *= ref.layerConfig.transform.scale;
-          sizeFactor *= ref.layer.transform.scale;
-        } else if (ref.points.pointSize.unit === "layer") {
-          sizeFactor *= ref.layer.transform.scale;
-        }
         const sizeData = await LoadUtils.loadSizeData(
           ref.data.getIndex(),
           ref.points.pointSize,
           sizeMaps,
           defaultPointSize,
           loadTable,
-          { signal, sizeFactor },
+          { signal },
         );
         signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
@@ -580,8 +594,6 @@ export class WebGLPointsController extends WebGLControllerBase {
           layer: {
             visibility: ref.layer.visibility,
             opacity: ref.layer.opacity,
-            pointSizeFactor: ref.layer.pointSizeFactor,
-            transform: ref.layer.transform,
           },
           points: {
             visibility: ref.points.visibility,
@@ -591,12 +603,10 @@ export class WebGLPointsController extends WebGLControllerBase {
             pointColor: structuredClone(ref.points.pointColor),
             pointVisibility: structuredClone(ref.points.pointVisibility),
             pointOpacity: structuredClone(ref.points.pointOpacity),
-            pointSizeFactor: ref.points.pointSizeFactor,
           },
           layerConfig: {
             x: ref.layerConfig.x,
             y: ref.layerConfig.y,
-            transform: ref.layerConfig.transform,
           },
         },
       });
@@ -609,6 +619,8 @@ export class WebGLPointsController extends WebGLControllerBase {
         ),
         i * 8,
       );
+      objectsUBOData[WebGLPointsController._maxNumObjects * 8 + i] =
+        ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
       offset += numPoints;
     }
     WebGLUtils.loadBuffer(
@@ -634,10 +646,7 @@ type PointsBufferSliceState = {
   offset: number;
   numPoints: number;
   current: {
-    layer: Pick<
-      Layer,
-      "visibility" | "opacity" | "pointSizeFactor" | "transform"
-    >;
+    layer: Pick<Layer, "visibility" | "opacity">;
     points: Pick<
       Points,
       | "visibility"
@@ -647,8 +656,7 @@ type PointsBufferSliceState = {
       | "pointColor"
       | "pointVisibility"
       | "pointOpacity"
-      | "pointSizeFactor"
     >;
-    layerConfig: Pick<PointsLayerConfig, "x" | "y" | "transform">;
+    layerConfig: Pick<PointsLayerConfig, "x" | "y">;
   };
 };
