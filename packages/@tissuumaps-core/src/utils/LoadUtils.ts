@@ -308,15 +308,14 @@ export class LoadUtils {
           const id = ids[i]!;
           const tableIndex = tableIndices.get(id);
           if (tableIndex !== undefined) {
-            let v = tableValues[tableIndex]!;
-            if (v < vmin) {
-              v = vmin;
-            } else if (v > vmax) {
-              v = vmax;
-            }
-            v = (v - vmin) / (vmax - vmin);
-            const colorIndex = Math.floor(v * colorPalette.length);
-            const color = colorPalette[colorIndex]!;
+            const v = tableValues[tableIndex]!;
+            const vnorm = (v - vmin) / (vmax - vmin);
+            const colorIndex = Math.round(vnorm * colorPalette.length);
+            const clampedColorIndex = Math.min(
+              Math.max(0, colorIndex),
+              colorPalette.length - 1,
+            );
+            const color = colorPalette[clampedColorIndex]!;
             const packedColor = ColorUtils.packColor(color);
             data[i] = packedColor;
           } else {
