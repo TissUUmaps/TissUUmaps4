@@ -18,7 +18,7 @@ export type Config<TSource extends string> = {
  * If a source is explicitly prioritized using {@link Config.source}, that source is returned.
  *
  * Otherwise, the active source is determined by checking for the presence of configuration-specific fields in the following order:
- * - {@link ValueConfig}
+ * - {@link ConstantConfig}
  * - {@link FromConfig}
  * - {@link GroupByConfig}
  * - {@link RandomConfig}
@@ -32,8 +32,8 @@ export function getActiveConfigSource<TSource extends string>(
   if (config.source !== undefined) {
     return config.source;
   }
-  if (isValueConfig(config)) {
-    return "value" as TSource;
+  if (isConstantConfig(config)) {
+    return "constant" as TSource;
   }
   if (isFromConfig(config)) {
     return "from" as TSource;
@@ -47,23 +47,25 @@ export function getActiveConfigSource<TSource extends string>(
   return undefined;
 }
 
-/** Configuration to use a single value */
-export type ValueConfig<TValue> = Config<"value"> & {
-  /** Specification of a single value */
-  value: NonNullable<TValue>;
+/** Configuration to use a constant value */
+export type ConstantConfig<
+  TValue,
+  TConstantExtra = unknown,
+> = Config<"constant"> & {
+  /** Specification of a constant value */
+  constant: { value: NonNullable<TValue> } & TConstantExtra;
 };
 
 /**
- * Determines whether the given object is a {@link ValueConfig}
+ * Determines whether the given object is a {@link ConstantConfig}
  *
  * @param obj - The object to check
- * @returns Whether the object is an (active) {@link ValueConfig}
+ * @returns Whether the object is an (active) {@link ConstantConfig}
  */
-export function isValueConfig<TValue>(
+export function isConstantConfig<TValue, TConstantExtra = unknown>(
   obj: unknown,
-): obj is ValueConfig<TValue> {
-  const valueConfig = obj as ValueConfig<TValue>;
-  return valueConfig.source === "value" || valueConfig.value !== undefined;
+): obj is ConstantConfig<TValue, TConstantExtra> {
+  return (obj as ConstantConfig<TValue, TConstantExtra>).constant !== undefined;
 }
 
 /** Configuration to load values from a table column */
@@ -155,7 +157,7 @@ export function isRandomConfig<TRandom>(
  * Table values correspond to marker indices (see {@link Marker})
  */
 export type MarkerConfig =
-  | ValueConfig<Marker>
+  | ConstantConfig<Marker>
   | FromConfig
   | GroupByConfig<Marker>;
 
@@ -164,19 +166,37 @@ export type MarkerConfig =
  *
  * Table values correspond to sizes in the specified {@link SizeConfig.unit}
  */
-export type SizeConfig = (
-  | ValueConfig<number>
-  | FromConfig
-  | GroupByConfig<number>
-) & {
-  /**
-   * Coordinate space in which the sizes are specified
-   *
-   * @defaultValue {@link "./constants".defaultSizeUnit}
-   */
-
-  unit?: CoordinateSpace;
-};
+export type SizeConfig =
+  | ConstantConfig<
+      number,
+      {
+        /**
+         * Coordinate space in which the size values are specified
+         *
+         * @defaultValue {@link "./constants".defaultSizeUnit}
+         */
+        unit?: CoordinateSpace;
+      }
+    >
+  | FromConfig<{
+      /**
+       * Coordinate space in which the size values are specified
+       *
+       * @defaultValue {@link "./constants".defaultSizeUnit}
+       */
+      unit?: CoordinateSpace;
+    }>
+  | GroupByConfig<
+      number,
+      {
+        /**
+         * Coordinate space in which the size values are specified
+         *
+         * @defaultValue {@link "./constants".defaultSizeUnit}
+         */
+        unit?: CoordinateSpace;
+      }
+    >;
 
 /**
  * Color configuration
@@ -184,7 +204,7 @@ export type SizeConfig = (
  * Numerical table values are linearly mapped to colors in the specified {@link ColorConfig.from.palette} using the specified {@link ColorConfig.from.range}.
  */
 export type ColorConfig =
-  | ValueConfig<Color>
+  | ConstantConfig<Color>
   | FromConfig<{
       /**
        * Value range that is linearly mapped to {@link ColorConfig.from.palette}
@@ -210,7 +230,7 @@ export type ColorConfig =
  * Numerical table values are interpreted as booleans, where `0` is `false` and any other value is `true`.
  */
 export type VisibilityConfig =
-  | ValueConfig<boolean>
+  | ConstantConfig<boolean>
   | FromConfig
   | GroupByConfig<boolean>;
 
@@ -220,6 +240,6 @@ export type VisibilityConfig =
  * Numerical table values are interpreted as opacities between `0` (fully transparent) and `1` (fully opaque).
  */
 export type OpacityConfig =
-  | ValueConfig<number>
+  | ConstantConfig<number>
   | FromConfig
   | GroupByConfig<number>;

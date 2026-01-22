@@ -27,12 +27,12 @@ import {
  * Default values for {@link RawShapes}
  */
 export const shapesDefaults = {
-  shapeFillColor: { value: defaultShapeFillColor },
-  shapeFillVisibility: { value: defaultShapeFillVisibility },
-  shapeFillOpacity: { value: defaultShapeFillOpacity },
-  shapeStrokeColor: { value: defaultShapeStrokeColor },
-  shapeStrokeVisibility: { value: defaultShapeStrokeVisibility },
-  shapeStrokeOpacity: { value: defaultShapeStrokeOpacity },
+  shapeFillColor: { constant: { value: defaultShapeFillColor } },
+  shapeFillVisibility: { constant: { value: defaultShapeFillVisibility } },
+  shapeFillOpacity: { constant: { value: defaultShapeFillOpacity } },
+  shapeStrokeColor: { constant: { value: defaultShapeStrokeColor } },
+  shapeStrokeVisibility: { constant: { value: defaultShapeStrokeVisibility } },
+  shapeStrokeOpacity: { constant: { value: defaultShapeStrokeOpacity } },
 } as const satisfies Partial<RawShapes>;
 
 /**

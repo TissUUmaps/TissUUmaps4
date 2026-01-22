@@ -4,16 +4,24 @@ import markersUrl from "../assets/markers/markers.png?url";
 import pointsFragmentShader from "../assets/shaders/points.frag?raw";
 import pointsVertexShader from "../assets/shaders/points.vert?raw";
 import {
+  getActiveConfigSource,
+  isConstantConfig,
+  isFromConfig,
+  isGroupByConfig,
+} from "../model/configs";
+import {
   defaultPointColor,
   defaultPointMarker,
   defaultPointOpacity,
   defaultPointSize,
   defaultPointVisibility,
+  defaultSizeUnit,
 } from "../model/constants";
 import { type Layer } from "../model/layer";
 import { type Points, type PointsLayerConfig } from "../model/points";
 import {
   type Color,
+  type CoordinateSpace,
   type DrawOptions,
   Marker,
   type ValueMap,
@@ -27,7 +35,7 @@ import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLControllerBase } from "./WebGLControllerBase";
 
 export class WebGLPointsController extends WebGLControllerBase {
-  private static readonly _maxNumObjects = 256; // see vertex shader
+  private static readonly _maxNumObjects = 2048; // see vertex shader
   private static readonly _attribLocations = {
     X: 0,
     Y: 1,
@@ -42,7 +50,7 @@ export class WebGLPointsController extends WebGLControllerBase {
 
   private readonly _program: WebGLProgram;
   private readonly _uniformLocations: {
-    globalPointSizeFactor: WebGLUniformLocation;
+    worldPointSizeFactor: WebGLUniformLocation;
     worldToViewportMatrix: WebGLUniformLocation;
     viewportSize: WebGLUniformLocation;
     canvasSize: WebGLUniformLocation;
@@ -76,10 +84,10 @@ export class WebGLPointsController extends WebGLControllerBase {
     );
     // get uniform locations
     this._uniformLocations = {
-      globalPointSizeFactor: WebGLUtils.getUniformLocation(
+      worldPointSizeFactor: WebGLUtils.getUniformLocation(
         this._gl,
         this._program,
-        "u_globalPointSizeFactor",
+        "u_worldPointSizeFactor",
       ),
       worldToViewportMatrix: WebGLUtils.getUniformLocation(
         this._gl,
@@ -125,7 +133,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       this._gl,
       this._gl.UNIFORM_BUFFER,
       this._buffers.objectsUBO,
-      WebGLPointsController._maxNumObjects * 9 * Float32Array.BYTES_PER_ELEMENT,
+      WebGLPointsController._maxNumObjects * 8 * Float32Array.BYTES_PER_ELEMENT,
       this._gl.DYNAMIC_DRAW,
     );
     // create and configure VAO
@@ -177,7 +185,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       this._buffers.object,
       WebGLPointsController._attribLocations.OBJECT,
       1,
-      this._gl.UNSIGNED_BYTE,
+      this._gl.UNSIGNED_SHORT,
     );
     this._gl.bindVertexArray(null);
   }
@@ -262,7 +270,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       WebGLPointsController._bindingPoints.OBJECTS_UBO,
     );
     this._gl.uniform1f(
-      this._uniformLocations.globalPointSizeFactor,
+      this._uniformLocations.worldPointSizeFactor,
       drawOptions.pointSizeFactor,
     );
     this._gl.uniformMatrix3x2fv(
@@ -347,7 +355,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       this._gl,
       this._gl.ARRAY_BUFFER,
       this._buffers.object,
-      n * Uint8Array.BYTES_PER_ELEMENT,
+      n * Uint16Array.BYTES_PER_ELEMENT,
       this._gl.STATIC_DRAW,
     );
     this._currentBufferSize = n;
@@ -415,7 +423,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     signal?.throwIfAborted();
     let offset = 0;
     const objectsUBOData = new Float32Array(
-      WebGLPointsController._maxNumObjects * 9,
+      WebGLPointsController._maxNumObjects * 8,
     );
     const newBufferSliceStates: PointsBufferSliceState[] = [];
     for (let i = 0; i < refs.length; i++) {
@@ -494,13 +502,40 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.points.pointSize,
         )
       ) {
+        let activeUnit: CoordinateSpace;
+        const activeSource = getActiveConfigSource(ref.points.pointSize);
+        if (
+          activeSource === "constant" &&
+          isConstantConfig(ref.points.pointSize)
+        ) {
+          activeUnit = ref.points.pointSize.constant.unit ?? defaultSizeUnit;
+        } else if (
+          activeSource === "from" &&
+          isFromConfig(ref.points.pointSize)
+        ) {
+          activeUnit = ref.points.pointSize.from.unit ?? defaultSizeUnit;
+        } else if (
+          activeSource === "groupBy" &&
+          isGroupByConfig(ref.points.pointSize)
+        ) {
+          activeUnit = ref.points.pointSize.groupBy.unit ?? defaultSizeUnit;
+        } else {
+          activeUnit = defaultSizeUnit;
+        }
+        let sizeFactor = ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
+        if (activeUnit === "data") {
+          sizeFactor *= ref.layerConfig.transform.scale;
+        }
+        if (activeUnit === "data" || activeUnit === "layer") {
+          sizeFactor *= ref.layer.transform.scale;
+        }
         const sizeData = await LoadUtils.loadSizeData(
           ref.data.getIndex(),
           ref.points.pointSize,
           sizeMaps,
           defaultPointSize,
           loadTable,
-          { signal },
+          { signal, sizeFactor },
         );
         signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
@@ -582,7 +617,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           this._gl,
           this._gl.ARRAY_BUFFER,
           this._buffers.object,
-          new Uint8Array(numPoints).fill(i),
+          new Uint16Array(numPoints).fill(i),
           { offset },
         );
       }
@@ -619,8 +654,6 @@ export class WebGLPointsController extends WebGLControllerBase {
         ),
         i * 8,
       );
-      objectsUBOData[WebGLPointsController._maxNumObjects * 8 + i] =
-        ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
       offset += numPoints;
     }
     WebGLUtils.loadBuffer(
