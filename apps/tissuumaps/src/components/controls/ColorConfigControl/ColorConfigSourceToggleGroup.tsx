@@ -19,8 +19,8 @@ export function ColorConfigSourceToggleGroup(
       }
       {...props}
     >
-      <ToggleGroupItem value={"value" satisfies typeof currentSource}>
-        value
+      <ToggleGroupItem value={"constant" satisfies typeof currentSource}>
+        constant
       </ToggleGroupItem>
       <ToggleGroupItem value={"from" satisfies typeof currentSource}>
         from

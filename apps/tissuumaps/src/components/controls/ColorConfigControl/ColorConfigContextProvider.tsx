@@ -4,10 +4,10 @@ import {
   type Color,
   type ColorConfig,
   type ValueMap,
+  isConstantConfig,
   isFromConfig,
   isGroupByConfig,
   isRandomConfig,
-  isValueConfig,
 } from "@tissuumaps/core";
 
 import { ColorConfigContext } from "./context";
@@ -31,9 +31,10 @@ export function ColorConfigContextProvider({
     colorConfig.source ?? defaultColorConfigSource,
   );
 
-  const [currentValue, setCurrentValue] = useState<Color | null>(
-    isValueConfig(colorConfig) ? colorConfig.value : null,
-  );
+  const [currentConstantValue, setCurrentConstantValue] =
+    useState<Color | null>(
+      isConstantConfig(colorConfig) ? colorConfig.constant.value : null,
+    );
 
   const [currentFromTable, setCurrentFromTable] = useState<string | null>(
     isFromConfig(colorConfig) ? colorConfig.from.table : null,
@@ -71,16 +72,17 @@ export function ColorConfigContextProvider({
 
   useEffect(() => {
     if (
-      // value is complete...
-      currentSource === "value" &&
-      currentValue !== null &&
+      // constant is complete...
+      currentSource === "constant" &&
+      currentConstantValue !== null &&
       // ...and different from current config
-      (!isValueConfig(colorConfig) || colorConfig.value !== currentValue)
+      (!isConstantConfig(colorConfig) ||
+        colorConfig.constant.value !== currentConstantValue)
     ) {
       onColorConfigChange({
         ...colorConfig,
-        source: "value",
-        value: currentValue,
+        source: "constant",
+        constant: { value: currentConstantValue },
       });
     } else if (
       // from is complete...
@@ -155,7 +157,7 @@ export function ColorConfigContextProvider({
   }, [
     colorConfig,
     currentSource,
-    currentValue,
+    currentConstantValue,
     currentFromTable,
     currentFromColumn,
     currentFromRangeMin,
@@ -173,7 +175,7 @@ export function ColorConfigContextProvider({
     <ColorConfigContext.Provider
       value={{
         currentSource,
-        currentValue,
+        currentConstantValue: currentConstantValue,
         currentFromTable,
         currentFromColumn,
         currentFromRangeMin,
@@ -185,7 +187,7 @@ export function ColorConfigContextProvider({
         currentGroupByMap,
         currentRandomPalette,
         setCurrentSource,
-        setCurrentValue,
+        setCurrentConstantValue: setCurrentConstantValue,
         setCurrentFromTable,
         setCurrentFromColumn,
         setCurrentFromRangeMin,
