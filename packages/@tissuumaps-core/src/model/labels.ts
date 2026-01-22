@@ -25,8 +25,8 @@ import {
  */
 export const labelsDefaults = {
   labelColor: { random: { palette: defaultRandomLabelColorPalette } },
-  labelVisibility: { value: defaultLabelVisibility },
-  labelOpacity: { value: defaultLabelOpacity },
+  labelVisibility: { constant: { value: defaultLabelVisibility } },
+  labelOpacity: { constant: { value: defaultLabelOpacity } },
 } as const satisfies Partial<RawLabels>;
 
 /**

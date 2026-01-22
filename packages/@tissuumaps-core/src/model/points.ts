@@ -28,11 +28,11 @@ import {
  * Default values for {@link RawPoints}
  */
 export const pointsDefaults = {
-  pointMarker: { value: defaultPointMarker },
-  pointSize: { value: defaultPointSize },
-  pointColor: { value: defaultPointColor },
-  pointVisibility: { value: defaultPointVisibility },
-  pointOpacity: { value: defaultPointOpacity },
+  pointMarker: { constant: { value: defaultPointMarker } },
+  pointSize: { constant: { value: defaultPointSize } },
+  pointColor: { constant: { value: defaultPointColor } },
+  pointVisibility: { constant: { value: defaultPointVisibility } },
+  pointOpacity: { constant: { value: defaultPointOpacity } },
   pointSizeFactor: 1,
 } as const satisfies Partial<RawPoints>;
 

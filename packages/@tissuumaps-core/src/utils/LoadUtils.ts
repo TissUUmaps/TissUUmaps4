@@ -5,10 +5,10 @@ import {
   type SizeConfig,
   type VisibilityConfig,
   getActiveConfigSource,
+  isConstantConfig,
   isFromConfig,
   isGroupByConfig,
   isRandomConfig,
-  isValueConfig,
 } from "../model/configs";
 import { type Color, Marker, type ValueMap } from "../model/types";
 import { colorPalettes, markerPalette } from "../palettes";
@@ -36,8 +36,8 @@ export class LoadUtils {
     }
     const data = new Uint8Array(dataLength);
     const activeConfigSource = getActiveConfigSource(markerConfig);
-    if (activeConfigSource === "value" && isValueConfig(markerConfig)) {
-      const marker = markerConfig.value;
+    if (activeConfigSource === "constant" && isConstantConfig(markerConfig)) {
+      const marker = markerConfig.constant.value;
       const markerIndex = marker as number;
       data.fill(markerIndex, 0, ids.length);
     } else if (activeConfigSource === "from" && isFromConfig(markerConfig)) {
@@ -140,9 +140,11 @@ export class LoadUtils {
     {
       signal,
       padding,
+      sizeFactor = 1,
     }: {
       signal?: AbortSignal;
       padding?: number;
+      sizeFactor?: number;
     } = {},
   ): Promise<Float32Array> {
     signal?.throwIfAborted();
@@ -152,8 +154,9 @@ export class LoadUtils {
     }
     const data = new Float32Array(dataLength);
     const activeConfigSource = getActiveConfigSource(sizeConfig);
-    if (activeConfigSource === "value" && isValueConfig(sizeConfig)) {
-      data.fill(sizeConfig.value, 0, ids.length);
+    if (activeConfigSource === "constant" && isConstantConfig(sizeConfig)) {
+      const scaledSize = sizeConfig.constant.value * sizeFactor;
+      data.fill(scaledSize, 0, ids.length);
     } else if (activeConfigSource === "from" && isFromConfig(sizeConfig)) {
       const tableData = await loadTable(sizeConfig.from.table, { signal });
       signal?.throwIfAborted();
@@ -169,9 +172,12 @@ export class LoadUtils {
         const id = ids[i]!;
         const tableIndex = tableIndices.get(id);
         if (tableIndex !== undefined) {
-          data[i] = tableValues[tableIndex]!;
+          const size = tableValues[tableIndex]!;
+          const scaledSize = size * sizeFactor;
+          data[i] = scaledSize;
         } else {
-          data[i] = defaultSize;
+          const scaledSize = defaultSize * sizeFactor;
+          data[i] = scaledSize;
           e++;
         }
       }
@@ -211,12 +217,15 @@ export class LoadUtils {
           const tableIndex = tableIndices.get(id);
           if (tableIndex !== undefined) {
             const group = JSON.stringify(tableGroups[tableIndex]!);
-            data[i] =
+            const size =
               sizeMap.values.get(group) ?? // first, try to get group-specific size
               sizeMap.defaultValue ?? // then, fallback to size map default
               defaultSize; // finally, fallback to default size
+            const scaledSize = size * sizeFactor;
+            data[i] = scaledSize;
           } else {
-            data[i] = defaultSize;
+            const scaledSize = defaultSize * sizeFactor;
+            data[i] = scaledSize;
             e++;
           }
         }
@@ -224,11 +233,13 @@ export class LoadUtils {
           console.warn(`${e} IDs missing in table ${sizeConfig.groupBy.table}`);
         }
       } else {
-        data.fill(defaultSize, 0, ids.length);
+        const scaledSize = defaultSize * sizeFactor;
+        data.fill(scaledSize, 0, ids.length);
       }
     } else // activeConfigSource === undefined
     {
-      data.fill(defaultSize, 0, ids.length);
+      const scaledSize = defaultSize * sizeFactor;
+      data.fill(scaledSize, 0, ids.length);
     }
     return data;
   }
@@ -253,8 +264,8 @@ export class LoadUtils {
     }
     const data = new Uint32Array(dataLength);
     const activeConfigSource = getActiveConfigSource(colorConfig);
-    if (activeConfigSource === "value" && isValueConfig(colorConfig)) {
-      const packedColor = ColorUtils.packColor(colorConfig.value);
+    if (activeConfigSource === "constant" && isConstantConfig(colorConfig)) {
+      const packedColor = ColorUtils.packColor(colorConfig.constant.value);
       data.fill(packedColor, 0, ids.length);
     } else if (activeConfigSource === "from" && isFromConfig(colorConfig)) {
       const colorPalette = colorPalettes[colorConfig.from.palette];
@@ -420,8 +431,11 @@ export class LoadUtils {
     }
     const data = new Uint8Array(dataLength);
     const activeConfigSource = getActiveConfigSource(visibilityConfig);
-    if (activeConfigSource === "value" && isValueConfig(visibilityConfig)) {
-      const numericVisibility = visibilityConfig.value ? 1 : 0;
+    if (
+      activeConfigSource === "constant" &&
+      isConstantConfig(visibilityConfig)
+    ) {
+      const numericVisibility = visibilityConfig.constant.value ? 1 : 0;
       data.fill(numericVisibility, 0, ids.length);
     } else if (
       activeConfigSource === "from" &&
@@ -548,8 +562,8 @@ export class LoadUtils {
     }
     const data = new Uint8Array(dataLength);
     const activeConfigSource = getActiveConfigSource(opacityConfig);
-    if (activeConfigSource === "value" && isValueConfig(opacityConfig)) {
-      const scaledOpacity = opacityFactor * opacityConfig.value;
+    if (activeConfigSource === "constant" && isConstantConfig(opacityConfig)) {
+      const scaledOpacity = opacityFactor * opacityConfig.constant.value;
       const scaledOpacityInt = Math.round(scaledOpacity * 255);
       data.fill(scaledOpacityInt, 0, ids.length);
     } else if (activeConfigSource === "from" && isFromConfig(opacityConfig)) {
