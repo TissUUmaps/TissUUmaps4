@@ -1,4 +1,8 @@
-import { type Points, defaultPointColor } from "@tissuumaps/core";
+import {
+  type Points,
+  defaultPointColor,
+  defaultPointSize,
+} from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import {
@@ -14,6 +18,11 @@ import {
   ColorConfigControl,
   ColorConfigSourceToggleGroup,
 } from "../../controls/ColorConfigControl";
+import {
+  SizeConfigContextProvider,
+  SizeConfigControl,
+  SizeConfigSourceToggleGroup,
+} from "../../controls/SizeConfigControl";
 
 export function PointsPanelItemSettings({ points }: { points: Points }) {
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
@@ -37,6 +46,25 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
           </AccordionPanel>
         </AccordionItem>
       </ColorConfigContextProvider>
+      {/* Point size */}
+      <SizeConfigContextProvider
+        sizeConfig={points.pointSize}
+        onSizeConfigChange={(c: typeof points.pointSize) =>
+          updatePoints(points.id, { pointSize: c })
+        }
+        defaultSizeConfigSource="constant"
+      >
+        <AccordionItem>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Size</AccordionTrigger>
+            <SizeConfigSourceToggleGroup className="ml-auto" />
+          </AccordionHeader>
+          <AccordionPanel>
+            <SizeConfigControl defaultConstantValue={defaultPointSize} />
+          </AccordionPanel>
+        </AccordionItem>
+      </SizeConfigContextProvider>
     </Accordion>
   );
 }
