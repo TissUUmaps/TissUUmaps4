@@ -24,7 +24,7 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
       <ColorConfigContextProvider
         colorConfig={points.pointColor}
         onColorConfigChange={(c) => updatePoints(points.id, { pointColor: c })}
-        defaultColorConfigSource="value"
+        defaultColorConfigSource="constant"
       >
         <AccordionItem>
           <AccordionHeader>
@@ -33,7 +33,7 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
             <ColorConfigSourceToggleGroup className="ml-auto" />
           </AccordionHeader>
           <AccordionPanel>
-            <ColorConfigControl defaultValue={defaultPointColor} />
+            <ColorConfigControl defaultConstantValue={defaultPointColor} />
           </AccordionPanel>
         </AccordionItem>
       </ColorConfigContextProvider>

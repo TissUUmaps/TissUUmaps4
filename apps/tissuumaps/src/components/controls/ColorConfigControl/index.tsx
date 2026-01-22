@@ -13,21 +13,21 @@ import { useColorConfigContext } from "./context";
 export { ColorConfigContextProvider } from "./ColorConfigContextProvider";
 
 export type ColorConfigControlProps = {
-  defaultValue: Color;
+  defaultConstantValue: Color;
   className?: string;
 };
 
 export function ColorConfigControl({
-  defaultValue,
+  defaultConstantValue,
   className,
 }: ColorConfigControlProps) {
   const { currentSource } = useColorConfigContext();
 
   switch (currentSource) {
-    case "value":
+    case "constant":
       return (
-        <ColorConfigValueControl
-          defaultValue={defaultValue}
+        <ColorConfigConstantControl
+          defaultConstantValue={defaultConstantValue}
           className={className}
         />
       );
@@ -40,22 +40,23 @@ export function ColorConfigControl({
   }
 }
 
-type ColorConfigValueControlProps = {
-  defaultValue: Color;
+type ColorConfigConstantControlProps = {
+  defaultConstantValue: Color;
   className?: string;
 };
 
-function ColorConfigValueControl({
-  defaultValue,
+function ColorConfigConstantControl({
+  defaultConstantValue,
   className,
-}: ColorConfigValueControlProps) {
-  const { currentValue, setCurrentValue } = useColorConfigContext();
+}: ColorConfigConstantControlProps) {
+  const { currentConstantValue, setCurrentConstantValue } =
+    useColorConfigContext();
 
   return (
     <div className={className}>
       <ColorPicker
-        color={currentValue ?? defaultValue}
-        onColorChange={setCurrentValue}
+        color={currentConstantValue ?? defaultConstantValue}
+        onColorChange={setCurrentConstantValue}
       />
     </div>
   );

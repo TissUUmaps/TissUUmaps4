@@ -6,7 +6,7 @@ type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 
 interface ColorConfigContextValue {
   currentSource: ColorConfigSource;
-  currentValue: Color | null;
+  currentConstantValue: Color | null;
   currentFromTable: string | null;
   currentFromColumn: string | null;
   currentFromRangeMin: number | undefined | null;
@@ -18,7 +18,7 @@ interface ColorConfigContextValue {
   currentGroupByMap: ValueMap<Color> | undefined | null;
   currentRandomPalette: string | null;
   setCurrentSource: (newCurrentSource: ColorConfigSource) => void;
-  setCurrentValue: (newCurrentValue: Color | null) => void;
+  setCurrentConstantValue: (newCurrentValue: Color | null) => void;
   setCurrentFromTable: (newCurrentFromTable: string | null) => void;
   setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
   setCurrentFromRangeMin: (
