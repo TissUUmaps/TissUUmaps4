@@ -17,8 +17,18 @@ export class TablePointsData implements PointsData {
     return this._tableData.getIndex();
   }
 
-  getDimensions(): string[] {
-    return this._dimensionColumns ?? this._tableData.getColumns();
+  async suggestDimensionQueries(currentQuery: string): Promise<string[]> {
+    if (this._dimensionColumns !== undefined) {
+      const filteredColumns = this._dimensionColumns.filter((column) =>
+        column.includes(currentQuery),
+      );
+      return await Promise.resolve(filteredColumns);
+    }
+    return await this._tableData.suggestColumnQueries(currentQuery);
+  }
+
+  async getDimension(query: string): Promise<string | null> {
+    return await this._tableData.getColumn(query);
   }
 
   async loadCoordinates(

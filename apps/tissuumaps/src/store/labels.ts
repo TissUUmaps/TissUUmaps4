@@ -17,14 +17,15 @@ export type LabelsSliceState = {
 
 export type LabelsSliceActions = {
   addLabels: (labels: Labels, index?: number) => void;
+  updateLabels: (labelsId: string, updates: Partial<Labels>) => void;
   moveLabels: (labelsId: string, newIndex: number) => void;
+  deleteLabels: (labelsId: string) => void;
+  clearLabels: () => void;
   loadLabels: (
     labelsId: string,
     options: { signal?: AbortSignal },
   ) => Promise<LabelsData>;
   unloadLabels: (labelsId: string) => void;
-  deleteLabels: (labelsId: string) => void;
-  clearLabels: () => void;
 };
 
 export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
@@ -34,11 +35,21 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
   ...initialLabelsSliceState,
   addLabels: (labels, index) => {
     const state = get();
-    if (state.labels.find((x) => x.id === labels.id) !== undefined) {
+    if (state.labels.some((x) => x.id === labels.id)) {
       throw new Error(`Labels with ID ${labels.id} already exists.`);
     }
     set((draft) => {
       draft.labels.splice(index ?? draft.labels.length, 0, labels);
+    });
+  },
+  updateLabels: (labelsId, updates) => {
+    const state = get();
+    const index = state.labels.findIndex((labels) => labels.id === labelsId);
+    if (index === -1) {
+      throw new Error(`Labels with ID ${labelsId} not found.`);
+    }
+    set((draft) => {
+      draft.labels[index] = { ...draft.labels[index]!, ...updates };
     });
   },
   moveLabels: (labelsId, newIndex) => {
@@ -53,6 +64,24 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
         draft.labels.splice(newIndex, 0, labels!);
       });
     }
+  },
+  deleteLabels: (labelsId) => {
+    const state = get();
+    const index = state.labels.findIndex((labels) => labels.id === labelsId);
+    if (index === -1) {
+      throw new Error(`Labels with ID ${labelsId} not found.`);
+    }
+    state.unloadLabels(labelsId);
+    set((draft) => {
+      draft.labels.splice(index, 1);
+    });
+  },
+  clearLabels: () => {
+    const state = get();
+    while (state.labels.length > 0) {
+      state.deleteLabels(state.labels[0]!.id);
+    }
+    set(initialLabelsSliceState);
   },
   loadLabels: async (labelsId, { signal }: { signal?: AbortSignal } = {}) => {
     signal?.throwIfAborted();
@@ -103,24 +132,6 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
       });
       cache.data.destroy();
     }
-  },
-  deleteLabels: (labelsId) => {
-    const state = get();
-    const index = state.labels.findIndex((labels) => labels.id === labelsId);
-    if (index === -1) {
-      throw new Error(`Labels with ID ${labelsId} not found.`);
-    }
-    state.unloadLabels(labelsId);
-    set((draft) => {
-      draft.labels.splice(index, 1);
-    });
-  },
-  clearLabels: () => {
-    const state = get();
-    while (state.labels.length > 0) {
-      state.deleteLabels(state.labels[0]!.id);
-    }
-    set(initialLabelsSliceState);
   },
 });
 

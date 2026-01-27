@@ -10,6 +10,7 @@ export type LayerSliceState = {
 
 export type LayerSliceActions = {
   addLayer: (layer: Layer, index?: number) => void;
+  updateLayer: (layerId: string, updates: Partial<Layer>) => void;
   moveLayer: (layerId: string, newIndex: number) => void;
   deleteLayer: (layerId: string) => void;
   clearLayers: () => void;
@@ -22,11 +23,21 @@ export const createLayerSlice: TissUUmapsStateCreator<LayerSlice> = (
   ...initialLayerSliceState,
   addLayer: (layer, index) => {
     const state = get();
-    if (state.layers.find((x) => x.id === layer.id) !== undefined) {
+    if (state.layers.some((x) => x.id === layer.id)) {
       throw new Error(`Layer with ID ${layer.id} already exists.`);
     }
     set((draft) => {
       draft.layers.splice(index ?? draft.layers.length, 0, layer);
+    });
+  },
+  updateLayer: (layerId, updates) => {
+    const state = get();
+    const index = state.layers.findIndex((layer) => layer.id === layerId);
+    if (index === -1) {
+      throw new Error(`Layer with ID ${layerId} not found.`);
+    }
+    set((draft) => {
+      draft.layers[index] = { ...draft.layers[index]!, ...updates };
     });
   },
   moveLayer: (layerId, newIndex) => {

@@ -17,6 +17,7 @@ export type ImageSliceState = {
 
 export type ImageSliceActions = {
   addImage: (image: Image, index?: number) => void;
+  updateImage: (imageId: string, updates: Partial<Image>) => void;
   moveImage: (imageId: string, newIndex: number) => void;
   deleteImage: (imageId: string) => void;
   clearImages: () => void;
@@ -34,11 +35,21 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
   ...initialImageSliceState,
   addImage: (image, index) => {
     const state = get();
-    if (state.images.find((x) => x.id === image.id) !== undefined) {
+    if (state.images.some((x) => x.id === image.id)) {
       throw new Error(`Image with ID ${image.id} already exists.`);
     }
     set((draft) => {
       draft.images.splice(index ?? draft.images.length, 0, image);
+    });
+  },
+  updateImage: (imageId, updates) => {
+    const state = get();
+    const index = state.images.findIndex((image) => image.id === imageId);
+    if (index === -1) {
+      throw new Error(`Image with ID ${imageId} not found.`);
+    }
+    set((draft) => {
+      draft.images[index] = { ...draft.images[index]!, ...updates };
     });
   },
   moveImage: (imageId, newIndex) => {
@@ -53,6 +64,24 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
         draft.images.splice(newIndex, 0, image!);
       });
     }
+  },
+  deleteImage: (imageId) => {
+    const state = get();
+    const index = state.images.findIndex((image) => image.id === imageId);
+    if (index === -1) {
+      throw new Error(`Image with ID ${imageId} not found.`);
+    }
+    state.unloadImage(imageId);
+    set((draft) => {
+      draft.images.splice(index, 1);
+    });
+  },
+  clearImages: () => {
+    const state = get();
+    while (state.images.length > 0) {
+      state.deleteImage(state.images[0]!.id);
+    }
+    set(initialImageSliceState);
   },
   loadImage: async (imageId, { signal } = {}) => {
     signal?.throwIfAborted();
@@ -103,24 +132,6 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
       });
       cache.data.destroy();
     }
-  },
-  deleteImage: (imageId) => {
-    const state = get();
-    const index = state.images.findIndex((image) => image.id === imageId);
-    if (index === -1) {
-      throw new Error(`Image with ID ${imageId} not found.`);
-    }
-    state.unloadImage(imageId);
-    set((draft) => {
-      draft.images.splice(index, 1);
-    });
-  },
-  clearImages: () => {
-    const state = get();
-    while (state.images.length > 0) {
-      state.deleteImage(state.images[0]!.id);
-    }
-    set(initialImageSliceState);
   },
 });
 

@@ -1,21 +1,24 @@
+import { Button } from "@/components/ui/button";
 import {
   DockviewDefaultTab,
   DockviewReact,
   type DockviewReadyEvent,
+  type DockviewTheme,
   type IDockviewPanelHeaderProps,
 } from "dockview-react";
+import { Moon, Sun } from "lucide-react";
 import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
 
 import "./App.css";
-import { ImageCollectionPanel } from "./components/ImageCollectionPanel";
-import { LabelsCollectionPanel } from "./components/LabelsCollectionPanel";
-import { PointsCollectionPanel } from "./components/PointsCollectionPanel";
-import { ProjectPanel } from "./components/ProjectPanel";
-import { ShapesCollectionPanel } from "./components/ShapesCollectionPanel";
-import { TableCollectionPanel } from "./components/TableCollectionPanel";
+import { ImagesPanel } from "./components/panels/ImagesPanel";
+import { LabelsPanel } from "./components/panels/LabelsPanel";
+import { PointsPanel } from "./components/panels/PointsPanel";
+import { ProjectPanel } from "./components/panels/ProjectPanel";
+import { ShapesPanel } from "./components/panels/ShapesPanel";
+import { TablesPanel } from "./components/panels/TablesPanel";
 import { useTissUUmaps } from "./store";
 
 declare global {
@@ -24,87 +27,101 @@ declare global {
   }
 }
 
+const dockviewTheme: DockviewTheme = {
+  name: "tailwindcss",
+  className: "dockview-theme-tailwindcss",
+};
+
 const dockviewComponents = {
-  viewer: () => <Viewer className="size-full bg-white" />,
-  projectPanel: () => <ProjectPanel />,
-  imageCollectionPanel: () => <ImageCollectionPanel />,
-  labelsCollectionPanel: () => <LabelsCollectionPanel />,
-  pointsCollectionPanel: () => <PointsCollectionPanel />,
-  shapesCollectionPanel: () => <ShapesCollectionPanel />,
-  tableCollectionPanel: () => <TableCollectionPanel />,
+  ViewerPanel: () => <Viewer className="size-full" />,
+  ProjectPanel: () => <ProjectPanel className="m-2" />,
+  ImagesPanel: () => <ImagesPanel className="m-2" />,
+  LabelsPanel: () => <LabelsPanel />,
+  PointsPanel: () => <PointsPanel className="m-2" />,
+  ShapesPanel: () => <ShapesPanel />,
+  TablesPanel: () => <TablesPanel />,
 };
 
 const dockviewTabComponents = {
-  closableTab: (props: IDockviewPanelHeaderProps) => {
+  ClosablePanelHeader: (props: IDockviewPanelHeaderProps) => {
     return <DockviewDefaultTab hideClose={false} {...props} />;
   },
-  nonClosableTab: (props: IDockviewPanelHeaderProps) => {
+  PersistentPanelHeader: (props: IDockviewPanelHeaderProps) => {
     return <DockviewDefaultTab hideClose={true} {...props} />;
   },
 };
 
+function DockviewRightHeaderActionsComponent() {
+  const dark = useTissUUmaps((state) => state.dark);
+  const setDark = useTissUUmaps((state) => state.setDark);
+  return (
+    <Button onClick={() => setDark(!dark)}>{dark ? <Sun /> : <Moon />}</Button>
+  );
+}
+
 const onDockviewReady = (event: DockviewReadyEvent) => {
-  const viewer = event.api.addPanel({
-    id: "viewer",
+  const viewerPanel = event.api.addPanel({
+    id: "viewerPanel",
     title: "Viewer",
-    component: "viewer",
+    component: "ViewerPanel",
   });
+  viewerPanel.group.header.hidden = true;
+  viewerPanel.group.locked = true;
   const projectPanel = event.api.addPanel({
     id: "projectPanel",
     title: "Project",
-    component: "projectPanel",
-    tabComponent: "nonClosableTab",
-    initialWidth: 600,
+    component: "ProjectPanel",
+    tabComponent: "PersistentPanelHeader",
+    initialWidth: 400,
     position: {
-      referencePanel: viewer,
+      referencePanel: viewerPanel,
       direction: "right",
     },
   });
   event.api.addPanel({
-    id: "imageCollectionPanel",
+    id: "imagesPanel",
     title: "Images",
-    component: "imageCollectionPanel",
-    tabComponent: "nonClosableTab",
+    component: "ImagesPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "labelsCollectionPanel",
+    id: "labelsPanel",
     title: "Labels",
-    component: "labelsCollectionPanel",
-    tabComponent: "nonClosableTab",
+    component: "LabelsPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "pointsCollectionPanel",
+    id: "pointsPanel",
     title: "Points",
-    component: "pointsCollectionPanel",
-    tabComponent: "nonClosableTab",
+    component: "PointsPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "shapesCollectionPanel",
+    id: "shapesPanel",
     title: "Shapes",
-    component: "shapesCollectionPanel",
-    tabComponent: "nonClosableTab",
+    component: "ShapesPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "tableCollectionPanel",
+    id: "tablesPanel",
     title: "Tables",
-    component: "tableCollectionPanel",
-    tabComponent: "nonClosableTab",
+    component: "TablesPanel",
+    tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
-  viewer.group.header.hidden = true;
-  viewer.group.locked = true;
   projectPanel.api.setActive();
 };
 
-const projectUrlParam = "project";
-const defaultProjectUrl = "project.json";
-
 export function App() {
-  const adapter = useTissUUmaps(
+  const dark = useTissUUmaps((state) => state.dark);
+  const clearProject = useTissUUmaps((state) => state.clearProject);
+  const loadProjectFromURL = useTissUUmaps((state) => state.loadProjectFromURL);
+
+  const viewerAdapter = useTissUUmaps(
     useShallow((state) => ({
       projectDir: state.projectDir,
       layers: state.layers,
@@ -135,10 +152,7 @@ export function App() {
     })),
   );
 
-  const clearProject = useTissUUmaps((state) => state.clearProject);
-  const loadProjectFromURL = useTissUUmaps((state) => state.loadProjectFromURL);
-
-  // make store available to plugins
+  // plugins
   useEffect(() => {
     window.TissUUmaps = useTissUUmaps;
     return () => {
@@ -146,11 +160,11 @@ export function App() {
     };
   }, []);
 
-  // load project, if available
+  // load project
   useEffect(() => {
     const abortController = new AbortController();
     const params = new URLSearchParams(window.location.search);
-    const projectUrl = params.get(projectUrlParam) ?? defaultProjectUrl;
+    const projectUrl = params.get("project") ?? "project.json";
     loadProjectFromURL(projectUrl, {
       signal: abortController.signal,
       quiet: true,
@@ -166,11 +180,14 @@ export function App() {
   }, [clearProject, loadProjectFromURL]);
 
   return (
-    <div className="w-screen h-screen overflow-hidden">
-      <ViewerProvider adapter={adapter}>
+    // https://tailwindcss.com/docs/dark-mode
+    <div className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}>
+      <ViewerProvider adapter={viewerAdapter}>
         <DockviewReact
+          theme={dockviewTheme}
           components={dockviewComponents}
           tabComponents={dockviewTabComponents}
+          rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
           onReady={onDockviewReady}
         />
       </ViewerProvider>

@@ -89,8 +89,7 @@ export type FromConfig<TFromExtra = unknown> = Config<"from"> & {
 export function isFromConfig<TFromExtra = unknown>(
   obj: unknown,
 ): obj is FromConfig<TFromExtra> {
-  const fromConfig = obj as FromConfig<TFromExtra>;
-  return fromConfig.source === "from" || fromConfig.from !== undefined;
+  return (obj as FromConfig<TFromExtra>).from !== undefined;
 }
 
 /** Configuration to map a categorical table column to values */
@@ -107,13 +106,18 @@ export type GroupByConfig<
     column: string;
 
     /**
-     * Group-to-value mapping
+     * ID of a project-global group-to-value mapping
      *
-     * Can be specified as either:
-     * - ID of a project-global mapping
-     * - A custom mapping of groups to values
+     * If not specified, the custom mapping defined in {@link GroupByConfig.map} is used.
      */
-    map: string | ValueMap<TValue>;
+    projectMap?: string;
+
+    /**
+     * Custom group-to-value mapping
+     *
+     * Only used if {@link GroupByConfig.projectMap} is not specified.
+     */
+    map?: ValueMap<TValue>;
   } & TGroupByExtra;
 };
 
@@ -126,10 +130,7 @@ export type GroupByConfig<
 export function isGroupByConfig<TValue, TGroupByExtra = unknown>(
   obj: unknown,
 ): obj is GroupByConfig<TValue, TGroupByExtra> {
-  const groupByConfig = obj as GroupByConfig<TValue, TGroupByExtra>;
-  return (
-    groupByConfig.source === "groupBy" || groupByConfig.groupBy !== undefined
-  );
+  return (obj as GroupByConfig<TValue, TGroupByExtra>).groupBy !== undefined;
 }
 
 /** Configuration to use random values */
@@ -147,8 +148,7 @@ export type RandomConfig<TRandom> = Config<"random"> & {
 export function isRandomConfig<TRandom>(
   obj: unknown,
 ): obj is RandomConfig<TRandom> {
-  const randomConfig = obj as RandomConfig<TRandom>;
-  return randomConfig.source === "random" || randomConfig.random !== undefined;
+  return (obj as RandomConfig<TRandom>).random !== undefined;
 }
 
 /**

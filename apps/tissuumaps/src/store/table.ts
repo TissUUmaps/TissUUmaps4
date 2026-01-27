@@ -17,14 +17,15 @@ export type TableSliceState = {
 
 export type TableSliceActions = {
   addTable: (table: Table, index?: number) => void;
+  updateTable: (tableId: string, updates: Partial<Table>) => void;
   moveTable: (tableId: string, newIndex: number) => void;
+  deleteTable: (tableId: string) => void;
+  clearTables: () => void;
   loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
   ) => Promise<TableData>;
   unloadTable: (tableId: string) => void;
-  deleteTable: (tableId: string) => void;
-  clearTables: () => void;
 };
 
 export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
@@ -34,11 +35,21 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
   ...initialTableSliceState,
   addTable: (table, index) => {
     const state = get();
-    if (state.tables.find((x) => x.id === table.id) !== undefined) {
+    if (state.tables.some((x) => x.id === table.id)) {
       throw new Error(`Table with ID ${table.id} already exists.`);
     }
     set((draft) => {
       draft.tables.splice(index ?? draft.tables.length, 0, table);
+    });
+  },
+  updateTable: (tableId, updates) => {
+    const state = get();
+    const index = state.tables.findIndex((table) => table.id === tableId);
+    if (index === -1) {
+      throw new Error(`Table with ID ${tableId} not found.`);
+    }
+    set((draft) => {
+      draft.tables[index] = { ...draft.tables[index]!, ...updates };
     });
   },
   moveTable: (tableId, newIndex) => {
@@ -53,6 +64,24 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
         draft.tables.splice(newIndex, 0, table!);
       });
     }
+  },
+  deleteTable: (tableId) => {
+    const state = get();
+    const index = state.tables.findIndex((table) => table.id === tableId);
+    if (index === -1) {
+      throw new Error(`Table with ID ${tableId} not found.`);
+    }
+    state.unloadTable(tableId);
+    set((draft) => {
+      draft.tables.splice(index, 1);
+    });
+  },
+  clearTables: () => {
+    const state = get();
+    while (state.tables.length > 0) {
+      state.deleteTable(state.tables[0]!.id);
+    }
+    set(initialTableSliceState);
   },
   loadTable: async (tableId, { signal }: { signal?: AbortSignal } = {}) => {
     signal?.throwIfAborted();
@@ -99,24 +128,6 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
       });
       cache.data.destroy();
     }
-  },
-  deleteTable: (tableId) => {
-    const state = get();
-    const index = state.tables.findIndex((table) => table.id === tableId);
-    if (index === -1) {
-      throw new Error(`Table with ID ${tableId} not found.`);
-    }
-    state.unloadTable(tableId);
-    set((draft) => {
-      draft.tables.splice(index, 1);
-    });
-  },
-  clearTables: () => {
-    const state = get();
-    while (state.tables.length > 0) {
-      state.deleteTable(state.tables[0]!.id);
-    }
-    set(initialTableSliceState);
   },
 });
 

@@ -55,8 +55,16 @@ export class ParquetTableData implements TableData {
     return this._index;
   }
 
-  getColumns(): string[] {
-    return this._columns;
+  async suggestColumnQueries(currentQuery: string): Promise<string[]> {
+    const filteredColumns = this._columns.filter((column) =>
+      column.includes(currentQuery),
+    );
+    return await Promise.resolve(filteredColumns);
+  }
+
+  async getColumn(query: string): Promise<string | null> {
+    const column = this._columns.includes(query) ? query : null;
+    return await Promise.resolve(column);
   }
 
   async loadColumn<T>(

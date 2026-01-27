@@ -41,6 +41,7 @@ export type ProjectSliceActions = {
       quiet?: boolean;
     },
   ) => Promise<void>;
+  saveProject: () => Project;
   clearProject: () => void;
 };
 
@@ -138,6 +139,10 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
     const project = createProject(rawProject);
     await state.loadProject(project, { signal });
     signal?.throwIfAborted();
+  },
+  saveProject: () => {
+    // TODO
+    throw new Error("Not implemented yet");
   },
   clearProject: () => {
     const state = get();
