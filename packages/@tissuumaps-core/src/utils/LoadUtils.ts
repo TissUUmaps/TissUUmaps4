@@ -310,7 +310,7 @@ export class LoadUtils {
           if (tableIndex !== undefined) {
             const v = tableValues[tableIndex]!;
             const vnorm = (v - vmin) / (vmax - vmin);
-            const colorIndex = Math.round(vnorm * colorPalette.length);
+            const colorIndex = Math.floor(vnorm * colorPalette.length);
             const clampedColorIndex = Math.min(
               Math.max(0, colorIndex),
               colorPalette.length - 1,
