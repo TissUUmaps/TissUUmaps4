@@ -3,13 +3,11 @@ import {
   DockviewDefaultTab,
   DockviewReact,
   type DockviewReadyEvent,
-  type IDockviewHeaderActionsProps,
+  type DockviewTheme,
   type IDockviewPanelHeaderProps,
-  themeLight,
 } from "dockview-react";
 import { Moon, Sun } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
@@ -29,7 +27,10 @@ declare global {
   }
 }
 
-const projectPanelId = "projectPanel";
+const dockviewTheme: DockviewTheme = {
+  name: "tailwindcss",
+  className: "dockview-theme-tailwindcss",
+};
 
 const dockviewComponents = {
   ViewerPanel: () => <Viewer className="size-full" />,
@@ -50,6 +51,14 @@ const dockviewTabComponents = {
   },
 };
 
+function DockviewRightHeaderActionsComponent() {
+  const dark = useTissUUmaps((state) => state.dark);
+  const setDark = useTissUUmaps((state) => state.setDark);
+  return (
+    <Button onClick={() => setDark(!dark)}>{dark ? <Sun /> : <Moon />}</Button>
+  );
+}
+
 const onDockviewReady = (event: DockviewReadyEvent) => {
   const viewerPanel = event.api.addPanel({
     id: "viewerPanel",
@@ -59,7 +68,7 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
   viewerPanel.group.header.hidden = true;
   viewerPanel.group.locked = true;
   const projectPanel = event.api.addPanel({
-    id: projectPanelId,
+    id: "projectPanel",
     title: "Project",
     component: "ProjectPanel",
     tabComponent: "PersistentPanelHeader",
@@ -108,10 +117,7 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
 };
 
 export function App() {
-  const [toolbarElement, setToolbarElement] = useState<Element | null>(null);
-
   const dark = useTissUUmaps((state) => state.dark);
-  const setDark = useTissUUmaps((state) => state.setDark);
   const clearProject = useTissUUmaps((state) => state.clearProject);
   const loadProjectFromURL = useTissUUmaps((state) => state.loadProjectFromURL);
 
@@ -173,37 +179,17 @@ export function App() {
     };
   }, [clearProject, loadProjectFromURL]);
 
-  const DockviewToolbarHeaderActions = useCallback(
-    (props: IDockviewHeaderActionsProps) => {
-      if (props.group.panels.find((panel) => panel.id === projectPanelId)) {
-        // Dockview does not re-render group headers upon state changes
-        // --> we use a portal to render a React component that does
-        return <div ref={setToolbarElement} />;
-      }
-    },
-    [setToolbarElement],
-  );
-
   return (
     // https://tailwindcss.com/docs/dark-mode
     <div className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}>
       <ViewerProvider adapter={viewerAdapter}>
         <DockviewReact
+          theme={dockviewTheme}
           components={dockviewComponents}
           tabComponents={dockviewTabComponents}
-          rightHeaderActionsComponent={DockviewToolbarHeaderActions}
-          theme={themeLight}
+          rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
           onReady={onDockviewReady}
         />
-        {toolbarElement &&
-          createPortal(
-            <>
-              <Button onClick={() => setDark(!dark)}>
-                {dark ? <Sun /> : <Moon />}
-              </Button>
-            </>,
-            toolbarElement,
-          )}
       </ViewerProvider>
     </div>
   );
