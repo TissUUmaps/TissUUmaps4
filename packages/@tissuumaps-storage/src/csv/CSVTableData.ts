@@ -64,13 +64,6 @@ export class CSVTableData implements TableData {
     return await Promise.resolve(column);
   }
 
-  getColumns(searchValue: string): string[] {
-    searchValue = searchValue.toLowerCase();
-    return this._columns.filter((columns) =>
-      columns.toLowerCase().includes(searchValue),
-    );
-  }
-
   async loadColumn<T>(
     column: string,
     options: { signal?: AbortSignal } = {},
