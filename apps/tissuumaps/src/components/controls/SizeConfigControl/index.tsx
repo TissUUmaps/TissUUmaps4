@@ -183,14 +183,23 @@ function SizeConfigFromControl({ className }: SizeConfigFromControlProps) {
         <FieldControl
           render={
             <SimpleAsyncCombobox
-              item={currentFromColumn}
-              onItemChange={setCurrentFromColumn}
-              getItem={currentFromTableData?.getColumn.bind(
-                currentFromTableData,
-              )}
-              suggestQueries={currentFromTableData?.suggestColumnQueries.bind(
-                currentFromTableData,
-              )}
+              suggestQueries={async (currentQuery) => {
+                if (currentFromTableData !== null) {
+                  return await currentFromTableData.suggestColumnQueries(
+                    currentQuery,
+                  );
+                }
+                return Promise.resolve([]);
+              }}
+              getItem={async (query) => {
+                if (currentFromTableData !== null) {
+                  return await currentFromTableData.getColumn(query);
+                }
+                return Promise.resolve(null);
+              }}
+              itemQuery={(column) => column}
+              selectedItem={currentFromColumn}
+              onSelectedItemChange={setCurrentFromColumn}
             />
           }
         />
@@ -252,14 +261,23 @@ function SizeConfigGroupByControl({
       <FieldControl
         render={
           <SimpleAsyncCombobox
-            item={currentGroupByColumn}
-            onItemChange={setCurrentGroupByColumn}
-            getItem={currentGroupByTableData?.getColumn.bind(
-              currentGroupByTableData,
-            )}
-            suggestQueries={currentGroupByTableData?.suggestColumnQueries.bind(
-              currentGroupByTableData,
-            )}
+            suggestQueries={async (currentQuery) => {
+              if (currentGroupByTableData !== null) {
+                return await currentGroupByTableData.suggestColumnQueries(
+                  currentQuery,
+                );
+              }
+              return Promise.resolve([]);
+            }}
+            getItem={async (query) => {
+              if (currentGroupByTableData !== null) {
+                return await currentGroupByTableData.getColumn(query);
+              }
+              return Promise.resolve(null);
+            }}
+            itemQuery={(column) => column}
+            selectedItem={currentGroupByColumn}
+            onSelectedItemChange={setCurrentGroupByColumn}
           />
         }
       />
