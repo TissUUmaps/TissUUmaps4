@@ -102,8 +102,7 @@ export function SizeConfigContextProvider({
       currentSource === "groupBy" &&
       currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
-      currentGroupByProjectMap !== null &&
-      currentGroupByMap !== null &&
+      (currentGroupByProjectMap !== null || currentGroupByMap !== null) &&
       // ...and different from current config
       (!isGroupByConfig(sizeConfig) ||
         sizeConfig.groupBy.table !== currentGroupByTable ||

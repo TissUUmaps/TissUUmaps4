@@ -119,8 +119,7 @@ export function ColorConfigContextProvider({
       currentSource === "groupBy" &&
       currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
-      currentGroupByProjectMap !== null &&
-      currentGroupByMap !== null &&
+      (currentGroupByProjectMap !== null || currentGroupByMap !== null) &&
       // ...and different from current config
       (!isGroupByConfig(colorConfig) ||
         colorConfig.groupBy.table !== currentGroupByTable ||
