@@ -57,7 +57,7 @@
   --dv-inactivegroup-visiblepanel-tab-background-color: var(--card);
   --dv-inactivegroup-hiddenpanel-tab-background-color: var(--muted);
   --dv-tab-divider-color: var(--border);
-  --dv-activegroup-visiblepanel-tab-color: var(--destructive);
+  --dv-activegroup-visiblepanel-tab-color: var(--foreground);
   --dv-activegroup-hiddenpanel-tab-color: var(--muted-foreground);
   --dv-inactivegroup-visiblepanel-tab-color: var(--muted-foreground);
   --dv-inactivegroup-hiddenpanel-tab-color: var(--muted-foreground);
