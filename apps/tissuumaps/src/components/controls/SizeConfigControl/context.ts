@@ -43,28 +43,3 @@ export function useSizeConfigContext(): SizeConfigContextValue {
   }
   return context;
 }
-
-export type SizeConfigContextType = {
-  currentSource: SizeConfigSource;
-  currentConstantValue: number | null;
-  currentFromTable: string | null;
-  currentFromColumn: string | null;
-  currentGroupByTable: string | null;
-  currentGroupByColumn: string | null;
-  currentGroupByProjectMap: string | undefined | null;
-  currentGroupByMap: ValueMap<number> | undefined | null;
-  currentUnit?: CoordinateSpace;
-  setCurrentSource: (newCurrentSource: SizeConfigSource) => void;
-  setCurrentConstantValue: (newCurrentConstantValue: number | null) => void;
-  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
-  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
-  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
-  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
-  setCurrentGroupByProjectMap: (
-    newCurrentGroupByProjectMap: string | undefined | null,
-  ) => void;
-  setCurrentGroupByMap: (
-    newCurrentGroupByMap: ValueMap<number> | undefined | null,
-  ) => void;
-  setCurrentUnit: (unit: CoordinateSpace) => void;
-};
