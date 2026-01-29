@@ -35,7 +35,7 @@ export function ColorPicker({
         />
         <div className="grid grid-cols-3 w-full">
           <Field>
-            <FieldLabel>R</FieldLabel>
+            <FieldLabel>Red</FieldLabel>
             <FieldControl
               render={
                 <Input
@@ -51,7 +51,7 @@ export function ColorPicker({
             />
           </Field>
           <Field>
-            <FieldLabel>G</FieldLabel>
+            <FieldLabel>Green</FieldLabel>
             <FieldControl
               render={
                 <Input
@@ -67,7 +67,7 @@ export function ColorPicker({
             />
           </Field>
           <Field>
-            <FieldLabel>B</FieldLabel>
+            <FieldLabel>Blue</FieldLabel>
             <FieldControl
               render={
                 <Input
