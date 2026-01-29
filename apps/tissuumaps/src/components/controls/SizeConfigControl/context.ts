@@ -1,33 +1,35 @@
 import { createContext, useContext } from "react";
 
-import { type SizeConfig, type ValueMap } from "@tissuumaps/core";
+import { type SizeConfig } from "@tissuumaps/core";
 import { type CoordinateSpace } from "@tissuumaps/core";
 
 type SizeConfigSource = Exclude<SizeConfig["source"], undefined>;
 
 interface SizeConfigContextValue {
   currentSource: SizeConfigSource;
-  currentConstantValue: number | null;
+  currentConstantValue: number;
+  currentConstantUnit: CoordinateSpace | null;
   currentFromTable: string | null;
   currentFromColumn: string | null;
+  currentFromUnit: CoordinateSpace | null;
   currentGroupByTable: string | null;
   currentGroupByColumn: string | null;
-  currentGroupByProjectMap: string | undefined | null;
-  currentGroupByMap: ValueMap<number> | undefined | null;
-  currentUnit?: CoordinateSpace;
+  currentGroupByMap: string | null;
+  currentGroupByUnit: CoordinateSpace | null;
   setCurrentSource: (newCurrentSource: SizeConfigSource) => void;
-  setCurrentConstantValue: (newCurrentConstantValue: number | null) => void;
+  setCurrentConstantValue: (newCurrentConstantValue: number) => void;
+  setCurrentConstantUnit: (
+    newCurrentConstantUnit: CoordinateSpace | null,
+  ) => void;
   setCurrentFromTable: (newCurrentFromTable: string | null) => void;
   setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
+  setCurrentFromUnit: (newCurrentFromUnit: CoordinateSpace | null) => void;
   setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
   setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
-  setCurrentGroupByProjectMap: (
-    newCurrentGroupByProjectMap: string | undefined | null,
+  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
+  setCurrentGroupByUnit: (
+    newCurrentGroupByUnit: CoordinateSpace | null,
   ) => void;
-  setCurrentGroupByMap: (
-    newCurrentGroupByMap: ValueMap<number> | undefined | null,
-  ) => void;
-  setCurrentUnit: (unit: CoordinateSpace) => void;
 }
 
 export const SizeConfigContext = createContext<SizeConfigContextValue | null>(

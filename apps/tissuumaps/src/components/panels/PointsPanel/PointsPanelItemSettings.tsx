@@ -33,7 +33,8 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
       <ColorConfigContextProvider
         colorConfig={points.pointColor}
         onColorConfigChange={(c) => updatePoints(points.id, { pointColor: c })}
-        defaultColorConfigSource="constant"
+        defaultSource="constant"
+        defaultColor={defaultPointColor}
       >
         <AccordionItem>
           <AccordionHeader>
@@ -42,7 +43,7 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
             <ColorConfigSourceToggleGroup className="ml-auto" />
           </AccordionHeader>
           <AccordionPanel>
-            <ColorConfigControl defaultConstantValue={defaultPointColor} />
+            <ColorConfigControl />
           </AccordionPanel>
         </AccordionItem>
       </ColorConfigContextProvider>
@@ -52,7 +53,8 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
         onSizeConfigChange={(c: typeof points.pointSize) =>
           updatePoints(points.id, { pointSize: c })
         }
-        defaultSizeConfigSource="constant"
+        defaultSource="constant"
+        defaultSize={defaultPointSize}
       >
         <AccordionItem>
           <AccordionHeader>
@@ -61,7 +63,7 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
             <SizeConfigSourceToggleGroup className="ml-auto" />
           </AccordionHeader>
           <AccordionPanel>
-            <SizeConfigControl defaultConstantValue={defaultPointSize} />
+            <SizeConfigControl />
           </AccordionPanel>
         </AccordionItem>
       </SizeConfigContextProvider>

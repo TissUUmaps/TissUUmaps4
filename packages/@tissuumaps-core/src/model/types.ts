@@ -1,16 +1,12 @@
 import type OpenSeadragon from "openseadragon";
 
-/** A mapping from string keys (groups) to values with an optional default value */
-export type ValueMap<TValue> = {
-  values: { [key: string]: TValue };
-  defaultValue?: TValue;
-};
-
-/** A named mapping from string keys (groups) to values with an optional default value */
-export type NamedValueMap<TValue> = {
+/** A named mapping from string keys (groups) to typed values with an optional default value */
+export type DefaultMap<TValue> = {
   id: string;
   name: string;
-} & ValueMap<TValue>;
+  values: { [key: string]: TValue };
+  default?: TValue;
+};
 
 /** A marker shape (see marker atlas) */
 export const Marker = {

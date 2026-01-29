@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 
 import {
   type Color,
+  type DefaultMap,
   type DrawOptions,
   type Image,
   type ImageData,
@@ -14,7 +15,6 @@ import {
   type Shapes,
   type ShapesData,
   type TableData,
-  type ValueMap,
   type ViewerOptions,
 } from "@tissuumaps/core";
 
@@ -25,11 +25,11 @@ export interface ViewerAdapter {
   labels: Labels[];
   points: Points[];
   shapes: Shapes[];
-  markerMaps: Map<string, ValueMap<Marker>>;
-  sizeMaps: Map<string, ValueMap<number>>;
-  colorMaps: Map<string, ValueMap<Color>>;
-  visibilityMaps: Map<string, ValueMap<boolean>>;
-  opacityMaps: Map<string, ValueMap<number>>;
+  markerMaps: DefaultMap<Marker>[];
+  sizeMaps: DefaultMap<number>[];
+  colorMaps: DefaultMap<Color>[];
+  visibilityMaps: DefaultMap<boolean>[];
+  opacityMaps: DefaultMap<number>[];
   viewerOptions: ViewerOptions;
   viewerAnimationStartOptions: ViewerOptions;
   viewerAnimationFinishOptions: ViewerOptions;

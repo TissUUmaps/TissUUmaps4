@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { useTissUUmaps } from "@/store";
 import { useEffect, useState } from "react";
 
-import { type Color, type TableData, colorPalettes } from "@tissuumaps/core";
+import { type TableData, colorPalettes } from "@tissuumaps/core";
 
 import { ColorPicker } from "../../common/color-picker";
 import { Field, FieldControl, FieldLabel } from "../../common/field";
@@ -11,62 +11,59 @@ import { SimpleSelect } from "../../common/simple-select";
 import { useColorConfigContext } from "./context";
 
 export { ColorConfigContextProvider } from "./ColorConfigContextProvider";
+export { ColorConfigSourceToggleGroup } from "./ColorConfigSourceToggleGroup";
 
 export type ColorConfigControlProps = {
-  defaultConstantValue: Color;
   className?: string;
 };
 
-export function ColorConfigControl({
-  defaultConstantValue,
-  className,
-}: ColorConfigControlProps) {
+export function ColorConfigControl({ className }: ColorConfigControlProps) {
   const { currentSource } = useColorConfigContext();
 
   switch (currentSource) {
     case "constant":
-      return (
-        <ColorConfigConstantControl
-          defaultConstantValue={defaultConstantValue}
-          className={className}
-        />
-      );
+      return <ConstantColorConfigControl className={className} />;
     case "from":
-      return <ColorConfigFromControl className={className} />;
+      return <FromColorConfigControl className={className} />;
     case "groupBy":
-      return <ColorConfigGroupByControl className={className} />;
+      return <GroupByColorConfigControl className={className} />;
     case "random":
-      return <ColorConfigRandomControl className={className} />;
+      return <RandomColorConfigControl className={className} />;
   }
 }
 
-type ColorConfigConstantControlProps = {
-  defaultConstantValue: Color;
+type ConstantColorConfigControlProps = {
   className?: string;
 };
 
-function ColorConfigConstantControl({
-  defaultConstantValue,
+function ConstantColorConfigControl({
   className,
-}: ColorConfigConstantControlProps) {
+}: ConstantColorConfigControlProps) {
   const { currentConstantValue, setCurrentConstantValue } =
     useColorConfigContext();
 
   return (
     <div className={className}>
-      <ColorPicker
-        color={currentConstantValue ?? defaultConstantValue}
-        onColorChange={setCurrentConstantValue}
-      />
+      <Field>
+        <FieldLabel>Color</FieldLabel>
+        <FieldControl
+          render={
+            <ColorPicker
+              color={currentConstantValue}
+              onColorChange={setCurrentConstantValue}
+            />
+          }
+        />
+      </Field>
     </div>
   );
 }
 
-type ColorConfigFromControlProps = {
+type FromColorConfigControlProps = {
   className?: string;
 };
 
-function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
+function FromColorConfigControl({ className }: FromColorConfigControlProps) {
   const {
     currentFromTable,
     currentFromColumn,
@@ -155,10 +152,10 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
           render={
             <Input
               type="number"
-              value={currentFromRangeMin ?? undefined}
+              value={currentFromRangeMin ?? ""}
               onChange={(event) =>
                 setCurrentFromRangeMin(
-                  event.target.value ? +event.target.value : undefined,
+                  event.target.value ? +event.target.value : null,
                 )
               }
             />
@@ -171,10 +168,10 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
           render={
             <Input
               type="number"
-              value={currentFromRangeMax ?? undefined}
+              value={currentFromRangeMax ?? ""}
               onChange={(event) =>
                 setCurrentFromRangeMax(
-                  event.target.value ? +event.target.value : undefined,
+                  event.target.value ? +event.target.value : null,
                 )
               }
             />
@@ -182,13 +179,13 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
         />
       </Field>
       <Field>
-        <FieldLabel>Palette</FieldLabel>
+        <FieldLabel>Color palette</FieldLabel>
         <FieldControl
           render={
             <SimpleSelect
-              items={Object.entries(colorPalettes)}
-              itemLabel={([paletteId]) => paletteId}
-              itemValue={([paletteId]) => paletteId}
+              items={colorPalettes}
+              itemLabel={(colorPalette) => colorPalette.name}
+              itemValue={(colorPalette) => colorPalette.id}
               value={currentFromPalette}
               onValueChange={setCurrentFromPalette}
             />
@@ -199,21 +196,26 @@ function ColorConfigFromControl({ className }: ColorConfigFromControlProps) {
   );
 }
 
-type ColorConfigGroupByControlProps = {
+type GroupByColorConfigControlProps = {
   className?: string;
 };
 
-function ColorConfigGroupByControl({
+function GroupByColorConfigControl({
   className,
-}: ColorConfigGroupByControlProps) {
+}: GroupByColorConfigControlProps) {
   const {
     currentGroupByTable,
     currentGroupByColumn,
+    currentGroupByMap,
+    currentGroupByPalette,
     setCurrentGroupByTable,
     setCurrentGroupByColumn,
+    setCurrentGroupByMap,
+    setCurrentGroupByPalette,
   } = useColorConfigContext();
 
   const tables = useTissUUmaps((state) => state.tables);
+  const colorMaps = useTissUUmaps((state) => state.colorMaps);
   const loadTable = useTissUUmaps((state) => state.loadTable);
 
   const [currentGroupByTableData, setCurrentGroupByTableData] =
@@ -242,62 +244,104 @@ function ColorConfigGroupByControl({
 
   return (
     <div className={className}>
-      <SimpleSelect
-        items={tables}
-        itemLabel={(table) => table.name}
-        itemValue={(table) => table.id}
-        value={currentGroupByTable}
-        onValueChange={setCurrentGroupByTable}
-      />
-      <FieldControl
-        render={
-          <SimpleAsyncCombobox
-            suggestQueries={async (currentQuery) => {
-              if (currentGroupByTableData !== null) {
-                return await currentGroupByTableData.suggestColumnQueries(
-                  currentQuery,
-                );
-              }
-              return Promise.resolve([]);
-            }}
-            getItem={async (query) => {
-              if (currentGroupByTableData !== null) {
-                return await currentGroupByTableData.getColumn(query);
-              }
-              return Promise.resolve(null);
-            }}
-            itemQuery={(column) => column}
-            selectedItem={currentGroupByColumn}
-            onSelectedItemChange={setCurrentGroupByColumn}
-          />
-        }
-      />
-      {/* TODO projectMap/map select */}
+      <Field>
+        <FieldLabel>Table</FieldLabel>
+        <FieldControl
+          render={
+            <SimpleSelect
+              items={tables}
+              itemLabel={(table) => table.name}
+              itemValue={(table) => table.id}
+              value={currentGroupByTable}
+              onValueChange={setCurrentGroupByTable}
+            />
+          }
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Column</FieldLabel>
+        <FieldControl
+          render={
+            <SimpleAsyncCombobox
+              suggestQueries={async (currentQuery) => {
+                if (currentGroupByTableData !== null) {
+                  return await currentGroupByTableData.suggestColumnQueries(
+                    currentQuery,
+                  );
+                }
+                return Promise.resolve([]);
+              }}
+              getItem={async (query) => {
+                if (currentGroupByTableData !== null) {
+                  return await currentGroupByTableData.getColumn(query);
+                }
+                return Promise.resolve(null);
+              }}
+              itemQuery={(column) => column}
+              selectedItem={currentGroupByColumn}
+              onSelectedItemChange={setCurrentGroupByColumn}
+            />
+          }
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Color map</FieldLabel>
+        <FieldControl
+          render={
+            <SimpleSelect
+              items={colorMaps}
+              itemLabel={(colorMap) => colorMap.name}
+              itemValue={(colorMap) => colorMap.id}
+              value={currentGroupByMap}
+              onValueChange={setCurrentGroupByMap}
+            />
+          }
+        />
+      </Field>
+      <Field disabled={currentGroupByMap !== null}>
+        <FieldLabel>Color palette</FieldLabel>
+        <FieldControl
+          render={
+            <SimpleSelect
+              items={colorPalettes}
+              itemLabel={(colorPalette) => colorPalette.name}
+              itemValue={(colorPalette) => colorPalette.id}
+              value={currentGroupByPalette}
+              onValueChange={setCurrentGroupByPalette}
+            />
+          }
+        />
+      </Field>
     </div>
   );
 }
 
-type ColorConfigRandomControlProps = {
+type RandomColorConfigControlProps = {
   className?: string;
 };
 
-function ColorConfigRandomControl({
+function RandomColorConfigControl({
   className,
-}: ColorConfigRandomControlProps) {
+}: RandomColorConfigControlProps) {
   const { currentRandomPalette, setCurrentRandomPalette } =
     useColorConfigContext();
 
   return (
     <div className={className}>
-      <SimpleSelect
-        items={Object.entries(colorPalettes)}
-        itemLabel={([paletteId]) => paletteId}
-        itemValue={([paletteId]) => paletteId}
-        value={currentRandomPalette}
-        onValueChange={setCurrentRandomPalette}
-      />
+      <Field>
+        <FieldLabel>Color palette</FieldLabel>
+        <FieldControl
+          render={
+            <SimpleSelect
+              items={colorPalettes}
+              itemLabel={(colorPalette) => colorPalette.name}
+              itemValue={(colorPalette) => colorPalette.id}
+              value={currentRandomPalette}
+              onValueChange={setCurrentRandomPalette}
+            />
+          }
+        />
+      </Field>
     </div>
   );
 }
-
-export { ColorConfigSourceToggleGroup } from "./ColorConfigSourceToggleGroup";

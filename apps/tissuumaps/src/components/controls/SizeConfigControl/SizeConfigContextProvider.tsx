@@ -1,13 +1,12 @@
 import { type ReactNode, useEffect, useState } from "react";
 
 import {
+  type CoordinateSpace,
   type SizeConfig,
-  type ValueMap,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
 } from "@tissuumaps/core";
-import { type CoordinateSpace } from "@tissuumaps/core";
 
 import { SizeConfigContext } from "./context";
 
@@ -16,23 +15,31 @@ type SizeConfigSource = Exclude<SizeConfig["source"], undefined>;
 export type SizeConfigContextProviderProps = {
   sizeConfig: SizeConfig;
   onSizeConfigChange: (newSizeConfig: SizeConfig) => void;
-  defaultSizeConfigSource: SizeConfigSource;
+  defaultSource: SizeConfigSource;
+  defaultSize: number;
   children: ReactNode;
 };
 
 export function SizeConfigContextProvider({
   sizeConfig,
   onSizeConfigChange,
-  defaultSizeConfigSource,
+  defaultSource,
+  defaultSize,
   children,
 }: SizeConfigContextProviderProps) {
   const [currentSource, setCurrentSource] = useState<SizeConfigSource>(
-    sizeConfig.source ?? defaultSizeConfigSource,
+    sizeConfig.source ?? defaultSource,
   );
 
-  const [currentConstantValue, setCurrentConstantValue] = useState<
-    number | null
-  >(isConstantConfig(sizeConfig) ? sizeConfig.constant.value : null);
+  const [currentConstantValue, setCurrentConstantValue] = useState<number>(
+    isConstantConfig(sizeConfig) ? sizeConfig.constant.value : defaultSize,
+  );
+  const [currentConstantUnit, setCurrentConstantUnit] =
+    useState<CoordinateSpace | null>(
+      isConstantConfig(sizeConfig) && sizeConfig.constant.unit !== undefined
+        ? sizeConfig.constant.unit
+        : null,
+    );
 
   const [currentFromTable, setCurrentFromTable] = useState<string | null>(
     isFromConfig(sizeConfig) ? sizeConfig.from.table : null,
@@ -40,6 +47,12 @@ export function SizeConfigContextProvider({
   const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
     isFromConfig(sizeConfig) ? sizeConfig.from.column : null,
   );
+  const [currentFromUnit, setCurrentFromUnit] =
+    useState<CoordinateSpace | null>(
+      isFromConfig(sizeConfig) && sizeConfig.from.unit !== undefined
+        ? sizeConfig.from.unit
+        : null,
+    );
 
   const [currentGroupByTable, setCurrentGroupByTable] = useState<string | null>(
     isGroupByConfig(sizeConfig) ? sizeConfig.groupBy.table : null,
@@ -47,20 +60,17 @@ export function SizeConfigContextProvider({
   const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
     string | null
   >(isGroupByConfig(sizeConfig) ? sizeConfig.groupBy.column : null);
-  const [currentGroupByProjectMap, setCurrentGroupByProjectMap] = useState<
-    string | undefined | null
-  >(isGroupByConfig(sizeConfig) ? sizeConfig.groupBy.projectMap : null);
-  const [currentGroupByMap, setCurrentGroupByMap] = useState<
-    ValueMap<number> | undefined | null
-  >(isGroupByConfig(sizeConfig) ? sizeConfig.groupBy.map : null);
-
-  const [currentUnit, setCurrentUnit] = useState<CoordinateSpace | undefined>(
-    // Initialize from sizeConfig if present
-    (isConstantConfig(sizeConfig) && sizeConfig.constant.unit) ||
-      (isFromConfig(sizeConfig) && sizeConfig.from.unit) ||
-      (isGroupByConfig(sizeConfig) && sizeConfig.groupBy.unit) ||
-      undefined,
+  const [currentGroupByMap, setCurrentGroupByMap] = useState<string | null>(
+    isGroupByConfig(sizeConfig) && sizeConfig.groupBy.map !== undefined
+      ? sizeConfig.groupBy.map
+      : null,
   );
+  const [currentGroupByUnit, setCurrentGroupByUnit] =
+    useState<CoordinateSpace | null>(
+      isGroupByConfig(sizeConfig) && sizeConfig.groupBy.unit !== undefined
+        ? sizeConfig.groupBy.unit
+        : null,
+    );
 
   useEffect(() => {
     if (
@@ -70,12 +80,15 @@ export function SizeConfigContextProvider({
       // ...and different from current config
       (!isConstantConfig(sizeConfig) ||
         sizeConfig.constant.value !== currentConstantValue ||
-        sizeConfig.constant.unit !== currentUnit)
+        sizeConfig.constant.unit !== (currentConstantUnit ?? undefined))
     ) {
       onSizeConfigChange({
         ...sizeConfig,
         source: "constant",
-        constant: { value: currentConstantValue, unit: currentUnit },
+        constant: {
+          value: currentConstantValue,
+          unit: currentConstantUnit ?? undefined,
+        },
       });
     } else if (
       // from is complete...
@@ -86,7 +99,7 @@ export function SizeConfigContextProvider({
       (!isFromConfig(sizeConfig) ||
         sizeConfig.from.table !== currentFromTable ||
         sizeConfig.from.column !== currentFromColumn ||
-        sizeConfig.from.unit !== currentUnit)
+        sizeConfig.from.unit !== (currentFromUnit ?? undefined))
     ) {
       onSizeConfigChange({
         ...sizeConfig,
@@ -94,7 +107,7 @@ export function SizeConfigContextProvider({
         from: {
           table: currentFromTable,
           column: currentFromColumn,
-          unit: currentUnit,
+          unit: currentFromUnit ?? undefined,
         },
       });
     } else if (
@@ -102,15 +115,13 @@ export function SizeConfigContextProvider({
       currentSource === "groupBy" &&
       currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
-      currentGroupByProjectMap !== null &&
       currentGroupByMap !== null &&
       // ...and different from current config
       (!isGroupByConfig(sizeConfig) ||
         sizeConfig.groupBy.table !== currentGroupByTable ||
         sizeConfig.groupBy.column !== currentGroupByColumn ||
-        sizeConfig.groupBy.projectMap !== currentGroupByProjectMap ||
         sizeConfig.groupBy.map !== currentGroupByMap ||
-        sizeConfig.groupBy.unit !== currentUnit)
+        sizeConfig.groupBy.unit !== (currentGroupByUnit ?? undefined))
     ) {
       onSizeConfigChange({
         ...sizeConfig,
@@ -118,9 +129,8 @@ export function SizeConfigContextProvider({
         groupBy: {
           table: currentGroupByTable,
           column: currentGroupByColumn,
-          projectMap: currentGroupByProjectMap,
           map: currentGroupByMap,
-          unit: currentUnit,
+          unit: currentGroupByUnit ?? undefined,
         },
       });
     }
@@ -128,13 +138,14 @@ export function SizeConfigContextProvider({
     sizeConfig,
     currentSource,
     currentConstantValue,
+    currentConstantUnit,
     currentFromTable,
     currentFromColumn,
+    currentFromUnit,
     currentGroupByTable,
     currentGroupByColumn,
-    currentGroupByProjectMap,
     currentGroupByMap,
-    currentUnit,
+    currentGroupByUnit,
     onSizeConfigChange,
   ]);
 
@@ -142,23 +153,25 @@ export function SizeConfigContextProvider({
     <SizeConfigContext.Provider
       value={{
         currentSource,
-        currentConstantValue: currentConstantValue,
+        currentConstantValue,
+        currentConstantUnit,
         currentFromTable,
         currentFromColumn,
+        currentFromUnit,
         currentGroupByTable,
         currentGroupByColumn,
-        currentGroupByProjectMap,
         currentGroupByMap,
-        currentUnit,
+        currentGroupByUnit,
         setCurrentSource,
-        setCurrentConstantValue: setCurrentConstantValue,
+        setCurrentConstantValue,
+        setCurrentConstantUnit,
         setCurrentFromTable,
         setCurrentFromColumn,
+        setCurrentFromUnit,
         setCurrentGroupByTable,
         setCurrentGroupByColumn,
-        setCurrentGroupByProjectMap,
         setCurrentGroupByMap,
-        setCurrentUnit,
+        setCurrentGroupByUnit,
       }}
     >
       {children}

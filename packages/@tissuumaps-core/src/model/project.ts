@@ -8,9 +8,9 @@ import { type RawShapes, type Shapes, createShapes } from "./shapes";
 import { type RawTable, type Table, createTable } from "./table";
 import {
   type Color,
+  type DefaultMap,
   type DrawOptions,
   type Marker,
-  type NamedValueMap,
   type ViewerOptions,
 } from "./types";
 
@@ -74,27 +74,27 @@ export interface RawProject extends RawModel {
   /**
    * Marker maps
    */
-  markerMaps?: NamedValueMap<Marker>[];
+  markerMaps?: DefaultMap<Marker>[];
 
   /**
    * Size maps
    */
-  sizeMaps?: NamedValueMap<number>[];
+  sizeMaps?: DefaultMap<number>[];
 
   /**
    * Color maps
    */
-  colorMaps?: NamedValueMap<Color>[];
+  colorMaps?: DefaultMap<Color>[];
 
   /**
    * Visibility maps
    */
-  visibilityMaps?: NamedValueMap<boolean>[];
+  visibilityMaps?: DefaultMap<boolean>[];
 
   /**
    * Opacity maps
    */
-  opacityMaps?: NamedValueMap<number>[];
+  opacityMaps?: DefaultMap<number>[];
 
   /**
    * WebGL draw options for points/shapes

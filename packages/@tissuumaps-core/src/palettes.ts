@@ -21,15 +21,29 @@ export const markerPalette = [
   Marker.Gaussian,
 ];
 
-export const continuousColorPalettes: Record<string, Color[]> = {
-  batlow: ColorUtils.parseColorPalette(batlow),
+export type ColorPalette = {
+  id: string;
+  name: string;
+  colors: Color[];
 };
 
-export const categoricalColorPalettes: Record<string, Color[]> = {
-  batlowS: ColorUtils.parseColorPalette(batlowS),
-};
+export const continuousColorPalettes: ColorPalette[] = [
+  {
+    id: "batlow",
+    name: "Batlow (continuous)",
+    colors: ColorUtils.parseColorPalette(batlow),
+  },
+];
 
-export const colorPalettes: Record<string, Color[]> = {
+export const categoricalColorPalettes: ColorPalette[] = [
+  {
+    id: "batlowS",
+    name: "Batlow (categorical)",
+    colors: ColorUtils.parseColorPalette(batlowS),
+  },
+];
+
+export const colorPalettes: ColorPalette[] = [
   ...continuousColorPalettes,
   ...categoricalColorPalettes,
-};
+];

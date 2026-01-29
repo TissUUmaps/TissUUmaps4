@@ -1,4 +1,3 @@
-import { colorPalettes } from "../palettes";
 import {
   type Color,
   type CoordinateSpace,
@@ -52,9 +51,8 @@ export const defaultViewerOptions = {
   imageSmoothingEnabled: false,
 } as const satisfies ViewerOptions;
 
-/** Default palette for random label colors */
-export const defaultRandomLabelColorPalette: keyof typeof colorPalettes =
-  "batlowS";
+/** ID of the default color palette for random label colors */
+export const defaultRandomLabelColorPalette: string = "batlowS";
 
 /** Default label visibility */
 export const defaultLabelVisibility = true;

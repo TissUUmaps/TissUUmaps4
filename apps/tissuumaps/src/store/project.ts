@@ -1,10 +1,10 @@
 import {
   type Color,
+  type DefaultMap,
   type DrawOptions,
   Marker,
   type Project,
   type RawProject,
-  type ValueMap,
   type ViewerOptions,
   createProject,
   projectDefaults,
@@ -16,11 +16,11 @@ export type ProjectSlice = ProjectSliceState & ProjectSliceActions;
 
 export type ProjectSliceState = {
   projectName: string;
-  markerMaps: Map<string, ValueMap<Marker>>;
-  sizeMaps: Map<string, ValueMap<number>>;
-  colorMaps: Map<string, ValueMap<Color>>;
-  visibilityMaps: Map<string, ValueMap<boolean>>;
-  opacityMaps: Map<string, ValueMap<number>>;
+  markerMaps: DefaultMap<Marker>[];
+  sizeMaps: DefaultMap<number>[];
+  colorMaps: DefaultMap<Color>[];
+  visibilityMaps: DefaultMap<boolean>[];
+  opacityMaps: DefaultMap<number>[];
   drawOptions: DrawOptions;
   viewerOptions: ViewerOptions;
   viewerAnimationStartOptions: ViewerOptions;
@@ -29,7 +29,6 @@ export type ProjectSliceState = {
 
 export type ProjectSliceActions = {
   setProjectName: (name: string) => void;
-  // TODO actions for maps, drawOptions, viewerOptions
   loadProject: (
     project: Project,
     options: { signal?: AbortSignal },
@@ -61,13 +60,11 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
     state.clearProject();
     set((draft) => {
       draft.projectName = project.name;
-      draft.markerMaps = new Map(project.markerMaps?.map((m) => [m.id, m]));
-      draft.sizeMaps = new Map(project.sizeMaps?.map((m) => [m.id, m]));
-      draft.colorMaps = new Map(project.colorMaps?.map((m) => [m.id, m]));
-      draft.visibilityMaps = new Map(
-        project.visibilityMaps?.map((m) => [m.id, m]),
-      );
-      draft.opacityMaps = new Map(project.opacityMaps?.map((m) => [m.id, m]));
+      draft.markerMaps = project.markerMaps;
+      draft.sizeMaps = project.sizeMaps;
+      draft.colorMaps = project.colorMaps;
+      draft.visibilityMaps = project.visibilityMaps;
+      draft.opacityMaps = project.opacityMaps;
       draft.drawOptions = project.drawOptions;
       draft.viewerOptions = project.viewerOptions;
       draft.viewerAnimationStartOptions = project.viewerAnimationStartOptions;
@@ -158,11 +155,11 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
 
 const initialProjectSliceState: ProjectSliceState = {
   projectName: "New Project",
-  markerMaps: new Map(),
-  sizeMaps: new Map(),
-  colorMaps: new Map(),
-  visibilityMaps: new Map(),
-  opacityMaps: new Map(),
+  markerMaps: [],
+  sizeMaps: [],
+  colorMaps: [],
+  visibilityMaps: [],
+  opacityMaps: [],
   drawOptions: projectDefaults.drawOptions,
   viewerOptions: projectDefaults.viewerOptions,
   viewerAnimationStartOptions: projectDefaults.viewerAnimationStartOptions,

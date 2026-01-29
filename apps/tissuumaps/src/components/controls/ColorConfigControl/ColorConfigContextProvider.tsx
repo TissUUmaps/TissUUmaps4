@@ -3,7 +3,6 @@ import { type ReactNode, useEffect, useState } from "react";
 import {
   type Color,
   type ColorConfig,
-  type ValueMap,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
@@ -17,24 +16,25 @@ type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 export type ColorConfigContextProviderProps = {
   colorConfig: ColorConfig;
   onColorConfigChange: (newColorConfig: ColorConfig) => void;
-  defaultColorConfigSource: ColorConfigSource;
+  defaultSource: ColorConfigSource;
+  defaultColor: Color;
   children: ReactNode;
 };
 
 export function ColorConfigContextProvider({
   colorConfig,
   onColorConfigChange,
-  defaultColorConfigSource,
+  defaultSource,
+  defaultColor,
   children,
 }: ColorConfigContextProviderProps) {
   const [currentSource, setCurrentSource] = useState<ColorConfigSource>(
-    colorConfig.source ?? defaultColorConfigSource,
+    colorConfig.source ?? defaultSource,
   );
 
-  const [currentConstantValue, setCurrentConstantValue] =
-    useState<Color | null>(
-      isConstantConfig(colorConfig) ? colorConfig.constant.value : null,
-    );
+  const [currentConstantValue, setCurrentConstantValue] = useState<Color>(
+    isConstantConfig(colorConfig) ? colorConfig.constant.value : defaultColor,
+  );
 
   const [currentFromTable, setCurrentFromTable] = useState<string | null>(
     isFromConfig(colorConfig) ? colorConfig.from.table : null,
@@ -42,13 +42,17 @@ export function ColorConfigContextProvider({
   const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
     isFromConfig(colorConfig) ? colorConfig.from.column : null,
   );
-  const [currentFromRangeMin, setCurrentFromRangeMin] = useState<
-    number | undefined | null
-  >(isFromConfig(colorConfig) ? colorConfig.from.range?.[0] : null);
+  const [currentFromRangeMin, setCurrentFromRangeMin] = useState<number | null>(
+    isFromConfig(colorConfig) && colorConfig.from.range !== undefined
+      ? colorConfig.from.range[0]
+      : null,
+  );
 
-  const [currentFromRangeMax, setCurrentFromRangeMax] = useState<
-    number | undefined | null
-  >(isFromConfig(colorConfig) ? colorConfig.from.range?.[1] : null);
+  const [currentFromRangeMax, setCurrentFromRangeMax] = useState<number | null>(
+    isFromConfig(colorConfig) && colorConfig.from.range !== undefined
+      ? colorConfig.from.range[1]
+      : null,
+  );
   const [currentFromPalette, setCurrentFromPalette] = useState<string | null>(
     isFromConfig(colorConfig) ? colorConfig.from.palette : null,
   );
@@ -59,12 +63,14 @@ export function ColorConfigContextProvider({
   const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
     string | null
   >(isGroupByConfig(colorConfig) ? colorConfig.groupBy.column : null);
-  const [currentGroupByProjectMap, setCurrentGroupByProjectMap] = useState<
-    string | undefined | null
-  >(isGroupByConfig(colorConfig) ? colorConfig.groupBy.projectMap : null);
-  const [currentGroupByMap, setCurrentGroupByMap] = useState<
-    ValueMap<Color> | undefined | null
-  >(isGroupByConfig(colorConfig) ? colorConfig.groupBy.map : null);
+  const [currentGroupByMap, setCurrentGroupByMap] = useState<string | null>(
+    isGroupByConfig(colorConfig) && colorConfig.groupBy.map !== undefined
+      ? colorConfig.groupBy.map
+      : null,
+  );
+  const [currentGroupByPalette, setCurrentGroupByPalette] = useState<
+    string | null
+  >(isGroupByConfig(colorConfig) ? colorConfig.groupBy.palette : null);
 
   const [currentRandomPalette, setCurrentRandomPalette] = useState<
     string | null
@@ -89,15 +95,13 @@ export function ColorConfigContextProvider({
       currentSource === "from" &&
       currentFromTable !== null &&
       currentFromColumn !== null &&
-      currentFromRangeMin !== null &&
-      currentFromRangeMax !== null &&
       currentFromPalette !== null &&
       // ...and different from current config
       (!isFromConfig(colorConfig) ||
         colorConfig.from.table !== currentFromTable ||
         colorConfig.from.column !== currentFromColumn ||
-        colorConfig.from.range?.[0] !== currentFromRangeMin ||
-        colorConfig.from.range?.[1] !== currentFromRangeMax ||
+        colorConfig.from.range?.[0] !== (currentFromRangeMin ?? undefined) ||
+        colorConfig.from.range?.[1] !== (currentFromRangeMax ?? undefined) ||
         colorConfig.from.palette !== currentFromPalette)
     ) {
       onColorConfigChange({
@@ -107,8 +111,7 @@ export function ColorConfigContextProvider({
           table: currentFromTable,
           column: currentFromColumn,
           range:
-            currentFromRangeMin !== undefined &&
-            currentFromRangeMax !== undefined
+            currentFromRangeMin !== null && currentFromRangeMax !== null
               ? [currentFromRangeMin, currentFromRangeMax]
               : undefined,
           palette: currentFromPalette,
@@ -119,14 +122,13 @@ export function ColorConfigContextProvider({
       currentSource === "groupBy" &&
       currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
-      currentGroupByProjectMap !== null &&
-      currentGroupByMap !== null &&
+      currentGroupByPalette !== null &&
       // ...and different from current config
       (!isGroupByConfig(colorConfig) ||
         colorConfig.groupBy.table !== currentGroupByTable ||
         colorConfig.groupBy.column !== currentGroupByColumn ||
-        colorConfig.groupBy.projectMap !== currentGroupByProjectMap ||
-        colorConfig.groupBy.map !== currentGroupByMap)
+        colorConfig.groupBy.map !== (currentGroupByMap ?? undefined) ||
+        colorConfig.groupBy.palette !== currentGroupByPalette)
     ) {
       onColorConfigChange({
         ...colorConfig,
@@ -134,8 +136,8 @@ export function ColorConfigContextProvider({
         groupBy: {
           table: currentGroupByTable,
           column: currentGroupByColumn,
-          projectMap: currentGroupByProjectMap,
-          map: currentGroupByMap,
+          map: currentGroupByMap ?? undefined,
+          palette: currentGroupByPalette,
         },
       });
     } else if (
@@ -165,8 +167,8 @@ export function ColorConfigContextProvider({
     currentFromPalette,
     currentGroupByTable,
     currentGroupByColumn,
-    currentGroupByProjectMap,
     currentGroupByMap,
+    currentGroupByPalette,
     currentRandomPalette,
     onColorConfigChange,
   ]);
@@ -175,7 +177,7 @@ export function ColorConfigContextProvider({
     <ColorConfigContext.Provider
       value={{
         currentSource,
-        currentConstantValue: currentConstantValue,
+        currentConstantValue,
         currentFromTable,
         currentFromColumn,
         currentFromRangeMin,
@@ -183,11 +185,11 @@ export function ColorConfigContextProvider({
         currentFromPalette,
         currentGroupByTable,
         currentGroupByColumn,
-        currentGroupByProjectMap,
         currentGroupByMap,
+        currentGroupByPalette,
         currentRandomPalette,
         setCurrentSource,
-        setCurrentConstantValue: setCurrentConstantValue,
+        setCurrentConstantValue,
         setCurrentFromTable,
         setCurrentFromColumn,
         setCurrentFromRangeMin,
@@ -195,8 +197,8 @@ export function ColorConfigContextProvider({
         setCurrentFromPalette,
         setCurrentGroupByTable,
         setCurrentGroupByColumn,
-        setCurrentGroupByProjectMap,
         setCurrentGroupByMap,
+        setCurrentGroupByPalette,
         setCurrentRandomPalette,
       }}
     >

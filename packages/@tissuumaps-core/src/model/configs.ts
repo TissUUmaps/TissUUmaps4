@@ -1,10 +1,4 @@
-import { type colorPalettes } from "../palettes";
-import {
-  type Color,
-  type CoordinateSpace,
-  type Marker,
-  type ValueMap,
-} from "./types";
+import { type Color, type CoordinateSpace, type Marker } from "./types";
 
 /** Configuration */
 export type Config<TSource extends string> = {
@@ -94,7 +88,7 @@ export function isFromConfig<TFromExtra = unknown>(
 
 /** Configuration to map a categorical table column to values */
 export type GroupByConfig<
-  TValue,
+  TMapRequired extends boolean,
   TGroupByExtra = unknown,
 > = Config<"groupBy"> & {
   /** Specification of what categorical table column to load and how to map groups to values */
@@ -105,19 +99,8 @@ export type GroupByConfig<
     /** Name of the categorical table column */
     column: string;
 
-    /**
-     * ID of a project-global group-to-value mapping
-     *
-     * If not specified, the custom mapping defined in {@link GroupByConfig.map} is used.
-     */
-    projectMap?: string;
-
-    /**
-     * Custom group-to-value mapping
-     *
-     * Only used if {@link GroupByConfig.projectMap} is not specified.
-     */
-    map?: ValueMap<TValue>;
+    /** Project-global group-to-value map ID */
+    map: TMapRequired extends true ? string : string | undefined;
   } & TGroupByExtra;
 };
 
@@ -127,10 +110,13 @@ export type GroupByConfig<
  * @param obj - The object to check
  * @returns Whether the object is a {@link GroupByConfig}
  */
-export function isGroupByConfig<TValue, TGroupByExtra = unknown>(
-  obj: unknown,
-): obj is GroupByConfig<TValue, TGroupByExtra> {
-  return (obj as GroupByConfig<TValue, TGroupByExtra>).groupBy !== undefined;
+export function isGroupByConfig<
+  TMapRequired extends boolean,
+  TGroupByExtra = unknown,
+>(obj: unknown): obj is GroupByConfig<TMapRequired, TGroupByExtra> {
+  return (
+    (obj as GroupByConfig<TMapRequired, TGroupByExtra>).groupBy !== undefined
+  );
 }
 
 /** Configuration to use random values */
@@ -159,7 +145,7 @@ export function isRandomConfig<TRandom>(
 export type MarkerConfig =
   | ConstantConfig<Marker>
   | FromConfig
-  | GroupByConfig<Marker>;
+  | GroupByConfig<false>;
 
 /**
  * Size configuration
@@ -187,7 +173,7 @@ export type SizeConfig =
       unit?: CoordinateSpace;
     }>
   | GroupByConfig<
-      number,
+      true,
       {
         /**
          * Coordinate space in which the size values are specified
@@ -215,13 +201,23 @@ export type ColorConfig =
        */
       range?: [number, number];
 
-      /** Color palette to which clipped and rescaled numerical values are mapped */
-      palette: keyof typeof colorPalettes;
+      /** ID of the color palette to which clipped and rescaled numerical values are mapped */
+      palette: string;
     }>
-  | GroupByConfig<Color>
+  | GroupByConfig<
+      false,
+      {
+        /**
+         * ID of the color palette for mapping hashed group names to colors
+         *
+         * Only used when no project-global colormap is specified
+         */
+        palette: string;
+      }
+    >
   | RandomConfig<{
-      /** Color palette from which colors are randomly drawn */
-      palette: keyof typeof colorPalettes;
+      /** ID of the color palette from which colors are randomly drawn */
+      palette: string;
     }>;
 
 /**
@@ -232,7 +228,7 @@ export type ColorConfig =
 export type VisibilityConfig =
   | ConstantConfig<boolean>
   | FromConfig
-  | GroupByConfig<boolean>;
+  | GroupByConfig<true>;
 
 /**
  * Opacity configuration
@@ -242,4 +238,4 @@ export type VisibilityConfig =
 export type OpacityConfig =
   | ConstantConfig<number>
   | FromConfig
-  | GroupByConfig<number>;
+  | GroupByConfig<true>;

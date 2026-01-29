@@ -13,7 +13,7 @@ import {
 } from "../model/constants";
 import { type Layer } from "../model/layer";
 import { type Shapes, type ShapesLayerConfig } from "../model/shapes";
-import { type Color, type DrawOptions, type ValueMap } from "../model/types";
+import { type Color, type DefaultMap, type DrawOptions } from "../model/types";
 import { type ShapesData } from "../storage/shapes";
 import { type TableData } from "../storage/table";
 import { type MultiPolygon, type Rect, type Vertex } from "../types";
@@ -112,9 +112,9 @@ export class WebGLShapesController extends WebGLControllerBase {
   async synchronize(
     layers: Layer[],
     shapes: Shapes[],
-    colorMaps: Map<string, ValueMap<Color>>,
-    visibilityMaps: Map<string, ValueMap<boolean>>,
-    opacityMaps: Map<string, ValueMap<number>>,
+    colorMaps: DefaultMap<Color>[],
+    visibilityMaps: DefaultMap<boolean>[],
+    opacityMaps: DefaultMap<number>[],
     loadShapes: (
       shapesId: string,
       options: { signal?: AbortSignal },
@@ -275,9 +275,9 @@ export class WebGLShapesController extends WebGLControllerBase {
   private async _createOrUpdateGLShapes(
     refs: ShapesRef[],
     glShapesByRef: Map<ShapesRef, GLShapes>,
-    colorMaps: Map<string, ValueMap<Color>>,
-    visibilityMaps: Map<string, ValueMap<boolean>>,
-    opacityMaps: Map<string, ValueMap<number>>,
+    colorMaps: DefaultMap<Color>[],
+    visibilityMaps: DefaultMap<boolean>[],
+    opacityMaps: DefaultMap<number>[],
     loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
@@ -433,9 +433,9 @@ export class WebGLShapesController extends WebGLControllerBase {
 
   private async _createShapeFillColorsTexture(
     ref: ShapesRef,
-    colorMaps: Map<string, ValueMap<Color>>,
-    visibilityMaps: Map<string, ValueMap<boolean>>,
-    opacityMaps: Map<string, ValueMap<number>>,
+    colorMaps: DefaultMap<Color>[],
+    visibilityMaps: DefaultMap<boolean>[],
+    opacityMaps: DefaultMap<number>[],
     loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },
@@ -502,9 +502,9 @@ export class WebGLShapesController extends WebGLControllerBase {
 
   private async _createShapeStrokeColorsTexture(
     ref: ShapesRef,
-    colorMaps: Map<string, ValueMap<Color>>,
-    visibilityMaps: Map<string, ValueMap<boolean>>,
-    opacityMaps: Map<string, ValueMap<number>>,
+    colorMaps: DefaultMap<Color>[],
+    visibilityMaps: DefaultMap<boolean>[],
+    opacityMaps: DefaultMap<number>[],
     loadTable: (
       tableId: string,
       options: { signal?: AbortSignal },

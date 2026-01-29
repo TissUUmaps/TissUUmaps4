@@ -22,9 +22,9 @@ import { type Points, type PointsLayerConfig } from "../model/points";
 import {
   type Color,
   type CoordinateSpace,
+  type DefaultMap,
   type DrawOptions,
   Marker,
-  type ValueMap,
 } from "../model/types";
 import { type PointsData } from "../storage/points";
 import { type TableData } from "../storage/table";
@@ -206,11 +206,11 @@ export class WebGLPointsController extends WebGLControllerBase {
   async synchronize(
     layers: Layer[],
     points: Points[],
-    markerMaps: Map<string, ValueMap<Marker>>,
-    sizeMaps: Map<string, ValueMap<number>>,
-    colorMaps: Map<string, ValueMap<Color>>,
-    visibilityMaps: Map<string, ValueMap<boolean>>,
-    opacityMaps: Map<string, ValueMap<number>>,
+    markerMaps: DefaultMap<Marker>[],
+    sizeMaps: DefaultMap<number>[],
+    colorMaps: DefaultMap<Color>[],
+    visibilityMaps: DefaultMap<boolean>[],
+    opacityMaps: DefaultMap<number>[],
     loadPoints: (
       pointsId: string,
       options: { signal?: AbortSignal },
@@ -408,11 +408,11 @@ export class WebGLPointsController extends WebGLControllerBase {
 
   private async _loadPointBuffers(
     refs: PointsRef[],
-    markerMaps: Map<string, ValueMap<Marker>>,
-    sizeMaps: Map<string, ValueMap<number>>,
-    colorMaps: Map<string, ValueMap<Color>>,
-    visibilityMaps: Map<string, ValueMap<boolean>>,
-    opacityMaps: Map<string, ValueMap<number>>,
+    markerMaps: DefaultMap<Marker>[],
+    sizeMaps: DefaultMap<number>[],
+    colorMaps: DefaultMap<Color>[],
+    visibilityMaps: DefaultMap<boolean>[],
+    opacityMaps: DefaultMap<number>[],
     buffersResized: boolean,
     loadTable: (
       tableId: string,
@@ -439,6 +439,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         bufferSliceState.ref.points.id !== ref.points.id ||
         bufferSliceState.ref.layerConfigIndex !== ref.layerConfigIndex ||
         bufferSliceState.ref.data !== ref.data;
+      // x
       if (
         bufferSliceChanged ||
         bufferSliceState.current.layerConfig.x !== ref.layerConfig.x
@@ -455,6 +456,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           { offset },
         );
       }
+      // y
       if (
         bufferSliceChanged ||
         bufferSliceState.current.layerConfig.y !== ref.layerConfig.y
@@ -471,6 +473,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           { offset },
         );
       }
+      // marker
       if (
         bufferSliceChanged ||
         !deepEqual(
@@ -495,8 +498,17 @@ export class WebGLPointsController extends WebGLControllerBase {
           { offset },
         );
       }
+      // size
       if (
         bufferSliceChanged ||
+        bufferSliceState.current.layer.pointSizeFactor !==
+          ref.layer.pointSizeFactor ||
+        bufferSliceState.current.points.pointSizeFactor !==
+          ref.points.pointSizeFactor ||
+        bufferSliceState.current.layer.transform.scale !==
+          ref.layer.transform.scale ||
+        bufferSliceState.current.layerConfig.transform.scale !==
+          ref.layerConfig.transform.scale ||
         !deepEqual(
           bufferSliceState.current.points.pointSize,
           ref.points.pointSize,
@@ -546,6 +558,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           { offset },
         );
       }
+      // color, visibility, opacity
       if (
         bufferSliceChanged ||
         bufferSliceState.current.layer.visibility !== ref.layer.visibility ||
@@ -629,6 +642,8 @@ export class WebGLPointsController extends WebGLControllerBase {
           layer: {
             visibility: ref.layer.visibility,
             opacity: ref.layer.opacity,
+            pointSizeFactor: ref.layer.pointSizeFactor,
+            transform: structuredClone(ref.layer.transform),
           },
           points: {
             visibility: ref.points.visibility,
@@ -638,10 +653,12 @@ export class WebGLPointsController extends WebGLControllerBase {
             pointColor: structuredClone(ref.points.pointColor),
             pointVisibility: structuredClone(ref.points.pointVisibility),
             pointOpacity: structuredClone(ref.points.pointOpacity),
+            pointSizeFactor: ref.points.pointSizeFactor,
           },
           layerConfig: {
             x: ref.layerConfig.x,
             y: ref.layerConfig.y,
+            transform: structuredClone(ref.layerConfig.transform),
           },
         },
       });
@@ -679,7 +696,10 @@ type PointsBufferSliceState = {
   offset: number;
   numPoints: number;
   current: {
-    layer: Pick<Layer, "visibility" | "opacity">;
+    layer: Pick<
+      Layer,
+      "visibility" | "opacity" | "pointSizeFactor" | "transform"
+    >;
     points: Pick<
       Points,
       | "visibility"
@@ -689,7 +709,8 @@ type PointsBufferSliceState = {
       | "pointColor"
       | "pointVisibility"
       | "pointOpacity"
+      | "pointSizeFactor"
     >;
-    layerConfig: Pick<PointsLayerConfig, "x" | "y">;
+    layerConfig: Pick<PointsLayerConfig, "x" | "y" | "transform">;
   };
 };
