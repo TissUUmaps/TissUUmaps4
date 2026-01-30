@@ -71,7 +71,11 @@ export function ColorConfigContextProvider({
   );
   const [currentGroupByPalette, setCurrentGroupByPalette] = useState<
     string | null
-  >(isGroupByConfig(colorConfig) ? colorConfig.groupBy.palette : null);
+  >(
+    isGroupByConfig(colorConfig) && colorConfig.groupBy.palette !== undefined
+      ? colorConfig.groupBy.palette
+      : null,
+  );
 
   const [currentRandomPalette, setCurrentRandomPalette] = useState<
     string | null
@@ -125,14 +129,14 @@ export function ColorConfigContextProvider({
       currentSource === "groupBy" &&
       currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
-      currentGroupByPalette !== null &&
+      (currentGroupByMap !== null || currentGroupByPalette !== null) &&
       // ...and different from active config
       (activeSource !== "groupBy" ||
         !isGroupByConfig(colorConfig) ||
         colorConfig.groupBy.table !== currentGroupByTable ||
         colorConfig.groupBy.column !== currentGroupByColumn ||
         colorConfig.groupBy.map !== (currentGroupByMap ?? undefined) ||
-        colorConfig.groupBy.palette !== currentGroupByPalette)
+        colorConfig.groupBy.palette !== (currentGroupByPalette ?? undefined))
     ) {
       onColorConfigChange({
         ...colorConfig,
@@ -141,7 +145,7 @@ export function ColorConfigContextProvider({
           table: currentGroupByTable,
           column: currentGroupByColumn,
           map: currentGroupByMap ?? undefined,
-          palette: currentGroupByPalette,
+          palette: currentGroupByPalette ?? undefined,
         },
       });
     } else if (

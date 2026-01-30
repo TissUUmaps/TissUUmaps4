@@ -369,17 +369,25 @@ export class LoadUtils {
         }
       }
       // load color palette
-      const colorPalette = colorPalettes.find(
-        (colorPalette) => colorPalette.id === colorConfig.groupBy.palette,
-      );
-      if (colorPalette === undefined) {
-        console.warn(`Color palette ${colorConfig.groupBy.palette} not found`);
+      let colorPalette;
+      if (colorConfig.groupBy.palette !== undefined) {
+        const p = colorPalettes.find(
+          (p) => p.id === colorConfig.groupBy.palette,
+        );
+        if (p !== undefined) {
+          colorPalette = p;
+        } else {
+          console.warn(
+            `Color palette ${colorConfig.groupBy.palette} not found`,
+          );
+          colorPalette = "notfound" as const;
+        }
       }
-      if (colorMap === "notfound" || colorPalette === undefined) {
+      if (colorMap === "notfound" || colorPalette === "notfound") {
         // color map or color palette not found --> use default color
         const packedColor = ColorUtils.packColor(defaultColor);
         data.fill(packedColor, 0, ids.length);
-      } else {
+      } else if (colorMap !== undefined || colorPalette !== undefined) {
         // load table column
         const tableData = await loadTable(colorConfig.groupBy.table, {
           signal,
@@ -404,10 +412,12 @@ export class LoadUtils {
                 colorMap.values.get(group) ?? // first, try to get group-specific color
                 colorMap.default ?? // then, fallback to color map default
                 defaultColor; // finally, fallback to default color
-            } else {
+            } else if (colorPalette !== undefined) {
               // no color map --> use hash of group name to select a color
               const hash = HashUtils.djb2(group);
               color = colorPalette.colors[hash % colorPalette.colors.length]!;
+            } else {
+              throw new Error("Unreachable");
             }
             const packedColor = ColorUtils.packColor(color);
             data[i] = packedColor;
@@ -421,6 +431,11 @@ export class LoadUtils {
             data[i] = packedColor;
           }
         }
+      } else {
+        // no color map and no color palette --> use default color
+        console.warn(`No color map or color palette specified`);
+        const packedColor = ColorUtils.packColor(defaultColor);
+        data.fill(packedColor, 0, ids.length);
       }
     } else if (activeConfigSource === "random" && isRandomConfig(colorConfig)) {
       // load color palette

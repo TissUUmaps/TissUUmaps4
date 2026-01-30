@@ -200,7 +200,7 @@ export type ColorConfig =
          *
          * Only used when no project-global colormap is specified
          */
-        palette: string;
+        palette?: string;
       }
     >
   | RandomConfig<{
