@@ -14,9 +14,11 @@ export function SizeConfigSourceToggleGroup(
   return (
     <ToggleGroup
       value={[currentSource]}
-      onValueChange={(value) =>
-        setCurrentSource(value[0] as typeof currentSource)
-      }
+      onValueChange={(value) => {
+        if (value.length === 1 && value[0] !== undefined) {
+          setCurrentSource(value[0] as typeof currentSource);
+        }
+      }}
       {...props}
     >
       <ToggleGroupItem value={"constant" satisfies typeof currentSource}>
