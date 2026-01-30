@@ -14,8 +14,8 @@ import {
   defaultPointMarker,
   defaultPointOpacity,
   defaultPointSize,
+  defaultPointSizeUnit,
   defaultPointVisibility,
-  defaultSizeUnit,
 } from "../model/constants";
 import { type Layer } from "../model/layer";
 import { type Points, type PointsLayerConfig } from "../model/points";
@@ -520,19 +520,21 @@ export class WebGLPointsController extends WebGLControllerBase {
           activeSource === "constant" &&
           isConstantConfig(ref.points.pointSize)
         ) {
-          activeUnit = ref.points.pointSize.constant.unit ?? defaultSizeUnit;
+          activeUnit =
+            ref.points.pointSize.constant.unit ?? defaultPointSizeUnit;
         } else if (
           activeSource === "from" &&
           isFromConfig(ref.points.pointSize)
         ) {
-          activeUnit = ref.points.pointSize.from.unit ?? defaultSizeUnit;
+          activeUnit = ref.points.pointSize.from.unit ?? defaultPointSizeUnit;
         } else if (
           activeSource === "groupBy" &&
           isGroupByConfig(ref.points.pointSize)
         ) {
-          activeUnit = ref.points.pointSize.groupBy.unit ?? defaultSizeUnit;
+          activeUnit =
+            ref.points.pointSize.groupBy.unit ?? defaultPointSizeUnit;
         } else {
-          activeUnit = defaultSizeUnit;
+          activeUnit = defaultPointSizeUnit;
         }
         let sizeFactor = ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
         if (activeUnit === "data") {

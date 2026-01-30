@@ -14,9 +14,6 @@ export const identityTransform = {
   translation: { x: 0, y: 0 },
 } as const satisfies SimilarityTransform;
 
-/** Default size unit */
-export const defaultSizeUnit: CoordinateSpace = "data";
-
 /** Default WebGL draw options */
 export const defaultDrawOptions = {
   pointSizeFactor: 1,
@@ -52,7 +49,7 @@ export const defaultViewerOptions = {
 } as const satisfies ViewerOptions;
 
 /** ID of the default color palette for random label colors */
-export const defaultRandomLabelColorPalette: string = "batlowS";
+export const defaultLabelColorPalette: string = "batlowS";
 
 /** Default label visibility */
 export const defaultLabelVisibility = true;
@@ -65,6 +62,9 @@ export const defaultPointMarker = Marker.Disc;
 
 /** Default point size */
 export const defaultPointSize = 1;
+
+/** Default point size unit */
+export const defaultPointSizeUnit: CoordinateSpace = "data";
 
 /** Default point color */
 export const defaultPointColor = {

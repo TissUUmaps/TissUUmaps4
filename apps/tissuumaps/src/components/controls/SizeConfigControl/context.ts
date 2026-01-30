@@ -9,28 +9,24 @@ interface SizeConfigContextValue {
   activeSource: SizeConfigSource;
   currentSource: SizeConfigSource;
   currentConstantValue: number;
-  currentConstantUnit: CoordinateSpace | null;
+  currentConstantUnit: CoordinateSpace;
   currentFromTable: string | null;
   currentFromColumn: string | null;
-  currentFromUnit: CoordinateSpace | null;
+  currentFromUnit: CoordinateSpace;
   currentGroupByTable: string | null;
   currentGroupByColumn: string | null;
   currentGroupByMap: string | null;
-  currentGroupByUnit: CoordinateSpace | null;
+  currentGroupByUnit: CoordinateSpace;
   setCurrentSource: (newCurrentSource: SizeConfigSource) => void;
   setCurrentConstantValue: (newCurrentConstantValue: number) => void;
-  setCurrentConstantUnit: (
-    newCurrentConstantUnit: CoordinateSpace | null,
-  ) => void;
+  setCurrentConstantUnit: (newCurrentConstantUnit: CoordinateSpace) => void;
   setCurrentFromTable: (newCurrentFromTable: string | null) => void;
   setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
-  setCurrentFromUnit: (newCurrentFromUnit: CoordinateSpace | null) => void;
+  setCurrentFromUnit: (newCurrentFromUnit: CoordinateSpace) => void;
   setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
   setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
   setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
-  setCurrentGroupByUnit: (
-    newCurrentGroupByUnit: CoordinateSpace | null,
-  ) => void;
+  setCurrentGroupByUnit: (newCurrentGroupByUnit: CoordinateSpace) => void;
 }
 
 export const SizeConfigContext = createContext<SizeConfigContextValue | null>(

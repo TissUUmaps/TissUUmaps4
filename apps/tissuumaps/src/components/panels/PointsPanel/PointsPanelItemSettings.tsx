@@ -4,6 +4,7 @@ import {
   type Points,
   defaultPointColor,
   defaultPointSize,
+  defaultPointSizeUnit,
 } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
@@ -77,6 +78,7 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
           updatePoints(points.id, { pointSize: newSizeConfig })
         }
         defaultSize={defaultPointSize}
+        defaultSizeUnit={defaultPointSizeUnit}
       >
         <AccordionItem value={ConfigControl.pointSize}>
           <AccordionHeader>

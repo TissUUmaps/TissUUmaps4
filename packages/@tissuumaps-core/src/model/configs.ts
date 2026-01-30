@@ -156,30 +156,18 @@ export type SizeConfig =
   | ConstantConfig<
       number,
       {
-        /**
-         * Coordinate space in which the size values are specified
-         *
-         * @defaultValue {@link "./constants".defaultSizeUnit}
-         */
+        /** Coordinate space in which the size values are specified */
         unit?: CoordinateSpace;
       }
     >
   | FromConfig<{
-      /**
-       * Coordinate space in which the size values are specified
-       *
-       * @defaultValue {@link "./constants".defaultSizeUnit}
-       */
+      /** Coordinate space in which the size values are specified */
       unit?: CoordinateSpace;
     }>
   | GroupByConfig<
       true,
       {
-        /**
-         * Coordinate space in which the size values are specified
-         *
-         * @defaultValue {@link "./constants".defaultSizeUnit}
-         */
+        /** Coordinate space in which the size values are specified */
         unit?: CoordinateSpace;
       }
     >;

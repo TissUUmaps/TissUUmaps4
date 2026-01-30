@@ -17,6 +17,7 @@ export type SizeConfigContextProviderProps = {
   sizeConfig: SizeConfig;
   onSizeConfigChange: (newSizeConfig: SizeConfig) => void;
   defaultSize: number;
+  defaultSizeUnit: CoordinateSpace;
   children: ReactNode;
 };
 
@@ -24,6 +25,7 @@ export function SizeConfigContextProvider({
   sizeConfig,
   onSizeConfigChange,
   defaultSize,
+  defaultSizeUnit,
   children,
 }: SizeConfigContextProviderProps) {
   const activeSource = getActiveConfigSource(sizeConfig) ?? "constant";
@@ -35,10 +37,10 @@ export function SizeConfigContextProvider({
     isConstantConfig(sizeConfig) ? sizeConfig.constant.value : defaultSize,
   );
   const [currentConstantUnit, setCurrentConstantUnit] =
-    useState<CoordinateSpace | null>(
+    useState<CoordinateSpace>(
       isConstantConfig(sizeConfig) && sizeConfig.constant.unit !== undefined
         ? sizeConfig.constant.unit
-        : null,
+        : defaultSizeUnit,
     );
 
   const [currentFromTable, setCurrentFromTable] = useState<string | null>(
@@ -47,12 +49,11 @@ export function SizeConfigContextProvider({
   const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
     isFromConfig(sizeConfig) ? sizeConfig.from.column : null,
   );
-  const [currentFromUnit, setCurrentFromUnit] =
-    useState<CoordinateSpace | null>(
-      isFromConfig(sizeConfig) && sizeConfig.from.unit !== undefined
-        ? sizeConfig.from.unit
-        : null,
-    );
+  const [currentFromUnit, setCurrentFromUnit] = useState<CoordinateSpace>(
+    isFromConfig(sizeConfig) && sizeConfig.from.unit !== undefined
+      ? sizeConfig.from.unit
+      : defaultSizeUnit,
+  );
 
   const [currentGroupByTable, setCurrentGroupByTable] = useState<string | null>(
     isGroupByConfig(sizeConfig) ? sizeConfig.groupBy.table : null,
@@ -65,12 +66,11 @@ export function SizeConfigContextProvider({
       ? sizeConfig.groupBy.map
       : null,
   );
-  const [currentGroupByUnit, setCurrentGroupByUnit] =
-    useState<CoordinateSpace | null>(
-      isGroupByConfig(sizeConfig) && sizeConfig.groupBy.unit !== undefined
-        ? sizeConfig.groupBy.unit
-        : null,
-    );
+  const [currentGroupByUnit, setCurrentGroupByUnit] = useState<CoordinateSpace>(
+    isGroupByConfig(sizeConfig) && sizeConfig.groupBy.unit !== undefined
+      ? sizeConfig.groupBy.unit
+      : defaultSizeUnit,
+  );
 
   useEffect(() => {
     if (
@@ -81,14 +81,14 @@ export function SizeConfigContextProvider({
       (activeSource !== "constant" ||
         !isConstantConfig(sizeConfig) ||
         sizeConfig.constant.value !== currentConstantValue ||
-        sizeConfig.constant.unit !== (currentConstantUnit ?? undefined))
+        sizeConfig.constant.unit !== currentConstantUnit)
     ) {
       onSizeConfigChange({
         ...sizeConfig,
         source: "constant",
         constant: {
           value: currentConstantValue,
-          unit: currentConstantUnit ?? undefined,
+          unit: currentConstantUnit,
         },
       });
     } else if (
@@ -101,7 +101,7 @@ export function SizeConfigContextProvider({
         !isFromConfig(sizeConfig) ||
         sizeConfig.from.table !== currentFromTable ||
         sizeConfig.from.column !== currentFromColumn ||
-        sizeConfig.from.unit !== (currentFromUnit ?? undefined))
+        sizeConfig.from.unit !== currentFromUnit)
     ) {
       onSizeConfigChange({
         ...sizeConfig,
@@ -109,7 +109,7 @@ export function SizeConfigContextProvider({
         from: {
           table: currentFromTable,
           column: currentFromColumn,
-          unit: currentFromUnit ?? undefined,
+          unit: currentFromUnit,
         },
       });
     } else if (
@@ -124,7 +124,7 @@ export function SizeConfigContextProvider({
         sizeConfig.groupBy.table !== currentGroupByTable ||
         sizeConfig.groupBy.column !== currentGroupByColumn ||
         sizeConfig.groupBy.map !== currentGroupByMap ||
-        sizeConfig.groupBy.unit !== (currentGroupByUnit ?? undefined))
+        sizeConfig.groupBy.unit !== currentGroupByUnit)
     ) {
       onSizeConfigChange({
         ...sizeConfig,
@@ -133,7 +133,7 @@ export function SizeConfigContextProvider({
           table: currentGroupByTable,
           column: currentGroupByColumn,
           map: currentGroupByMap,
-          unit: currentGroupByUnit ?? undefined,
+          unit: currentGroupByUnit,
         },
       });
     }

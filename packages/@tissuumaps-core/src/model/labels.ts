@@ -15,16 +15,16 @@ import {
   type VisibilityConfig,
 } from "./configs";
 import {
+  defaultLabelColorPalette,
   defaultLabelOpacity,
   defaultLabelVisibility,
-  defaultRandomLabelColorPalette,
 } from "./constants";
 
 /**
  * Default values for {@link RawLabels}
  */
 export const labelsDefaults = {
-  labelColor: { random: { palette: defaultRandomLabelColorPalette } },
+  labelColor: { random: { palette: defaultLabelColorPalette } },
   labelVisibility: { constant: { value: defaultLabelVisibility } },
   labelOpacity: { constant: { value: defaultLabelOpacity } },
 } as const satisfies Partial<RawLabels>;
