@@ -77,7 +77,7 @@ export function SizeConfigContextProvider({
       // constant is complete...
       currentSource === "constant" &&
       currentConstantValue !== null &&
-      // ...and different from current config
+      // ...and different from active config
       (activeSource !== "constant" ||
         !isConstantConfig(sizeConfig) ||
         sizeConfig.constant.value !== currentConstantValue ||
@@ -96,7 +96,7 @@ export function SizeConfigContextProvider({
       currentSource === "from" &&
       currentFromTable !== null &&
       currentFromColumn !== null &&
-      // ...and different from current config
+      // ...and different from active config
       (activeSource !== "from" ||
         !isFromConfig(sizeConfig) ||
         sizeConfig.from.table !== currentFromTable ||
@@ -118,7 +118,7 @@ export function SizeConfigContextProvider({
       currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
       currentGroupByMap !== null &&
-      // ...and different from current config
+      // ...and different from active config
       (activeSource !== "groupBy" ||
         !isGroupByConfig(sizeConfig) ||
         sizeConfig.groupBy.table !== currentGroupByTable ||

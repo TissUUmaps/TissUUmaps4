@@ -1,3 +1,4 @@
+import { deepEqual } from "fast-equals";
 import { type ReactNode, useEffect, useState } from "react";
 
 import {
@@ -77,11 +78,15 @@ export function ColorConfigContextProvider({
   >(isRandomConfig(colorConfig) ? colorConfig.random.palette : null);
 
   useEffect(() => {
+    const currentFromRange: [number, number] | null =
+      currentFromRangeMin !== null && currentFromRangeMax !== null
+        ? [currentFromRangeMin, currentFromRangeMax]
+        : null;
     if (
       // constant is complete...
       currentSource === "constant" &&
       currentConstantValue !== null &&
-      // ...and different from current config
+      // ...and different from active config
       (activeSource !== "constant" ||
         !isConstantConfig(colorConfig) ||
         colorConfig.constant.value !== currentConstantValue)
@@ -97,13 +102,12 @@ export function ColorConfigContextProvider({
       currentFromTable !== null &&
       currentFromColumn !== null &&
       currentFromPalette !== null &&
-      // ...and different from current config
+      // ...and different from active config
       (activeSource !== "from" ||
         !isFromConfig(colorConfig) ||
         colorConfig.from.table !== currentFromTable ||
         colorConfig.from.column !== currentFromColumn ||
-        colorConfig.from.range?.[0] !== (currentFromRangeMin ?? undefined) ||
-        colorConfig.from.range?.[1] !== (currentFromRangeMax ?? undefined) ||
+        !deepEqual(colorConfig.from.range, currentFromRange ?? undefined) ||
         colorConfig.from.palette !== currentFromPalette)
     ) {
       onColorConfigChange({
@@ -112,10 +116,7 @@ export function ColorConfigContextProvider({
         from: {
           table: currentFromTable,
           column: currentFromColumn,
-          range:
-            currentFromRangeMin !== null && currentFromRangeMax !== null
-              ? [currentFromRangeMin, currentFromRangeMax]
-              : undefined,
+          range: currentFromRange !== null ? currentFromRange : undefined,
           palette: currentFromPalette,
         },
       });
@@ -125,7 +126,7 @@ export function ColorConfigContextProvider({
       currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
       currentGroupByPalette !== null &&
-      // ...and different from current config
+      // ...and different from active config
       (activeSource !== "groupBy" ||
         !isGroupByConfig(colorConfig) ||
         colorConfig.groupBy.table !== currentGroupByTable ||
@@ -147,7 +148,7 @@ export function ColorConfigContextProvider({
       // random is complete...
       currentSource === "random" &&
       currentRandomPalette !== null &&
-      // ...and different from current config
+      // ...and different from active config
       (activeSource !== "random" ||
         !isRandomConfig(colorConfig) ||
         colorConfig.random.palette !== currentRandomPalette)
