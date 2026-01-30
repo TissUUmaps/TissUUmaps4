@@ -6,6 +6,7 @@ import { type CoordinateSpace } from "@tissuumaps/core";
 type SizeConfigSource = Exclude<SizeConfig["source"], undefined>;
 
 interface SizeConfigContextValue {
+  activeSource: SizeConfigSource;
   currentSource: SizeConfigSource;
   currentConstantValue: number;
   currentConstantUnit: CoordinateSpace | null;

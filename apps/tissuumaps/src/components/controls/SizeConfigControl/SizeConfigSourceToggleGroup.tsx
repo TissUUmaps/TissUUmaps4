@@ -1,4 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { CircleDotIcon, CircleIcon } from "lucide-react";
 
 import { useSizeConfigContext } from "./context";
 
@@ -10,7 +11,9 @@ export type SizeConfigSourceToggleGroupProps = Omit<
 export function SizeConfigSourceToggleGroup(
   props: SizeConfigSourceToggleGroupProps,
 ) {
-  const { currentSource, setCurrentSource } = useSizeConfigContext();
+  const { activeSource, currentSource, setCurrentSource } =
+    useSizeConfigContext();
+
   return (
     <ToggleGroup
       value={[currentSource]}
@@ -22,12 +25,27 @@ export function SizeConfigSourceToggleGroup(
       {...props}
     >
       <ToggleGroupItem value={"constant" satisfies typeof currentSource}>
+        {activeSource === "constant" ? (
+          <CircleDotIcon className="text-green-500" />
+        ) : (
+          <CircleIcon className="text-gray-200" />
+        )}
         constant
       </ToggleGroupItem>
       <ToggleGroupItem value={"from" satisfies typeof currentSource}>
+        {activeSource === "from" ? (
+          <CircleDotIcon className="text-green-500" />
+        ) : (
+          <CircleIcon className="text-gray-200" />
+        )}
         from
       </ToggleGroupItem>
       <ToggleGroupItem value={"groupBy" satisfies typeof currentSource}>
+        {activeSource === "groupBy" ? (
+          <CircleDotIcon className="text-green-500" />
+        ) : (
+          <CircleIcon className="text-gray-200" />
+        )}
         groupBy
       </ToggleGroupItem>
     </ToggleGroup>

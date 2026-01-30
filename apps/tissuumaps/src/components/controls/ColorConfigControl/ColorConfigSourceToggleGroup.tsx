@@ -1,4 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { CircleDotIcon, CircleIcon } from "lucide-react";
 
 import { useColorConfigContext } from "./context";
 
@@ -10,7 +11,9 @@ export type ColorConfigSourceToggleGroupProps = Omit<
 export function ColorConfigSourceToggleGroup(
   props: ColorConfigSourceToggleGroupProps,
 ) {
-  const { currentSource, setCurrentSource } = useColorConfigContext();
+  const { activeSource, currentSource, setCurrentSource } =
+    useColorConfigContext();
+
   return (
     <ToggleGroup
       value={[currentSource]}
@@ -22,15 +25,35 @@ export function ColorConfigSourceToggleGroup(
       {...props}
     >
       <ToggleGroupItem value={"constant" satisfies typeof currentSource}>
+        {activeSource === "constant" ? (
+          <CircleDotIcon className="text-green-500" />
+        ) : (
+          <CircleIcon className="text-gray-200" />
+        )}
         constant
       </ToggleGroupItem>
       <ToggleGroupItem value={"from" satisfies typeof currentSource}>
+        {activeSource === "from" ? (
+          <CircleDotIcon className="text-green-500" />
+        ) : (
+          <CircleIcon className="text-gray-200" />
+        )}
         from
       </ToggleGroupItem>
       <ToggleGroupItem value={"groupBy" satisfies typeof currentSource}>
+        {activeSource === "groupBy" ? (
+          <CircleDotIcon className="text-green-500" />
+        ) : (
+          <CircleIcon className="text-gray-200" />
+        )}
         groupBy
       </ToggleGroupItem>
       <ToggleGroupItem value={"random" satisfies typeof currentSource}>
+        {activeSource === "random" ? (
+          <CircleDotIcon className="text-green-500" />
+        ) : (
+          <CircleIcon className="text-gray-200" />
+        )}
         random
       </ToggleGroupItem>
     </ToggleGroup>

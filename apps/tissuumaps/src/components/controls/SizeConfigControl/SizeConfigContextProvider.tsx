@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import {
   type CoordinateSpace,
   type SizeConfig,
+  getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
@@ -15,7 +16,6 @@ type SizeConfigSource = Exclude<SizeConfig["source"], undefined>;
 export type SizeConfigContextProviderProps = {
   sizeConfig: SizeConfig;
   onSizeConfigChange: (newSizeConfig: SizeConfig) => void;
-  defaultSource: SizeConfigSource;
   defaultSize: number;
   children: ReactNode;
 };
@@ -23,12 +23,12 @@ export type SizeConfigContextProviderProps = {
 export function SizeConfigContextProvider({
   sizeConfig,
   onSizeConfigChange,
-  defaultSource,
   defaultSize,
   children,
 }: SizeConfigContextProviderProps) {
+  const activeSource = getActiveConfigSource(sizeConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<SizeConfigSource>(
-    sizeConfig.source ?? defaultSource,
+    sizeConfig.source ?? "constant",
   );
 
   const [currentConstantValue, setCurrentConstantValue] = useState<number>(
@@ -152,6 +152,7 @@ export function SizeConfigContextProvider({
   return (
     <SizeConfigContext.Provider
       value={{
+        activeSource,
         currentSource,
         currentConstantValue,
         currentConstantUnit,

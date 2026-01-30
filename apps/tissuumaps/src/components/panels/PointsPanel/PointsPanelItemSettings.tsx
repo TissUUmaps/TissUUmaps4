@@ -51,8 +51,9 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
       {/* Point color */}
       <ColorConfigContextProvider
         colorConfig={points.pointColor}
-        onColorConfigChange={(c) => updatePoints(points.id, { pointColor: c })}
-        defaultSource="constant"
+        onColorConfigChange={(newColorConfig) =>
+          updatePoints(points.id, { pointColor: newColorConfig })
+        }
         defaultColor={defaultPointColor}
       >
         <AccordionItem value={ConfigControl.pointColor}>
@@ -72,10 +73,9 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
       {/* Point size */}
       <SizeConfigContextProvider
         sizeConfig={points.pointSize}
-        onSizeConfigChange={(c: typeof points.pointSize) =>
-          updatePoints(points.id, { pointSize: c })
+        onSizeConfigChange={(newSizeConfig: typeof points.pointSize) =>
+          updatePoints(points.id, { pointSize: newSizeConfig })
         }
-        defaultSource="constant"
         defaultSize={defaultPointSize}
       >
         <AccordionItem value={ConfigControl.pointSize}>

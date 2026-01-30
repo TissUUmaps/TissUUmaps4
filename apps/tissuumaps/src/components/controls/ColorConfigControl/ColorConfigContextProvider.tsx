@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import {
   type Color,
   type ColorConfig,
+  getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
@@ -16,7 +17,6 @@ type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 export type ColorConfigContextProviderProps = {
   colorConfig: ColorConfig;
   onColorConfigChange: (newColorConfig: ColorConfig) => void;
-  defaultSource: ColorConfigSource;
   defaultColor: Color;
   children: ReactNode;
 };
@@ -24,12 +24,12 @@ export type ColorConfigContextProviderProps = {
 export function ColorConfigContextProvider({
   colorConfig,
   onColorConfigChange,
-  defaultSource,
   defaultColor,
   children,
 }: ColorConfigContextProviderProps) {
+  const activeSource = getActiveConfigSource(colorConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<ColorConfigSource>(
-    colorConfig.source ?? defaultSource,
+    colorConfig.source ?? "constant",
   );
 
   const [currentConstantValue, setCurrentConstantValue] = useState<Color>(
@@ -176,6 +176,7 @@ export function ColorConfigContextProvider({
   return (
     <ColorConfigContext.Provider
       value={{
+        activeSource,
         currentSource,
         currentConstantValue,
         currentFromTable,

@@ -5,6 +5,7 @@ import { type Color, type ColorConfig } from "@tissuumaps/core";
 type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 
 interface ColorConfigContextValue {
+  activeSource: ColorConfigSource;
   currentSource: ColorConfigSource;
   currentConstantValue: Color;
   currentFromTable: string | null;
