@@ -82,7 +82,8 @@ export function ColorConfigContextProvider({
       currentSource === "constant" &&
       currentConstantValue !== null &&
       // ...and different from current config
-      (!isConstantConfig(colorConfig) ||
+      (activeSource !== "constant" ||
+        !isConstantConfig(colorConfig) ||
         colorConfig.constant.value !== currentConstantValue)
     ) {
       onColorConfigChange({
@@ -97,7 +98,8 @@ export function ColorConfigContextProvider({
       currentFromColumn !== null &&
       currentFromPalette !== null &&
       // ...and different from current config
-      (!isFromConfig(colorConfig) ||
+      (activeSource !== "from" ||
+        !isFromConfig(colorConfig) ||
         colorConfig.from.table !== currentFromTable ||
         colorConfig.from.column !== currentFromColumn ||
         colorConfig.from.range?.[0] !== (currentFromRangeMin ?? undefined) ||
@@ -124,7 +126,8 @@ export function ColorConfigContextProvider({
       currentGroupByColumn !== null &&
       currentGroupByPalette !== null &&
       // ...and different from current config
-      (!isGroupByConfig(colorConfig) ||
+      (activeSource !== "groupBy" ||
+        !isGroupByConfig(colorConfig) ||
         colorConfig.groupBy.table !== currentGroupByTable ||
         colorConfig.groupBy.column !== currentGroupByColumn ||
         colorConfig.groupBy.map !== (currentGroupByMap ?? undefined) ||
@@ -145,7 +148,8 @@ export function ColorConfigContextProvider({
       currentSource === "random" &&
       currentRandomPalette !== null &&
       // ...and different from current config
-      (!isRandomConfig(colorConfig) ||
+      (activeSource !== "random" ||
+        !isRandomConfig(colorConfig) ||
         colorConfig.random.palette !== currentRandomPalette)
     ) {
       onColorConfigChange({
@@ -157,6 +161,7 @@ export function ColorConfigContextProvider({
       });
     }
   }, [
+    activeSource,
     colorConfig,
     currentSource,
     currentConstantValue,

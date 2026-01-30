@@ -78,7 +78,8 @@ export function SizeConfigContextProvider({
       currentSource === "constant" &&
       currentConstantValue !== null &&
       // ...and different from current config
-      (!isConstantConfig(sizeConfig) ||
+      (activeSource !== "constant" ||
+        !isConstantConfig(sizeConfig) ||
         sizeConfig.constant.value !== currentConstantValue ||
         sizeConfig.constant.unit !== (currentConstantUnit ?? undefined))
     ) {
@@ -96,7 +97,8 @@ export function SizeConfigContextProvider({
       currentFromTable !== null &&
       currentFromColumn !== null &&
       // ...and different from current config
-      (!isFromConfig(sizeConfig) ||
+      (activeSource !== "from" ||
+        !isFromConfig(sizeConfig) ||
         sizeConfig.from.table !== currentFromTable ||
         sizeConfig.from.column !== currentFromColumn ||
         sizeConfig.from.unit !== (currentFromUnit ?? undefined))
@@ -117,7 +119,8 @@ export function SizeConfigContextProvider({
       currentGroupByColumn !== null &&
       currentGroupByMap !== null &&
       // ...and different from current config
-      (!isGroupByConfig(sizeConfig) ||
+      (activeSource !== "groupBy" ||
+        !isGroupByConfig(sizeConfig) ||
         sizeConfig.groupBy.table !== currentGroupByTable ||
         sizeConfig.groupBy.column !== currentGroupByColumn ||
         sizeConfig.groupBy.map !== currentGroupByMap ||
@@ -135,6 +138,7 @@ export function SizeConfigContextProvider({
       });
     }
   }, [
+    activeSource,
     sizeConfig,
     currentSource,
     currentConstantValue,
