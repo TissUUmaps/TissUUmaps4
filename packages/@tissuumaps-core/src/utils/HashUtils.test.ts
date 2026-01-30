@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { HashUtils } from "./HashUtils";
 
 describe("HashUtils", () => {
-  it("should return 0 for empty string", () => {
-    expect(HashUtils.djb2("")).toBe(0);
+  it("should return 5381 for empty string", () => {
+    expect(HashUtils.djb2("")).toBe(5381);
   });
 
   it("should return the same hash for the same string", () => {
