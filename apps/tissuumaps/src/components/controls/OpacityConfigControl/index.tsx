@@ -49,9 +49,12 @@ function ConstantOpacityConfigControl({
           max={1}
           step={0.01}
           value={value}
-          onChange={(event) =>
-            setValue(Math.min(Math.max(0, +event.target.value), 1))
-          }
+          onChange={(event) => {
+            const opacity = event.target.valueAsNumber;
+            if (Number.isFinite(opacity)) {
+              setValue(Math.min(Math.max(0, opacity), 1));
+            }
+          }}
         />
       </Field>
     </div>
