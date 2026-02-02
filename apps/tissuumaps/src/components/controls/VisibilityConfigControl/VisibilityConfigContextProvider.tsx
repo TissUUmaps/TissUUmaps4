@@ -1,58 +1,58 @@
 import { type ReactNode, useEffect, useState } from "react";
 
 import {
-  Marker,
-  type MarkerConfig,
+  type VisibilityConfig,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { MarkerConfigContext } from "./context";
+import { VisibilityConfigContext } from "./context";
 
-type MarkerConfigSource = Exclude<MarkerConfig["source"], undefined>;
+type VisibilityConfigSource = Exclude<VisibilityConfig["source"], undefined>;
 
-export type MarkerConfigContextProviderProps = {
-  markerConfig: MarkerConfig;
-  onMarkerConfigChange: (newMarkerConfig: MarkerConfig) => void;
-  defaultMarker: Marker;
+export type VisibilityConfigContextProviderProps = {
+  visibilityConfig: VisibilityConfig;
+  onVisibilityConfigChange: (newVisibilityConfig: VisibilityConfig) => void;
+  defaultVisibility: boolean;
   children: ReactNode;
 };
 
-export function MarkerConfigContextProvider({
-  markerConfig,
-  onMarkerConfigChange,
-  defaultMarker,
+export function VisibilityConfigContextProvider({
+  visibilityConfig,
+  onVisibilityConfigChange,
+  defaultVisibility,
   children,
-}: MarkerConfigContextProviderProps) {
-  const activeSource = getActiveConfigSource(markerConfig) ?? "constant";
-  const [currentSource, setCurrentSource] = useState<MarkerConfigSource>(
-    markerConfig.source ?? "constant",
+}: VisibilityConfigContextProviderProps) {
+  const activeSource = getActiveConfigSource(visibilityConfig) ?? "constant";
+  const [currentSource, setCurrentSource] = useState<VisibilityConfigSource>(
+    visibilityConfig.source ?? "constant",
   );
 
-  const [currentConstantValue, setCurrentConstantValue] = useState<Marker>(
-    isConstantConfig(markerConfig)
-      ? markerConfig.constant.value
-      : defaultMarker,
+  const [currentConstantValue, setCurrentConstantValue] = useState<boolean>(
+    isConstantConfig(visibilityConfig)
+      ? visibilityConfig.constant.value
+      : defaultVisibility,
   );
 
   const [currentFromTable, setCurrentFromTable] = useState<string | null>(
-    isFromConfig(markerConfig) ? markerConfig.from.table : null,
+    isFromConfig(visibilityConfig) ? visibilityConfig.from.table : null,
   );
   const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
-    isFromConfig(markerConfig) ? markerConfig.from.column : null,
+    isFromConfig(visibilityConfig) ? visibilityConfig.from.column : null,
   );
 
   const [currentGroupByTable, setCurrentGroupByTable] = useState<string | null>(
-    isGroupByConfig(markerConfig) ? markerConfig.groupBy.table : null,
+    isGroupByConfig(visibilityConfig) ? visibilityConfig.groupBy.table : null,
   );
   const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
     string | null
-  >(isGroupByConfig(markerConfig) ? markerConfig.groupBy.column : null);
+  >(isGroupByConfig(visibilityConfig) ? visibilityConfig.groupBy.column : null);
   const [currentGroupByMap, setCurrentGroupByMap] = useState<string | null>(
-    isGroupByConfig(markerConfig) && markerConfig.groupBy.map !== undefined
-      ? markerConfig.groupBy.map
+    isGroupByConfig(visibilityConfig) &&
+      visibilityConfig.groupBy.map !== undefined
+      ? visibilityConfig.groupBy.map
       : null,
   );
 
@@ -62,13 +62,15 @@ export function MarkerConfigContextProvider({
       currentSource === "constant" &&
       // ...and different from active config
       (activeSource !== "constant" ||
-        !isConstantConfig(markerConfig) ||
-        markerConfig.constant.value !== currentConstantValue)
+        !isConstantConfig(visibilityConfig) ||
+        visibilityConfig.constant.value !== currentConstantValue)
     ) {
-      onMarkerConfigChange({
-        ...markerConfig,
+      onVisibilityConfigChange({
+        ...visibilityConfig,
         source: "constant",
-        constant: { value: currentConstantValue },
+        constant: {
+          value: currentConstantValue,
+        },
       });
     } else if (
       // from is complete...
@@ -77,12 +79,12 @@ export function MarkerConfigContextProvider({
       currentFromColumn !== null &&
       // ...and different from active config
       (activeSource !== "from" ||
-        !isFromConfig(markerConfig) ||
-        markerConfig.from.table !== currentFromTable ||
-        markerConfig.from.column !== currentFromColumn)
+        !isFromConfig(visibilityConfig) ||
+        visibilityConfig.from.table !== currentFromTable ||
+        visibilityConfig.from.column !== currentFromColumn)
     ) {
-      onMarkerConfigChange({
-        ...markerConfig,
+      onVisibilityConfigChange({
+        ...visibilityConfig,
         source: "from",
         from: {
           table: currentFromTable,
@@ -94,26 +96,27 @@ export function MarkerConfigContextProvider({
       currentSource === "groupBy" &&
       currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
+      currentGroupByMap !== null &&
       // ...and different from active config
       (activeSource !== "groupBy" ||
-        !isGroupByConfig(markerConfig) ||
-        markerConfig.groupBy.table !== currentGroupByTable ||
-        markerConfig.groupBy.column !== currentGroupByColumn ||
-        markerConfig.groupBy.map !== (currentGroupByMap ?? undefined))
+        !isGroupByConfig(visibilityConfig) ||
+        visibilityConfig.groupBy.table !== currentGroupByTable ||
+        visibilityConfig.groupBy.column !== currentGroupByColumn ||
+        visibilityConfig.groupBy.map !== currentGroupByMap)
     ) {
-      onMarkerConfigChange({
-        ...markerConfig,
+      onVisibilityConfigChange({
+        ...visibilityConfig,
         source: "groupBy",
         groupBy: {
           table: currentGroupByTable,
           column: currentGroupByColumn,
-          map: currentGroupByMap ?? undefined,
+          map: currentGroupByMap,
         },
       });
     }
   }, [
     activeSource,
-    markerConfig,
+    visibilityConfig,
     currentSource,
     currentConstantValue,
     currentFromTable,
@@ -121,11 +124,11 @@ export function MarkerConfigContextProvider({
     currentGroupByTable,
     currentGroupByColumn,
     currentGroupByMap,
-    onMarkerConfigChange,
+    onVisibilityConfigChange,
   ]);
 
   return (
-    <MarkerConfigContext.Provider
+    <VisibilityConfigContext.Provider
       value={{
         activeSource,
         currentSource,
@@ -145,6 +148,6 @@ export function MarkerConfigContextProvider({
       }}
     >
       {children}
-    </MarkerConfigContext.Provider>
+    </VisibilityConfigContext.Provider>
   );
 }
