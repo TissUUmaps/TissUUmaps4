@@ -8,6 +8,11 @@ import {
   OpacityConfigControl,
   OpacityConfigSourceToggleGroup,
 } from "@/components/controls/OpacityConfigControl";
+import {
+  VisibilityConfigContextProvider,
+  VisibilityConfigControl,
+  VisibilityConfigSourceToggleGroup,
+} from "@/components/controls/VisibilityConfigControl";
 import { useState } from "react";
 
 import {
@@ -43,6 +48,7 @@ const ConfigControl = {
   pointMarker: "pointMarker",
   pointSize: "pointSize",
   pointColor: "pointColor",
+  pointVisibility: "pointVisibility",
   pointOpacity: "pointOpacity",
 } as const;
 
@@ -132,6 +138,30 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
           </AccordionPanel>
         </AccordionItem>
       </ColorConfigContextProvider>
+      {/* Point visibility */}
+      <VisibilityConfigContextProvider
+        visibilityConfig={points.pointVisibility}
+        onVisibilityConfigChange={(newVisibilityConfig) =>
+          updatePoints(points.id, { pointVisibility: newVisibilityConfig })
+        }
+        defaultVisibility={true}
+      >
+        <AccordionItem value={ConfigControl.pointVisibility}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Visibility</AccordionTrigger>
+            <VisibilityConfigSourceToggleGroup
+              className="ml-auto"
+              onClick={() =>
+                setExpandedConfigControl(ConfigControl.pointVisibility)
+              }
+            />
+          </AccordionHeader>
+          <AccordionPanel>
+            <VisibilityConfigControl />
+          </AccordionPanel>
+        </AccordionItem>
+      </VisibilityConfigContextProvider>
       {/* Point opacity */}
       <OpacityConfigContextProvider
         opacityConfig={points.pointOpacity}
