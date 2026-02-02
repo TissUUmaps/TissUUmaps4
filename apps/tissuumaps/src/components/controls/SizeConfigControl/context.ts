@@ -36,9 +36,7 @@ export const SizeConfigContext = createContext<SizeConfigContextValue | null>(
 export function useSizeConfigContext(): SizeConfigContextValue {
   const context = useContext(SizeConfigContext);
   if (!context) {
-    throw new Error(
-      "SizeConfigControl must be used within a SizeConfigContextProvider",
-    );
+    throw new Error("SizeConfig context not found");
   }
   return context;
 }

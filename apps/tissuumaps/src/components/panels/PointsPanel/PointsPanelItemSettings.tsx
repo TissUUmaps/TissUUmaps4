@@ -1,8 +1,14 @@
+import {
+  MarkerConfigContextProvider,
+  MarkerConfigControl,
+  MarkerConfigSourceToggleGroup,
+} from "@/components/controls/MarkerConfigControl";
 import { useState } from "react";
 
 import {
   type Points,
   defaultPointColor,
+  defaultPointMarker,
   defaultPointSize,
   defaultPointSizeUnit,
 } from "@tissuumaps/core";
@@ -28,8 +34,9 @@ import {
 } from "../../controls/SizeConfigControl";
 
 const ConfigControl = {
-  pointColor: "pointColor",
+  pointMarker: "pointMarker",
   pointSize: "pointSize",
+  pointColor: "pointColor",
 } as const;
 
 type ConfigControl = (typeof ConfigControl)[keyof typeof ConfigControl];
@@ -49,28 +56,30 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
         )
       }
     >
-      {/* Point color */}
-      <ColorConfigContextProvider
-        colorConfig={points.pointColor}
-        onColorConfigChange={(newColorConfig) =>
-          updatePoints(points.id, { pointColor: newColorConfig })
+      {/* Point marker */}
+      <MarkerConfigContextProvider
+        markerConfig={points.pointMarker}
+        onMarkerConfigChange={(newMarkerConfig: typeof points.pointMarker) =>
+          updatePoints(points.id, { pointMarker: newMarkerConfig })
         }
-        defaultColor={defaultPointColor}
+        defaultMarker={defaultPointMarker}
       >
-        <AccordionItem value={ConfigControl.pointColor}>
+        <AccordionItem value={ConfigControl.pointMarker}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Color</AccordionTrigger>
-            <ColorConfigSourceToggleGroup
+            <AccordionTrigger>Marker</AccordionTrigger>
+            <MarkerConfigSourceToggleGroup
               className="ml-auto"
-              onClick={() => setExpandedConfigControl(ConfigControl.pointColor)}
+              onClick={() =>
+                setExpandedConfigControl(ConfigControl.pointMarker)
+              }
             />
           </AccordionHeader>
           <AccordionPanel>
-            <ColorConfigControl />
+            <MarkerConfigControl />
           </AccordionPanel>
         </AccordionItem>
-      </ColorConfigContextProvider>
+      </MarkerConfigContextProvider>
       {/* Point size */}
       <SizeConfigContextProvider
         sizeConfig={points.pointSize}
@@ -94,6 +103,28 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
           </AccordionPanel>
         </AccordionItem>
       </SizeConfigContextProvider>
+      {/* Point color */}
+      <ColorConfigContextProvider
+        colorConfig={points.pointColor}
+        onColorConfigChange={(newColorConfig) =>
+          updatePoints(points.id, { pointColor: newColorConfig })
+        }
+        defaultColor={defaultPointColor}
+      >
+        <AccordionItem value={ConfigControl.pointColor}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Color</AccordionTrigger>
+            <ColorConfigSourceToggleGroup
+              className="ml-auto"
+              onClick={() => setExpandedConfigControl(ConfigControl.pointColor)}
+            />
+          </AccordionHeader>
+          <AccordionPanel>
+            <ColorConfigControl />
+          </AccordionPanel>
+        </AccordionItem>
+      </ColorConfigContextProvider>
     </Accordion>
   );
 }

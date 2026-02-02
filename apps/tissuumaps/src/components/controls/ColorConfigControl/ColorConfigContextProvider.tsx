@@ -48,7 +48,6 @@ export function ColorConfigContextProvider({
       ? colorConfig.from.range[0]
       : null,
   );
-
   const [currentFromRangeMax, setCurrentFromRangeMax] = useState<number | null>(
     isFromConfig(colorConfig) && colorConfig.from.range !== undefined
       ? colorConfig.from.range[1]

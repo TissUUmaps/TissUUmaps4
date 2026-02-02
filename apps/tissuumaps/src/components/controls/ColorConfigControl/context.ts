@@ -39,9 +39,7 @@ export const ColorConfigContext = createContext<ColorConfigContextValue | null>(
 export function useColorConfigContext(): ColorConfigContextValue {
   const context = useContext(ColorConfigContext);
   if (!context) {
-    throw new Error(
-      "ColorConfigControl must be used within a ColorConfigContextProvider",
-    );
+    throw new Error("ColorConfig context not found");
   }
   return context;
 }
