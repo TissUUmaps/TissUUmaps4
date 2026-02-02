@@ -3,12 +3,18 @@ import {
   MarkerConfigControl,
   MarkerConfigSourceToggleGroup,
 } from "@/components/controls/MarkerConfigControl";
+import {
+  OpacityConfigContextProvider,
+  OpacityConfigControl,
+  OpacityConfigSourceToggleGroup,
+} from "@/components/controls/OpacityConfigControl";
 import { useState } from "react";
 
 import {
   type Points,
   defaultPointColor,
   defaultPointMarker,
+  defaultPointOpacity,
   defaultPointSize,
   defaultPointSizeUnit,
 } from "@tissuumaps/core";
@@ -37,6 +43,7 @@ const ConfigControl = {
   pointMarker: "pointMarker",
   pointSize: "pointSize",
   pointColor: "pointColor",
+  pointOpacity: "pointOpacity",
 } as const;
 
 type ConfigControl = (typeof ConfigControl)[keyof typeof ConfigControl];
@@ -125,6 +132,30 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
           </AccordionPanel>
         </AccordionItem>
       </ColorConfigContextProvider>
+      {/* Point opacity */}
+      <OpacityConfigContextProvider
+        opacityConfig={points.pointOpacity}
+        onOpacityConfigChange={(newOpacityConfig) =>
+          updatePoints(points.id, { pointOpacity: newOpacityConfig })
+        }
+        defaultOpacity={defaultPointOpacity}
+      >
+        <AccordionItem value={ConfigControl.pointOpacity}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Opacity</AccordionTrigger>
+            <OpacityConfigSourceToggleGroup
+              className="ml-auto"
+              onClick={() =>
+                setExpandedConfigControl(ConfigControl.pointOpacity)
+              }
+            />
+          </AccordionHeader>
+          <AccordionPanel>
+            <OpacityConfigControl />
+          </AccordionPanel>
+        </AccordionItem>
+      </OpacityConfigContextProvider>
     </Accordion>
   );
 }

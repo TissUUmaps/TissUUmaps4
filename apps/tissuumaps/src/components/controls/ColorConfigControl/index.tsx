@@ -53,12 +53,15 @@ function ConstantColorConfigControl({
             min={0}
             max={255}
             value={color.r}
-            onChange={(event) =>
-              setColor({
-                ...color,
-                r: Math.min(Math.max(0, +event.target.value), 255),
-              })
-            }
+            onChange={(event) => {
+              const r = event.target.valueAsNumber;
+              if (Number.isFinite(r)) {
+                setColor({
+                  ...color,
+                  r: Math.min(Math.max(0, r), 255),
+                });
+              }
+            }}
           />
         </Field>
         <Field className="contents">
@@ -68,12 +71,15 @@ function ConstantColorConfigControl({
             min={0}
             max={255}
             value={color.g}
-            onChange={(event) =>
-              setColor({
-                ...color,
-                g: Math.min(Math.max(0, +event.target.value), 255),
-              })
-            }
+            onChange={(event) => {
+              const g = event.target.valueAsNumber;
+              if (Number.isFinite(g)) {
+                setColor({
+                  ...color,
+                  g: Math.min(Math.max(0, g), 255),
+                });
+              }
+            }}
           />
         </Field>
         <Field className="contents">
@@ -83,12 +89,15 @@ function ConstantColorConfigControl({
             min={0}
             max={255}
             value={color.b}
-            onChange={(event) =>
-              setColor({
-                ...color,
-                b: Math.min(Math.max(0, +event.target.value), 255),
-              })
-            }
+            onChange={(event) => {
+              const b = event.target.valueAsNumber;
+              if (Number.isFinite(b)) {
+                setColor({
+                  ...color,
+                  b: Math.min(Math.max(0, b), 255),
+                });
+              }
+            }}
           />
         </Field>
         <SimpleColorPicker
