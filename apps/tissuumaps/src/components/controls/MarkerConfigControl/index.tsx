@@ -243,7 +243,7 @@ function GroupByMarkerConfigControl({
   } = useMarkerConfigContext();
 
   const tables = useTissUUmaps((state) => state.tables);
-  const sizeMaps = useTissUUmaps((state) => state.sizeMaps);
+  const markerMaps = useTissUUmaps((state) => state.markerMaps);
   const loadTable = useTissUUmaps((state) => state.loadTable);
 
   const [tableData, setTableData] = useState<TableData | null>(null);
@@ -301,11 +301,11 @@ function GroupByMarkerConfigControl({
         </Field>
       </div>
       <Field>
-        <FieldLabel>Size map</FieldLabel>
+        <FieldLabel>Marker map</FieldLabel>
         <SimpleSelect
-          items={sizeMaps}
-          itemLabel={(sizeMap) => sizeMap.name}
-          itemValue={(sizeMap) => sizeMap.id}
+          items={markerMaps}
+          itemLabel={(markerMap) => markerMap.name}
+          itemValue={(markerMap) => markerMap.id}
           value={map}
           onValueChange={setMap}
         />

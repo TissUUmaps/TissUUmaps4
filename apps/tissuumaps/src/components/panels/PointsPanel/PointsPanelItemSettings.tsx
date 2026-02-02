@@ -59,7 +59,7 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
       {/* Point marker */}
       <MarkerConfigContextProvider
         markerConfig={points.pointMarker}
-        onMarkerConfigChange={(newMarkerConfig: typeof points.pointMarker) =>
+        onMarkerConfigChange={(newMarkerConfig) =>
           updatePoints(points.id, { pointMarker: newMarkerConfig })
         }
         defaultMarker={defaultPointMarker}
@@ -83,7 +83,7 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
       {/* Point size */}
       <SizeConfigContextProvider
         sizeConfig={points.pointSize}
-        onSizeConfigChange={(newSizeConfig: typeof points.pointSize) =>
+        onSizeConfigChange={(newSizeConfig) =>
           updatePoints(points.id, { pointSize: newSizeConfig })
         }
         defaultSize={defaultPointSize}
