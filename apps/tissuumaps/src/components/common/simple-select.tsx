@@ -33,9 +33,12 @@ export function SimpleSelect<
       })),
     [items, itemLabel, itemValue],
   );
+
+  // style adapted from https://base-ui.com/react/components/select main example, with the following changes:
+  // - set trigger width to w-full
   return (
     <SelectPrimitive.Root items={memoizedItems} {...props}>
-      <SelectPrimitive.Trigger className="flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border pr-3 pl-3.5 select-none hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 data-popup-open:bg-gray-100 dark:bg-input/30 text-foreground">
+      <SelectPrimitive.Trigger className="flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border border-gray-200 pr-3 pl-3.5 text-base bg-[canvas] text-gray-900 select-none hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 data-popup-open:bg-gray-100">
         <SelectPrimitive.Value className="data-placeholder:opacity-60" />
         <SelectPrimitive.Icon className="flex">
           <ChevronsUpDownIcon />
@@ -47,15 +50,15 @@ export function SimpleSelect<
           sideOffset={8}
         >
           <SelectPrimitive.Popup
-            className="group min-w-full bg-clip-padding rounded-md bg-[canvas] text-gray-900 shadow-lg shadow-gray-200 outline-1 outline-gray-200 transition-transform transition-opacity transition-scale dark:bg-gray-900 dark:text-gray-100 dark:shadow-none dark:outline-gray-300"
+            className="group min-w-(--anchor-width) origin-(--transform-origin) bg-clip-padding rounded-md bg-[canvas] text-gray-900 shadow-lg shadow-gray-200 outline-1 outline-gray-200 transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-[side=none]:min-w-[calc(var(--anchor-width)+1rem)] data-[side=none]:data-ending-style:transition-none data-starting-style:scale-90 data-starting-style:opacity-0 data-[side=none]:data-starting-style:scale-100 data-[side=none]:data-starting-style:opacity-100 data-[side=none]:data-starting-style:transition-none dark:shadow-none dark:outline-gray-300"
             style={{
               minWidth: "var(--anchor-width)",
               transformOrigin: "var(--transform-origin)",
             }}
           >
-            <SelectPrimitive.ScrollUpArrow className="top-0 z-1 flex h-4 w-full cursor-default items-center justify-center rounded-md bg-[canvas] text-center text-xs before:absolute before:left-0 before:h-full before:w-full before:content-[''] data-side=none:before:top-[-100%] dark:bg-gray-900 dark:text-gray-100" />
+            <SelectPrimitive.ScrollUpArrow className="top-0 z-1 flex h-4 w-full cursor-default items-center justify-center rounded-md bg-[canvas] text-center text-xs before:absolute data-[side=none]:before:-top-full before:left-0 before:h-full before:w-full before:content-['']" />
             <SelectPrimitive.List
-              className="relative py-1 scroll-py-6 overflow-y-auto dark:bg-gray-900"
+              className="relative py-1 scroll-py-6 overflow-y-auto max-h-(--available-height)"
               style={{ maxHeight: "var(--available-height)" }}
             >
               {memoizedItems.map(({ label, value }) => (
@@ -73,7 +76,7 @@ export function SimpleSelect<
                 </SelectPrimitive.Item>
               ))}
             </SelectPrimitive.List>
-            <SelectPrimitive.ScrollDownArrow className="bottom-0 z-1 flex h-4 w-full cursor-default items-center justify-center rounded-md bg-[canvas] text-center text-xs before:absolute before:left-0 before:h-full before:w-full before:content-[''] data-side=none:before:bottom-[-100%] dark:bg-gray-900 dark:text-gray-100" />
+            <SelectPrimitive.ScrollDownArrow className="bottom-0 z-1 flex h-4 w-full cursor-default items-center justify-center rounded-md bg-[canvas] text-center text-xs before:absolute before:left-0 before:h-full before:w-full before:content-[''] data-[side=none]:before:-bottom-full" />
           </SelectPrimitive.Popup>
         </SelectPrimitive.Positioner>
       </SelectPrimitive.Portal>

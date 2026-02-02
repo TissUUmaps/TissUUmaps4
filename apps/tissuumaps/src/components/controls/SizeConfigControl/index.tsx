@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { type CoordinateSpace, type TableData } from "@tissuumaps/core";
 
-import { Field, FieldControl, FieldItem, FieldLabel } from "../../common/field";
+import { Field, FieldItem, FieldLabel } from "../../common/field";
 import { SimpleSelect } from "../../common/simple-select";
 import { useSizeConfigContext } from "./context";
 
@@ -38,64 +38,41 @@ function ConstantSizeConfigControl({
   className,
 }: ConstantSizeConfigControlProps) {
   const {
-    currentConstantValue,
-    currentConstantUnit,
-    setCurrentConstantValue,
-    setCurrentConstantUnit,
+    currentConstantValue: value,
+    currentConstantUnit: unit,
+    setCurrentConstantValue: setValue,
+    setCurrentConstantUnit: setUnit,
   } = useSizeConfigContext();
 
   return (
     <div className={className}>
       <Field>
         <FieldLabel>Size</FieldLabel>
-        <FieldControl
-          render={
-            <Input
-              type="number"
-              value={currentConstantValue}
-              onChange={(event) =>
-                setCurrentConstantValue(
-                  event.target.value
-                    ? +event.target.value
-                    : currentConstantValue,
-                )
-              }
-            />
-          }
+        <Input
+          type="number"
+          min={0}
+          value={value}
+          onChange={(event) => setValue(Math.max(0, +event.target.value))}
         />
       </Field>
       <Field>
-        <FieldLabel>Unit</FieldLabel>
+        <FieldLabel>Size unit</FieldLabel>
         <RadioGroup
-          value={currentConstantUnit}
-          onValueChange={(value) =>
-            setCurrentConstantUnit(value as CoordinateSpace)
-          }
-          className="flex gap-4"
+          value={unit}
+          onValueChange={(value) => setUnit(value as CoordinateSpace)}
+          className="flex gap-x-4"
         >
-          <FieldItem className="flex items-center gap-3">
-            <FieldControl
-              render={
-                <RadioGroupItem value={"data" satisfies CoordinateSpace} />
-              }
-            />
-            <FieldLabel>Data</FieldLabel>
+          <FieldItem className="flex items-center gap-x-2">
+            <RadioGroupItem value={"data" satisfies CoordinateSpace} />
+            <FieldLabel>Data pixels</FieldLabel>
           </FieldItem>
-          <FieldItem className="flex items-center gap-3">
-            <FieldControl
-              render={
-                <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
-              }
-            />
-            <FieldLabel>Layer</FieldLabel>
+          <FieldItem className="flex items-center gap-x-2">
+            <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
+            <FieldLabel>Layer pixels</FieldLabel>
           </FieldItem>
-          <FieldItem className="flex items-center gap-3">
-            <FieldControl
-              render={
-                <RadioGroupItem value={"world" satisfies CoordinateSpace} />
-              }
-            />
-            <FieldLabel>World</FieldLabel>
+          <FieldItem className="flex items-center gap-x-2">
+            <RadioGroupItem value={"world" satisfies CoordinateSpace} />
+            <FieldLabel>World pixels</FieldLabel>
           </FieldItem>
         </RadioGroup>
       </Field>
@@ -109,115 +86,89 @@ type FromSizeConfigControlProps = {
 
 function FromSizeConfigControl({ className }: FromSizeConfigControlProps) {
   const {
-    currentFromTable,
-    currentFromColumn,
-    currentFromUnit,
-    setCurrentFromTable,
-    setCurrentFromColumn,
-    setCurrentFromUnit,
+    currentFromTable: table,
+    currentFromColumn: column,
+    currentFromUnit: unit,
+    setCurrentFromTable: setTable,
+    setCurrentFromColumn: setColumn,
+    setCurrentFromUnit: setUnit,
   } = useSizeConfigContext();
 
   const tables = useTissUUmaps((state) => state.tables);
   const loadTable = useTissUUmaps((state) => state.loadTable);
 
-  const [currentFromTableData, setCurrentFromTableData] =
-    useState<TableData | null>(null);
+  const [tableData, setTableData] = useState<TableData | null>(null);
 
   useEffect(() => {
     const abortController = new AbortController();
-
-    async function loadCurrentFromTableData() {
-      if (currentFromTable) {
-        const tableData = await loadTable(currentFromTable, {
+    async function loadTableData() {
+      if (table) {
+        const tableData = await loadTable(table, {
           signal: abortController.signal,
         });
         if (!abortController.signal.aborted) {
-          setCurrentFromTableData(tableData);
+          setTableData(tableData);
         }
       }
     }
-
-    loadCurrentFromTableData().catch(console.error);
-
+    loadTableData().catch(console.error);
     return () => {
       abortController.abort();
     };
-  }, [currentFromTable, loadTable]);
+  }, [table, loadTable]);
 
   return (
     <div className={className}>
+      <div className="grid grid-cols-2 gap-x-2">
+        <Field>
+          <FieldLabel>Source table</FieldLabel>
+          <SimpleSelect
+            items={tables}
+            itemLabel={(table) => table.name}
+            itemValue={(table) => table.id}
+            value={table}
+            onValueChange={setTable}
+          />
+        </Field>
+        <Field disabled={table === null}>
+          <FieldLabel>Source column</FieldLabel>
+          <SimpleAsyncCombobox
+            suggestQueries={async (currentQuery) => {
+              if (tableData !== null) {
+                return await tableData.suggestColumnQueries(currentQuery);
+              }
+              return Promise.resolve([]);
+            }}
+            getItem={async (query) => {
+              if (tableData !== null) {
+                return await tableData.getColumn(query);
+              }
+              return Promise.resolve(null);
+            }}
+            itemQuery={(column) => column}
+            selectedItem={column}
+            onSelectedItemChange={setColumn}
+          />
+        </Field>
+      </div>
       <Field>
-        <FieldLabel>Table</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleSelect
-              items={tables}
-              itemLabel={(table) => table.name}
-              itemValue={(table) => table.id}
-              value={currentFromTable}
-              onValueChange={setCurrentFromTable}
-            />
-          }
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Column</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleAsyncCombobox
-              suggestQueries={async (currentQuery) => {
-                if (currentFromTableData !== null) {
-                  return await currentFromTableData.suggestColumnQueries(
-                    currentQuery,
-                  );
-                }
-                return Promise.resolve([]);
-              }}
-              getItem={async (query) => {
-                if (currentFromTableData !== null) {
-                  return await currentFromTableData.getColumn(query);
-                }
-                return Promise.resolve(null);
-              }}
-              itemQuery={(column) => column}
-              selectedItem={currentFromColumn}
-              onSelectedItemChange={setCurrentFromColumn}
-            />
-          }
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Unit</FieldLabel>
+        <FieldLabel>Size unit</FieldLabel>
         <RadioGroup
-          value={currentFromUnit}
-          onValueChange={(value) =>
-            setCurrentFromUnit(value as CoordinateSpace)
-          }
-          className="flex gap-4"
+          value={unit}
+          onValueChange={(value) => setUnit(value as CoordinateSpace)}
+          className="flex gap-x-4"
         >
-          <FieldItem className="flex items-center gap-3">
-            <FieldControl
-              render={
-                <RadioGroupItem value={"data" satisfies CoordinateSpace} />
-              }
-            />
-            <FieldLabel>Data</FieldLabel>
+          <FieldItem className="flex items-center gap-x-2">
+            <RadioGroupItem value={"data" satisfies CoordinateSpace} />
+            <FieldLabel>Data pixels</FieldLabel>
           </FieldItem>
-          <FieldItem className="flex items-center gap-3">
-            <FieldControl
-              render={
-                <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
-              }
-            />
-            <FieldLabel>Layer</FieldLabel>
+          <FieldItem className="flex items-center gap-x-2">
+            <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
+            <FieldLabel>Layer pixels</FieldLabel>
           </FieldItem>
-          <FieldItem className="flex items-center gap-3">
-            <FieldControl
-              render={
-                <RadioGroupItem value={"world" satisfies CoordinateSpace} />
-              }
-            />
-            <FieldLabel>World</FieldLabel>
+          <FieldItem className="flex items-center gap-x-2">
+            <RadioGroupItem value={"world" satisfies CoordinateSpace} />
+            <FieldLabel>World pixels</FieldLabel>
           </FieldItem>
         </RadioGroup>
       </Field>
@@ -233,132 +184,102 @@ function GroupBySizeConfigControl({
   className,
 }: GroupBySizeConfigControlProps) {
   const {
-    currentGroupByTable,
-    currentGroupByColumn,
-    currentGroupByMap,
-    currentGroupByUnit,
-    setCurrentGroupByTable,
-    setCurrentGroupByColumn,
-    setCurrentGroupByMap,
-    setCurrentGroupByUnit,
+    currentGroupByTable: table,
+    currentGroupByColumn: column,
+    currentGroupByMap: map,
+    currentGroupByUnit: unit,
+    setCurrentGroupByTable: setTable,
+    setCurrentGroupByColumn: setColumn,
+    setCurrentGroupByMap: setMap,
+    setCurrentGroupByUnit: setUnit,
   } = useSizeConfigContext();
 
   const tables = useTissUUmaps((state) => state.tables);
   const sizeMaps = useTissUUmaps((state) => state.sizeMaps);
   const loadTable = useTissUUmaps((state) => state.loadTable);
 
-  const [currentGroupByTableData, setCurrentGroupByTableData] =
-    useState<TableData | null>(null);
+  const [tableData, setTableData] = useState<TableData | null>(null);
 
   useEffect(() => {
     const abortController = new AbortController();
-
-    async function loadCurrentGroupByTableData() {
-      if (currentGroupByTable) {
-        const tableData = await loadTable(currentGroupByTable, {
+    async function loadTableData() {
+      if (table) {
+        const tableData = await loadTable(table, {
           signal: abortController.signal,
         });
         if (!abortController.signal.aborted) {
-          setCurrentGroupByTableData(tableData);
+          setTableData(tableData);
         }
       }
     }
-
-    loadCurrentGroupByTableData().catch(console.error);
-
+    loadTableData().catch(console.error);
     return () => {
       abortController.abort();
     };
-  }, [currentGroupByTable, loadTable]);
+  }, [table, loadTable]);
 
   return (
     <div className={className}>
-      <Field>
-        <FieldLabel>Table</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleSelect
-              items={tables}
-              itemLabel={(table) => table.name}
-              itemValue={(table) => table.id}
-              value={currentGroupByTable}
-              onValueChange={setCurrentGroupByTable}
-            />
-          }
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Column</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleAsyncCombobox
-              suggestQueries={async (currentQuery) => {
-                if (currentGroupByTableData !== null) {
-                  return await currentGroupByTableData.suggestColumnQueries(
-                    currentQuery,
-                  );
-                }
-                return Promise.resolve([]);
-              }}
-              getItem={async (query) => {
-                if (currentGroupByTableData !== null) {
-                  return await currentGroupByTableData.getColumn(query);
-                }
-                return Promise.resolve(null);
-              }}
-              itemQuery={(column) => column}
-              selectedItem={currentGroupByColumn}
-              onSelectedItemChange={setCurrentGroupByColumn}
-            />
-          }
-        />
-      </Field>
+      <div className="grid grid-cols-2 gap-x-2">
+        <Field>
+          <FieldLabel>Source table</FieldLabel>
+          <SimpleSelect
+            items={tables}
+            itemLabel={(table) => table.name}
+            itemValue={(table) => table.id}
+            value={table}
+            onValueChange={setTable}
+          />
+        </Field>
+        <Field disabled={table === null}>
+          <FieldLabel>Source column</FieldLabel>
+          <SimpleAsyncCombobox
+            suggestQueries={async (currentQuery) => {
+              if (tableData !== null) {
+                return await tableData.suggestColumnQueries(currentQuery);
+              }
+              return Promise.resolve([]);
+            }}
+            getItem={async (query) => {
+              if (tableData !== null) {
+                return await tableData.getColumn(query);
+              }
+              return Promise.resolve(null);
+            }}
+            itemQuery={(column) => column}
+            selectedItem={column}
+            onSelectedItemChange={setColumn}
+          />
+        </Field>
+      </div>
       <Field>
         <FieldLabel>Size map</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleSelect
-              items={sizeMaps}
-              itemLabel={(sizeMap) => sizeMap.name}
-              itemValue={(sizeMap) => sizeMap.id}
-              value={currentGroupByMap}
-              onValueChange={setCurrentGroupByMap}
-            />
-          }
+        <SimpleSelect
+          items={sizeMaps}
+          itemLabel={(sizeMap) => sizeMap.name}
+          itemValue={(sizeMap) => sizeMap.id}
+          value={map}
+          onValueChange={setMap}
         />
       </Field>
       <Field>
-        <FieldLabel>Unit</FieldLabel>
+        <FieldLabel>Size unit</FieldLabel>
         <RadioGroup
-          value={currentGroupByUnit}
-          onValueChange={(value) =>
-            setCurrentGroupByUnit(value as CoordinateSpace)
-          }
-          className="flex gap-4"
+          value={unit}
+          onValueChange={(value) => setUnit(value as CoordinateSpace)}
+          className="flex gap-x-4"
         >
-          <FieldItem className="flex items-center gap-3">
-            <FieldControl
-              render={
-                <RadioGroupItem value={"data" satisfies CoordinateSpace} />
-              }
-            />
-            <FieldLabel>Data</FieldLabel>
+          <FieldItem className="flex items-center gap-x-2">
+            <RadioGroupItem value={"data" satisfies CoordinateSpace} />
+            <FieldLabel>Data pixels</FieldLabel>
           </FieldItem>
-          <FieldItem className="flex items-center gap-3">
-            <FieldControl
-              render={
-                <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
-              }
-            />
-            <FieldLabel>Layer</FieldLabel>
+          <FieldItem className="flex items-center gap-x-2">
+            <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
+            <FieldLabel>Layer pixels</FieldLabel>
           </FieldItem>
-          <FieldItem className="flex items-center gap-3">
-            <FieldControl
-              render={
-                <RadioGroupItem value={"world" satisfies CoordinateSpace} />
-              }
-            />
-            <FieldLabel>World</FieldLabel>
+          <FieldItem className="flex items-center gap-x-2">
+            <RadioGroupItem value={"world" satisfies CoordinateSpace} />
+            <FieldLabel>World pixels</FieldLabel>
           </FieldItem>
         </RadioGroup>
       </Field>

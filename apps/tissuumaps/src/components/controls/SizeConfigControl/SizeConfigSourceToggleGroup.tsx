@@ -46,7 +46,7 @@ export function SizeConfigSourceToggleGroup(
         ) : (
           <CircleIcon className="text-gray-200" />
         )}
-        groupBy
+        group by
       </ToggleGroupItem>
     </ToggleGroup>
   );

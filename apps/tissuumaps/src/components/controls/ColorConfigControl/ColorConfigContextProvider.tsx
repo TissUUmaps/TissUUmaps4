@@ -64,16 +64,16 @@ export function ColorConfigContextProvider({
   const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
     string | null
   >(isGroupByConfig(colorConfig) ? colorConfig.groupBy.column : null);
-  const [currentGroupByMap, setCurrentGroupByMap] = useState<string | null>(
-    isGroupByConfig(colorConfig) && colorConfig.groupBy.map !== undefined
-      ? colorConfig.groupBy.map
-      : null,
-  );
   const [currentGroupByPalette, setCurrentGroupByPalette] = useState<
     string | null
   >(
     isGroupByConfig(colorConfig) && colorConfig.groupBy.palette !== undefined
       ? colorConfig.groupBy.palette
+      : null,
+  );
+  const [currentGroupByMap, setCurrentGroupByMap] = useState<string | null>(
+    isGroupByConfig(colorConfig) && colorConfig.groupBy.map !== undefined
+      ? colorConfig.groupBy.map
       : null,
   );
 
@@ -129,14 +129,14 @@ export function ColorConfigContextProvider({
       currentSource === "groupBy" &&
       currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
-      (currentGroupByMap !== null || currentGroupByPalette !== null) &&
+      (currentGroupByPalette !== null || currentGroupByMap !== null) &&
       // ...and different from active config
       (activeSource !== "groupBy" ||
         !isGroupByConfig(colorConfig) ||
         colorConfig.groupBy.table !== currentGroupByTable ||
         colorConfig.groupBy.column !== currentGroupByColumn ||
-        colorConfig.groupBy.map !== (currentGroupByMap ?? undefined) ||
-        colorConfig.groupBy.palette !== (currentGroupByPalette ?? undefined))
+        colorConfig.groupBy.palette !== (currentGroupByPalette ?? undefined) ||
+        colorConfig.groupBy.map !== (currentGroupByMap ?? undefined))
     ) {
       onColorConfigChange({
         ...colorConfig,
@@ -144,8 +144,8 @@ export function ColorConfigContextProvider({
         groupBy: {
           table: currentGroupByTable,
           column: currentGroupByColumn,
-          map: currentGroupByMap ?? undefined,
           palette: currentGroupByPalette ?? undefined,
+          map: currentGroupByMap ?? undefined,
         },
       });
     } else if (
@@ -177,8 +177,8 @@ export function ColorConfigContextProvider({
     currentFromPalette,
     currentGroupByTable,
     currentGroupByColumn,
-    currentGroupByMap,
     currentGroupByPalette,
+    currentGroupByMap,
     currentRandomPalette,
     onColorConfigChange,
   ]);
@@ -196,8 +196,8 @@ export function ColorConfigContextProvider({
         currentFromPalette,
         currentGroupByTable,
         currentGroupByColumn,
-        currentGroupByMap,
         currentGroupByPalette,
+        currentGroupByMap,
         currentRandomPalette,
         setCurrentSource,
         setCurrentConstantValue,
@@ -208,8 +208,8 @@ export function ColorConfigContextProvider({
         setCurrentFromPalette,
         setCurrentGroupByTable,
         setCurrentGroupByColumn,
-        setCurrentGroupByMap,
         setCurrentGroupByPalette,
+        setCurrentGroupByMap,
         setCurrentRandomPalette,
       }}
     >

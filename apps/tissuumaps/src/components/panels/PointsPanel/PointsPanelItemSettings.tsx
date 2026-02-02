@@ -43,11 +43,11 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
   return (
     <Accordion
       value={[expandedConfigControl]}
-      onValueChange={(value) => {
-        if (value.length === 1) {
-          setExpandedConfigControl(value[0] as ConfigControl | null);
-        }
-      }}
+      onValueChange={(value) =>
+        setExpandedConfigControl(
+          (value[0] as ConfigControl | undefined) ?? null,
+        )
+      }
     >
       {/* Point color */}
       <ColorConfigContextProvider

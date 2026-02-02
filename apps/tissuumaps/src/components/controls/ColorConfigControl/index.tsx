@@ -1,12 +1,13 @@
 import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { Input } from "@/components/ui/input";
 import { useTissUUmaps } from "@/store";
+import { Square } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { type TableData, colorPalettes } from "@tissuumaps/core";
 
-import { ColorPicker } from "../../common/color-picker";
-import { Field, FieldControl, FieldLabel } from "../../common/field";
+import { Field, FieldLabel } from "../../common/field";
+import { SimpleColorPicker } from "../../common/simple-color-picker";
 import { SimpleSelect } from "../../common/simple-select";
 import { useColorConfigContext } from "./context";
 
@@ -39,22 +40,65 @@ type ConstantColorConfigControlProps = {
 function ConstantColorConfigControl({
   className,
 }: ConstantColorConfigControlProps) {
-  const { currentConstantValue, setCurrentConstantValue } =
+  const { currentConstantValue: color, setCurrentConstantValue: setColor } =
     useColorConfigContext();
 
   return (
     <div className={className}>
-      <Field>
-        <FieldLabel>Color</FieldLabel>
-        <FieldControl
-          render={
-            <ColorPicker
-              color={currentConstantValue}
-              onColorChange={setCurrentConstantValue}
-            />
-          }
-        />
-      </Field>
+      <div className="grid grid-cols-4 grid-flow-col gap-x-2 items-center">
+        <Field className="contents">
+          <FieldLabel>Red</FieldLabel>
+          <Input
+            type="number"
+            min={0}
+            max={255}
+            value={color.r}
+            onChange={(event) =>
+              setColor({
+                ...color,
+                r: Math.min(Math.max(0, +event.target.value), 255),
+              })
+            }
+          />
+        </Field>
+        <Field className="contents">
+          <FieldLabel>Green</FieldLabel>
+          <Input
+            type="number"
+            min={0}
+            max={255}
+            value={color.g}
+            onChange={(event) =>
+              setColor({
+                ...color,
+                g: Math.min(Math.max(0, +event.target.value), 255),
+              })
+            }
+          />
+        </Field>
+        <Field className="contents">
+          <FieldLabel>Blue</FieldLabel>
+          <Input
+            type="number"
+            min={0}
+            max={255}
+            value={color.b}
+            onChange={(event) =>
+              setColor({
+                ...color,
+                b: Math.min(Math.max(0, +event.target.value), 255),
+              })
+            }
+          />
+        </Field>
+        <SimpleColorPicker
+          color={color}
+          onColorChange={setColor}
+          className="row-start-2 col-start-4"
+        >
+          <Square fill={`rgb(${color.r}, ${color.g}, ${color.b})`} /> Pick
+        </SimpleColorPicker>
+      </div>
     </div>
   );
 }
@@ -65,133 +109,107 @@ type FromColorConfigControlProps = {
 
 function FromColorConfigControl({ className }: FromColorConfigControlProps) {
   const {
-    currentFromTable,
-    currentFromColumn,
-    currentFromRangeMin,
-    currentFromRangeMax,
-    currentFromPalette,
-    setCurrentFromTable,
-    setCurrentFromColumn,
-    setCurrentFromRangeMin,
-    setCurrentFromRangeMax,
-    setCurrentFromPalette,
+    currentFromTable: table,
+    currentFromColumn: column,
+    currentFromRangeMin: rangeMin,
+    currentFromRangeMax: rangeMax,
+    currentFromPalette: palette,
+    setCurrentFromTable: setTable,
+    setCurrentFromColumn: setColumn,
+    setCurrentFromRangeMin: setRangeMin,
+    setCurrentFromRangeMax: setRangeMax,
+    setCurrentFromPalette: setPalette,
   } = useColorConfigContext();
 
   const tables = useTissUUmaps((state) => state.tables);
   const loadTable = useTissUUmaps((state) => state.loadTable);
 
-  const [currentFromTableData, setCurrentFromTableData] =
-    useState<TableData | null>(null);
+  const [tableData, setTableData] = useState<TableData | null>(null);
 
   useEffect(() => {
     const abortController = new AbortController();
-
-    async function loadCurrentFromTableData() {
-      if (currentFromTable) {
-        const tableData = await loadTable(currentFromTable, {
+    async function loadTableData() {
+      if (table) {
+        const tableData = await loadTable(table, {
           signal: abortController.signal,
         });
         if (!abortController.signal.aborted) {
-          setCurrentFromTableData(tableData);
+          setTableData(tableData);
         }
       }
     }
-
-    loadCurrentFromTableData().catch(console.error);
-
+    loadTableData().catch(console.error);
     return () => {
       abortController.abort();
     };
-  }, [currentFromTable, loadTable]);
+  }, [table, loadTable]);
 
   return (
     <div className={className}>
-      <Field>
-        <FieldLabel>Table</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleSelect
-              items={tables}
-              itemLabel={(table) => table.name}
-              itemValue={(table) => table.id}
-              value={currentFromTable}
-              onValueChange={setCurrentFromTable}
-            />
-          }
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Column</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleAsyncCombobox
-              suggestQueries={async (currentQuery) => {
-                if (currentFromTableData !== null) {
-                  return await currentFromTableData.suggestColumnQueries(
-                    currentQuery,
-                  );
-                }
-                return Promise.resolve([]);
-              }}
-              getItem={async (query) => {
-                if (currentFromTableData !== null) {
-                  return await currentFromTableData.getColumn(query);
-                }
-                return Promise.resolve(null);
-              }}
-              itemQuery={(column) => column}
-              selectedItem={currentFromColumn}
-              onSelectedItemChange={setCurrentFromColumn}
-            />
-          }
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Min</FieldLabel>
-        <FieldControl
-          render={
-            <Input
-              type="number"
-              value={currentFromRangeMin ?? ""}
-              onChange={(event) =>
-                setCurrentFromRangeMin(
-                  event.target.value ? +event.target.value : null,
-                )
+      <div className="grid grid-cols-2 gap-x-2">
+        <Field>
+          <FieldLabel>Source table</FieldLabel>
+          <SimpleSelect
+            items={tables}
+            itemLabel={(table) => table.name}
+            itemValue={(table) => table.id}
+            value={table}
+            onValueChange={setTable}
+          />
+        </Field>
+        <Field disabled={table === null}>
+          <FieldLabel>Source column</FieldLabel>
+          <SimpleAsyncCombobox
+            suggestQueries={async (currentQuery) => {
+              if (tableData !== null) {
+                return await tableData.suggestColumnQueries(currentQuery);
               }
-            />
-          }
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Max</FieldLabel>
-        <FieldControl
-          render={
-            <Input
-              type="number"
-              value={currentFromRangeMax ?? ""}
-              onChange={(event) =>
-                setCurrentFromRangeMax(
-                  event.target.value ? +event.target.value : null,
-                )
+              return Promise.resolve([]);
+            }}
+            getItem={async (query) => {
+              if (tableData !== null) {
+                return await tableData.getColumn(query);
               }
-            />
-          }
-        />
-      </Field>
+              return Promise.resolve(null);
+            }}
+            itemQuery={(column) => column}
+            selectedItem={column}
+            onSelectedItemChange={setColumn}
+          />
+        </Field>
+      </div>
       <Field>
         <FieldLabel>Color palette</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleSelect
-              items={colorPalettes}
-              itemLabel={(colorPalette) => colorPalette.name}
-              itemValue={(colorPalette) => colorPalette.id}
-              value={currentFromPalette}
-              onValueChange={setCurrentFromPalette}
-            />
-          }
+        <SimpleSelect
+          items={colorPalettes}
+          itemLabel={(colorPalette) => colorPalette.name}
+          itemValue={(colorPalette) => colorPalette.id}
+          value={palette}
+          onValueChange={setPalette}
         />
       </Field>
+      <div className="grid grid-cols-2 gap-x-2">
+        <Field>
+          <FieldLabel>Min. value</FieldLabel>
+          <Input
+            type="number"
+            value={rangeMin ?? ""}
+            onChange={(event) =>
+              setRangeMin(event.target.value ? +event.target.value : null)
+            }
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Max. value</FieldLabel>
+          <Input
+            type="number"
+            value={rangeMax ?? ""}
+            onChange={(event) =>
+              setRangeMax(event.target.value ? +event.target.value : null)
+            }
+          />
+        </Field>
+      </div>
     </div>
   );
 }
@@ -204,112 +222,92 @@ function GroupByColorConfigControl({
   className,
 }: GroupByColorConfigControlProps) {
   const {
-    currentGroupByTable,
-    currentGroupByColumn,
-    currentGroupByMap,
-    currentGroupByPalette,
-    setCurrentGroupByTable,
-    setCurrentGroupByColumn,
-    setCurrentGroupByMap,
-    setCurrentGroupByPalette,
+    currentGroupByTable: table,
+    currentGroupByColumn: column,
+    currentGroupByPalette: palette,
+    currentGroupByMap: map,
+    setCurrentGroupByTable: setTable,
+    setCurrentGroupByColumn: setColumn,
+    setCurrentGroupByPalette: setPalette,
+    setCurrentGroupByMap: setMap,
   } = useColorConfigContext();
 
   const tables = useTissUUmaps((state) => state.tables);
   const colorMaps = useTissUUmaps((state) => state.colorMaps);
   const loadTable = useTissUUmaps((state) => state.loadTable);
 
-  const [currentGroupByTableData, setCurrentGroupByTableData] =
-    useState<TableData | null>(null);
+  const [tableData, setTableData] = useState<TableData | null>(null);
 
   useEffect(() => {
     const abortController = new AbortController();
-
-    async function loadCurrentGroupByTableData() {
-      if (currentGroupByTable) {
-        const tableData = await loadTable(currentGroupByTable, {
+    async function loadTableData() {
+      if (table) {
+        const tableData = await loadTable(table, {
           signal: abortController.signal,
         });
         if (!abortController.signal.aborted) {
-          setCurrentGroupByTableData(tableData);
+          setTableData(tableData);
         }
       }
     }
-
-    loadCurrentGroupByTableData().catch(console.error);
-
+    loadTableData().catch(console.error);
     return () => {
       abortController.abort();
     };
-  }, [currentGroupByTable, loadTable]);
+  }, [table, loadTable]);
 
   return (
     <div className={className}>
-      <Field>
-        <FieldLabel>Table</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleSelect
-              items={tables}
-              itemLabel={(table) => table.name}
-              itemValue={(table) => table.id}
-              value={currentGroupByTable}
-              onValueChange={setCurrentGroupByTable}
-            />
-          }
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Column</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleAsyncCombobox
-              suggestQueries={async (currentQuery) => {
-                if (currentGroupByTableData !== null) {
-                  return await currentGroupByTableData.suggestColumnQueries(
-                    currentQuery,
-                  );
-                }
-                return Promise.resolve([]);
-              }}
-              getItem={async (query) => {
-                if (currentGroupByTableData !== null) {
-                  return await currentGroupByTableData.getColumn(query);
-                }
-                return Promise.resolve(null);
-              }}
-              itemQuery={(column) => column}
-              selectedItem={currentGroupByColumn}
-              onSelectedItemChange={setCurrentGroupByColumn}
-            />
-          }
+      <div className="grid grid-cols-2 gap-x-2">
+        <Field>
+          <FieldLabel>Source table</FieldLabel>
+          <SimpleSelect
+            items={tables}
+            itemLabel={(table) => table.name}
+            itemValue={(table) => table.id}
+            value={table}
+            onValueChange={setTable}
+          />
+        </Field>
+        <Field disabled={table === null}>
+          <FieldLabel>Source column</FieldLabel>
+          <SimpleAsyncCombobox
+            suggestQueries={async (currentQuery) => {
+              if (tableData !== null) {
+                return await tableData.suggestColumnQueries(currentQuery);
+              }
+              return Promise.resolve([]);
+            }}
+            getItem={async (query) => {
+              if (tableData !== null) {
+                return await tableData.getColumn(query);
+              }
+              return Promise.resolve(null);
+            }}
+            itemQuery={(column) => column}
+            selectedItem={column}
+            onSelectedItemChange={setColumn}
+          />
+        </Field>
+      </div>
+      <Field disabled={map !== null}>
+        <FieldLabel>Color palette</FieldLabel>
+        <SimpleSelect
+          items={colorPalettes}
+          itemLabel={(colorPalette) => colorPalette.name}
+          itemValue={(colorPalette) => colorPalette.id}
+          value={palette}
+          onValueChange={setPalette}
         />
       </Field>
       <Field>
         <FieldLabel>Color map</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleSelect
-              items={colorMaps}
-              itemLabel={(colorMap) => colorMap.name}
-              itemValue={(colorMap) => colorMap.id}
-              value={currentGroupByMap}
-              onValueChange={setCurrentGroupByMap}
-            />
-          }
-        />
-      </Field>
-      <Field disabled={currentGroupByMap !== null}>
-        <FieldLabel>Color palette</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleSelect
-              items={colorPalettes}
-              itemLabel={(colorPalette) => colorPalette.name}
-              itemValue={(colorPalette) => colorPalette.id}
-              value={currentGroupByPalette}
-              onValueChange={setCurrentGroupByPalette}
-            />
-          }
+        <SimpleSelect
+          items={colorMaps}
+          itemLabel={(colorMap) => colorMap.name}
+          itemValue={(colorMap) => colorMap.id}
+          value={map}
+          onValueChange={setMap}
         />
       </Field>
     </div>
@@ -323,23 +321,19 @@ type RandomColorConfigControlProps = {
 function RandomColorConfigControl({
   className,
 }: RandomColorConfigControlProps) {
-  const { currentRandomPalette, setCurrentRandomPalette } =
+  const { currentRandomPalette: palette, setCurrentRandomPalette: setPalette } =
     useColorConfigContext();
 
   return (
     <div className={className}>
       <Field>
         <FieldLabel>Color palette</FieldLabel>
-        <FieldControl
-          render={
-            <SimpleSelect
-              items={colorPalettes}
-              itemLabel={(colorPalette) => colorPalette.name}
-              itemValue={(colorPalette) => colorPalette.id}
-              value={currentRandomPalette}
-              onValueChange={setCurrentRandomPalette}
-            />
-          }
+        <SimpleSelect
+          items={colorPalettes}
+          itemLabel={(colorPalette) => colorPalette.name}
+          itemValue={(colorPalette) => colorPalette.id}
+          value={palette}
+          onValueChange={setPalette}
         />
       </Field>
     </div>

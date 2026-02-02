@@ -139,6 +139,8 @@ export function SimpleAsyncCombobox<TItem>({
     return null;
   }
 
+  // style adapted from https://base-ui.com/react/components/combobox#async-search-single example, with the following changes:
+  // - set width to w-full
   return (
     <ComboboxPrimitive.Root
       filter={null}
@@ -160,7 +162,7 @@ export function SimpleAsyncCombobox<TItem>({
       }}
       onValueChange={handleSelectedQueryChanged}
     >
-      <div className="relative flex flex-col gap-1 text-sm font-medium leading-5 text-gray-900 w-[16rem] md:w-[20rem] [&>input]:pr-8 has-[.combobox-clear]:[&>input]:pr-[calc(0.5rem+1.5rem*2)]">
+      <div className="relative text-sm font-medium text-gray-900 w-full [&>input]:pr-8 has-[.combobox-clear]:[&>input]:pr-[calc(0.5rem+1.5rem*2)]">
         <ComboboxPrimitive.Input
           disabled={isSelectPending}
           className="box-border h-10 w-full rounded-md border border-gray-200 bg-[canvas] pl-3.5 text-base font-normal text-gray-900 focus:outline-2 focus:-outline-offset-1 focus:outline-blue-800"
@@ -185,7 +187,7 @@ export function SimpleAsyncCombobox<TItem>({
       <ComboboxPrimitive.Portal>
         <ComboboxPrimitive.Positioner className="outline-none" sideOffset={4}>
           <ComboboxPrimitive.Popup
-            className="box-border w-(--anchor-width) max-h-[min(var(--available-height),23rem)] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto scroll-pb-2 scroll-pt-2 overscroll-contain rounded-md bg-[canvas] py-2 text-gray-900 shadow-[0_10px_15px_-3px_var(--color-gray-200),0_4px_6px_-4px_var(--color-gray-200)] outline outline-gray-200 transition-[transform,scale,opacity] data-ending-style:transition-none data-starting-style:scale-95 data-starting-style:opacity-0 dark:-outline-offset-1 dark:shadow-none dark:outline-gray-300"
+            className="box-border w-(--anchor-width) max-h-[min(var(--available-height),23rem)] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto scroll-pb-2 scroll-pt-2 overscroll-contain rounded-md bg-[canvas] py-2 text-gray-900 shadow-[0_10px_15px_-3px_var(--color-gray-200),0_4px_6px_-4px_var(--color-gray-200)] outline-1 outline-gray-200 transition-[transform,scale,opacity] data-ending-style:transition-none data-starting-style:scale-95 data-starting-style:opacity-0 dark:-outline-offset-1 dark:shadow-none dark:outline-gray-300"
             aria-busy={isSearchPending || isSelectPending || undefined}
           >
             <ComboboxPrimitive.Status className="flex items-center gap-2 py-1 pl-4 pr-5 text-sm text-gray-600 empty:hidden">

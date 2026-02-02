@@ -15,8 +15,8 @@ interface ColorConfigContextValue {
   currentFromPalette: string | null;
   currentGroupByTable: string | null;
   currentGroupByColumn: string | null;
-  currentGroupByMap: string | null;
   currentGroupByPalette: string | null;
+  currentGroupByMap: string | null;
   currentRandomPalette: string | null;
   setCurrentSource: (newCurrentSource: ColorConfigSource) => void;
   setCurrentConstantValue: (newCurrentValue: Color) => void;
@@ -27,8 +27,8 @@ interface ColorConfigContextValue {
   setCurrentFromPalette: (newCurrentFromPalette: string | null) => void;
   setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
   setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
-  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
   setCurrentGroupByPalette: (newCurrentGroupByPalette: string | null) => void;
+  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
   setCurrentRandomPalette: (newCurrentRandomPalette: string | null) => void;
 }
 
