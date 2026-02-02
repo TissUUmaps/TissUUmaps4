@@ -60,7 +60,6 @@ export function VisibilityConfigContextProvider({
     if (
       // constant is complete...
       currentSource === "constant" &&
-      currentConstantValue !== null &&
       // ...and different from active config
       (activeSource !== "constant" ||
         !isConstantConfig(visibilityConfig) ||

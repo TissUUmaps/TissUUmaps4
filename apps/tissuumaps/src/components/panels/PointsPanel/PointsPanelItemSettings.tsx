@@ -22,6 +22,7 @@ import {
   defaultPointOpacity,
   defaultPointSize,
   defaultPointSizeUnit,
+  defaultPointVisibility,
 } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
@@ -144,7 +145,7 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
         onVisibilityConfigChange={(newVisibilityConfig) =>
           updatePoints(points.id, { pointVisibility: newVisibilityConfig })
         }
-        defaultVisibility={true}
+        defaultVisibility={defaultPointVisibility}
       >
         <AccordionItem value={ConfigControl.pointVisibility}>
           <AccordionHeader>
