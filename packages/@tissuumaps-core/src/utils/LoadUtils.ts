@@ -12,7 +12,7 @@ import {
 } from "../model/configs";
 import { type Color, type DefaultMap, Marker } from "../model/types";
 import { colorPalettes, markerPalette } from "../palettes";
-import type { TableData } from "../storage/table";
+import { type TableData } from "../storage/table";
 import { ColorUtils } from "./ColorUtils";
 import { HashUtils } from "./HashUtils";
 import { MathUtils } from "./MathUtils";

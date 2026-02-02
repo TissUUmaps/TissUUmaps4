@@ -1,18 +1,3 @@
-import {
-  MarkerConfigContextProvider,
-  MarkerConfigControl,
-  MarkerConfigSourceToggleGroup,
-} from "@/components/controls/MarkerConfigControl";
-import {
-  OpacityConfigContextProvider,
-  OpacityConfigControl,
-  OpacityConfigSourceToggleGroup,
-} from "@/components/controls/OpacityConfigControl";
-import {
-  VisibilityConfigContextProvider,
-  VisibilityConfigControl,
-  VisibilityConfigSourceToggleGroup,
-} from "@/components/controls/VisibilityConfigControl";
 import { useState } from "react";
 
 import {
@@ -40,10 +25,25 @@ import {
   ColorConfigSourceToggleGroup,
 } from "../../controls/ColorConfigControl";
 import {
+  MarkerConfigContextProvider,
+  MarkerConfigControl,
+  MarkerConfigSourceToggleGroup,
+} from "../../controls/MarkerConfigControl";
+import {
+  OpacityConfigContextProvider,
+  OpacityConfigControl,
+  OpacityConfigSourceToggleGroup,
+} from "../../controls/OpacityConfigControl";
+import {
   SizeConfigContextProvider,
   SizeConfigControl,
   SizeConfigSourceToggleGroup,
 } from "../../controls/SizeConfigControl";
+import {
+  VisibilityConfigContextProvider,
+  VisibilityConfigControl,
+  VisibilityConfigSourceToggleGroup,
+} from "../../controls/VisibilityConfigControl";
 
 const ConfigControl = {
   pointMarker: "pointMarker",

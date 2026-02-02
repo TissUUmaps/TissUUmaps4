@@ -36,9 +36,9 @@ const dockviewComponents = {
   ViewerPanel: () => <Viewer className="size-full" />,
   ProjectPanel: () => <ProjectPanel className="m-2" />,
   ImagesPanel: () => <ImagesPanel className="m-2" />,
-  LabelsPanel: () => <LabelsPanel />,
+  LabelsPanel: () => <LabelsPanel className="m-2" />,
   PointsPanel: () => <PointsPanel className="m-2" />,
-  ShapesPanel: () => <ShapesPanel />,
+  ShapesPanel: () => <ShapesPanel className="m-2" />,
   TablesPanel: () => <TablesPanel />,
 };
 

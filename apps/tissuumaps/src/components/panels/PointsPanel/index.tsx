@@ -2,7 +2,7 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { GripVertical } from "lucide-react";
 
-import type { Points } from "@tissuumaps/core";
+import { type Points } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import {

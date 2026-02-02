@@ -48,6 +48,14 @@ export const defaultViewerOptions = {
   imageSmoothingEnabled: false,
 } as const satisfies ViewerOptions;
 
+// TODO always use defaultLabelColorPalette instead
+/** Default label color */
+export const defaultLabelColor = {
+  r: 255,
+  g: 255,
+  b: 255,
+} as const satisfies Color;
+
 /** ID of the default color palette for random label colors */
 export const defaultLabelColorPalette: string = "batlowS";
 
