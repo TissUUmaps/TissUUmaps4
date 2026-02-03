@@ -20,7 +20,7 @@
     "clean": "rm -rf dist node_modules"
   },
   "devDependencies": {
-    "@types/openseadragon": "^5.0.1"
+    "@types/openseadragon": "^5.0.2"
   },
   "dependencies": {
     "fast-equals": "^6.0.0",
