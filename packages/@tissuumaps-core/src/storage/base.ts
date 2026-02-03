@@ -1,5 +1,9 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface DataLoader {}
+import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
+
+export interface DataLoader {
+  readonly schema: JsonSchema;
+  readonly uischema: UISchemaElement;
+}
 
 export interface Data {
   destroy(): void;

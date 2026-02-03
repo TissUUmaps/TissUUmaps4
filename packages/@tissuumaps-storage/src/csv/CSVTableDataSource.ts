@@ -13,6 +13,13 @@ export const csvTableDataSourceDefaults = {
     delimiter: ",",
   },
 };
+export const csvTableDataSourceSchema = {
+  // TODO JSON schema
+};
+export const csvTableDataSourceUISchema = {
+  type: "VerticalLayout",
+  // TODO UI schema
+};
 
 export interface RawCSVTableDataSource extends RawTableDataSource<
   typeof csvTableDataSourceType

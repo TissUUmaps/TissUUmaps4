@@ -35,6 +35,7 @@
     "node": ">=20.0.0"
   },
   "devDependencies": {
+    "@jsonforms/core": "^3.7.0",
     "@types/geojson": "^7946.0.16",
     "@types/papaparse": "^5.5.2"
   }

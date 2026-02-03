@@ -6,6 +6,13 @@ import {
 
 export const geoJSONShapesDataSourceType = "geojson";
 export const geoJSONShapesDataSourceDefaults = {};
+export const geoJSONShapesDataSourceSchema = {
+  // TODO JSON schema
+};
+export const geoJSONShapesDataSourceUISchema = {
+  type: "VerticalLayout",
+  // TODO UI schema
+};
 
 export interface RawGeoJSONShapesDataSource extends RawShapesDataSource<
   typeof geoJSONShapesDataSourceType

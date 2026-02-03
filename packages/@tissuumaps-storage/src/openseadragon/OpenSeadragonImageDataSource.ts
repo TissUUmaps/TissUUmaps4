@@ -7,6 +7,13 @@ import {
 
 export const openSeadragonImageDataSourceType = "openseadragon";
 export const openSeadragonImageDataSourceDefaults = {};
+export const openSeadragonImageDataSourceSchema = {
+  // TODO JSON schema
+};
+export const openSeadragonImageDataSourceUISchema = {
+  type: "VerticalLayout",
+  // TODO UI schema
+};
 
 export interface RawOpenSeadragonImageDataSource extends RawImageDataSource<
   typeof openSeadragonImageDataSourceType

@@ -1,3 +1,5 @@
+import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
+
 import {
   type PointsDataSource,
   type RawPointsDataSource,
@@ -6,6 +8,28 @@ import {
 
 export const tablePointsDataSourceType = "table";
 export const tablePointsDataSourceDefaults = {};
+export const tablePointsDataSourceSchema: JsonSchema = {
+  type: "object",
+  properties: {
+    tableId: {
+      type: "string",
+    },
+    // TODO JSON schema for dimensionColumns
+  },
+  required: ["tableId"],
+};
+export const tablePointsDataSourceUISchema: UISchemaElement = {
+  type: "VerticalLayout",
+  elements: [
+    {
+      type: "Control",
+      scope: "#/properties/tableId",
+      label: "Table",
+      options: { "x-renderer": "TableSelect" },
+    },
+    // TODO UI schema for dimensionColumns
+  ],
+};
 
 export interface RawTablePointsDataSource extends RawPointsDataSource<
   typeof tablePointsDataSourceType

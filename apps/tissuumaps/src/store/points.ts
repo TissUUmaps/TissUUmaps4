@@ -3,6 +3,7 @@ import { deepEqual } from "fast-equals";
 import {
   type Points,
   type PointsData,
+  type PointsDataLoader,
   type PointsDataSource,
 } from "@tissuumaps/core";
 
@@ -21,6 +22,7 @@ export type PointsSliceActions = {
   movePoints: (pointsId: string, newIndex: number) => void;
   deletePoints: (pointsId: string) => void;
   clearPoints: () => void;
+  createPointsDataLoader: (pointsId: string) => PointsDataLoader<PointsData>;
   loadPoints: (
     pointsId: string,
     options: { signal?: AbortSignal },
@@ -83,18 +85,11 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
     }
     set(initialPointsSliceState);
   },
-  loadPoints: async (pointsId, { signal }: { signal?: AbortSignal } = {}) => {
-    signal?.throwIfAborted();
+  createPointsDataLoader: (pointsId) => {
     const state = get();
     const points = state.points.find((points) => points.id === pointsId);
     if (points === undefined) {
       throw new Error(`Points with ID ${pointsId} not found.`);
-    }
-    const cache = state._pointsDataCache.find(({ dataSource }) =>
-      deepEqual(dataSource, points.dataSource),
-    );
-    if (cache !== undefined) {
-      return cache.data;
     }
     const dataLoaderFactory = state.pointsDataLoaderFactories.get(
       points.dataSource.type,
@@ -109,6 +104,22 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
       state.projectDir,
       state.loadTable,
     );
+    return dataLoader;
+  },
+  loadPoints: async (pointsId, { signal } = {}) => {
+    signal?.throwIfAborted();
+    const state = get();
+    const points = state.points.find((points) => points.id === pointsId);
+    if (points === undefined) {
+      throw new Error(`Points with ID ${pointsId} not found.`);
+    }
+    const cache = state._pointsDataCache.find(({ dataSource }) =>
+      deepEqual(dataSource, points.dataSource),
+    );
+    if (cache !== undefined) {
+      return cache.data;
+    }
+    const dataLoader = state.createPointsDataLoader(pointsId);
     const data = await dataLoader.loadPoints({ signal });
     signal?.throwIfAborted();
     set((draft) => {

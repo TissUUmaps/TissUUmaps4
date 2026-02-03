@@ -5,12 +5,19 @@ import {
   ParquetTableData,
   loadParquetTableDataColumn,
 } from "./ParquetTableData";
-import { type ParquetTableDataSource } from "./ParquetTableDataSource";
+import {
+  type ParquetTableDataSource,
+  parquetTableDataSourceSchema,
+  parquetTableDataSourceUISchema,
+} from "./ParquetTableDataSource";
 
 export class ParquetTableDataLoader extends AbstractTableDataLoader<
   ParquetTableDataSource,
   ParquetTableData
 > {
+  readonly schema = parquetTableDataSourceSchema;
+  readonly uischema = parquetTableDataSourceUISchema;
+
   async loadTable({
     signal,
   }: { signal?: AbortSignal } = {}): Promise<ParquetTableData> {

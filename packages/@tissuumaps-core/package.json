@@ -20,6 +20,7 @@
     "clean": "rm -rf dist node_modules"
   },
   "devDependencies": {
+    "@jsonforms/core": "^3.7.0",
     "@types/openseadragon": "^5.0.2"
   },
   "dependencies": {

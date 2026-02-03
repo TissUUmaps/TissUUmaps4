@@ -1,3 +1,5 @@
+import type { JsonSchema, UISchemaElement } from "@jsonforms/core";
+
 import {
   type RawTableDataSource,
   type TableDataSource,
@@ -6,6 +8,13 @@ import {
 
 export const parquetTableDataSourceType = "parquet";
 export const parquetTableDataSourceDefaults = {};
+export const parquetTableDataSourceSchema: JsonSchema = {
+  // TODO JSON schema
+};
+export const parquetTableDataSourceUISchema: UISchemaElement = {
+  type: "VerticalLayout",
+  // TODO UI schema
+};
 
 export interface RawParquetTableDataSource extends RawTableDataSource<
   typeof parquetTableDataSourceType

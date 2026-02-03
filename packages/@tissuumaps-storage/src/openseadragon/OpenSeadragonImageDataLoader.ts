@@ -1,11 +1,18 @@
 import { AbstractImageDataLoader } from "../base";
 import { OpenSeadragonImageData } from "./OpenSeadragonImageData";
-import { type OpenSeadragonImageDataSource } from "./OpenSeadragonImageDataSource";
+import {
+  type OpenSeadragonImageDataSource,
+  openSeadragonImageDataSourceSchema,
+  openSeadragonImageDataSourceUISchema,
+} from "./OpenSeadragonImageDataSource";
 
 export class OpenSeadragonImageDataLoader extends AbstractImageDataLoader<
   OpenSeadragonImageDataSource,
   OpenSeadragonImageData
 > {
+  readonly schema = openSeadragonImageDataSourceSchema;
+  readonly uischema = openSeadragonImageDataSourceUISchema;
+
   async loadImage({
     signal,
   }: { signal?: AbortSignal } = {}): Promise<OpenSeadragonImageData> {
