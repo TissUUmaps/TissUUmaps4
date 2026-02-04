@@ -39,7 +39,7 @@ const dockviewComponents = {
   LabelsPanel: () => <LabelsPanel className="m-2" />,
   PointsPanel: () => <PointsPanel className="m-2" />,
   ShapesPanel: () => <ShapesPanel className="m-2" />,
-  TablesPanel: () => <TablesPanel />,
+  TablesPanel: () => <TablesPanel className="m-2" />,
 };
 
 const dockviewTabComponents = {
