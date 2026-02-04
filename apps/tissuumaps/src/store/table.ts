@@ -3,6 +3,7 @@ import { deepEqual } from "fast-equals";
 import {
   type Table,
   type TableData,
+  type TableDataLoader,
   type TableDataSource,
 } from "@tissuumaps/core";
 
@@ -21,6 +22,7 @@ export type TableSliceActions = {
   moveTable: (tableId: string, newIndex: number) => void;
   deleteTable: (tableId: string) => void;
   clearTables: () => void;
+  createTableDataLoader: (tableId: string) => TableDataLoader<TableData>;
   loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
@@ -83,6 +85,23 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
     }
     set(initialTableSliceState);
   },
+  createTableDataLoader: (tableId) => {
+    const state = get();
+    const table = state.tables.find((table) => table.id === tableId);
+    if (table === undefined) {
+      throw new Error(`Table with ID ${tableId} not found.`);
+    }
+    const dataLoaderFactory = state.tableDataLoaderFactories.get(
+      table.dataSource.type,
+    );
+    if (dataLoaderFactory === undefined) {
+      throw new Error(
+        `No table data loader found for type ${table.dataSource.type}.`,
+      );
+    }
+    const dataLoader = dataLoaderFactory(table.dataSource, state.projectDir);
+    return dataLoader;
+  },
   loadTable: async (tableId, { signal }: { signal?: AbortSignal } = {}) => {
     signal?.throwIfAborted();
     const state = get();
@@ -96,15 +115,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
     if (cache !== undefined) {
       return cache.data;
     }
-    const dataLoaderFactory = state.tableDataLoaderFactories.get(
-      table.dataSource.type,
-    );
-    if (dataLoaderFactory === undefined) {
-      throw new Error(
-        `No table data loader found for type ${table.dataSource.type}.`,
-      );
-    }
-    const dataLoader = dataLoaderFactory(table.dataSource, state.projectDir);
+    const dataLoader = state.createTableDataLoader(tableId);
     const data = await dataLoader.loadTable({ signal });
     signal?.throwIfAborted();
     set((draft) => {

@@ -4,12 +4,19 @@ import { type TypedArray } from "@tissuumaps/core";
 
 import { AbstractTableDataLoader } from "../base";
 import { CSVTableData, loadCSVTableDataColumn } from "./CSVTableData";
-import { type CSVTableDataSource } from "./CSVTableDataSource";
+import {
+  type CSVTableDataSource,
+  csvTableDataSourceSchema,
+  csvTableDataSourceUISchema,
+} from "./CSVTableDataSource";
 
 export class CSVTableDataLoader extends AbstractTableDataLoader<
   CSVTableDataSource,
   CSVTableData
 > {
+  readonly schema = csvTableDataSourceSchema;
+  readonly uischema = csvTableDataSourceUISchema;
+
   async loadTable({
     signal,
   }: { signal?: AbortSignal } = {}): Promise<CSVTableData> {

@@ -4,12 +4,19 @@ import { type MultiPolygon, type Polygon } from "@tissuumaps/core";
 
 import { AbstractShapesDataLoader } from "../base";
 import { GeoJSONShapesData } from "./GeoJSONShapesData";
-import { type GeoJSONShapesDataSource } from "./GeoJSONShapesDataSource";
+import {
+  type GeoJSONShapesDataSource,
+  geoJSONShapesDataSourceSchema,
+  geoJSONShapesDataSourceUISchema,
+} from "./GeoJSONShapesDataSource";
 
 export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
   GeoJSONShapesDataSource,
   GeoJSONShapesData
 > {
+  readonly schema = geoJSONShapesDataSourceSchema;
+  readonly uischema = geoJSONShapesDataSourceUISchema;
+
   async loadShapes({
     signal,
   }: { signal?: AbortSignal } = {}): Promise<GeoJSONShapesData> {

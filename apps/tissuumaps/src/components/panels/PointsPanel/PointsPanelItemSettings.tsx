@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { JsonForms } from "@jsonforms/react";
+import { useMemo, useState } from "react";
 
 import {
   type Points,
+  type PointsDataSource,
   defaultPointColor,
   defaultPointMarker,
   defaultPointOpacity,
@@ -44,6 +46,7 @@ import {
   VisibilityConfigControl,
   VisibilityConfigSourceToggleGroup,
 } from "../../controls/VisibilityConfigControl";
+import { cells, renderers } from "../../jsonforms";
 
 const ConfigControl = {
   pointMarker: "pointMarker",
@@ -60,133 +63,166 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
     useState<ConfigControl | null>(null);
 
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
+  const createPointsDataLoader = useTissUUmaps(
+    (state) => state.createPointsDataLoader,
+  );
+
+  const pointsDataLoader = useMemo(
+    () => createPointsDataLoader(points.id),
+    [createPointsDataLoader, points.id],
+  );
 
   return (
-    <Accordion
-      value={[expandedConfigControl]}
-      onValueChange={(value) =>
-        setExpandedConfigControl(
-          (value[0] as ConfigControl | undefined) ?? null,
-        )
-      }
-    >
-      {/* Point marker */}
-      <MarkerConfigContextProvider
-        markerConfig={points.pointMarker}
-        onMarkerConfigChange={(newMarkerConfig) =>
-          updatePoints(points.id, { pointMarker: newMarkerConfig })
+    <div>
+      {/* Data source */}
+      <JsonForms
+        schema={pointsDataLoader.schema}
+        uischema={pointsDataLoader.uischema}
+        data={points.dataSource}
+        onChange={({ data, errors }) => {
+          if (errors === undefined || errors.length === 0) {
+            updatePoints(points.id, {
+              dataSource: {
+                ...points.dataSource,
+                ...(data as PointsDataSource),
+              },
+            });
+          }
+        }}
+        renderers={renderers}
+        cells={cells}
+      />
+      {/* Point settings */}
+      <Accordion
+        value={[expandedConfigControl]}
+        onValueChange={(value) =>
+          setExpandedConfigControl(
+            (value[0] as ConfigControl | undefined) ?? null,
+          )
         }
-        defaultMarker={defaultPointMarker}
       >
-        <AccordionItem value={ConfigControl.pointMarker}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Marker</AccordionTrigger>
-            <MarkerConfigSourceToggleGroup
-              className="ml-auto"
-              onClick={() =>
-                setExpandedConfigControl(ConfigControl.pointMarker)
-              }
-            />
-          </AccordionHeader>
-          <AccordionPanel>
-            <MarkerConfigControl />
-          </AccordionPanel>
-        </AccordionItem>
-      </MarkerConfigContextProvider>
-      {/* Point size */}
-      <SizeConfigContextProvider
-        sizeConfig={points.pointSize}
-        onSizeConfigChange={(newSizeConfig) =>
-          updatePoints(points.id, { pointSize: newSizeConfig })
-        }
-        defaultSize={defaultPointSize}
-        defaultSizeUnit={defaultPointSizeUnit}
-      >
-        <AccordionItem value={ConfigControl.pointSize}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Size</AccordionTrigger>
-            <SizeConfigSourceToggleGroup
-              className="ml-auto"
-              onClick={() => setExpandedConfigControl(ConfigControl.pointSize)}
-            />
-          </AccordionHeader>
-          <AccordionPanel>
-            <SizeConfigControl />
-          </AccordionPanel>
-        </AccordionItem>
-      </SizeConfigContextProvider>
-      {/* Point color */}
-      <ColorConfigContextProvider
-        colorConfig={points.pointColor}
-        onColorConfigChange={(newColorConfig) =>
-          updatePoints(points.id, { pointColor: newColorConfig })
-        }
-        defaultColor={defaultPointColor}
-      >
-        <AccordionItem value={ConfigControl.pointColor}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Color</AccordionTrigger>
-            <ColorConfigSourceToggleGroup
-              className="ml-auto"
-              onClick={() => setExpandedConfigControl(ConfigControl.pointColor)}
-            />
-          </AccordionHeader>
-          <AccordionPanel>
-            <ColorConfigControl />
-          </AccordionPanel>
-        </AccordionItem>
-      </ColorConfigContextProvider>
-      {/* Point visibility */}
-      <VisibilityConfigContextProvider
-        visibilityConfig={points.pointVisibility}
-        onVisibilityConfigChange={(newVisibilityConfig) =>
-          updatePoints(points.id, { pointVisibility: newVisibilityConfig })
-        }
-        defaultVisibility={defaultPointVisibility}
-      >
-        <AccordionItem value={ConfigControl.pointVisibility}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Visibility</AccordionTrigger>
-            <VisibilityConfigSourceToggleGroup
-              className="ml-auto"
-              onClick={() =>
-                setExpandedConfigControl(ConfigControl.pointVisibility)
-              }
-            />
-          </AccordionHeader>
-          <AccordionPanel>
-            <VisibilityConfigControl />
-          </AccordionPanel>
-        </AccordionItem>
-      </VisibilityConfigContextProvider>
-      {/* Point opacity */}
-      <OpacityConfigContextProvider
-        opacityConfig={points.pointOpacity}
-        onOpacityConfigChange={(newOpacityConfig) =>
-          updatePoints(points.id, { pointOpacity: newOpacityConfig })
-        }
-        defaultOpacity={defaultPointOpacity}
-      >
-        <AccordionItem value={ConfigControl.pointOpacity}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Opacity</AccordionTrigger>
-            <OpacityConfigSourceToggleGroup
-              className="ml-auto"
-              onClick={() =>
-                setExpandedConfigControl(ConfigControl.pointOpacity)
-              }
-            />
-          </AccordionHeader>
-          <AccordionPanel>
-            <OpacityConfigControl />
-          </AccordionPanel>
-        </AccordionItem>
-      </OpacityConfigContextProvider>
-    </Accordion>
+        {/* Point marker */}
+        <MarkerConfigContextProvider
+          markerConfig={points.pointMarker}
+          onMarkerConfigChange={(newMarkerConfig) =>
+            updatePoints(points.id, { pointMarker: newMarkerConfig })
+          }
+          defaultMarker={defaultPointMarker}
+        >
+          <AccordionItem value={ConfigControl.pointMarker}>
+            <AccordionHeader>
+              <AccordionTriggerRightDownIcon />
+              <AccordionTrigger>Marker</AccordionTrigger>
+              <MarkerConfigSourceToggleGroup
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointMarker)
+                }
+              />
+            </AccordionHeader>
+            <AccordionPanel>
+              <MarkerConfigControl />
+            </AccordionPanel>
+          </AccordionItem>
+        </MarkerConfigContextProvider>
+        {/* Point size */}
+        <SizeConfigContextProvider
+          sizeConfig={points.pointSize}
+          onSizeConfigChange={(newSizeConfig) =>
+            updatePoints(points.id, { pointSize: newSizeConfig })
+          }
+          defaultSize={defaultPointSize}
+          defaultSizeUnit={defaultPointSizeUnit}
+        >
+          <AccordionItem value={ConfigControl.pointSize}>
+            <AccordionHeader>
+              <AccordionTriggerRightDownIcon />
+              <AccordionTrigger>Size</AccordionTrigger>
+              <SizeConfigSourceToggleGroup
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointSize)
+                }
+              />
+            </AccordionHeader>
+            <AccordionPanel>
+              <SizeConfigControl />
+            </AccordionPanel>
+          </AccordionItem>
+        </SizeConfigContextProvider>
+        {/* Point color */}
+        <ColorConfigContextProvider
+          colorConfig={points.pointColor}
+          onColorConfigChange={(newColorConfig) =>
+            updatePoints(points.id, { pointColor: newColorConfig })
+          }
+          defaultColor={defaultPointColor}
+        >
+          <AccordionItem value={ConfigControl.pointColor}>
+            <AccordionHeader>
+              <AccordionTriggerRightDownIcon />
+              <AccordionTrigger>Color</AccordionTrigger>
+              <ColorConfigSourceToggleGroup
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointColor)
+                }
+              />
+            </AccordionHeader>
+            <AccordionPanel>
+              <ColorConfigControl />
+            </AccordionPanel>
+          </AccordionItem>
+        </ColorConfigContextProvider>
+        {/* Point visibility */}
+        <VisibilityConfigContextProvider
+          visibilityConfig={points.pointVisibility}
+          onVisibilityConfigChange={(newVisibilityConfig) =>
+            updatePoints(points.id, { pointVisibility: newVisibilityConfig })
+          }
+          defaultVisibility={defaultPointVisibility}
+        >
+          <AccordionItem value={ConfigControl.pointVisibility}>
+            <AccordionHeader>
+              <AccordionTriggerRightDownIcon />
+              <AccordionTrigger>Visibility</AccordionTrigger>
+              <VisibilityConfigSourceToggleGroup
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointVisibility)
+                }
+              />
+            </AccordionHeader>
+            <AccordionPanel>
+              <VisibilityConfigControl />
+            </AccordionPanel>
+          </AccordionItem>
+        </VisibilityConfigContextProvider>
+        {/* Point opacity */}
+        <OpacityConfigContextProvider
+          opacityConfig={points.pointOpacity}
+          onOpacityConfigChange={(newOpacityConfig) =>
+            updatePoints(points.id, { pointOpacity: newOpacityConfig })
+          }
+          defaultOpacity={defaultPointOpacity}
+        >
+          <AccordionItem value={ConfigControl.pointOpacity}>
+            <AccordionHeader>
+              <AccordionTriggerRightDownIcon />
+              <AccordionTrigger>Opacity</AccordionTrigger>
+              <OpacityConfigSourceToggleGroup
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointOpacity)
+                }
+              />
+            </AccordionHeader>
+            <AccordionPanel>
+              <OpacityConfigControl />
+            </AccordionPanel>
+          </AccordionItem>
+        </OpacityConfigContextProvider>
+      </Accordion>
+    </div>
   );
 }

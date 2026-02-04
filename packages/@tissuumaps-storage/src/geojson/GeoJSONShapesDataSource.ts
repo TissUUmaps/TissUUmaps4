@@ -6,6 +6,35 @@ import {
 
 export const geoJSONShapesDataSourceType = "geojson";
 export const geoJSONShapesDataSourceDefaults = {};
+export const geoJSONShapesDataSourceSchema = {
+  type: "object",
+  properties: {
+    url: {
+      type: "string",
+    },
+    // TODO path
+    idProperty: {
+      type: "string",
+    },
+  },
+};
+export const geoJSONShapesDataSourceUISchema = {
+  type: "VerticalLayout",
+  elements: [
+    {
+      type: "Control",
+      scope: "#/properties/url",
+      label: "URL",
+    },
+    // TODO path
+    {
+      type: "Control",
+      scope: "#/properties/idProperty",
+      label: "ID Property",
+    },
+  ],
+  required: ["url"], // TODO ... or path
+};
 
 export interface RawGeoJSONShapesDataSource extends RawShapesDataSource<
   typeof geoJSONShapesDataSourceType

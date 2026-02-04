@@ -3,6 +3,7 @@ import { deepEqual } from "fast-equals";
 import {
   type Shapes,
   type ShapesData,
+  type ShapesDataLoader,
   type ShapesDataSource,
 } from "@tissuumaps/core";
 
@@ -21,6 +22,7 @@ export type ShapesSliceActions = {
   moveShapes: (shapesId: string, newIndex: number) => void;
   deleteShapes: (shapesId: string) => void;
   clearShapes: () => void;
+  createShapesDataLoader: (shapesId: string) => ShapesDataLoader<ShapesData>;
   loadShapes: (
     shapesId: string,
     options: { signal?: AbortSignal },
@@ -83,18 +85,11 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
     }
     set(initialShapesSliceState);
   },
-  loadShapes: async (shapesId, { signal }: { signal?: AbortSignal } = {}) => {
-    signal?.throwIfAborted();
+  createShapesDataLoader: (shapesId) => {
     const state = get();
     const shapes = state.shapes.find((shapes) => shapes.id === shapesId);
     if (shapes === undefined) {
       throw new Error(`Shapes with ID ${shapesId} not found.`);
-    }
-    const cache = state._shapesDataCache.find(({ dataSource }) =>
-      deepEqual(dataSource, shapes.dataSource),
-    );
-    if (cache !== undefined) {
-      return cache.data;
     }
     const dataLoaderFactory = state.shapesDataLoaderFactories.get(
       shapes.dataSource.type,
@@ -109,6 +104,22 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
       state.projectDir,
       state.loadTable,
     );
+    return dataLoader;
+  },
+  loadShapes: async (shapesId, { signal }: { signal?: AbortSignal } = {}) => {
+    signal?.throwIfAborted();
+    const state = get();
+    const shapes = state.shapes.find((shapes) => shapes.id === shapesId);
+    if (shapes === undefined) {
+      throw new Error(`Shapes with ID ${shapesId} not found.`);
+    }
+    const cache = state._shapesDataCache.find(({ dataSource }) =>
+      deepEqual(dataSource, shapes.dataSource),
+    );
+    if (cache !== undefined) {
+      return cache.data;
+    }
+    const dataLoader = state.createShapesDataLoader(shapesId);
     const data = await dataLoader.loadShapes({ signal });
     signal?.throwIfAborted();
     set((draft) => {

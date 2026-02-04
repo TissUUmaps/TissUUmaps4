@@ -1,3 +1,5 @@
+import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
+
 import {
   type DataLoader,
   type DataSource,
@@ -21,6 +23,8 @@ import {
 export abstract class AbstractDataLoader<
   TDataSource extends DataSource,
 > implements DataLoader {
+  abstract readonly schema: JsonSchema;
+  abstract readonly uischema: UISchemaElement;
   protected readonly dataSource: TDataSource;
   protected readonly workspace: FileSystemDirectoryHandle | null;
 

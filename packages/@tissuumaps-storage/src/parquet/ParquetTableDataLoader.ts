@@ -5,12 +5,19 @@ import {
   ParquetTableData,
   loadParquetTableDataColumn,
 } from "./ParquetTableData";
-import { type ParquetTableDataSource } from "./ParquetTableDataSource";
+import {
+  type ParquetTableDataSource,
+  parquetTableDataSourceSchema,
+  parquetTableDataSourceUISchema,
+} from "./ParquetTableDataSource";
 
 export class ParquetTableDataLoader extends AbstractTableDataLoader<
   ParquetTableDataSource,
   ParquetTableData
 > {
+  readonly schema = parquetTableDataSourceSchema;
+  readonly uischema = parquetTableDataSourceUISchema;
+
   async loadTable({
     signal,
   }: { signal?: AbortSignal } = {}): Promise<ParquetTableData> {
@@ -56,7 +63,7 @@ export class ParquetTableDataLoader extends AbstractTableDataLoader<
     if (this.dataSource.url !== undefined) {
       const buffer = await hyparquet.asyncBufferFromUrl({
         url: this.dataSource.url,
-        requestInit: { headers: this.dataSource.headers },
+        requestInit: { headers: this.dataSource.requestHeaders },
       });
       signal?.throwIfAborted();
       return buffer;

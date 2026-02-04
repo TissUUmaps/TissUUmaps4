@@ -1,3 +1,5 @@
+import type { JsonSchema, UISchemaElement } from "@jsonforms/core";
+
 import {
   type RawTableDataSource,
   type TableDataSource,
@@ -6,12 +8,41 @@ import {
 
 export const parquetTableDataSourceType = "parquet";
 export const parquetTableDataSourceDefaults = {};
+export const parquetTableDataSourceSchema: JsonSchema = {
+  type: "object",
+  properties: {
+    url: {
+      type: "string",
+    },
+    // TODO path
+    idColumn: {
+      type: "string",
+    },
+  },
+  required: ["url"], // TODO ... or path
+};
+export const parquetTableDataSourceUISchema: UISchemaElement = {
+  type: "VerticalLayout",
+  elements: [
+    {
+      type: "Control",
+      scope: "#/properties/url",
+      label: "URL",
+    },
+    // TODO path
+    {
+      type: "Control",
+      scope: "#/properties/idColumn",
+      label: "ID Column",
+    },
+  ],
+};
 
 export interface RawParquetTableDataSource extends RawTableDataSource<
   typeof parquetTableDataSourceType
 > {
   idColumn?: string;
-  headers?: { [headerName: string]: string };
+  requestHeaders?: { [headerName: string]: string };
 }
 
 export type ParquetTableDataSource = TableDataSource<

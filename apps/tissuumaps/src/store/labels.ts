@@ -3,6 +3,7 @@ import { deepEqual } from "fast-equals";
 import {
   type Labels,
   type LabelsData,
+  type LabelsDataLoader,
   type LabelsDataSource,
 } from "@tissuumaps/core";
 
@@ -21,6 +22,7 @@ export type LabelsSliceActions = {
   moveLabels: (labelsId: string, newIndex: number) => void;
   deleteLabels: (labelsId: string) => void;
   clearLabels: () => void;
+  createLabelsDataLoader: (labelsId: string) => LabelsDataLoader<LabelsData>;
   loadLabels: (
     labelsId: string,
     options: { signal?: AbortSignal },
@@ -83,18 +85,11 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
     }
     set(initialLabelsSliceState);
   },
-  loadLabels: async (labelsId, { signal }: { signal?: AbortSignal } = {}) => {
-    signal?.throwIfAborted();
+  createLabelsDataLoader: (labelsId) => {
     const state = get();
     const labels = state.labels.find((labels) => labels.id === labelsId);
     if (labels === undefined) {
       throw new Error(`Labels with ID ${labelsId} not found.`);
-    }
-    const cache = state._labelsDataCache.find(({ dataSource }) =>
-      deepEqual(dataSource, labels.dataSource),
-    );
-    if (cache !== undefined) {
-      return cache.data;
     }
     const dataLoaderFactory = state.labelsDataLoaderFactories.get(
       labels.dataSource.type,
@@ -109,6 +104,22 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
       state.projectDir,
       state.loadTable,
     );
+    return dataLoader;
+  },
+  loadLabels: async (labelsId, { signal }: { signal?: AbortSignal } = {}) => {
+    signal?.throwIfAborted();
+    const state = get();
+    const labels = state.labels.find((labels) => labels.id === labelsId);
+    if (labels === undefined) {
+      throw new Error(`Labels with ID ${labelsId} not found.`);
+    }
+    const cache = state._labelsDataCache.find(({ dataSource }) =>
+      deepEqual(dataSource, labels.dataSource),
+    );
+    if (cache !== undefined) {
+      return cache.data;
+    }
+    const dataLoader = state.createLabelsDataLoader(labelsId);
     const data = await dataLoader.loadLabels({ signal });
     signal?.throwIfAborted();
     set((draft) => {

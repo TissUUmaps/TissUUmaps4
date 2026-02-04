@@ -40,7 +40,7 @@
       "name": "ISS",
       "dataSource": {
         "type": "table",
-        "tableId": "iss",
+        "table": "iss",
         "dimensionColumns": ["global_X_pos", "global_Y_pos"]
       },
       "layerConfigs": [

@@ -3,6 +3,7 @@ import { deepEqual } from "fast-equals";
 import {
   type Image,
   type ImageData,
+  type ImageDataLoader,
   type ImageDataSource,
 } from "@tissuumaps/core";
 
@@ -21,6 +22,7 @@ export type ImageSliceActions = {
   moveImage: (imageId: string, newIndex: number) => void;
   deleteImage: (imageId: string) => void;
   clearImages: () => void;
+  createImageDataLoader: (imageId: string) => ImageDataLoader<ImageData>;
   loadImage: (
     imageId: string,
     options: { signal?: AbortSignal },
@@ -83,18 +85,11 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
     }
     set(initialImageSliceState);
   },
-  loadImage: async (imageId, { signal } = {}) => {
-    signal?.throwIfAborted();
+  createImageDataLoader: (imageId) => {
     const state = get();
     const image = state.images.find((image) => image.id === imageId);
     if (image === undefined) {
       throw new Error(`Image with ID ${imageId} not found.`);
-    }
-    const cache = state._imageDataCache.find(({ dataSource }) =>
-      deepEqual(dataSource, image.dataSource),
-    );
-    if (cache !== undefined) {
-      return cache.data;
     }
     const dataLoaderFactory = state.imageDataLoaderFactories.get(
       image.dataSource.type,
@@ -109,6 +104,22 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
       state.projectDir,
       state.loadTable,
     );
+    return dataLoader;
+  },
+  loadImage: async (imageId, { signal } = {}) => {
+    signal?.throwIfAborted();
+    const state = get();
+    const image = state.images.find((image) => image.id === imageId);
+    if (image === undefined) {
+      throw new Error(`Image with ID ${imageId} not found.`);
+    }
+    const cache = state._imageDataCache.find(({ dataSource }) =>
+      deepEqual(dataSource, image.dataSource),
+    );
+    if (cache !== undefined) {
+      return cache.data;
+    }
+    const dataLoader = state.createImageDataLoader(imageId);
     const data = await dataLoader.loadImage({ signal });
     signal?.throwIfAborted();
     set((draft) => {
