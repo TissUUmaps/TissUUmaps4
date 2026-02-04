@@ -33,9 +33,7 @@ export class TablePointsDataLoader extends AbstractPointsDataLoader<
     signal,
   }: { signal?: AbortSignal } = {}): Promise<PointsData> {
     signal?.throwIfAborted();
-    const tableData = await this._loadTable(this.dataSource.tableId, {
-      signal,
-    });
+    const tableData = await this._loadTable(this.dataSource.table, { signal });
     signal?.throwIfAborted();
     return new TablePointsData(tableData, this.dataSource.dimensionColumns);
   }

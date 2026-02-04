@@ -131,9 +131,6 @@ importers:
       "@jsonforms/react":
         specifier: ^3.7.0
         version: 3.7.0(@jsonforms/core@3.7.0)(react@19.2.4)
-      "@jsonforms/vanilla-renderers":
-        specifier: ^3.7.0
-        version: 3.7.0(@jsonforms/core@3.7.0)(@jsonforms/react@3.7.0(@jsonforms/core@3.7.0)(react@19.2.4))(react@19.2.4)
       "@tailwindcss/vite":
         specifier: ^4.1.18
         version: 4.1.18(vite@7.3.1(@types/node@25.2.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(yaml@2.8.2))
@@ -2642,16 +2639,6 @@ packages:
       }
     peerDependencies:
       "@jsonforms/core": 3.7.0
-      react: ^16.12.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
-  "@jsonforms/vanilla-renderers@3.7.0":
-    resolution:
-      {
-        integrity: sha512-RdXQGsheARUJVbaTe6SqGw9W4/yrm0BgUok6OKUj8krp1NF4fqXc5UbYGHFksMR/p7LCuoYHCtQzKLXEfxJbDw==,
-      }
-    peerDependencies:
-      "@jsonforms/core": 3.7.0
-      "@jsonforms/react": 3.7.0
       react: ^16.12.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   "@jsonjoy.com/base64@1.1.2":
@@ -14031,13 +14018,6 @@ snapshots:
   "@jsonforms/react@3.7.0(@jsonforms/core@3.7.0)(react@19.2.4)":
     dependencies:
       "@jsonforms/core": 3.7.0
-      lodash: 4.17.23
-      react: 19.2.4
-
-  "@jsonforms/vanilla-renderers@3.7.0(@jsonforms/core@3.7.0)(@jsonforms/react@3.7.0(@jsonforms/core@3.7.0)(react@19.2.4))(react@19.2.4)":
-    dependencies:
-      "@jsonforms/core": 3.7.0
-      "@jsonforms/react": 3.7.0(@jsonforms/core@3.7.0)(react@19.2.4)
       lodash: 4.17.23
       react: 19.2.4
 

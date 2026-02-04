@@ -11,23 +11,31 @@ export const tablePointsDataSourceDefaults = {};
 export const tablePointsDataSourceSchema: JsonSchema = {
   type: "object",
   properties: {
-    tableId: {
+    table: {
       type: "string",
     },
-    // TODO JSON schema for dimensionColumns
+    dimensionColumns: {
+      type: "array",
+      items: {
+        type: "string",
+      },
+    },
   },
-  required: ["tableId"],
+  required: ["table"],
 };
 export const tablePointsDataSourceUISchema: UISchemaElement = {
   type: "VerticalLayout",
   elements: [
     {
       type: "Control",
-      scope: "#/properties/tableId",
+      scope: "#/properties/table",
       label: "Table",
-      options: { "x-renderer": "TableSelect" },
     },
-    // TODO UI schema for dimensionColumns
+    {
+      type: "Control",
+      scope: "#/properties/dimensionColumns",
+      label: "Dimension Columns",
+    },
   ],
 };
 
@@ -36,7 +44,7 @@ export interface RawTablePointsDataSource extends RawPointsDataSource<
 > {
   url: undefined; // Table data does not use a URL
   path: undefined; // Table data does not use a path
-  tableId: string;
+  table: string;
   dimensionColumns?: string[];
 }
 

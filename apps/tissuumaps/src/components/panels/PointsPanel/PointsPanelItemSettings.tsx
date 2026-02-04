@@ -1,5 +1,4 @@
 import { JsonForms } from "@jsonforms/react";
-import { vanillaCells, vanillaRenderers } from "@jsonforms/vanilla-renderers";
 import { useMemo, useState } from "react";
 
 import {
@@ -13,7 +12,6 @@ import {
   defaultPointVisibility,
 } from "@tissuumaps/core";
 
-import { renderers } from "../../../components/renderers";
 import { useTissUUmaps } from "../../../store";
 import {
   Accordion,
@@ -48,6 +46,7 @@ import {
   VisibilityConfigControl,
   VisibilityConfigSourceToggleGroup,
 } from "../../controls/VisibilityConfigControl";
+import { cells, renderers } from "../../jsonforms";
 
 const ConfigControl = {
   pointMarker: "pointMarker",
@@ -85,8 +84,8 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
             updatePoints(points.id, { dataSource: data as PointsDataSource });
           }
         }}
-        renderers={[...vanillaRenderers, ...renderers]}
-        cells={vanillaCells}
+        renderers={renderers}
+        cells={cells}
       />
       {/* Point settings */}
       <Accordion

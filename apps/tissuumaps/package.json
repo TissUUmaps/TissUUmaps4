@@ -17,7 +17,6 @@
     "@dnd-kit/react": "^0.2.3",
     "@jsonforms/core": "^3.7.0",
     "@jsonforms/react": "^3.7.0",
-    "@jsonforms/vanilla-renderers": "^3.7.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tissuumaps/core": "workspace:*",
     "@tissuumaps/plugins": "workspace:*",
