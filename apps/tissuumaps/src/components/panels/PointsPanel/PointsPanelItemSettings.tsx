@@ -81,7 +81,12 @@ export function PointsPanelItemSettings({ points }: { points: Points }) {
         data={points.dataSource}
         onChange={({ data, errors }) => {
           if (errors === undefined || errors.length === 0) {
-            updatePoints(points.id, { dataSource: data as PointsDataSource });
+            updatePoints(points.id, {
+              dataSource: {
+                ...points.dataSource,
+                ...(data as PointsDataSource),
+              },
+            });
           }
         }}
         renderers={renderers}
