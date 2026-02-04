@@ -14,11 +14,41 @@ export const csvTableDataSourceDefaults = {
   },
 };
 export const csvTableDataSourceSchema = {
-  // TODO JSON schema
+  type: "object",
+  properties: {
+    url: {
+      type: "string",
+    },
+    // TODO path
+    // TODO columns
+    idColumn: {
+      type: "string",
+    },
+    // TODO loadColumns
+    // TODO chunkSize
+    // TODO parseConfig
+  },
+  required: ["url"], // TODO ... or path
 };
 export const csvTableDataSourceUISchema = {
   type: "VerticalLayout",
-  // TODO UI schema
+  elements: [
+    {
+      type: "Control",
+      scope: "#/properties/url",
+      label: "URL",
+    },
+    // TODO path
+    // TODO columns
+    {
+      type: "Control",
+      scope: "#/properties/idColumn",
+      label: "ID Column",
+    },
+    // TODO loadColumns
+    // TODO chunkSize
+    // TODO parseConfig
+  ],
 };
 
 export interface RawCSVTableDataSource extends RawTableDataSource<

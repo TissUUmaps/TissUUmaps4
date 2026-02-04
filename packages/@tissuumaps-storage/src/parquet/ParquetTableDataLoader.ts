@@ -63,7 +63,7 @@ export class ParquetTableDataLoader extends AbstractTableDataLoader<
     if (this.dataSource.url !== undefined) {
       const buffer = await hyparquet.asyncBufferFromUrl({
         url: this.dataSource.url,
-        requestInit: { headers: this.dataSource.headers },
+        requestInit: { headers: this.dataSource.requestHeaders },
       });
       signal?.throwIfAborted();
       return buffer;

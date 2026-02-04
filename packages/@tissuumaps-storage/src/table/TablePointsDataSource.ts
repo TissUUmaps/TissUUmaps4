@@ -14,12 +14,6 @@ export const tablePointsDataSourceSchema: JsonSchema = {
     table: {
       type: "string",
     },
-    dimensionColumns: {
-      type: "array",
-      items: {
-        type: "string",
-      },
-    },
   },
   required: ["table"],
 };
@@ -30,11 +24,6 @@ export const tablePointsDataSourceUISchema: UISchemaElement = {
       type: "Control",
       scope: "#/properties/table",
       label: "Table",
-    },
-    {
-      type: "Control",
-      scope: "#/properties/dimensionColumns",
-      label: "Dimension Columns",
     },
   ],
 };

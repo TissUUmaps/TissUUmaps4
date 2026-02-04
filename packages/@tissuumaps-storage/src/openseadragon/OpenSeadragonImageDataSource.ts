@@ -8,11 +8,27 @@ import {
 export const openSeadragonImageDataSourceType = "openseadragon";
 export const openSeadragonImageDataSourceDefaults = {};
 export const openSeadragonImageDataSourceSchema = {
-  // TODO JSON schema
+  type: "object",
+  properties: {
+    url: {
+      type: "string",
+    },
+    // TODO path
+    // TODO tileSourceConfig
+  },
 };
 export const openSeadragonImageDataSourceUISchema = {
   type: "VerticalLayout",
-  // TODO UI schema
+  elements: [
+    {
+      type: "Control",
+      scope: "#/properties/url",
+      label: "URL",
+    },
+    // TODO path
+    // TODO tileSourceConfig
+  ],
+  required: ["url"], // TODO ... or path/tileSourceConfig
 };
 
 export interface RawOpenSeadragonImageDataSource extends RawImageDataSource<
