@@ -162,12 +162,12 @@ export function SimpleAsyncCombobox<TItem>({
       }}
       onValueChange={handleSelectedQueryChanged}
     >
-      <div className="relative text-sm font-medium text-gray-900 w-full [&>input]:pr-8 has-[.combobox-clear]:[&>input]:pr-[calc(0.5rem+1.5rem*2)]">
+      <div className="relative text-sm font-medium text-gray-900 w-full dark:text-gray-100 [&>input]:pr-8 has-[.combobox-clear]:[&>input]:pr-[calc(0.5rem+1.5rem*2)]">
         <ComboboxPrimitive.Input
           disabled={isSelectPending}
-          className="box-border h-10 w-full rounded-md border border-gray-200 bg-[canvas] pl-3.5 text-base font-normal text-gray-900 focus:outline-2 focus:-outline-offset-1 focus:outline-blue-800"
+          className="flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border border-input pr-3 pl-3.5 bg-[canvas] select-none hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 data-popup-open:bg-gray-100 dark:bg-input/30 text-foreground"
         />
-        <div className="absolute bottom-0 right-2 flex h-10 items-center justify-center text-gray-600">
+        <div className="absolute bottom-0 right-2 flex h-10 items-center justify-center text-gray-600 dark:text-gray-300">
           <ComboboxPrimitive.Clear
             disabled={isSelectPending}
             className="combobox-clear flex h-10 w-6 items-center justify-center rounded border-0 bg-transparent p-0"
@@ -187,13 +187,13 @@ export function SimpleAsyncCombobox<TItem>({
       <ComboboxPrimitive.Portal>
         <ComboboxPrimitive.Positioner className="outline-none" sideOffset={4}>
           <ComboboxPrimitive.Popup
-            className="box-border w-(--anchor-width) max-h-[min(var(--available-height),23rem)] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto scroll-pb-2 scroll-pt-2 overscroll-contain rounded-md bg-[canvas] py-2 text-gray-900 shadow-[0_10px_15px_-3px_var(--color-gray-200),0_4px_6px_-4px_var(--color-gray-200)] outline-1 outline-gray-200 transition-[transform,scale,opacity] data-ending-style:transition-none data-starting-style:scale-95 data-starting-style:opacity-0 dark:-outline-offset-1 dark:shadow-none dark:outline-gray-300"
+            className="box-border w-(--anchor-width) max-h-[min(var(--available-height),23rem)] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto scroll-pb-2 scroll-pt-2 overscroll-contain rounded-md bg-[canvas] py-2 text-foreground shadow-[0_10px_15px_-3px_var(--color-gray-200),0_4px_6px_-4px_var(--color-gray-200)] outline-1 outline-gray-200 transition-[transform,scale,opacity] data-ending-style:transition-none data-starting-style:scale-95 data-starting-style:opacity-0 dark:bg-input/30 dark:-outline-offset-1 dark:shadow-none dark:outline-gray-300"
             aria-busy={isSearchPending || isSelectPending || undefined}
           >
-            <ComboboxPrimitive.Status className="flex items-center gap-2 py-1 pl-4 pr-5 text-sm text-gray-600 empty:hidden">
+            <ComboboxPrimitive.Status className="flex items-center gap-2 py-1 pl-4 pr-5 text-sm text-gray-600 dark:text-gray-300 empty:hidden">
               {getStatusMessage()}
             </ComboboxPrimitive.Status>
-            <ComboboxPrimitive.Empty className="px-4 py-2 text-[0.875rem] leading-4 text-gray-600 empty:hidden">
+            <ComboboxPrimitive.Empty className="px-4 py-2 text-[0.875rem] leading-4 text-gray-600 dark:text-gray-300 empty:hidden">
               {getEmptyMessage()}
             </ComboboxPrimitive.Empty>
             <ComboboxPrimitive.List>
@@ -202,12 +202,12 @@ export function SimpleAsyncCombobox<TItem>({
                   key={index}
                   value={suggestedQuery}
                   disabled={isSelectPending}
-                  className="grid cursor-default select-none grid-cols-[0.75rem_1fr] items-start gap-2 py-2 pl-4 pr-5 text-base leading-[1.2rem] outline-none [@media(hover:hover)]:data-highlighted:relative [@media(hover:hover)]:data-highlighted:z-0 [@media(hover:hover)]:data-highlighted:text-gray-900 [@media(hover:hover)]:data-highlighted:before:absolute [@media(hover:hover)]:data-highlighted:before:inset-y-0 [@media(hover:hover)]:data-highlighted:before:inset-x-2 [@media(hover:hover)]:data-highlighted:before:z-[-1] [@media(hover:hover)]:data-highlighted:before:rounded [@media(hover:hover)]:data-highlighted:before:bg-gray-100 [@media(hover:hover)]:data-highlighted:before:content-['']"
+                  className="grid cursor-default select-none grid-cols-[0.75rem_1fr] items-start gap-2 py-2 pl-4 pr-5 text-base leading-[1.2rem] outline-none [@media(hover:hover)]:data-highlighted:relative [@media(hover:hover)]:data-highlighted:z-0 [@media(hover:hover)]:data-highlighted:text-gray-900 [@media(hover:hover)]:data-highlighted:before:absolute [@media(hover:hover)]:data-highlighted:before:inset-y-0 [@media(hover:hover)]:data-highlighted:before:inset-x-2 [@media(hover:hover)]:data-highlighted:before:z-[-1] [@media(hover:hover)]:data-highlighted:before:rounded [@media(hover:hover)]:data-highlighted:before:bg-gray-100 [@media(hover:hover)]:data-highlighted:before:content-[''] dark:[@media(hover:hover)]:data-highlighted:text-gray-100 dark:[@media(hover:hover)]:data-highlighted:before:bg-gray-800"
                 >
                   <ComboboxPrimitive.ItemIndicator className="col-start-1 mt-1">
                     <CheckIcon className="size-3" />
                   </ComboboxPrimitive.ItemIndicator>
-                  <div className="col-start-2 text-[0.8125rem] text-gray-600">
+                  <div className="col-start-2 text-[0.8125rem] text-gray-600 dark:text-gray-300">
                     {suggestedQuery}
                   </div>
                 </ComboboxPrimitive.Item>
