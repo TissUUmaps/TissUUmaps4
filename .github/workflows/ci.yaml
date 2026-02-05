@@ -1,13 +1,30 @@
-name: CI
+name: ci
 on:
   pull_request:
     branches:
       - main
+      - development
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  lint-format-test:
+  check-format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install
+      - name: Check formatting
+        run: pnpm run fmt:check
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -25,19 +42,28 @@ jobs:
         run: pnpm run build:packages
       - name: Run linter
         run: pnpm run lint
-      - name: Check formatting
-        run: pnpm run fmt:check
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build packages
+        run: pnpm run build:packages
       - name: Run tests
         run: pnpm run test
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: coverage
-          path: ./coverage
-      - name: Upload coverage to Codecov
+      - name: Upload coverage
         uses: codecov/codecov-action@v5
         with:
-          directory: ./coverage
+          directory: coverage
           fail_ci_if_error: true
           flags: unittests
           token: ${{ secrets.CODECOV_TOKEN }}

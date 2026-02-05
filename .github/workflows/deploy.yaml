@@ -1,15 +1,16 @@
-name: CD
+name: deploy
 on:
   push:
     branches:
       - main
+      - development
   workflow_dispatch:
 permissions:
   contents: read
   pages: write
   id-token: write
 concurrency:
-  group: pages
+  group: github-pages
   cancel-in-progress: true
 jobs:
   pages:
@@ -18,8 +19,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout staging
         uses: actions/checkout@v6
+        with:
+          ref: development
+          path: staging
+      - name: Checkout production
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: production
       - name: Install pnpm
         uses: pnpm/action-setup@v4
       - name: Set up Node
@@ -27,22 +36,30 @@ jobs:
         with:
           node-version: lts/*
           cache: pnpm
-      - name: Install dependencies
-        run: pnpm install
-      - name: Build project
-        run: pnpm run build
+          cache-dependency-path: |
+            staging/package-lock.json
+            production/package-lock.json
+      - name: Build staging
+        working-directory: staging
+        run: pnpm install && pnpm --filter tissuumaps... run build
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/staging/
+      - name: Build production
+        working-directory: production
+        run: pnpm install && pnpm run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
       - name: Prepare deployment
         run: |
-          mkdir ./_site
-          mv ./apps/docs/build ./_site/docs
-          mv ./apps/tissuumaps/dist ./_site/live
+          mkdir _site
+          mv staging/apps/tissuumaps/dist _site/staging
+          mv production/apps/tissuumaps/dist _site/live
+          mv production/apps/docs/build _site/docs
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
       - name: Deploy to GitHub Pages
-        id: deployment
         uses: actions/deploy-pages@v4
+        id: deployment
