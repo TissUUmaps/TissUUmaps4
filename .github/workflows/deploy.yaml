@@ -37,18 +37,24 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
-          # cache: pnpm
-          # cache-dependency-path: |
-          #   staging/pnpm-lock.yaml
-          #   production/pnpm-lock.yaml
+          cache: pnpm
+          cache-dependency-path: |
+            staging/pnpm-lock.yaml
+            production/pnpm-lock.yaml
       - name: Build staging
         working-directory: staging
-        run: pnpm install && pnpm --filter tissuumaps... run build
+        run: |
+          pnpm install
+          ls packages/*/dist apps/tissuumaps/dist
+          pnpm --filter tissuumaps... run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/staging/
       - name: Build production
         working-directory: production
-        run: pnpm install && pnpm run build
+        run: |
+          pnpm install
+          ls packages/*/dist apps/tissuumaps/dist apps/docs/build
+          pnpm run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
