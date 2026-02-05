@@ -39,8 +39,8 @@ jobs:
           node-version: lts/*
           cache: pnpm
           cache-dependency-path: |
-            staging/package-lock.json
-            production/package-lock.json
+            staging/pnpm-lock.yaml
+            production/pnpm-lock.yaml
       - name: Build staging
         working-directory: staging
         run: pnpm install && pnpm --filter tissuumaps... run build
