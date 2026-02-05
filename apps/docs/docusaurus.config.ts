@@ -87,6 +87,11 @@ const config: Config = {
           label: "Live",
           position: "right",
         },
+        {
+          href: "https://tissuumaps.github.io/TissUUmaps4/staging",
+          label: "Staging",
+          position: "right",
+        },
       ],
     },
     footer: {
@@ -124,6 +129,10 @@ const config: Config = {
             {
               href: "https://tissuumaps.github.io/TissUUmaps4/live",
               label: "Live",
+            },
+            {
+              href: "https://tissuumaps.github.io/TissUUmaps4/staging",
+              label: "Staging",
             },
           ],
         },
