@@ -19,16 +19,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout staging
-        uses: actions/checkout@v6
-        with:
-          ref: development
-          path: staging
-      - name: Checkout production
+      - name: Checkout main
         uses: actions/checkout@v6
         with:
           ref: main
           path: production
+      - name: Checkout development
+        uses: actions/checkout@v6
+        with:
+          ref: development
+          path: development
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -39,27 +39,27 @@ jobs:
           node-version: lts/*
           cache: pnpm
           cache-dependency-path: |
-            staging/pnpm-lock.yaml
             production/pnpm-lock.yaml
-      - name: Build staging
-        run: |
-          cd staging
-          pnpm install && pnpm --filter tissuumaps... run build
+            development/pnpm-lock.yaml
+      - name: Build development
+        working-directory: development
+        run: pnpm install && pnpm run build
         env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/staging/
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/live-dev/
+          DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs-dev/
       - name: Build production
-        run: |
-          cd production
-          pnpm install && pnpm run build
+        working-directory: production
+        run: pnpm install && pnpm run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
       - name: Prepare deployment
         run: |
           mkdir _site
-          mv staging/apps/tissuumaps/dist _site/staging
           mv production/apps/tissuumaps/dist _site/live
           mv production/apps/docs/build _site/docs
+          mv development/apps/tissuumaps/dist _site/live-dev
+          mv development/apps/docs/build _site/docs-dev
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

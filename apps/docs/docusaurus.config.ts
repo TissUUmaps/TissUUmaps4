@@ -88,8 +88,8 @@ const config: Config = {
           position: "right",
         },
         {
-          href: "https://tissuumaps.github.io/TissUUmaps4/staging",
-          label: "Staging",
+          href: "https://tissuumaps.github.io/TissUUmaps4/live-dev",
+          label: "Live (development)",
           position: "right",
         },
       ],
@@ -131,8 +131,8 @@ const config: Config = {
               label: "Live",
             },
             {
-              href: "https://tissuumaps.github.io/TissUUmaps4/staging",
-              label: "Staging",
+              href: "https://tissuumaps.github.io/TissUUmaps4/live-dev",
+              label: "Live (development)",
             },
           ],
         },
