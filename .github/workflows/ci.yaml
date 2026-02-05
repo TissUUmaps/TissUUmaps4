@@ -8,7 +8,7 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  install:
+  format:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,28 +22,42 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install
-  build:
-    needs: install
-    runs-on: ubuntu-latest
-    steps:
-      - name: Build packages
-        run: pnpm run build:packages
-  format:
-    needs: install
-    runs-on: ubuntu-latest
-    steps:
       - name: Check formatting
         run: pnpm run fmt:check
   lint:
-    needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build packages
+        run: pnpm run build:packages
       - name: Run linter
         run: pnpm run lint
   test:
-    needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build packages
+        run: pnpm run build:packages
       - name: Run tests
         run: pnpm run test
       - name: Upload coverage
