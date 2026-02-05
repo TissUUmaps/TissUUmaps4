@@ -36,18 +36,17 @@ jobs:
         with:
           node-version: lts/*
           cache: pnpm
+          cache-dependency-path: |
+            staging/package-lock.json
+            production/package-lock.json
       - name: Build staging
-        run: |
-          cd staging
-          pnpm install
-          pnpm --filter tissuumaps... run build
+        working-directory: staging
+        run: pnpm install && pnpm --filter tissuumaps... run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/staging/
       - name: Build production
-        run: |
-          cd production
-          pnpm install
-          pnpm run build
+        working-directory: production
+        run: pnpm install && pnpm run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
