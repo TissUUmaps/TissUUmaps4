@@ -164,8 +164,8 @@ export function ColorConfigContextProvider({
       });
     }
   }, [
-    activeSource,
     colorConfig,
+    activeSource,
     currentSource,
     currentConstantValue,
     currentFromTable,
@@ -184,6 +184,8 @@ export function ColorConfigContextProvider({
   return (
     <ColorConfigContext.Provider
       value={{
+        colorConfig,
+        defaultColor,
         activeSource,
         currentSource,
         currentConstantValue,

@@ -1,6 +1,12 @@
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
-import { GripVertical } from "lucide-react";
+import { EyeIcon, EyeOffIcon, GripVertical } from "lucide-react";
 
 import { type Points } from "@tissuumaps/core";
 
@@ -13,7 +19,10 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "../../common/accordion";
-import { PointsPanelItem } from "./PointsPanelItem";
+import { PointsGroupsPanel } from "./PointsGroupsPanel";
+import { PointsLayersPanel } from "./PointsLayersPanel";
+import { PointsSettingsPanel } from "./PointsSettingsPanel";
+import { PointsSourcePanel } from "./PointsSourcePanel";
 
 export function PointsPanel({ className }: { className?: string }) {
   const points = useTissUUmaps((state) => state.points);
@@ -49,17 +58,65 @@ function PointsAccordionItem({
   points: Points;
   index: number;
 }) {
+  const updatePoints = useTissUUmaps((state) => state.updatePoints);
+
   const { ref, handleRef } = useSortable({ id: points.id, index });
+
   return (
     <div ref={ref}>
-      <AccordionItem>
+      <AccordionItem className="border rounded-md bg-sidebar p-2">
         <AccordionHeader>
           <GripVertical ref={handleRef} />
           <AccordionTrigger>{points.name}</AccordionTrigger>
-          <AccordionTriggerUpDownIcon className="ml-auto" />
+          <div className="ml-auto flex flex-row items-center gap-x-2">
+            <InputGroup className="w-24">
+              <InputGroupAddon>PSF</InputGroupAddon>
+              <InputGroupInput
+                type="number"
+                min={0}
+                value={points.pointSizeFactor}
+                onChange={(event) => {
+                  const value = event.target.valueAsNumber;
+                  if (Number.isFinite(value)) {
+                    updatePoints(points.id, { pointSizeFactor: value });
+                  }
+                }}
+              />
+            </InputGroup>
+            <InputGroup className="w-24">
+              <InputGroupAddon>OPA</InputGroupAddon>
+              <InputGroupInput
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={points.opacity}
+                onChange={(event) => {
+                  const opacity = event.target.valueAsNumber;
+                  if (Number.isFinite(opacity)) {
+                    updatePoints(points.id, {
+                      opacity: Math.min(Math.max(0, opacity), 1),
+                    });
+                  }
+                }}
+              />
+            </InputGroup>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                updatePoints(points.id, { visibility: !points.visibility })
+              }
+            >
+              {points.visibility ? <EyeIcon /> : <EyeOffIcon />}
+            </Button>
+          </div>
+          <AccordionTriggerUpDownIcon />
         </AccordionHeader>
-        <AccordionPanel>
-          <PointsPanelItem points={points} />
+        <AccordionPanel className="pt-2 flex flex-col gap-y-2">
+          <PointsSourcePanel points={points} className="bg-card" />
+          <PointsSettingsPanel points={points} className="bg-card" />
+          <PointsLayersPanel points={points} className="bg-card" />
+          <PointsGroupsPanel points={points} className="bg-card" />
         </AccordionPanel>
       </AccordionItem>
     </div>

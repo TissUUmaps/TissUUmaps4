@@ -114,8 +114,8 @@ export function OpacityConfigContextProvider({
       });
     }
   }, [
-    activeSource,
     opacityConfig,
+    activeSource,
     currentSource,
     currentConstantValue,
     currentFromTable,
@@ -129,6 +129,8 @@ export function OpacityConfigContextProvider({
   return (
     <OpacityConfigContext.Provider
       value={{
+        opacityConfig,
+        defaultOpacity,
         activeSource,
         currentSource,
         currentConstantValue,

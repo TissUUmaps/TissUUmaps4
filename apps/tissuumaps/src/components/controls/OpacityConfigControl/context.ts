@@ -5,6 +5,8 @@ import { type OpacityConfig } from "@tissuumaps/core";
 type OpacityConfigSource = Exclude<OpacityConfig["source"], undefined>;
 
 interface OpacityConfigContextValue {
+  opacityConfig: OpacityConfig;
+  defaultOpacity: number;
   activeSource: OpacityConfigSource;
   currentSource: OpacityConfigSource;
   currentConstantValue: number;

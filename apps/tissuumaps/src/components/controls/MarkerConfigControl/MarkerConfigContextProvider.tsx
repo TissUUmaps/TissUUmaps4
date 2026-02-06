@@ -112,8 +112,8 @@ export function MarkerConfigContextProvider({
       });
     }
   }, [
-    activeSource,
     markerConfig,
+    activeSource,
     currentSource,
     currentConstantValue,
     currentFromTable,
@@ -127,6 +127,8 @@ export function MarkerConfigContextProvider({
   return (
     <MarkerConfigContext.Provider
       value={{
+        markerConfig,
+        defaultMarker,
         activeSource,
         currentSource,
         currentConstantValue,

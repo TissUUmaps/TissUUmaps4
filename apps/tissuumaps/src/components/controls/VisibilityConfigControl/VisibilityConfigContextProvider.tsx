@@ -115,8 +115,8 @@ export function VisibilityConfigContextProvider({
       });
     }
   }, [
-    activeSource,
     visibilityConfig,
+    activeSource,
     currentSource,
     currentConstantValue,
     currentFromTable,
@@ -130,6 +130,8 @@ export function VisibilityConfigContextProvider({
   return (
     <VisibilityConfigContext.Provider
       value={{
+        visibilityConfig,
+        defaultVisibility,
         activeSource,
         currentSource,
         currentConstantValue,

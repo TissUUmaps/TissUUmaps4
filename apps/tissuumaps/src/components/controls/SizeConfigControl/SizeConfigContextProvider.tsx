@@ -137,8 +137,8 @@ export function SizeConfigContextProvider({
       });
     }
   }, [
-    activeSource,
     sizeConfig,
+    activeSource,
     currentSource,
     currentConstantValue,
     currentConstantUnit,
@@ -155,6 +155,9 @@ export function SizeConfigContextProvider({
   return (
     <SizeConfigContext.Provider
       value={{
+        sizeConfig,
+        defaultSize,
+        defaultSizeUnit,
         activeSource,
         currentSource,
         currentConstantValue,

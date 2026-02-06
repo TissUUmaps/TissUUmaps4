@@ -5,6 +5,8 @@ import { Marker, type MarkerConfig } from "@tissuumaps/core";
 type MarkerConfigSource = Exclude<MarkerConfig["source"], undefined>;
 
 interface MarkerConfigContextValue {
+  markerConfig: MarkerConfig;
+  defaultMarker: Marker;
   activeSource: MarkerConfigSource;
   currentSource: MarkerConfigSource;
   currentConstantValue: Marker;
