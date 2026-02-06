@@ -5,6 +5,8 @@ import { type VisibilityConfig } from "@tissuumaps/core";
 type VisibilityConfigSource = Exclude<VisibilityConfig["source"], undefined>;
 
 interface VisibilityConfigContextValue {
+  visibilityConfig: VisibilityConfig;
+  defaultVisibility: boolean;
   activeSource: VisibilityConfigSource;
   currentSource: VisibilityConfigSource;
   currentConstantValue: boolean;

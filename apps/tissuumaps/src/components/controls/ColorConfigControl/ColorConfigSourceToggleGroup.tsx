@@ -1,5 +1,4 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { CircleDotIcon, CircleIcon } from "lucide-react";
 
 import { useColorConfigContext } from "./context";
 
@@ -24,36 +23,28 @@ export function ColorConfigSourceToggleGroup(
       }}
       {...props}
     >
-      <ToggleGroupItem value={"constant" satisfies typeof currentSource}>
-        {activeSource === "constant" ? (
-          <CircleDotIcon className="text-green-500" />
-        ) : (
-          <CircleIcon className="text-gray-200" />
-        )}
+      <ToggleGroupItem
+        value={"constant" satisfies typeof currentSource}
+        className={activeSource === "constant" ? "font-medium" : "font-normal"}
+      >
         constant
       </ToggleGroupItem>
-      <ToggleGroupItem value={"from" satisfies typeof currentSource}>
-        {activeSource === "from" ? (
-          <CircleDotIcon className="text-green-500" />
-        ) : (
-          <CircleIcon className="text-gray-200" />
-        )}
+      <ToggleGroupItem
+        value={"from" satisfies typeof currentSource}
+        className={activeSource === "from" ? "font-medium" : "font-normal"}
+      >
         from
       </ToggleGroupItem>
-      <ToggleGroupItem value={"groupBy" satisfies typeof currentSource}>
-        {activeSource === "groupBy" ? (
-          <CircleDotIcon className="text-green-500" />
-        ) : (
-          <CircleIcon className="text-gray-200" />
-        )}
+      <ToggleGroupItem
+        value={"groupBy" satisfies typeof currentSource}
+        className={activeSource === "groupBy" ? "font-medium" : "font-normal"}
+      >
         group by
       </ToggleGroupItem>
-      <ToggleGroupItem value={"random" satisfies typeof currentSource}>
-        {activeSource === "random" ? (
-          <CircleDotIcon className="text-green-500" />
-        ) : (
-          <CircleIcon className="text-gray-200" />
-        )}
+      <ToggleGroupItem
+        value={"random" satisfies typeof currentSource}
+        className={activeSource === "random" ? "font-medium" : "font-normal"}
+      >
         random
       </ToggleGroupItem>
     </ToggleGroup>

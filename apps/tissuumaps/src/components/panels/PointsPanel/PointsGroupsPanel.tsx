@@ -1,0 +1,20 @@
+import { cn } from "@/lib/utils";
+
+import { type Points } from "@tissuumaps/core";
+
+import { Fieldset, FieldsetLegend } from "../../common/fieldset";
+
+export type PointsGroupsPanelProps = {
+  points: Points;
+  className?: string;
+};
+
+export function PointsGroupsPanel({ className }: PointsGroupsPanelProps) {
+  return (
+    <Fieldset
+      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
+    >
+      <FieldsetLegend className="font-medium">Groups</FieldsetLegend>
+    </Fieldset>
+  );
+}
