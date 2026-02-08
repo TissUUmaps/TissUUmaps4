@@ -64,15 +64,15 @@ function ConstantSizeConfigControl({
         >
           <FieldItem className="flex items-center gap-x-2">
             <RadioGroupItem value={"data" satisfies CoordinateSpace} />
-            <FieldLabel>Data pixels</FieldLabel>
+            <FieldLabel>Data</FieldLabel>
           </FieldItem>
           <FieldItem className="flex items-center gap-x-2">
             <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
-            <FieldLabel>Layer pixels</FieldLabel>
+            <FieldLabel>Layer</FieldLabel>
           </FieldItem>
           <FieldItem className="flex items-center gap-x-2">
             <RadioGroupItem value={"world" satisfies CoordinateSpace} />
-            <FieldLabel>World pixels</FieldLabel>
+            <FieldLabel>World</FieldLabel>
           </FieldItem>
         </RadioGroup>
       </Field>
@@ -160,15 +160,15 @@ function FromSizeConfigControl({ className }: FromSizeConfigControlProps) {
         >
           <FieldItem className="flex items-center gap-x-2">
             <RadioGroupItem value={"data" satisfies CoordinateSpace} />
-            <FieldLabel>Data pixels</FieldLabel>
+            <FieldLabel>Data</FieldLabel>
           </FieldItem>
           <FieldItem className="flex items-center gap-x-2">
             <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
-            <FieldLabel>Layer pixels</FieldLabel>
+            <FieldLabel>Layer</FieldLabel>
           </FieldItem>
           <FieldItem className="flex items-center gap-x-2">
             <RadioGroupItem value={"world" satisfies CoordinateSpace} />
-            <FieldLabel>World pixels</FieldLabel>
+            <FieldLabel>World</FieldLabel>
           </FieldItem>
         </RadioGroup>
       </Field>
@@ -271,15 +271,15 @@ function GroupBySizeConfigControl({
         >
           <FieldItem className="flex items-center gap-x-2">
             <RadioGroupItem value={"data" satisfies CoordinateSpace} />
-            <FieldLabel>Data pixels</FieldLabel>
+            <FieldLabel>Data</FieldLabel>
           </FieldItem>
           <FieldItem className="flex items-center gap-x-2">
             <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
-            <FieldLabel>Layer pixels</FieldLabel>
+            <FieldLabel>Layer</FieldLabel>
           </FieldItem>
           <FieldItem className="flex items-center gap-x-2">
             <RadioGroupItem value={"world" satisfies CoordinateSpace} />
-            <FieldLabel>World pixels</FieldLabel>
+            <FieldLabel>World</FieldLabel>
           </FieldItem>
         </RadioGroup>
       </Field>
