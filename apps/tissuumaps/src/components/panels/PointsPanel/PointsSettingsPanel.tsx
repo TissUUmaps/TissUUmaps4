@@ -98,7 +98,7 @@ export function PointsSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>General</AccordionTrigger>
           </AccordionHeader>
-          <AccordionPanel>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <Field>
               <FieldLabel>Name</FieldLabel>
               <Input
@@ -166,18 +166,15 @@ export function PointsSettingsPanel({
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point marker</AccordionTrigger>
-              {expandedConfigControl === ConfigControl.pointMarker ? (
-                <MarkerConfigSourceToggleGroup className="ml-auto" />
-              ) : (
-                <MarkerConfigSourceValue
-                  className="ml-auto"
-                  onClick={() =>
-                    setExpandedConfigControl(ConfigControl.pointMarker)
-                  }
-                />
-              )}
+              <MarkerConfigSourceValue
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointMarker)
+                }
+              />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <MarkerConfigSourceToggleGroup className="border rounded" />
               <MarkerConfigControl />
             </AccordionPanel>
           </AccordionItem>
@@ -195,18 +192,15 @@ export function PointsSettingsPanel({
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point size</AccordionTrigger>
-              {expandedConfigControl === ConfigControl.pointSize ? (
-                <SizeConfigSourceToggleGroup className="ml-auto" />
-              ) : (
-                <SizeConfigSourceValue
-                  className="ml-auto"
-                  onClick={() =>
-                    setExpandedConfigControl(ConfigControl.pointSize)
-                  }
-                />
-              )}
+              <SizeConfigSourceValue
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointSize)
+                }
+              />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <SizeConfigSourceToggleGroup className="border rounded" />
               <SizeConfigControl />
             </AccordionPanel>
           </AccordionItem>
@@ -223,18 +217,15 @@ export function PointsSettingsPanel({
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point color</AccordionTrigger>
-              {expandedConfigControl === ConfigControl.pointColor ? (
-                <ColorConfigSourceToggleGroup className="ml-auto" />
-              ) : (
-                <ColorConfigSourceValue
-                  className="ml-auto"
-                  onClick={() =>
-                    setExpandedConfigControl(ConfigControl.pointColor)
-                  }
-                />
-              )}
+              <ColorConfigSourceValue
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointColor)
+                }
+              />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <ColorConfigSourceToggleGroup className="border rounded" />
               <ColorConfigControl />
             </AccordionPanel>
           </AccordionItem>
@@ -251,18 +242,15 @@ export function PointsSettingsPanel({
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point visibility</AccordionTrigger>
-              {expandedConfigControl === ConfigControl.pointVisibility ? (
-                <VisibilityConfigSourceToggleGroup className="ml-auto" />
-              ) : (
-                <VisibilityConfigSourceValue
-                  className="ml-auto"
-                  onClick={() =>
-                    setExpandedConfigControl(ConfigControl.pointVisibility)
-                  }
-                />
-              )}
+              <VisibilityConfigSourceValue
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointVisibility)
+                }
+              />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <VisibilityConfigSourceToggleGroup className="border rounded" />
               <VisibilityConfigControl />
             </AccordionPanel>
           </AccordionItem>
@@ -279,18 +267,15 @@ export function PointsSettingsPanel({
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point opacity</AccordionTrigger>
-              {expandedConfigControl === ConfigControl.pointOpacity ? (
-                <OpacityConfigSourceToggleGroup className="ml-auto" />
-              ) : (
-                <OpacityConfigSourceValue
-                  className="ml-auto"
-                  onClick={() =>
-                    setExpandedConfigControl(ConfigControl.pointOpacity)
-                  }
-                />
-              )}
+              <OpacityConfigSourceValue
+                className="ml-auto"
+                onClick={() =>
+                  setExpandedConfigControl(ConfigControl.pointOpacity)
+                }
+              />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <OpacityConfigSourceToggleGroup className="border rounded" />
               <OpacityConfigControl />
             </AccordionPanel>
           </AccordionItem>
