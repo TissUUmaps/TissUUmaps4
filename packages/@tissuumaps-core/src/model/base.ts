@@ -7,7 +7,7 @@ import { type SimilarityTransform } from "./types";
 export const modelDefaults = {} as const satisfies Partial<RawModel>;
 
 /**
- * A model
+ * Base interface for all model types in a TissUUmaps project
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawModel {}
@@ -43,7 +43,7 @@ export const dataObjectDefaults = {} as const satisfies Partial<
 >;
 
 /**
- * A data object
+ * A named, identifiable data object backed by a data source
  */
 export interface RawDataObject<
   TRawDataSource extends RawDataSource<string>,
@@ -101,7 +101,7 @@ export const renderedDataObjectDefaults = {
 >;
 
 /**
- * A data object that can be rendered
+ * A data object that can be rendered on one or more layers
  */
 export interface RawRenderedDataObject<
   TRawDataSource extends RawDataSource<string>,
@@ -122,7 +122,9 @@ export interface RawRenderedDataObject<
   opacity?: number;
 
   /**
-   * Layer configurations
+   * Layer configurations specifying how this data object is displayed on each layer
+   *
+   * @defaultValue {@link renderedDataObjectDefaults.layerConfigs}
    */
   layerConfigs?: TRawLayerConfig[];
 }

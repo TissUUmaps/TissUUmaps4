@@ -34,6 +34,13 @@ import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLControllerBase } from "./WebGLControllerBase";
 
+/**
+ * WebGL sub-controller for rendering two-dimensional point clouds
+ *
+ * Manages GPU buffers, shaders, a marker atlas texture, and per-object
+ * uniform block data. Points are rendered as `gl.POINTS` using per-vertex
+ * attributes (x, y, size, color, marker, object index).
+ */
 export class WebGLPointsController extends WebGLControllerBase {
   private static readonly _maxNumObjects = 2048; // see vertex shader
   private static readonly _attribLocations = {
@@ -74,6 +81,12 @@ export class WebGLPointsController extends WebGLControllerBase {
   private _currentBufferSize: number = 0;
   private _bufferSliceStates: PointsBufferSliceState[] = [];
 
+  /**
+   * Creates the shader program, uniform locations, GPU buffers, and vertex
+   * array object for point rendering
+   *
+   * @param gl - The WebGL 2 rendering context
+   */
   constructor(gl: WebGL2RenderingContext) {
     super(gl);
     // load program
@@ -190,6 +203,14 @@ export class WebGLPointsController extends WebGLControllerBase {
     this._gl.bindVertexArray(null);
   }
 
+  /**
+   * Loads the bundled marker atlas texture
+   *
+   * Must be called once before the first {@link draw}.
+   *
+   * @param options - Optional abort signal
+   * @returns This controller instance, for chaining
+   */
   async initialize({
     signal,
   }: { signal?: AbortSignal } = {}): Promise<WebGLPointsController> {
@@ -203,6 +224,24 @@ export class WebGLPointsController extends WebGLControllerBase {
     return this;
   }
 
+  /**
+   * Synchronizes GPU buffers with the current model state
+   *
+   * Loads all points data for the given layers, resolves configuration-driven
+   * properties (marker, size, color, visibility, opacity) via the provided maps
+   * and table loader, and uploads the results into GPU buffers.
+   *
+   * @param layers - Layers to render
+   * @param points - Points data objects
+   * @param markerMaps - Project-global marker maps for {@link GroupByConfig} resolution
+   * @param sizeMaps - Project-global size maps
+   * @param colorMaps - Project-global color maps
+   * @param visibilityMaps - Project-global visibility maps
+   * @param opacityMaps - Project-global opacity maps
+   * @param loadPoints - Async loader for points data
+   * @param loadTable - Async loader for table data
+   * @param options - Optional abort signal
+   */
   async synchronize(
     layers: Layer[],
     points: Points[],
@@ -250,6 +289,16 @@ export class WebGLPointsController extends WebGLControllerBase {
     signal?.throwIfAborted();
   }
 
+  /**
+   * Issues the WebGL draw call for all synchronized points
+   *
+   * Binds the shader program, configures uniforms (transform, viewport,
+   * canvas size, device pixel ratio), binds the marker atlas texture, and
+   * draws all points in a single `gl.POINTS` call with alpha blending.
+   *
+   * @param viewport - Current world-space viewport
+   * @param drawOptions - Current draw options (e.g. point size factor)
+   */
   draw(viewport: Rect, drawOptions: DrawOptions): void {
     if (
       this._currentBufferSize === 0 ||
@@ -304,6 +353,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     this._gl.useProgram(null);
   }
 
+  /** Releases the shader program, VAO, marker atlas texture, and all GPU buffers */
   destroy(): void {
     this._gl.deleteProgram(this._program);
     this._gl.deleteVertexArray(this._vao);
@@ -315,6 +365,13 @@ export class WebGLPointsController extends WebGLControllerBase {
     }
   }
 
+  /**
+   * Resizes all per-vertex GPU buffers to accommodate `n` points
+   *
+   * Existing buffer contents are discarded.
+   *
+   * @param n - Total number of points across all objects
+   */
   private _resizePointBuffers(n: number): void {
     WebGLUtils.resizeBuffer(
       this._gl,
@@ -361,6 +418,13 @@ export class WebGLPointsController extends WebGLControllerBase {
     this._currentBufferSize = n;
   }
 
+  /**
+   * Loads points data for every layer configuration matching the given layers
+   *
+   * Objects that fail to load are logged and skipped.
+   *
+   * @returns A flat list of resolved point references in layer order
+   */
   private async _loadPoints(
     layers: Layer[],
     points: Points[],
@@ -406,6 +470,15 @@ export class WebGLPointsController extends WebGLControllerBase {
     return refs;
   }
 
+  /**
+   * Loads per-point attribute data into GPU buffers, performing incremental
+   * updates where possible by comparing each buffer slice's current state
+   * against the new model values
+   *
+   * Also populates the per-object UBO with data → world transform matrices.
+   *
+   * @returns An updated list of buffer slice states for the next synchronization cycle
+   */
   private async _loadPointBuffers(
     refs: PointsRef[],
     markerMaps: DefaultMap<Marker>[],
@@ -685,6 +758,7 @@ export class WebGLPointsController extends WebGLControllerBase {
   }
 }
 
+/** Binding of a points data object to a specific layer and layer configuration */
 type PointsRef = {
   layer: Layer;
   points: Points;
@@ -693,10 +767,21 @@ type PointsRef = {
   data: PointsData;
 };
 
+/**
+ * Tracks the current GPU buffer state for a single points object's
+ * slice within the shared vertex buffers
+ *
+ * Used for incremental updates: by comparing `current` against the new
+ * model values, only changed attributes are re-uploaded to the GPU.
+ */
 type PointsBufferSliceState = {
+  /** Reference to the points object this slice represents */
   ref: PointsRef;
+  /** Element offset (point count) within each shared vertex buffer */
   offset: number;
+  /** Number of points in this slice */
   numPoints: number;
+  /** Snapshot of model values at the time of the last buffer upload */
   current: {
     layer: Pick<
       Layer,

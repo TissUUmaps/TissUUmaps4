@@ -34,7 +34,13 @@ export const projectDefaults = {
   },
 } as const satisfies Partial<RawProject>;
 
-/** A TissUUmaps project */
+/**
+ * A TissUUmaps project
+ *
+ * Top-level container that assembles layers, data objects (images, labels,
+ * points, shapes), tables, group-to-value maps, and viewer/draw options
+ * into a single serializable configuration.
+ */
 export interface RawProject extends RawModel {
   /**
    * Project name
@@ -72,38 +78,51 @@ export interface RawProject extends RawModel {
   tables?: RawTable[];
 
   /**
-   * Marker maps
+   * Project-global marker maps, referenced by {@link "./configs".GroupByConfig} marker configurations
+   *
+   * @defaultValue {@link projectDefaults.markerMaps}
    */
   markerMaps?: DefaultMap<Marker>[];
 
   /**
-   * Size maps
+   * Project-global size maps, referenced by {@link "./configs".GroupByConfig} size configurations
+   *
+   * @defaultValue {@link projectDefaults.sizeMaps}
    */
   sizeMaps?: DefaultMap<number>[];
 
   /**
-   * Color maps
+   * Project-global color maps, referenced by {@link "./configs".GroupByConfig} color configurations
+   *
+   * @defaultValue {@link projectDefaults.colorMaps}
    */
   colorMaps?: DefaultMap<Color>[];
 
   /**
-   * Visibility maps
+   * Project-global visibility maps, referenced by {@link "./configs".GroupByConfig} visibility configurations
+   *
+   * @defaultValue {@link projectDefaults.visibilityMaps}
    */
   visibilityMaps?: DefaultMap<boolean>[];
 
   /**
-   * Opacity maps
+   * Project-global opacity maps, referenced by {@link "./configs".GroupByConfig} opacity configurations
+   *
+   * @defaultValue {@link projectDefaults.opacityMaps}
    */
   opacityMaps?: DefaultMap<number>[];
 
   /**
    * WebGL draw options for points/shapes
+   *
+   * @defaultValue {@link projectDefaults.drawOptions}
    */
   drawOptions?: DrawOptions;
 
   /**
    * OpenSeadragon viewer options for images/labels
    *
+   * @defaultValue {@link projectDefaults.viewerOptions}
    * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
    */
   viewerOptions?: ViewerOptions;
@@ -111,8 +130,10 @@ export interface RawProject extends RawModel {
   /**
    * OpenSeadragon viewer options set when an animation starts
    *
-   * Each option will be reset to the initial value when the animation finishes, unless overridden by `viewerAnimationFinishOptions`
+   * Each option will be reset to the initial value when the animation finishes,
+   * unless overridden by {@link viewerAnimationFinishOptions}.
    *
+   * @defaultValue {@link projectDefaults.viewerAnimationStartOptions}
    * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
    */
   viewerAnimationStartOptions?: ViewerOptions;
@@ -120,6 +141,7 @@ export interface RawProject extends RawModel {
   /**
    * OpenSeadragon viewer options set when an animation finishes
    *
+   * @defaultValue {@link projectDefaults.viewerAnimationFinishOptions}
    * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
    */
   viewerAnimationFinishOptions?: ViewerOptions;

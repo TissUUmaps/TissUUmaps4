@@ -5,6 +5,13 @@ import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLPointsController } from "./WebGLPointsController";
 import { WebGLShapesController } from "./WebGLShapesController";
 
+/**
+ * Top-level WebGL controller that coordinates point and shape rendering
+ *
+ * Owns a `<canvas>` element, a {@link WebGL2RenderingContext}, and delegates
+ * to {@link WebGLPointsController} and {@link WebGLShapesController} for
+ * data-type-specific synchronization and drawing.
+ */
 export class WebGLController {
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas#maximum_canvas_size
   private static readonly _maxCanvasSize = 4096;
@@ -16,6 +23,7 @@ export class WebGLController {
   private _pointsController: WebGLPointsController;
   private _shapesController: WebGLShapesController;
 
+  /** Creates a positioned, full-size `<canvas>` element for the WebGL overlay */
   static createCanvas(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
     canvas.style.setProperty("position", "relative");
@@ -25,6 +33,10 @@ export class WebGLController {
     return canvas;
   }
 
+  /**
+   * @param canvas - The canvas element to draw on (typically created by {@link createCanvas})
+   * @param viewport - Initial world-space viewport rectangle
+   */
   constructor(canvas: HTMLCanvasElement, viewport: Rect) {
     this._canvas = canvas;
     this._viewport = viewport;
@@ -42,6 +54,12 @@ export class WebGLController {
     });
   }
 
+  /**
+   * Updates the world-space viewport rectangle
+   *
+   * @param viewport - New viewport bounds in world coordinates
+   * @returns `true` if the viewport actually changed, `false` otherwise
+   */
   setViewport(viewport: Rect): boolean {
     if (
       this._viewport.x !== viewport.x ||
@@ -55,6 +73,12 @@ export class WebGLController {
     return false;
   }
 
+  /**
+   * Applies new draw options
+   *
+   * @param drawOptions - The new draw options
+   * @returns Flags indicating whether points and/or shapes need re-synchronization
+   */
   setDrawOptions(drawOptions: DrawOptions): {
     syncPoints: boolean;
     syncShapes: boolean;
@@ -66,6 +90,12 @@ export class WebGLController {
     return { syncPoints: false, syncShapes };
   }
 
+  /**
+   * Performs one-time asynchronous initialization (e.g. loading the marker atlas)
+   *
+   * @param options - Optional abort signal
+   * @returns This controller instance, for chaining
+   */
   async initialize({
     signal,
   }: { signal?: AbortSignal } = {}): Promise<WebGLController> {
@@ -75,18 +105,27 @@ export class WebGLController {
     return this;
   }
 
+  /** Delegates to {@link WebGLPointsController.synchronize} */
   async synchronizePoints(
     ...args: Parameters<typeof WebGLPointsController.prototype.synchronize>
   ): ReturnType<typeof WebGLPointsController.prototype.synchronize> {
     return await this._pointsController.synchronize(...args);
   }
 
+  /** Delegates to {@link WebGLShapesController.synchronize} */
   async synchronizeShapes(
     ...args: Parameters<typeof WebGLShapesController.prototype.synchronize>
   ): ReturnType<typeof WebGLShapesController.prototype.synchronize> {
     return await this._shapesController.synchronize(...args);
   }
 
+  /**
+   * Resizes the canvas to match the given CSS pixel size, accounting for
+   * `devicePixelRatio` and clamping to {@link _maxCanvasSize}
+   *
+   * @param size - Desired CSS pixel dimensions
+   * @returns `true` if the canvas size actually changed, `false` otherwise
+   */
   resizeCanvas(size: { width: number; height: number }): boolean {
     let { width, height } = size;
     width *= window.devicePixelRatio;
@@ -111,6 +150,7 @@ export class WebGLController {
     return false;
   }
 
+  /** Clears the canvas and draws all synchronized points and shapes */
   draw(): void {
     this._gl.clearColor(0, 0, 0, 0);
     this._gl.clear(this._gl.COLOR_BUFFER_BIT);
@@ -118,11 +158,18 @@ export class WebGLController {
     this._shapesController.draw(this._viewport, this._drawOptions);
   }
 
+  /** Releases all WebGL resources held by the points and shapes sub-controllers */
   destroy(): void {
     this._pointsController.destroy();
     this._shapesController.destroy();
   }
 
+  /**
+   * Creates a WebGL 2 rendering context on the given canvas
+   *
+   * Antialiasing is disabled and the drawing buffer is preserved so that
+   * the canvas can be composited with the OpenSeadragon viewer.
+   */
   private static _createWebGLContext(
     canvas: HTMLCanvasElement,
   ): WebGL2RenderingContext {

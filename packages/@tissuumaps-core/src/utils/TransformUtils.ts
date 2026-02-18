@@ -2,7 +2,19 @@ import { mat3 } from "gl-matrix";
 
 import { type SimilarityTransform } from "../model/types";
 
+/**
+ * Utility methods for converting between {@link SimilarityTransform}
+ * objects and `gl-matrix` {@link mat3} matrices
+ */
 export class TransformUtils {
+  /**
+   * Decomposes a 3×3 matrix into a {@link SimilarityTransform}
+   *
+   * Extracts uniform scale, rotation (in degrees), and translation
+   * from a column-major `gl-matrix` {@link mat3}.
+   *
+   * @param m - The source matrix
+   */
   static fromMatrix(m: mat3): SimilarityTransform {
     // gl-matrix, like OpenGL, uses column-major order.
     return {
@@ -12,6 +24,15 @@ export class TransformUtils {
     };
   }
 
+  /**
+   * Builds a 3×3 matrix from a (partial) {@link SimilarityTransform}
+   *
+   * Applies, in order: scale, rotation (around `rotationCenter` if provided),
+   * and translation.
+   *
+   * @param tf - The transform components (all optional)
+   * @param options - Optional rotation center in pre-scaled coordinates
+   */
   static toMatrix(
     tf: Partial<SimilarityTransform>,
     {
@@ -47,14 +68,24 @@ export class TransformUtils {
     return m;
   }
 
-  /** Converts m to a mat3x2 */
+  /**
+   * Extracts a column-major `mat3x2` (3 columns × 2 rows) from a {@link mat3},
+   * discarding the third row
+   *
+   * @param m - The source matrix
+   */
   static asGLMat3x2(m: mat3): number[] {
     // gl-matrix, like OpenGL, uses column-major order.
     // In OpenGL, mat3x2 has three columns and two rows.
     return [m[0], m[1], m[3], m[4], m[6], m[7]];
   }
 
-  /** Transposes m and converts the transposed matrix to a mat2x4 */
+  /**
+   * Transposes a {@link mat3} and extracts a column-major `mat2x4`
+   * (2 columns × 4 rows), zero-padded in the fourth row
+   *
+   * @param m - The source matrix
+   */
   static transposeAsGLMat2x4(m: mat3): number[] {
     // gl-matrix, like OpenGL, uses column-major order.
     // In OpenGL, mat2x4 has two columns and four rows.

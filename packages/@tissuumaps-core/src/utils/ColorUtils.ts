@@ -1,6 +1,18 @@
 import { type Color } from "../model/types";
 
+/** Utility methods for color parsing, packing, and conversion */
 export class ColorUtils {
+  /**
+   * Parses a text-based color palette into an array of colors
+   *
+   * Each non-empty line is expected to contain three numeric components
+   * separated by `sep`, scaled from `[0, maxValue]` to `[0, 255]`.
+   *
+   * @param str - Multi-line palette string
+   * @param options - Parsing options
+   * @param options.sep - Component separator (default `" "`)
+   * @param options.maxValue - Maximum input value per component (default `1`)
+   */
   static parseColorPalette(
     str: string,
     {
@@ -27,10 +39,21 @@ export class ColorUtils {
       });
   }
 
+  /**
+   * Packs an RGB color into a single 24-bit integer (`0xRRGGBB`)
+   *
+   * @param color - The color to pack
+   */
   static packColor(color: Color): number {
     return (color.r << 16) | (color.g << 8) | color.b;
   }
 
+  /**
+   * Parses a hex color string into a {@link Color}
+   *
+   * @param hex - A `#RRGGBB` hex string
+   * @throws If the string is not a valid 6-digit hex color
+   */
   static fromHex(hex: string): Color {
     if (!/^#([0-9A-Fa-f]{6})$/.test(hex)) {
       throw new Error(`Invalid hex color: ${hex}`);
@@ -41,6 +64,11 @@ export class ColorUtils {
     return { r, g, b };
   }
 
+  /**
+   * Formats a {@link Color} as a `#RRGGBB` hex string
+   *
+   * @param color - The color to format
+   */
   static toHex(color: Color): string {
     const rHex = Math.round(color.r).toString(16).padStart(2, "0");
     const gHex = Math.round(color.g).toString(16).padStart(2, "0");
