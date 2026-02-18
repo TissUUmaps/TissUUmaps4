@@ -102,7 +102,7 @@ export class WebGLController {
       width = Math.floor(width * scale);
       height = Math.floor(height * scale);
     }
-    if (this._canvas.width !== width && this._canvas.height !== height) {
+    if (this._canvas.width !== width || this._canvas.height !== height) {
       this._canvas.width = width;
       this._canvas.height = height;
       this._gl.viewport(0, 0, width, height);
