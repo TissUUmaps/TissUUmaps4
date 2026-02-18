@@ -5,7 +5,7 @@ export class HashUtils {
    *
    * Returns a non-negative 32-bit integer.
    *
-   * @see {@link http://www.cse.yorku.ca/~oz/hash.html}
+   * @see http://www.cse.yorku.ca/~oz/hash.html
    * @param str - The string to hash
    */
   static djb2(str: string): number {
