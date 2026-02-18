@@ -353,8 +353,8 @@ export class OpenSeadragonController {
           this._updateTiledImage(tiledImageState);
           tiledImageState.deferredUpdate = undefined;
         } else {
-          // always update transform
-          this._updateTiledImageTransform(tiledImageState);
+          // always update geometry
+          this._updateTiledImageGeometry(tiledImageState);
         }
         this._viewer.viewport.fitBounds(
           tiledImageState.tiledImage.getBounds(),
@@ -373,22 +373,16 @@ export class OpenSeadragonController {
     if (tiledImageState.tiledImage === undefined) {
       throw new Error("Cannot update tiled image before it is created");
     }
-    if (
-      tiledImageState.tiledImage.getFlip() !==
-      tiledImageState.ref.layerConfig.flip
-    ) {
-      tiledImageState.tiledImage.setFlip(tiledImageState.ref.layerConfig.flip);
-    }
     const opacity = OpenSeadragonController._calculateOpacity(
       tiledImageState.ref,
     );
     if (tiledImageState.tiledImage.getOpacity() !== opacity) {
       tiledImageState.tiledImage.setOpacity(opacity);
     }
-    this._updateTiledImageTransform(tiledImageState);
+    this._updateTiledImageGeometry(tiledImageState);
   }
 
-  private _updateTiledImageTransform(tiledImageState: TiledImageState): void {
+  private _updateTiledImageGeometry(tiledImageState: TiledImageState): void {
     if (tiledImageState.tiledImage === undefined) {
       throw new Error("Cannot update tiled image before it is created");
     }
