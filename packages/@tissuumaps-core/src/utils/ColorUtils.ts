@@ -42,9 +42,9 @@ export class ColorUtils {
   }
 
   static toHex(color: Color): string {
-    const rHex = color.r.toString(16).padStart(2, "0");
-    const gHex = color.g.toString(16).padStart(2, "0");
-    const bHex = color.b.toString(16).padStart(2, "0");
+    const rHex = Math.round(color.r).toString(16).padStart(2, "0");
+    const gHex = Math.round(color.g).toString(16).padStart(2, "0");
+    const bHex = Math.round(color.b).toString(16).padStart(2, "0");
     return `#${rHex}${gHex}${bHex}`;
   }
 }
