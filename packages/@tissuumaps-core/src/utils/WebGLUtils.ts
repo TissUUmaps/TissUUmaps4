@@ -194,23 +194,9 @@ export class WebGLUtils {
     format: GLenum,
     type: GLenum,
     data: TypedArray,
-    offset: number = 0,
   ): void {
-    // textures are row-major
-    const xoffset = offset % width;
-    const yoffset = Math.floor(offset / width);
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texSubImage2D(
-      gl.TEXTURE_2D,
-      0,
-      xoffset,
-      yoffset,
-      width,
-      height,
-      format,
-      type,
-      data,
-    );
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, format, type, data);
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
