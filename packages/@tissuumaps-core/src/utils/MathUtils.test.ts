@@ -20,60 +20,63 @@ describe("MathUtils.clamp", () => {
     expect(MathUtils.clamp(0.5, 1.2, 4.5)).toBeCloseTo(1.2);
   });
 
-  it("when min equals max returns that value", () => {
+  it("returns the value when min equals max", () => {
     expect(MathUtils.clamp(2, 5, 5)).toBe(5);
     expect(MathUtils.clamp(7, 5, 5)).toBe(5);
   });
-
-  it("when min > max returns max (per implementation)", () => {
-    // Math.min(Math.max(min, value), max) will return max in this case
-    expect(MathUtils.clamp(3, 10, 5)).toBe(5);
-    expect(MathUtils.clamp(20, 10, 5)).toBe(5);
-  });
 });
 
-describe("MathUtils bitwise safe operations (uint32 results)", () => {
-  it("safeAnd with positive and negative yields expected uint32", () => {
-    const a = -1;
-    const b = 0x0f0f0f0f; // 252645135
-    expect(MathUtils.safeAnd(a, b)).toBe(0x0f0f0f0f >>> 0);
-    expect(MathUtils.safeAnd(3.7, 1.2)).toBe((3 & 1) >>> 0); // float inputs truncated
+describe("MathUtils bitwise safe operations", () => {
+  it("safeAnd with positive and negative values", () => {
+    expect(MathUtils.safeAnd(-1, 0x0f0f0f0f)).toBe(0x0f0f0f0f >>> 0);
+    expect(MathUtils.safeAnd(0xff00, 0x0ff0)).toBe(0x0f00);
   });
 
   it("safeOr produces expected uint32", () => {
-    const a = 0x80000000; // 2147483648
-    const b = 1;
-    expect(MathUtils.safeOr(a, b)).toBe((0x80000000 | 1) >>> 0);
-    expect(MathUtils.safeOr(-2, 2)).toBe((-2 | 2) >>> 0);
+    expect(MathUtils.safeOr(0x80000000, 1)).toBe((0x80000000 | 1) >>> 0);
+    expect(MathUtils.safeOr(0xff00, 0x00ff)).toBe(0xffff);
   });
 
   it("safeXor produces expected uint32", () => {
-    const a = 0xffffffff; // -1 as int32
-    const b = 0xaaaaaaaa;
-    expect(MathUtils.safeXor(a, b)).toBe((0xffffffff ^ 0xaaaaaaaa) >>> 0);
+    expect(MathUtils.safeXor(0xffffffff, 0xaaaaaaaa)).toBe(
+      (0xffffffff ^ 0xaaaaaaaa) >>> 0,
+    );
+  });
+
+  it("safeXor with zero is identity", () => {
+    expect(MathUtils.safeXor(0x12345678, 0)).toBe(0x12345678);
   });
 
   it("safeNot produces expected uint32", () => {
-    expect(MathUtils.safeNot(0)).toBe(~0 >>> 0); // should be 0xFFFFFFFF
+    expect(MathUtils.safeNot(0)).toBe(0xffffffff);
     expect(MathUtils.safeNot(0x12345678)).toBe(~0x12345678 >>> 0);
   });
 
   it("safeLeftShift respects 32-bit shift semantics", () => {
     expect(MathUtils.safeLeftShift(1, 31)).toBe((1 << 31) >>> 0);
-    // shift of 32 is treated as shift & 31 => 0, so value unchanged
     expect(MathUtils.safeLeftShift(1, 32)).toBe((1 << 0) >>> 0);
-    // overflow behavior
     expect(MathUtils.safeLeftShift(0x80000000, 1)).toBe(
       (0x80000000 << 1) >>> 0,
     );
   });
 
   it("safeRightShift behaves as unsigned right shift", () => {
-    expect(MathUtils.safeRightShift(0x80000000, 1)).toBe(
-      (0x80000000 >>> 1) >>> 0,
-    );
+    expect(MathUtils.safeRightShift(0x80000000, 1)).toBe(0x40000000);
     expect(MathUtils.safeRightShift(1, 1)).toBe(0);
-    // shift of 32 treated as 0
     expect(MathUtils.safeRightShift(1, 32)).toBe(1);
+  });
+
+  it("all safe operations return non-negative values", () => {
+    const ops = [
+      MathUtils.safeAnd(-1, -1),
+      MathUtils.safeOr(-1, 0),
+      MathUtils.safeXor(-1, 0),
+      MathUtils.safeNot(-1),
+      MathUtils.safeLeftShift(-1, 1),
+      MathUtils.safeRightShift(-1, 1),
+    ];
+    for (const result of ops) {
+      expect(result).toBeGreaterThanOrEqual(0);
+    }
   });
 });

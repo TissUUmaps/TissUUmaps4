@@ -26,6 +26,19 @@ describe("ColorUtils", () => {
       ]);
     });
 
+    it("parses an 8-bit palette with maxValue 255", () => {
+      const str = "0 0 0\n128 64 32\n255 255 255";
+      const result = ColorUtils.parseColorPalette(str, {
+        sep: " ",
+        maxValue: 255,
+      });
+      expect(result).toEqual([
+        { r: 0, g: 0, b: 0 },
+        { r: 128, g: 64, b: 32 },
+        { r: 255, g: 255, b: 255 },
+      ]);
+    });
+
     it("throws on invalid line", () => {
       const str = "0 0\n1 1 1";
       expect(() => ColorUtils.parseColorPalette(str)).toThrow(
@@ -36,22 +49,27 @@ describe("ColorUtils", () => {
     it("ignores empty lines", () => {
       const str = "\n0 0 0\n\n1 1 1\n";
       const result = ColorUtils.parseColorPalette(str);
-      expect(result.length).toBe(2);
+      expect(result).toHaveLength(2);
+    });
+
+    it("parses a single color line", () => {
+      const result = ColorUtils.parseColorPalette("0.5 0.5 0.5");
+      expect(result).toEqual([{ r: 127.5, g: 127.5, b: 127.5 }]);
     });
   });
 
   describe("packColor", () => {
-    it("packs a color to a number", () => {
+    it("packs a color to a 24-bit integer", () => {
       expect(ColorUtils.packColor({ r: 1, g: 2, b: 3 })).toBe(
         (1 << 16) | (2 << 8) | 3,
       );
     });
 
-    it("packs white color", () => {
+    it("packs white", () => {
       expect(ColorUtils.packColor({ r: 255, g: 255, b: 255 })).toBe(0xffffff);
     });
 
-    it("packs black color", () => {
+    it("packs black", () => {
       expect(ColorUtils.packColor({ r: 0, g: 0, b: 0 })).toBe(0x000000);
     });
   });
@@ -61,9 +79,20 @@ describe("ColorUtils", () => {
       expect(ColorUtils.fromHex("#010203")).toEqual({ r: 1, g: 2, b: 3 });
     });
 
-    it("throws on invalid hex", () => {
+    it("handles mixed case", () => {
+      expect(ColorUtils.fromHex("#aaBBcc")).toEqual({ r: 170, g: 187, b: 204 });
+    });
+
+    it("throws on missing hash prefix", () => {
       expect(() => ColorUtils.fromHex("010203")).toThrow(/Invalid hex color/);
+    });
+
+    it("throws on non-hex characters", () => {
       expect(() => ColorUtils.fromHex("#GGHHII")).toThrow(/Invalid hex color/);
+    });
+
+    it("throws on wrong length", () => {
+      expect(() => ColorUtils.fromHex("#FFF")).toThrow(/Invalid hex color/);
     });
   });
 
@@ -72,12 +101,25 @@ describe("ColorUtils", () => {
       expect(ColorUtils.toHex({ r: 1, g: 2, b: 3 })).toBe("#010203");
     });
 
-    it("converts white color to hex", () => {
+    it("rounds fractional components", () => {
+      expect(ColorUtils.toHex({ r: 1.4, g: 2.6, b: 3.5 })).toBe("#010304");
+    });
+
+    it("converts white to #ffffff", () => {
       expect(ColorUtils.toHex({ r: 255, g: 255, b: 255 })).toBe("#ffffff");
     });
 
-    it("converts black color to hex", () => {
+    it("converts black to #000000", () => {
       expect(ColorUtils.toHex({ r: 0, g: 0, b: 0 })).toBe("#000000");
     });
+  });
+
+  describe("fromHex / toHex roundtrip", () => {
+    it.each(["#000000", "#ffffff", "#1a2b3c", "#ff8800"])(
+      "roundtrips %s",
+      (hex) => {
+        expect(ColorUtils.toHex(ColorUtils.fromHex(hex))).toBe(hex);
+      },
+    );
   });
 });
