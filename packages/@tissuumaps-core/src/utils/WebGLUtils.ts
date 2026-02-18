@@ -195,7 +195,6 @@ export class WebGLUtils {
     type: GLenum,
     data: TypedArray,
   ): void {
-    // textures are row-major
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, format, type, data);
     gl.bindTexture(gl.TEXTURE_2D, null);
