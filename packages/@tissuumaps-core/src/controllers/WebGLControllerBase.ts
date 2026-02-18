@@ -5,13 +5,29 @@ import { type Layer } from "../model/layer";
 import { type Rect } from "../types";
 import { TransformUtils } from "../utils/TransformUtils";
 
+/**
+ * Base class for WebGL sub-controllers
+ *
+ * Provides shared coordinate-transform utilities for computing matrices between
+ * data space, layer space, world space, and viewport space.
+ */
 export class WebGLControllerBase {
   protected readonly _gl: WebGL2RenderingContext;
 
+  /** @param gl - The WebGL 2 rendering context shared with the parent {@link WebGLController} */
   constructor(gl: WebGL2RenderingContext) {
     this._gl = gl;
   }
 
+  /**
+   * Computes the data → world transformation matrix
+   *
+   * Applies, in order: optional horizontal flip, data → layer transform,
+   * then layer → world transform.
+   *
+   * @param layer - Layer providing the layer → world transform
+   * @param layerConfig - Layer configuration providing the flip flag and data → layer transform
+   */
   protected static createDataToWorldMatrix(
     layer: Layer,
     layerConfig: LayerConfig,
@@ -28,6 +44,14 @@ export class WebGLControllerBase {
     return dataToWorldMatrix;
   }
 
+  /**
+   * Computes the world → viewport transformation matrix
+   *
+   * Translates by the negative viewport origin and scales by the inverse
+   * viewport dimensions, mapping world coordinates to the `[0, 1]` range.
+   *
+   * @param viewport - World-space viewport rectangle
+   */
   protected static createWorldToViewportMatrix(viewport: Rect): mat3 {
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,
     // so we need to apply transformations in reverse order.
@@ -37,6 +61,13 @@ export class WebGLControllerBase {
     return m;
   }
 
+  /**
+   * Computes the viewport → world transformation matrix
+   *
+   * Inverse of {@link createWorldToViewportMatrix}.
+   *
+   * @param viewport - World-space viewport rectangle
+   */
   protected static createViewportToWorldMatrix(viewport: Rect): mat3 {
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,
     // so we need to apply transformations in reverse order.
@@ -46,6 +77,15 @@ export class WebGLControllerBase {
     return m;
   }
 
+  /**
+   * Computes the world → data transformation matrix
+   *
+   * Inverse of {@link createDataToWorldMatrix}: applies world → layer,
+   * layer → data, then optional horizontal un-flip.
+   *
+   * @param layer - Layer providing the layer → world transform (inverted)
+   * @param layerConfig - Layer configuration providing the data → layer transform (inverted) and flip flag
+   */
   protected static createWorldToDataMatrix(
     layer: Layer,
     layerConfig: LayerConfig,

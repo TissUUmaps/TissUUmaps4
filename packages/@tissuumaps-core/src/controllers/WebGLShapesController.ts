@@ -23,6 +23,14 @@ import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLControllerBase } from "./WebGLControllerBase";
 
+/**
+ * WebGL sub-controller for rendering two-dimensional shape clouds
+ *
+ * Shapes are rasterized on the GPU via a scanline-based algorithm. Each shapes
+ * object is represented by a full-screen quad whose fragment shader samples a
+ * scanline data texture to determine polygon membership, fill colors, and
+ * stroke colors.
+ */
 export class WebGLShapesController extends WebGLControllerBase {
   private static readonly _scanlineDataTextureWidth = 4096; // see fragment shader
   private static readonly _shapeFillColorsTextureWidth = 4096; // see fragment shader
@@ -42,6 +50,11 @@ export class WebGLShapesController extends WebGLControllerBase {
   private _numScanlines: number = defaultDrawOptions.numShapesScanlines;
   private _glShapes: GLShapes[] = [];
 
+  /**
+   * Creates the shader program and retrieves uniform locations
+   *
+   * @param gl - The WebGL 2 rendering context
+   */
   constructor(gl: WebGL2RenderingContext) {
     super(gl);
     this._program = WebGLUtils.loadProgram(
@@ -93,6 +106,15 @@ export class WebGLShapesController extends WebGLControllerBase {
     };
   }
 
+  /**
+   * Updates the number of horizontal scanlines used for shape rasterization
+   *
+   * If the value changes, all existing scanline data textures are invalidated
+   * and must be regenerated during the next {@link synchronize} call.
+   *
+   * @param numScanlines - New scanline count
+   * @returns `true` if a re-synchronization is required (i.e. the value changed)
+   */
   setNumScanlines(numScanlines: number): boolean {
     let sync = false;
     if (numScanlines !== this._numScanlines) {
@@ -109,6 +131,22 @@ export class WebGLShapesController extends WebGLControllerBase {
     return sync;
   }
 
+  /**
+   * Synchronizes GPU textures with the current model state
+   *
+   * Loads all shapes data for the given layers, removes GPU resources for
+   * shapes that are no longer needed, and creates or updates scanline data
+   * textures and color textures for the remaining ones.
+   *
+   * @param layers - Layers to render
+   * @param shapes - Shapes data objects
+   * @param colorMaps - Project-global color maps for {@link GroupByConfig} resolution
+   * @param visibilityMaps - Project-global visibility maps
+   * @param opacityMaps - Project-global opacity maps
+   * @param loadShapes - Async loader for shapes data
+   * @param loadTable - Async loader for table data
+   * @param options - Optional abort signal
+   */
   async synchronize(
     layers: Layer[],
     shapes: Shapes[],
@@ -141,6 +179,16 @@ export class WebGLShapesController extends WebGLControllerBase {
     signal?.throwIfAborted();
   }
 
+  /**
+   * Issues the WebGL draw calls for all synchronized shapes
+   *
+   * Renders each shapes object as a full-screen quad whose fragment shader
+   * performs scanline-based polygon rasterization using the per-object
+   * scanline data texture.
+   *
+   * @param viewport - Current world-space viewport
+   * @param drawOptions - Current draw options (e.g. stroke width)
+   */
   draw(viewport: Rect, drawOptions: DrawOptions): void {
     this._gl.useProgram(this._program);
     this._gl.uniformMatrix3x2fv(
@@ -200,6 +248,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     this._gl.useProgram(null);
   }
 
+  /** Releases the shader program and all per-object GPU textures */
   destroy(): void {
     this._gl.deleteProgram(this._program);
     for (const glShapes of this._glShapes) {
@@ -208,6 +257,13 @@ export class WebGLShapesController extends WebGLControllerBase {
     this._glShapes = [];
   }
 
+  /**
+   * Loads shapes data for every layer configuration matching the given layers
+   *
+   * Objects that fail to load are logged and skipped.
+   *
+   * @returns A flat list of resolved shapes references in layer order
+   */
   private async _loadShapes(
     layers: Layer[],
     shapes: Shapes[],
@@ -251,6 +307,15 @@ export class WebGLShapesController extends WebGLControllerBase {
     return refs;
   }
 
+  /**
+   * Removes GPU resources for shapes that are no longer referenced
+   *
+   * Matches existing GLShapes entries to the new set of refs. Entries that
+   * still map to a ref are returned; entries without a match have their
+   * textures destroyed.
+   *
+   * @returns Map from matched refs to their existing GLShapes entries
+   */
   private _cleanGLShapes(refs: ShapesRef[]): Map<ShapesRef, GLShapes> {
     const glShapesByRef = new Map<ShapesRef, GLShapes>();
     for (let i = 0; i < this._glShapes.length; i++) {
@@ -272,6 +337,16 @@ export class WebGLShapesController extends WebGLControllerBase {
     return glShapesByRef;
   }
 
+  /**
+   * Creates new GPU resources for shapes that have no existing GLShapes entry,
+   * or updates existing ones when the model state has changed
+   *
+   * Scanline data textures are regenerated when the geometry or scanline count
+   * changes. Color textures are regenerated when color, visibility, or opacity
+   * configurations change.
+   *
+   * @returns The new ordered list of GLShapes entries
+   */
   private async _createOrUpdateGLShapes(
     refs: ShapesRef[],
     glShapesByRef: Map<ShapesRef, GLShapes>,
@@ -400,6 +475,15 @@ export class WebGLShapesController extends WebGLControllerBase {
     return newGLShapes;
   }
 
+  /**
+   * Builds the scanline data texture for a shapes object
+   *
+   * Rasterizes all multi-polygons into horizontal scanlines, packs the
+   * result into a float buffer, and uploads it as an RGBA32F texture.
+   *
+   * @param multiPolygons - Polygon geometry for each shape in the object
+   * @param objectBounds - Axis-aligned bounding box of all shapes
+   */
   private _createScanlineDataTexture(
     multiPolygons: MultiPolygon[],
     objectBounds: Rect,
@@ -431,6 +515,12 @@ export class WebGLShapesController extends WebGLControllerBase {
     return scanlineDataTexture;
   }
 
+  /**
+   * Builds the fill color texture for a shapes object
+   *
+   * Resolves per-shape fill colors from the configuration, applies
+   * visibility and opacity, packs into RGBA, and uploads as an R32UI texture.
+   */
   private async _createShapeFillColorsTexture(
     ref: ShapesRef,
     colorMaps: DefaultMap<Color>[],
@@ -500,6 +590,12 @@ export class WebGLShapesController extends WebGLControllerBase {
     return shapeFillColorsTexture;
   }
 
+  /**
+   * Builds the stroke color texture for a shapes object
+   *
+   * Resolves per-shape stroke colors from the configuration, applies
+   * visibility and opacity, packs into RGBA, and uploads as an R32UI texture.
+   */
   private async _createShapeStrokeColorsTexture(
     ref: ShapesRef,
     colorMaps: DefaultMap<Color>[],
@@ -569,6 +665,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     return shapeStrokeColorsTexture;
   }
 
+  /** Deletes all GPU textures owned by a single GLShapes entry */
   private _destroyGLShapes(glShapes: GLShapes): void {
     if (glShapes.scanlineDataTexture !== undefined) {
       this._gl.deleteTexture(glShapes.scanlineDataTexture);
@@ -577,6 +674,12 @@ export class WebGLShapesController extends WebGLControllerBase {
     this._gl.deleteTexture(glShapes.shapeStrokeColorsTexture);
   }
 
+  /**
+   * Computes the axis-aligned bounding box of all multi-polygons
+   *
+   * @param multiPolygons - Polygon geometry
+   * @returns The bounding rectangle in data-space coordinates
+   */
   private static _getObjectBounds(multiPolygons: MultiPolygon[]): Rect {
     let xMin = Infinity,
       yMin = Infinity,
@@ -597,6 +700,18 @@ export class WebGLShapesController extends WebGLControllerBase {
     return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
   }
 
+  /**
+   * Rasterizes multi-polygons into horizontal scanlines
+   *
+   * For each scanline, determines which shapes and edges intersect it,
+   * computes per-scanline/per-shape bounding boxes, and builds a 128-bit
+   * occupancy mask for fast skip-testing in the fragment shader.
+   *
+   * @param numScanlines - Number of horizontal scanlines
+   * @param multiPolygons - Polygon geometry for all shapes
+   * @param objectBounds - Bounding box of all shapes
+   * @returns Scanlines with per-shape edges, and total counts for buffer sizing
+   */
   private static _createScanlines(
     numScanlines: number,
     multiPolygons: MultiPolygon[],
@@ -727,6 +842,19 @@ export class WebGLShapesController extends WebGLControllerBase {
     return { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges };
   }
 
+  /**
+   * Packs scanline data into a flat {@link ArrayBuffer} suitable for
+   * uploading as a GPU texture
+   *
+   * The layout matches what the fragment shader expects:
+   * - Header region: one texel per scanline (offset + shape count + xMin/xMax)
+   * - Per-scanline data: occupancy mask, then per-shape headers and edges
+   *
+   * @param scanlines - Rasterized scanlines from {@link _createScanlines}
+   * @param totalNumScanlineShapes - Total shape entries across all scanlines
+   * @param totalNumScanlineShapeEdges - Total edge entries across all scanlines
+   * @param options - Optional padding to align the buffer to texture line boundaries
+   */
   private static _packScanlines(
     scanlines: Scanline[],
     totalNumScanlineShapes: number,
@@ -786,6 +914,7 @@ export class WebGLShapesController extends WebGLControllerBase {
   }
 }
 
+/** Binding of a shapes data object to a specific layer and layer configuration */
 type ShapesRef = {
   layer: Layer;
   shapes: Shapes;
@@ -794,13 +923,27 @@ type ShapesRef = {
   data: ShapesData;
 };
 
+/**
+ * GPU state for a single shapes object
+ *
+ * Holds texture handles for scanline data, fill colors, and stroke colors,
+ * plus a snapshot of the model values used to generate them (for incremental
+ * update detection).
+ */
 type GLShapes = {
+  /** Reference to the shapes object this GPU state represents */
   ref: ShapesRef;
+  /** Number of shapes in the object at the time the textures were built */
   numShapes: number;
+  /** Axis-aligned bounding box of all shapes in data-space coordinates */
   objectBounds: Rect;
+  /** Scanline data texture (RGBA32F); `undefined` while being regenerated */
   scanlineDataTexture?: WebGLTexture;
+  /** Per-shape fill color texture (R32UI) */
   shapeFillColorsTexture: WebGLTexture;
+  /** Per-shape stroke color texture (R32UI) */
   shapeStrokeColorsTexture: WebGLTexture;
+  /** Snapshot of model values at the time of the last texture upload */
   current: {
     layer: Pick<Layer, "visibility" | "opacity">;
     shapes: Pick<
@@ -817,22 +960,35 @@ type GLShapes = {
   };
 };
 
+/** A single horizontal scanline containing shape intersection data */
 type Scanline = {
+  /** Minimum X coordinate across all shapes intersecting this scanline */
   xMin: number;
+  /** Maximum X coordinate across all shapes intersecting this scanline */
   xMax: number;
+  /** Per-shape intersection data, keyed by shape index */
   shapes: Map<number, ScanlineShape>;
+  /** 128-bit bitmask for fast horizontal skip-testing in the fragment shader */
   occupancyMask: ScanlineOccupancyMask;
 };
 
+/** Per-shape data within a single scanline */
 type ScanlineShape = {
+  /** Minimum X coordinate of this shape within the scanline */
   xMin: number;
+  /** Maximum X coordinate of this shape within the scanline */
   xMax: number;
+  /** Polygon edges that intersect this scanline */
   edges: ScanlineShapeEdge[];
 };
 
+/** A polygon edge intersecting a scanline, defined by its two endpoints */
 type ScanlineShapeEdge = {
+  /** First endpoint */
   v0: Vertex;
+  /** Second endpoint */
   v1: Vertex;
 };
 
+/** A 128-bit occupancy mask stored as four 32-bit integers */
 type ScanlineOccupancyMask = [number, number, number, number];

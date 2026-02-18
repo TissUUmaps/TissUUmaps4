@@ -10,6 +10,13 @@ import { type ImageData } from "../storage/image";
 import { type LabelsData } from "../storage/labels";
 import { TransformUtils } from "../utils/TransformUtils";
 
+/**
+ * Controller for managing an OpenSeadragon viewer and its tiled images
+ *
+ * Handles the lifecycle of tiled images (creation, update, removal) for
+ * {@link Image} and {@link Labels} data objects, including transform
+ * computation, opacity, and viewer animation options.
+ */
 export class OpenSeadragonController {
   private readonly _viewer: OpenSeadragon.Viewer;
   private _tiledImageStates: TiledImageState[] = [];
@@ -23,6 +30,10 @@ export class OpenSeadragonController {
   private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
   private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
 
+  /**
+   * @param viewerElement - DOM element in which the OpenSeadragon viewer is created
+   * @param viewerInit - Optional callback invoked with the viewer immediately after creation
+   */
   constructor(
     viewerElement: HTMLElement,
     viewerInit?: (viewer: OpenSeadragon.Viewer) => void,
@@ -44,6 +55,14 @@ export class OpenSeadragonController {
     }
   }
 
+  /**
+   * Applies viewer options to the OpenSeadragon viewer and all existing tiled images
+   *
+   * For each option key, performs a shallow merge (one level deep) of nested objects
+   * on both the viewer instance and every tiled image in the world.
+   *
+   * @param viewerOptions - Options to apply
+   */
   setViewerOptions(viewerOptions: ViewerOptions): void {
     // TODO allow more than one level (deep nested shallow merge)
     for (const [key, value] of Object.entries(viewerOptions)) {
@@ -79,6 +98,18 @@ export class OpenSeadragonController {
     }
   }
 
+  /**
+   * Installs OpenSeadragon `animation-start` and `animation-finish` handlers
+   *
+   * On animation start, the specified start options are applied and the previous
+   * values are saved. On animation finish, the saved values are restored and
+   * then merged with the finish options.
+   *
+   * Calling this method again replaces any previously installed handlers.
+   *
+   * @param viewerAnimationStartOptions - Options to apply when an animation starts
+   * @param viewerAnimationFinishOptions - Options to apply when an animation finishes
+   */
   configureAnimationHandlers(
     viewerAnimationStartOptions: ViewerOptions,
     viewerAnimationFinishOptions: ViewerOptions,
@@ -145,6 +176,20 @@ export class OpenSeadragonController {
     this._viewer.addHandler("animation-finish", this._animationFinishHandler);
   }
 
+  /**
+   * Synchronizes the viewer's tiled images with the current model state
+   *
+   * Loads all images and labels that are assigned to the given layers,
+   * removes tiled images that are no longer needed, and creates or updates
+   * the remaining ones.
+   *
+   * @param layers - Layers to render
+   * @param images - Image data objects to display
+   * @param labels - Labels data objects to display
+   * @param loadImage - Async loader for image data
+   * @param loadLabels - Async loader for labels data
+   * @param options - Optional abort signal
+   */
   async synchronize(
     layers: Layer[],
     images: Image[],
@@ -176,11 +221,18 @@ export class OpenSeadragonController {
     );
   }
 
+  /** Destroys the OpenSeadragon viewer and releases all tiled image state */
   destroy(): void {
     this._viewer.destroy();
     this._tiledImageStates = [];
   }
 
+  /**
+   * Loads image and labels data for every layer configuration that references
+   * one of the given layers, producing a flat list of {@link ObjectRef} entries
+   *
+   * Objects that fail to load are logged and skipped.
+   */
   private async _loadObjects(
     layers: Layer[],
     images: Image[],
@@ -247,6 +299,16 @@ export class OpenSeadragonController {
     return refs;
   }
 
+  /**
+   * Removes tiled images that are no longer referenced
+   *
+   * Matches existing tiled image states to the new set of refs. States that
+   * still map to a ref are returned; states without a matching ref are removed
+   * from the viewer world (or scheduled for deferred deletion if the tiled
+   * image hasn't loaded yet).
+   *
+   * @returns Map from matched refs to their existing tiled image states
+   */
   private _cleanTiledImages(
     refs: ObjectRef[],
   ): Map<ObjectRef, TiledImageState> {
@@ -279,6 +341,14 @@ export class OpenSeadragonController {
     return tiledImageStatesByRef;
   }
 
+  /**
+   * Creates new tiled images for refs that have no existing state, or updates
+   * (re-positions, re-opacifies) existing ones
+   *
+   * @param refs - The desired object references in display order
+   * @param tiledImageStatesByRef - Existing states that survived {@link _cleanTiledImages}
+   * @returns The new ordered list of tiled image states
+   */
   private _createOrUpdateTiledImages(
     refs: ObjectRef[],
     tiledImageStatesByRef: Map<ObjectRef, TiledImageState>,
@@ -321,6 +391,17 @@ export class OpenSeadragonController {
     return newTiledImageStates;
   }
 
+  /**
+   * Creates a new tiled image in the viewer for the given object reference
+   *
+   * The tiled image is added asynchronously by OpenSeadragon; the returned
+   * state object will have its `tiledImage` field populated once the
+   * `success` callback fires, at which point any deferred operations
+   * (index, update, delete) are applied.
+   *
+   * @param index - Desired z-index for the tiled image in the viewer world
+   * @param ref - Object reference (image or labels) to render
+   */
   private _createTiledImage(index: number, ref: ObjectRef): TiledImageState {
     const tiledImageState: TiledImageState = { ref };
     this._viewer.addTiledImage({
@@ -369,6 +450,12 @@ export class OpenSeadragonController {
     return tiledImageState;
   }
 
+  /**
+   * Updates the opacity and geometry of an existing tiled image to match
+   * the current model state
+   *
+   * @throws If the tiled image has not been created yet
+   */
   private _updateTiledImage(tiledImageState: TiledImageState): void {
     if (tiledImageState.tiledImage === undefined) {
       throw new Error("Cannot update tiled image before it is created");
@@ -382,6 +469,12 @@ export class OpenSeadragonController {
     this._updateTiledImageGeometry(tiledImageState);
   }
 
+  /**
+   * Updates the flip, width, rotation, and position of a tiled image based
+   * on the composed data → layer → world transform
+   *
+   * @throws If the tiled image has not been created yet
+   */
   private _updateTiledImageGeometry(tiledImageState: TiledImageState): void {
     if (tiledImageState.tiledImage === undefined) {
       throw new Error("Cannot update tiled image before it is created");
@@ -428,6 +521,12 @@ export class OpenSeadragonController {
     }
   }
 
+  /**
+   * Computes the effective opacity for a tiled image
+   *
+   * Returns `0` when either the layer or object is invisible; otherwise
+   * multiplies layer and object opacities.
+   */
   private static _calculateOpacity(ref: ObjectRef): number {
     const object = "image" in ref ? ref.image : ref.labels;
     const visibility = ref.layer.visibility && object.visibility;
@@ -436,6 +535,7 @@ export class OpenSeadragonController {
   }
 }
 
+/** Reference binding an image to a specific layer and layer configuration */
 type ImageRef = {
   layer: Layer;
   image: Image;
@@ -444,6 +544,7 @@ type ImageRef = {
   data: ImageData;
 };
 
+/** Reference binding a labels object to a specific layer and layer configuration */
 type LabelsRef = {
   layer: Layer;
   labels: Labels;
@@ -452,12 +553,26 @@ type LabelsRef = {
   data: LabelsData;
 };
 
+/** A reference to either an image or labels object on a specific layer */
 type ObjectRef = ImageRef | LabelsRef;
 
+/**
+ * Mutable state for a single tiled image in the viewer
+ *
+ * Because OpenSeadragon adds tiled images asynchronously, the `tiledImage`
+ * field may be `undefined` until the `success` callback fires. During that
+ * window, operations are deferred via `deferredIndex`, `deferredUpdate`,
+ * and `deferredDelete`.
+ */
 type TiledImageState = {
+  /** The object reference that this tiled image represents */
   ref: ObjectRef;
+  /** Desired (z-)index to apply once the tiled image is available */
   deferredIndex?: number;
+  /** Whether an update is pending until the tiled image is available */
   deferredUpdate?: boolean;
+  /** Whether the tiled image should be removed once it becomes available */
   deferredDelete?: boolean;
+  /** The OpenSeadragon tiled image, set once the tile source has loaded */
   tiledImage?: OpenSeadragon.TiledImage;
 };
