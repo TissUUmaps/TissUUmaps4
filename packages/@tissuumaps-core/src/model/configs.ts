@@ -1,8 +1,18 @@
 import { type Color, type CoordinateSpace, type Marker } from "./types";
 
-/** Configuration */
+/**
+ * Base type for property configurations that can be sourced from different providers
+ *
+ * Concrete configuration types (e.g. {@link ColorConfig}, {@link SizeConfig}) are unions
+ * of this base with one or more source-specific types such as {@link ConstantConfig},
+ * {@link FromConfig}, {@link GroupByConfig}, and {@link RandomConfig}.
+ */
 export type Config<TSource extends string> = {
-  /** Prioritized configuration source (see {@link getActiveConfigSource}) */
+  /**
+   * Explicitly prioritized configuration source
+   *
+   * When set, this overrides the automatic source detection in {@link getActiveConfigSource}.
+   */
   source?: TSource;
 };
 
@@ -140,7 +150,8 @@ export function isRandomConfig<TRandom>(
 /**
  * Marker configuration
  *
- * Table values correspond to marker indices (see {@link Marker})
+ * When sourced from a table column, numerical values are interpreted as
+ * {@link Marker} indices (e.g. `0` = Cross, `6` = Disc).
  */
 export type MarkerConfig =
   | ConstantConfig<Marker>
@@ -150,7 +161,8 @@ export type MarkerConfig =
 /**
  * Size configuration
  *
- * Table values correspond to sizes in the specified {@link SizeConfig.unit}
+ * When sourced from a table column, numerical values are interpreted as sizes
+ * in the specified {@link CoordinateSpace} unit.
  */
 export type SizeConfig =
   | ConstantConfig<
@@ -175,13 +187,14 @@ export type SizeConfig =
 /**
  * Color configuration
  *
- * Numerical table values are linearly mapped to colors in the specified {@link ColorConfig.from.palette} using the specified {@link ColorConfig.from.range}.
+ * When sourced from a numerical table column, values are linearly mapped to
+ * colors using the specified palette and optional range (see {@link FromConfig}).
  */
 export type ColorConfig =
   | ConstantConfig<Color>
   | FromConfig<{
       /**
-       * Value range that is linearly mapped to {@link ColorConfig.from.palette}
+       * Value range that is linearly mapped to the color palette
        *
        * Values are clipped to this range before mapping them to colors.
        *

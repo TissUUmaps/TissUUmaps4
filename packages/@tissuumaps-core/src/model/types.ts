@@ -2,9 +2,16 @@ import type OpenSeadragon from "openseadragon";
 
 /** A named mapping from string keys (groups) to typed values with an optional default value */
 export type DefaultMap<TValue> = {
+  /** Map ID, referenced from data object configurations */
   id: string;
+
+  /** Human-readable map name */
   name: string;
+
+  /** Mapping from group names to values */
   values: { [key: string]: TValue };
+
+  /** Default value for groups not present in {@link values} */
   default?: TValue;
 };
 
@@ -27,6 +34,7 @@ export const Marker = {
   Gaussian: 14,
 } as const;
 
+/** A marker index corresponding to one of the entries in the {@link Marker} object */
 export type Marker = (typeof Marker)[keyof typeof Marker];
 
 /** A color in RGB format */
@@ -50,42 +58,67 @@ export type CoordinateSpace =
   /** World (i.e. global) space */
   | "world";
 
-/** Similarity transform */
+/** Similarity transform (uniform scale, rotation, and translation) */
 export type SimilarityTransform = {
-  /** Scale factor */
+  /** Uniform scale factor (1 = no scaling) */
   scale: number;
 
   /** Rotation around origin, in degrees */
   rotation: number;
 
-  /** Translation, applied after scaling and rotation */
+  /** Translation in X and Y, applied after scaling and rotation */
   translation: { x: number; y: number };
 };
 
-/** OpenSeadragon viewer options (see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options) */
+/**
+ * OpenSeadragon viewer options
+ *
+ * DOM element references are excluded because they cannot be serialized by Zustand.
+ * Button/toolbar properties accept element IDs (strings) instead.
+ *
+ * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
+ */
 export type ViewerOptions = Omit<OpenSeadragon.Options, "element"> & {
-  // References to DOM elements cannot be handled by Zustand!
   navigatorElement?: never;
+
+  /** Element ID of the toolbar container */
   toolbar?: string;
+
+  /** Element ID of the zoom-in button */
   zoomInButton?: string;
+
+  /** Element ID of the zoom-out button */
   zoomOutButton?: string;
+
+  /** Element ID of the home (reset zoom) button */
   homeButton?: string;
+
+  /** Element ID of the full-page toggle button */
   fullPageButton?: string;
+
+  /** Element ID of the rotate-left button */
   rotateLeftButton?: string;
+
+  /** Element ID of the rotate-right button */
   rotateRightButton?: string;
+
+  /** Element ID of the previous-page button */
   previousButton?: string;
+
+  /** Element ID of the next-page button */
   nextButton?: string;
+
   referenceStripElement?: never;
 };
 
-/** WebGL draw options */
+/** WebGL draw options for rendering points and shapes */
 export type DrawOptions = {
-  /** Point size factor */
+  /** Global point size scaling factor (unitless, multiplied with all point sizes) */
   pointSizeFactor: number;
 
-  /** Shape stroke width */
+  /** Shape stroke width, in pixels */
   shapeStrokeWidth: number;
 
-  /** Number of scanlines per shapes object */
+  /** Number of scanlines used for rasterizing each shapes object (higher = more accurate but slower) */
   numShapesScanlines: number;
 };
