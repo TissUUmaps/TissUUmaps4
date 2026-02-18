@@ -17,7 +17,25 @@ import { ColorUtils } from "./ColorUtils";
 import { HashUtils } from "./HashUtils";
 import { MathUtils } from "./MathUtils";
 
+/**
+ * Utility methods for resolving per-item visual properties
+ * (marker, size, color, visibility, opacity) from configuration objects
+ *
+ * Each method supports constant, from-column, group-by, and (where
+ * applicable) random configuration sources, and produces a typed array
+ * suitable for direct GPU buffer upload.
+ */
 export class LoadUtils {
+  /**
+   * Resolves per-item marker indices from a {@link MarkerConfig}
+   *
+   * @param ids - Item IDs to resolve
+   * @param markerConfig - Marker configuration
+   * @param markerMaps - Project-global marker maps
+   * @param defaultMarker - Fallback marker when no configuration matches
+   * @param loadTable - Async table loader
+   * @param options - Optional abort signal and output padding
+   */
   static async loadMarkerData(
     ids: number[],
     markerConfig: MarkerConfig,
@@ -139,6 +157,16 @@ export class LoadUtils {
     return data;
   }
 
+  /**
+   * Resolves per-item sizes from a {@link SizeConfig}
+   *
+   * @param ids - Item IDs to resolve
+   * @param sizeConfig - Size configuration
+   * @param sizeMaps - Project-global size maps
+   * @param defaultSize - Fallback size when no configuration matches
+   * @param loadTable - Async table loader
+   * @param options - Optional abort signal, output padding, and size factor
+   */
   static async loadSizeData(
     ids: number[],
     sizeConfig: SizeConfig,
@@ -260,6 +288,21 @@ export class LoadUtils {
     return data;
   }
 
+  /**
+   * Resolves per-item packed RGBA colors from a {@link ColorConfig}
+   *
+   * The returned `Uint32Array` encodes each color as `(R << 24 | G << 16 | B << 8 | A)`
+   * where alpha is derived from the provided `visibilityData` and `opacityData`.
+   *
+   * @param ids - Item IDs to resolve
+   * @param colorConfig - Color configuration
+   * @param colorMaps - Project-global color maps
+   * @param defaultColor - Fallback color when no configuration matches
+   * @param loadTable - Async table loader
+   * @param options - Optional abort signal and output padding
+   * @param visibilityData - Per-item visibility flags (0 or 1)
+   * @param opacityData - Per-item opacity values (0–255)
+   */
   static async loadColorData(
     ids: number[],
     colorConfig: ColorConfig,
@@ -472,6 +515,16 @@ export class LoadUtils {
     return data;
   }
 
+  /**
+   * Resolves per-item visibility flags from a {@link VisibilityConfig}
+   *
+   * @param ids - Item IDs to resolve
+   * @param visibilityConfig - Visibility configuration
+   * @param visibilityMaps - Project-global visibility maps
+   * @param defaultVisibility - Fallback visibility when no configuration matches
+   * @param loadTable - Async table loader
+   * @param options - Optional abort signal and output padding
+   */
   static async loadVisibilityData(
     ids: number[],
     visibilityConfig: VisibilityConfig,
@@ -600,6 +653,16 @@ export class LoadUtils {
     return data;
   }
 
+  /**
+   * Resolves per-item opacity values from an {@link OpacityConfig}
+   *
+   * @param ids - Item IDs to resolve
+   * @param opacityConfig - Opacity configuration
+   * @param opacityMaps - Project-global opacity maps
+   * @param defaultOpacity - Fallback opacity when no configuration matches
+   * @param loadTable - Async table loader
+   * @param options - Optional abort signal, output padding, and opacity factor
+   */
   static async loadOpacityData(
     ids: number[],
     opacityConfig: OpacityConfig,

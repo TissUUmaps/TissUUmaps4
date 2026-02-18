@@ -1,5 +1,13 @@
+/** Utility methods for non-cryptographic hashing */
 export class HashUtils {
-  // http://www.cse.yorku.ca/~oz/hash.html
+  /**
+   * Computes the djb2 hash of a string
+   *
+   * Returns a non-negative 32-bit integer.
+   *
+   * @see {@link http://www.cse.yorku.ca/~oz/hash.html}
+   * @param str - The string to hash
+   */
   static djb2(str: string): number {
     let hash = 5381;
     for (let i = 0; i < str.length; i++) {
