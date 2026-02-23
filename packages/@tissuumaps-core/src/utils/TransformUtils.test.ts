@@ -15,7 +15,7 @@ describe("TransformUtils", () => {
       mat3.rotate(m, m, (Math.PI * rotationDeg) / 180);
       mat3.scale(m, m, [scale, scale]);
 
-      const tf = TransformUtils.fromMatrix(m);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
 
       expect(tf.scale).toBeCloseTo(scale);
       expect(tf.rotation).toBeCloseTo(rotationDeg);
@@ -25,7 +25,7 @@ describe("TransformUtils", () => {
 
     it("handles identity matrix", () => {
       const m = mat3.create();
-      const tf = TransformUtils.fromMatrix(m);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
       expect(tf.scale).toBeCloseTo(1);
       expect(tf.rotation).toBeCloseTo(0);
       expect(tf.translation.x).toBeCloseTo(0);
@@ -35,7 +35,7 @@ describe("TransformUtils", () => {
     it("extracts pure translation", () => {
       const m = mat3.create();
       mat3.translate(m, m, [7, -3]);
-      const tf = TransformUtils.fromMatrix(m);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
       expect(tf.scale).toBeCloseTo(1);
       expect(tf.rotation).toBeCloseTo(0);
       expect(tf.translation.x).toBeCloseTo(7);
@@ -45,7 +45,7 @@ describe("TransformUtils", () => {
     it("extracts pure scale", () => {
       const m = mat3.create();
       mat3.scale(m, m, [4, 4]);
-      const tf = TransformUtils.fromMatrix(m);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
       expect(tf.scale).toBeCloseTo(4);
       expect(tf.rotation).toBeCloseTo(0);
       expect(tf.translation.x).toBeCloseTo(0);
@@ -60,9 +60,9 @@ describe("TransformUtils", () => {
         rotation: 30,
         translation: { x: 5, y: 7 },
       };
-      const m = TransformUtils.toMatrix(tf);
+      const m = TransformUtils.toSimilarityMatrix(tf);
 
-      const result = TransformUtils.fromMatrix(m);
+      const result = TransformUtils.fromSimilarityMatrix(m);
       expect(result.scale).toBeCloseTo(tf.scale);
       expect(result.rotation).toBeCloseTo(tf.rotation);
       expect(result.translation.x).toBeCloseTo(tf.translation.x);
@@ -70,7 +70,7 @@ describe("TransformUtils", () => {
     });
 
     it("handles partial transform (only scale)", () => {
-      const m = TransformUtils.toMatrix({ scale: 3 });
+      const m = TransformUtils.toSimilarityMatrix({ scale: 3 });
       expect(m[0]).toBeCloseTo(3);
       expect(m[4]).toBeCloseTo(3);
       expect(m[6]).toBeCloseTo(0);
@@ -78,7 +78,7 @@ describe("TransformUtils", () => {
     });
 
     it("handles partial transform (only rotation)", () => {
-      const m = TransformUtils.toMatrix({ rotation: 90 });
+      const m = TransformUtils.toSimilarityMatrix({ rotation: 90 });
       expect(m[0]).toBeCloseTo(0);
       expect(m[1]).toBeCloseTo(1);
       expect(m[3]).toBeCloseTo(-1);
@@ -86,18 +86,20 @@ describe("TransformUtils", () => {
     });
 
     it("handles partial transform (only translation)", () => {
-      const m = TransformUtils.toMatrix({ translation: { x: 4, y: 5 } });
+      const m = TransformUtils.toSimilarityMatrix({
+        translation: { x: 4, y: 5 },
+      });
       expect(m[6]).toBeCloseTo(4);
       expect(m[7]).toBeCloseTo(5);
     });
 
     it("applies rotation around a center", () => {
       const center = { x: 2, y: 3 };
-      const m = TransformUtils.toMatrix(
+      const m = TransformUtils.toSimilarityMatrix(
         { rotation: 90, scale: 1 },
-        { rotationCenter: center },
+        { center },
       );
-      const tf = TransformUtils.fromMatrix(m);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
       expect(tf.rotation).toBeCloseTo(90);
       expect(tf.scale).toBeCloseTo(1);
       // The origin maps to (m[6], m[7]) which should be (5, 1)
@@ -107,13 +109,13 @@ describe("TransformUtils", () => {
 
     it("applies rotation around a center without explicit scale (defaults to 1)", () => {
       const center = { x: 2, y: 3 };
-      const withDefault = TransformUtils.toMatrix(
+      const withDefault = TransformUtils.toSimilarityMatrix(
         { rotation: 90 },
-        { rotationCenter: center },
+        { center },
       );
-      const withExplicit = TransformUtils.toMatrix(
+      const withExplicit = TransformUtils.toSimilarityMatrix(
         { rotation: 90, scale: 1 },
-        { rotationCenter: center },
+        { center },
       );
       // Omitting scale should behave identically to scale: 1
       for (let i = 0; i < 9; i++) {
@@ -123,11 +125,11 @@ describe("TransformUtils", () => {
 
     it("applies rotation around a center with scale", () => {
       const center = { x: 1, y: 1 };
-      const m = TransformUtils.toMatrix(
+      const m = TransformUtils.toSimilarityMatrix(
         { rotation: 180, scale: 2 },
-        { rotationCenter: center },
+        { center },
       );
-      const tf = TransformUtils.fromMatrix(m);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
       expect(tf.rotation).toBeCloseTo(180);
       expect(tf.scale).toBeCloseTo(2);
       // At 180° rotation around scaled center (2,2): translation = (4,4)
@@ -136,7 +138,7 @@ describe("TransformUtils", () => {
     });
 
     it("returns identity for empty partial transform", () => {
-      const m = TransformUtils.toMatrix({});
+      const m = TransformUtils.toSimilarityMatrix({});
       const identity = mat3.create();
       for (let i = 0; i < 9; i++) {
         expect(m[i]).toBeCloseTo(identity[i]!);
@@ -150,8 +152,8 @@ describe("TransformUtils", () => {
       { scale: 2.5, rotation: 60, translation: { x: -10, y: 20 } },
       { scale: 0.5, rotation: -45, translation: { x: 100, y: 100 } },
     ])("roundtrips %j", (tf) => {
-      const m = TransformUtils.toMatrix(tf);
-      const result = TransformUtils.fromMatrix(m);
+      const m = TransformUtils.toSimilarityMatrix(tf);
+      const result = TransformUtils.fromSimilarityMatrix(m);
       expect(result.scale).toBeCloseTo(tf.scale);
       expect(result.rotation).toBeCloseTo(tf.rotation);
       expect(result.translation.x).toBeCloseTo(tf.translation.x);

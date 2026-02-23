@@ -37,9 +37,13 @@ export class WebGLControllerBase {
       const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
       mat3.multiply(dataToWorldMatrix, flipMatrix, dataToWorldMatrix);
     }
-    const dataToLayerMatrix = TransformUtils.toMatrix(layerConfig.transform);
+    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(
+      layerConfig.transform,
+    );
     mat3.multiply(dataToWorldMatrix, dataToLayerMatrix, dataToWorldMatrix);
-    const layerToWorldMatrix = TransformUtils.toMatrix(layer.transform);
+    const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
+      layer.transform,
+    );
     mat3.multiply(dataToWorldMatrix, layerToWorldMatrix, dataToWorldMatrix);
     return dataToWorldMatrix;
   }
@@ -91,10 +95,14 @@ export class WebGLControllerBase {
     layerConfig: LayerConfig,
   ): mat3 {
     const worldToDataMatrix = mat3.create();
-    const worldToLayerMatrix = TransformUtils.toMatrix(layer.transform);
+    const worldToLayerMatrix = TransformUtils.toSimilarityMatrix(
+      layer.transform,
+    );
     mat3.invert(worldToLayerMatrix, worldToLayerMatrix);
     mat3.multiply(worldToDataMatrix, worldToLayerMatrix, worldToDataMatrix);
-    const layerToDataMatrix = TransformUtils.toMatrix(layerConfig.transform);
+    const layerToDataMatrix = TransformUtils.toSimilarityMatrix(
+      layerConfig.transform,
+    );
     mat3.invert(layerToDataMatrix, layerToDataMatrix);
     mat3.multiply(worldToDataMatrix, layerToDataMatrix, worldToDataMatrix);
     if (layerConfig.flip) {

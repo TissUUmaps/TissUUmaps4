@@ -8,14 +8,14 @@ import { type SimilarityTransform } from "../model/types";
  */
 export class TransformUtils {
   /**
-   * Decomposes a 3×3 matrix into a {@link SimilarityTransform}
+   * Decomposes a 3×3 similarity matrix into a {@link SimilarityTransform}
    *
    * Extracts uniform scale, rotation (in degrees), and translation
    * from a column-major `gl-matrix` {@link mat3}.
    *
    * @param m - The source matrix
    */
-  static fromMatrix(m: mat3): SimilarityTransform {
+  static fromSimilarityMatrix(m: mat3): SimilarityTransform {
     // gl-matrix, like OpenGL, uses column-major order.
     return {
       scale: Math.sqrt(m[0] * m[0] + m[1] * m[1]),
@@ -25,21 +25,17 @@ export class TransformUtils {
   }
 
   /**
-   * Builds a 3×3 matrix from a (partial) {@link SimilarityTransform}
+   * Builds a 3×3 similarity matrix from a (partial) {@link SimilarityTransform}
    *
-   * Applies, in order: scale, rotation (around `rotationCenter` if provided),
+   * Applies, in order: scale, rotation (around `center` if provided),
    * and translation.
    *
    * @param tf - The transform components (all optional)
    * @param options - Optional rotation center in pre-scaled coordinates
    */
-  static toMatrix(
+  static toSimilarityMatrix(
     tf: Partial<SimilarityTransform>,
-    {
-      rotationCenter,
-    }: {
-      rotationCenter?: { x: number; y: number };
-    } = {},
+    { center }: { center?: { x: number; y: number } } = {},
   ): mat3 {
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,
     // so we need to apply transformations in reverse order.
@@ -47,19 +43,19 @@ export class TransformUtils {
     if (tf.translation !== undefined) {
       mat3.translate(m, m, [tf.translation.x, tf.translation.y]);
     }
-    if (rotationCenter !== undefined) {
+    if (center !== undefined) {
       mat3.translate(m, m, [
-        rotationCenter.x * (tf.scale ?? 1),
-        rotationCenter.y * (tf.scale ?? 1),
+        center.x * (tf.scale ?? 1),
+        center.y * (tf.scale ?? 1),
       ]);
     }
     if (tf.rotation !== undefined) {
       mat3.rotate(m, m, (Math.PI * tf.rotation) / 180);
     }
-    if (rotationCenter !== undefined) {
+    if (center !== undefined) {
       mat3.translate(m, m, [
-        -rotationCenter.x * (tf.scale ?? 1),
-        -rotationCenter.y * (tf.scale ?? 1),
+        -center.x * (tf.scale ?? 1),
+        -center.y * (tf.scale ?? 1),
       ]);
     }
     if (tf.scale !== undefined) {
