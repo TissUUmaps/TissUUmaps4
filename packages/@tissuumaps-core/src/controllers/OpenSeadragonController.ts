@@ -480,21 +480,21 @@ export class OpenSeadragonController {
       throw new Error("Cannot update tiled image before it is created");
     }
     const m = mat3.create();
-    const dataToLayerMatrix = TransformUtils.toMatrix(
+    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(
       tiledImageState.ref.layerConfig.transform,
       {
-        rotationCenter: {
+        center: {
           x: tiledImageState.tiledImage.getContentSize().x / 2,
           y: tiledImageState.tiledImage.getContentSize().y / 2,
         },
       },
     );
     mat3.multiply(m, dataToLayerMatrix, m);
-    const layerToWorldMatrix = TransformUtils.toMatrix(
+    const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
       tiledImageState.ref.layer.transform,
     );
     mat3.multiply(m, layerToWorldMatrix, m);
-    const dataToWorldTransform = TransformUtils.fromMatrix(m);
+    const dataToWorldTransform = TransformUtils.fromSimilarityMatrix(m);
     const bounds = tiledImageState.tiledImage.getBounds();
     if (
       tiledImageState.tiledImage.getFlip() !==
