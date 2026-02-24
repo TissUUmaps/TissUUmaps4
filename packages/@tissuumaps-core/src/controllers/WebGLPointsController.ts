@@ -29,7 +29,7 @@ import {
 import { type PointsData } from "../storage/points";
 import { type TableData } from "../storage/table";
 import { type Rect } from "../types";
-import { LoadUtils } from "../utils/LoadUtils";
+import { ResolveUtils } from "../utils/ResolveUtils";
 import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLControllerBase } from "./WebGLControllerBase";
@@ -554,7 +554,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.points.pointMarker,
         )
       ) {
-        const markerData = await LoadUtils.loadMarkerData(
+        const markerData = await ResolveUtils.resolveMarkers(
           ref.data.getIndex(),
           ref.points.pointMarker,
           markerMaps,
@@ -616,7 +616,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         if (activeUnit === "data" || activeUnit === "layer") {
           sizeFactor *= ref.layer.transform.scale;
         }
-        const sizeData = await LoadUtils.loadSizeData(
+        const sizeData = await ResolveUtils.resolveSizes(
           ref.data.getIndex(),
           ref.points.pointSize,
           sizeMaps,
@@ -662,7 +662,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         ) {
           colorData = new Uint32Array(numPoints).fill(0);
         } else {
-          const visibilityData = await LoadUtils.loadVisibilityData(
+          const visibilityData = await ResolveUtils.resolveVisibilities(
             ref.data.getIndex(),
             ref.points.pointVisibility,
             visibilityMaps,
@@ -671,7 +671,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             { signal },
           );
           signal?.throwIfAborted();
-          const opacityData = await LoadUtils.loadOpacityData(
+          const opacityData = await ResolveUtils.resolveOpacities(
             ref.data.getIndex(),
             ref.points.pointOpacity,
             opacityMaps,
@@ -680,7 +680,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             { signal, opacityFactor: ref.layer.opacity * ref.points.opacity },
           );
           signal?.throwIfAborted();
-          colorData = await LoadUtils.loadColorData(
+          colorData = await ResolveUtils.resolveColors(
             ref.data.getIndex(),
             ref.points.pointColor,
             colorMaps,

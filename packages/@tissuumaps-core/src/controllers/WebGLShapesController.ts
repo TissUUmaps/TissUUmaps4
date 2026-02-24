@@ -17,8 +17,8 @@ import { type Color, type DefaultMap, type DrawOptions } from "../model/types";
 import { type ShapesData } from "../storage/shapes";
 import { type TableData } from "../storage/table";
 import { type MultiPolygon, type Rect, type Vertex } from "../types";
-import { LoadUtils } from "../utils/LoadUtils";
 import { MathUtils } from "../utils/MathUtils";
+import { ResolveUtils } from "../utils/ResolveUtils";
 import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLControllerBase } from "./WebGLControllerBase";
@@ -500,7 +500,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       scanlines,
       totalNumScanlineShapes,
       totalNumScanlineShapeEdges,
-      { paddingMultiple: numValuesPerTextureLine },
+      { align: numValuesPerTextureLine },
     );
     const scanlineData = new Float32Array(scanlineBuffer);
     const scanlineDataTexture = WebGLUtils.createDataTexture(
@@ -544,16 +544,16 @@ export class WebGLShapesController extends WebGLControllerBase {
     ) {
       colorData = new Uint32Array(ref.data.getLength()).fill(0);
     } else {
-      const visibilityData = await LoadUtils.loadVisibilityData(
+      const visibilityData = await ResolveUtils.resolveVisibilities(
         ref.data.getIndex(),
         ref.shapes.shapeFillVisibility,
         visibilityMaps,
         defaultShapeFillVisibility,
         loadTable,
-        { signal, padding: numValuesPerTextureLine },
+        { signal, align: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
-      const opacityData = await LoadUtils.loadOpacityData(
+      const opacityData = await ResolveUtils.resolveOpacities(
         ref.data.getIndex(),
         ref.shapes.shapeFillOpacity,
         opacityMaps,
@@ -561,18 +561,18 @@ export class WebGLShapesController extends WebGLControllerBase {
         loadTable,
         {
           signal,
-          padding: numValuesPerTextureLine,
+          align: numValuesPerTextureLine,
           opacityFactor: ref.layer.opacity * ref.shapes.opacity,
         },
       );
       signal?.throwIfAborted();
-      colorData = await LoadUtils.loadColorData(
+      colorData = await ResolveUtils.resolveColors(
         ref.data.getIndex(),
         ref.shapes.shapeFillColor,
         colorMaps,
         defaultShapeFillColor,
         loadTable,
-        { signal, padding: numValuesPerTextureLine },
+        { signal, align: numValuesPerTextureLine },
         visibilityData,
         opacityData,
       );
@@ -619,16 +619,16 @@ export class WebGLShapesController extends WebGLControllerBase {
     ) {
       colorData = new Uint32Array(ref.data.getLength()).fill(0);
     } else {
-      const visibilityData = await LoadUtils.loadVisibilityData(
+      const visibilityData = await ResolveUtils.resolveVisibilities(
         ref.data.getIndex(),
         ref.shapes.shapeStrokeVisibility,
         visibilityMaps,
         defaultShapeStrokeVisibility,
         loadTable,
-        { signal, padding: numValuesPerTextureLine },
+        { signal, align: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
-      const opacityData = await LoadUtils.loadOpacityData(
+      const opacityData = await ResolveUtils.resolveOpacities(
         ref.data.getIndex(),
         ref.shapes.shapeStrokeOpacity,
         opacityMaps,
@@ -636,18 +636,18 @@ export class WebGLShapesController extends WebGLControllerBase {
         loadTable,
         {
           signal,
-          padding: numValuesPerTextureLine,
+          align: numValuesPerTextureLine,
           opacityFactor: ref.layer.opacity * ref.shapes.opacity,
         },
       );
       signal?.throwIfAborted();
-      colorData = await LoadUtils.loadColorData(
+      colorData = await ResolveUtils.resolveColors(
         ref.data.getIndex(),
         ref.shapes.shapeStrokeColor,
         colorMaps,
         defaultShapeStrokeColor,
         loadTable,
-        { signal, padding: numValuesPerTextureLine },
+        { signal, align: numValuesPerTextureLine },
         visibilityData,
         opacityData,
       );
@@ -853,23 +853,23 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @param scanlines - Rasterized scanlines from {@link _createScanlines}
    * @param totalNumScanlineShapes - Total shape entries across all scanlines
    * @param totalNumScanlineShapeEdges - Total edge entries across all scanlines
-   * @param options - Optional padding to align the buffer to texture line boundaries
+   * @param options - Optional alignment for the buffer to texture line boundaries
    */
   private static _packScanlines(
     scanlines: Scanline[],
     totalNumScanlineShapes: number,
     totalNumScanlineShapeEdges: number,
-    { paddingMultiple }: { paddingMultiple?: number } = {},
+    { align }: { align?: number } = {},
   ): ArrayBuffer {
-    let dataLength =
-      4 * scanlines.length + // header -> scanline info S
-      4 * scanlines.length + // scanline S -> scanline header
-      4 * totalNumScanlineShapes + // scanline S -> shape P -> shape header
-      4 * totalNumScanlineShapeEdges; // scanline S -> shape P -> edge E
-    if (paddingMultiple && dataLength % paddingMultiple !== 0) {
-      dataLength += paddingMultiple - (dataLength % paddingMultiple);
-    }
-    const buffer = new ArrayBuffer(4 * dataLength); // 4 bytes per 32-bit value
+    const buffer = new ArrayBuffer(
+      MathUtils.align(
+        4 * scanlines.length + // header -> scanline info S
+          4 * scanlines.length + // scanline S -> scanline header
+          4 * totalNumScanlineShapes + // scanline S -> shape P -> shape header
+          4 * totalNumScanlineShapeEdges, // scanline S -> shape P -> edge E
+        align ?? 1,
+      ) * 4, // 4 bytes per 32-bit value
+    );
     const float32Data = new Float32Array(buffer);
     const uint32Data = new Uint32Array(buffer);
     let currentScanlineTexelOffset = scanlines.length;
