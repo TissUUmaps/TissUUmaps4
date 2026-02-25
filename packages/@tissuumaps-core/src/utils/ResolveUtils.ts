@@ -640,10 +640,10 @@ export class ResolveUtils {
   }
 
   /**
-   * Fills `data` by loading group keys from the configured table column and mapping them to values`
+   * Fills `data` by loading group keys from the configured table column and mapping them to values.
    *
    * For each ID in `ids`, the corresponding row is looked up in the loaded table by ID.
-   * The raw cell values is JSON-stringified to produce a group key that is then mapped to a value using `mapTableGroup`.
+   * The raw cell value is JSON-stringified to produce a group key, which is then mapped to a value using `mapTableGroup`.
    * If the mapping fails, `defaultValue` is used instead.
    *
    * @param data - Output typed array to fill
