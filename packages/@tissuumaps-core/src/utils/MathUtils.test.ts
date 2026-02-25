@@ -26,6 +26,40 @@ describe("MathUtils.clamp", () => {
   });
 });
 
+describe("MathUtils.align", () => {
+  it("returns n when multiple is zero", () => {
+    expect(MathUtils.align(10, 0)).toBe(10);
+    expect(MathUtils.align(0, 0)).toBe(0);
+  });
+
+  it("returns n when n is already a multiple", () => {
+    expect(MathUtils.align(10, 5)).toBe(10);
+    expect(MathUtils.align(20, 4)).toBe(20);
+    expect(MathUtils.align(0, 5)).toBe(0);
+  });
+
+  it("aligns to next multiple when n is not a multiple", () => {
+    expect(MathUtils.align(7, 5)).toBe(10);
+    expect(MathUtils.align(11, 4)).toBe(12);
+    expect(MathUtils.align(1, 8)).toBe(8);
+  });
+
+  it("works with multiple of 1", () => {
+    expect(MathUtils.align(5, 1)).toBe(5);
+    expect(MathUtils.align(5.5, 1)).toBe(6);
+  });
+
+  it("works with floats", () => {
+    expect(MathUtils.align(5.5, 2)).toBeCloseTo(6);
+    expect(MathUtils.align(3.2, 0.5)).toBeCloseTo(3.5);
+  });
+
+  it("works with negative values", () => {
+    expect(MathUtils.align(-5, 3)).toBeCloseTo(-3);
+    expect(MathUtils.align(-10, 4)).toBe(-8);
+  });
+});
+
 describe("MathUtils bitwise safe operations", () => {
   it("safeAnd with positive and negative values", () => {
     expect(MathUtils.safeAnd(-1, 0x0f0f0f0f)).toBe(0x0f0f0f0f >>> 0);

@@ -15,7 +15,7 @@ import {
 import { type Color, type DefaultMap, type Marker } from "../model/types";
 import { colorPalettes, markerPalette } from "../palettes";
 import { type TableData } from "../storage/table";
-import { type MappableArrayLike, type TypedArray } from "../types";
+import { type TypedArray } from "../types";
 import { ColorUtils } from "./ColorUtils";
 import { HashUtils } from "./HashUtils";
 import { MathUtils } from "./MathUtils";
@@ -268,11 +268,27 @@ export class ResolveUtils {
         let range = colorConfig.from.range;
         const parseColor = (
           tableValue: unknown,
-          tableValues: MappableArrayLike<unknown>,
+          tableIdValues: Map<number, unknown>,
         ) => {
           if (range === undefined) {
-            range = MathUtils.getRange(tableValues);
-            if (range === undefined || range[0] >= range[1]) {
+            let vmin, vmax;
+            for (const id of ids) {
+              const tableValue = tableIdValues.get(id);
+              if (
+                typeof tableValue === "number" &&
+                Number.isFinite(tableValue)
+              ) {
+                if (vmin === undefined || tableValue < vmin) {
+                  vmin = tableValue;
+                }
+                if (vmax === undefined || tableValue > vmax) {
+                  vmax = tableValue;
+                }
+              }
+            }
+            if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
+              range = [vmin, vmax];
+            } else {
               console.warn("Invalid color value range, using [0, 1] instead");
               range = [0, 1];
             }
@@ -613,7 +629,7 @@ export class ResolveUtils {
     ) => Promise<TableData>,
     parseTableValue: (
       tableValue: unknown,
-      tableValues: MappableArrayLike<unknown>,
+      tableIdValues: Map<number, unknown>,
     ) => TValue | undefined,
     defaultValue: TValue,
     encodeValue: (value: TValue) => number,
@@ -621,16 +637,18 @@ export class ResolveUtils {
   ): Promise<void> {
     const tableData = await loadTable(config.from.table, { signal });
     signal?.throwIfAborted();
-    const tableIds = tableData.getIndex();
-    const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
     const tableValues = await tableData.loadColumn(config.from.column, {
       signal,
     });
     signal?.throwIfAborted();
+    const tableIdValues = new Map<number, unknown>();
+    tableData.getIndex().forEach((tableId, index) => {
+      tableIdValues.set(tableId, tableValues[index]);
+    });
     ids.forEach((id, i) => {
-      const tableIndex = tableIndices.get(id);
-      if (tableIndex !== undefined) {
-        const value = parseTableValue(tableValues[tableIndex], tableValues);
+      if (tableIdValues.has(id)) {
+        const tableValue = tableIdValues.get(id);
+        const value = parseTableValue(tableValue, tableIdValues);
         data[i] = encodeValue(value ?? defaultValue);
       } else {
         console.warn(`ID ${id} missing in table ${config.from.table}`);
@@ -670,16 +688,18 @@ export class ResolveUtils {
   ): Promise<void> {
     const tableData = await loadTable(config.groupBy.table, { signal });
     signal?.throwIfAborted();
-    const tableIds = tableData.getIndex();
-    const tableIndices = new Map(tableIds.map((id, index) => [id, index]));
     const tableGroups = await tableData.loadColumn(config.groupBy.column, {
       signal,
     });
     signal?.throwIfAborted();
+    const tableIdGroups = new Map<number, unknown>();
+    tableData.getIndex().forEach((tableId, index) => {
+      tableIdGroups.set(tableId, tableGroups[index]);
+    });
     ids.forEach((id, i) => {
-      const tableIndex = tableIndices.get(id);
-      if (tableIndex !== undefined) {
-        const group = JSON.stringify(tableGroups[tableIndex]!);
+      if (tableIdGroups.has(id)) {
+        const tableGroup = tableIdGroups.get(id);
+        const group = JSON.stringify(tableGroup);
         const value = mapTableGroup(group) ?? defaultValue;
         data[i] = encodeValue(value);
       } else {

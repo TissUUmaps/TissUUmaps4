@@ -17,44 +17,22 @@ export class MathUtils {
 
   /**
    * Aligns a number `n` to the next multiple of `multiple`
-   * (i.e., returns the smallest multiple of `multiple` that is >= `n`)
+   *
+   * If `multiple` is zero or `n` is already a multiple of `multiple`, returns `n`.
+   * Otherwise, returns the smallest multiple of `multiple` that is greater than `n`.
    *
    * @param n - The number to align
    * @param multiple - The multiple to align to
    * @returns The aligned number
    */
   static align(n: number, multiple: number): number {
-    const remainder = n % multiple;
-    if (remainder === 0) {
+    if (multiple === 0) {
       return n;
     }
-    return n + multiple - remainder;
-  }
-
-  /**
-   * Returns the minimum and maximum values in an array-like object
-   * (ignoring non-numeric or non-finite values)
-   *
-   * @param values - The array-like object to process
-   * @returns The [min, max] range, or undefined if no valid values are found
-   */
-  static getRange(values: ArrayLike<unknown>): [number, number] | undefined {
-    let vmin, vmax;
-    for (let i = 0; i < values.length; i++) {
-      const v = values[i];
-      if (typeof v === "number" && Number.isFinite(v)) {
-        if (vmin === undefined || v < vmin) {
-          vmin = v;
-        }
-        if (vmax === undefined || v > vmax) {
-          vmax = v;
-        }
-      }
+    if (n % multiple === 0) {
+      return n;
     }
-    if (vmin !== undefined && vmax !== undefined) {
-      return [vmin, vmax];
-    }
-    return undefined;
+    return Math.ceil(n / multiple) * multiple;
   }
 
   /**
