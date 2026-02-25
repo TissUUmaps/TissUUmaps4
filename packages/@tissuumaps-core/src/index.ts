@@ -22,7 +22,7 @@ export * from "./storage/table";
 
 export { ColorUtils } from "./utils/ColorUtils";
 export { HashUtils } from "./utils/HashUtils";
-export { LoadUtils } from "./utils/LoadUtils";
+export { ResolveUtils } from "./utils/ResolveUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 export { WebGLUtils } from "./utils/WebGLUtils";

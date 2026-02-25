@@ -26,6 +26,46 @@ describe("MathUtils.clamp", () => {
   });
 });
 
+describe("MathUtils.align", () => {
+  it("returns n when n is already a multiple of m", () => {
+    expect(MathUtils.align(10, 5)).toBe(10);
+    expect(MathUtils.align(0, 5)).toBe(0);
+    expect(MathUtils.align(100, 25)).toBe(100);
+  });
+
+  it("aligns n to the next multiple of m when not already aligned", () => {
+    expect(MathUtils.align(7, 5)).toBe(10);
+    expect(MathUtils.align(1, 8)).toBe(8);
+    expect(MathUtils.align(33, 16)).toBe(48);
+  });
+
+  it("throws error when n is negative", () => {
+    expect(() => MathUtils.align(-5, 3)).toThrow("n must be non-negative");
+    expect(() => MathUtils.align(-1, 1)).toThrow("n must be non-negative");
+  });
+
+  it("throws error when m is zero or negative", () => {
+    expect(() => MathUtils.align(5, 0)).toThrow("m must be strictly positive");
+    expect(() => MathUtils.align(5, -3)).toThrow("m must be strictly positive");
+  });
+
+  it("works with m = 1", () => {
+    expect(MathUtils.align(5, 1)).toBe(5);
+    expect(MathUtils.align(0, 1)).toBe(0);
+  });
+
+  it("works with large numbers", () => {
+    expect(MathUtils.align(1000000, 1024)).toBe(1000448);
+    expect(MathUtils.align(1000000, 1000000)).toBe(1000000);
+  });
+
+  it("aligns to power of 2", () => {
+    expect(MathUtils.align(5, 4)).toBe(8);
+    expect(MathUtils.align(15, 16)).toBe(16);
+    expect(MathUtils.align(256, 512)).toBe(512);
+  });
+});
+
 describe("MathUtils bitwise safe operations", () => {
   it("safeAnd with positive and negative values", () => {
     expect(MathUtils.safeAnd(-1, 0x0f0f0f0f)).toBe(0x0f0f0f0f >>> 0);
