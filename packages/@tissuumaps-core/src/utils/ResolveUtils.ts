@@ -12,7 +12,7 @@ import {
   isGroupByConfig,
   isRandomConfig,
 } from "../model/configs";
-import { type Color, type DefaultMap, Marker } from "../model/types";
+import { type Color, type DefaultMap, type Marker } from "../model/types";
 import { colorPalettes, markerPalette } from "../palettes";
 import { type TableData } from "../storage/table";
 import { type MappableArrayLike, type TypedArray } from "../types";
