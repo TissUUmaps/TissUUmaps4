@@ -1,5 +1,9 @@
 name: ci
 on:
+  push:
+    branches:
+      - main
+      - development
   pull_request:
     branches:
       - main
@@ -9,6 +13,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   check-format:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -25,6 +30,7 @@ jobs:
       - name: Check formatting
         run: pnpm run fmt:check
   lint:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -43,6 +49,7 @@ jobs:
       - name: Run linter
         run: pnpm run lint
   test:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
