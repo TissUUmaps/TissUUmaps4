@@ -27,36 +27,42 @@ describe("MathUtils.clamp", () => {
 });
 
 describe("MathUtils.align", () => {
-  it("returns n when multiple is zero", () => {
-    expect(MathUtils.align(10, 0)).toBe(10);
-    expect(MathUtils.align(0, 0)).toBe(0);
-  });
-
-  it("returns n when n is already a multiple", () => {
+  it("returns n when n is already a multiple of m", () => {
     expect(MathUtils.align(10, 5)).toBe(10);
-    expect(MathUtils.align(20, 4)).toBe(20);
     expect(MathUtils.align(0, 5)).toBe(0);
+    expect(MathUtils.align(100, 25)).toBe(100);
   });
 
-  it("aligns to next multiple when n is not a multiple", () => {
+  it("aligns n to the next multiple of m when not already aligned", () => {
     expect(MathUtils.align(7, 5)).toBe(10);
-    expect(MathUtils.align(11, 4)).toBe(12);
     expect(MathUtils.align(1, 8)).toBe(8);
+    expect(MathUtils.align(33, 16)).toBe(48);
   });
 
-  it("works with multiple of 1", () => {
+  it("throws error when n is negative", () => {
+    expect(() => MathUtils.align(-5, 3)).toThrow("n must be non-negative");
+    expect(() => MathUtils.align(-1, 1)).toThrow("n must be non-negative");
+  });
+
+  it("throws error when m is zero or negative", () => {
+    expect(() => MathUtils.align(5, 0)).toThrow("m must be strictly positive");
+    expect(() => MathUtils.align(5, -3)).toThrow("m must be strictly positive");
+  });
+
+  it("works with m = 1", () => {
     expect(MathUtils.align(5, 1)).toBe(5);
-    expect(MathUtils.align(5.5, 1)).toBe(6);
+    expect(MathUtils.align(0, 1)).toBe(0);
   });
 
-  it("works with floats", () => {
-    expect(MathUtils.align(5.5, 2)).toBeCloseTo(6);
-    expect(MathUtils.align(3.2, 0.5)).toBeCloseTo(3.5);
+  it("works with large numbers", () => {
+    expect(MathUtils.align(1000000, 1024)).toBe(1000448);
+    expect(MathUtils.align(1000000, 1000000)).toBe(1000000);
   });
 
-  it("works with negative values", () => {
-    expect(MathUtils.align(-5, 3)).toBeCloseTo(-3);
-    expect(MathUtils.align(-10, 4)).toBe(-8);
+  it("aligns to power of 2", () => {
+    expect(MathUtils.align(5, 4)).toBe(8);
+    expect(MathUtils.align(15, 16)).toBe(16);
+    expect(MathUtils.align(256, 512)).toBe(512);
   });
 });
 

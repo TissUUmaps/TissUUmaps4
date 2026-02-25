@@ -49,11 +49,11 @@ export class ResolveUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    { signal, align }: { signal?: AbortSignal; align?: number } = {},
+    { signal, align = 1 }: { signal?: AbortSignal; align?: number } = {},
   ): Promise<Uint8Array> {
     signal?.throwIfAborted();
     const encodeMarker = (marker: Marker) => marker as number;
-    const data = new Uint8Array(MathUtils.align(ids.length, align ?? 1));
+    const data = new Uint8Array(MathUtils.align(ids.length, align));
     const activeConfigSource = getActiveConfigSource(markerConfig);
     if (activeConfigSource === "constant" && isConstantConfig(markerConfig)) {
       data.fill(encodeMarker(markerConfig.constant.value), 0, ids.length);
@@ -156,7 +156,7 @@ export class ResolveUtils {
     ) => Promise<TableData>,
     {
       signal,
-      align,
+      align = 1,
       sizeFactor = 1,
     }: {
       signal?: AbortSignal;
@@ -166,7 +166,7 @@ export class ResolveUtils {
   ): Promise<Float32Array> {
     signal?.throwIfAborted();
     const encodeSize = (size: number) => size * sizeFactor;
-    const data = new Float32Array(MathUtils.align(ids.length, align ?? 1));
+    const data = new Float32Array(MathUtils.align(ids.length, align));
     const activeConfigSource = getActiveConfigSource(sizeConfig);
     if (activeConfigSource === "constant" && isConstantConfig(sizeConfig)) {
       data.fill(encodeSize(sizeConfig.constant.value), 0, ids.length);
@@ -250,13 +250,13 @@ export class ResolveUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    { signal, align }: { signal?: AbortSignal; align?: number } = {},
+    { signal, align = 1 }: { signal?: AbortSignal; align?: number } = {},
     visibilityData: Uint8Array,
     opacityData: Uint8Array,
   ): Promise<Uint32Array> {
     signal?.throwIfAborted();
     const encodeColor = (color: Color) => ColorUtils.packColor(color);
-    const data = new Uint32Array(MathUtils.align(ids.length, align ?? 1));
+    const data = new Uint32Array(MathUtils.align(ids.length, align));
     const activeConfigSource = getActiveConfigSource(colorConfig);
     if (activeConfigSource === "constant" && isConstantConfig(colorConfig)) {
       data.fill(encodeColor(colorConfig.constant.value), 0, ids.length);
@@ -436,11 +436,11 @@ export class ResolveUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    { signal, align }: { signal?: AbortSignal; align?: number } = {},
+    { signal, align = 1 }: { signal?: AbortSignal; align?: number } = {},
   ): Promise<Uint8Array> {
     signal?.throwIfAborted();
     const encodeVisibility = (visibility: boolean) => (visibility ? 1 : 0);
-    const data = new Uint8Array(MathUtils.align(ids.length, align ?? 1));
+    const data = new Uint8Array(MathUtils.align(ids.length, align));
     const activeConfigSource = getActiveConfigSource(visibilityConfig);
     if (
       activeConfigSource === "constant" &&
@@ -537,7 +537,7 @@ export class ResolveUtils {
     ) => Promise<TableData>,
     {
       signal,
-      align,
+      align = 1,
       opacityFactor = 1,
     }: {
       signal?: AbortSignal;
@@ -549,7 +549,7 @@ export class ResolveUtils {
 
     const encodeOpacity = (opacity: number) =>
       MathUtils.clamp(Math.round(opacity * opacityFactor * 255), 0, 255);
-    const data = new Uint8Array(MathUtils.align(ids.length, align ?? 1));
+    const data = new Uint8Array(MathUtils.align(ids.length, align));
     const activeConfigSource = getActiveConfigSource(opacityConfig);
     if (activeConfigSource === "constant" && isConstantConfig(opacityConfig)) {
       data.fill(encodeOpacity(opacityConfig.constant.value), 0, ids.length);

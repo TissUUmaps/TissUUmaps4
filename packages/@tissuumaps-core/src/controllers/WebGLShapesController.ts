@@ -859,7 +859,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     scanlines: Scanline[],
     totalNumScanlineShapes: number,
     totalNumScanlineShapeEdges: number,
-    { align }: { align?: number } = {},
+    { align = 1 }: { align?: number } = {},
   ): ArrayBuffer {
     const buffer = new ArrayBuffer(
       MathUtils.align(
@@ -867,7 +867,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           4 * scanlines.length + // scanline S -> scanline header
           4 * totalNumScanlineShapes + // scanline S -> shape P -> shape header
           4 * totalNumScanlineShapeEdges, // scanline S -> shape P -> edge E
-        align ?? 1,
+        align,
       ) * 4, // 4 bytes per 32-bit value
     );
     const float32Data = new Float32Array(buffer);

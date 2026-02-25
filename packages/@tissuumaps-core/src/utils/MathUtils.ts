@@ -16,23 +16,26 @@ export class MathUtils {
   }
 
   /**
-   * Aligns a number `n` to the next multiple of `multiple`
+   * Aligns a positive number `n` to the next multiple of `m`
    *
-   * If `multiple` is zero or `n` is already a multiple of `multiple`, returns `n`.
-   * Otherwise, returns the smallest multiple of `multiple` that is greater than `n`.
+   * If `n` is already a multiple of `m`, returns `n`.
+   * Otherwise, returns the smallest multiple of `m` that is greater than `n`.
    *
-   * @param n - The number to align
-   * @param multiple - The multiple to align to
+   * @param n - The non-negative number to align
+   * @param m - The strictly positive multiple to align to
    * @returns The aligned number
    */
-  static align(n: number, multiple: number): number {
-    if (multiple === 0) {
+  static align(n: number, m: number): number {
+    if (n < 0) {
+      throw new Error("n must be non-negative");
+    }
+    if (m <= 0) {
+      throw new Error("m must be strictly positive");
+    }
+    if (n % m === 0) {
       return n;
     }
-    if (n % multiple === 0) {
-      return n;
-    }
-    return Math.ceil(n / multiple) * multiple;
+    return Math.ceil(n / m) * m;
   }
 
   /**
