@@ -73,7 +73,9 @@ export function ShapesSettingsPanel({
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="font-medium">Settings</FieldsetLegend>
+      <FieldsetLegend className="font-medium text-foreground">
+        Settings
+      </FieldsetLegend>
       <Accordion
         value={[expandedConfigControl]}
         onValueChange={(value) =>
@@ -143,7 +145,7 @@ export function ShapesSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Fill color</AccordionTrigger>
               <ColorConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeFillColor)
                 }
@@ -170,7 +172,7 @@ export function ShapesSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Fill visibility</AccordionTrigger>
               <VisibilityConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeFillVisibility)
                 }
@@ -195,7 +197,7 @@ export function ShapesSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Fill opacity</AccordionTrigger>
               <OpacityConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeFillOpacity)
                 }
@@ -220,7 +222,7 @@ export function ShapesSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Stroke color</AccordionTrigger>
               <ColorConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeStrokeColor)
                 }
@@ -247,7 +249,7 @@ export function ShapesSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Stroke visibility</AccordionTrigger>
               <VisibilityConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeStrokeVisibility)
                 }
@@ -272,7 +274,7 @@ export function ShapesSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Stroke opacity</AccordionTrigger>
               <OpacityConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeStrokeOpacity)
                 }

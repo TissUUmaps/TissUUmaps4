@@ -14,7 +14,9 @@ export function ShapesLayersPanel({ className }: ShapesLayersPanelProps) {
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="font-medium">Layers</FieldsetLegend>
+      <FieldsetLegend className="font-medium text-foreground">
+        Layers
+      </FieldsetLegend>
     </Fieldset>
   );
 }

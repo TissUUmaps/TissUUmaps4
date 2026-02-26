@@ -14,7 +14,9 @@ export function ShapesGroupsPanel({ className }: ShapesGroupsPanelProps) {
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="font-medium">Groups</FieldsetLegend>
+      <FieldsetLegend className="font-medium text-foreground">
+        Groups
+      </FieldsetLegend>
     </Fieldset>
   );
 }

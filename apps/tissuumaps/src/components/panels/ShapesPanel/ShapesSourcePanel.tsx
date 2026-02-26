@@ -32,7 +32,7 @@ export function ShapesSourcePanel({
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="flex flex-row items-center font-medium">
+      <FieldsetLegend className="flex flex-row items-center font-medium text-foreground">
         Source
         <EditIcon className="ml-auto size-4" />
       </FieldsetLegend>
