@@ -4,7 +4,7 @@ import { JsonForms } from "@jsonforms/react";
 import { EditIcon } from "lucide-react";
 import { useMemo } from "react";
 
-import { type Shapes } from "@tissuumaps/core";
+import { type Shapes, type ShapesDataSource } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import { Field, FieldLabel } from "../../common/field";
@@ -22,6 +22,7 @@ export function ShapesSourcePanel({
     (state) => state.createShapesDataLoader,
   );
 
+  const updateShapes = useTissUUmaps((state) => state.updateShapes);
   const shapesDataLoader = useMemo(
     () => createShapesDataLoader(shapes.id),
     [createShapesDataLoader, shapes.id],
@@ -44,8 +45,17 @@ export function ShapesSourcePanel({
         uischema={shapesDataLoader.uischema}
         data={shapes.dataSource}
         renderers={renderers}
+        onChange={({ data, errors }) => {
+          if (errors === undefined || errors.length === 0) {
+            updateShapes(shapes.id, {
+              dataSource: {
+                ...shapes.dataSource,
+                ...(data as ShapesDataSource),
+              },
+            });
+          }
+        }}
         cells={cells}
-        readonly={true}
       />
     </Fieldset>
   );
