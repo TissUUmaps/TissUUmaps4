@@ -13,6 +13,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
+import { useConfirm } from "@/components/common/alert-dialog-provider";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -104,6 +105,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
   const deletePoints = useTissUUmaps((state) => state.deletePoints);
   const loadPoints = useTissUUmaps((state) => state.loadPoints);
+  const confirm = useConfirm();
 
   const { ref, handleRef } = useSortable({ id: points.id, index });
 
@@ -183,14 +185,16 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             <Button
               variant="ghost"
               onClick={() => {
-                if (
-                  // TODO replace by dialog overlay
-                  window.confirm(
-                    "Are you sure you want to delete this point cloud?",
-                  )
-                ) {
-                  deletePoints(points.id);
-                }
+                void confirm({
+                  title: "Delete point cloud",
+                  body: "Are you sure you want to delete this point cloud? This action cannot be undone.",
+                  cancelButton: "No",
+                  actionButton: "Yes",
+                }).then((confirmAnswer) => {
+                  if (confirmAnswer) {
+                    deletePoints(points.id);
+                  }
+                });
               }}
               title="Delete point cloud"
             >
