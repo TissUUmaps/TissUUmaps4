@@ -1,9 +1,8 @@
-import { JsonForms } from "@jsonforms/react";
-import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 import {
   type Shapes,
-  type ShapesDataSource,
   defaultShapeFillColor,
   defaultShapeFillOpacity,
   defaultShapeFillVisibility,
@@ -21,24 +20,31 @@ import {
   AccordionTrigger,
   AccordionTriggerRightDownIcon,
 } from "../../common/accordion";
+import { Field, FieldLabel } from "../../common/field";
+import { Fieldset, FieldsetLegend } from "../../common/fieldset";
 import {
   ColorConfigContextProvider,
   ColorConfigControl,
   ColorConfigSourceToggleGroup,
 } from "../../controls/ColorConfigControl";
+import { ColorConfigSourceValue } from "../../controls/ColorConfigControl/ColorConfigSourceValue";
 import {
   OpacityConfigContextProvider,
   OpacityConfigControl,
   OpacityConfigSourceToggleGroup,
 } from "../../controls/OpacityConfigControl";
+import { OpacityConfigSourceValue } from "../../controls/OpacityConfigControl/OpacityConfigSourceValue";
 import {
   VisibilityConfigContextProvider,
   VisibilityConfigControl,
   VisibilityConfigSourceToggleGroup,
 } from "../../controls/VisibilityConfigControl";
-import { cells, renderers } from "../../jsonforms";
+import { VisibilityConfigSourceValue } from "../../controls/VisibilityConfigControl/VisibilityConfigSourceValue";
+import { Input } from "../../ui/input";
+import { Switch } from "../../ui/switch";
 
 const ConfigControl = {
+  general: "general",
   shapeFillColor: "shapeFillColor",
   shapeFillVisibility: "shapeFillVisibility",
   shapeFillOpacity: "shapeFillOpacity",
@@ -49,41 +55,25 @@ const ConfigControl = {
 
 type ConfigControl = (typeof ConfigControl)[keyof typeof ConfigControl];
 
-export function ShapesPanelItemSettings({ shapes }: { shapes: Shapes }) {
+export type ShapesSettingsPanelProps = {
+  shapes: Shapes;
+  className?: string;
+};
+
+export function ShapesSettingsPanel({
+  shapes,
+  className,
+}: ShapesSettingsPanelProps) {
   const [expandedConfigControl, setExpandedConfigControl] =
     useState<ConfigControl | null>(null);
 
   const updateShapes = useTissUUmaps((state) => state.updateShapes);
-  const createShapesDataLoader = useTissUUmaps(
-    (state) => state.createShapesDataLoader,
-  );
-
-  const shapesDataLoader = useMemo(
-    () => createShapesDataLoader(shapes.id),
-    [createShapesDataLoader, shapes.id],
-  );
 
   return (
-    <div>
-      {/* Data source */}
-      <JsonForms
-        schema={shapesDataLoader.schema}
-        uischema={shapesDataLoader.uischema}
-        data={shapes.dataSource}
-        onChange={({ data, errors }) => {
-          if (errors === undefined || errors.length === 0) {
-            updateShapes(shapes.id, {
-              dataSource: {
-                ...shapes.dataSource,
-                ...(data as ShapesDataSource),
-              },
-            });
-          }
-        }}
-        renderers={renderers}
-        cells={cells}
-      />
-      {/* Shape settings */}
+    <Fieldset
+      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
+    >
+      <FieldsetLegend className="font-medium">Settings</FieldsetLegend>
       <Accordion
         value={[expandedConfigControl]}
         onValueChange={(value) =>
@@ -92,6 +82,54 @@ export function ShapesPanelItemSettings({ shapes }: { shapes: Shapes }) {
           )
         }
       >
+        {/* General settings */}
+        <AccordionItem value={ConfigControl.general}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>General</AccordionTrigger>
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <Field>
+              <FieldLabel>Name</FieldLabel>
+              <Input
+                value={shapes.name}
+                onChange={(event) =>
+                  updateShapes(shapes.id, { name: event.target.value })
+                }
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Visibility</FieldLabel>
+              <div className="flex flex-row items-center gap-x-2">
+                <Switch
+                  checked={shapes.visibility}
+                  onCheckedChange={(checked) =>
+                    updateShapes(shapes.id, { visibility: checked })
+                  }
+                />
+                {shapes.visibility ? "Visible" : "Hidden"}
+              </div>
+            </Field>
+            <Field>
+              <FieldLabel>Opacity</FieldLabel>
+              <Input
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={shapes.opacity}
+                onChange={(event) => {
+                  const opacity = event.target.valueAsNumber;
+                  if (Number.isFinite(opacity)) {
+                    updateShapes(shapes.id, {
+                      opacity: Math.min(Math.max(0, opacity), 1),
+                    });
+                  }
+                }}
+              />
+            </Field>
+          </AccordionPanel>
+        </AccordionItem>
         {/* Shape fill color */}
         <ColorConfigContextProvider
           colorConfig={shapes.shapeFillColor}
@@ -104,14 +142,15 @@ export function ShapesPanelItemSettings({ shapes }: { shapes: Shapes }) {
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Fill color</AccordionTrigger>
-              <ColorConfigSourceToggleGroup
+              <ColorConfigSourceValue
                 className="ml-auto"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeFillColor)
                 }
               />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <ColorConfigSourceToggleGroup className="border rounded" />
               <ColorConfigControl />
             </AccordionPanel>
           </AccordionItem>
@@ -130,14 +169,15 @@ export function ShapesPanelItemSettings({ shapes }: { shapes: Shapes }) {
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Fill visibility</AccordionTrigger>
-              <VisibilityConfigSourceToggleGroup
+              <VisibilityConfigSourceValue
                 className="ml-auto"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeFillVisibility)
                 }
               />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <VisibilityConfigSourceToggleGroup className="border rounded" />
               <VisibilityConfigControl />
             </AccordionPanel>
           </AccordionItem>
@@ -154,14 +194,15 @@ export function ShapesPanelItemSettings({ shapes }: { shapes: Shapes }) {
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Fill opacity</AccordionTrigger>
-              <OpacityConfigSourceToggleGroup
+              <OpacityConfigSourceValue
                 className="ml-auto"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeFillOpacity)
                 }
               />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <OpacityConfigSourceToggleGroup className="border rounded" />
               <OpacityConfigControl />
             </AccordionPanel>
           </AccordionItem>
@@ -178,14 +219,15 @@ export function ShapesPanelItemSettings({ shapes }: { shapes: Shapes }) {
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Stroke color</AccordionTrigger>
-              <ColorConfigSourceToggleGroup
+              <ColorConfigSourceValue
                 className="ml-auto"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeStrokeColor)
                 }
               />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <ColorConfigSourceToggleGroup className="border rounded" />
               <ColorConfigControl />
             </AccordionPanel>
           </AccordionItem>
@@ -204,14 +246,15 @@ export function ShapesPanelItemSettings({ shapes }: { shapes: Shapes }) {
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Stroke visibility</AccordionTrigger>
-              <VisibilityConfigSourceToggleGroup
+              <VisibilityConfigSourceValue
                 className="ml-auto"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeStrokeVisibility)
                 }
               />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <VisibilityConfigSourceToggleGroup className="border rounded" />
               <VisibilityConfigControl />
             </AccordionPanel>
           </AccordionItem>
@@ -228,19 +271,20 @@ export function ShapesPanelItemSettings({ shapes }: { shapes: Shapes }) {
             <AccordionHeader>
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Stroke opacity</AccordionTrigger>
-              <OpacityConfigSourceToggleGroup
+              <OpacityConfigSourceValue
                 className="ml-auto"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.shapeStrokeOpacity)
                 }
               />
             </AccordionHeader>
-            <AccordionPanel>
+            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+              <OpacityConfigSourceToggleGroup className="border rounded" />
               <OpacityConfigControl />
             </AccordionPanel>
           </AccordionItem>
         </OpacityConfigContextProvider>
       </Accordion>
-    </div>
+    </Fieldset>
   );
 }
