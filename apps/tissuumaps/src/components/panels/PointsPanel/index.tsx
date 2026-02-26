@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/input-group";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
-import { EyeIcon, EyeOffIcon, GripVertical } from "lucide-react";
+import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 
 import { type Points } from "@tissuumaps/core";
 
@@ -59,6 +59,7 @@ function PointsAccordionItem({
   index: number;
 }) {
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
+  const deletePoints = useTissUUmaps((state) => state.deletePoints);
 
   const { ref, handleRef } = useSortable({ id: points.id, index });
 
@@ -108,6 +109,21 @@ function PointsAccordionItem({
               }
             >
               {points.visibility ? <EyeIcon /> : <EyeOffIcon />}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Are you sure you want to delete this point cloud?",
+                  )
+                ) {
+                  deletePoints(points.id);
+                }
+              }}
+              title="Delete point cloud"
+            >
+              <Trash2Icon />
             </Button>
           </div>
           <AccordionTriggerUpDownIcon />
