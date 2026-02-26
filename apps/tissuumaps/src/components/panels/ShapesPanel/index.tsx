@@ -99,7 +99,7 @@ function ShapesAccordionItem({
               onClick={() => {
                 if (
                   window.confirm(
-                    "Are you sure you want to delete this shapes layer?",
+                    "Are you sure you want to delete this shape cloud?",
                   )
                 ) {
                   deleteShapes(shapes.id);
