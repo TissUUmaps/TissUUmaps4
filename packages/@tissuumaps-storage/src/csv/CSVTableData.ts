@@ -26,6 +26,7 @@ export class CSVTableData implements TableData {
   private readonly _n: number;
   private readonly _columns: string[];
   private readonly _data: (string[] | TypedArray)[];
+  private readonly _ranges: Map<string, [number, number]> = new Map();
   private _index?: number[];
 
   constructor(
@@ -66,14 +67,41 @@ export class CSVTableData implements TableData {
 
   async loadColumn<T>(
     column: string,
-    options: { signal?: AbortSignal } = {},
+    {
+      signal,
+      computeRange,
+    }: { signal?: AbortSignal; computeRange?: boolean } = {},
   ): Promise<MappableArrayLike<T>> {
-    return await loadCSVTableDataColumn(
+    signal?.throwIfAborted();
+    const values = await loadCSVTableDataColumn<T>(
       column,
       this._columns,
       this._data,
-      options,
+      { signal },
     );
+    signal?.throwIfAborted();
+    if (computeRange && !this._ranges.has(column)) {
+      let vmin, vmax;
+      for (let i = 0; i < values.length; i++) {
+        const v = values[i];
+        if (typeof v === "number" && Number.isFinite(v)) {
+          if (vmin === undefined || v < vmin) {
+            vmin = v;
+          }
+          if (vmax === undefined || v > vmax) {
+            vmax = v;
+          }
+        }
+      }
+      if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
+        this._ranges.set(column, [vmin, vmax]);
+      }
+    }
+    return values;
+  }
+
+  getRange(column: string): [number, number] | undefined {
+    return this._ranges.get(column);
   }
 
   destroy(): void {}

@@ -41,10 +41,19 @@ export interface TableData extends ItemsData {
    *
    * @typeParam T - Element type of the returned array
    * @param column - The column name
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and whether to compute the column's value range
+   * @returns The column values
    */
   loadColumn<T>(
     column: string,
-    options: { signal?: AbortSignal },
+    options: { signal?: AbortSignal; computeRange?: boolean },
   ): Promise<MappableArrayLike<T>>;
+
+  /**
+   * Returns the minimum and maximum values of a numeric column, if previously loaded
+   *
+   * @param column - The column name
+   * @returns The [min, max] range of the column, or `undefined` if not previously loaded
+   */
+  getRange(column: string): [number, number] | undefined;
 }
