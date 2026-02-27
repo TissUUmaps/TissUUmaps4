@@ -111,7 +111,7 @@ function ShapesAccordionItem({
                   deleteShapes(shapes.id);
                 }
               }}
-              title="Delete shapes"
+              title="Delete shape cloud"
             >
               <Trash2Icon />
             </Button>
