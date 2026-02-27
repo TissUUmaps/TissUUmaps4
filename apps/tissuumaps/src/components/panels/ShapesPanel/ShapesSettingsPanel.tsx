@@ -84,7 +84,6 @@ export function ShapesSettingsPanel({
           )
         }
       >
-        {/* General settings */}
         <AccordionItem value={ConfigControl.general}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
