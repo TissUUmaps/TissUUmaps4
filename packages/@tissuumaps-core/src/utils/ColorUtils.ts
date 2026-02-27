@@ -9,9 +9,7 @@ export class ColorUtils {
    * separated by `sep`, scaled from `[0, maxValue]` to `[0, 255]`.
    *
    * @param str - Multi-line palette string
-   * @param options - Parsing options
-   * @param options.sep - Component separator (default `" "`)
-   * @param options.maxValue - Maximum input value per component (default `1`)
+   * @param options - Component separator (default `" "`) and maximum input value per component (default `1`)
    */
   static parseColorPalette(
     str: string,

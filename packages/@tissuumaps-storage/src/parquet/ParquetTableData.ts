@@ -25,6 +25,7 @@ export class ParquetTableData implements TableData {
   private readonly _buffer: hyparquet.AsyncBuffer;
   private readonly _metadata: hyparquet.FileMetaData;
   private readonly _columns: string[];
+  private readonly _ranges: Map<string, [number, number]> = new Map();
   private _index?: number[];
 
   constructor(
@@ -69,14 +70,41 @@ export class ParquetTableData implements TableData {
 
   async loadColumn<T>(
     column: string,
-    options: { signal?: AbortSignal } = {},
+    {
+      signal,
+      computeRange,
+    }: { signal?: AbortSignal; computeRange?: boolean } = {},
   ): Promise<MappableArrayLike<T>> {
-    return await loadParquetTableDataColumn(
+    signal?.throwIfAborted();
+    const values = await loadParquetTableDataColumn<T>(
       column,
       this._buffer,
       this._metadata,
-      options,
+      { signal },
     );
+    signal?.throwIfAborted();
+    if (computeRange && !this._ranges.has(column)) {
+      let vmin, vmax;
+      for (let i = 0; i < values.length; i++) {
+        const v = values[i];
+        if (typeof v === "number" && Number.isFinite(v)) {
+          if (vmin === undefined || v < vmin) {
+            vmin = v;
+          }
+          if (vmax === undefined || v > vmax) {
+            vmax = v;
+          }
+        }
+      }
+      if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
+        this._ranges.set(column, [vmin, vmax]);
+      }
+    }
+    return values;
+  }
+
+  getRange(column: string): [number, number] | undefined {
+    return this._ranges.get(column);
   }
 
   destroy(): void {}

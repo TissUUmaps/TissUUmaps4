@@ -36,8 +36,7 @@ export class ResolveUtils {
    * @param markerMaps - Named maps from group strings to {@link Marker} values
    * @param defaultMarker - Fallback marker used when a value cannot be resolved
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options.signal - Optional abort signal
-   * @param options.align - Optional alignment for the output array length
+   * @param options - Optional abort signal and alignment for the output array length
    * @returns A `Uint8Array` of length `align(ids.length, align)` with encoded markers
    */
   static async resolveMarkers(
@@ -58,11 +57,11 @@ export class ResolveUtils {
     if (activeConfigSource === "constant" && isConstantConfig(markerConfig)) {
       data.fill(encodeMarker(markerConfig.constant.value), 0, ids.length);
     } else if (activeConfigSource === "from" && isFromConfig(markerConfig)) {
-      const parseMarker = (tableValue: unknown) => {
-        if (typeof tableValue === "number") {
-          return tableValue as Marker;
+      const parseMarker = (value: unknown) => {
+        if (typeof value === "number") {
+          return value as Marker;
         }
-        console.warn(`Invalid marker table value: ${String(tableValue)}`);
+        console.warn(`Invalid marker table value: ${String(value)}`);
         return undefined;
       };
       await ResolveUtils.fillFrom(
@@ -90,28 +89,25 @@ export class ResolveUtils {
       if (markerConfig.groupBy.map !== undefined && markerMap !== undefined) {
         const groupMarkers = new Map(Object.entries(markerMap.values));
         const defaultGroupMarker = markerMap.default;
-        const mapToMarker = (tableGroup: string) =>
-          groupMarkers.get(tableGroup) ?? defaultGroupMarker;
         await ResolveUtils.fillGroupBy(
           data,
           ids,
           markerConfig,
           loadTable,
-          mapToMarker,
+          (group) => groupMarkers.get(group) ?? defaultGroupMarker,
           defaultMarker,
           encodeMarker,
           { signal },
         );
         signal?.throwIfAborted();
       } else if (markerConfig.groupBy.map === undefined) {
-        const mapToMarker = (tableGroup: string) =>
-          markerPalette[HashUtils.djb2(tableGroup) % markerPalette.length]!;
         await ResolveUtils.fillGroupBy(
           data,
           ids,
           markerConfig,
           loadTable,
-          mapToMarker,
+          (group) =>
+            markerPalette[HashUtils.djb2(group) % markerPalette.length]!,
           defaultMarker,
           encodeMarker,
           { signal },
@@ -140,9 +136,7 @@ export class ResolveUtils {
    * @param sizeMaps - Named maps from group strings to numeric size values
    * @param defaultSize - Fallback size used when a value cannot be resolved
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options.signal - Optional abort signal
-   * @param options.align - Optional alignment for the output array length
-   * @param options.sizeFactor - Scalar multiplied into every resolved size (default `1`)
+   * @param options - Optional abort signal, alignment for the output array length, and size factor
    * @returns A `Float32Array` of length `align(ids.length, align)` with scaled sizes
    */
   static async resolveSizes(
@@ -171,11 +165,11 @@ export class ResolveUtils {
     if (activeConfigSource === "constant" && isConstantConfig(sizeConfig)) {
       data.fill(encodeSize(sizeConfig.constant.value), 0, ids.length);
     } else if (activeConfigSource === "from" && isFromConfig(sizeConfig)) {
-      const parseSize = (tableValue: unknown) => {
-        if (typeof tableValue === "number") {
-          return tableValue;
+      const parseSize = (value: unknown) => {
+        if (typeof value === "number") {
+          return value;
         }
-        console.warn(`Invalid size table value: ${String(tableValue)}`);
+        console.warn(`Invalid size table value: ${String(value)}`);
         return undefined;
       };
       await ResolveUtils.fillFrom(
@@ -196,14 +190,12 @@ export class ResolveUtils {
       const sizeMap = sizeMaps.find((m) => m.id === sizeConfig.groupBy.map);
       if (sizeMap !== undefined) {
         const groupSizes = new Map(Object.entries(sizeMap.values));
-        const mapToSize = (tableGroup: string) =>
-          groupSizes.get(tableGroup) ?? sizeMap.default;
         await ResolveUtils.fillGroupBy(
           data,
           ids,
           sizeConfig,
           loadTable,
-          mapToSize,
+          (group) => groupSizes.get(group) ?? sizeMap.default,
           defaultSize,
           encodeSize,
           { signal },
@@ -235,8 +227,7 @@ export class ResolveUtils {
    * @param colorMaps - Named maps from group strings to {@link Color} values
    * @param defaultColor - Fallback color used when a value cannot be resolved
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options.signal - Optional abort signal
-   * @param options.align - Optional alignment for the output array length
+   * @param options - Optional abort signal and alignment for the output array length
    * @param visibilityData - Resolved visibility data produced by {@link resolveVisibilities}
    * @param opacityData - Resolved opacity data produced by {@link resolveOpacities}
    * @returns A `Uint32Array` of length `align(ids.length, align)` with packed RGBA colors
@@ -265,36 +256,13 @@ export class ResolveUtils {
         (colorPalette) => colorPalette.id === colorConfig.from.palette,
       );
       if (colorPalette !== undefined) {
-        let range = colorConfig.from.range;
         const parseColor = (
-          tableValue: unknown,
-          tableIdValues: Map<number, unknown>,
+          value: unknown,
+          range: [number, number] | undefined,
         ) => {
-          if (range === undefined) {
-            let vmin, vmax;
-            for (const id of ids) {
-              const tableValue = tableIdValues.get(id);
-              if (
-                typeof tableValue === "number" &&
-                Number.isFinite(tableValue)
-              ) {
-                if (vmin === undefined || tableValue < vmin) {
-                  vmin = tableValue;
-                }
-                if (vmax === undefined || tableValue > vmax) {
-                  vmax = tableValue;
-                }
-              }
-            }
-            if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
-              range = [vmin, vmax];
-            } else {
-              console.warn("Invalid color value range, using [0, 1] instead");
-              range = [0, 1];
-            }
-          }
-          if (typeof tableValue === "number") {
-            const vnorm = (tableValue - range[0]) / (range[1] - range[0]);
+          if (typeof value === "number" && Number.isFinite(value)) {
+            const [vmin, vmax] = colorConfig.from.range ?? range ?? [0, 1];
+            const vnorm = (value - vmin) / (vmax - vmin);
             const index = MathUtils.clamp(
               Math.floor(vnorm * colorPalette.colors.length),
               0,
@@ -302,7 +270,7 @@ export class ResolveUtils {
             );
             return colorPalette.colors[index]!;
           }
-          console.warn(`Invalid color table value: ${String(tableValue)}`);
+          console.warn(`Invalid color table value: ${String(value)}`);
           return undefined;
         };
         await ResolveUtils.fillFrom(
@@ -313,7 +281,7 @@ export class ResolveUtils {
           parseColor,
           defaultColor,
           encodeColor,
-          { signal },
+          { signal, computeRange: true },
         );
         signal?.throwIfAborted();
       } else {
@@ -345,14 +313,12 @@ export class ResolveUtils {
       if (colorConfig.groupBy.map !== undefined && colorMap !== undefined) {
         const groupColors = new Map(Object.entries(colorMap.values));
         const defaultGroupColor = colorMap.default;
-        const mapToColor = (tableGroup: string) =>
-          groupColors.get(tableGroup) ?? defaultGroupColor;
         await ResolveUtils.fillGroupBy(
           data,
           ids,
           colorConfig,
           loadTable,
-          mapToColor,
+          (group) => groupColors.get(group) ?? defaultGroupColor,
           defaultColor,
           encodeColor,
           { signal },
@@ -363,14 +329,12 @@ export class ResolveUtils {
         colorPalette !== undefined
       ) {
         const colors = colorPalette.colors;
-        const mapToColor = (tableGroup: string) =>
-          colors[HashUtils.djb2(tableGroup) % colors.length]!;
         await ResolveUtils.fillGroupBy(
           data,
           ids,
           colorConfig,
           loadTable,
-          mapToColor,
+          (group) => colors[HashUtils.djb2(group) % colors.length]!,
           defaultColor,
           encodeColor,
           { signal },
@@ -423,8 +387,7 @@ export class ResolveUtils {
    * @param visibilityMaps - Named maps from group strings to boolean visibility values
    * @param defaultVisibility - Fallback visibility used when a value cannot be resolved
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options.signal - Optional abort signal
-   * @param options.align - Optional alignment for the output array length
+   * @param options - Optional abort signal and alignment for the output array length
    * @returns A `Uint8Array` of length `align(ids.length, align)` with visibility flags
    */
   static async resolveVisibilities(
@@ -455,11 +418,11 @@ export class ResolveUtils {
       activeConfigSource === "from" &&
       isFromConfig(visibilityConfig)
     ) {
-      const parseVisibility = (tableValue: unknown) => {
-        if (typeof tableValue === "number") {
-          return tableValue > 0;
+      const parseVisibility = (value: unknown) => {
+        if (typeof value === "number") {
+          return value > 0;
         }
-        console.warn(`Invalid visibility table value: ${String(tableValue)}`);
+        console.warn(`Invalid visibility table value: ${String(value)}`);
         return undefined;
       };
       await ResolveUtils.fillFrom(
@@ -482,14 +445,12 @@ export class ResolveUtils {
       );
       if (visibilityMap !== undefined) {
         const groupVisibilities = new Map(Object.entries(visibilityMap.values));
-        const mapToVisibility = (tableGroup: string) =>
-          groupVisibilities.get(tableGroup) ?? visibilityMap.default;
         await ResolveUtils.fillGroupBy(
           data,
           ids,
           visibilityConfig,
           loadTable,
-          mapToVisibility,
+          (group) => groupVisibilities.get(group) ?? visibilityMap.default,
           defaultVisibility,
           encodeVisibility,
           { signal },
@@ -521,9 +482,7 @@ export class ResolveUtils {
    * @param opacityMaps - Named maps from group strings to numeric opacity values in `[0, 1]`
    * @param defaultOpacity - Fallback opacity in `[0, 1]` used when a value cannot be resolved
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options.signal - Optional abort signal
-   * @param options.align - Optional alignment for the output array length
-   * @param options.opacityFactor - Scalar applied before converting to bytes (default `1`)
+   * @param options - Optional abort signal, alignment for the output array length, and opacity factor
    * @returns A `Uint8Array` of length `align(ids.length, align)` with byte-scaled opacities
    */
   static async resolveOpacities(
@@ -554,11 +513,11 @@ export class ResolveUtils {
     if (activeConfigSource === "constant" && isConstantConfig(opacityConfig)) {
       data.fill(encodeOpacity(opacityConfig.constant.value), 0, ids.length);
     } else if (activeConfigSource === "from" && isFromConfig(opacityConfig)) {
-      const parseOpacity = (tableValue: unknown) => {
-        if (typeof tableValue === "number") {
-          return MathUtils.clamp(tableValue, 0, 1);
+      const parseOpacity = (value: unknown) => {
+        if (typeof value === "number") {
+          return MathUtils.clamp(value, 0, 1);
         }
-        console.warn(`Invalid opacity table value: ${String(tableValue)}`);
+        console.warn(`Invalid opacity table value: ${String(value)}`);
         return undefined;
       };
       await ResolveUtils.fillFrom(
@@ -581,14 +540,12 @@ export class ResolveUtils {
       );
       if (opacityMap !== undefined) {
         const groupOpacities = new Map(Object.entries(opacityMap.values));
-        const mapToOpacity = (tableGroup: string) =>
-          groupOpacities.get(tableGroup) ?? opacityMap.default;
         await ResolveUtils.fillGroupBy(
           data,
           ids,
           opacityConfig,
           loadTable,
-          mapToOpacity,
+          (group) => groupOpacities.get(group) ?? opacityMap.default,
           defaultOpacity,
           encodeOpacity,
           { signal },
@@ -608,13 +565,13 @@ export class ResolveUtils {
    * Fills `data` by loading values from the configured table column
    *
    * For each ID in `ids`, the corresponding row is looked up in the loaded table by ID.
-   * The raw cell value is parsed by `parseTableValue`; if parsing fails, `defaultValue` is used instead.
+   * The raw cell value is parsed by `parseValue`; if parsing fails, `defaultValue` is used instead.
    *
    * @param data - Output typed array to fill
    * @param ids - Ordered list of item IDs
    * @param config - A `FromConfig` specifying the source table and column
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param parseTableValue - Converts a raw cell value to `TValue`, or `undefined` on failure
+   * @param parseValue - Converts a raw cell value to `TValue`, or `undefined` on failure
    * @param defaultValue - Value used when the ID is missing or parsing fails
    * @param encodeValue - Converts `TValue` to the numeric representation stored in `data`
    * @param options - Optional abort signal
@@ -627,29 +584,34 @@ export class ResolveUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    parseTableValue: (
-      tableValue: unknown,
-      tableIdValues: Map<number, unknown>,
+    parseValue: (
+      value: unknown,
+      range: [number, number] | undefined,
     ) => TValue | undefined,
     defaultValue: TValue,
     encodeValue: (value: TValue) => number,
-    { signal }: { signal?: AbortSignal } = {},
-  ): Promise<void> {
-    const tableData = await loadTable(config.from.table, { signal });
-    signal?.throwIfAborted();
-    const tableValues = await tableData.loadColumn(config.from.column, {
+    {
       signal,
+      computeRange,
+    }: { signal?: AbortSignal; computeRange?: boolean } = {},
+  ): Promise<void> {
+    const table = await loadTable(config.from.table, { signal });
+    signal?.throwIfAborted();
+    const values = await table.loadColumn(config.from.column, {
+      signal,
+      computeRange,
     });
     signal?.throwIfAborted();
-    const tableIdValues = new Map<number, unknown>();
-    tableData.getIndex().forEach((tableId, index) => {
-      tableIdValues.set(tableId, tableValues[index]);
+    const range = table.getRange(config.from.column);
+    const idValues = new Map<number, unknown>();
+    table.getIndex().forEach((id, i) => {
+      idValues.set(id, values[i]);
     });
     ids.forEach((id, i) => {
-      if (tableIdValues.has(id)) {
-        const tableValue = tableIdValues.get(id);
-        const value = parseTableValue(tableValue, tableIdValues);
-        data[i] = encodeValue(value ?? defaultValue);
+      if (idValues.has(id)) {
+        const value = idValues.get(id);
+        const parsedValue = parseValue(value, range);
+        data[i] = encodeValue(parsedValue ?? defaultValue);
       } else {
         console.warn(`ID ${id} missing in table ${config.from.table}`);
         data[i] = encodeValue(defaultValue);
@@ -661,14 +623,14 @@ export class ResolveUtils {
    * Fills `data` by loading group keys from the configured table column and mapping them to values.
    *
    * For each ID in `ids`, the corresponding row is looked up in the loaded table by ID.
-   * The raw cell value is JSON-stringified to produce a group key, which is then mapped to a value using `mapTableGroup`.
+   * The raw cell value is JSON-stringified to produce a group key, which is then mapped to a value using `mapGroupToValue`.
    * If the mapping fails, `defaultValue` is used instead.
    *
    * @param data - Output typed array to fill
    * @param ids - Ordered list of item IDs
    * @param config - A `GroupByConfig` specifying the source table and column
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param mapTableGroup - Maps a JSON-stringified group key to `TValue`, or `undefined`
+   * @param mapGroupToValue - Maps a JSON-stringified group key to `TValue`, or `undefined`
    * @param defaultValue - Value used when the ID is missing or the group is unmapped
    * @param encodeValue - Converts `TValue` to the numeric representation stored in `data`
    * @param options - Optional abort signal
@@ -681,26 +643,30 @@ export class ResolveUtils {
       tableId: string,
       options: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    mapTableGroup: (tableGroup: string) => TValue | undefined,
+    mapGroupToValue: (group: string) => TValue | undefined,
     defaultValue: TValue,
     encodeValue: (value: TValue) => number,
-    { signal }: { signal?: AbortSignal } = {},
-  ): Promise<void> {
-    const tableData = await loadTable(config.groupBy.table, { signal });
-    signal?.throwIfAborted();
-    const tableGroups = await tableData.loadColumn(config.groupBy.column, {
+    {
       signal,
+      computeRange,
+    }: { signal?: AbortSignal; computeRange?: boolean } = {},
+  ): Promise<void> {
+    const table = await loadTable(config.groupBy.table, { signal });
+    signal?.throwIfAborted();
+    const groups = await table.loadColumn(config.groupBy.column, {
+      signal,
+      computeRange,
     });
     signal?.throwIfAborted();
-    const tableIdGroups = new Map<number, unknown>();
-    tableData.getIndex().forEach((tableId, index) => {
-      tableIdGroups.set(tableId, tableGroups[index]);
+    const idGroups = new Map<number, unknown>();
+    table.getIndex().forEach((id, i) => {
+      idGroups.set(id, groups[i]);
     });
     ids.forEach((id, i) => {
-      if (tableIdGroups.has(id)) {
-        const tableGroup = tableIdGroups.get(id);
-        const group = JSON.stringify(tableGroup);
-        const value = mapTableGroup(group) ?? defaultValue;
+      if (idGroups.has(id)) {
+        const group = idGroups.get(id);
+        const groupName = JSON.stringify(group);
+        const value = mapGroupToValue(groupName) ?? defaultValue;
         data[i] = encodeValue(value);
       } else {
         console.warn(`ID ${id} missing in table ${config.groupBy.table}`);
