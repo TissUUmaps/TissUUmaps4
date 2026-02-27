@@ -68,7 +68,11 @@ function PointsAccordionItem({
       <AccordionItem className="border rounded-md bg-sidebar p-2">
         <AccordionHeader>
           <GripVertical ref={handleRef} />
-          <AccordionTrigger>{points.name}</AccordionTrigger>
+          <div className="flex-1 w-full">
+            <AccordionTrigger className="w-full cursor-pointer">
+              {points.name}
+            </AccordionTrigger>
+          </div>
           <div className="ml-auto flex flex-row items-center gap-x-2">
             <InputGroup className="w-24">
               <InputGroupAddon>PSF</InputGroupAddon>

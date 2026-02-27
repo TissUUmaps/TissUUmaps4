@@ -84,7 +84,9 @@ export function PointsSettingsPanel({
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="font-medium">Settings</FieldsetLegend>
+      <FieldsetLegend className="font-medium text-foreground">
+        Settings
+      </FieldsetLegend>
       <Accordion
         value={[expandedConfigControl]}
         onValueChange={(value) =>
@@ -167,7 +169,7 @@ export function PointsSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point marker</AccordionTrigger>
               <MarkerConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.pointMarker)
                 }
@@ -193,7 +195,7 @@ export function PointsSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point size</AccordionTrigger>
               <SizeConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.pointSize)
                 }
@@ -218,7 +220,7 @@ export function PointsSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point color</AccordionTrigger>
               <ColorConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.pointColor)
                 }
@@ -243,7 +245,7 @@ export function PointsSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point visibility</AccordionTrigger>
               <VisibilityConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.pointVisibility)
                 }
@@ -268,7 +270,7 @@ export function PointsSettingsPanel({
               <AccordionTriggerRightDownIcon />
               <AccordionTrigger>Point opacity</AccordionTrigger>
               <OpacityConfigSourceValue
-                className="ml-auto"
+                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
                 onClick={() =>
                   setExpandedConfigControl(ConfigControl.pointOpacity)
                 }

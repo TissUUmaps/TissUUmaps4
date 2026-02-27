@@ -1,15 +1,15 @@
 import { cn } from "@/lib/utils";
 
-import { type Points } from "@tissuumaps/core";
+import { type Shapes } from "@tissuumaps/core";
 
 import { Fieldset, FieldsetLegend } from "../../common/fieldset";
 
-export type PointsLayersPanelProps = {
-  points: Points;
+export type ShapesLayersPanelProps = {
+  shapes: Shapes;
   className?: string;
 };
 
-export function PointsLayersPanel({ className }: PointsLayersPanelProps) {
+export function ShapesLayersPanel({ className }: ShapesLayersPanelProps) {
   return (
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}

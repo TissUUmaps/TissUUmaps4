@@ -4,29 +4,29 @@ import { JsonForms } from "@jsonforms/react";
 import { EditIcon } from "lucide-react";
 import { useMemo } from "react";
 
-import { type Points } from "@tissuumaps/core";
+import { type Shapes } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import { Field, FieldLabel } from "../../common/field";
 import { Fieldset, FieldsetLegend } from "../../common/fieldset";
 import { cells, renderers } from "../../jsonforms";
 
-export type PointsSourcePanelProps = {
-  points: Points;
+export type ShapesSourcePanelProps = {
+  shapes: Shapes;
   className?: string;
 };
 
-export function PointsSourcePanel({
-  points,
+export function ShapesSourcePanel({
+  shapes,
   className,
-}: PointsSourcePanelProps) {
-  const createPointsDataLoader = useTissUUmaps(
-    (state) => state.createPointsDataLoader,
+}: ShapesSourcePanelProps) {
+  const createShapesDataLoader = useTissUUmaps(
+    (state) => state.createShapesDataLoader,
   );
 
-  const pointsDataLoader = useMemo(
-    () => createPointsDataLoader(points.id),
-    [createPointsDataLoader, points.id],
+  const shapesDataLoader = useMemo(
+    () => createShapesDataLoader(shapes.id),
+    [createShapesDataLoader, shapes.id],
   );
 
   return (
@@ -39,12 +39,12 @@ export function PointsSourcePanel({
       </FieldsetLegend>
       <Field>
         <FieldLabel>Type</FieldLabel>
-        <Input type="text" value={points.dataSource.type} disabled />
+        <Input type="text" value={shapes.dataSource.type} disabled />
       </Field>
       <JsonForms
-        schema={pointsDataLoader.schema}
-        uischema={pointsDataLoader.uischema}
-        data={points.dataSource}
+        schema={shapesDataLoader.schema}
+        uischema={shapesDataLoader.uischema}
+        data={shapes.dataSource}
         renderers={renderers}
         cells={cells}
         readonly={true}
