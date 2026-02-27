@@ -17,16 +17,37 @@ import { ResolveUtils } from "./ResolveUtils";
 
 type ColumnMap = Record<string, unknown[]>;
 
-const createTableData = (index: number[], columns: ColumnMap): TableData => ({
-  getLength: () => index.length,
-  getIndex: () => index,
-  destroy: () => undefined,
-  suggestColumnQueries: () => Promise.resolve([]),
-  getColumn: (query: string) =>
-    Promise.resolve(query in columns ? query : null),
-  loadColumn: <T>(column: string) =>
-    Promise.resolve((columns[column] ?? []) as T[]),
-});
+const createTableData = (index: number[], columns: ColumnMap): TableData => {
+  const ranges = new Map<string, [number, number]>();
+  return {
+    getLength: () => index.length,
+    getIndex: () => index,
+    destroy: () => undefined,
+    suggestColumnQueries: () => Promise.resolve([]),
+    getColumn: (query: string) =>
+      Promise.resolve(query in columns ? query : null),
+    loadColumn: <T>(
+      column: string,
+      { computeRange }: { signal?: AbortSignal; computeRange?: boolean } = {},
+    ) => {
+      const values = (columns[column] ?? []) as T[];
+      if (computeRange && !ranges.has(column)) {
+        let vmin: number | undefined, vmax: number | undefined;
+        for (const v of values) {
+          if (typeof v === "number" && Number.isFinite(v)) {
+            if (vmin === undefined || v < vmin) vmin = v;
+            if (vmax === undefined || v > vmax) vmax = v;
+          }
+        }
+        if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
+          ranges.set(column, [vmin, vmax]);
+        }
+      }
+      return Promise.resolve(values);
+    },
+    getRange: (column: string) => ranges.get(column),
+  };
+};
 
 const createLoadTable =
   (tables: Record<string, TableData>) => (tableId: string) => {
@@ -769,9 +790,7 @@ describe("ResolveUtils", () => {
           8,
         ) + 255;
       expect(Array.from(result)).toEqual([expected, expected]);
-      expect(warnSpy).toHaveBeenCalledWith(
-        "Invalid color value range, using [0, 1] instead",
-      );
+      expect(warnSpy).not.toHaveBeenCalled();
     });
 
     it("warns on invalid color table values and falls back", async () => {
