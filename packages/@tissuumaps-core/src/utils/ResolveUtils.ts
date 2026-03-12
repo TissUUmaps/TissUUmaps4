@@ -586,7 +586,9 @@ export class ResolveUtils {
     signal?.throwIfAborted();
     const values = await tableData.loadValues(config.from.column, { signal });
     signal?.throwIfAborted();
-    const valueRange = await tableData.loadValueRange(config.from.column);
+    const valueRange = await tableData.loadValueRange(config.from.column, {
+      signal,
+    });
     signal?.throwIfAborted();
     const idValues = new Map<number, unknown>();
     tableData.getIds().forEach((id, i) => {

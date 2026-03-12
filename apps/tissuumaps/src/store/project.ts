@@ -113,7 +113,7 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
     const { signal, quiet = false } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
-    const response = await fetch(url);
+    const response = await fetch(url, { signal });
     signal?.throwIfAborted();
     if (!response.ok) {
       if (quiet) {
