@@ -2,6 +2,7 @@
   "name": "@tissuumaps/storage",
   "version": "0.1.0",
   "type": "module",
+  "sideEffects": false,
   "files": [
     "./dist"
   ],
@@ -10,33 +11,63 @@
   "main": "./dist/index.cjs",
   "exports": {
     ".": {
+      "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js",
-      "require": "./dist/*.cjs"
+    "./csv": {
+      "development": "./src/csv/index.ts",
+      "types": "./dist/csv.d.ts",
+      "import": "./dist/csv.js",
+      "require": "./dist/csv.cjs"
+    },
+    "./geojson": {
+      "development": "./src/geojson/index.ts",
+      "types": "./dist/geojson.d.ts",
+      "import": "./dist/geojson.js",
+      "require": "./dist/geojson.cjs"
+    },
+    "./openseadragon": {
+      "development": "./src/openseadragon/index.ts",
+      "types": "./dist/openseadragon.d.ts",
+      "import": "./dist/openseadragon.js",
+      "require": "./dist/openseadragon.cjs"
+    },
+    "./parquet": {
+      "development": "./src/parquet/index.ts",
+      "types": "./dist/parquet.d.ts",
+      "import": "./dist/parquet.js",
+      "require": "./dist/parquet.cjs"
+    },
+    "./table": {
+      "development": "./src/table/index.ts",
+      "types": "./dist/table.d.ts",
+      "import": "./dist/table.js",
+      "require": "./dist/table.cjs"
     }
   },
   "scripts": {
     "build": "tsc -b && vite build",
-    "clean": "rm -rf dist node_modules"
+    "clean": "rm -rf build dist node_modules",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@tissuumaps/core": "workspace:*",
+    "@jsonforms/core": "^3.7.0",
+    "@tissuumaps/core": "workspace:^",
     "geojson": "^0.5.0",
     "hyparquet": "^1.24.1",
     "hyparquet-compressors": "^1.1.1",
     "papaparse": "^5.5.3"
   },
-  "engines": {
-    "node": ">=20.0.0"
+  "peerDependencies": {
+    "@tissuumaps/core": ">=0.1.0"
   },
   "devDependencies": {
-    "@jsonforms/core": "^3.7.0",
     "@types/geojson": "^7946.0.16",
     "@types/papaparse": "^5.5.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

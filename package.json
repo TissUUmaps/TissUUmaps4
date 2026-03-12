@@ -1,5 +1,5 @@
 {
-  "name": "tissuumaps",
+  "name": "@tissuumaps/root",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.28.2",
@@ -33,7 +33,7 @@
     "lint:fix": "eslint --fix .",
     "fmt": "prettier --write --ignore-unknown .",
     "fmt:check": "prettier --check --ignore-unknown .",
-    "test": "vitest run --coverage",
+    "test": "vitest run --passWithNoTests --coverage",
     "dev": "pnpm run --filter tissuumaps dev",
     "docs": "pnpm run --filter docs start",
     "build": "pnpm run build:packages && pnpm run build:apps",

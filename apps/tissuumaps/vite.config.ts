@@ -7,8 +7,8 @@ import { defineConfig } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss(), viteSingleFile()],
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), tailwindcss(), mode === "production" && viteSingleFile()],
   build: {
     chunkSizeWarningLimit: 2048,
   },
@@ -30,4 +30,4 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-});
+}));
