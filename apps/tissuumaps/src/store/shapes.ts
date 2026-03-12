@@ -1,6 +1,7 @@
 import { deepEqual } from "fast-equals";
 
 import {
+  type MultiPolygon,
   type Shapes,
   type ShapesData,
   type ShapesDataLoader,
@@ -10,11 +11,17 @@ import {
 import { loadTableDataProxy } from "../proxies/TableDataProxy";
 import { type TissUUmapsStateCreator } from "./index";
 
+export type LoadedShapes = {
+  data: ShapesData;
+  loadedMultiPolygons?: MultiPolygon[];
+};
+
 export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
 
 export type ShapesSliceState = {
   shapes: Shapes[];
-  _shapesDataCache: { dataSource: ShapesDataSource; data: ShapesData }[];
+  loadedShapes: Map<string, LoadedShapes>;
+  shapesDataSourceCaches: { dataSource: ShapesDataSource; data: ShapesData }[];
 };
 
 export type ShapesSliceActions = {
@@ -26,8 +33,13 @@ export type ShapesSliceActions = {
   createShapesDataLoader: (shapesId: string) => ShapesDataLoader<ShapesData>;
   loadShapes: (
     shapesId: string,
-    options?: { signal?: AbortSignal },
-  ) => Promise<ShapesData>;
+    options?: { signal?: AbortSignal; reload?: boolean },
+  ) => Promise<LoadedShapes>;
+  loadShapesMultiPolygons: (
+    shapesId: string,
+    options?: { signal?: AbortSignal; reload?: boolean },
+  ) => Promise<MultiPolygon[]>;
+  unloadShapesMultiPolygons: (shapesId: string) => void;
   unloadShapes: (shapesId: string) => void;
 };
 
@@ -114,47 +126,95 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
     return dataLoader;
   },
   loadShapes: async (shapesId, options) => {
-    const { signal } = options ?? {};
+    const { signal, reload = false } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
+    const loadedShapes = state.loadedShapes.get(shapesId);
+    if (loadedShapes !== undefined && !reload) {
+      return loadedShapes;
+    }
     const shapes = state.shapes.find((shapes) => shapes.id === shapesId);
     if (shapes === undefined) {
       throw new Error(`Shapes with ID ${shapesId} not found.`);
     }
-    const cache = state._shapesDataCache.find(({ dataSource }) =>
-      deepEqual(dataSource, shapes.dataSource),
+    let data;
+    const dataSourceCache = state.shapesDataSourceCaches.find(
+      ({ dataSource }) => deepEqual(dataSource, shapes.dataSource),
     );
-    if (cache !== undefined) {
-      return cache.data;
+    if (dataSourceCache !== undefined) {
+      data = dataSourceCache.data;
+    } else {
+      const dataLoader = state.createShapesDataLoader(shapesId);
+      const newData = await dataLoader.loadShapes({ signal });
+      signal?.throwIfAborted();
+      set((draft) => {
+        draft.shapesDataSourceCaches.push({
+          dataSource: shapes.dataSource,
+          data: newData,
+        });
+      });
+      data = newData;
     }
-    const dataLoader = state.createShapesDataLoader(shapesId);
-    const data = await dataLoader.loadShapes({ signal });
+    const newLoadedShapes = { data };
+    set((draft) => {
+      draft.loadedShapes.set(shapesId, newLoadedShapes);
+    });
+    return newLoadedShapes;
+  },
+  loadShapesMultiPolygons: async (shapesId, options) => {
+    const { signal, reload = false } = options ?? {};
+    signal?.throwIfAborted();
+    const state = get();
+    const loadedShapes = await state.loadShapes(shapesId, { signal });
+    signal?.throwIfAborted();
+    if (loadedShapes.loadedMultiPolygons !== undefined && !reload) {
+      return loadedShapes.loadedMultiPolygons;
+    }
+    const multiPolygons = await loadedShapes.data.loadMultiPolygons({ signal });
     signal?.throwIfAborted();
     set((draft) => {
-      draft._shapesDataCache.push({ dataSource: shapes.dataSource, data });
+      const loadedShapes = draft.loadedShapes.get(shapesId)!;
+      loadedShapes.loadedMultiPolygons = multiPolygons;
     });
-    return data;
+    return multiPolygons;
+  },
+  unloadShapesMultiPolygons: (shapesId) => {
+    set((draft) => {
+      const loadedShapes = draft.loadedShapes.get(shapesId);
+      if (loadedShapes === undefined) {
+        throw new Error(`Shapes with ID ${shapesId} not loaded.`);
+      }
+      loadedShapes.loadedMultiPolygons = undefined;
+    });
   },
   unloadShapes: (shapesId) => {
     const state = get();
-    const shapes = state.shapes.find((shapes) => shapes.id === shapesId);
-    if (shapes === undefined) {
-      throw new Error(`Shapes with ID ${shapesId} not found.`);
-    }
-    const cacheIndex = state._shapesDataCache.findIndex(({ dataSource }) =>
-      deepEqual(dataSource, shapes.dataSource),
-    );
-    if (cacheIndex !== -1) {
-      const cache = state._shapesDataCache[cacheIndex]!;
+    const loadedShapes = state.loadedShapes.get(shapesId);
+    if (loadedShapes !== undefined) {
+      let destroy = true;
+      for (const other of state.loadedShapes.values()) {
+        if (other !== loadedShapes && other.data === loadedShapes.data) {
+          destroy = false;
+          break;
+        }
+      }
       set((draft) => {
-        draft._shapesDataCache.splice(cacheIndex, 1);
+        draft.loadedShapes.delete(shapesId);
+        if (destroy) {
+          draft.shapesDataSourceCaches = draft.shapesDataSourceCaches.filter(
+            (dataSourceCache) => dataSourceCache.data !== loadedShapes.data,
+          );
+        }
       });
-      cache.data.destroy();
+      if (destroy) {
+        loadedShapes.data.destroy();
+      }
     }
   },
 });
 
 const initialShapesSliceState: ShapesSliceState = {
   shapes: [],
-  _shapesDataCache: [],
+  loadedShapes: new Map(),
+  shapesDataSourceCaches: [],
 };

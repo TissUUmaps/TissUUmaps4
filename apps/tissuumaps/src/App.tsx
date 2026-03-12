@@ -20,6 +20,10 @@ import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { usePlugins } from "./hooks/usePlugins";
 import { useProject } from "./hooks/useProject";
+import { useImageDataProxy } from "./proxies/ImageDataProxy";
+import { useLabelsDataProxy } from "./proxies/LabelsDataProxy";
+import { usePointsDataProxy } from "./proxies/PointsDataProxy";
+import { useShapesDataProxy } from "./proxies/ShapesDataProxy";
 import { useTableDataProxy } from "./proxies/TableDataProxy";
 import { useTissUUmaps } from "./store";
 
@@ -136,10 +140,6 @@ export function App() {
       viewerAnimationStartOptions: state.viewerAnimationStartOptions,
       viewerAnimationFinishOptions: state.viewerAnimationFinishOptions,
       drawOptions: state.drawOptions,
-      loadImage: state.loadImage,
-      loadLabels: state.loadLabels,
-      loadPoints: state.loadPoints,
-      loadShapes: state.loadShapes,
       // rerender upon changes to data loader factories
       _imageDataLoaderFactories: state.imageDataLoaderFactories,
       _labelsDataLoaderFactories: state.labelsDataLoaderFactories,
@@ -150,6 +150,10 @@ export function App() {
   );
 
   const viewerActions = {
+    loadImage: useImageDataProxy(),
+    loadLabels: useLabelsDataProxy(),
+    loadPoints: usePointsDataProxy(),
+    loadShapes: useShapesDataProxy(),
     loadTable: useTableDataProxy(),
   };
 

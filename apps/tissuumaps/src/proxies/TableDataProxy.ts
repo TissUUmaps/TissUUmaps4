@@ -7,8 +7,8 @@ import { useTissUUmaps } from "../store";
 import { type LoadedTable, type LoadedTableColumn } from "../store/table";
 
 export class TableDataProxy implements TableData {
-  private readonly loadedTable: LoadedTable;
-  private readonly loadTableColumn: <T>(
+  private readonly _loadedTable: LoadedTable;
+  private readonly _loadTableColumn: <T>(
     column: string,
     options?: { signal?: AbortSignal; reload?: boolean },
   ) => Promise<LoadedTableColumn<T>>;
@@ -20,33 +20,36 @@ export class TableDataProxy implements TableData {
       options?: { signal?: AbortSignal; reload?: boolean },
     ) => Promise<LoadedTableColumn<T>>,
   ) {
-    this.loadedTable = loadedTable;
-    this.loadTableColumn = loadTableColumn;
+    this._loadedTable = loadedTable;
+    this._loadTableColumn = loadTableColumn;
   }
 
   getIds(): number[] {
-    return this.loadedTable.data.getIds();
+    return this._loadedTable.data.getIds();
   }
 
   getSize(): number {
-    return this.loadedTable.data.getSize();
+    return this._loadedTable.data.getSize();
   }
 
   async suggestColumnQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },
   ): Promise<string[]> {
-    return await this.loadedTable.data.suggestColumnQueries(
-      currentQuery,
-      options,
-    );
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    return await this._loadedTable.data.suggestColumnQueries(currentQuery, {
+      signal,
+    });
   }
 
   async resolveColumnQuery(
     query: string,
     options?: { signal?: AbortSignal },
   ): Promise<string | null> {
-    return await this.loadedTable.data.resolveColumnQuery(query, options);
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    return await this._loadedTable.data.resolveColumnQuery(query, { signal });
   }
 
   async loadValues<T>(
@@ -55,7 +58,9 @@ export class TableDataProxy implements TableData {
   ): Promise<MappableArrayLike<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const loadedTableColumn = await this.loadTableColumn<T>(column, { signal });
+    const loadedTableColumn = await this._loadTableColumn<T>(column, {
+      signal,
+    });
     signal?.throwIfAborted();
     return loadedTableColumn.values;
   }
@@ -66,13 +71,13 @@ export class TableDataProxy implements TableData {
   ): Promise<[number, number] | undefined> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const loadedTableColumn = await this.loadTableColumn(column, { signal });
+    const loadedTableColumn = await this._loadTableColumn(column, { signal });
     signal?.throwIfAborted();
     return loadedTableColumn.valueRange;
   }
 
   destroy(): void {
-    // cleanup is handled by application
+    this._loadedTable.data.destroy();
   }
 }
 

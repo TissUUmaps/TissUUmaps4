@@ -10,11 +10,21 @@ import {
 import { loadTableDataProxy } from "../proxies/TableDataProxy";
 import { type TissUUmapsStateCreator } from "./index";
 
+export type LoadedPoints = {
+  data: PointsData;
+  loadedDimensions: Map<string, LoadedPointsDimension>;
+};
+
+export type LoadedPointsDimension = {
+  coordinates: Float32Array;
+};
+
 export type PointsSlice = PointsSliceState & PointsSliceActions;
 
 export type PointsSliceState = {
   points: Points[];
-  _pointsDataCache: { dataSource: PointsDataSource; data: PointsData }[];
+  loadedPoints: Map<string, LoadedPoints>;
+  pointsDataSourceCaches: { dataSource: PointsDataSource; data: PointsData }[];
 };
 
 export type PointsSliceActions = {
@@ -26,8 +36,14 @@ export type PointsSliceActions = {
   createPointsDataLoader: (pointsId: string) => PointsDataLoader<PointsData>;
   loadPoints: (
     pointsId: string,
-    options?: { signal?: AbortSignal },
-  ) => Promise<PointsData>;
+    options?: { signal?: AbortSignal; reload?: boolean },
+  ) => Promise<LoadedPoints>;
+  loadPointsDimension: (
+    pointsId: string,
+    dimension: string,
+    options?: { signal?: AbortSignal; reload?: boolean },
+  ) => Promise<LoadedPointsDimension>;
+  unloadPointsDimension: (pointsId: string, dimension: string) => void;
   unloadPoints: (pointsId: string) => void;
 };
 
@@ -114,47 +130,99 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
     return dataLoader;
   },
   loadPoints: async (pointsId, options) => {
-    const { signal } = options ?? {};
+    const { signal, reload = false } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
+    const loadedPoints = state.loadedPoints.get(pointsId);
+    if (loadedPoints !== undefined && !reload) {
+      return loadedPoints;
+    }
     const points = state.points.find((points) => points.id === pointsId);
     if (points === undefined) {
       throw new Error(`Points with ID ${pointsId} not found.`);
     }
-    const cache = state._pointsDataCache.find(({ dataSource }) =>
-      deepEqual(dataSource, points.dataSource),
+    let data;
+    const dataSourceCache = state.pointsDataSourceCaches.find(
+      ({ dataSource }) => deepEqual(dataSource, points.dataSource),
     );
-    if (cache !== undefined) {
-      return cache.data;
+    if (dataSourceCache !== undefined) {
+      data = dataSourceCache.data;
+    } else {
+      const dataLoader = state.createPointsDataLoader(pointsId);
+      const newData = await dataLoader.loadPoints({ signal });
+      signal?.throwIfAborted();
+      set((draft) => {
+        draft.pointsDataSourceCaches.push({
+          dataSource: points.dataSource,
+          data: newData,
+        });
+      });
+      data = newData;
     }
-    const dataLoader = state.createPointsDataLoader(pointsId);
-    const data = await dataLoader.loadPoints({ signal });
-    signal?.throwIfAborted();
+    const newLoadedPoints = { data, loadedDimensions: new Map() };
     set((draft) => {
-      draft._pointsDataCache.push({ dataSource: points.dataSource, data });
+      draft.loadedPoints.set(pointsId, newLoadedPoints);
     });
-    return data;
+    return newLoadedPoints;
+  },
+  loadPointsDimension: async (pointsId, dimension, options) => {
+    const { signal, reload = false } = options ?? {};
+    signal?.throwIfAborted();
+    const state = get();
+    const loadedPoints = await state.loadPoints(pointsId, { signal });
+    signal?.throwIfAborted();
+    const loadedDimension = loadedPoints.loadedDimensions.get(dimension);
+    if (loadedDimension !== undefined && !reload) {
+      return loadedDimension;
+    }
+    const coordinates = await loadedPoints.data.loadCoordinates(dimension, {
+      signal,
+    });
+    signal?.throwIfAborted();
+    const newLoadedDimension = { coordinates };
+    set((draft) => {
+      const loadedPoints = draft.loadedPoints.get(pointsId)!;
+      loadedPoints.loadedDimensions.set(dimension, newLoadedDimension);
+    });
+    return newLoadedDimension;
+  },
+  unloadPointsDimension: (pointsId, dimension) => {
+    set((draft) => {
+      const loadedPoints = draft.loadedPoints.get(pointsId);
+      if (loadedPoints === undefined) {
+        throw new Error(`Points with ID ${pointsId} not loaded.`);
+      }
+      loadedPoints.loadedDimensions.delete(dimension);
+    });
   },
   unloadPoints: (pointsId) => {
     const state = get();
-    const points = state.points.find((points) => points.id === pointsId);
-    if (points === undefined) {
-      throw new Error(`Points with ID ${pointsId} not found.`);
-    }
-    const cacheIndex = state._pointsDataCache.findIndex(({ dataSource }) =>
-      deepEqual(dataSource, points.dataSource),
-    );
-    if (cacheIndex !== -1) {
-      const cache = state._pointsDataCache[cacheIndex]!;
+    const loadedPoints = state.loadedPoints.get(pointsId);
+    if (loadedPoints !== undefined) {
+      let destroy = true;
+      for (const other of state.loadedPoints.values()) {
+        if (other !== loadedPoints && other.data === loadedPoints.data) {
+          destroy = false;
+          break;
+        }
+      }
       set((draft) => {
-        draft._pointsDataCache.splice(cacheIndex, 1);
+        draft.loadedPoints.delete(pointsId);
+        if (destroy) {
+          draft.pointsDataSourceCaches = draft.pointsDataSourceCaches.filter(
+            (dataSourceCache) => dataSourceCache.data !== loadedPoints.data,
+          );
+        }
       });
-      cache.data.destroy();
+      if (destroy) {
+        loadedPoints.data.destroy();
+      }
     }
   },
 });
 
 const initialPointsSliceState: PointsSliceState = {
   points: [],
-  _pointsDataCache: [],
+  loadedPoints: new Map(),
+  pointsDataSourceCaches: [],
 };

@@ -121,7 +121,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
     return dataLoader;
   },
   loadTable: async (tableId, options) => {
-    const { signal, reload } = options ?? {};
+    const { signal, reload = false } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
     const loadedTable = state.loadedTables.get(tableId);
@@ -139,15 +139,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
     if (dataSourceCache !== undefined) {
       data = dataSourceCache.data;
     } else {
-      const dataLoaderFactory = state.tableDataLoaderFactories.get(
-        table.dataSource.type,
-      );
-      if (dataLoaderFactory === undefined) {
-        throw new Error(
-          `No table data loader found for type ${table.dataSource.type}.`,
-        );
-      }
-      const dataLoader = dataLoaderFactory(table.dataSource, state.workspace);
+      const dataLoader = state.createTableDataLoader(tableId);
       const newData = await dataLoader.loadTable({ signal });
       signal?.throwIfAborted();
       set((draft) => {
@@ -158,11 +150,11 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
       });
       data = newData;
     }
-    const newLoadedData = { data, loadedColumns: new Map() };
+    const newLoadedTable = { data, loadedColumns: new Map() };
     set((draft) => {
-      draft.loadedTables.set(tableId, newLoadedData);
+      draft.loadedTables.set(tableId, newLoadedTable);
     });
-    return newLoadedData;
+    return newLoadedTable;
   },
   loadTableColumn: async <T>(
     tableId: string,
@@ -184,11 +176,12 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
       signal,
     });
     signal?.throwIfAborted();
+    const newLoadedColumn = { values, valueRange };
     set((draft) => {
       const loadedTable = draft.loadedTables.get(tableId)!;
-      loadedTable.loadedColumns.set(column, { values, valueRange });
+      loadedTable.loadedColumns.set(column, newLoadedColumn);
     });
-    return { values, valueRange };
+    return newLoadedColumn;
   },
   unloadTableColumn: (tableId, column) => {
     set((draft) => {
@@ -203,21 +196,24 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
     const state = get();
     const loadedTable = state.loadedTables.get(tableId);
     if (loadedTable !== undefined) {
-      let clearDataSourceCache = true;
-      for (const otherLoadedData of state.loadedTables.values()) {
-        if (otherLoadedData.data === loadedTable.data) {
-          clearDataSourceCache = false;
+      let destroy = true;
+      for (const other of state.loadedTables.values()) {
+        if (other !== loadedTable && other.data === loadedTable.data) {
+          destroy = false;
           break;
         }
       }
       set((draft) => {
         draft.loadedTables.delete(tableId);
-        if (clearDataSourceCache) {
+        if (destroy) {
           draft.tableDataSourceCaches = draft.tableDataSourceCaches.filter(
             (dataSourceCache) => dataSourceCache.data !== loadedTable.data,
           );
         }
       });
+      if (destroy) {
+        loadedTable.data.destroy();
+      }
     }
   },
 });

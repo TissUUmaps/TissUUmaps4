@@ -10,11 +10,16 @@ import {
 import { loadTableDataProxy } from "../proxies/TableDataProxy";
 import { type TissUUmapsStateCreator } from "./index";
 
+export type LoadedImage = {
+  data: ImageData;
+};
+
 export type ImageSlice = ImageSliceState & ImageSliceActions;
 
 export type ImageSliceState = {
   images: Image[];
-  _imageDataCache: { dataSource: ImageDataSource; data: ImageData }[];
+  loadedImages: Map<string, LoadedImage>;
+  imageDataSourceCaches: { dataSource: ImageDataSource; data: ImageData }[];
 };
 
 export type ImageSliceActions = {
@@ -26,8 +31,8 @@ export type ImageSliceActions = {
   createImageDataLoader: (imageId: string) => ImageDataLoader<ImageData>;
   loadImage: (
     imageId: string,
-    options?: { signal?: AbortSignal },
-  ) => Promise<ImageData>;
+    options?: { signal?: AbortSignal; reload?: boolean },
+  ) => Promise<LoadedImage>;
   unloadImage: (imageId: string) => void;
 };
 
@@ -114,47 +119,69 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
     return dataLoader;
   },
   loadImage: async (imageId, options) => {
-    const { signal } = options ?? {};
+    const { signal, reload = false } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
+    const loadedImage = state.loadedImages.get(imageId);
+    if (loadedImage !== undefined && !reload) {
+      return loadedImage;
+    }
     const image = state.images.find((image) => image.id === imageId);
     if (image === undefined) {
       throw new Error(`Image with ID ${imageId} not found.`);
     }
-    const cache = state._imageDataCache.find(({ dataSource }) =>
+    let data;
+    const dataSourceCache = state.imageDataSourceCaches.find(({ dataSource }) =>
       deepEqual(dataSource, image.dataSource),
     );
-    if (cache !== undefined) {
-      return cache.data;
+    if (dataSourceCache !== undefined) {
+      data = dataSourceCache.data;
+    } else {
+      const dataLoader = state.createImageDataLoader(imageId);
+      const newData = await dataLoader.loadImage({ signal });
+      signal?.throwIfAborted();
+      set((draft) => {
+        draft.imageDataSourceCaches.push({
+          dataSource: image.dataSource,
+          data: newData,
+        });
+      });
+      data = newData;
     }
-    const dataLoader = state.createImageDataLoader(imageId);
-    const data = await dataLoader.loadImage({ signal });
-    signal?.throwIfAborted();
+    const newLoadedImage = { data };
     set((draft) => {
-      draft._imageDataCache.push({ dataSource: image.dataSource, data });
+      draft.loadedImages.set(imageId, newLoadedImage);
     });
-    return data;
+    return newLoadedImage;
   },
   unloadImage: (imageId) => {
     const state = get();
-    const image = state.images.find((image) => image.id === imageId);
-    if (image === undefined) {
-      throw new Error(`Image with ID ${imageId} not found.`);
-    }
-    const cacheIndex = state._imageDataCache.findIndex(({ dataSource }) =>
-      deepEqual(dataSource, image.dataSource),
-    );
-    if (cacheIndex !== -1) {
-      const cache = state._imageDataCache[cacheIndex]!;
+    const loadedImage = state.loadedImages.get(imageId);
+    if (loadedImage !== undefined) {
+      let destroy = true;
+      for (const other of state.loadedImages.values()) {
+        if (other !== loadedImage && other.data === loadedImage.data) {
+          destroy = false;
+          break;
+        }
+      }
       set((draft) => {
-        draft._imageDataCache.splice(cacheIndex, 1);
+        draft.loadedImages.delete(imageId);
+        if (destroy) {
+          draft.imageDataSourceCaches = draft.imageDataSourceCaches.filter(
+            (dataSourceCache) => dataSourceCache.data !== loadedImage.data,
+          );
+        }
       });
-      cache.data.destroy();
+      if (destroy) {
+        loadedImage.data.destroy();
+      }
     }
   },
 });
 
 const initialImageSliceState: ImageSliceState = {
   images: [],
-  _imageDataCache: [],
+  loadedImages: new Map(),
+  imageDataSourceCaches: [],
 };

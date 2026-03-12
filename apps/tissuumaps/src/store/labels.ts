@@ -10,11 +10,16 @@ import {
 import { loadTableDataProxy } from "../proxies/TableDataProxy";
 import { type TissUUmapsStateCreator } from "./index";
 
+export type LoadedLabels = {
+  data: LabelsData;
+};
+
 export type LabelsSlice = LabelsSliceState & LabelsSliceActions;
 
 export type LabelsSliceState = {
   labels: Labels[];
-  _labelsDataCache: { dataSource: LabelsDataSource; data: LabelsData }[];
+  loadedLabels: Map<string, LoadedLabels>;
+  labelsDataSourceCaches: { dataSource: LabelsDataSource; data: LabelsData }[];
 };
 
 export type LabelsSliceActions = {
@@ -26,8 +31,8 @@ export type LabelsSliceActions = {
   createLabelsDataLoader: (labelsId: string) => LabelsDataLoader<LabelsData>;
   loadLabels: (
     labelsId: string,
-    options?: { signal?: AbortSignal },
-  ) => Promise<LabelsData>;
+    options?: { signal?: AbortSignal; reload?: boolean },
+  ) => Promise<LoadedLabels>;
   unloadLabels: (labelsId: string) => void;
 };
 
@@ -114,47 +119,69 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
     return dataLoader;
   },
   loadLabels: async (labelsId, options) => {
-    const { signal } = options ?? {};
+    const { signal, reload = false } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
+    const loadedLabels = state.loadedLabels.get(labelsId);
+    if (loadedLabels !== undefined && !reload) {
+      return loadedLabels;
+    }
     const labels = state.labels.find((labels) => labels.id === labelsId);
     if (labels === undefined) {
       throw new Error(`Labels with ID ${labelsId} not found.`);
     }
-    const cache = state._labelsDataCache.find(({ dataSource }) =>
-      deepEqual(dataSource, labels.dataSource),
+    let data;
+    const dataSourceCache = state.labelsDataSourceCaches.find(
+      ({ dataSource }) => deepEqual(dataSource, labels.dataSource),
     );
-    if (cache !== undefined) {
-      return cache.data;
+    if (dataSourceCache !== undefined) {
+      data = dataSourceCache.data;
+    } else {
+      const dataLoader = state.createLabelsDataLoader(labelsId);
+      const newData = await dataLoader.loadLabels({ signal });
+      signal?.throwIfAborted();
+      set((draft) => {
+        draft.labelsDataSourceCaches.push({
+          dataSource: labels.dataSource,
+          data: newData,
+        });
+      });
+      data = newData;
     }
-    const dataLoader = state.createLabelsDataLoader(labelsId);
-    const data = await dataLoader.loadLabels({ signal });
-    signal?.throwIfAborted();
+    const newLoadedLabels = { data };
     set((draft) => {
-      draft._labelsDataCache.push({ dataSource: labels.dataSource, data });
+      draft.loadedLabels.set(labelsId, newLoadedLabels);
     });
-    return data;
+    return newLoadedLabels;
   },
   unloadLabels: (labelsId) => {
     const state = get();
-    const labels = state.labels.find((labels) => labels.id === labelsId);
-    if (labels === undefined) {
-      throw new Error(`Labels with ID ${labelsId} not found.`);
-    }
-    const cacheIndex = state._labelsDataCache.findIndex(({ dataSource }) =>
-      deepEqual(dataSource, labels.dataSource),
-    );
-    if (cacheIndex !== -1) {
-      const cache = state._labelsDataCache[cacheIndex]!;
+    const loadedLabels = state.loadedLabels.get(labelsId);
+    if (loadedLabels !== undefined) {
+      let destroy = true;
+      for (const other of state.loadedLabels.values()) {
+        if (other !== loadedLabels && other.data === loadedLabels.data) {
+          destroy = false;
+          break;
+        }
+      }
       set((draft) => {
-        draft._labelsDataCache.splice(cacheIndex, 1);
+        draft.loadedLabels.delete(labelsId);
+        if (destroy) {
+          draft.labelsDataSourceCaches = draft.labelsDataSourceCaches.filter(
+            (dataSourceCache) => dataSourceCache.data !== loadedLabels.data,
+          );
+        }
       });
-      cache.data.destroy();
+      if (destroy) {
+        loadedLabels.data.destroy();
+      }
     }
   },
 });
 
 const initialLabelsSliceState: LabelsSliceState = {
   labels: [],
-  _labelsDataCache: [],
+  loadedLabels: new Map(),
+  labelsDataSourceCaches: [],
 };
