@@ -74,8 +74,10 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
       }));
     }
 
-    const step = (results: papaparse.ParseStepResult<string[]>) => {
-      signal?.throwIfAborted();
+    const step = (
+      results: papaparse.ParseStepResult<string[]>,
+      parser: papaparse.Parser,
+    ) => {
       if (
         columns === undefined ||
         filteredColumns === undefined ||
@@ -113,10 +115,12 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
           }
         }
       }
+      if (signal?.aborted) {
+        parser.abort();
+      }
     };
 
     const complete = () => {
-      signal?.throwIfAborted();
       const columnValues = new Map<string, string[] | Float32Array>();
       for (const columnInfo of filteredColumnInfos!) {
         if (columnInfo.currentChunk.length > 0) {
