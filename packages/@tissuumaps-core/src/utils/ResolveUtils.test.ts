@@ -17,34 +17,32 @@ import { ResolveUtils } from "./ResolveUtils";
 
 type ColumnMap = Record<string, unknown[]>;
 
-const createTableData = (ids: number[], columns: ColumnMap): TableData => {
-  const ranges = new Map<string, [number, number]>();
-  return {
-    getIds: () => ids,
-    getSize: () => ids.length,
-    destroy: () => undefined,
-    suggestColumnQueries: () => Promise.resolve([]),
-    resolveColumnQuery: (query: string) =>
-      Promise.resolve(query in columns ? query : null),
-    loadValues: <T>(column: string) => {
-      const values = (columns[column] ?? []) as T[];
-      if (!ranges.has(column)) {
-        let vmin: number | undefined, vmax: number | undefined;
-        for (const v of values) {
-          if (typeof v === "number" && Number.isFinite(v)) {
-            if (vmin === undefined || v < vmin) vmin = v;
-            if (vmax === undefined || v > vmax) vmax = v;
-          }
-        }
-        if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
-          ranges.set(column, [vmin, vmax]);
-        }
-      }
-      return Promise.resolve(values);
-    },
-    loadValueRange: (column: string) => Promise.resolve(ranges.get(column)),
-  };
+const computeRange = (values: unknown[]): [number, number] | undefined => {
+  let vmin: number | undefined, vmax: number | undefined;
+  for (const v of values) {
+    if (typeof v === "number" && Number.isFinite(v)) {
+      if (vmin === undefined || v < vmin) vmin = v;
+      if (vmax === undefined || v > vmax) vmax = v;
+    }
+  }
+  if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
+    return [vmin, vmax];
+  }
+  return undefined;
 };
+
+const createTableData = (ids: number[], columns: ColumnMap): TableData => ({
+  getIds: () => ids,
+  getSize: () => ids.length,
+  destroy: () => undefined,
+  suggestColumnQueries: () => Promise.resolve([]),
+  resolveColumnQuery: (query: string) =>
+    Promise.resolve(query in columns ? query : null),
+  loadValues: <T>(column: string) =>
+    Promise.resolve((columns[column] ?? []) as T[]),
+  loadValueRange: (column: string) =>
+    Promise.resolve(computeRange(columns[column] ?? [])),
+});
 
 const createLoadTable =
   (tables: Record<string, TableData>) => (tableId: string) => {
