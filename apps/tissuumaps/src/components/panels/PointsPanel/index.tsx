@@ -24,9 +24,14 @@ import { PointsLayersPanel } from "./PointsLayersPanel";
 import { PointsSettingsPanel } from "./PointsSettingsPanel";
 import { PointsSourcePanel } from "./PointsSourcePanel";
 
-export function PointsPanel({ className }: { className?: string }) {
+export type PointsPanelProps = {
+  className?: string;
+};
+
+export function PointsPanel({ className }: PointsPanelProps) {
   const points = useTissUUmaps((state) => state.points);
   const movePoints = useTissUUmaps((state) => state.movePoints);
+
   return (
     <DragDropProvider
       onDragEnd={(event) => {
@@ -51,13 +56,12 @@ export function PointsPanel({ className }: { className?: string }) {
   );
 }
 
-function PointsAccordionItem({
-  points,
-  index,
-}: {
+type PointsAccordionItemProps = {
   points: Points;
   index: number;
-}) {
+};
+
+function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
   const deletePoints = useTissUUmaps((state) => state.deletePoints);
 

@@ -1,17 +1,20 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { useVisibilityConfigContext } from "./context";
+import { type VisibilityConfigControlState } from "./useVisibilityConfigControl";
 
 export type VisibilityConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],
   "value" | "onValueChange"
->;
+> & {
+  state: VisibilityConfigControlState;
+};
 
-export function VisibilityConfigSourceToggleGroup(
-  props: VisibilityConfigSourceToggleGroupProps,
-) {
-  const { activeSource, currentSource, setCurrentSource } =
-    useVisibilityConfigContext();
+export function VisibilityConfigSourceToggleGroup({
+  state,
+  ...props
+}: VisibilityConfigSourceToggleGroupProps) {
+  const { activeSource, currentSource, setCurrentSource } = state;
+
   return (
     <ToggleGroup
       value={[currentSource]}

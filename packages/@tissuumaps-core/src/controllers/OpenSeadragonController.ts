@@ -196,14 +196,15 @@ export class OpenSeadragonController {
     labels: Labels[],
     loadImage: (
       imageId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<ImageData>,
     loadLabels: (
       labelsId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
-    { signal }: { signal?: AbortSignal } = {},
+    options?: { signal?: AbortSignal },
   ): Promise<void> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs = await this._loadObjects(
       layers,
@@ -239,14 +240,15 @@ export class OpenSeadragonController {
     labels: Labels[],
     loadImage: (
       imageId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<ImageData>,
     loadLabels: (
       labelsId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
-    { signal }: { signal?: AbortSignal } = {},
+    options?: { signal?: AbortSignal },
   ): Promise<ObjectRef[]> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs: ObjectRef[] = [];
     for (const layer of layers) {

@@ -7,7 +7,6 @@ import {
   type IDockviewPanelHeaderProps,
 } from "dockview-react";
 import { Moon, Sun } from "lucide-react";
-import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
@@ -19,13 +18,10 @@ import { PointsPanel } from "./components/panels/PointsPanel";
 import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
+import { usePlugins } from "./hooks/usePlugins";
+import { useProject } from "./hooks/useProject";
+import { useTableDataProxy } from "./proxies/TableDataProxy";
 import { useTissUUmaps } from "./store";
-
-declare global {
-  interface Window {
-    TissUUmaps?: typeof useTissUUmaps;
-  }
-}
 
 const dockviewTheme: DockviewTheme = {
   name: "tailwindcss",
@@ -117,13 +113,15 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
 };
 
 export function App() {
-  const dark = useTissUUmaps((state) => state.dark);
-  const clearProject = useTissUUmaps((state) => state.clearProject);
-  const loadProjectFromURL = useTissUUmaps((state) => state.loadProjectFromURL);
+  usePlugins();
 
-  const viewerAdapter = useTissUUmaps(
+  useProject("project", "project.json");
+
+  const dark = useTissUUmaps((state) => state.dark);
+
+  const viewerState = useTissUUmaps(
     useShallow((state) => ({
-      projectDir: state.projectDir,
+      workspace: state.workspace,
       layers: state.layers,
       images: state.images,
       labels: state.labels,
@@ -142,7 +140,6 @@ export function App() {
       loadLabels: state.loadLabels,
       loadPoints: state.loadPoints,
       loadShapes: state.loadShapes,
-      loadTable: state.loadTable,
       // rerender upon changes to data loader factories
       _imageDataLoaderFactories: state.imageDataLoaderFactories,
       _labelsDataLoaderFactories: state.labelsDataLoaderFactories,
@@ -152,32 +149,11 @@ export function App() {
     })),
   );
 
-  // plugins
-  useEffect(() => {
-    window.TissUUmaps = useTissUUmaps;
-    return () => {
-      delete window.TissUUmaps;
-    };
-  }, []);
+  const viewerActions = {
+    loadTable: useTableDataProxy(),
+  };
 
-  // load project
-  useEffect(() => {
-    const abortController = new AbortController();
-    const params = new URLSearchParams(window.location.search);
-    const projectUrl = params.get("project") ?? "project.json";
-    loadProjectFromURL(projectUrl, {
-      signal: abortController.signal,
-      quiet: true,
-    }).catch((reason) => {
-      if (!abortController.signal.aborted) {
-        console.error(reason);
-      }
-    });
-    return () => {
-      abortController.abort();
-      clearProject();
-    };
-  }, [clearProject, loadProjectFromURL]);
+  const viewerAdapter = { ...viewerState, ...viewerActions };
 
   return (
     // https://tailwindcss.com/docs/dark-mode

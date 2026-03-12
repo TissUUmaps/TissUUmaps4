@@ -11,7 +11,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
   const [syncShapes, dispatchSyncShapes] = useReducer((pass) => pass + 1, 0);
 
   const {
-    projectDir,
+    workspace,
     layers,
     points,
     shapes,
@@ -120,7 +120,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     colorMaps,
     visibilityMaps,
     opacityMaps,
-    projectDir,
+    workspace,
     loadPoints,
     loadTable,
   ]);
@@ -165,7 +165,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     colorMaps,
     visibilityMaps,
     opacityMaps,
-    projectDir,
+    workspace,
     loadShapes,
     loadTable,
   ]);

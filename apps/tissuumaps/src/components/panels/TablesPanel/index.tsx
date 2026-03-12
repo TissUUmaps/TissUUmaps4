@@ -9,8 +9,13 @@ import {
 } from "../../common/accordion";
 import { TablesPanelItem } from "./TablesPanelItem";
 
-export function TablesPanel({ className }: { className?: string }) {
+export type TablesPanelProps = {
+  className?: string;
+};
+
+export function TablesPanel({ className }: TablesPanelProps) {
   const tables = useTissUUmaps((state) => state.tables);
+
   return (
     <Accordion className={className} multiple>
       {tables.map((table) => (

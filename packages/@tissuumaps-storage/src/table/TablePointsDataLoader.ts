@@ -12,26 +12,25 @@ export class TablePointsDataLoader extends AbstractPointsDataLoader<
   TablePointsDataSource,
   PointsData
 > {
-  readonly schema = tablePointsDataSourceSchema;
-  readonly uischema = tablePointsDataSourceUISchema;
+  readonly dataSourceSchema = tablePointsDataSourceSchema;
+  readonly dataSourceUISchema = tablePointsDataSourceUISchema;
 
   private readonly _loadTable: (
     tableId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<TableData>;
 
   constructor(
     dataSource: TablePointsDataSource,
-    projectDir: FileSystemDirectoryHandle | null,
+    workspace: FileSystemDirectoryHandle | null,
     loadTable: typeof TablePointsDataLoader.prototype._loadTable,
   ) {
-    super(dataSource, projectDir);
+    super(dataSource, workspace);
     this._loadTable = loadTable;
   }
 
-  async loadPoints({
-    signal,
-  }: { signal?: AbortSignal } = {}): Promise<PointsData> {
+  async loadPoints(options?: { signal?: AbortSignal }): Promise<PointsData> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const tableData = await this._loadTable(this.dataSource.table, { signal });
     signal?.throwIfAborted();

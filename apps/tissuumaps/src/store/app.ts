@@ -44,7 +44,7 @@ export type AppSlice = AppSliceState & AppSliceActions;
 
 export type AppSliceState = {
   dark: boolean;
-  projectDir: FileSystemDirectoryHandle | null;
+  workspace: FileSystemDirectoryHandle | null;
   imageDataLoaderFactories: Map<string, ImageDataLoaderFactory>;
   labelsDataLoaderFactories: Map<string, LabelsDataLoaderFactory>;
   pointsDataLoaderFactories: Map<string, PointsDataLoaderFactory>;
@@ -54,7 +54,7 @@ export type AppSliceState = {
 
 export type AppSliceActions = {
   setDark: (dark: boolean) => void;
-  setProjectDir: (dir: FileSystemDirectoryHandle | null) => void;
+  setWorkspace: (workspace: FileSystemDirectoryHandle | null) => void;
   registerImageDataLoader: (
     imageDataSourceType: string,
     imageDataLoaderFactory: ImageDataLoaderFactory,
@@ -84,9 +84,9 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
       draft.dark = dark;
     });
   },
-  setProjectDir: (dir) => {
+  setWorkspace: (dir) => {
     set((draft) => {
-      draft.projectDir = dir;
+      draft.workspace = dir;
     });
     // TODO reload data if necessary
   },
@@ -134,16 +134,16 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
 
 const initialAppSliceState: AppSliceState = {
   dark: false,
-  projectDir: null,
+  workspace: null,
   imageDataLoaderFactories: new Map<string, ImageDataLoaderFactory>([
     [
       openSeadragonImageDataSourceType,
-      (rawDataSource, projectDir) =>
+      (rawDataSource, workspace) =>
         new OpenSeadragonImageDataLoader(
           createOpenSeadragonImageDataSource(
             rawDataSource as RawOpenSeadragonImageDataSource,
           ),
-          projectDir,
+          workspace,
         ),
     ],
   ]),
@@ -151,12 +151,12 @@ const initialAppSliceState: AppSliceState = {
   pointsDataLoaderFactories: new Map<string, PointsDataLoaderFactory>([
     [
       tablePointsDataSourceType,
-      (rawDataSource, projectDir, loadTable) =>
+      (rawDataSource, workspace, loadTable) =>
         new TablePointsDataLoader(
           createTablePointsDataSource(
             rawDataSource as RawTablePointsDataSource,
           ),
-          projectDir,
+          workspace,
           loadTable,
         ),
     ],
@@ -164,32 +164,32 @@ const initialAppSliceState: AppSliceState = {
   shapesDataLoaderFactories: new Map<string, ShapesDataLoaderFactory>([
     [
       geoJSONShapesDataSourceType,
-      (rawDataSource, projectDir) =>
+      (rawDataSource, workspace) =>
         new GeoJSONShapesDataLoader(
           createGeoJSONShapesDataSource(
             rawDataSource as RawGeoJSONShapesDataSource,
           ),
-          projectDir,
+          workspace,
         ),
     ],
   ]),
   tableDataLoaderFactories: new Map<string, TableDataLoaderFactory>([
     [
       csvTableDataSourceType,
-      (rawDataSource, projectDir) =>
+      (rawDataSource, workspace) =>
         new CSVTableDataLoader(
           createCSVTableDataSource(rawDataSource as RawCSVTableDataSource),
-          projectDir,
+          workspace,
         ),
     ],
     [
       parquetTableDataSourceType,
-      (rawDataSource, projectDir) =>
+      (rawDataSource, workspace) =>
         new ParquetTableDataLoader(
           createParquetTableDataSource(
             rawDataSource as RawParquetTableDataSource,
           ),
-          projectDir,
+          workspace,
         ),
     ],
   ]),
@@ -197,7 +197,7 @@ const initialAppSliceState: AppSliceState = {
 
 type ImageDataLoaderFactory = (
   rawDataSource: RawImageDataSource,
-  projectDir: FileSystemDirectoryHandle | null,
+  workspace: FileSystemDirectoryHandle | null,
   loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
@@ -206,7 +206,7 @@ type ImageDataLoaderFactory = (
 
 type LabelsDataLoaderFactory = (
   dataSource: RawLabelsDataSource,
-  projectDir: FileSystemDirectoryHandle | null,
+  workspace: FileSystemDirectoryHandle | null,
   loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
@@ -215,7 +215,7 @@ type LabelsDataLoaderFactory = (
 
 export type PointsDataLoaderFactory = (
   dataSource: RawPointsDataSource,
-  projectDir: FileSystemDirectoryHandle | null,
+  workspace: FileSystemDirectoryHandle | null,
   loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
@@ -224,7 +224,7 @@ export type PointsDataLoaderFactory = (
 
 export type ShapesDataLoaderFactory = (
   dataSource: RawShapesDataSource,
-  projectDir: FileSystemDirectoryHandle | null,
+  workspace: FileSystemDirectoryHandle | null,
   loadTable: (
     tableId: string,
     options: { signal?: AbortSignal },
@@ -233,5 +233,5 @@ export type ShapesDataLoaderFactory = (
 
 export type TableDataLoaderFactory = (
   dataSource: RawTableDataSource,
-  projectDir: FileSystemDirectoryHandle | null,
+  workspace: FileSystemDirectoryHandle | null,
 ) => TableDataLoader<TableData>;

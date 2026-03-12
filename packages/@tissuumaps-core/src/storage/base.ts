@@ -5,10 +5,10 @@ import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
  */
 export interface DataLoader {
   /** JSON Schema describing the data source configuration */
-  readonly schema: JsonSchema;
+  readonly dataSourceSchema: JsonSchema;
 
   /** UI schema controlling the form layout for the data source configuration */
-  readonly uischema: UISchemaElement;
+  readonly dataSourceUISchema: UISchemaElement;
 }
 
 /**
@@ -26,9 +26,9 @@ export interface Data {
  * (e.g. points, shapes, labels, tables).
  */
 export interface ItemsData extends Data {
-  /** Returns the total number of items */
-  getLength(): number;
-
   /** Returns an array of item IDs */
-  getIndex(): number[];
+  getIds(): number[];
+
+  /** Returns the total number of items */
+  getSize(): number;
 }

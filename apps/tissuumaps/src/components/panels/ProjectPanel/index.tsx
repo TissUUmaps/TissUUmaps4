@@ -13,7 +13,11 @@ import { useTissUUmaps } from "../../../store";
 import { Field, FieldControl, FieldLabel } from "../../common/field";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
-export function ProjectPanel({ className }: { className?: string }) {
+export type ProjectPanelProps = {
+  className?: string;
+};
+
+export function ProjectPanel({ className }: ProjectPanelProps) {
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const projectName = useTissUUmaps((state) => state.projectName);

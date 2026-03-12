@@ -165,18 +165,19 @@ export class WebGLUtils {
     index: number,
     size: number,
     type: GLenum,
-    {
-      normalized = false,
-      stride = 0,
-      offset = 0,
-      divisor = 0,
-    }: {
+    options?: {
       normalized?: boolean;
       stride?: number;
       offset?: number;
       divisor?: number;
-    } = {},
+    },
   ): void {
+    const {
+      normalized = false,
+      stride = 0,
+      offset = 0,
+      divisor = 0,
+    } = options ?? {};
     gl.bindBuffer(target, buffer);
     gl.enableVertexAttribArray(index);
     gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
@@ -202,16 +203,9 @@ export class WebGLUtils {
     index: number,
     size: number,
     type: GLenum,
-    {
-      stride = 0,
-      offset = 0,
-      divisor = 0,
-    }: {
-      stride?: number;
-      offset?: number;
-      divisor?: number;
-    } = {},
+    options?: { stride?: number; offset?: number; divisor?: number },
   ): void {
+    const { stride = 0, offset = 0, divisor = 0 } = options ?? {};
     gl.bindBuffer(target, buffer);
     gl.enableVertexAttribArray(index);
     gl.vertexAttribIPointer(index, size, type, stride, offset);
@@ -303,14 +297,9 @@ export class WebGLUtils {
   static async loadImageTextureFromUrl(
     gl: WebGL2RenderingContext,
     url: string,
-    {
-      mipmap = false,
-      signal,
-    }: {
-      mipmap?: boolean;
-      signal?: AbortSignal;
-    } = {},
+    options?: { mipmap?: boolean; signal?: AbortSignal },
   ): Promise<WebGLTexture> {
+    const { mipmap = false, signal } = options ?? {};
     signal?.throwIfAborted();
     const texture = gl.createTexture();
     if (texture === null) {
@@ -368,12 +357,9 @@ export class WebGLUtils {
     target: GLenum,
     buffer: WebGLBuffer,
     data: Exclude<TypedArray, Float64Array>,
-    {
-      offset = 0,
-    }: {
-      offset?: number;
-    } = {},
+    options?: { offset?: number },
   ): void {
+    const { offset = 0 } = options ?? {};
     gl.bindBuffer(target, buffer);
     gl.bufferSubData(target, offset * data.BYTES_PER_ELEMENT, data);
     gl.bindBuffer(target, null);

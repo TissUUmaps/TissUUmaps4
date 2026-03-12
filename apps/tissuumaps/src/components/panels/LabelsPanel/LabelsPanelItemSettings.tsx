@@ -19,20 +19,20 @@ import {
   AccordionTriggerRightDownIcon,
 } from "../../common/accordion";
 import {
-  ColorConfigContextProvider,
   ColorConfigControl,
   ColorConfigSourceToggleGroup,
 } from "../../controls/ColorConfigControl";
+import { useColorConfigControl } from "../../controls/ColorConfigControl/useColorConfigControl";
 import {
-  OpacityConfigContextProvider,
   OpacityConfigControl,
   OpacityConfigSourceToggleGroup,
 } from "../../controls/OpacityConfigControl";
+import { useOpacityConfigControl } from "../../controls/OpacityConfigControl/useOpacityConfigControl";
 import {
-  VisibilityConfigContextProvider,
   VisibilityConfigControl,
   VisibilityConfigSourceToggleGroup,
 } from "../../controls/VisibilityConfigControl";
+import { useVisibilityConfigControl } from "../../controls/VisibilityConfigControl/useVisibilityConfigControl";
 import { cells, renderers } from "../../jsonforms";
 
 const ConfigControl = {
@@ -43,7 +43,13 @@ const ConfigControl = {
 
 type ConfigControl = (typeof ConfigControl)[keyof typeof ConfigControl];
 
-export function LabelsPanelItemSettings({ labels }: { labels: Labels }) {
+export type LabelsPanelItemSettingsProps = {
+  labels: Labels;
+};
+
+export function LabelsPanelItemSettings({
+  labels,
+}: LabelsPanelItemSettingsProps) {
   const [expandedConfigControl, setExpandedConfigControl] =
     useState<ConfigControl | null>(null);
 
@@ -57,12 +63,30 @@ export function LabelsPanelItemSettings({ labels }: { labels: Labels }) {
     [createLabelsDataLoader, labels.id],
   );
 
+  const labelColorConfigControlState = useColorConfigControl(
+    labels.labelColor,
+    (newColorConfig) => updateLabels(labels.id, { labelColor: newColorConfig }),
+    defaultLabelColor,
+  );
+  const labelVisibilityConfigControlState = useVisibilityConfigControl(
+    labels.labelVisibility,
+    (newVisibilityConfig) =>
+      updateLabels(labels.id, { labelVisibility: newVisibilityConfig }),
+    defaultLabelVisibility,
+  );
+  const labelOpacityConfigControlState = useOpacityConfigControl(
+    labels.labelOpacity,
+    (newOpacityConfig) =>
+      updateLabels(labels.id, { labelOpacity: newOpacityConfig }),
+    defaultLabelOpacity,
+  );
+
   return (
     <div>
       {/* Data source */}
       <JsonForms
-        schema={labelsDataLoader.schema}
-        uischema={labelsDataLoader.uischema}
+        schema={labelsDataLoader.dataSourceSchema}
+        uischema={labelsDataLoader.dataSourceUISchema}
         data={labels.dataSource}
         onChange={({ data, errors }) => {
           if (errors === undefined || errors.length === 0) {
@@ -87,77 +111,56 @@ export function LabelsPanelItemSettings({ labels }: { labels: Labels }) {
         }
       >
         {/* Label color */}
-        <ColorConfigContextProvider
-          colorConfig={labels.labelColor}
-          onColorConfigChange={(newColorConfig) =>
-            updateLabels(labels.id, { labelColor: newColorConfig })
-          }
-          defaultColor={defaultLabelColor}
-        >
-          <AccordionItem value={ConfigControl.labelColor}>
-            <AccordionHeader>
-              <AccordionTriggerRightDownIcon />
-              <AccordionTrigger>Color</AccordionTrigger>
-              <ColorConfigSourceToggleGroup
-                className="ml-auto"
-                onClick={() =>
-                  setExpandedConfigControl(ConfigControl.labelColor)
-                }
-              />
-            </AccordionHeader>
-            <AccordionPanel>
-              <ColorConfigControl />
-            </AccordionPanel>
-          </AccordionItem>
-        </ColorConfigContextProvider>
+        <AccordionItem value={ConfigControl.labelColor}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Color</AccordionTrigger>
+            <ColorConfigSourceToggleGroup
+              state={labelColorConfigControlState}
+              className="ml-auto"
+              onClick={() => setExpandedConfigControl(ConfigControl.labelColor)}
+            />
+          </AccordionHeader>
+          <AccordionPanel>
+            <ColorConfigControl state={labelColorConfigControlState} />
+          </AccordionPanel>
+        </AccordionItem>
         {/* Label visibility */}
-        <VisibilityConfigContextProvider
-          visibilityConfig={labels.labelVisibility}
-          onVisibilityConfigChange={(newVisibilityConfig) =>
-            updateLabels(labels.id, { labelVisibility: newVisibilityConfig })
-          }
-          defaultVisibility={defaultLabelVisibility}
-        >
-          <AccordionItem value={ConfigControl.labelVisibility}>
-            <AccordionHeader>
-              <AccordionTriggerRightDownIcon />
-              <AccordionTrigger>Visibility</AccordionTrigger>
-              <VisibilityConfigSourceToggleGroup
-                className="ml-auto"
-                onClick={() =>
-                  setExpandedConfigControl(ConfigControl.labelVisibility)
-                }
-              />
-            </AccordionHeader>
-            <AccordionPanel>
-              <VisibilityConfigControl />
-            </AccordionPanel>
-          </AccordionItem>
-        </VisibilityConfigContextProvider>
+        <AccordionItem value={ConfigControl.labelVisibility}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Visibility</AccordionTrigger>
+            <VisibilityConfigSourceToggleGroup
+              state={labelVisibilityConfigControlState}
+              className="ml-auto"
+              onClick={() =>
+                setExpandedConfigControl(ConfigControl.labelVisibility)
+              }
+            />
+          </AccordionHeader>
+          <AccordionPanel>
+            <VisibilityConfigControl
+              state={labelVisibilityConfigControlState}
+            />
+          </AccordionPanel>
+        </AccordionItem>
         {/* Label opacity */}
-        <OpacityConfigContextProvider
-          opacityConfig={labels.labelOpacity}
-          onOpacityConfigChange={(newOpacityConfig) =>
-            updateLabels(labels.id, { labelOpacity: newOpacityConfig })
-          }
-          defaultOpacity={defaultLabelOpacity}
-        >
-          <AccordionItem value={ConfigControl.labelOpacity}>
-            <AccordionHeader>
-              <AccordionTriggerRightDownIcon />
-              <AccordionTrigger>Opacity</AccordionTrigger>
-              <OpacityConfigSourceToggleGroup
-                className="ml-auto"
-                onClick={() =>
-                  setExpandedConfigControl(ConfigControl.labelOpacity)
-                }
-              />
-            </AccordionHeader>
-            <AccordionPanel>
-              <OpacityConfigControl />
-            </AccordionPanel>
-          </AccordionItem>
-        </OpacityConfigContextProvider>
+        <AccordionItem value={ConfigControl.labelOpacity}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Opacity</AccordionTrigger>
+            <OpacityConfigSourceToggleGroup
+              state={labelOpacityConfigControlState}
+              className="ml-auto"
+              onClick={() =>
+                setExpandedConfigControl(ConfigControl.labelOpacity)
+              }
+            />
+          </AccordionHeader>
+          <AccordionPanel>
+            <OpacityConfigControl state={labelOpacityConfigControlState} />
+          </AccordionPanel>
+        </AccordionItem>
       </Accordion>
     </div>
   );

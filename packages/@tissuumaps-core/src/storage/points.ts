@@ -13,7 +13,7 @@ export interface PointsDataLoader<
    *
    * @param options - Optional abort signal
    */
-  loadPoints(options: { signal?: AbortSignal }): Promise<TPointsData>;
+  loadPoints(options?: { signal?: AbortSignal }): Promise<TPointsData>;
 }
 
 /**
@@ -33,7 +33,7 @@ export interface PointsData extends ItemsData {
    * @param query - The dimension query
    * @returns The resolved dimension name, or `null` if no match is found
    */
-  getDimension(query: string): Promise<string | null>;
+  resolveDimensionQuery(query: string): Promise<string | null>;
 
   /**
    * Loads the coordinate values for a dimension as a float array
@@ -43,6 +43,6 @@ export interface PointsData extends ItemsData {
    */
   loadCoordinates(
     dimension: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ): Promise<Float32Array>;
 }

@@ -6,7 +6,13 @@ import { type Image, type ImageDataSource } from "@tissuumaps/core";
 import { useTissUUmaps } from "../../../store";
 import { cells, renderers } from "../../jsonforms";
 
-export function ImagesPanelItemSettings({ image }: { image: Image }) {
+export type ImagesPanelItemSettingsProps = {
+  image: Image;
+};
+
+export function ImagesPanelItemSettings({
+  image,
+}: ImagesPanelItemSettingsProps) {
   const updateImage = useTissUUmaps((state) => state.updateImage);
   const createImageDataLoader = useTissUUmaps(
     (state) => state.createImageDataLoader,
@@ -21,8 +27,8 @@ export function ImagesPanelItemSettings({ image }: { image: Image }) {
     <div>
       {/* Data source */}
       <JsonForms
-        schema={imageDataLoader.schema}
-        uischema={imageDataLoader.uischema}
+        schema={imageDataLoader.dataSourceSchema}
+        uischema={imageDataLoader.dataSourceUISchema}
         data={image.dataSource}
         onChange={({ data, errors }) => {
           if (errors === undefined || errors.length === 0) {

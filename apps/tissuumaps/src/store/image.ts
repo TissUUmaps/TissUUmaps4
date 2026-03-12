@@ -7,6 +7,7 @@ import {
   type ImageDataSource,
 } from "@tissuumaps/core";
 
+import { loadTableDataProxy } from "../proxies/TableDataProxy";
 import { type TissUUmapsStateCreator } from "./index";
 
 export type ImageSlice = ImageSliceState & ImageSliceActions;
@@ -25,7 +26,7 @@ export type ImageSliceActions = {
   createImageDataLoader: (imageId: string) => ImageDataLoader<ImageData>;
   loadImage: (
     imageId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<ImageData>;
   unloadImage: (imageId: string) => void;
 };
@@ -101,12 +102,19 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
     }
     const dataLoader = dataLoaderFactory(
       image.dataSource,
-      state.projectDir,
-      state.loadTable,
+      state.workspace,
+      (tableId, options) =>
+        loadTableDataProxy(
+          tableId,
+          state.loadTable,
+          state.loadTableColumn,
+          options,
+        ),
     );
     return dataLoader;
   },
-  loadImage: async (imageId, { signal } = {}) => {
+  loadImage: async (imageId, options) => {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
     const image = state.images.find((image) => image.id === imageId);

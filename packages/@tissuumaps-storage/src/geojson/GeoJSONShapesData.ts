@@ -2,31 +2,32 @@ import { type MultiPolygon, type ShapesData } from "@tissuumaps/core";
 
 export class GeoJSONShapesData implements ShapesData {
   private readonly _multiPolygons: MultiPolygon[];
-  private _index?: number[];
+  private _ids?: number[];
 
-  constructor(multiPolygons: MultiPolygon[], index?: number[]) {
+  constructor(multiPolygons: MultiPolygon[], ids?: number[]) {
     this._multiPolygons = multiPolygons;
-    this._index = index;
+    this._ids = ids;
   }
 
-  getLength(): number {
-    return this._multiPolygons.length;
-  }
-
-  getIndex(): number[] {
-    if (this._index === undefined) {
+  getIds(): number[] {
+    if (this._ids === undefined) {
       console.warn("No ID property specified, using sequential IDs instead");
-      this._index = Array.from(
+      this._ids = Array.from(
         { length: this._multiPolygons.length },
         (_, i) => i,
       );
     }
-    return this._index;
+    return this._ids;
   }
 
-  loadMultiPolygons({ signal }: { signal?: AbortSignal } = {}): Promise<
-    MultiPolygon[]
-  > {
+  getSize(): number {
+    return this._multiPolygons.length;
+  }
+
+  loadMultiPolygons(options?: {
+    signal?: AbortSignal;
+  }): Promise<MultiPolygon[]> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     return Promise.resolve(this._multiPolygons);
   }

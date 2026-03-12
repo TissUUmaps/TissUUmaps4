@@ -17,21 +17,18 @@ import { ResolveUtils } from "./ResolveUtils";
 
 type ColumnMap = Record<string, unknown[]>;
 
-const createTableData = (index: number[], columns: ColumnMap): TableData => {
+const createTableData = (ids: number[], columns: ColumnMap): TableData => {
   const ranges = new Map<string, [number, number]>();
   return {
-    getLength: () => index.length,
-    getIndex: () => index,
+    getIds: () => ids,
+    getSize: () => ids.length,
     destroy: () => undefined,
     suggestColumnQueries: () => Promise.resolve([]),
-    getColumn: (query: string) =>
+    resolveColumnQuery: (query: string) =>
       Promise.resolve(query in columns ? query : null),
-    loadColumn: <T>(
-      column: string,
-      { computeRange }: { signal?: AbortSignal; computeRange?: boolean } = {},
-    ) => {
+    loadValues: <T>(column: string) => {
       const values = (columns[column] ?? []) as T[];
-      if (computeRange && !ranges.has(column)) {
+      if (!ranges.has(column)) {
         let vmin: number | undefined, vmax: number | undefined;
         for (const v of values) {
           if (typeof v === "number" && Number.isFinite(v)) {
@@ -45,7 +42,7 @@ const createTableData = (index: number[], columns: ColumnMap): TableData => {
       }
       return Promise.resolve(values);
     },
-    getRange: (column: string) => ranges.get(column),
+    loadValueRange: (column: string) => Promise.resolve(ranges.get(column)),
   };
 };
 
@@ -616,7 +613,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -651,7 +647,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -682,7 +677,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -727,7 +721,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -774,7 +767,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -814,7 +806,6 @@ describe("ResolveUtils", () => {
         [],
         defaultColor,
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -841,7 +832,6 @@ describe("ResolveUtils", () => {
         [],
         defaultColor,
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -867,7 +857,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 1, g: 1, b: 1 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -903,7 +892,6 @@ describe("ResolveUtils", () => {
         colorMaps,
         { r: 0, g: 0, b: 0 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -944,7 +932,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -975,7 +962,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 2, g: 2, b: 2 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -1002,7 +988,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 3, g: 3, b: 3 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -1035,7 +1020,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -1079,7 +1063,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 4, g: 4, b: 4 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );
@@ -1103,7 +1086,6 @@ describe("ResolveUtils", () => {
         [],
         { r: 5, g: 5, b: 5 },
         loadTable,
-        {},
         visibilityData,
         opacityData,
       );

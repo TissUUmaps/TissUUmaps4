@@ -211,9 +211,10 @@ export class WebGLPointsController extends WebGLControllerBase {
    * @param options - Optional abort signal
    * @returns This controller instance, for chaining
    */
-  async initialize({
-    signal,
-  }: { signal?: AbortSignal } = {}): Promise<WebGLPointsController> {
+  async initialize(options?: {
+    signal?: AbortSignal;
+  }): Promise<WebGLPointsController> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     this._markerAtlasTexture = await WebGLUtils.loadImageTextureFromUrl(
       this._gl,
@@ -252,14 +253,15 @@ export class WebGLPointsController extends WebGLControllerBase {
     opacityMaps: DefaultMap<number>[],
     loadPoints: (
       pointsId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<PointsData>,
     loadTable: (
       tableId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    { signal }: { signal?: AbortSignal } = {},
+    options?: { signal?: AbortSignal },
   ): Promise<void> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs = await this._loadPoints(layers, points, loadPoints, { signal });
     signal?.throwIfAborted();
@@ -270,7 +272,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       refs.length = WebGLPointsController._maxNumObjects;
     }
     let buffersResized = false;
-    const n = refs.reduce((accum, ref) => accum + ref.data.getLength(), 0);
+    const n = refs.reduce((accum, ref) => accum + ref.data.getSize(), 0);
     if (this._currentBufferSize !== n) {
       this._resizePointBuffers(n);
       buffersResized = true;
@@ -430,10 +432,11 @@ export class WebGLPointsController extends WebGLControllerBase {
     points: Points[],
     loadPoints: (
       pointsId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<PointsData>,
-    { signal }: { signal?: AbortSignal } = {},
+    options?: { signal?: AbortSignal },
   ): Promise<PointsRef[]> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs: PointsRef[] = [];
     for (const layer of layers) {
@@ -489,10 +492,11 @@ export class WebGLPointsController extends WebGLControllerBase {
     buffersResized: boolean,
     loadTable: (
       tableId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    { signal }: { signal?: AbortSignal } = {},
+    options?: { signal?: AbortSignal },
   ): Promise<PointsBufferSliceState[]> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     let offset = 0;
     const objectsUBOData = new Float32Array(
@@ -501,7 +505,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     const newBufferSliceStates: PointsBufferSliceState[] = [];
     for (let i = 0; i < refs.length; i++) {
       const ref = refs[i]!;
-      const numPoints = ref.data.getLength();
+      const numPoints = ref.data.getSize();
       const bufferSliceState = this._bufferSliceStates[i];
       const bufferSliceChanged =
         buffersResized ||
@@ -517,7 +521,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         bufferSliceChanged ||
         bufferSliceState.current.layerConfig.x !== ref.layerConfig.x
       ) {
-        const data = await ref.data.loadCoordinates(ref.layerConfig.x, {
+        const xData = await ref.data.loadCoordinates(ref.layerConfig.x, {
           signal,
         });
         signal?.throwIfAborted();
@@ -525,7 +529,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           this._gl,
           this._gl.ARRAY_BUFFER,
           this._buffers.x,
-          data,
+          xData,
           { offset },
         );
       }
@@ -534,7 +538,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         bufferSliceChanged ||
         bufferSliceState.current.layerConfig.y !== ref.layerConfig.y
       ) {
-        const data = await ref.data.loadCoordinates(ref.layerConfig.y, {
+        const yData = await ref.data.loadCoordinates(ref.layerConfig.y, {
           signal,
         });
         signal?.throwIfAborted();
@@ -542,7 +546,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           this._gl,
           this._gl.ARRAY_BUFFER,
           this._buffers.y,
-          data,
+          yData,
           { offset },
         );
       }
@@ -555,7 +559,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         )
       ) {
         const markerData = await ResolveUtils.resolveMarkers(
-          ref.data.getIndex(),
+          ref.data.getIds(),
           ref.points.pointMarker,
           markerMaps,
           defaultPointMarker,
@@ -617,7 +621,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           sizeFactor *= ref.layer.transform.scale;
         }
         const sizeData = await ResolveUtils.resolveSizes(
-          ref.data.getIndex(),
+          ref.data.getIds(),
           ref.points.pointSize,
           sizeMaps,
           defaultPointSize,
@@ -663,7 +667,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           colorData = new Uint32Array(numPoints).fill(0);
         } else {
           const visibilityData = await ResolveUtils.resolveVisibilities(
-            ref.data.getIndex(),
+            ref.data.getIds(),
             ref.points.pointVisibility,
             visibilityMaps,
             defaultPointVisibility,
@@ -672,7 +676,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           );
           signal?.throwIfAborted();
           const opacityData = await ResolveUtils.resolveOpacities(
-            ref.data.getIndex(),
+            ref.data.getIds(),
             ref.points.pointOpacity,
             opacityMaps,
             defaultPointOpacity,
@@ -681,17 +685,17 @@ export class WebGLPointsController extends WebGLControllerBase {
           );
           signal?.throwIfAborted();
           colorData = await ResolveUtils.resolveColors(
-            ref.data.getIndex(),
+            ref.data.getIds(),
             ref.points.pointColor,
             colorMaps,
             defaultPointColor,
             loadTable,
-            { signal },
             visibilityData,
             opacityData,
+            { signal },
           );
+          signal?.throwIfAborted();
         }
-        signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
           this._gl,
           this._gl.ARRAY_BUFFER,

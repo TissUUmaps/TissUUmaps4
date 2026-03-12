@@ -14,7 +14,7 @@ export interface LabelsDataLoader<
    *
    * @param options - Optional abort signal
    */
-  loadLabels(options: { signal?: AbortSignal }): Promise<TLabelsData>;
+  loadLabels(options?: { signal?: AbortSignal }): Promise<TLabelsData>;
 }
 
 /**
@@ -74,6 +74,6 @@ export interface LabelsData extends ItemsData {
     level: number,
     x: number,
     y: number,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ): Promise<UintArray>;
 }

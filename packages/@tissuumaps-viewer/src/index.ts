@@ -1,3 +1,6 @@
-export { Viewer } from "./components/Viewer";
-export { ViewerProvider } from "./components/ViewerProvider";
+export { Viewer, type ViewerProps } from "./components/Viewer";
+export {
+  ViewerProvider,
+  type ViewerProviderProps,
+} from "./components/ViewerProvider";
 export { type ViewerAdapter } from "./context";

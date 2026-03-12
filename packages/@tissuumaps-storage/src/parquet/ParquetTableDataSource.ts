@@ -1,4 +1,4 @@
-import type { JsonSchema, UISchemaElement } from "@jsonforms/core";
+import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
 
 import {
   type RawTableDataSource,

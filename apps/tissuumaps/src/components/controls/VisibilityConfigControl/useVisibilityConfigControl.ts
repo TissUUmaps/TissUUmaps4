@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   type VisibilityConfig,
@@ -8,23 +8,33 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { VisibilityConfigContext } from "./context";
-
 type VisibilityConfigSource = Exclude<VisibilityConfig["source"], undefined>;
 
-export type VisibilityConfigContextProviderProps = {
+export type VisibilityConfigControlState = {
   visibilityConfig: VisibilityConfig;
-  onVisibilityConfigChange: (newVisibilityConfig: VisibilityConfig) => void;
   defaultVisibility: boolean;
-  children: ReactNode;
+  activeSource: VisibilityConfigSource;
+  currentSource: VisibilityConfigSource;
+  currentConstantValue: boolean;
+  currentFromTable: string | null;
+  currentFromColumn: string | null;
+  currentGroupByTable: string | null;
+  currentGroupByColumn: string | null;
+  currentGroupByMap: string | null;
+  setCurrentSource: (newCurrentSource: VisibilityConfigSource) => void;
+  setCurrentConstantValue: (newCurrentConstantValue: boolean) => void;
+  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
+  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
+  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
+  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
 };
 
-export function VisibilityConfigContextProvider({
-  visibilityConfig,
-  onVisibilityConfigChange,
-  defaultVisibility,
-  children,
-}: VisibilityConfigContextProviderProps) {
+export function useVisibilityConfigControl(
+  visibilityConfig: VisibilityConfig,
+  onVisibilityConfigChange: (newVisibilityConfig: VisibilityConfig) => void,
+  defaultVisibility: boolean,
+): VisibilityConfigControlState {
   const activeSource = getActiveConfigSource(visibilityConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<VisibilityConfigSource>(
     visibilityConfig.source ?? "constant",
@@ -127,29 +137,23 @@ export function VisibilityConfigContextProvider({
     onVisibilityConfigChange,
   ]);
 
-  return (
-    <VisibilityConfigContext.Provider
-      value={{
-        visibilityConfig,
-        defaultVisibility,
-        activeSource,
-        currentSource,
-        currentConstantValue,
-        currentFromTable,
-        currentFromColumn,
-        currentGroupByTable,
-        currentGroupByColumn,
-        currentGroupByMap,
-        setCurrentSource,
-        setCurrentConstantValue,
-        setCurrentFromTable,
-        setCurrentFromColumn,
-        setCurrentGroupByTable,
-        setCurrentGroupByColumn,
-        setCurrentGroupByMap,
-      }}
-    >
-      {children}
-    </VisibilityConfigContext.Provider>
-  );
+  return {
+    visibilityConfig,
+    defaultVisibility,
+    activeSource,
+    currentSource,
+    currentConstantValue,
+    currentFromTable,
+    currentFromColumn,
+    currentGroupByTable,
+    currentGroupByColumn,
+    currentGroupByMap,
+    setCurrentSource,
+    setCurrentConstantValue,
+    setCurrentFromTable,
+    setCurrentFromColumn,
+    setCurrentGroupByTable,
+    setCurrentGroupByColumn,
+    setCurrentGroupByMap,
+  };
 }

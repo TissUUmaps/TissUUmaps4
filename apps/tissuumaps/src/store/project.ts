@@ -31,14 +31,11 @@ export type ProjectSliceActions = {
   setProjectName: (name: string) => void;
   loadProject: (
     project: Project,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<void>;
   loadProjectFromURL: (
     url: string,
-    options: {
-      signal?: AbortSignal;
-      quiet?: boolean;
-    },
+    options?: { signal?: AbortSignal; quiet?: boolean },
   ) => Promise<void>;
   saveProject: () => Project;
   clearProject: () => void;
@@ -54,7 +51,8 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       draft.projectName = name;
     });
   },
-  loadProject: async (project, { signal }: { signal?: AbortSignal } = {}) => {
+  loadProject: async (project, options) => {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
     state.clearProject();
@@ -111,10 +109,8 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
     await Promise.all(loadRenderedDataObjectPromises);
     signal?.throwIfAborted();
   },
-  loadProjectFromURL: async (
-    url,
-    { signal, quiet = false }: { signal?: AbortSignal; quiet?: boolean } = {},
-  ) => {
+  loadProjectFromURL: async (url, options) => {
+    const { signal, quiet = false } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
     const response = await fetch(url);
@@ -131,9 +127,10 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
         );
       }
     }
-    const rawProject = (await response.json()) as RawProject; // TODO validate project
+    const rawProjectData: unknown = await response.json();
     signal?.throwIfAborted();
-    const project = createProject(rawProject);
+    // TODO validate project data
+    const project = createProject(rawProjectData as RawProject);
     await state.loadProject(project, { signal });
     signal?.throwIfAborted();
   },

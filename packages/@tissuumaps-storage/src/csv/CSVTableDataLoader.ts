@@ -3,7 +3,7 @@ import * as papaparse from "papaparse";
 import { type TypedArray } from "@tissuumaps/core";
 
 import { AbstractTableDataLoader } from "../base";
-import { CSVTableData, loadCSVTableDataColumn } from "./CSVTableData";
+import { CSVTableData } from "./CSVTableData";
 import {
   type CSVTableDataSource,
   csvTableDataSourceSchema,
@@ -14,42 +14,44 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
   CSVTableDataSource,
   CSVTableData
 > {
-  readonly schema = csvTableDataSourceSchema;
-  readonly uischema = csvTableDataSourceUISchema;
+  readonly dataSourceSchema = csvTableDataSourceSchema;
+  readonly dataSourceUISchema = csvTableDataSourceUISchema;
 
-  async loadTable({
-    signal,
-  }: { signal?: AbortSignal } = {}): Promise<CSVTableData> {
+  async loadTable(options?: { signal?: AbortSignal }): Promise<CSVTableData> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { n, columns, data } = await this._loadCSV({ signal });
+    const { n, columns, columnValues } = await this._loadCSV({ signal });
     signal?.throwIfAborted();
-    let index;
+    let ids;
     if (this.dataSource.idColumn !== undefined) {
-      const ids = await loadCSVTableDataColumn<number>(
-        this.dataSource.idColumn,
-        columns,
-        data,
-        { signal },
-      );
-      signal?.throwIfAborted();
-      for (let i = 0; i < ids.length; i++) {
-        if (!Number.isInteger(ids[i])) {
-          throw new Error(
-            `ID column "${this.dataSource.idColumn}" contains non-integer values.`,
-          );
-        }
+      const idColumnValues = columnValues.get(this.dataSource.idColumn);
+      if (idColumnValues === undefined) {
+        throw new Error(
+          `ID column "${this.dataSource.idColumn}" does not exist in the table.`,
+        );
       }
-      index = Array.from(ids);
+      ids = Array.from(
+        idColumnValues.map((v) => {
+          if (!Number.isInteger(v)) {
+            throw new Error(
+              `ID column "${this.dataSource.idColumn}" contains non-integer values.`,
+            );
+          }
+          return +v;
+        }),
+      );
     }
-    return new CSVTableData(n, data, columns, index);
+    return new CSVTableData(n, columns, columnValues, ids);
   }
 
-  private async _loadCSV({ signal }: { signal?: AbortSignal } = {}): Promise<{
+  private async _loadCSV(options?: { signal?: AbortSignal }): Promise<{
     n: number;
     columns: string[];
-    data: (string[] | Float32Array)[];
+    columnValues: Map<string, string[] | Float32Array>;
   }> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
+
     let n = 0;
     let columns = this.dataSource.columns;
     let filteredColumns = this.dataSource.loadColumns ?? columns;
@@ -71,7 +73,9 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
         isNaN: false,
       }));
     }
+
     const step = (results: papaparse.ParseStepResult<string[]>) => {
+      signal?.throwIfAborted();
       if (
         columns === undefined ||
         filteredColumns === undefined ||
@@ -110,8 +114,10 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
         }
       }
     };
+
     const complete = () => {
-      const data = [];
+      signal?.throwIfAborted();
+      const columnValues = new Map<string, string[] | Float32Array>();
       for (const columnInfo of filteredColumnInfos!) {
         if (columnInfo.currentChunk.length > 0) {
           columnInfo.chunks.push(
@@ -122,62 +128,70 @@ export class CSVTableDataLoader extends AbstractTableDataLoader<
           columnInfo.currentChunk = [];
         }
         if (columnInfo.isNaN) {
-          const columnData = columnInfo.chunks.flatMap((chunk) =>
-            Array.isArray(chunk) ? chunk : Array.from(chunk, String),
+          const values = columnInfo.chunks.flatMap((chunkValues) =>
+            Array.isArray(chunkValues)
+              ? chunkValues
+              : Array.from(chunkValues, String),
           );
-          data.push(columnData);
+          columnValues.set(columnInfo.name, values);
         } else {
-          const columnData = new Float32Array(n);
+          const values = new Float32Array(n);
           let offset = 0;
-          for (const chunk of columnInfo.chunks) {
-            columnData.set(chunk as TypedArray, offset);
-            offset += chunk.length;
+          for (const chunkValues of columnInfo.chunks) {
+            values.set(chunkValues as TypedArray, offset);
+            offset += chunkValues.length;
           }
-          data.push(columnData);
+          columnValues.set(columnInfo.name, values);
         }
         columnInfo.chunks = [];
       }
-      return data;
+      return columnValues;
     };
+
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);
       signal?.throwIfAborted();
       const file = await fh.getFile();
       signal?.throwIfAborted();
-      const data = await new Promise<(string[] | Float32Array)[]>(
-        (resolve, reject) =>
-          papaparse.parse(file, {
-            ...this.dataSource.parseConfig,
-            header: false,
-            skipEmptyLines: true,
-            step: step,
-            complete: () => resolve(complete()),
-            error: reject,
-          }),
+      const columnValues = await new Promise<
+        Map<string, string[] | Float32Array>
+      >((resolve, reject) =>
+        papaparse.parse(file, {
+          ...this.dataSource.parseConfig,
+          header: false,
+          skipEmptyLines: true,
+          step: step,
+          complete: () => resolve(complete()),
+          error: reject,
+        }),
       );
       signal?.throwIfAborted();
-      return { n, columns: filteredColumns!, data };
+      return { n, columns: filteredColumns!, columnValues };
     }
+
     if (this.dataSource.url !== undefined) {
       const url = this.dataSource.url;
-      const data = await new Promise<(string[] | Float32Array)[]>(
-        (resolve, reject) =>
-          papaparse.parse(url, {
-            ...this.dataSource.parseConfig,
-            download: true,
-            header: false,
-            skipEmptyLines: true,
-            step: step,
-            complete: () => resolve(complete()),
-            error: reject,
-          }),
+      const columnValues = await new Promise<
+        Map<string, string[] | Float32Array>
+      >((resolve, reject) =>
+        papaparse.parse(url, {
+          ...this.dataSource.parseConfig,
+          download: true,
+          header: false,
+          skipEmptyLines: true,
+          step: step,
+          complete: () => resolve(complete()),
+          error: reject,
+        }),
       );
       signal?.throwIfAborted();
-      return { n, columns: filteredColumns!, data };
+      return { n, columns: filteredColumns!, columnValues };
     }
+
     if (this.dataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     }
+
     throw new Error("A URL or workspace path is required to load data.");
   }
 }

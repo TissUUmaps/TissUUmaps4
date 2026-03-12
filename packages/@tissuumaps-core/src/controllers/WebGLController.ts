@@ -96,9 +96,10 @@ export class WebGLController {
    * @param options - Optional abort signal
    * @returns This controller instance, for chaining
    */
-  async initialize({
-    signal,
-  }: { signal?: AbortSignal } = {}): Promise<WebGLController> {
+  async initialize(options?: {
+    signal?: AbortSignal;
+  }): Promise<WebGLController> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     await this._pointsController.initialize({ signal });
     signal?.throwIfAborted();

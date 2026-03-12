@@ -24,9 +24,14 @@ import { ShapesLayersPanel } from "./ShapesLayersPanel";
 import { ShapesSettingsPanel } from "./ShapesSettingsPanel";
 import { ShapesSourcePanel } from "./ShapesSourcePanel";
 
-export function ShapesPanel({ className }: { className?: string }) {
+export type ShapesPanelProps = {
+  className?: string;
+};
+
+export function ShapesPanel({ className }: ShapesPanelProps) {
   const shapes = useTissUUmaps((state) => state.shapes);
   const moveShapes = useTissUUmaps((state) => state.moveShapes);
+
   return (
     <DragDropProvider
       onDragEnd={(event) => {
@@ -51,13 +56,12 @@ export function ShapesPanel({ className }: { className?: string }) {
   );
 }
 
-function ShapesAccordionItem({
-  shapes,
-  index,
-}: {
+type ShapesAccordionItemProps = {
   shapes: Shapes;
   index: number;
-}) {
+};
+
+function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
   const updateShapes = useTissUUmaps((state) => state.updateShapes);
   const deleteShapes = useTissUUmaps((state) => state.deleteShapes);
 

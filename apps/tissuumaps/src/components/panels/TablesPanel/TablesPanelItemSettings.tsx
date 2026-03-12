@@ -1,13 +1,18 @@
 import { JsonForms } from "@jsonforms/react";
 import { useMemo } from "react";
 
-import { type Table, type TableDataSource } from "@tissuumaps/core";
+import { type Table } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import { cells, renderers } from "../../jsonforms";
 
-export function TablesPanelItemSettings({ table }: { table: Table }) {
-  const updateTable = useTissUUmaps((state) => state.updateTable);
+export type TablesPanelItemSettingsProps = {
+  table: Table;
+};
+
+export function TablesPanelItemSettings({
+  table,
+}: TablesPanelItemSettingsProps) {
   const createTableDataLoader = useTissUUmaps(
     (state) => state.createTableDataLoader,
   );
@@ -21,21 +26,12 @@ export function TablesPanelItemSettings({ table }: { table: Table }) {
     <div>
       {/* Data source */}
       <JsonForms
-        schema={tableDataLoader.schema}
-        uischema={tableDataLoader.uischema}
+        schema={tableDataLoader.dataSourceSchema}
+        uischema={tableDataLoader.dataSourceUISchema}
         data={table.dataSource}
-        onChange={({ data, errors }) => {
-          if (errors === undefined || errors.length === 0) {
-            updateTable(table.id, {
-              dataSource: {
-                ...table.dataSource,
-                ...(data as TableDataSource),
-              },
-            });
-          }
-        }}
         renderers={renderers}
         cells={cells}
+        readonly={true}
       />
     </div>
   );

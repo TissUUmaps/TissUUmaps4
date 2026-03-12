@@ -7,6 +7,7 @@ import {
   type ShapesDataSource,
 } from "@tissuumaps/core";
 
+import { loadTableDataProxy } from "../proxies/TableDataProxy";
 import { type TissUUmapsStateCreator } from "./index";
 
 export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
@@ -25,7 +26,7 @@ export type ShapesSliceActions = {
   createShapesDataLoader: (shapesId: string) => ShapesDataLoader<ShapesData>;
   loadShapes: (
     shapesId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
   unloadShapes: (shapesId: string) => void;
 };
@@ -101,12 +102,19 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
     }
     const dataLoader = dataLoaderFactory(
       shapes.dataSource,
-      state.projectDir,
-      state.loadTable,
+      state.workspace,
+      (tableId, options) =>
+        loadTableDataProxy(
+          tableId,
+          state.loadTable,
+          state.loadTableColumn,
+          options,
+        ),
     );
     return dataLoader;
   },
-  loadShapes: async (shapesId, { signal }: { signal?: AbortSignal } = {}) => {
+  loadShapes: async (shapesId, options) => {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
     const shapes = state.shapes.find((shapes) => shapes.id === shapesId);

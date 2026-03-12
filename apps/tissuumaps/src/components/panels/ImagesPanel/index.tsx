@@ -15,9 +15,14 @@ import {
 } from "../../common/accordion";
 import { ImagesPanelItem } from "./ImagesPanelItem";
 
-export function ImagesPanel({ className }: { className?: string }) {
+export type ImagesPanelProps = {
+  className?: string;
+};
+
+export function ImagesPanel({ className }: ImagesPanelProps) {
   const images = useTissUUmaps((state) => state.images);
   const moveImage = useTissUUmaps((state) => state.moveImage);
+
   return (
     <DragDropProvider
       onDragEnd={(event) => {
@@ -38,8 +43,14 @@ export function ImagesPanel({ className }: { className?: string }) {
   );
 }
 
-function ImageAccordionItem({ image, index }: { image: Image; index: number }) {
+type ImageAccordionItemProps = {
+  image: Image;
+  index: number;
+};
+
+function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
   const { ref, handleRef } = useSortable({ id: image.id, index });
+
   return (
     <AccordionItem render={<div ref={ref} />}>
       <AccordionHeader>

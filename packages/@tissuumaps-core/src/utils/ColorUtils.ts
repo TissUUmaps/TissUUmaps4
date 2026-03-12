@@ -13,14 +13,9 @@ export class ColorUtils {
    */
   static parseColorPalette(
     str: string,
-    {
-      sep = " ",
-      maxValue = 1,
-    }: {
-      sep?: string;
-      maxValue?: number;
-    } = {},
+    options?: { sep?: string; maxValue?: number },
   ): Color[] {
+    const { sep = " ", maxValue = 1 } = options ?? {};
     return str
       .split("\n")
       .filter((line) => line.trim().length > 0)

@@ -7,6 +7,7 @@ import {
   type PointsDataSource,
 } from "@tissuumaps/core";
 
+import { loadTableDataProxy } from "../proxies/TableDataProxy";
 import { type TissUUmapsStateCreator } from "./index";
 
 export type PointsSlice = PointsSliceState & PointsSliceActions;
@@ -25,7 +26,7 @@ export type PointsSliceActions = {
   createPointsDataLoader: (pointsId: string) => PointsDataLoader<PointsData>;
   loadPoints: (
     pointsId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<PointsData>;
   unloadPoints: (pointsId: string) => void;
 };
@@ -101,12 +102,19 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
     }
     const dataLoader = dataLoaderFactory(
       points.dataSource,
-      state.projectDir,
-      state.loadTable,
+      state.workspace,
+      (tableId, options) =>
+        loadTableDataProxy(
+          tableId,
+          state.loadTable,
+          state.loadTableColumn,
+          options,
+        ),
     );
     return dataLoader;
   },
-  loadPoints: async (pointsId, { signal } = {}) => {
+  loadPoints: async (pointsId, options) => {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
     const points = state.points.find((points) => points.id === pointsId);

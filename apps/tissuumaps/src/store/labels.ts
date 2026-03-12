@@ -7,6 +7,7 @@ import {
   type LabelsDataSource,
 } from "@tissuumaps/core";
 
+import { loadTableDataProxy } from "../proxies/TableDataProxy";
 import { type TissUUmapsStateCreator } from "./index";
 
 export type LabelsSlice = LabelsSliceState & LabelsSliceActions;
@@ -25,7 +26,7 @@ export type LabelsSliceActions = {
   createLabelsDataLoader: (labelsId: string) => LabelsDataLoader<LabelsData>;
   loadLabels: (
     labelsId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<LabelsData>;
   unloadLabels: (labelsId: string) => void;
 };
@@ -101,12 +102,19 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
     }
     const dataLoader = dataLoaderFactory(
       labels.dataSource,
-      state.projectDir,
-      state.loadTable,
+      state.workspace,
+      (tableId, options) =>
+        loadTableDataProxy(
+          tableId,
+          state.loadTable,
+          state.loadTableColumn,
+          options,
+        ),
     );
     return dataLoader;
   },
-  loadLabels: async (labelsId, { signal }: { signal?: AbortSignal } = {}) => {
+  loadLabels: async (labelsId, options) => {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
     const labels = state.labels.find((labels) => labels.id === labelsId);

@@ -1,5 +1,5 @@
 import { Switch } from "@/components/ui/switch";
-import type { CellProps } from "@jsonforms/core";
+import { type CellProps } from "@jsonforms/core";
 import { withJsonFormsCellProps } from "@jsonforms/react";
 
 export const BooleanCell = withJsonFormsCellProps((props: CellProps) => {

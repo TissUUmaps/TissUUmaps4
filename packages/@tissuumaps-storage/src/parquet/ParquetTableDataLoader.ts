@@ -1,10 +1,9 @@
 import * as hyparquet from "hyparquet";
+import { compressors } from "hyparquet-compressors";
+import { parquetReadColumn } from "hyparquet/src/read.js";
 
 import { AbstractTableDataLoader } from "../base";
-import {
-  ParquetTableData,
-  loadParquetTableDataColumn,
-} from "./ParquetTableData";
+import { ParquetTableData } from "./ParquetTableData";
 import {
   type ParquetTableDataSource,
   parquetTableDataSourceSchema,
@@ -15,41 +14,43 @@ export class ParquetTableDataLoader extends AbstractTableDataLoader<
   ParquetTableDataSource,
   ParquetTableData
 > {
-  readonly schema = parquetTableDataSourceSchema;
-  readonly uischema = parquetTableDataSourceUISchema;
+  readonly dataSourceSchema = parquetTableDataSourceSchema;
+  readonly dataSourceUISchema = parquetTableDataSourceUISchema;
 
-  async loadTable({
-    signal,
-  }: { signal?: AbortSignal } = {}): Promise<ParquetTableData> {
+  async loadTable(options?: {
+    signal?: AbortSignal;
+  }): Promise<ParquetTableData> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const buffer = await this._loadParquet({ signal });
     signal?.throwIfAborted();
     const metadata = await hyparquet.parquetMetadataAsync(buffer);
     signal?.throwIfAborted();
-    let index;
+    let ids;
     if (this.dataSource.idColumn !== undefined) {
-      const ids = await loadParquetTableDataColumn<number>(
-        this.dataSource.idColumn,
-        buffer,
-        metadata,
-        { signal },
-      );
+      const rawIdColumnData = await parquetReadColumn({
+        file: buffer,
+        columns: [this.dataSource.idColumn],
+        metadata: metadata,
+        compressors: compressors,
+      });
       signal?.throwIfAborted();
-      for (let i = 0; i < ids.length; i++) {
-        if (!Number.isInteger(ids[i])) {
+      for (let i = 0; i < rawIdColumnData.length; i++) {
+        if (!Number.isInteger(rawIdColumnData[i])) {
           throw new Error(
             `ID column "${this.dataSource.idColumn}" contains non-integer values.`,
           );
         }
       }
-      index = Array.from(ids);
+      ids = Array.from(rawIdColumnData);
     }
-    return new ParquetTableData(buffer, metadata, index);
+    return new ParquetTableData(buffer, metadata, ids);
   }
 
-  private async _loadParquet({
-    signal,
-  }: { signal?: AbortSignal } = {}): Promise<hyparquet.AsyncBuffer> {
+  private async _loadParquet(options?: {
+    signal?: AbortSignal;
+  }): Promise<hyparquet.AsyncBuffer> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);

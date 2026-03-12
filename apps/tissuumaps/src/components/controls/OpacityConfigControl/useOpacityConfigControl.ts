@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   type OpacityConfig,
@@ -8,23 +8,33 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { OpacityConfigContext } from "./context";
-
 type OpacityConfigSource = Exclude<OpacityConfig["source"], undefined>;
 
-export type OpacityConfigContextProviderProps = {
+export type OpacityConfigControlState = {
   opacityConfig: OpacityConfig;
-  onOpacityConfigChange: (newOpacityConfig: OpacityConfig) => void;
   defaultOpacity: number;
-  children: ReactNode;
+  activeSource: OpacityConfigSource;
+  currentSource: OpacityConfigSource;
+  currentConstantValue: number;
+  currentFromTable: string | null;
+  currentFromColumn: string | null;
+  currentGroupByTable: string | null;
+  currentGroupByColumn: string | null;
+  currentGroupByMap: string | null;
+  setCurrentSource: (newCurrentSource: OpacityConfigSource) => void;
+  setCurrentConstantValue: (newCurrentConstantValue: number) => void;
+  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
+  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
+  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
+  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
 };
 
-export function OpacityConfigContextProvider({
-  opacityConfig,
-  onOpacityConfigChange,
-  defaultOpacity,
-  children,
-}: OpacityConfigContextProviderProps) {
+export function useOpacityConfigControl(
+  opacityConfig: OpacityConfig,
+  onOpacityConfigChange: (newOpacityConfig: OpacityConfig) => void,
+  defaultOpacity: number,
+): OpacityConfigControlState {
   const activeSource = getActiveConfigSource(opacityConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<OpacityConfigSource>(
     opacityConfig.source ?? "constant",
@@ -126,29 +136,23 @@ export function OpacityConfigContextProvider({
     onOpacityConfigChange,
   ]);
 
-  return (
-    <OpacityConfigContext.Provider
-      value={{
-        opacityConfig,
-        defaultOpacity,
-        activeSource,
-        currentSource,
-        currentConstantValue,
-        currentFromTable,
-        currentFromColumn,
-        currentGroupByTable,
-        currentGroupByColumn,
-        currentGroupByMap,
-        setCurrentSource,
-        setCurrentConstantValue,
-        setCurrentFromTable,
-        setCurrentFromColumn,
-        setCurrentGroupByTable,
-        setCurrentGroupByColumn,
-        setCurrentGroupByMap,
-      }}
-    >
-      {children}
-    </OpacityConfigContext.Provider>
-  );
+  return {
+    opacityConfig,
+    defaultOpacity,
+    activeSource,
+    currentSource,
+    currentConstantValue,
+    currentFromTable,
+    currentFromColumn,
+    currentGroupByTable,
+    currentGroupByColumn,
+    currentGroupByMap,
+    setCurrentSource,
+    setCurrentConstantValue,
+    setCurrentFromTable,
+    setCurrentFromColumn,
+    setCurrentGroupByTable,
+    setCurrentGroupByColumn,
+    setCurrentGroupByMap,
+  };
 }

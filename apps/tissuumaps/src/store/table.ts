@@ -1,6 +1,7 @@
 import { deepEqual } from "fast-equals";
 
 import {
+  type MappableArrayLike,
   type Table,
   type TableData,
   type TableDataLoader,
@@ -9,11 +10,22 @@ import {
 
 import { type TissUUmapsStateCreator } from "./index";
 
+export type LoadedTable = {
+  data: TableData;
+  loadedColumns: Map<string, LoadedTableColumn<unknown>>;
+};
+
+export type LoadedTableColumn<T> = {
+  values: MappableArrayLike<T>;
+  valueRange: [number, number] | undefined;
+};
+
 export type TableSlice = TableSliceState & TableSliceActions;
 
 export type TableSliceState = {
   tables: Table[];
-  _tableDataCache: { dataSource: TableDataSource; data: TableData }[];
+  loadedTables: Map<string, LoadedTable>;
+  tableDataSourceCaches: { dataSource: TableDataSource; data: TableData }[];
 };
 
 export type TableSliceActions = {
@@ -25,8 +37,14 @@ export type TableSliceActions = {
   createTableDataLoader: (tableId: string) => TableDataLoader<TableData>;
   loadTable: (
     tableId: string,
-    options: { signal?: AbortSignal },
-  ) => Promise<TableData>;
+    options?: { signal?: AbortSignal; reload?: boolean },
+  ) => Promise<LoadedTable>;
+  loadTableColumn: <T>(
+    tableId: string,
+    column: string,
+    options?: { signal?: AbortSignal; reload?: boolean },
+  ) => Promise<LoadedTableColumn<T>>;
+  unloadTableColumn: (tableId: string, column: string) => void;
   unloadTable: (tableId: string) => void;
 };
 
@@ -99,50 +117,113 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
         `No table data loader found for type ${table.dataSource.type}.`,
       );
     }
-    const dataLoader = dataLoaderFactory(table.dataSource, state.projectDir);
+    const dataLoader = dataLoaderFactory(table.dataSource, state.workspace);
     return dataLoader;
   },
-  loadTable: async (tableId, { signal }: { signal?: AbortSignal } = {}) => {
+  loadTable: async (tableId, options) => {
+    const { signal, reload } = options ?? {};
     signal?.throwIfAborted();
     const state = get();
+    const loadedTable = state.loadedTables.get(tableId);
+    if (loadedTable !== undefined && !reload) {
+      return loadedTable;
+    }
     const table = state.tables.find((table) => table.id === tableId);
     if (table === undefined) {
       throw new Error(`Table with ID ${tableId} not found.`);
     }
-    const cache = state._tableDataCache.find(({ dataSource }) =>
+    let data;
+    const dataSourceCache = state.tableDataSourceCaches.find(({ dataSource }) =>
       deepEqual(dataSource, table.dataSource),
     );
-    if (cache !== undefined) {
-      return cache.data;
+    if (dataSourceCache !== undefined) {
+      data = dataSourceCache.data;
+    } else {
+      const dataLoaderFactory = state.tableDataLoaderFactories.get(
+        table.dataSource.type,
+      );
+      if (dataLoaderFactory === undefined) {
+        throw new Error(
+          `No table data loader found for type ${table.dataSource.type}.`,
+        );
+      }
+      const dataLoader = dataLoaderFactory(table.dataSource, state.workspace);
+      const newData = await dataLoader.loadTable({ signal });
+      signal?.throwIfAborted();
+      set((draft) => {
+        draft.tableDataSourceCaches.push({
+          dataSource: table.dataSource,
+          data: newData,
+        });
+      });
+      data = newData;
     }
-    const dataLoader = state.createTableDataLoader(tableId);
-    const data = await dataLoader.loadTable({ signal });
+    const newLoadedData = { data, loadedColumns: new Map() };
+    set((draft) => {
+      draft.loadedTables.set(tableId, newLoadedData);
+    });
+    return newLoadedData;
+  },
+  loadTableColumn: async <T>(
+    tableId: string,
+    column: string,
+    options?: { signal?: AbortSignal; reload?: boolean },
+  ) => {
+    const { signal, reload = false } = options ?? {};
+    signal?.throwIfAborted();
+    const state = get();
+    const loadedTable = await state.loadTable(tableId, { signal });
+    signal?.throwIfAborted();
+    const loadedColumn = loadedTable.loadedColumns.get(column);
+    if (loadedColumn !== undefined && !reload) {
+      return loadedColumn as LoadedTableColumn<T>;
+    }
+    const values = await loadedTable.data.loadValues<T>(column, { signal });
+    signal?.throwIfAborted();
+    const valueRange = await loadedTable.data.loadValueRange(column, {
+      signal,
+    });
     signal?.throwIfAborted();
     set((draft) => {
-      draft._tableDataCache.push({ dataSource: table.dataSource, data });
+      const loadedTable = draft.loadedTables.get(tableId)!;
+      loadedTable.loadedColumns.set(column, { values, valueRange });
     });
-    return data;
+    return { values, valueRange };
+  },
+  unloadTableColumn: (tableId, column) => {
+    set((draft) => {
+      const loadedTable = draft.loadedTables.get(tableId);
+      if (loadedTable === undefined) {
+        throw new Error(`Table with ID ${tableId} not loaded.`);
+      }
+      loadedTable.loadedColumns.delete(column);
+    });
   },
   unloadTable: (tableId) => {
     const state = get();
-    const table = state.tables.find((table) => table.id === tableId);
-    if (table === undefined) {
-      throw new Error(`Table with ID ${tableId} not found.`);
-    }
-    const cacheIndex = state._tableDataCache.findIndex(({ dataSource }) =>
-      deepEqual(dataSource, table.dataSource),
-    );
-    if (cacheIndex !== -1) {
-      const cache = state._tableDataCache[cacheIndex]!;
+    const loadedTable = state.loadedTables.get(tableId);
+    if (loadedTable !== undefined) {
+      let clearDataSourceCache = true;
+      for (const otherLoadedData of state.loadedTables.values()) {
+        if (otherLoadedData.data === loadedTable.data) {
+          clearDataSourceCache = false;
+          break;
+        }
+      }
       set((draft) => {
-        draft._tableDataCache.splice(cacheIndex, 1);
+        draft.loadedTables.delete(tableId);
+        if (clearDataSourceCache) {
+          draft.tableDataSourceCaches = draft.tableDataSourceCaches.filter(
+            (dataSourceCache) => dataSourceCache.data !== loadedTable.data,
+          );
+        }
       });
-      cache.data.destroy();
     }
   },
 });
 
 const initialTableSliceState: TableSliceState = {
   tables: [],
-  _tableDataCache: [],
+  loadedTables: new Map(),
+  tableDataSourceCaches: [],
 };

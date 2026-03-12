@@ -1,11 +1,6 @@
-import { ColorConfigSourceValue } from "@/components/controls/ColorConfigControl/ColorConfigSourceValue";
-import { MarkerConfigSourceValue } from "@/components/controls/MarkerConfigControl/MarkerConfigSourceValue";
-import { OpacityConfigSourceValue } from "@/components/controls/OpacityConfigControl/OpacityConfigSourceValue";
-import { SizeConfigSourceValue } from "@/components/controls/SizeConfigControl/SizeConfigSourceValue";
-import { VisibilityConfigSourceValue } from "@/components/controls/VisibilityConfigControl/VisibilityConfigSourceValue";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
 import {
   type Points,
@@ -29,42 +24,35 @@ import {
 import { Field, FieldLabel } from "../../common/field";
 import { Fieldset, FieldsetLegend } from "../../common/fieldset";
 import {
-  ColorConfigContextProvider,
+  ActiveColorConfigValue,
   ColorConfigControl,
   ColorConfigSourceToggleGroup,
 } from "../../controls/ColorConfigControl";
+import { useColorConfigControl } from "../../controls/ColorConfigControl/useColorConfigControl";
 import {
-  MarkerConfigContextProvider,
+  ActiveMarkerConfigValue,
   MarkerConfigControl,
   MarkerConfigSourceToggleGroup,
 } from "../../controls/MarkerConfigControl";
+import { useMarkerConfigControl } from "../../controls/MarkerConfigControl/useMarkerConfigControl";
 import {
-  OpacityConfigContextProvider,
+  ActiveOpacityConfigValue,
   OpacityConfigControl,
   OpacityConfigSourceToggleGroup,
 } from "../../controls/OpacityConfigControl";
+import { useOpacityConfigControl } from "../../controls/OpacityConfigControl/useOpacityConfigControl";
 import {
-  SizeConfigContextProvider,
+  ActiveSizeConfigValue,
   SizeConfigControl,
   SizeConfigSourceToggleGroup,
 } from "../../controls/SizeConfigControl";
+import { useSizeConfigControl } from "../../controls/SizeConfigControl/useSizeConfigControl";
 import {
-  VisibilityConfigContextProvider,
+  ActiveVisibilityConfigValue,
   VisibilityConfigControl,
   VisibilityConfigSourceToggleGroup,
 } from "../../controls/VisibilityConfigControl";
-import { Switch } from "../../ui/switch";
-
-const ConfigControl = {
-  general: "general",
-  pointMarker: "pointMarker",
-  pointSize: "pointSize",
-  pointColor: "pointColor",
-  pointVisibility: "pointVisibility",
-  pointOpacity: "pointOpacity",
-} as const;
-
-type ConfigControl = (typeof ConfigControl)[keyof typeof ConfigControl];
+import { useVisibilityConfigControl } from "../../controls/VisibilityConfigControl/useVisibilityConfigControl";
 
 export type PointsSettingsPanelProps = {
   points: Points;
@@ -75,10 +63,37 @@ export function PointsSettingsPanel({
   points,
   className,
 }: PointsSettingsPanelProps) {
-  const [expandedConfigControl, setExpandedConfigControl] =
-    useState<ConfigControl | null>(null);
-
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
+
+  const pointMarkerConfigControlState = useMarkerConfigControl(
+    points.pointMarker,
+    (newMarkerConfig) =>
+      updatePoints(points.id, { pointMarker: newMarkerConfig }),
+    defaultPointMarker,
+  );
+  const pointSizeConfigControlState = useSizeConfigControl(
+    points.pointSize,
+    (newSizeConfig) => updatePoints(points.id, { pointSize: newSizeConfig }),
+    defaultPointSize,
+    defaultPointSizeUnit,
+  );
+  const pointColorConfigControlState = useColorConfigControl(
+    points.pointColor,
+    (newColorConfig) => updatePoints(points.id, { pointColor: newColorConfig }),
+    defaultPointColor,
+  );
+  const pointVisibilityConfigControlState = useVisibilityConfigControl(
+    points.pointVisibility,
+    (newVisibilityConfig) =>
+      updatePoints(points.id, { pointVisibility: newVisibilityConfig }),
+    defaultPointVisibility,
+  );
+  const pointOpacityConfigControlState = useOpacityConfigControl(
+    points.pointOpacity,
+    (newOpacityConfig) =>
+      updatePoints(points.id, { pointOpacity: newOpacityConfig }),
+    defaultPointOpacity,
+  );
 
   return (
     <Fieldset
@@ -87,15 +102,8 @@ export function PointsSettingsPanel({
       <FieldsetLegend className="font-medium text-foreground">
         Settings
       </FieldsetLegend>
-      <Accordion
-        value={[expandedConfigControl]}
-        onValueChange={(value) =>
-          setExpandedConfigControl(
-            (value[0] as ConfigControl | undefined) ?? null,
-          )
-        }
-      >
-        <AccordionItem value={ConfigControl.general}>
+      <Accordion>
+        <AccordionItem value="general">
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>General</AccordionTrigger>
@@ -157,131 +165,97 @@ export function PointsSettingsPanel({
           </AccordionPanel>
         </AccordionItem>
         {/* Point marker */}
-        <MarkerConfigContextProvider
-          markerConfig={points.pointMarker}
-          onMarkerConfigChange={(newMarkerConfig) =>
-            updatePoints(points.id, { pointMarker: newMarkerConfig })
-          }
-          defaultMarker={defaultPointMarker}
-        >
-          <AccordionItem value={ConfigControl.pointMarker}>
-            <AccordionHeader>
-              <AccordionTriggerRightDownIcon />
-              <AccordionTrigger>Point marker</AccordionTrigger>
-              <MarkerConfigSourceValue
-                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-                onClick={() =>
-                  setExpandedConfigControl(ConfigControl.pointMarker)
-                }
-              />
-            </AccordionHeader>
-            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-              <MarkerConfigSourceToggleGroup className="border rounded" />
-              <MarkerConfigControl />
-            </AccordionPanel>
-          </AccordionItem>
-        </MarkerConfigContextProvider>
+        <AccordionItem value="pointMarker">
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Point marker</AccordionTrigger>
+            <ActiveMarkerConfigValue
+              state={pointMarkerConfigControlState}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <MarkerConfigSourceToggleGroup
+              state={pointMarkerConfigControlState}
+              className="border rounded"
+            />
+            <MarkerConfigControl state={pointMarkerConfigControlState} />
+          </AccordionPanel>
+        </AccordionItem>
         {/* Point size */}
-        <SizeConfigContextProvider
-          sizeConfig={points.pointSize}
-          onSizeConfigChange={(newSizeConfig) =>
-            updatePoints(points.id, { pointSize: newSizeConfig })
-          }
-          defaultSize={defaultPointSize}
-          defaultSizeUnit={defaultPointSizeUnit}
-        >
-          <AccordionItem value={ConfigControl.pointSize}>
-            <AccordionHeader>
-              <AccordionTriggerRightDownIcon />
-              <AccordionTrigger>Point size</AccordionTrigger>
-              <SizeConfigSourceValue
-                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-                onClick={() =>
-                  setExpandedConfigControl(ConfigControl.pointSize)
-                }
-              />
-            </AccordionHeader>
-            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-              <SizeConfigSourceToggleGroup className="border rounded" />
-              <SizeConfigControl />
-            </AccordionPanel>
-          </AccordionItem>
-        </SizeConfigContextProvider>
+        <AccordionItem value="pointSize">
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Point size</AccordionTrigger>
+            <ActiveSizeConfigValue
+              state={pointSizeConfigControlState}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <SizeConfigSourceToggleGroup
+              state={pointSizeConfigControlState}
+              className="border rounded"
+            />
+            <SizeConfigControl state={pointSizeConfigControlState} />
+          </AccordionPanel>
+        </AccordionItem>
         {/* Point color */}
-        <ColorConfigContextProvider
-          colorConfig={points.pointColor}
-          onColorConfigChange={(newColorConfig) =>
-            updatePoints(points.id, { pointColor: newColorConfig })
-          }
-          defaultColor={defaultPointColor}
-        >
-          <AccordionItem value={ConfigControl.pointColor}>
-            <AccordionHeader>
-              <AccordionTriggerRightDownIcon />
-              <AccordionTrigger>Point color</AccordionTrigger>
-              <ColorConfigSourceValue
-                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-                onClick={() =>
-                  setExpandedConfigControl(ConfigControl.pointColor)
-                }
-              />
-            </AccordionHeader>
-            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-              <ColorConfigSourceToggleGroup className="border rounded" />
-              <ColorConfigControl />
-            </AccordionPanel>
-          </AccordionItem>
-        </ColorConfigContextProvider>
+        <AccordionItem value="pointColor">
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Point color</AccordionTrigger>
+            <ActiveColorConfigValue
+              state={pointColorConfigControlState}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <ColorConfigSourceToggleGroup
+              state={pointColorConfigControlState}
+              className="border rounded"
+            />
+            <ColorConfigControl state={pointColorConfigControlState} />
+          </AccordionPanel>
+        </AccordionItem>
         {/* Point visibility */}
-        <VisibilityConfigContextProvider
-          visibilityConfig={points.pointVisibility}
-          onVisibilityConfigChange={(newVisibilityConfig) =>
-            updatePoints(points.id, { pointVisibility: newVisibilityConfig })
-          }
-          defaultVisibility={defaultPointVisibility}
-        >
-          <AccordionItem value={ConfigControl.pointVisibility}>
-            <AccordionHeader>
-              <AccordionTriggerRightDownIcon />
-              <AccordionTrigger>Point visibility</AccordionTrigger>
-              <VisibilityConfigSourceValue
-                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-                onClick={() =>
-                  setExpandedConfigControl(ConfigControl.pointVisibility)
-                }
-              />
-            </AccordionHeader>
-            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-              <VisibilityConfigSourceToggleGroup className="border rounded" />
-              <VisibilityConfigControl />
-            </AccordionPanel>
-          </AccordionItem>
-        </VisibilityConfigContextProvider>
+        <AccordionItem value="pointVisibility">
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Point visibility</AccordionTrigger>
+            <ActiveVisibilityConfigValue
+              state={pointVisibilityConfigControlState}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <VisibilityConfigSourceToggleGroup
+              state={pointVisibilityConfigControlState}
+              className="border rounded"
+            />
+            <VisibilityConfigControl
+              state={pointVisibilityConfigControlState}
+            />
+          </AccordionPanel>
+        </AccordionItem>
         {/* Point opacity */}
-        <OpacityConfigContextProvider
-          opacityConfig={points.pointOpacity}
-          onOpacityConfigChange={(newOpacityConfig) =>
-            updatePoints(points.id, { pointOpacity: newOpacityConfig })
-          }
-          defaultOpacity={defaultPointOpacity}
-        >
-          <AccordionItem value={ConfigControl.pointOpacity}>
-            <AccordionHeader>
-              <AccordionTriggerRightDownIcon />
-              <AccordionTrigger>Point opacity</AccordionTrigger>
-              <OpacityConfigSourceValue
-                className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-                onClick={() =>
-                  setExpandedConfigControl(ConfigControl.pointOpacity)
-                }
-              />
-            </AccordionHeader>
-            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-              <OpacityConfigSourceToggleGroup className="border rounded" />
-              <OpacityConfigControl />
-            </AccordionPanel>
-          </AccordionItem>
-        </OpacityConfigContextProvider>
+        <AccordionItem value="pointOpacity">
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Point opacity</AccordionTrigger>
+            <ActiveOpacityConfigValue
+              state={pointOpacityConfigControlState}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <OpacityConfigSourceToggleGroup
+              state={pointOpacityConfigControlState}
+              className="border rounded"
+            />
+            <OpacityConfigControl state={pointOpacityConfigControlState} />
+          </AccordionPanel>
+        </AccordionItem>
       </Accordion>
     </Fieldset>
   );

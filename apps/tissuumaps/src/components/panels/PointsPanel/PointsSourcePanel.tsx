@@ -42,8 +42,8 @@ export function PointsSourcePanel({
         <Input type="text" value={points.dataSource.type} disabled />
       </Field>
       <JsonForms
-        schema={pointsDataLoader.schema}
-        uischema={pointsDataLoader.uischema}
+        schema={pointsDataLoader.dataSourceSchema}
+        uischema={pointsDataLoader.dataSourceUISchema}
         data={points.dataSource}
         renderers={renderers}
         cells={cells}

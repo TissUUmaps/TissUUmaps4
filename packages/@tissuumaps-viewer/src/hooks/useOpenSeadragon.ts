@@ -4,16 +4,15 @@ import { OpenSeadragonController, type Rect } from "@tissuumaps/core";
 
 import { useViewer } from "../context";
 
-export function useOpenSeadragon({
-  containerResizedHandler,
-  viewportChangedHandler,
-}: {
-  containerResizedHandler?: (newContainerSize: {
+export function useOpenSeadragon(options?: {
+  onContainerResized?: (newContainerSize: {
     width: number;
     height: number;
   }) => void;
-  viewportChangedHandler?: (newViewport: Rect) => void;
-} = {}) {
+  onViewportChanged?: (newViewport: Rect) => void;
+}) {
+  const { onContainerResized, onViewportChanged } = options ?? {};
+
   const controllerRef = useRef<OpenSeadragonController | null>(null);
   const [viewerState, setViewerState] = useState<{
     canvas: Element | null;
@@ -21,7 +20,7 @@ export function useOpenSeadragon({
   }>({ canvas: null, initialViewport: null });
 
   const {
-    projectDir,
+    workspace,
     layers,
     images,
     labels,
@@ -42,17 +41,17 @@ export function useOpenSeadragon({
         const controller = new OpenSeadragonController(
           viewerElement,
           (viewer) => {
-            if (containerResizedHandler !== undefined) {
+            if (onContainerResized !== undefined) {
               viewer.addHandler("resize", (event) => {
-                containerResizedHandler({
+                onContainerResized({
                   width: event.newContainerSize.x,
                   height: event.newContainerSize.y,
                 });
               });
             }
-            if (viewportChangedHandler !== undefined) {
+            if (onViewportChanged !== undefined) {
               viewer.addHandler("viewport-change", () => {
-                viewportChangedHandler(viewer.viewport.getBounds(true));
+                onViewportChanged(viewer.viewport.getBounds(true));
               });
             }
             setViewerState({
@@ -73,7 +72,7 @@ export function useOpenSeadragon({
         }
       };
     },
-    [containerResizedHandler, viewportChangedHandler],
+    [onContainerResized, onViewportChanged],
   );
 
   useEffect(() => {
@@ -120,7 +119,7 @@ export function useOpenSeadragon({
     return () => {
       abortController.abort();
     };
-  }, [projectDir, layers, images, labels, loadImage, loadLabels]);
+  }, [workspace, layers, images, labels, loadImage, loadLabels]);
 
   return { viewerElementRef, viewerState };
 }

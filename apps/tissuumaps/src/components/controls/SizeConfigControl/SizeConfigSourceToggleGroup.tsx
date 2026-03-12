@@ -1,17 +1,19 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { useSizeConfigContext } from "./context";
+import { type SizeConfigControlState } from "./useSizeConfigControl";
 
 export type SizeConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],
   "value" | "onValueChange"
->;
+> & {
+  state: SizeConfigControlState;
+};
 
-export function SizeConfigSourceToggleGroup(
-  props: SizeConfigSourceToggleGroupProps,
-) {
-  const { activeSource, currentSource, setCurrentSource } =
-    useSizeConfigContext();
+export function SizeConfigSourceToggleGroup({
+  state,
+  ...props
+}: SizeConfigSourceToggleGroupProps) {
+  const { activeSource, currentSource, setCurrentSource } = state;
 
   return (
     <ToggleGroup
