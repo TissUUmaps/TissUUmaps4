@@ -14,7 +14,7 @@ export interface TableDataLoader<
    *
    * @param options - Optional abort signal
    */
-  loadTable(options: { signal?: AbortSignal }): Promise<TTableData>;
+  loadTable(options?: { signal?: AbortSignal }): Promise<TTableData>;
 }
 
 /**
@@ -25,35 +25,48 @@ export interface TableData extends ItemsData {
    * Returns column name suggestions matching the current query
    *
    * @param currentQuery - The partial column name to autocomplete
+   * @param options - Optional abort signal
+   * @returns A list of suggested column queries matching the current one
    */
-  suggestColumnQueries(currentQuery: string): Promise<string[]>;
+  suggestColumnQueries(
+    currentQuery: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<string[]>;
 
   /**
    * Resolves a query to an exact column name
    *
    * @param query - The column query
+   * @param options - Optional abort signal
    * @returns The resolved column name, or `null` if no match is found
    */
-  getColumn(query: string): Promise<string | null>;
+  resolveColumnQuery(
+    query: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | null>;
 
   /**
    * Loads a column's values as a typed array-like
    *
    * @typeParam T - Element type of the returned array
    * @param column - The column name
-   * @param options - Optional abort signal and whether to compute the column's value range
+   * @param options - Optional abort signal
    * @returns The column values
    */
-  loadColumn<T>(
+  loadValues<T>(
     column: string,
-    options: { signal?: AbortSignal; computeRange?: boolean },
+    options?: { signal?: AbortSignal },
   ): Promise<MappableArrayLike<T>>;
 
   /**
-   * Returns the minimum and maximum values of a numeric column, if previously loaded
+   * Load a column's minimum and maximum values
    *
    * @param column - The column name
-   * @returns The [min, max] range of the column, or `undefined` if not previously loaded
+   * @param options - Optional abort signal
+   * @returns The numeric [min, max] value range of the column, or `undefined` if not numeric
    */
-  getRange(column: string): [number, number] | undefined;
+  loadValueRange(
+    column: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<[number, number] | undefined>;
 }

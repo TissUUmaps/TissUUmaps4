@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Marker,
@@ -9,23 +9,33 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { MarkerConfigContext } from "./context";
-
 type MarkerConfigSource = Exclude<MarkerConfig["source"], undefined>;
 
-export type MarkerConfigContextProviderProps = {
+export type MarkerConfigControlState = {
   markerConfig: MarkerConfig;
-  onMarkerConfigChange: (newMarkerConfig: MarkerConfig) => void;
   defaultMarker: Marker;
-  children: ReactNode;
+  activeSource: MarkerConfigSource;
+  currentSource: MarkerConfigSource;
+  currentConstantValue: Marker;
+  currentFromTable: string | null;
+  currentFromColumn: string | null;
+  currentGroupByTable: string | null;
+  currentGroupByColumn: string | null;
+  currentGroupByMap: string | null;
+  setCurrentSource: (newCurrentSource: MarkerConfigSource) => void;
+  setCurrentConstantValue: (newCurrentValue: Marker) => void;
+  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
+  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
+  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
+  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
 };
 
-export function MarkerConfigContextProvider({
-  markerConfig,
-  onMarkerConfigChange,
-  defaultMarker,
-  children,
-}: MarkerConfigContextProviderProps) {
+export function useMarkerConfigControl(
+  markerConfig: MarkerConfig,
+  onMarkerConfigChange: (newMarkerConfig: MarkerConfig) => void,
+  defaultMarker: Marker,
+): MarkerConfigControlState {
   const activeSource = getActiveConfigSource(markerConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<MarkerConfigSource>(
     markerConfig.source ?? "constant",
@@ -124,29 +134,23 @@ export function MarkerConfigContextProvider({
     onMarkerConfigChange,
   ]);
 
-  return (
-    <MarkerConfigContext.Provider
-      value={{
-        markerConfig,
-        defaultMarker,
-        activeSource,
-        currentSource,
-        currentConstantValue,
-        currentFromTable,
-        currentFromColumn,
-        currentGroupByTable,
-        currentGroupByColumn,
-        currentGroupByMap,
-        setCurrentSource,
-        setCurrentConstantValue,
-        setCurrentFromTable,
-        setCurrentFromColumn,
-        setCurrentGroupByTable,
-        setCurrentGroupByColumn,
-        setCurrentGroupByMap,
-      }}
-    >
-      {children}
-    </MarkerConfigContext.Provider>
-  );
+  return {
+    markerConfig,
+    defaultMarker,
+    activeSource,
+    currentSource,
+    currentConstantValue,
+    currentFromTable,
+    currentFromColumn,
+    currentGroupByTable,
+    currentGroupByColumn,
+    currentGroupByMap,
+    setCurrentSource,
+    setCurrentConstantValue,
+    setCurrentFromTable,
+    setCurrentFromColumn,
+    setCurrentGroupByTable,
+    setCurrentGroupByColumn,
+    setCurrentGroupByMap,
+  };
 }

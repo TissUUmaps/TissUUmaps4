@@ -1,5 +1,5 @@
 import { Label } from "@/components/ui/label";
-import type { LabelProps } from "@jsonforms/core";
+import { type LabelProps } from "@jsonforms/core";
 import { withJsonFormsLabelProps } from "@jsonforms/react";
 
 export const LabelControl = withJsonFormsLabelProps((props: LabelProps) => {

@@ -46,10 +46,11 @@ export class ResolveUtils {
     defaultMarker: Marker,
     loadTable: (
       tableId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    { signal, align = 1 }: { signal?: AbortSignal; align?: number } = {},
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const encodeMarker = (marker: Marker) => marker as number;
     const data = new Uint8Array(MathUtils.align(ids.length, align));
@@ -146,18 +147,11 @@ export class ResolveUtils {
     defaultSize: number,
     loadTable: (
       tableId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    {
-      signal,
-      align = 1,
-      sizeFactor = 1,
-    }: {
-      signal?: AbortSignal;
-      align?: number;
-      sizeFactor?: number;
-    } = {},
+    options?: { signal?: AbortSignal; align?: number; sizeFactor?: number },
   ): Promise<Float32Array> {
+    const { signal, align = 1, sizeFactor = 1 } = options ?? {};
     signal?.throwIfAborted();
     const encodeSize = (size: number) => size * sizeFactor;
     const data = new Float32Array(MathUtils.align(ids.length, align));
@@ -227,9 +221,9 @@ export class ResolveUtils {
    * @param colorMaps - Named maps from group strings to {@link Color} values
    * @param defaultColor - Fallback color used when a value cannot be resolved
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options - Optional abort signal and alignment for the output array length
    * @param visibilityData - Resolved visibility data produced by {@link resolveVisibilities}
    * @param opacityData - Resolved opacity data produced by {@link resolveOpacities}
+   * @param options - Optional abort signal and alignment for the output array length
    * @returns A `Uint32Array` of length `align(ids.length, align)` with packed RGBA colors
    */
   static async resolveColors(
@@ -239,12 +233,13 @@ export class ResolveUtils {
     defaultColor: Color,
     loadTable: (
       tableId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    { signal, align = 1 }: { signal?: AbortSignal; align?: number } = {},
     visibilityData: Uint8Array,
     opacityData: Uint8Array,
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint32Array> {
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const encodeColor = (color: Color) => ColorUtils.packColor(color);
     const data = new Uint32Array(MathUtils.align(ids.length, align));
@@ -258,10 +253,10 @@ export class ResolveUtils {
       if (colorPalette !== undefined) {
         const parseColor = (
           value: unknown,
-          range: [number, number] | undefined,
+          valueRange: [number, number] | undefined,
         ) => {
           if (typeof value === "number" && Number.isFinite(value)) {
-            const [vmin, vmax] = colorConfig.from.range ?? range ?? [0, 1];
+            const [vmin, vmax] = colorConfig.from.range ?? valueRange ?? [0, 1];
             const vnorm = (value - vmin) / (vmax - vmin);
             const index = MathUtils.clamp(
               Math.floor(vnorm * colorPalette.colors.length),
@@ -281,7 +276,7 @@ export class ResolveUtils {
           parseColor,
           defaultColor,
           encodeColor,
-          { signal, computeRange: true },
+          { signal },
         );
         signal?.throwIfAborted();
       } else {
@@ -397,10 +392,11 @@ export class ResolveUtils {
     defaultVisibility: boolean,
     loadTable: (
       tableId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    { signal, align = 1 }: { signal?: AbortSignal; align?: number } = {},
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const encodeVisibility = (visibility: boolean) => (visibility ? 1 : 0);
     const data = new Uint8Array(MathUtils.align(ids.length, align));
@@ -492,20 +488,12 @@ export class ResolveUtils {
     defaultOpacity: number,
     loadTable: (
       tableId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    {
-      signal,
-      align = 1,
-      opacityFactor = 1,
-    }: {
-      signal?: AbortSignal;
-      align?: number;
-      opacityFactor?: number;
-    } = {},
+    options?: { signal?: AbortSignal; align?: number; opacityFactor?: number },
   ): Promise<Uint8Array> {
+    const { signal, align = 1, opacityFactor = 1 } = options ?? {};
     signal?.throwIfAborted();
-
     const encodeOpacity = (opacity: number) =>
       MathUtils.clamp(Math.round(opacity * opacityFactor * 255), 0, 255);
     const data = new Uint8Array(MathUtils.align(ids.length, align));
@@ -582,35 +570,34 @@ export class ResolveUtils {
     config: FromConfig,
     loadTable: (
       tableId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
     parseValue: (
       value: unknown,
-      range: [number, number] | undefined,
+      valueRange: [number, number] | undefined,
     ) => TValue | undefined,
     defaultValue: TValue,
     encodeValue: (value: TValue) => number,
-    {
-      signal,
-      computeRange,
-    }: { signal?: AbortSignal; computeRange?: boolean } = {},
+    options?: { signal?: AbortSignal },
   ): Promise<void> {
-    const table = await loadTable(config.from.table, { signal });
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const values = await table.loadColumn(config.from.column, {
+    const tableData = await loadTable(config.from.table, { signal });
+    signal?.throwIfAborted();
+    const values = await tableData.loadValues(config.from.column, { signal });
+    signal?.throwIfAborted();
+    const valueRange = await tableData.loadValueRange(config.from.column, {
       signal,
-      computeRange,
     });
     signal?.throwIfAborted();
-    const range = table.getRange(config.from.column);
     const idValues = new Map<number, unknown>();
-    table.getIndex().forEach((id, i) => {
+    tableData.getIds().forEach((id, i) => {
       idValues.set(id, values[i]);
     });
     ids.forEach((id, i) => {
       if (idValues.has(id)) {
         const value = idValues.get(id);
-        const parsedValue = parseValue(value, range);
+        const parsedValue = parseValue(value, valueRange);
         data[i] = encodeValue(parsedValue ?? defaultValue);
       } else {
         console.warn(`ID ${id} missing in table ${config.from.table}`);
@@ -641,25 +628,23 @@ export class ResolveUtils {
     config: GroupByConfig<TMapRequired>,
     loadTable: (
       tableId: string,
-      options: { signal?: AbortSignal },
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
     mapGroupToValue: (group: string) => TValue | undefined,
     defaultValue: TValue,
     encodeValue: (value: TValue) => number,
-    {
-      signal,
-      computeRange,
-    }: { signal?: AbortSignal; computeRange?: boolean } = {},
+    options?: { signal?: AbortSignal },
   ): Promise<void> {
-    const table = await loadTable(config.groupBy.table, { signal });
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const groups = await table.loadColumn(config.groupBy.column, {
+    const tableData = await loadTable(config.groupBy.table, { signal });
+    signal?.throwIfAborted();
+    const groups = await tableData.loadValues(config.groupBy.column, {
       signal,
-      computeRange,
     });
     signal?.throwIfAborted();
     const idGroups = new Map<number, unknown>();
-    table.getIndex().forEach((id, i) => {
+    tableData.getIds().forEach((id, i) => {
       idGroups.set(id, groups[i]);
     });
     ids.forEach((id, i) => {

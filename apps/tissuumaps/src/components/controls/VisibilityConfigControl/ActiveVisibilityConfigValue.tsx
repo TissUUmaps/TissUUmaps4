@@ -1,5 +1,4 @@
 import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { type HTMLProps } from "react";
 
 import {
   isConstantConfig,
@@ -8,21 +7,24 @@ import {
 } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
-import { useVisibilityConfigContext } from "./context";
+import { type VisibilityConfigControlState } from "./useVisibilityConfigControl";
 
-export type VisibilityConfigSourceValueProps = HTMLProps<HTMLDivElement>;
+export type ActiveVisibilityConfigValueProps = {
+  state: VisibilityConfigControlState;
+  className?: string;
+};
 
-export function VisibilityConfigSourceValue(
-  props: VisibilityConfigSourceValueProps,
-) {
+export function ActiveVisibilityConfigValue({
+  state,
+  className,
+}: ActiveVisibilityConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, visibilityConfig, defaultVisibility } =
-    useVisibilityConfigContext();
+  const { activeSource, visibilityConfig, defaultVisibility } = state;
 
   if (activeSource === "constant" && isConstantConfig(visibilityConfig)) {
     return (
-      <div {...props}>
+      <div className={className}>
         {visibilityConfig.constant.value ? (
           <EyeIcon className="size-4" />
         ) : (
@@ -37,7 +39,7 @@ export function VisibilityConfigSourceValue(
       tables.find((table) => table.id === visibilityConfig.from.table)?.name ??
       visibilityConfig.from.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({visibilityConfig.from.column})
       </div>
     );
@@ -48,14 +50,14 @@ export function VisibilityConfigSourceValue(
       tables.find((table) => table.id === visibilityConfig.groupBy.table)
         ?.name ?? visibilityConfig.groupBy.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({visibilityConfig.groupBy.column})
       </div>
     );
   }
 
   return (
-    <div {...props}>
+    <div className={className}>
       {defaultVisibility ? (
         <EyeIcon className="size-4" />
       ) : (

@@ -1,5 +1,5 @@
 import { deepEqual } from "fast-equals";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   type Color,
@@ -11,23 +11,43 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { ColorConfigContext } from "./context";
-
 type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 
-export type ColorConfigContextProviderProps = {
+export type ColorConfigControlState = {
   colorConfig: ColorConfig;
-  onColorConfigChange: (newColorConfig: ColorConfig) => void;
   defaultColor: Color;
-  children: ReactNode;
+  activeSource: ColorConfigSource;
+  currentSource: ColorConfigSource;
+  currentConstantValue: Color;
+  currentFromTable: string | null;
+  currentFromColumn: string | null;
+  currentFromRangeMin: number | null;
+  currentFromRangeMax: number | null;
+  currentFromPalette: string | null;
+  currentGroupByTable: string | null;
+  currentGroupByColumn: string | null;
+  currentGroupByPalette: string | null;
+  currentGroupByMap: string | null;
+  currentRandomPalette: string | null;
+  setCurrentSource: (newCurrentSource: ColorConfigSource) => void;
+  setCurrentConstantValue: (newCurrentValue: Color) => void;
+  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
+  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
+  setCurrentFromRangeMin: (newCurrentFromRangeMin: number | null) => void;
+  setCurrentFromRangeMax: (newCurrentFromRangeMax: number | null) => void;
+  setCurrentFromPalette: (newCurrentFromPalette: string | null) => void;
+  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
+  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentGroupByPalette: (newCurrentGroupByPalette: string | null) => void;
+  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
+  setCurrentRandomPalette: (newCurrentRandomPalette: string | null) => void;
 };
 
-export function ColorConfigContextProvider({
-  colorConfig,
-  onColorConfigChange,
-  defaultColor,
-  children,
-}: ColorConfigContextProviderProps) {
+export function useColorConfigControl(
+  colorConfig: ColorConfig,
+  onColorConfigChange: (newColorConfig: ColorConfig) => void,
+  defaultColor: Color,
+): ColorConfigControlState {
   const activeSource = getActiveConfigSource(colorConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<ColorConfigSource>(
     colorConfig.source ?? "constant",
@@ -181,39 +201,33 @@ export function ColorConfigContextProvider({
     onColorConfigChange,
   ]);
 
-  return (
-    <ColorConfigContext.Provider
-      value={{
-        colorConfig,
-        defaultColor,
-        activeSource,
-        currentSource,
-        currentConstantValue,
-        currentFromTable,
-        currentFromColumn,
-        currentFromRangeMin,
-        currentFromRangeMax,
-        currentFromPalette,
-        currentGroupByTable,
-        currentGroupByColumn,
-        currentGroupByPalette,
-        currentGroupByMap,
-        currentRandomPalette,
-        setCurrentSource,
-        setCurrentConstantValue,
-        setCurrentFromTable,
-        setCurrentFromColumn,
-        setCurrentFromRangeMin,
-        setCurrentFromRangeMax,
-        setCurrentFromPalette,
-        setCurrentGroupByTable,
-        setCurrentGroupByColumn,
-        setCurrentGroupByPalette,
-        setCurrentGroupByMap,
-        setCurrentRandomPalette,
-      }}
-    >
-      {children}
-    </ColorConfigContext.Provider>
-  );
+  return {
+    colorConfig,
+    defaultColor,
+    activeSource,
+    currentSource,
+    currentConstantValue,
+    currentFromTable,
+    currentFromColumn,
+    currentFromRangeMin,
+    currentFromRangeMax,
+    currentFromPalette,
+    currentGroupByTable,
+    currentGroupByColumn,
+    currentGroupByPalette,
+    currentGroupByMap,
+    currentRandomPalette,
+    setCurrentSource,
+    setCurrentConstantValue,
+    setCurrentFromTable,
+    setCurrentFromColumn,
+    setCurrentFromRangeMin,
+    setCurrentFromRangeMax,
+    setCurrentFromPalette,
+    setCurrentGroupByTable,
+    setCurrentGroupByColumn,
+    setCurrentGroupByPalette,
+    setCurrentGroupByMap,
+    setCurrentRandomPalette,
+  };
 }

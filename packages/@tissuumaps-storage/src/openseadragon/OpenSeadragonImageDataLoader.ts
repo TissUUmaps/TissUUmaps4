@@ -10,12 +10,13 @@ export class OpenSeadragonImageDataLoader extends AbstractImageDataLoader<
   OpenSeadragonImageDataSource,
   OpenSeadragonImageData
 > {
-  readonly schema = openSeadragonImageDataSourceSchema;
-  readonly uischema = openSeadragonImageDataSourceUISchema;
+  readonly dataSourceSchema = openSeadragonImageDataSourceSchema;
+  readonly dataSourceUISchema = openSeadragonImageDataSourceUISchema;
 
-  async loadImage({
-    signal,
-  }: { signal?: AbortSignal } = {}): Promise<OpenSeadragonImageData> {
+  async loadImage(options?: {
+    signal?: AbortSignal;
+  }): Promise<OpenSeadragonImageData> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     if (this.dataSource.tileSourceConfig !== undefined) {
       if (

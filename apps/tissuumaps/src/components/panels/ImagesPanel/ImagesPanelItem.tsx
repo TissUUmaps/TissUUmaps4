@@ -2,7 +2,11 @@ import { type Image } from "@tissuumaps/core";
 
 import { ImagesPanelItemSettings } from "./ImagesPanelItemSettings";
 
-export function ImagesPanelItem({ image }: { image: Image }) {
+export type ImagesPanelItemProps = {
+  image: Image;
+};
+
+export function ImagesPanelItem({ image }: ImagesPanelItemProps) {
   return (
     <>
       <ImagesPanelItemSettings image={image} />

@@ -19,7 +19,7 @@ import {
 } from "@tissuumaps/core";
 
 export interface ViewerAdapter {
-  projectDir: FileSystemDirectoryHandle | null;
+  workspace: FileSystemDirectoryHandle | null;
   layers: Layer[];
   images: Image[];
   labels: Labels[];
@@ -36,23 +36,23 @@ export interface ViewerAdapter {
   drawOptions: DrawOptions;
   loadImage: (
     imageId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<ImageData>;
   loadLabels: (
     labelsId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<LabelsData>;
   loadPoints: (
     pointsId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<PointsData>;
   loadShapes: (
     shapesId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
   loadTable: (
     tableId: string,
-    options: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ) => Promise<TableData>;
 }
 

@@ -1,5 +1,3 @@
-import { type HTMLProps } from "react";
-
 import {
   isConstantConfig,
   isFromConfig,
@@ -7,18 +5,25 @@ import {
 } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
-import { useOpacityConfigContext } from "./context";
+import { type OpacityConfigControlState } from "./useOpacityConfigControl";
 
-export type OpacityConfigSourceValueProps = HTMLProps<HTMLDivElement>;
+export type ActiveOpacityConfigValueProps = {
+  state: OpacityConfigControlState;
+  className?: string;
+};
 
-export function OpacityConfigSourceValue(props: OpacityConfigSourceValueProps) {
+export function ActiveOpacityConfigValue({
+  state,
+  className,
+}: ActiveOpacityConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, opacityConfig, defaultOpacity } =
-    useOpacityConfigContext();
+  const { activeSource, opacityConfig, defaultOpacity } = state;
 
   if (activeSource === "constant" && isConstantConfig(opacityConfig)) {
-    return <div {...props}>{opacityConfig.constant.value.toFixed(2)}</div>;
+    return (
+      <div className={className}>{opacityConfig.constant.value.toFixed(2)}</div>
+    );
   }
 
   if (activeSource === "from" && isFromConfig(opacityConfig)) {
@@ -26,7 +31,7 @@ export function OpacityConfigSourceValue(props: OpacityConfigSourceValueProps) {
       tables.find((table) => table.id === opacityConfig.from.table)?.name ??
       opacityConfig.from.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({opacityConfig.from.column})
       </div>
     );
@@ -37,11 +42,11 @@ export function OpacityConfigSourceValue(props: OpacityConfigSourceValueProps) {
       tables.find((table) => table.id === opacityConfig.groupBy.table)?.name ??
       opacityConfig.groupBy.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({opacityConfig.groupBy.column})
       </div>
     );
   }
 
-  return <div {...props}>{defaultOpacity.toFixed(2)}</div>;
+  return <div className={className}>{defaultOpacity.toFixed(2)}</div>;
 }

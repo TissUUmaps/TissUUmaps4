@@ -14,17 +14,18 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
   GeoJSONShapesDataSource,
   GeoJSONShapesData
 > {
-  readonly schema = geoJSONShapesDataSourceSchema;
-  readonly uischema = geoJSONShapesDataSourceUISchema;
+  readonly dataSourceSchema = geoJSONShapesDataSourceSchema;
+  readonly dataSourceUISchema = geoJSONShapesDataSourceUISchema;
 
-  async loadShapes({
-    signal,
-  }: { signal?: AbortSignal } = {}): Promise<GeoJSONShapesData> {
+  async loadShapes(options?: {
+    signal?: AbortSignal;
+  }): Promise<GeoJSONShapesData> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     const geo = await this._loadGeoJSON({ signal });
     signal?.throwIfAborted();
     const multiPolygons = GeoJSONShapesDataLoader._parseGeoJSON(geo);
-    let index;
+    let ids;
     const idProperty = this.dataSource.idProperty;
     if (idProperty !== undefined) {
       if (geo === null || geo.type !== "FeatureCollection") {
@@ -32,7 +33,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
           "ID properties can only be used with GeoJSON FeatureCollections.",
         );
       }
-      index = geo.features.map((feature) => {
+      ids = geo.features.map((feature) => {
         const id = feature.properties?.[idProperty] as unknown;
         if (
           id === undefined ||
@@ -44,14 +45,13 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
         return id;
       });
     }
-    return new GeoJSONShapesData(multiPolygons, index);
+    return new GeoJSONShapesData(multiPolygons, ids);
   }
 
-  private async _loadGeoJSON({
-    signal,
-  }: { signal?: AbortSignal } = {}): Promise<
-    geojson.GeoJSON<geojson.Geometry | null>
-  > {
+  private async _loadGeoJSON(options?: {
+    signal?: AbortSignal;
+  }): Promise<geojson.GeoJSON<geojson.Geometry | null>> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
     if (this.dataSource.path !== undefined && this.workspace !== null) {
       const fh = await this.workspace.getFileHandle(this.dataSource.path);

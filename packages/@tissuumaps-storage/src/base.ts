@@ -23,17 +23,17 @@ import {
 export abstract class AbstractDataLoader<
   TDataSource extends DataSource,
 > implements DataLoader {
-  abstract readonly schema: JsonSchema;
-  abstract readonly uischema: UISchemaElement;
   protected readonly dataSource: TDataSource;
+  abstract readonly dataSourceSchema: JsonSchema;
+  abstract readonly dataSourceUISchema: UISchemaElement;
   protected readonly workspace: FileSystemDirectoryHandle | null;
 
   constructor(
     dataSource: TDataSource,
-    projectDir: FileSystemDirectoryHandle | null,
+    workspace: FileSystemDirectoryHandle | null,
   ) {
     this.dataSource = dataSource;
-    this.workspace = projectDir;
+    this.workspace = workspace;
   }
 }
 
@@ -44,7 +44,7 @@ export abstract class AbstractImageDataLoader<
   extends AbstractDataLoader<TImageDataSource>
   implements ImageDataLoader<TImageData>
 {
-  abstract loadImage(options: { signal?: AbortSignal }): Promise<TImageData>;
+  abstract loadImage(options?: { signal?: AbortSignal }): Promise<TImageData>;
 }
 
 export abstract class AbstractLabelsDataLoader<
@@ -54,7 +54,7 @@ export abstract class AbstractLabelsDataLoader<
   extends AbstractDataLoader<TLabelsDataSource>
   implements LabelsDataLoader<TLabelsData>
 {
-  abstract loadLabels(options: { signal?: AbortSignal }): Promise<TLabelsData>;
+  abstract loadLabels(options?: { signal?: AbortSignal }): Promise<TLabelsData>;
 }
 
 export abstract class AbstractPointsDataLoader<
@@ -64,7 +64,7 @@ export abstract class AbstractPointsDataLoader<
   extends AbstractDataLoader<TPointsDataSource>
   implements PointsDataLoader<TPointsData>
 {
-  abstract loadPoints(options: { signal?: AbortSignal }): Promise<TPointsData>;
+  abstract loadPoints(options?: { signal?: AbortSignal }): Promise<TPointsData>;
 }
 
 export abstract class AbstractShapesDataLoader<
@@ -74,7 +74,7 @@ export abstract class AbstractShapesDataLoader<
   extends AbstractDataLoader<TShapesDataSource>
   implements ShapesDataLoader<TShapesData>
 {
-  abstract loadShapes(options: { signal?: AbortSignal }): Promise<TShapesData>;
+  abstract loadShapes(options?: { signal?: AbortSignal }): Promise<TShapesData>;
 }
 
 export abstract class AbstractTableDataLoader<
@@ -84,5 +84,5 @@ export abstract class AbstractTableDataLoader<
   extends AbstractDataLoader<TTableDataSource>
   implements TableDataLoader<TTableData>
 {
-  abstract loadTable(options: { signal?: AbortSignal }): Promise<TTableData>;
+  abstract loadTable(options?: { signal?: AbortSignal }): Promise<TTableData>;
 }

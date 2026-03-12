@@ -5,7 +5,9 @@ import { type Rect } from "@tissuumaps/core";
 import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
 import { useWebGL } from "../../hooks/useWebGL";
 
-export function Viewer({ className }: { className?: string }) {
+export type ViewerProps = { className?: string };
+
+export function Viewer({ className }: ViewerProps) {
   const glRef = useRef<ReturnType<typeof useWebGL> | null>(null);
   const resizeGLCanvas = useCallback(
     (newContainerSize: { width: number; height: number }) => {
@@ -23,8 +25,8 @@ export function Viewer({ className }: { className?: string }) {
     }
   }, []);
   const { viewerElementRef, viewerState } = useOpenSeadragon({
-    containerResizedHandler: resizeGLCanvas,
-    viewportChangedHandler: setGLViewport,
+    onContainerResized: resizeGLCanvas,
+    onViewportChanged: setGLViewport,
   });
   const gl = useWebGL(viewerState.canvas, viewerState.initialViewport);
   useEffect(() => {

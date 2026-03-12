@@ -1,5 +1,4 @@
 import { DicesIcon, SquareIcon } from "lucide-react";
-import { type HTMLProps } from "react";
 
 import {
   isConstantConfig,
@@ -9,19 +8,25 @@ import {
 } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
-import { useColorConfigContext } from "./context";
+import { type ColorConfigControlState } from "./useColorConfigControl";
 
-export type ColorConfigSourceValueProps = HTMLProps<HTMLDivElement>;
+export type ActiveColorConfigValueProps = {
+  state: ColorConfigControlState;
+  className?: string;
+};
 
-export function ColorConfigSourceValue(props: ColorConfigSourceValueProps) {
+export function ActiveColorConfigValue({
+  state,
+  className,
+}: ActiveColorConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, colorConfig, defaultColor } = useColorConfigContext();
+  const { activeSource, colorConfig, defaultColor } = state;
 
   if (activeSource === "constant" && isConstantConfig(colorConfig)) {
     const { r, g, b } = colorConfig.constant.value;
     return (
-      <div {...props}>
+      <div className={className}>
         <SquareIcon className="size-4" fill={`rgb(${r}, ${g}, ${b})`} />
       </div>
     );
@@ -32,7 +37,7 @@ export function ColorConfigSourceValue(props: ColorConfigSourceValueProps) {
       tables.find((table) => table.id === colorConfig.from.table)?.name ??
       colorConfig.from.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({colorConfig.from.column})
       </div>
     );
@@ -43,7 +48,7 @@ export function ColorConfigSourceValue(props: ColorConfigSourceValueProps) {
       tables.find((table) => table.id === colorConfig.groupBy.table)?.name ??
       colorConfig.groupBy.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({colorConfig.groupBy.column})
       </div>
     );
@@ -51,7 +56,7 @@ export function ColorConfigSourceValue(props: ColorConfigSourceValueProps) {
 
   if (activeSource === "random" && isRandomConfig(colorConfig)) {
     return (
-      <div {...props}>
+      <div className={className}>
         <DicesIcon className="size-4" />
       </div>
     );
@@ -59,7 +64,7 @@ export function ColorConfigSourceValue(props: ColorConfigSourceValueProps) {
 
   const { r, g, b } = defaultColor;
   return (
-    <div {...props}>
+    <div className={className}>
       <SquareIcon className="size-4" fill={`rgb(${r}, ${g}, ${b})`} />
     </div>
   );

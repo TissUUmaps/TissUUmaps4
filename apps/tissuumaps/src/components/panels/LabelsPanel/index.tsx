@@ -15,9 +15,14 @@ import {
 } from "../../common/accordion";
 import { LabelsPanelItem } from "./LabelsPanelItem";
 
-export function LabelsPanel({ className }: { className?: string }) {
+export type LabelsPanelProps = {
+  className?: string;
+};
+
+export function LabelsPanel({ className }: LabelsPanelProps) {
   const labels = useTissUUmaps((state) => state.labels);
   const moveLabels = useTissUUmaps((state) => state.moveLabels);
+
   return (
     <DragDropProvider
       onDragEnd={(event) => {
@@ -42,14 +47,14 @@ export function LabelsPanel({ className }: { className?: string }) {
   );
 }
 
-function LabelsAccordionItem({
-  labels,
-  index,
-}: {
+type LabelsAccordionItemProps = {
   labels: Labels;
   index: number;
-}) {
+};
+
+function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const { ref, handleRef } = useSortable({ id: labels.id, index });
+
   return (
     <div ref={ref}>
       <AccordionItem>

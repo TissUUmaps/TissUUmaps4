@@ -13,7 +13,7 @@ export interface ImageDataLoader<
    *
    * @param options - Optional abort signal
    */
-  loadImage(options: { signal?: AbortSignal }): Promise<TImageData>;
+  loadImage(options?: { signal?: AbortSignal }): Promise<TImageData>;
 }
 
 /**

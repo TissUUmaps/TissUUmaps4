@@ -14,7 +14,7 @@ export interface ShapesDataLoader<
    *
    * @param options - Optional abort signal
    */
-  loadShapes: (options: { signal?: AbortSignal }) => Promise<TShapesData>;
+  loadShapes: (options?: { signal?: AbortSignal }) => Promise<TShapesData>;
 }
 
 /**
@@ -27,5 +27,7 @@ export interface ShapesData extends ItemsData {
    * @param options - Optional abort signal
    * @returns One {@link MultiPolygon} per shape, in index order
    */
-  loadMultiPolygons(options: { signal?: AbortSignal }): Promise<MultiPolygon[]>;
+  loadMultiPolygons(options?: {
+    signal?: AbortSignal;
+  }): Promise<MultiPolygon[]>;
 }

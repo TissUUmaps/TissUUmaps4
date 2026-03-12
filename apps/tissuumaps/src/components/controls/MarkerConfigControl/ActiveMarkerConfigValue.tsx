@@ -1,5 +1,3 @@
-import { type HTMLProps } from "react";
-
 import {
   isConstantConfig,
   isFromConfig,
@@ -7,22 +5,27 @@ import {
 } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
-import { useMarkerConfigContext } from "./context";
 import { markers } from "./markers";
+import { type MarkerConfigControlState } from "./useMarkerConfigControl";
 
-export type MarkerConfigSourceValueProps = HTMLProps<HTMLDivElement>;
+export type ActiveMarkerConfigValueProps = {
+  state: MarkerConfigControlState;
+  className?: string;
+};
 
-export function MarkerConfigSourceValue(props: MarkerConfigSourceValueProps) {
+export function ActiveMarkerConfigValue({
+  state,
+  className,
+}: ActiveMarkerConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, markerConfig, defaultMarker } =
-    useMarkerConfigContext();
+  const { activeSource, markerConfig, defaultMarker } = state;
 
   if (activeSource === "constant" && isConstantConfig(markerConfig)) {
     const markerIcon = markers.find(
       (marker) => marker.value === markerConfig.constant.value,
     )!.icon;
-    return <div {...props}>{markerIcon}</div>;
+    return <div className={className}>{markerIcon}</div>;
   }
 
   if (activeSource === "from" && isFromConfig(markerConfig)) {
@@ -30,7 +33,7 @@ export function MarkerConfigSourceValue(props: MarkerConfigSourceValueProps) {
       tables.find((table) => table.id === markerConfig.from.table)?.name ??
       markerConfig.from.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({markerConfig.from.column})
       </div>
     );
@@ -41,7 +44,7 @@ export function MarkerConfigSourceValue(props: MarkerConfigSourceValueProps) {
       tables.find((table) => table.id === markerConfig.groupBy.table)?.name ??
       markerConfig.groupBy.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({markerConfig.groupBy.column})
       </div>
     );
@@ -50,5 +53,5 @@ export function MarkerConfigSourceValue(props: MarkerConfigSourceValueProps) {
   const markerIcon = markers.find(
     (marker) => marker.value === defaultMarker,
   )!.icon;
-  return <div {...props}>{markerIcon}</div>;
+  return <div className={className}>{markerIcon}</div>;
 }

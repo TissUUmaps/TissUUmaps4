@@ -42,8 +42,8 @@ export function ShapesSourcePanel({
         <Input type="text" value={shapes.dataSource.type} disabled />
       </Field>
       <JsonForms
-        schema={shapesDataLoader.schema}
-        uischema={shapesDataLoader.uischema}
+        schema={shapesDataLoader.dataSourceSchema}
+        uischema={shapesDataLoader.dataSourceUISchema}
         data={shapes.dataSource}
         renderers={renderers}
         cells={cells}

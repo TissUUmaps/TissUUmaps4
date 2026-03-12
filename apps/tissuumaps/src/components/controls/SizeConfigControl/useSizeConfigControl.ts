@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   type CoordinateSpace,
@@ -9,25 +9,41 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { SizeConfigContext } from "./context";
-
 type SizeConfigSource = Exclude<SizeConfig["source"], undefined>;
 
-export type SizeConfigContextProviderProps = {
+export type SizeConfigControlState = {
   sizeConfig: SizeConfig;
-  onSizeConfigChange: (newSizeConfig: SizeConfig) => void;
   defaultSize: number;
   defaultSizeUnit: CoordinateSpace;
-  children: ReactNode;
+  activeSource: SizeConfigSource;
+  currentSource: SizeConfigSource;
+  currentConstantValue: number;
+  currentConstantUnit: CoordinateSpace;
+  currentFromTable: string | null;
+  currentFromColumn: string | null;
+  currentFromUnit: CoordinateSpace;
+  currentGroupByTable: string | null;
+  currentGroupByColumn: string | null;
+  currentGroupByMap: string | null;
+  currentGroupByUnit: CoordinateSpace;
+  setCurrentSource: (newCurrentSource: SizeConfigSource) => void;
+  setCurrentConstantValue: (newCurrentConstantValue: number) => void;
+  setCurrentConstantUnit: (newCurrentConstantUnit: CoordinateSpace) => void;
+  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
+  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
+  setCurrentFromUnit: (newCurrentFromUnit: CoordinateSpace) => void;
+  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
+  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
+  setCurrentGroupByUnit: (newCurrentGroupByUnit: CoordinateSpace) => void;
 };
 
-export function SizeConfigContextProvider({
-  sizeConfig,
-  onSizeConfigChange,
-  defaultSize,
-  defaultSizeUnit,
-  children,
-}: SizeConfigContextProviderProps) {
+export function useSizeConfigControl(
+  sizeConfig: SizeConfig,
+  onSizeConfigChange: (newSizeConfig: SizeConfig) => void,
+  defaultSize: number,
+  defaultSizeUnit: CoordinateSpace,
+): SizeConfigControlState {
   const activeSource = getActiveConfigSource(sizeConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<SizeConfigSource>(
     sizeConfig.source ?? "constant",
@@ -152,36 +168,30 @@ export function SizeConfigContextProvider({
     onSizeConfigChange,
   ]);
 
-  return (
-    <SizeConfigContext.Provider
-      value={{
-        sizeConfig,
-        defaultSize,
-        defaultSizeUnit,
-        activeSource,
-        currentSource,
-        currentConstantValue,
-        currentConstantUnit,
-        currentFromTable,
-        currentFromColumn,
-        currentFromUnit,
-        currentGroupByTable,
-        currentGroupByColumn,
-        currentGroupByMap,
-        currentGroupByUnit,
-        setCurrentSource,
-        setCurrentConstantValue,
-        setCurrentConstantUnit,
-        setCurrentFromTable,
-        setCurrentFromColumn,
-        setCurrentFromUnit,
-        setCurrentGroupByTable,
-        setCurrentGroupByColumn,
-        setCurrentGroupByMap,
-        setCurrentGroupByUnit,
-      }}
-    >
-      {children}
-    </SizeConfigContext.Provider>
-  );
+  return {
+    sizeConfig,
+    defaultSize,
+    defaultSizeUnit,
+    activeSource,
+    currentSource,
+    currentConstantValue,
+    currentConstantUnit,
+    currentFromTable,
+    currentFromColumn,
+    currentFromUnit,
+    currentGroupByTable,
+    currentGroupByColumn,
+    currentGroupByMap,
+    currentGroupByUnit,
+    setCurrentSource,
+    setCurrentConstantValue,
+    setCurrentConstantUnit,
+    setCurrentFromTable,
+    setCurrentFromColumn,
+    setCurrentFromUnit,
+    setCurrentGroupByTable,
+    setCurrentGroupByColumn,
+    setCurrentGroupByMap,
+    setCurrentGroupByUnit,
+  };
 }

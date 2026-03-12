@@ -1,5 +1,3 @@
-import { type HTMLProps } from "react";
-
 import {
   isConstantConfig,
   isFromConfig,
@@ -7,17 +5,23 @@ import {
 } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
-import { useSizeConfigContext } from "./context";
+import { type SizeConfigControlState } from "./useSizeConfigControl";
 
-export type SizeConfigSourceValueProps = HTMLProps<HTMLDivElement>;
+export type ActiveSizeConfigValueProps = {
+  state: SizeConfigControlState;
+  className?: string;
+};
 
-export function SizeConfigSourceValue(props: SizeConfigSourceValueProps) {
+export function ActiveSizeConfigValue({
+  state,
+  className,
+}: ActiveSizeConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, sizeConfig, defaultSize } = useSizeConfigContext();
+  const { activeSource, sizeConfig, defaultSize } = state;
 
   if (activeSource === "constant" && isConstantConfig(sizeConfig)) {
-    return <div {...props}>{sizeConfig.constant.value}</div>;
+    return <div className={className}>{sizeConfig.constant.value}</div>;
   }
 
   if (activeSource === "from" && isFromConfig(sizeConfig)) {
@@ -25,7 +29,7 @@ export function SizeConfigSourceValue(props: SizeConfigSourceValueProps) {
       tables.find((table) => table.id === sizeConfig.from.table)?.name ??
       sizeConfig.from.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({sizeConfig.from.column})
       </div>
     );
@@ -36,11 +40,11 @@ export function SizeConfigSourceValue(props: SizeConfigSourceValueProps) {
       tables.find((table) => table.id === sizeConfig.groupBy.table)?.name ??
       sizeConfig.groupBy.table;
     return (
-      <div {...props}>
+      <div className={className}>
         {tableName} ({sizeConfig.groupBy.column})
       </div>
     );
   }
 
-  return <div {...props}>{defaultSize}</div>;
+  return <div className={className}>{defaultSize}</div>;
 }

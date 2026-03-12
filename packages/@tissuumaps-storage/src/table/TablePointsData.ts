@@ -9,38 +9,50 @@ export class TablePointsData implements PointsData {
     this._dimensionColumns = dimensionColumns;
   }
 
-  getLength(): number {
-    return this._tableData.getLength();
+  getIds(): number[] {
+    return this._tableData.getIds();
   }
 
-  getIndex(): number[] {
-    return this._tableData.getIndex();
+  getSize(): number {
+    return this._tableData.getSize();
   }
 
-  async suggestDimensionQueries(currentQuery: string): Promise<string[]> {
+  async suggestDimensionQueries(
+    currentQuery: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<string[]> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
     if (this._dimensionColumns !== undefined) {
-      const filteredColumns = this._dimensionColumns.filter((column) =>
+      return this._dimensionColumns.filter((column) =>
         column.includes(currentQuery),
       );
-      return await Promise.resolve(filteredColumns);
     }
-    return await this._tableData.suggestColumnQueries(currentQuery);
+    return await this._tableData.suggestColumnQueries(currentQuery, { signal });
   }
 
-  async getDimension(query: string): Promise<string | null> {
-    return await this._tableData.getColumn(query);
+  async resolveDimensionQuery(
+    query: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | null> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    return await this._tableData.resolveColumnQuery(query, { signal });
   }
 
   async loadCoordinates(
     dimension: string,
-    { signal }: { signal?: AbortSignal } = {},
+    options?: { signal?: AbortSignal },
   ): Promise<Float32Array> {
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const coords = await this._tableData.loadColumn<number>(dimension, {
+    const columnValues = await this._tableData.loadValues<number>(dimension, {
       signal,
     });
     signal?.throwIfAborted();
-    return coords instanceof Float32Array ? coords : Float32Array.from(coords);
+    return columnValues instanceof Float32Array
+      ? columnValues
+      : Float32Array.from(columnValues);
   }
 
   destroy(): void {}
