@@ -28,7 +28,7 @@
     "clean": "rm -rf build dist node_modules",
     "test": "vitest run --passWithNoTests"
   },
-  "dependencies": {
+  "devDependencies": {
     "@tissuumaps/core": "workspace:^"
   },
   "peerDependencies": {

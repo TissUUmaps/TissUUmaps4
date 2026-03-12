@@ -216,7 +216,7 @@ importers:
         version: 5.0.2
 
   packages/@tissuumaps-plugins:
-    dependencies:
+    devDependencies:
       "@tissuumaps/core":
         specifier: workspace:^
         version: link:../@tissuumaps-core
@@ -226,9 +226,6 @@ importers:
       "@jsonforms/core":
         specifier: ^3.7.0
         version: 3.7.0
-      "@tissuumaps/core":
-        specifier: workspace:^
-        version: link:../@tissuumaps-core
       geojson:
         specifier: ^0.5.0
         version: 0.5.0
@@ -242,6 +239,9 @@ importers:
         specifier: ^5.5.3
         version: 5.5.3
     devDependencies:
+      "@tissuumaps/core":
+        specifier: workspace:^
+        version: link:../@tissuumaps-core
       "@types/geojson":
         specifier: ^7946.0.16
         version: 7946.0.16
@@ -250,11 +250,10 @@ importers:
         version: 5.5.2
 
   packages/@tissuumaps-viewer:
-    dependencies:
+    devDependencies:
       "@tissuumaps/core":
         specifier: workspace:^
         version: link:../@tissuumaps-core
-    devDependencies:
       "@types/react":
         specifier: ^19.2.10
         version: 19.2.14

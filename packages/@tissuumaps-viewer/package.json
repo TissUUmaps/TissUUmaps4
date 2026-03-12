@@ -22,10 +22,8 @@
     "clean": "rm -rf build dist node_modules",
     "test": "vitest run --passWithNoTests"
   },
-  "dependencies": {
-    "@tissuumaps/core": "workspace:^"
-  },
   "devDependencies": {
+    "@tissuumaps/core": "workspace:^",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "react": "^19.2.4",
