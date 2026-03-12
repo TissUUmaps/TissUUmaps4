@@ -2,6 +2,7 @@
   "name": "@tissuumaps/viewer",
   "version": "0.1.0",
   "type": "module",
+  "sideEffects": false,
   "files": [
     "./dist"
   ],
@@ -10,6 +11,7 @@
   "main": "./dist/index.umd.cjs",
   "exports": {
     ".": {
+      "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.umd.cjs"
@@ -17,12 +19,11 @@
   },
   "scripts": {
     "build": "tsc -b && vite build",
-    "clean": "rm -rf dist node_modules"
-  },
-  "dependencies": {
-    "@tissuumaps/core": "workspace:*"
+    "clean": "rm -rf build dist node_modules",
+    "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
+    "@tissuumaps/core": "workspace:^",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "react": "^19.2.4",
@@ -30,7 +31,8 @@
   },
   "peerDependencies": {
     "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
+    "react-dom": ">=19.0.0",
+    "@tissuumaps/core": ">=0.1.0"
   },
   "engines": {
     "node": ">=20.0.0"

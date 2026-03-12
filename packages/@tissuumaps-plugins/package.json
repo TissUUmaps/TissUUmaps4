@@ -2,6 +2,7 @@
   "name": "@tissuumaps/plugins",
   "version": "0.1.0",
   "type": "module",
+  "sideEffects": false,
   "files": [
     "./dist"
   ],
@@ -10,22 +11,28 @@
   "main": "./dist/index.cjs",
   "exports": {
     ".": {
+      "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js",
-      "require": "./dist/*.cjs"
+    "./spatialdata": {
+      "development": "./src/spatialdata/index.ts",
+      "types": "./dist/spatialdata.d.ts",
+      "import": "./dist/spatialdata.js",
+      "require": "./dist/spatialdata.cjs"
     }
   },
   "scripts": {
     "build": "tsc -b && vite build",
-    "clean": "rm -rf dist node_modules"
+    "clean": "rm -rf build dist node_modules",
+    "test": "vitest run --passWithNoTests"
   },
-  "dependencies": {
-    "@tissuumaps/core": "workspace:*"
+  "devDependencies": {
+    "@tissuumaps/core": "workspace:^"
+  },
+  "peerDependencies": {
+    "@tissuumaps/core": ">=0.1.0"
   },
   "engines": {
     "node": ">=20.0.0"
