@@ -10,6 +10,7 @@ import {
 } from "@jsonforms/react";
 import React from "react";
 
+// eslint-disable-next-line react-refresh/only-export-components
 const MemoizedGroupLayout = React.memo((props: Omit<LayoutProps, "data">) => {
   const layout = props.uischema as GroupLayoutSchema;
   const { renderers, cells } = useJsonForms();
