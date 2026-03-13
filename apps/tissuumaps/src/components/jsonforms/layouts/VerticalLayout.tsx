@@ -9,6 +9,7 @@ import {
 } from "@jsonforms/react";
 import React from "react";
 
+// eslint-disable-next-line react-refresh/only-export-components
 const MemoizedVerticalLayout = React.memo(
   (props: Omit<LayoutProps, "data">) => {
     const layout = props.uischema as VerticalLayoutSchema;

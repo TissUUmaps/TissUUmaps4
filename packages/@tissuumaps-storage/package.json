@@ -55,7 +55,7 @@
   "dependencies": {
     "@jsonforms/core": "^3.7.0",
     "geojson": "^0.5.0",
-    "hyparquet": "^1.24.1",
+    "hyparquet": "^1.25.1",
     "hyparquet-compressors": "^1.1.1",
     "papaparse": "^5.5.3"
   },
@@ -68,6 +68,6 @@
     "@tissuumaps/core": ">=0.1.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
   }
 }
