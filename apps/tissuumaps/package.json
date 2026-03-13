@@ -43,6 +43,6 @@
     "vite-plugin-singlefile": "^2.3.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
   }
 }
