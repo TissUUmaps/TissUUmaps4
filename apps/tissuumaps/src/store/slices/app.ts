@@ -1,4 +1,3 @@
-import { LoadedTableDataAdapter } from "@/adapters/LoadedTableDataAdapter";
 import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
 
 import {
@@ -51,6 +50,7 @@ import {
   tablePointsDataSourceUISchema,
 } from "@tissuumaps/storage";
 
+import { LoadedTableDataAdapter } from "../../adapters/LoadedTableDataAdapter";
 import { type TissUUmapsStateCreator, useTissUUmaps } from "../index";
 
 type ImageDataLoaderFactory = (
