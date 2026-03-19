@@ -30,11 +30,12 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
   } = useViewer();
 
   useEffect(() => {
+    let appendedCanvas: HTMLCanvasElement | null = null;
     const abortController = new AbortController();
     if (parent !== null && initialViewport !== null) {
       console.debug("Initializing WebGL");
       const canvas = WebGLController.createCanvas();
-      parent.appendChild(canvas);
+      appendedCanvas = parent.appendChild(canvas);
       const controller = new WebGLController(canvas, initialViewport);
       controller.initialize({ signal: abortController.signal }).then(
         (controller) => {
@@ -50,6 +51,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
             console.error("Failed to initialize WebGL:", reason);
           }
           controller.destroy();
+          parent.removeChild(canvas);
         },
       );
     }
@@ -60,6 +62,9 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
         console.debug("Destroying WebGL");
         controller.destroy();
         controllerRef.current = null;
+      }
+      if (parent !== null && appendedCanvas !== null) {
+        parent.removeChild(appendedCanvas);
       }
     };
   }, [parent, initialViewport]);
