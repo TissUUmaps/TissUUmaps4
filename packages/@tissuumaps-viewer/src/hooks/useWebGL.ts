@@ -37,11 +37,11 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
       const canvas = WebGLController.createCanvas();
       appendedCanvas = parent.appendChild(canvas);
       const controller = new WebGLController(canvas, initialViewport);
+      controllerRef.current = controller;
+      incrementControllerVersion();
       controller.initialize({ signal: abortController.signal }).then(
         (controller) => {
           if (!abortController.signal.aborted) {
-            controllerRef.current = controller;
-            incrementControllerVersion();
             console.debug("WebGL initialized");
             controller.draw();
           }
