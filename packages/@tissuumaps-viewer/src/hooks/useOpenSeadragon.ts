@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { OpenSeadragonController, type Rect } from "@tissuumaps/core";
 
@@ -14,6 +14,10 @@ export function useOpenSeadragon(options?: {
   const { onContainerResized, onViewportChanged } = options ?? {};
 
   const controllerRef = useRef<OpenSeadragonController | null>(null);
+  const [controllerVersion, incrementControllerVersion] = useReducer(
+    (version) => version + 1,
+    0,
+  );
   const [viewerState, setViewerState] = useState<{
     canvas: Element | null;
     initialViewport: Rect | null;
@@ -61,6 +65,7 @@ export function useOpenSeadragon(options?: {
           },
         );
         controllerRef.current = controller;
+        incrementControllerVersion();
       }
       // React 19 added cleanup functions for ref callbacks
       return () => {
@@ -81,7 +86,7 @@ export function useOpenSeadragon(options?: {
       console.debug("Setting OpenSeadragon viewer options");
       controller.setViewerOptions(viewerOptions);
     }
-  }, [viewerOptions]);
+  }, [controllerVersion, viewerOptions]);
 
   useEffect(() => {
     const controller = controllerRef.current;
@@ -92,7 +97,11 @@ export function useOpenSeadragon(options?: {
         viewerAnimationFinishOptions,
       );
     }
-  }, [viewerAnimationStartOptions, viewerAnimationFinishOptions]);
+  }, [
+    controllerVersion,
+    viewerAnimationStartOptions,
+    viewerAnimationFinishOptions,
+  ]);
 
   useEffect(() => {
     const controller = controllerRef.current;
@@ -119,7 +128,15 @@ export function useOpenSeadragon(options?: {
     return () => {
       abortController.abort();
     };
-  }, [workspace, layers, images, labels, loadImage, loadLabels]);
+  }, [
+    controllerVersion,
+    workspace,
+    layers,
+    images,
+    labels,
+    loadImage,
+    loadLabels,
+  ]);
 
   return { viewerElementRef, viewerState };
 }
