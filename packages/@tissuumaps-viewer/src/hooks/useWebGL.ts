@@ -64,22 +64,25 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
   useEffect(() => {
     console.debug("Setting draw options");
     const controller = controllerRef.current;
-    if (controller !== null) {
-      const { syncPoints, syncShapes } = controller.setDrawOptions(drawOptions);
-      controller.draw();
+    if (initialized && controller !== null) {
+      const { syncPoints, syncShapes, redraw } =
+        controller.setDrawOptions(drawOptions);
       if (syncPoints) {
         dispatchSyncPoints();
       }
       if (syncShapes) {
         dispatchSyncShapes();
       }
+      if (redraw) {
+        controller.draw();
+      }
     }
-  }, [drawOptions]);
+  }, [initialized, drawOptions]);
 
   useEffect(() => {
     const abortController = new AbortController();
     const controller = controllerRef.current;
-    if (controller !== null) {
+    if (initialized && controller !== null) {
       console.debug("Synchronizing points");
       controller
         .synchronizePoints(
@@ -112,6 +115,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
       abortController.abort();
     };
   }, [
+    initialized,
     syncPoints,
     layers,
     points,
@@ -128,7 +132,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
   useEffect(() => {
     const abortController = new AbortController();
     const controller = controllerRef.current;
-    if (controller !== null) {
+    if (initialized && controller !== null) {
       console.debug("Synchronizing shapes");
       controller
         .synchronizeShapes(
@@ -159,6 +163,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
       abortController.abort();
     };
   }, [
+    initialized,
     syncShapes,
     layers,
     shapes,

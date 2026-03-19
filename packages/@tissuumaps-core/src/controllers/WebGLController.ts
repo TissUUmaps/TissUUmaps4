@@ -1,3 +1,5 @@
+import { deepEqual } from "fast-equals";
+
 import { defaultDrawOptions } from "../model/constants";
 import { type DrawOptions } from "../model/types";
 import { type Rect } from "../types";
@@ -77,17 +79,21 @@ export class WebGLController {
    * Applies new draw options
    *
    * @param drawOptions - The new draw options
-   * @returns Flags indicating whether points and/or shapes need re-synchronization
+   * @returns Flags indicating whether points and/or shapes need to be re-synchronized, and whether a redraw is needed
    */
   setDrawOptions(drawOptions: DrawOptions): {
     syncPoints: boolean;
     syncShapes: boolean;
+    redraw: boolean;
   } {
-    this._drawOptions = drawOptions;
-    const syncShapes = this._shapesController.setNumScanlines(
-      drawOptions.numShapesScanlines,
-    );
-    return { syncPoints: false, syncShapes };
+    if (!deepEqual(drawOptions, this._drawOptions)) {
+      this._drawOptions = drawOptions;
+      const syncShapes = this._shapesController.setNumScanlines(
+        drawOptions.numShapesScanlines,
+      );
+      return { syncPoints: false, syncShapes, redraw: true };
+    }
+    return { syncPoints: false, syncShapes: false, redraw: false };
   }
 
   /**
