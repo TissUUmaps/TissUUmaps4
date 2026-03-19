@@ -1,20 +1,16 @@
+import { type ProgressCallback } from "@tissuumaps/core";
+
 import { AbstractImageDataLoader } from "../base";
 import { OpenSeadragonImageData } from "./OpenSeadragonImageData";
-import {
-  type OpenSeadragonImageDataSource,
-  openSeadragonImageDataSourceSchema,
-  openSeadragonImageDataSourceUISchema,
-} from "./OpenSeadragonImageDataSource";
+import { type OpenSeadragonImageDataSource } from "./OpenSeadragonImageDataSource";
 
 export class OpenSeadragonImageDataLoader extends AbstractImageDataLoader<
   OpenSeadragonImageDataSource,
   OpenSeadragonImageData
 > {
-  readonly dataSourceSchema = openSeadragonImageDataSourceSchema;
-  readonly dataSourceUISchema = openSeadragonImageDataSourceUISchema;
-
   async loadImage(options?: {
     signal?: AbortSignal;
+    onProgress?: ProgressCallback;
   }): Promise<OpenSeadragonImageData> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();

@@ -12,6 +12,11 @@ import { useShallow } from "zustand/shallow";
 import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
 
 import "./App.css";
+import { useLoadedImageDataAdapter } from "./adapters/LoadedImageDataAdapter";
+import { useLoadedLabelsDataAdapter } from "./adapters/LoadedLabelsDataAdapter";
+import { useLoadedPointsDataAdapter } from "./adapters/LoadedPointsDataAdapter";
+import { useLoadedShapesDataAdapter } from "./adapters/LoadedShapesDataAdapter";
+import { useLoadedTableDataAdapter } from "./adapters/LoadedTableDataAdapter";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
 import { LabelsPanel } from "./components/panels/LabelsPanel";
 import { PointsPanel } from "./components/panels/PointsPanel";
@@ -20,11 +25,6 @@ import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { usePlugins } from "./hooks/usePlugins";
 import { useProject } from "./hooks/useProject";
-import { useImageDataProxy } from "./proxies/ImageDataProxy";
-import { useLabelsDataProxy } from "./proxies/LabelsDataProxy";
-import { usePointsDataProxy } from "./proxies/PointsDataProxy";
-import { useShapesDataProxy } from "./proxies/ShapesDataProxy";
-import { useTableDataProxy } from "./proxies/TableDataProxy";
 import { useTissUUmaps } from "./store";
 
 const dockviewTheme: DockviewTheme = {
@@ -140,21 +140,21 @@ export function App() {
       viewerAnimationStartOptions: state.viewerAnimationStartOptions,
       viewerAnimationFinishOptions: state.viewerAnimationFinishOptions,
       drawOptions: state.drawOptions,
-      // rerender upon changes to data loader factories
-      _imageDataLoaderFactories: state.imageDataLoaderFactories,
-      _labelsDataLoaderFactories: state.labelsDataLoaderFactories,
-      _pointsDataLoaderFactories: state.pointsDataLoaderFactories,
-      _shapesDataLoaderFactories: state.shapesDataLoaderFactories,
-      _tableDataLoaderFactories: state.tableDataLoaderFactories,
+      // rerender upon changes to data loader registries
+      _imageDataLoaderRegistry: state.imageDataLoaderRegistry,
+      _labelsDataLoaderRegistry: state.labelsDataLoaderRegistry,
+      _pointsDataLoaderRegistry: state.pointsDataLoaderRegistry,
+      _shapesDataLoaderRegistry: state.shapesDataLoaderRegistry,
+      _tableDataLoaderRegistry: state.tableDataLoaderRegistry,
     })),
   );
 
   const viewerActions = {
-    loadImage: useImageDataProxy(),
-    loadLabels: useLabelsDataProxy(),
-    loadPoints: usePointsDataProxy(),
-    loadShapes: useShapesDataProxy(),
-    loadTable: useTableDataProxy(),
+    loadImage: useLoadedImageDataAdapter(),
+    loadLabels: useLoadedLabelsDataAdapter(),
+    loadPoints: useLoadedPointsDataAdapter(),
+    loadShapes: useLoadedShapesDataAdapter(),
+    loadTable: useLoadedTableDataAdapter(),
   };
 
   const viewerAdapter = { ...viewerState, ...viewerActions };

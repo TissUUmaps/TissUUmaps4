@@ -2,23 +2,19 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
+import { type ProgressCallback } from "@tissuumaps/core";
+
 import { AbstractTableDataLoader } from "../base";
 import { ParquetTableData } from "./ParquetTableData";
-import {
-  type ParquetTableDataSource,
-  parquetTableDataSourceSchema,
-  parquetTableDataSourceUISchema,
-} from "./ParquetTableDataSource";
+import { type ParquetTableDataSource } from "./ParquetTableDataSource";
 
 export class ParquetTableDataLoader extends AbstractTableDataLoader<
   ParquetTableDataSource,
   ParquetTableData
 > {
-  readonly dataSourceSchema = parquetTableDataSourceSchema;
-  readonly dataSourceUISchema = parquetTableDataSourceUISchema;
-
   async loadTable(options?: {
     signal?: AbortSignal;
+    onProgress?: ProgressCallback;
   }): Promise<ParquetTableData> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();

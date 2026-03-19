@@ -1,24 +1,22 @@
 import * as geojson from "geojson";
 
-import { type MultiPolygon, type Polygon } from "@tissuumaps/core";
+import {
+  type MultiPolygon,
+  type Polygon,
+  type ProgressCallback,
+} from "@tissuumaps/core";
 
 import { AbstractShapesDataLoader } from "../base";
 import { GeoJSONShapesData } from "./GeoJSONShapesData";
-import {
-  type GeoJSONShapesDataSource,
-  geoJSONShapesDataSourceSchema,
-  geoJSONShapesDataSourceUISchema,
-} from "./GeoJSONShapesDataSource";
+import { type GeoJSONShapesDataSource } from "./GeoJSONShapesDataSource";
 
 export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
   GeoJSONShapesDataSource,
   GeoJSONShapesData
 > {
-  readonly dataSourceSchema = geoJSONShapesDataSourceSchema;
-  readonly dataSourceUISchema = geoJSONShapesDataSourceUISchema;
-
   async loadShapes(options?: {
     signal?: AbortSignal;
+    onProgress?: ProgressCallback;
   }): Promise<GeoJSONShapesData> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();

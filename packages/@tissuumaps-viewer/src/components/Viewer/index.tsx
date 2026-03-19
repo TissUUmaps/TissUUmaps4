@@ -31,6 +31,9 @@ export function Viewer({ className }: ViewerProps) {
   const gl = useWebGL(viewerState.canvas, viewerState.initialViewport);
   useEffect(() => {
     glRef.current = gl;
+    return () => {
+      glRef.current = null;
+    };
   }, [gl]);
   return <div ref={viewerElementRef} className={className} />;
 }

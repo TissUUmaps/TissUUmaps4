@@ -53,15 +53,20 @@ export function LabelsPanelItemSettings({
   const [expandedConfigControl, setExpandedConfigControl] =
     useState<ConfigControl | null>(null);
 
+  const labelsDataLoaderRegistry = useTissUUmaps(
+    (state) => state.labelsDataLoaderRegistry,
+  );
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
-  const createLabelsDataLoader = useTissUUmaps(
-    (state) => state.createLabelsDataLoader,
-  );
 
-  const labelsDataLoader = useMemo(
-    () => createLabelsDataLoader(labels.id),
-    [createLabelsDataLoader, labels.id],
-  );
+  const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
+    const value = labelsDataLoaderRegistry.get(labels.dataSource.type);
+    if (value === undefined) {
+      throw new Error(
+        `No labels data loader registered for data source type "${labels.dataSource.type}"`,
+      );
+    }
+    return value;
+  }, [labelsDataLoaderRegistry, labels.dataSource.type]);
 
   const labelColorConfigControlState = useColorConfigControl(
     labels.labelColor,
@@ -85,8 +90,8 @@ export function LabelsPanelItemSettings({
     <div>
       {/* Data source */}
       <JsonForms
-        schema={labelsDataLoader.dataSourceSchema}
-        uischema={labelsDataLoader.dataSourceUISchema}
+        schema={dataSourceSchema}
+        uischema={dataSourceUISchema}
         data={labels.dataSource}
         onChange={({ data, errors }) => {
           if (errors === undefined || errors.length === 0) {

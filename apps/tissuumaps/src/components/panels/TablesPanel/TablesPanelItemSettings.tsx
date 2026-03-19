@@ -13,21 +13,26 @@ export type TablesPanelItemSettingsProps = {
 export function TablesPanelItemSettings({
   table,
 }: TablesPanelItemSettingsProps) {
-  const createTableDataLoader = useTissUUmaps(
-    (state) => state.createTableDataLoader,
+  const tableDataLoaderRegistry = useTissUUmaps(
+    (state) => state.tableDataLoaderRegistry,
   );
 
-  const tableDataLoader = useMemo(
-    () => createTableDataLoader(table.id),
-    [createTableDataLoader, table.id],
-  );
+  const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
+    const value = tableDataLoaderRegistry.get(table.dataSource.type);
+    if (value === undefined) {
+      throw new Error(
+        `No table data loader registered for data source type "${table.dataSource.type}"`,
+      );
+    }
+    return value;
+  }, [tableDataLoaderRegistry, table.dataSource.type]);
 
   return (
     <div>
       {/* Data source */}
       <JsonForms
-        schema={tableDataLoader.dataSourceSchema}
-        uischema={tableDataLoader.dataSourceUISchema}
+        schema={dataSourceSchema}
+        uischema={dataSourceUISchema}
         data={table.dataSource}
         renderers={renderers}
         cells={cells}

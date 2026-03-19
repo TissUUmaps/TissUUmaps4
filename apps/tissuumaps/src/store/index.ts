@@ -6,14 +6,14 @@ import {
 } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
-import { type AppSlice, createAppSlice } from "./app";
-import { type ImageSlice, createImageSlice } from "./image";
-import { type LabelsSlice, createLabelsSlice } from "./labels";
-import { type LayerSlice, createLayerSlice } from "./layer";
-import { type PointsSlice, createPointsSlice } from "./points";
-import { type ProjectSlice, createProjectSlice } from "./project";
-import { type ShapesSlice, createShapesSlice } from "./shapes";
-import { type TableSlice, createTableSlice } from "./table";
+import { type AppSlice, createAppSlice } from "./slices/app";
+import { type ImageSlice, createImageSlice } from "./slices/image";
+import { type LabelsSlice, createLabelsSlice } from "./slices/labels";
+import { type LayerSlice, createLayerSlice } from "./slices/layer";
+import { type PointsSlice, createPointsSlice } from "./slices/points";
+import { type ProjectSlice, createProjectSlice } from "./slices/project";
+import { type ShapesSlice, createShapesSlice } from "./slices/shapes";
+import { type TableSlice, createTableSlice } from "./slices/table";
 
 export type TissUUmapsStateCreator<T> = StateCreator<
   TissUUmapsState,

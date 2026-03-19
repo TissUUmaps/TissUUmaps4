@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { OpenSeadragonController, type Rect } from "@tissuumaps/core";
 
@@ -14,6 +14,10 @@ export function useOpenSeadragon(options?: {
   const { onContainerResized, onViewportChanged } = options ?? {};
 
   const controllerRef = useRef<OpenSeadragonController | null>(null);
+  const [controllerVersion, incrementControllerVersion] = useReducer(
+    (version) => version + 1,
+    0,
+  );
   const [viewerState, setViewerState] = useState<{
     canvas: Element | null;
     initialViewport: Rect | null;
@@ -61,6 +65,7 @@ export function useOpenSeadragon(options?: {
           },
         );
         controllerRef.current = controller;
+        incrementControllerVersion();
       }
       // React 19 added cleanup functions for ref callbacks
       return () => {
@@ -76,29 +81,33 @@ export function useOpenSeadragon(options?: {
   );
 
   useEffect(() => {
-    console.debug("Setting OpenSeadragon viewer options");
     const controller = controllerRef.current;
     if (controller !== null) {
+      console.debug("Setting OpenSeadragon viewer options");
       controller.setViewerOptions(viewerOptions);
     }
-  }, [viewerOptions]);
+  }, [controllerVersion, viewerOptions]);
 
   useEffect(() => {
-    console.debug("Configuring OpenSeadragon animation handlers");
     const controller = controllerRef.current;
     if (controller !== null) {
+      console.debug("Configuring OpenSeadragon animation handlers");
       controller.configureAnimationHandlers(
         viewerAnimationStartOptions,
         viewerAnimationFinishOptions,
       );
     }
-  }, [viewerAnimationStartOptions, viewerAnimationFinishOptions]);
+  }, [
+    controllerVersion,
+    viewerAnimationStartOptions,
+    viewerAnimationFinishOptions,
+  ]);
 
   useEffect(() => {
-    console.debug("Synchronizing OpenSeadragon viewer");
     const controller = controllerRef.current;
     const abortController = new AbortController();
     if (controller !== null) {
+      console.debug("Synchronizing OpenSeadragon viewer");
       controller
         .synchronize(layers, images, labels, loadImage, loadLabels, {
           signal: abortController.signal,
@@ -109,9 +118,9 @@ export function useOpenSeadragon(options?: {
               console.debug("OpenSeadragon viewer synchronized");
             }
           },
-          (reason) => {
+          (error) => {
             if (!abortController.signal.aborted) {
-              console.error(reason);
+              throw error;
             }
           },
         );
@@ -119,7 +128,15 @@ export function useOpenSeadragon(options?: {
     return () => {
       abortController.abort();
     };
-  }, [workspace, layers, images, labels, loadImage, loadLabels]);
+  }, [
+    controllerVersion,
+    workspace,
+    layers,
+    images,
+    labels,
+    loadImage,
+    loadLabels,
+  ]);
 
   return { viewerElementRef, viewerState };
 }

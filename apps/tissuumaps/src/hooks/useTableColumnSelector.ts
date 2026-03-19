@@ -6,10 +6,21 @@ export function useTableColumnSelector(tableId: string | null) {
   const loadTable = useTissUUmaps((state) => state.loadTable);
 
   const suggestTableColumnQueries = useCallback(
-    async (currentQuery: string) => {
+    async (currentQuery: string, options?: { signal?: AbortSignal }) => {
+      const { signal } = options ?? {};
+      signal?.throwIfAborted();
       if (tableId !== null) {
-        const loadedTable = await loadTable(tableId);
-        return await loadedTable.data.suggestColumnQueries(currentQuery);
+        const loadedTable = await loadTable(tableId, { signal });
+        signal?.throwIfAborted();
+        const loadedTableDataSource = useTissUUmaps
+          .getState()
+          .loadedTableDataSources.get(loadedTable.loadedDataSourceKey);
+        if (loadedTableDataSource !== undefined) {
+          return await loadedTableDataSource.data.suggestColumnQueries(
+            currentQuery,
+            { signal },
+          );
+        }
       }
       return [];
     },
@@ -17,10 +28,20 @@ export function useTableColumnSelector(tableId: string | null) {
   );
 
   const resolveTableColumnQuery = useCallback(
-    async (query: string) => {
+    async (query: string, options?: { signal?: AbortSignal }) => {
+      const { signal } = options ?? {};
+      signal?.throwIfAborted();
       if (tableId !== null) {
-        const loadedTable = await loadTable(tableId);
-        return await loadedTable.data.resolveColumnQuery(query);
+        const loadedTable = await loadTable(tableId, { signal });
+        signal?.throwIfAborted();
+        const loadedTableDataSource = useTissUUmaps
+          .getState()
+          .loadedTableDataSources.get(loadedTable.loadedDataSourceKey);
+        if (loadedTableDataSource !== undefined) {
+          return await loadedTableDataSource.data.resolveColumnQuery(query, {
+            signal,
+          });
+        }
       }
       return null;
     },

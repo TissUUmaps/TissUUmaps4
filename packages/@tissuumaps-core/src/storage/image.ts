@@ -1,3 +1,4 @@
+import { type ProgressCallback } from "../types";
 import { type Data, type DataLoader } from "./base";
 
 /**
@@ -11,9 +12,13 @@ export interface ImageDataLoader<
   /**
    * Loads the image data from the configured data source
    *
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and progress callback
+   * @returns The loaded image data
    */
-  loadImage(options?: { signal?: AbortSignal }): Promise<TImageData>;
+  loadImage(options?: {
+    signal?: AbortSignal;
+    onProgress?: ProgressCallback;
+  }): Promise<TImageData>;
 }
 
 /**

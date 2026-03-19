@@ -22,6 +22,13 @@ export type MappableArrayLike<T> = ArrayLike<T> & {
   ): MappableArrayLike<U>;
 };
 
+/**
+ * A callback function that receives progress updates as a percentage (0-100)
+ *
+ * @param progress - The current progress as a percentage (0-100)
+ */
+export type ProgressCallback = (progress: number) => void;
+
 /** An axis-aligned rectangle defined by its top-left corner and dimensions */
 export type Rect = {
   /** X coordinate of the top-left corner */

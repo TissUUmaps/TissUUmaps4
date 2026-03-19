@@ -1,23 +1,19 @@
 import * as papaparse from "papaparse";
 
-import { type TypedArray } from "@tissuumaps/core";
+import { type ProgressCallback, type TypedArray } from "@tissuumaps/core";
 
 import { AbstractTableDataLoader } from "../base";
 import { CSVTableData } from "./CSVTableData";
-import {
-  type CSVTableDataSource,
-  csvTableDataSourceSchema,
-  csvTableDataSourceUISchema,
-} from "./CSVTableDataSource";
+import { type CSVTableDataSource } from "./CSVTableDataSource";
 
 export class CSVTableDataLoader extends AbstractTableDataLoader<
   CSVTableDataSource,
   CSVTableData
 > {
-  readonly dataSourceSchema = csvTableDataSourceSchema;
-  readonly dataSourceUISchema = csvTableDataSourceUISchema;
-
-  async loadTable(options?: { signal?: AbortSignal }): Promise<CSVTableData> {
+  async loadTable(options?: {
+    signal?: AbortSignal;
+    onProgress?: ProgressCallback;
+  }): Promise<CSVTableData> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const { n, columns, columnValues } = await this._loadCSV({ signal });
