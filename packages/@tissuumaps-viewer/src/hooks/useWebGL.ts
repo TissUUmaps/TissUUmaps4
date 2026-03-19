@@ -46,9 +46,9 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
             controller.draw();
           }
         },
-        (reason) => {
+        (error) => {
           if (!abortController.signal.aborted) {
-            console.error("Failed to initialize WebGL:", reason);
+            throw error;
           }
         },
       );
@@ -111,9 +111,9 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
               controller.draw();
             }
           },
-          (reason: unknown) => {
+          (error) => {
             if (!abortController.signal.aborted) {
-              console.error("Failed to synchronize points:", reason);
+              throw error;
             }
           },
         );
@@ -159,9 +159,9 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
               controller.draw();
             }
           },
-          (reason: unknown) => {
+          (error) => {
             if (!abortController.signal.aborted) {
-              console.error("Failed to synchronize shapes:", reason);
+              throw error;
             }
           },
         );

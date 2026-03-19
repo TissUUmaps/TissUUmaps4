@@ -118,9 +118,9 @@ export function useOpenSeadragon(options?: {
               console.debug("OpenSeadragon viewer synchronized");
             }
           },
-          (reason) => {
+          (error) => {
             if (!abortController.signal.aborted) {
-              console.error(reason);
+              throw error;
             }
           },
         );

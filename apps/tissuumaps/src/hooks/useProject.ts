@@ -11,9 +11,9 @@ export function useProject(projectUrlParam: string, defaultProjectUrl: string) {
     const params = new URLSearchParams(window.location.search);
     const projectUrl = params.get(projectUrlParam) ?? defaultProjectUrl;
     loadProjectFromURL(projectUrl, { signal: abortController.signal }).catch(
-      (reason) => {
+      (error) => {
         if (!abortController.signal.aborted) {
-          console.error(reason);
+          throw error;
         }
       },
     );
