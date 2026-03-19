@@ -3,16 +3,18 @@ export function deduplicate<
   F extends (this: any, ...args: any[]) => Promise<any>,
 >(f: F): F {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const promises = new Map<string, Promise<any>>();
+  const cachedPromises = new Map<string, Promise<any>>();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function (this: any, ...args: any[]): Promise<any> {
     const key = JSON.stringify(args);
-    let promise = promises.get(key);
-    if (promise !== undefined) {
-      return promise;
+    const cachedPromise = cachedPromises.get(key);
+    if (cachedPromise !== undefined) {
+      return cachedPromise;
     }
-    promise = f.apply(this, args).finally(() => promises.delete(key));
-    promises.set(key, promise);
+    const promise = f
+      .apply(this, args)
+      .finally(() => cachedPromises.delete(key));
+    cachedPromises.set(key, promise);
     return promise;
   } as F;
 }
