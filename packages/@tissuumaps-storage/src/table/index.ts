@@ -1,5 +1,8 @@
 export { TablePointsData } from "./TablePointsData";
-export { TablePointsDataLoader } from "./TablePointsDataLoader";
+export {
+  TablePointsDataLoader,
+  type LoadTableFunction,
+} from "./TablePointsDataLoader";
 export {
   tablePointsDataSourceDefaults,
   tablePointsDataSourceType,
