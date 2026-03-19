@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 
 import { type Rect, WebGLController } from "@tissuumaps/core";
 
@@ -178,27 +178,33 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     loadTable,
   ]);
 
-  const resizeCanvas = (size: { width: number; height: number }): void => {
-    const controller = controllerRef.current;
-    if (controllerVersion && controller !== null) {
-      console.debug("Resizing WebGL canvas to", size);
-      const canvasResized = controller.resizeCanvas(size);
-      if (canvasResized) {
-        controller.draw();
+  const resizeCanvas = useCallback(
+    (size: { width: number; height: number }): void => {
+      const controller = controllerRef.current;
+      if (controllerVersion && controller !== null) {
+        console.debug("Resizing WebGL canvas to", size);
+        const canvasResized = controller.resizeCanvas(size);
+        if (canvasResized) {
+          controller.draw();
+        }
       }
-    }
-  };
+    },
+    [controllerVersion],
+  );
 
-  const setViewport = (viewport: Rect): void => {
-    const controller = controllerRef.current;
-    if (controllerVersion && controller !== null) {
-      console.debug("Setting WebGL viewport to", viewport);
-      const viewportChanged = controller.setViewport(viewport);
-      if (viewportChanged) {
-        controller.draw();
+  const setViewport = useCallback(
+    (viewport: Rect): void => {
+      const controller = controllerRef.current;
+      if (controllerVersion && controller !== null) {
+        console.debug("Setting WebGL viewport to", viewport);
+        const viewportChanged = controller.setViewport(viewport);
+        if (viewportChanged) {
+          controller.draw();
+        }
       }
-    }
-  };
+    },
+    [controllerVersion],
+  );
 
   return { resizeCanvas, setViewport };
 }
