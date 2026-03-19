@@ -4,9 +4,6 @@ import { useTissUUmaps } from "../store";
 
 export function useTableColumnSelector(tableId: string | null) {
   const loadTable = useTissUUmaps((state) => state.loadTable);
-  const loadedTableDataSources = useTissUUmaps(
-    (state) => state.loadedTableDataSources,
-  );
 
   const suggestTableColumnQueries = useCallback(
     async (currentQuery: string, options?: { signal?: AbortSignal }) => {
@@ -15,9 +12,9 @@ export function useTableColumnSelector(tableId: string | null) {
       if (tableId !== null) {
         const loadedTable = await loadTable(tableId, { signal });
         signal?.throwIfAborted();
-        const loadedTableDataSource = loadedTableDataSources.get(
-          loadedTable.loadedDataSourceKey,
-        );
+        const loadedTableDataSource = useTissUUmaps
+          .getState()
+          .loadedTableDataSources.get(loadedTable.loadedDataSourceKey);
         if (loadedTableDataSource !== undefined) {
           return await loadedTableDataSource.data.suggestColumnQueries(
             currentQuery,
@@ -27,7 +24,7 @@ export function useTableColumnSelector(tableId: string | null) {
       }
       return [];
     },
-    [tableId, loadTable, loadedTableDataSources],
+    [tableId, loadTable],
   );
 
   const resolveTableColumnQuery = useCallback(
@@ -37,9 +34,9 @@ export function useTableColumnSelector(tableId: string | null) {
       if (tableId !== null) {
         const loadedTable = await loadTable(tableId, { signal });
         signal?.throwIfAborted();
-        const loadedTableDataSource = loadedTableDataSources.get(
-          loadedTable.loadedDataSourceKey,
-        );
+        const loadedTableDataSource = useTissUUmaps
+          .getState()
+          .loadedTableDataSources.get(loadedTable.loadedDataSourceKey);
         if (loadedTableDataSource !== undefined) {
           return await loadedTableDataSource.data.resolveColumnQuery(query, {
             signal,
@@ -48,7 +45,7 @@ export function useTableColumnSelector(tableId: string | null) {
       }
       return null;
     },
-    [tableId, loadTable, loadedTableDataSources],
+    [tableId, loadTable],
   );
 
   return { suggestTableColumnQueries, resolveTableColumnQuery };
