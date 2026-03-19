@@ -54,7 +54,7 @@ export interface PointsData extends ItemsData {
    *
    * @param dimension - The dimension name (e.g. an X or Y coordinate column)
    * @param options - Optional abort signal and progress callback
-   * @return The coordinate values for the dimension
+   * @returns The coordinate values for the dimension
    */
   loadCoordinates(
     dimension: string,
