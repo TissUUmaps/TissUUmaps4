@@ -8,7 +8,7 @@ import { AbstractPointsDataLoader } from "../base";
 import { TablePointsData } from "./TablePointsData";
 import { type TablePointsDataSource } from "./TablePointsDataSource";
 
-type LoadTableFunction = (
+export type LoadTableFunction = (
   tableId: string,
   options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ) => Promise<TableData>;
