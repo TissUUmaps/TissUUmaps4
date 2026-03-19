@@ -51,7 +51,9 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
             console.error("Failed to initialize WebGL:", reason);
           }
           controller.destroy();
+          controllerRef.current = null;
           parent.removeChild(canvas);
+          appendedCanvas = null;
         },
       );
     }
@@ -65,6 +67,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
       }
       if (parent !== null && appendedCanvas !== null) {
         parent.removeChild(appendedCanvas);
+        appendedCanvas = null;
       }
     };
   }, [parent, initialViewport]);
