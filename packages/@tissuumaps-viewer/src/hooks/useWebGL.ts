@@ -62,9 +62,9 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
   }, [parent, initialViewport]);
 
   useEffect(() => {
-    console.debug("Setting draw options");
     const controller = controllerRef.current;
     if (initialized && controller !== null) {
+      console.debug("Setting draw options");
       const { syncPoints, syncShapes, redraw } =
         controller.setDrawOptions(drawOptions);
       if (syncPoints) {

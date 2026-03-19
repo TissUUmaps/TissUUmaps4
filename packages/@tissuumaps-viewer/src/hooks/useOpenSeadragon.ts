@@ -76,17 +76,17 @@ export function useOpenSeadragon(options?: {
   );
 
   useEffect(() => {
-    console.debug("Setting OpenSeadragon viewer options");
     const controller = controllerRef.current;
     if (controller !== null) {
+      console.debug("Setting OpenSeadragon viewer options");
       controller.setViewerOptions(viewerOptions);
     }
   }, [viewerOptions]);
 
   useEffect(() => {
-    console.debug("Configuring OpenSeadragon animation handlers");
     const controller = controllerRef.current;
     if (controller !== null) {
+      console.debug("Configuring OpenSeadragon animation handlers");
       controller.configureAnimationHandlers(
         viewerAnimationStartOptions,
         viewerAnimationFinishOptions,
@@ -95,10 +95,10 @@ export function useOpenSeadragon(options?: {
   }, [viewerAnimationStartOptions, viewerAnimationFinishOptions]);
 
   useEffect(() => {
-    console.debug("Synchronizing OpenSeadragon viewer");
     const controller = controllerRef.current;
     const abortController = new AbortController();
     if (controller !== null) {
+      console.debug("Synchronizing OpenSeadragon viewer");
       controller
         .synchronize(layers, images, labels, loadImage, loadLabels, {
           signal: abortController.signal,
