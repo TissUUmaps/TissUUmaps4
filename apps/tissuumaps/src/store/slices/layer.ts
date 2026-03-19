@@ -1,6 +1,6 @@
 import { type Layer } from "@tissuumaps/core";
 
-import { type TissUUmapsStateCreator } from "./index";
+import { type TissUUmapsStateCreator } from "../index";
 
 export type LayerSlice = LayerSliceState & LayerSliceActions;
 
@@ -12,7 +12,7 @@ export type LayerSliceActions = {
   addLayer: (layer: Layer, index?: number) => void;
   updateLayer: (layerId: string, updates: Partial<Layer>) => void;
   moveLayer: (layerId: string, newIndex: number) => void;
-  deleteLayer: (layerId: string) => void;
+  deleteLayer: (layerId: string) => boolean;
   clearLayers: () => void;
 };
 
@@ -20,17 +20,23 @@ export const createLayerSlice: TissUUmapsStateCreator<LayerSlice> = (
   set,
   get,
 ) => ({
-  ...initialLayerSliceState,
+  ...createInitialLayerSliceState(),
   addLayer: (layer, index) => {
     const state = get();
     if (state.layers.some((x) => x.id === layer.id)) {
       throw new Error(`Layer with ID ${layer.id} already exists.`);
+    }
+    if (index !== undefined && (index < 0 || index > state.layers.length)) {
+      throw new Error(`Index ${index} is out of bounds.`);
     }
     set((draft) => {
       draft.layers.splice(index ?? draft.layers.length, 0, layer);
     });
   },
   updateLayer: (layerId, updates) => {
+    if (updates.id !== undefined) {
+      throw new Error("Updating layer ID is not allowed.");
+    }
     const state = get();
     const index = state.layers.findIndex((layer) => layer.id === layerId);
     if (index === -1) {
@@ -42,6 +48,9 @@ export const createLayerSlice: TissUUmapsStateCreator<LayerSlice> = (
   },
   moveLayer: (layerId, newIndex) => {
     const state = get();
+    if (newIndex < 0 || newIndex >= state.layers.length) {
+      throw new Error(`New index ${newIndex} is out of bounds.`);
+    }
     const oldIndex = state.layers.findIndex((layer) => layer.id === layerId);
     if (oldIndex === -1) {
       throw new Error(`Layer with ID ${layerId} not found.`);
@@ -56,22 +65,19 @@ export const createLayerSlice: TissUUmapsStateCreator<LayerSlice> = (
   deleteLayer: (layerId) => {
     const state = get();
     const index = state.layers.findIndex((layer) => layer.id === layerId);
-    if (index === -1) {
-      throw new Error(`Layer with ID ${layerId} not found.`);
+    if (index !== -1) {
+      set((draft) => {
+        draft.layers.splice(index, 1);
+      });
+      return true;
     }
-    set((draft) => {
-      draft.layers.splice(index, 1);
-    });
+    return false;
   },
   clearLayers: () => {
-    const state = get();
-    while (state.layers.length > 0) {
-      state.deleteLayer(state.layers[0]!.id);
-    }
-    set(initialLayerSliceState);
+    set(createInitialLayerSliceState());
   },
 });
 
-const initialLayerSliceState: LayerSliceState = {
-  layers: [],
-};
+function createInitialLayerSliceState(): LayerSliceState {
+  return { layers: [] };
+}

@@ -2,7 +2,11 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import { type MappableArrayLike, type TableData } from "@tissuumaps/core";
+import {
+  type MappableArrayLike,
+  type ProgressCallback,
+  type TableData,
+} from "@tissuumaps/core";
 
 export class ParquetTableData implements TableData {
   private readonly _buffer: hyparquet.AsyncBuffer;
@@ -66,7 +70,7 @@ export class ParquetTableData implements TableData {
 
   async loadValues<T>(
     column: string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<MappableArrayLike<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
@@ -90,7 +94,7 @@ export class ParquetTableData implements TableData {
 
   async loadValueRange(
     column: string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<[number, number] | undefined> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();

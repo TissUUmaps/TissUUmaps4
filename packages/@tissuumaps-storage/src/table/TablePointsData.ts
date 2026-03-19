@@ -1,4 +1,8 @@
-import { type PointsData, type TableData } from "@tissuumaps/core";
+import {
+  type PointsData,
+  type ProgressCallback,
+  type TableData,
+} from "@tissuumaps/core";
 
 export class TablePointsData implements PointsData {
   private readonly _tableData: TableData;
@@ -42,7 +46,7 @@ export class TablePointsData implements PointsData {
 
   async loadCoordinates(
     dimension: string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<Float32Array> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();

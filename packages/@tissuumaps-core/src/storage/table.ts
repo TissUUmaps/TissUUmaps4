@@ -1,4 +1,4 @@
-import { type MappableArrayLike } from "../types";
+import { type MappableArrayLike, type ProgressCallback } from "../types";
 import { type DataLoader, type ItemsData } from "./base";
 
 /**
@@ -12,9 +12,13 @@ export interface TableDataLoader<
   /**
    * Loads the table data from the configured data source
    *
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and progress callback
+   * @returns The loaded table data
    */
-  loadTable(options?: { signal?: AbortSignal }): Promise<TTableData>;
+  loadTable(options?: {
+    signal?: AbortSignal;
+    onProgress?: ProgressCallback;
+  }): Promise<TTableData>;
 }
 
 /**
@@ -50,23 +54,23 @@ export interface TableData extends ItemsData {
    *
    * @typeParam T - Element type of the returned array
    * @param column - The column name
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and progress callback
    * @returns The column values
    */
   loadValues<T>(
     column: string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<MappableArrayLike<T>>;
 
   /**
    * Load a column's minimum and maximum values
    *
    * @param column - The column name
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and progress callback
    * @returns The numeric [min, max] value range of the column, or `undefined` if not numeric
    */
   loadValueRange(
     column: string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<[number, number] | undefined>;
 }

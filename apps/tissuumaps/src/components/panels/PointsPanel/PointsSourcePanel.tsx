@@ -20,14 +20,19 @@ export function PointsSourcePanel({
   points,
   className,
 }: PointsSourcePanelProps) {
-  const createPointsDataLoader = useTissUUmaps(
-    (state) => state.createPointsDataLoader,
+  const pointsDataLoaderRegistry = useTissUUmaps(
+    (state) => state.pointsDataLoaderRegistry,
   );
 
-  const pointsDataLoader = useMemo(
-    () => createPointsDataLoader(points.id),
-    [createPointsDataLoader, points.id],
-  );
+  const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
+    const value = pointsDataLoaderRegistry.get(points.dataSource.type);
+    if (value === undefined) {
+      throw new Error(
+        `No points data loader registered for data source type "${points.dataSource.type}"`,
+      );
+    }
+    return value;
+  }, [pointsDataLoaderRegistry, points.dataSource.type]);
 
   return (
     <Fieldset
@@ -42,8 +47,8 @@ export function PointsSourcePanel({
         <Input type="text" value={points.dataSource.type} disabled />
       </Field>
       <JsonForms
-        schema={pointsDataLoader.dataSourceSchema}
-        uischema={pointsDataLoader.dataSourceUISchema}
+        schema={dataSourceSchema}
+        uischema={dataSourceUISchema}
         data={points.dataSource}
         renderers={renderers}
         cells={cells}

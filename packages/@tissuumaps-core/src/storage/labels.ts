@@ -1,4 +1,4 @@
-import { type UintArray } from "../types";
+import { type ProgressCallback, type UintArray } from "../types";
 import { type DataLoader, type ItemsData } from "./base";
 
 /**
@@ -12,9 +12,13 @@ export interface LabelsDataLoader<
   /**
    * Loads the labels data from the configured data source
    *
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and progress callback
+   * @returns The loaded labels data
    */
-  loadLabels(options?: { signal?: AbortSignal }): Promise<TLabelsData>;
+  loadLabels(options?: {
+    signal?: AbortSignal;
+    onProgress?: ProgressCallback;
+  }): Promise<TLabelsData>;
 }
 
 /**
@@ -68,12 +72,12 @@ export interface LabelsData extends ItemsData {
    * @param level - Pyramid level
    * @param x - Tile column index
    * @param y - Tile row index
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and progress callback
    */
   loadTile(
     level: number,
     x: number,
     y: number,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<UintArray>;
 }

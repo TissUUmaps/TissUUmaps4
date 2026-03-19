@@ -1,15 +1,8 @@
-import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
-
 /**
  * Base interface for data loaders
  */
-export interface DataLoader {
-  /** JSON Schema describing the data source configuration */
-  readonly dataSourceSchema: JsonSchema;
-
-  /** UI schema controlling the form layout for the data source configuration */
-  readonly dataSourceUISchema: UISchemaElement;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface DataLoader {}
 
 /**
  * Base interface for loaded data objects

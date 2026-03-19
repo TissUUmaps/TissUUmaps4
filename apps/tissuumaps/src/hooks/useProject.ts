@@ -10,14 +10,13 @@ export function useProject(projectUrlParam: string, defaultProjectUrl: string) {
     const abortController = new AbortController();
     const params = new URLSearchParams(window.location.search);
     const projectUrl = params.get(projectUrlParam) ?? defaultProjectUrl;
-    loadProjectFromURL(projectUrl, {
-      signal: abortController.signal,
-      quiet: true,
-    }).catch((reason) => {
-      if (!abortController.signal.aborted) {
-        console.error(reason);
-      }
-    });
+    loadProjectFromURL(projectUrl, { signal: abortController.signal }).catch(
+      (reason) => {
+        if (!abortController.signal.aborted) {
+          console.error(reason);
+        }
+      },
+    );
     return () => {
       abortController.abort();
       clearProject();

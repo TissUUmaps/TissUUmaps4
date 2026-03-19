@@ -1,3 +1,4 @@
+import { type ProgressCallback } from "../types";
 import { type DataLoader, type ItemsData } from "./base";
 
 /**
@@ -11,9 +12,13 @@ export interface PointsDataLoader<
   /**
    * Loads the points data from the configured data source
    *
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and progress callback
+   * @returns The loaded points data
    */
-  loadPoints(options?: { signal?: AbortSignal }): Promise<TPointsData>;
+  loadPoints(options?: {
+    signal?: AbortSignal;
+    onProgress?: (progress: number) => void;
+  }): Promise<TPointsData>;
 }
 
 /**
@@ -48,10 +53,11 @@ export interface PointsData extends ItemsData {
    * Loads the coordinate values for a dimension as a float array
    *
    * @param dimension - The dimension name (e.g. an X or Y coordinate column)
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and progress callback
+   * @return The coordinate values for the dimension
    */
   loadCoordinates(
     dimension: string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<Float32Array>;
 }

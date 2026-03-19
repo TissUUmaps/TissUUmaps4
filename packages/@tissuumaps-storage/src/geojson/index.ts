@@ -3,6 +3,8 @@ export { GeoJSONShapesDataLoader } from "./GeoJSONShapesDataLoader";
 export {
   geoJSONShapesDataSourceDefaults,
   geoJSONShapesDataSourceType,
+  geoJSONShapesDataSourceSchema,
+  geoJSONShapesDataSourceUISchema,
   type RawGeoJSONShapesDataSource,
   type GeoJSONShapesDataSource,
   createGeoJSONShapesDataSource,

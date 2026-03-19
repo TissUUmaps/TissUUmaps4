@@ -1,5 +1,6 @@
 import {
   type MappableArrayLike,
+  type ProgressCallback,
   type TableData,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -60,7 +61,7 @@ export class CSVTableData implements TableData {
 
   async loadValues<T>(
     column: string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<MappableArrayLike<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
@@ -75,7 +76,7 @@ export class CSVTableData implements TableData {
 
   async loadValueRange(
     column: string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<[number, number] | undefined> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
