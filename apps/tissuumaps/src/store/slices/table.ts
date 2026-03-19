@@ -132,90 +132,93 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
     }
     set(createInitialTableSliceState());
   },
-  loadTable: deduplicate(async (tableId, options) => {
-    const { signal, reload = false, onProgress } = options ?? {};
-    signal?.throwIfAborted();
-    // Check if the table is already loaded
-    const state = get();
-    const loadedTable = state.loadedTables.get(tableId);
-    if (loadedTable !== undefined && !reload) {
-      return loadedTable;
-    }
-    // Find the table and the corresponding data source (if loaded)
-    const table = state.tables.find((table) => table.id === tableId);
-    if (table === undefined) {
-      throw new Error(`Table with ID ${tableId} not found.`);
-    }
-    let oldLoadedDataSource: LoadedTableDataSource | undefined;
-    for (const loadedDataSource of state.loadedTableDataSources.values()) {
-      if (deepEqual(loadedDataSource.dataSource, table.dataSource)) {
-        oldLoadedDataSource = loadedDataSource;
-        break;
-      }
-    }
-    // Load the data source if not already loaded or if a reload has been requested
-    let loadedDataSource = oldLoadedDataSource;
-    if (loadedDataSource === undefined || reload) {
-      const { dataLoaderFactory } =
-        state.tableDataLoaderRegistry.get(table.dataSource.type) ?? {};
-      if (dataLoaderFactory === undefined) {
-        throw new Error(
-          `No table data loader registered for data source type ${table.dataSource.type}.`,
-        );
-      }
-      const dataLoader = dataLoaderFactory(table.dataSource, state.workspace);
-      const data = await dataLoader.loadTable({ signal, onProgress });
+  loadTable: deduplicate(
+    async (tableId, options) => {
+      const { signal, reload = false, onProgress } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the table has been deleted or its data source has changed
-      const currentState = get();
-      const currentTable = currentState.tables.find(
-        (table) => table.id === tableId,
-      );
-      if (
-        currentTable === undefined ||
-        !deepEqual(currentTable.dataSource, table.dataSource)
-      ) {
-        data.destroy();
-        throw new DOMException(
-          `Table with ID ${tableId} has been deleted or its data source has changed.`,
-          "AbortError",
-        );
+      // Check if the table is already loaded
+      const state = get();
+      const loadedTable = state.loadedTables.get(tableId);
+      if (loadedTable !== undefined && !reload) {
+        return loadedTable;
       }
-      loadedDataSource = {
-        dataSource: currentTable.dataSource,
-        data,
-        loadedValues: new Map(),
-        loadedValueRanges: new Map(),
-      };
-    }
-    // Store the loaded table and the corresponding data source in the state
-    let newLoadedTable: LoadedTable;
-    set((draft) => {
-      let loadedDataSourceKey;
-      for (const [key, value] of draft.loadedTableDataSources) {
-        if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
-          loadedDataSourceKey = key;
+      // Find the table and the corresponding data source (if loaded)
+      const table = state.tables.find((table) => table.id === tableId);
+      if (table === undefined) {
+        throw new Error(`Table with ID ${tableId} not found.`);
+      }
+      let oldLoadedDataSource: LoadedTableDataSource | undefined;
+      for (const loadedDataSource of state.loadedTableDataSources.values()) {
+        if (deepEqual(loadedDataSource.dataSource, table.dataSource)) {
+          oldLoadedDataSource = loadedDataSource;
           break;
         }
       }
-      if (loadedDataSourceKey === undefined) {
-        do {
-          loadedDataSourceKey = crypto.randomUUID();
-        } while (draft.loadedTableDataSources.has(loadedDataSourceKey));
+      // Load the data source if not already loaded or if a reload has been requested
+      let loadedDataSource = oldLoadedDataSource;
+      if (loadedDataSource === undefined || reload) {
+        const { dataLoaderFactory } =
+          state.tableDataLoaderRegistry.get(table.dataSource.type) ?? {};
+        if (dataLoaderFactory === undefined) {
+          throw new Error(
+            `No table data loader registered for data source type ${table.dataSource.type}.`,
+          );
+        }
+        const dataLoader = dataLoaderFactory(table.dataSource, state.workspace);
+        const data = await dataLoader.loadTable({ signal, onProgress });
+        signal?.throwIfAborted();
+        // Check if the table has been deleted or its data source has changed
+        const currentState = get();
+        const currentTable = currentState.tables.find(
+          (table) => table.id === tableId,
+        );
+        if (
+          currentTable === undefined ||
+          !deepEqual(currentTable.dataSource, table.dataSource)
+        ) {
+          data.destroy();
+          throw new DOMException(
+            `Table with ID ${tableId} has been deleted or its data source has changed.`,
+            "AbortError",
+          );
+        }
+        loadedDataSource = {
+          dataSource: currentTable.dataSource,
+          data,
+          loadedValues: new Map(),
+          loadedValueRanges: new Map(),
+        };
       }
-      newLoadedTable = { loadedDataSourceKey };
-      draft.loadedTables.set(tableId, newLoadedTable);
-      draft.loadedTableDataSources.set(loadedDataSourceKey, loadedDataSource);
-    });
-    // Clean up old data if the loaded data source has changed
-    if (
-      oldLoadedDataSource !== undefined &&
-      oldLoadedDataSource.data !== loadedDataSource.data
-    ) {
-      oldLoadedDataSource.data.destroy();
-    }
-    return newLoadedTable!;
-  }),
+      // Store the loaded table and the corresponding data source in the state
+      let newLoadedTable: LoadedTable;
+      set((draft) => {
+        let loadedDataSourceKey;
+        for (const [key, value] of draft.loadedTableDataSources) {
+          if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
+            loadedDataSourceKey = key;
+            break;
+          }
+        }
+        if (loadedDataSourceKey === undefined) {
+          do {
+            loadedDataSourceKey = crypto.randomUUID();
+          } while (draft.loadedTableDataSources.has(loadedDataSourceKey));
+        }
+        newLoadedTable = { loadedDataSourceKey };
+        draft.loadedTables.set(tableId, newLoadedTable);
+        draft.loadedTableDataSources.set(loadedDataSourceKey, loadedDataSource);
+      });
+      // Clean up old data if the loaded data source has changed
+      if (
+        oldLoadedDataSource !== undefined &&
+        oldLoadedDataSource.data !== loadedDataSource.data
+      ) {
+        oldLoadedDataSource.data.destroy();
+      }
+      return newLoadedTable!;
+    },
+    (_tableId, options) => options?.signal,
+  ),
   loadTableValues: deduplicate(
     async <T>(
       tableId: string,
@@ -288,68 +291,73 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
       });
       return values;
     },
+    (_tableId, _column, options) => options?.signal,
   ),
-  loadTableValueRange: deduplicate(async (tableId, column, options) => {
-    const { signal, reload = false, onProgress } = options ?? {};
-    signal?.throwIfAborted();
-    // Check if the table, the corresponding data source, and the requested value range are already loaded
-    const state = get();
-    const loadedTable = state.loadedTables.get(tableId);
-    if (loadedTable === undefined) {
-      throw new Error(`Table with ID ${tableId} not loaded.`);
-    }
-    const loadedDataSource = state.loadedTableDataSources.get(
-      loadedTable.loadedDataSourceKey,
-    );
-    if (loadedDataSource === undefined) {
-      throw new Error(`Data source for table with ID ${tableId} not loaded.`);
-    }
-    if (loadedDataSource.loadedValueRanges.has(column) && !reload) {
-      return loadedDataSource.loadedValueRanges.get(column);
-    }
-    // Load the requested value range
-    const valueRange = await loadedDataSource.data.loadValueRange(column, {
-      signal,
-      onProgress,
-    });
-    signal?.throwIfAborted();
-    // Check if the table has been unloaded or its data source has changed
-    const currentState = get();
-    const currentLoadedTable = currentState.loadedTables.get(tableId);
-    if (
-      currentLoadedTable === undefined ||
-      currentLoadedTable.loadedDataSourceKey !== loadedTable.loadedDataSourceKey
-    ) {
-      throw new DOMException(
-        `Table with ID ${tableId} has been unloaded or its data source has changed.`,
-        "AbortError",
+  loadTableValueRange: deduplicate(
+    async (tableId, column, options) => {
+      const { signal, reload = false, onProgress } = options ?? {};
+      signal?.throwIfAborted();
+      // Check if the table, the corresponding data source, and the requested value range are already loaded
+      const state = get();
+      const loadedTable = state.loadedTables.get(tableId);
+      if (loadedTable === undefined) {
+        throw new Error(`Table with ID ${tableId} not loaded.`);
+      }
+      const loadedDataSource = state.loadedTableDataSources.get(
+        loadedTable.loadedDataSourceKey,
       );
-    }
-    const currentLoadedDataSource = currentState.loadedTableDataSources.get(
-      currentLoadedTable.loadedDataSourceKey,
-    );
-    if (
-      currentLoadedDataSource === undefined ||
-      !deepEqual(
-        currentLoadedDataSource.dataSource,
-        loadedDataSource.dataSource,
-      )
-    ) {
-      throw new DOMException(
-        `Data source for table with ID ${tableId} has been unloaded or changed.`,
-        "AbortError",
+      if (loadedDataSource === undefined) {
+        throw new Error(`Data source for table with ID ${tableId} not loaded.`);
+      }
+      if (loadedDataSource.loadedValueRanges.has(column) && !reload) {
+        return loadedDataSource.loadedValueRanges.get(column);
+      }
+      // Load the requested value range
+      const valueRange = await loadedDataSource.data.loadValueRange(column, {
+        signal,
+        onProgress,
+      });
+      signal?.throwIfAborted();
+      // Check if the table has been unloaded or its data source has changed
+      const currentState = get();
+      const currentLoadedTable = currentState.loadedTables.get(tableId);
+      if (
+        currentLoadedTable === undefined ||
+        currentLoadedTable.loadedDataSourceKey !==
+          loadedTable.loadedDataSourceKey
+      ) {
+        throw new DOMException(
+          `Table with ID ${tableId} has been unloaded or its data source has changed.`,
+          "AbortError",
+        );
+      }
+      const currentLoadedDataSource = currentState.loadedTableDataSources.get(
+        currentLoadedTable.loadedDataSourceKey,
       );
-    }
-    // Store the loaded value range in the state
-    set((draft) => {
-      const loadedTableDraft = draft.loadedTables.get(tableId)!;
-      const loadedDataSourceDraft = draft.loadedTableDataSources.get(
-        loadedTableDraft.loadedDataSourceKey,
-      )!;
-      loadedDataSourceDraft.loadedValueRanges.set(column, valueRange);
-    });
-    return valueRange;
-  }),
+      if (
+        currentLoadedDataSource === undefined ||
+        !deepEqual(
+          currentLoadedDataSource.dataSource,
+          loadedDataSource.dataSource,
+        )
+      ) {
+        throw new DOMException(
+          `Data source for table with ID ${tableId} has been unloaded or changed.`,
+          "AbortError",
+        );
+      }
+      // Store the loaded value range in the state
+      set((draft) => {
+        const loadedTableDraft = draft.loadedTables.get(tableId)!;
+        const loadedDataSourceDraft = draft.loadedTableDataSources.get(
+          loadedTableDraft.loadedDataSourceKey,
+        )!;
+        loadedDataSourceDraft.loadedValueRanges.set(column, valueRange);
+      });
+      return valueRange;
+    },
+    (_tableId, _column, options) => options?.signal,
+  ),
   unloadTable: (tableId) => {
     const state = get();
     const loadedTable = state.loadedTables.get(tableId);

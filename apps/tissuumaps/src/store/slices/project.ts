@@ -53,67 +53,73 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       draft.projectName = name;
     });
   },
-  loadProject: deduplicate(async (project, options) => {
-    const { signal, onProgress } = options ?? {};
-    signal?.throwIfAborted();
-    get().clearProject();
-    // first, add layers
-    for (const layer of project.layers) {
-      get().addLayer(layer);
-    }
-    // then, add and asynchronously load data objects
-    {
-      const state = get();
-      const tablePromises = project.tables.map((table) => {
-        state.addTable(table);
-        return state.loadTable(table.id, { signal, onProgress });
-      });
-      await Promise.all(tablePromises);
+  loadProject: deduplicate(
+    async (project, options) => {
+      const { signal, onProgress } = options ?? {};
       signal?.throwIfAborted();
-    }
-    // finally, add and asynchronously load rendered data objects
-    {
-      const state = get();
-      const imagePromises = project.images.map((image) => {
-        state.addImage(image);
-        return state.loadImage(image.id, { signal, onProgress });
-      });
-      const labelsPromises = project.labels.map((labels) => {
-        state.addLabels(labels);
-        return state.loadLabels(labels.id, { signal, onProgress });
-      });
-      const pointsPromises = project.points.map((points) => {
-        state.addPoints(points);
-        return state.loadPoints(points.id, { signal, onProgress });
-      });
-      const shapesPromises = project.shapes.map((shapes) => {
-        state.addShapes(shapes);
-        return state.loadShapes(shapes.id, { signal, onProgress });
-      });
-      await Promise.all([
-        ...imagePromises,
-        ...labelsPromises,
-        ...pointsPromises,
-        ...shapesPromises,
-      ]);
-    }
-  }),
-  loadProjectFromURL: deduplicate(async (url, options) => {
-    const { signal, onProgress } = options ?? {};
-    signal?.throwIfAborted();
-    const response = await fetch(url, { signal });
-    signal?.throwIfAborted();
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load project from ${url}: ${response.status} ${response.statusText}`,
-      );
-    }
-    const rawProjectData: unknown = await response.json();
-    signal?.throwIfAborted();
-    // TODO validate project data
-    const project = createProject(rawProjectData as RawProject);
-    await get().loadProject(project, { signal, onProgress });
-  }),
+      get().clearProject();
+      // first, add layers
+      for (const layer of project.layers) {
+        get().addLayer(layer);
+      }
+      // then, add and asynchronously load data objects
+      {
+        const state = get();
+        const tablePromises = project.tables.map((table) => {
+          state.addTable(table);
+          return state.loadTable(table.id, { signal, onProgress });
+        });
+        await Promise.all(tablePromises);
+        signal?.throwIfAborted();
+      }
+      // finally, add and asynchronously load rendered data objects
+      {
+        const state = get();
+        const imagePromises = project.images.map((image) => {
+          state.addImage(image);
+          return state.loadImage(image.id, { signal, onProgress });
+        });
+        const labelsPromises = project.labels.map((labels) => {
+          state.addLabels(labels);
+          return state.loadLabels(labels.id, { signal, onProgress });
+        });
+        const pointsPromises = project.points.map((points) => {
+          state.addPoints(points);
+          return state.loadPoints(points.id, { signal, onProgress });
+        });
+        const shapesPromises = project.shapes.map((shapes) => {
+          state.addShapes(shapes);
+          return state.loadShapes(shapes.id, { signal, onProgress });
+        });
+        await Promise.all([
+          ...imagePromises,
+          ...labelsPromises,
+          ...pointsPromises,
+          ...shapesPromises,
+        ]);
+      }
+    },
+    (_project, options) => options?.signal,
+  ),
+  loadProjectFromURL: deduplicate(
+    async (url, options) => {
+      const { signal, onProgress } = options ?? {};
+      signal?.throwIfAborted();
+      const response = await fetch(url, { signal });
+      signal?.throwIfAborted();
+      if (!response.ok) {
+        throw new Error(
+          `Failed to load project from ${url}: ${response.status} ${response.statusText}`,
+        );
+      }
+      const rawProjectData: unknown = await response.json();
+      signal?.throwIfAborted();
+      // TODO validate project data
+      const project = createProject(rawProjectData as RawProject);
+      await get().loadProject(project, { signal, onProgress });
+    },
+    (_url, options) => options?.signal,
+  ),
   saveProject: () => {
     const state = get();
     return {

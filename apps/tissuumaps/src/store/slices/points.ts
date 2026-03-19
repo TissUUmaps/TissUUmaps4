@@ -121,152 +121,169 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
     }
     set(createInitialPointsSliceState());
   },
-  loadPoints: deduplicate(async (pointsId, options) => {
-    const { signal, reload = false, onProgress } = options ?? {};
-    signal?.throwIfAborted();
-    // Check if the points are already loaded
-    const state = get();
-    const loadedPoints = state.loadedPoints.get(pointsId);
-    if (loadedPoints !== undefined && !reload) {
-      return loadedPoints;
-    }
-    // Find the points and the corresponding data source (if loaded)
-    const points = state.points.find((points) => points.id === pointsId);
-    if (points === undefined) {
-      throw new Error(`Points with ID ${pointsId} not found.`);
-    }
-    let oldLoadedDataSource: LoadedPointsDataSource | undefined;
-    for (const loadedDataSource of state.loadedPointsDataSources.values()) {
-      if (deepEqual(loadedDataSource.dataSource, points.dataSource)) {
-        oldLoadedDataSource = loadedDataSource;
-        break;
-      }
-    }
-    // Load the data source if not already loaded or if a reload has been requested
-    let loadedDataSource = oldLoadedDataSource;
-    if (loadedDataSource === undefined || reload) {
-      const { dataLoaderFactory } =
-        state.pointsDataLoaderRegistry.get(points.dataSource.type) ?? {};
-      if (dataLoaderFactory === undefined) {
-        throw new Error(
-          `No points data loader registered for data source type ${points.dataSource.type}.`,
-        );
-      }
-      const dataLoader = dataLoaderFactory(points.dataSource, state.workspace);
-      const data = await dataLoader.loadPoints({ signal, onProgress });
+  loadPoints: deduplicate(
+    async (pointsId, options) => {
+      const { signal, reload = false, onProgress } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the points have been deleted or their data source has changed
-      const currentState = get();
-      const currentPoints = currentState.points.find(
-        (points) => points.id === pointsId,
-      );
-      if (
-        currentPoints === undefined ||
-        !deepEqual(currentPoints.dataSource, points.dataSource)
-      ) {
-        data.destroy();
-        throw new DOMException(
-          `Points with ID ${pointsId} have been deleted or their data source has changed.`,
-          "AbortError",
-        );
+      // Check if the points are already loaded
+      const state = get();
+      const loadedPoints = state.loadedPoints.get(pointsId);
+      if (loadedPoints !== undefined && !reload) {
+        return loadedPoints;
       }
-      loadedDataSource = {
-        dataSource: currentPoints.dataSource,
-        data,
-        loadedCoordinates: new Map(),
-      };
-    }
-    // Store the loaded points and the corresponding data source in the state
-    let newLoadedPoints: LoadedPoints;
-    set((draft) => {
-      let loadedDataSourceKey;
-      for (const [key, value] of draft.loadedPointsDataSources) {
-        if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
-          loadedDataSourceKey = key;
+      // Find the points and the corresponding data source (if loaded)
+      const points = state.points.find((points) => points.id === pointsId);
+      if (points === undefined) {
+        throw new Error(`Points with ID ${pointsId} not found.`);
+      }
+      let oldLoadedDataSource: LoadedPointsDataSource | undefined;
+      for (const loadedDataSource of state.loadedPointsDataSources.values()) {
+        if (deepEqual(loadedDataSource.dataSource, points.dataSource)) {
+          oldLoadedDataSource = loadedDataSource;
           break;
         }
       }
-      if (loadedDataSourceKey === undefined) {
-        do {
-          loadedDataSourceKey = crypto.randomUUID();
-        } while (draft.loadedPointsDataSources.has(loadedDataSourceKey));
+      // Load the data source if not already loaded or if a reload has been requested
+      let loadedDataSource = oldLoadedDataSource;
+      if (loadedDataSource === undefined || reload) {
+        const { dataLoaderFactory } =
+          state.pointsDataLoaderRegistry.get(points.dataSource.type) ?? {};
+        if (dataLoaderFactory === undefined) {
+          throw new Error(
+            `No points data loader registered for data source type ${points.dataSource.type}.`,
+          );
+        }
+        const dataLoader = dataLoaderFactory(
+          points.dataSource,
+          state.workspace,
+        );
+        const data = await dataLoader.loadPoints({ signal, onProgress });
+        signal?.throwIfAborted();
+        // Check if the points have been deleted or their data source has changed
+        const currentState = get();
+        const currentPoints = currentState.points.find(
+          (points) => points.id === pointsId,
+        );
+        if (
+          currentPoints === undefined ||
+          !deepEqual(currentPoints.dataSource, points.dataSource)
+        ) {
+          data.destroy();
+          throw new DOMException(
+            `Points with ID ${pointsId} have been deleted or their data source has changed.`,
+            "AbortError",
+          );
+        }
+        loadedDataSource = {
+          dataSource: currentPoints.dataSource,
+          data,
+          loadedCoordinates: new Map(),
+        };
       }
-      newLoadedPoints = { loadedDataSourceKey };
-      draft.loadedPoints.set(pointsId, newLoadedPoints);
-      draft.loadedPointsDataSources.set(loadedDataSourceKey, loadedDataSource);
-    });
-    // Clean up old data if the loaded data source has changed
-    if (
-      oldLoadedDataSource !== undefined &&
-      oldLoadedDataSource.data !== loadedDataSource.data
-    ) {
-      oldLoadedDataSource.data.destroy();
-    }
-    return newLoadedPoints!;
-  }),
-  loadPointsCoordinates: deduplicate(async (pointsId, dimension, options) => {
-    const { signal, reload = false, onProgress } = options ?? {};
-    signal?.throwIfAborted();
-    // Check if the points, the corresponding data source, and the requested coordinates are already loaded
-    const state = get();
-    const loadedPoints = state.loadedPoints.get(pointsId);
-    if (loadedPoints === undefined) {
-      throw new Error(`Points with ID ${pointsId} not loaded.`);
-    }
-    const loadedDataSource = state.loadedPointsDataSources.get(
-      loadedPoints.loadedDataSourceKey,
-    );
-    if (loadedDataSource === undefined) {
-      throw new Error(`Data source for points with ID ${pointsId} not loaded.`);
-    }
-    const oldCoordinates = loadedDataSource.loadedCoordinates.get(dimension);
-    if (oldCoordinates !== undefined && !reload) {
-      return oldCoordinates;
-    }
-    // Load the requested coordinates
-    const coordinates = await loadedDataSource.data.loadCoordinates(dimension, {
-      signal,
-      onProgress,
-    });
-    signal?.throwIfAborted();
-    // Check if the points have been unloaded or their data source has changed
-    const currentState = get();
-    const currentLoadedPoints = currentState.loadedPoints.get(pointsId);
-    if (
-      currentLoadedPoints === undefined ||
-      currentLoadedPoints.loadedDataSourceKey !==
-        loadedPoints.loadedDataSourceKey
-    ) {
-      throw new DOMException(
-        `Points with ID ${pointsId} have been unloaded or their data source has changed.`,
-        "AbortError",
+      // Store the loaded points and the corresponding data source in the state
+      let newLoadedPoints: LoadedPoints;
+      set((draft) => {
+        let loadedDataSourceKey;
+        for (const [key, value] of draft.loadedPointsDataSources) {
+          if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
+            loadedDataSourceKey = key;
+            break;
+          }
+        }
+        if (loadedDataSourceKey === undefined) {
+          do {
+            loadedDataSourceKey = crypto.randomUUID();
+          } while (draft.loadedPointsDataSources.has(loadedDataSourceKey));
+        }
+        newLoadedPoints = { loadedDataSourceKey };
+        draft.loadedPoints.set(pointsId, newLoadedPoints);
+        draft.loadedPointsDataSources.set(
+          loadedDataSourceKey,
+          loadedDataSource,
+        );
+      });
+      // Clean up old data if the loaded data source has changed
+      if (
+        oldLoadedDataSource !== undefined &&
+        oldLoadedDataSource.data !== loadedDataSource.data
+      ) {
+        oldLoadedDataSource.data.destroy();
+      }
+      return newLoadedPoints!;
+    },
+    (_pointsId, options) => options?.signal,
+  ),
+  loadPointsCoordinates: deduplicate(
+    async (pointsId, dimension, options) => {
+      const { signal, reload = false, onProgress } = options ?? {};
+      signal?.throwIfAborted();
+      // Check if the points, the corresponding data source, and the requested coordinates are already loaded
+      const state = get();
+      const loadedPoints = state.loadedPoints.get(pointsId);
+      if (loadedPoints === undefined) {
+        throw new Error(`Points with ID ${pointsId} not loaded.`);
+      }
+      const loadedDataSource = state.loadedPointsDataSources.get(
+        loadedPoints.loadedDataSourceKey,
       );
-    }
-    const currentLoadedDataSource = currentState.loadedPointsDataSources.get(
-      currentLoadedPoints.loadedDataSourceKey,
-    );
-    if (
-      currentLoadedDataSource === undefined ||
-      !deepEqual(
-        currentLoadedDataSource.dataSource,
-        loadedDataSource.dataSource,
-      )
-    ) {
-      throw new DOMException(
-        `Data source for points with ID ${pointsId} has been unloaded or changed.`,
-        "AbortError",
+      if (loadedDataSource === undefined) {
+        throw new Error(
+          `Data source for points with ID ${pointsId} not loaded.`,
+        );
+      }
+      const oldCoordinates = loadedDataSource.loadedCoordinates.get(dimension);
+      if (oldCoordinates !== undefined && !reload) {
+        return oldCoordinates;
+      }
+      // Load the requested coordinates
+      const coordinates = await loadedDataSource.data.loadCoordinates(
+        dimension,
+        {
+          signal,
+          onProgress,
+        },
       );
-    }
-    // Store the loaded coordinates in the state
-    set((draft) => {
-      const loadedPointsDraft = draft.loadedPoints.get(pointsId)!;
-      const loadedDataSourceDraft = draft.loadedPointsDataSources.get(
-        loadedPointsDraft.loadedDataSourceKey,
-      )!;
-      loadedDataSourceDraft.loadedCoordinates.set(dimension, coordinates);
-    });
-    return coordinates;
-  }),
+      signal?.throwIfAborted();
+      // Check if the points have been unloaded or their data source has changed
+      const currentState = get();
+      const currentLoadedPoints = currentState.loadedPoints.get(pointsId);
+      if (
+        currentLoadedPoints === undefined ||
+        currentLoadedPoints.loadedDataSourceKey !==
+          loadedPoints.loadedDataSourceKey
+      ) {
+        throw new DOMException(
+          `Points with ID ${pointsId} have been unloaded or their data source has changed.`,
+          "AbortError",
+        );
+      }
+      const currentLoadedDataSource = currentState.loadedPointsDataSources.get(
+        currentLoadedPoints.loadedDataSourceKey,
+      );
+      if (
+        currentLoadedDataSource === undefined ||
+        !deepEqual(
+          currentLoadedDataSource.dataSource,
+          loadedDataSource.dataSource,
+        )
+      ) {
+        throw new DOMException(
+          `Data source for points with ID ${pointsId} has been unloaded or changed.`,
+          "AbortError",
+        );
+      }
+      // Store the loaded coordinates in the state
+      set((draft) => {
+        const loadedPointsDraft = draft.loadedPoints.get(pointsId)!;
+        const loadedDataSourceDraft = draft.loadedPointsDataSources.get(
+          loadedPointsDraft.loadedDataSourceKey,
+        )!;
+        loadedDataSourceDraft.loadedCoordinates.set(dimension, coordinates);
+      });
+      return coordinates;
+    },
+    (_pointsId, _dimension, options) => options?.signal,
+  ),
   unloadPoints: (pointsId) => {
     const state = get();
     const loadedPoints = state.loadedPoints.get(pointsId);

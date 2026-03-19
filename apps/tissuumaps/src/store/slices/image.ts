@@ -111,85 +111,88 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
     }
     set(createInitialImageSliceState());
   },
-  loadImage: deduplicate(async (imageId, options) => {
-    const { signal, reload = false, onProgress } = options ?? {};
-    signal?.throwIfAborted();
-    // Check if the image is already loaded
-    const state = get();
-    const loadedImage = state.loadedImages.get(imageId);
-    if (loadedImage !== undefined && !reload) {
-      return loadedImage;
-    }
-    // Find the image and the corresponding data source (if loaded)
-    const image = state.images.find((image) => image.id === imageId);
-    if (image === undefined) {
-      throw new Error(`Image with ID ${imageId} not found.`);
-    }
-    let oldLoadedDataSource: LoadedImageDataSource | undefined;
-    for (const loadedDataSource of state.loadedImageDataSources.values()) {
-      if (deepEqual(loadedDataSource.dataSource, image.dataSource)) {
-        oldLoadedDataSource = loadedDataSource;
-        break;
-      }
-    }
-    // Load the data source if not already loaded or if a reload has been requested
-    let loadedDataSource = oldLoadedDataSource;
-    if (loadedDataSource === undefined || reload) {
-      const { dataLoaderFactory } =
-        state.imageDataLoaderRegistry.get(image.dataSource.type) ?? {};
-      if (dataLoaderFactory === undefined) {
-        throw new Error(
-          `No image data loader registered for data source type ${image.dataSource.type}.`,
-        );
-      }
-      const dataLoader = dataLoaderFactory(image.dataSource, state.workspace);
-      const data = await dataLoader.loadImage({ signal, onProgress });
+  loadImage: deduplicate(
+    async (imageId, options) => {
+      const { signal, reload = false, onProgress } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the image has been deleted or its data source has changed
-      const currentState = get();
-      const currentImage = currentState.images.find(
-        (image) => image.id === imageId,
-      );
-      if (
-        currentImage === undefined ||
-        !deepEqual(currentImage.dataSource, image.dataSource)
-      ) {
-        data.destroy();
-        throw new DOMException(
-          `Image with ID ${imageId} has been deleted or its data source has changed.`,
-          "AbortError",
-        );
+      // Check if the image is already loaded
+      const state = get();
+      const loadedImage = state.loadedImages.get(imageId);
+      if (loadedImage !== undefined && !reload) {
+        return loadedImage;
       }
-      loadedDataSource = { dataSource: image.dataSource, data };
-    }
-    // Store the loaded image and the corresponding data source in the state
-    let newLoadedImage: LoadedImage;
-    set((draft) => {
-      let loadedDataSourceKey;
-      for (const [key, value] of draft.loadedImageDataSources) {
-        if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
-          loadedDataSourceKey = key;
+      // Find the image and the corresponding data source (if loaded)
+      const image = state.images.find((image) => image.id === imageId);
+      if (image === undefined) {
+        throw new Error(`Image with ID ${imageId} not found.`);
+      }
+      let oldLoadedDataSource: LoadedImageDataSource | undefined;
+      for (const loadedDataSource of state.loadedImageDataSources.values()) {
+        if (deepEqual(loadedDataSource.dataSource, image.dataSource)) {
+          oldLoadedDataSource = loadedDataSource;
           break;
         }
       }
-      if (loadedDataSourceKey === undefined) {
-        do {
-          loadedDataSourceKey = crypto.randomUUID();
-        } while (draft.loadedImageDataSources.has(loadedDataSourceKey));
+      // Load the data source if not already loaded or if a reload has been requested
+      let loadedDataSource = oldLoadedDataSource;
+      if (loadedDataSource === undefined || reload) {
+        const { dataLoaderFactory } =
+          state.imageDataLoaderRegistry.get(image.dataSource.type) ?? {};
+        if (dataLoaderFactory === undefined) {
+          throw new Error(
+            `No image data loader registered for data source type ${image.dataSource.type}.`,
+          );
+        }
+        const dataLoader = dataLoaderFactory(image.dataSource, state.workspace);
+        const data = await dataLoader.loadImage({ signal, onProgress });
+        signal?.throwIfAborted();
+        // Check if the image has been deleted or its data source has changed
+        const currentState = get();
+        const currentImage = currentState.images.find(
+          (image) => image.id === imageId,
+        );
+        if (
+          currentImage === undefined ||
+          !deepEqual(currentImage.dataSource, image.dataSource)
+        ) {
+          data.destroy();
+          throw new DOMException(
+            `Image with ID ${imageId} has been deleted or its data source has changed.`,
+            "AbortError",
+          );
+        }
+        loadedDataSource = { dataSource: image.dataSource, data };
       }
-      newLoadedImage = { loadedDataSourceKey };
-      draft.loadedImages.set(imageId, newLoadedImage);
-      draft.loadedImageDataSources.set(loadedDataSourceKey, loadedDataSource);
-    });
-    // Clean up old data if the loaded data source has changed
-    if (
-      oldLoadedDataSource !== undefined &&
-      oldLoadedDataSource.data !== loadedDataSource.data
-    ) {
-      oldLoadedDataSource.data.destroy();
-    }
-    return newLoadedImage!;
-  }),
+      // Store the loaded image and the corresponding data source in the state
+      let newLoadedImage: LoadedImage;
+      set((draft) => {
+        let loadedDataSourceKey;
+        for (const [key, value] of draft.loadedImageDataSources) {
+          if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
+            loadedDataSourceKey = key;
+            break;
+          }
+        }
+        if (loadedDataSourceKey === undefined) {
+          do {
+            loadedDataSourceKey = crypto.randomUUID();
+          } while (draft.loadedImageDataSources.has(loadedDataSourceKey));
+        }
+        newLoadedImage = { loadedDataSourceKey };
+        draft.loadedImages.set(imageId, newLoadedImage);
+        draft.loadedImageDataSources.set(loadedDataSourceKey, loadedDataSource);
+      });
+      // Clean up old data if the loaded data source has changed
+      if (
+        oldLoadedDataSource !== undefined &&
+        oldLoadedDataSource.data !== loadedDataSource.data
+      ) {
+        oldLoadedDataSource.data.destroy();
+      }
+      return newLoadedImage!;
+    },
+    (_imageId, options) => options?.signal,
+  ),
   unloadImage: (imageId) => {
     const state = get();
     const loadedImage = state.loadedImages.get(imageId);

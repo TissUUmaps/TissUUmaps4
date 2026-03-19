@@ -111,85 +111,94 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
     }
     set(createInitialLabelsSliceState());
   },
-  loadLabels: deduplicate(async (labelsId, options) => {
-    const { signal, reload = false, onProgress } = options ?? {};
-    signal?.throwIfAborted();
-    // Check if the labels are already loaded
-    const state = get();
-    const loadedLabels = state.loadedLabels.get(labelsId);
-    if (loadedLabels !== undefined && !reload) {
-      return loadedLabels;
-    }
-    // Find the labels and the corresponding data source (if loaded)
-    const labels = state.labels.find((labels) => labels.id === labelsId);
-    if (labels === undefined) {
-      throw new Error(`Labels with ID ${labelsId} not found.`);
-    }
-    let oldLoadedDataSource: LoadedLabelsDataSource | undefined;
-    for (const loadedDataSource of state.loadedLabelsDataSources.values()) {
-      if (deepEqual(loadedDataSource.dataSource, labels.dataSource)) {
-        oldLoadedDataSource = loadedDataSource;
-        break;
-      }
-    }
-    // Load the data source if not already loaded or if a reload has been requested
-    let loadedDataSource = oldLoadedDataSource;
-    if (loadedDataSource === undefined || reload) {
-      const { dataLoaderFactory } =
-        state.labelsDataLoaderRegistry.get(labels.dataSource.type) ?? {};
-      if (dataLoaderFactory === undefined) {
-        throw new Error(
-          `No labels data loader registered for data source type ${labels.dataSource.type}.`,
-        );
-      }
-      const dataLoader = dataLoaderFactory(labels.dataSource, state.workspace);
-      const data = await dataLoader.loadLabels({ signal, onProgress });
+  loadLabels: deduplicate(
+    async (labelsId, options) => {
+      const { signal, reload = false, onProgress } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the labels have been deleted or their data source has changed
-      const currentState = get();
-      const currentLabels = currentState.labels.find(
-        (labels) => labels.id === labelsId,
-      );
-      if (
-        currentLabels === undefined ||
-        !deepEqual(currentLabels.dataSource, labels.dataSource)
-      ) {
-        data.destroy();
-        throw new DOMException(
-          `Labels with ID ${labelsId} have been deleted or their data source has changed.`,
-          "AbortError",
-        );
+      // Check if the labels are already loaded
+      const state = get();
+      const loadedLabels = state.loadedLabels.get(labelsId);
+      if (loadedLabels !== undefined && !reload) {
+        return loadedLabels;
       }
-      loadedDataSource = { dataSource: labels.dataSource, data };
-    }
-    // Store the loaded labels and the corresponding data source in the state
-    let newLoadedLabels: LoadedLabels;
-    set((draft) => {
-      let loadedDataSourceKey;
-      for (const [key, value] of draft.loadedLabelsDataSources) {
-        if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
-          loadedDataSourceKey = key;
+      // Find the labels and the corresponding data source (if loaded)
+      const labels = state.labels.find((labels) => labels.id === labelsId);
+      if (labels === undefined) {
+        throw new Error(`Labels with ID ${labelsId} not found.`);
+      }
+      let oldLoadedDataSource: LoadedLabelsDataSource | undefined;
+      for (const loadedDataSource of state.loadedLabelsDataSources.values()) {
+        if (deepEqual(loadedDataSource.dataSource, labels.dataSource)) {
+          oldLoadedDataSource = loadedDataSource;
           break;
         }
       }
-      if (loadedDataSourceKey === undefined) {
-        do {
-          loadedDataSourceKey = crypto.randomUUID();
-        } while (draft.loadedLabelsDataSources.has(loadedDataSourceKey));
+      // Load the data source if not already loaded or if a reload has been requested
+      let loadedDataSource = oldLoadedDataSource;
+      if (loadedDataSource === undefined || reload) {
+        const { dataLoaderFactory } =
+          state.labelsDataLoaderRegistry.get(labels.dataSource.type) ?? {};
+        if (dataLoaderFactory === undefined) {
+          throw new Error(
+            `No labels data loader registered for data source type ${labels.dataSource.type}.`,
+          );
+        }
+        const dataLoader = dataLoaderFactory(
+          labels.dataSource,
+          state.workspace,
+        );
+        const data = await dataLoader.loadLabels({ signal, onProgress });
+        signal?.throwIfAborted();
+        // Check if the labels have been deleted or their data source has changed
+        const currentState = get();
+        const currentLabels = currentState.labels.find(
+          (labels) => labels.id === labelsId,
+        );
+        if (
+          currentLabels === undefined ||
+          !deepEqual(currentLabels.dataSource, labels.dataSource)
+        ) {
+          data.destroy();
+          throw new DOMException(
+            `Labels with ID ${labelsId} have been deleted or their data source has changed.`,
+            "AbortError",
+          );
+        }
+        loadedDataSource = { dataSource: labels.dataSource, data };
       }
-      newLoadedLabels = { loadedDataSourceKey };
-      draft.loadedLabels.set(labelsId, newLoadedLabels);
-      draft.loadedLabelsDataSources.set(loadedDataSourceKey, loadedDataSource);
-    });
-    // Clean up old data if the loaded data source has changed
-    if (
-      oldLoadedDataSource !== undefined &&
-      oldLoadedDataSource.data !== loadedDataSource.data
-    ) {
-      oldLoadedDataSource.data.destroy();
-    }
-    return newLoadedLabels!;
-  }),
+      // Store the loaded labels and the corresponding data source in the state
+      let newLoadedLabels: LoadedLabels;
+      set((draft) => {
+        let loadedDataSourceKey;
+        for (const [key, value] of draft.loadedLabelsDataSources) {
+          if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
+            loadedDataSourceKey = key;
+            break;
+          }
+        }
+        if (loadedDataSourceKey === undefined) {
+          do {
+            loadedDataSourceKey = crypto.randomUUID();
+          } while (draft.loadedLabelsDataSources.has(loadedDataSourceKey));
+        }
+        newLoadedLabels = { loadedDataSourceKey };
+        draft.loadedLabels.set(labelsId, newLoadedLabels);
+        draft.loadedLabelsDataSources.set(
+          loadedDataSourceKey,
+          loadedDataSource,
+        );
+      });
+      // Clean up old data if the loaded data source has changed
+      if (
+        oldLoadedDataSource !== undefined &&
+        oldLoadedDataSource.data !== loadedDataSource.data
+      ) {
+        oldLoadedDataSource.data.destroy();
+      }
+      return newLoadedLabels!;
+    },
+    (_labelsId, options) => options?.signal,
+  ),
   unloadLabels: (labelsId) => {
     const state = get();
     const loadedLabels = state.loadedLabels.get(labelsId);
