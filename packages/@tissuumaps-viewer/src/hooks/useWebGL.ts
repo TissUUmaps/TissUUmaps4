@@ -178,7 +178,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     loadTable,
   ]);
 
-  const resizeCanvas = (size: { width: number; height: number }) => {
+  const resizeCanvas = (size: { width: number; height: number }): void => {
     const controller = controllerRef.current;
     if (controllerVersion && controller !== null) {
       console.debug("Resizing WebGL canvas to", size);
@@ -189,9 +189,9 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     }
   };
 
-  const setViewport = (viewport: Rect) => {
+  const setViewport = (viewport: Rect): void => {
     const controller = controllerRef.current;
-    if (controllerVersion && viewport !== null && controller !== null) {
+    if (controllerVersion && controller !== null) {
       console.debug("Setting WebGL viewport to", viewport);
       const viewportChanged = controller.setViewport(viewport);
       if (viewportChanged) {
