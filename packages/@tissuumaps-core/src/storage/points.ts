@@ -17,7 +17,7 @@ export interface PointsDataLoader<
    */
   loadPoints(options?: {
     signal?: AbortSignal;
-    onProgress?: (progress: number) => void;
+    onProgress?: ProgressCallback;
   }): Promise<TPointsData>;
 }
 
