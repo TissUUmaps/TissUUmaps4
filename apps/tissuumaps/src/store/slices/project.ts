@@ -58,38 +58,52 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       const { signal, onProgress } = options ?? {};
       signal?.throwIfAborted();
       get().clearProject();
+      set({
+        projectName: project.name,
+        markerMaps: structuredClone(project.markerMaps),
+        sizeMaps: structuredClone(project.sizeMaps),
+        colorMaps: structuredClone(project.colorMaps),
+        visibilityMaps: structuredClone(project.visibilityMaps),
+        opacityMaps: structuredClone(project.opacityMaps),
+        drawOptions: structuredClone(project.drawOptions),
+        viewerOptions: structuredClone(project.viewerOptions),
+        viewerAnimationStartOptions: structuredClone(
+          project.viewerAnimationStartOptions,
+        ),
+        viewerAnimationFinishOptions: structuredClone(
+          project.viewerAnimationFinishOptions,
+        ),
+      });
       // first, add layers
       for (const layer of project.layers) {
         get().addLayer(layer);
       }
       // then, add and asynchronously load data objects
       {
-        const state = get();
         const tablePromises = project.tables.map((table) => {
-          state.addTable(table);
-          return state.loadTable(table.id, { signal, onProgress });
+          get().addTable(table);
+          return get().loadTable(table.id, { signal, onProgress });
         });
         await Promise.all(tablePromises);
         signal?.throwIfAborted();
       }
       // finally, add and asynchronously load rendered data objects
       {
-        const state = get();
         const imagePromises = project.images.map((image) => {
-          state.addImage(image);
-          return state.loadImage(image.id, { signal, onProgress });
+          get().addImage(image);
+          return get().loadImage(image.id, { signal, onProgress });
         });
         const labelsPromises = project.labels.map((labels) => {
-          state.addLabels(labels);
-          return state.loadLabels(labels.id, { signal, onProgress });
+          get().addLabels(labels);
+          return get().loadLabels(labels.id, { signal, onProgress });
         });
         const pointsPromises = project.points.map((points) => {
-          state.addPoints(points);
-          return state.loadPoints(points.id, { signal, onProgress });
+          get().addPoints(points);
+          return get().loadPoints(points.id, { signal, onProgress });
         });
         const shapesPromises = project.shapes.map((shapes) => {
-          state.addShapes(shapes);
-          return state.loadShapes(shapes.id, { signal, onProgress });
+          get().addShapes(shapes);
+          return get().loadShapes(shapes.id, { signal, onProgress });
         });
         await Promise.all([
           ...imagePromises,
