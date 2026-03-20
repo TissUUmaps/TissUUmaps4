@@ -39,7 +39,13 @@ export type ProjectSliceActions = {
     url: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ) => Promise<void>;
+  loadProjectFromFile: (
+    file: File,
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+  ) => Promise<void>;
   saveProject: () => Project;
+  saveProjectToJSON: () => string;
+  saveProjectToBlob: () => Blob;
   clearProject: () => void;
 };
 
@@ -134,6 +140,12 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
     },
     (_url, options) => options?.signal,
   ),
+  loadProjectFromFile: deduplicate(async (file, options) => {
+    const { signal, onProgress } = options ?? {};
+    signal?.throwIfAborted();
+    const url = URL.createObjectURL(file);
+    return await get().loadProjectFromURL(url, { signal, onProgress });
+  }),
   saveProject: () => {
     const state = get();
     return {
@@ -158,6 +170,14 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
         state.viewerAnimationFinishOptions,
       ),
     };
+  },
+  saveProjectToJSON: () => {
+    const project = get().saveProject();
+    return JSON.stringify(project, null, 2);
+  },
+  saveProjectToBlob: () => {
+    const projectJSON = get().saveProjectToJSON();
+    return new Blob([projectJSON], { type: "application/json" });
   },
   clearProject: () => {
     get().clearImages();
