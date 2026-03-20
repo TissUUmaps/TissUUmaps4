@@ -162,6 +162,13 @@ const config: Config = {
       },
     ],
   ],
+
+  // mermaid diagrams
+  // https://docusaurus.io/docs/markdown-features/diagrams
+  markdown: {
+    mermaid: true,
+  },
+  themes: ["@docusaurus/theme-mermaid"],
 };
 
 export default config;
