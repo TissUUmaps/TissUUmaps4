@@ -144,7 +144,11 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const url = URL.createObjectURL(file);
-    return await get().loadProjectFromURL(url, { signal, onProgress });
+    try {
+      return await get().loadProjectFromURL(url, { signal, onProgress });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }),
   saveProject: () => {
     const state = get();
