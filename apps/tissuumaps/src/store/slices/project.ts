@@ -45,7 +45,6 @@ export type ProjectSliceActions = {
   ) => Promise<void>;
   saveProject: () => Project;
   saveProjectToJSON: () => string;
-  saveProjectToBlob: () => Blob;
   clearProject: () => void;
 };
 
@@ -178,10 +177,6 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
   saveProjectToJSON: () => {
     const project = get().saveProject();
     return JSON.stringify(project, null, 2);
-  },
-  saveProjectToBlob: () => {
-    const projectJSON = get().saveProjectToJSON();
-    return new Blob([projectJSON], { type: "application/json" });
   },
   clearProject: () => {
     get().clearImages();
