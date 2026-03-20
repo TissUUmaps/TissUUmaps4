@@ -6,14 +6,14 @@ export function useDownloadProject() {
   const saveProjectToJSON = useTissUUmaps((state) => state.saveProjectToJSON);
 
   const downloadProject = useCallback(() => {
-    const projectJSON = saveProjectToJSON();
-    const projectBlob = new Blob([projectJSON], { type: "application/json" });
-    const projectUrl = URL.createObjectURL(projectBlob);
     const sanitizedProjectName = projectName
       .trim()
       .replace(/\s+/g, "-")
       .replace(/[^a-zA-Z0-9-_]+/g, "")
       .replace(/^[-_]+|[-_]+$/g, "");
+    const projectJSON = saveProjectToJSON();
+    const projectBlob = new Blob([projectJSON], { type: "application/json" });
+    const projectUrl = URL.createObjectURL(projectBlob);
     try {
       const projectLink = document.createElement("a");
       projectLink.download = `${sanitizedProjectName || "Untitled"}.tmap`;
