@@ -1,5 +1,6 @@
-import { useTissUUmaps } from "@/store";
 import { useCallback } from "react";
+
+import { useTissUUmaps } from "../store";
 
 export function useDownloadProject() {
   const projectName = useTissUUmaps((state) => state.projectName);
