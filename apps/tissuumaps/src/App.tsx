@@ -24,7 +24,7 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { usePlugins } from "./hooks/usePlugins";
-import { useProject } from "./hooks/useProject";
+import { useStartupProject } from "./hooks/useStartupProject";
 import { useTissUUmaps } from "./store";
 
 const dockviewTheme: DockviewTheme = {
@@ -119,7 +119,7 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
 export function App() {
   usePlugins();
 
-  useProject("project", "project.json");
+  useStartupProject("project", "project.json");
 
   const dark = useTissUUmaps((state) => state.dark);
 
