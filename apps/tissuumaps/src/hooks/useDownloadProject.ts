@@ -9,16 +9,15 @@ export function useDownloadProject() {
     const projectJSON = saveProjectToJSON();
     const projectBlob = new Blob([projectJSON], { type: "application/json" });
     const projectUrl = URL.createObjectURL(projectBlob);
+    const sanitizedProjectName = projectName
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-zA-Z0-9-_]+/g, "")
+      .replace(/^[-_]+|[-_]+$/g, "");
     try {
       const projectLink = document.createElement("a");
+      projectLink.download = `${sanitizedProjectName || "Untitled"}.tmap`;
       projectLink.href = projectUrl;
-      const sanitizedBaseName = projectName
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-zA-Z0-9-_]+/g, "")
-        .replace(/^[-_]+|[-_]+$/g, "");
-      projectLink.download =
-        sanitizedBaseName !== "" ? `${sanitizedBaseName}.tmap` : "Untitled.tmap";
       projectLink.click();
     } finally {
       URL.revokeObjectURL(projectUrl);
