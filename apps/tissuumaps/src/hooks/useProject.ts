@@ -2,10 +2,7 @@ import { useEffect } from "react";
 
 import { useTissUUmaps } from "../store";
 
-export function useStartupProject(
-  projectUrlParam: string,
-  defaultProjectUrl: string,
-) {
+export function useProject(projectUrlParam: string, defaultProjectUrl: string) {
   const clearProject = useTissUUmaps((state) => state.clearProject);
   const loadProjectFromURL = useTissUUmaps((state) => state.loadProjectFromURL);
 

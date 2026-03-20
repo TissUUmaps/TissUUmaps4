@@ -2,7 +2,7 @@ import { useCallback } from "react";
 
 import { useTissUUmaps } from "../store";
 
-export function useDownloadProject() {
+export function useProjectDownload() {
   const projectName = useTissUUmaps((state) => state.projectName);
   const saveProjectToJSON = useTissUUmaps((state) => state.saveProjectToJSON);
 

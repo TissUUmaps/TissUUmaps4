@@ -9,7 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useRef } from "react";
 
-import { useDownloadProject } from "../../../hooks/useDownloadProject";
+import { useProjectDownload } from "../../../hooks/useProjectDownload";
 import { useTissUUmaps } from "../../../store";
 import { Field, FieldControl, FieldLabel } from "../../common/field";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
@@ -21,7 +21,7 @@ export type ProjectPanelProps = {
 export function ProjectPanel({ className }: ProjectPanelProps) {
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const { downloadProject } = useDownloadProject();
+  const { downloadProject } = useProjectDownload();
 
   const projectName = useTissUUmaps((state) => state.projectName);
   const setProjectName = useTissUUmaps((state) => state.setProjectName);
