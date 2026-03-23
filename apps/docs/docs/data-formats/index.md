@@ -1,8 +1,8 @@
 # Data formats
 
-The following table lists capabitilites of built-in data loaders.
+The following table lists capabitilites of built-in storage adapters.
 
-| Data loader                      | Images        | Labels        | Points          | Shapes           | Tables           |
+| Storage adapter                  | Images        | Labels        | Points          | Shapes           | Tables           |
 | -------------------------------- | ------------- | ------------- | --------------- | ---------------- | ---------------- |
 | [OpenSeadragon](./openseadragon) | Tile source   |               |                 |                  |                  |
 | [TIFF](./tiff)                   | TIFF URL/path | TIFF URL/path |                 |                  |                  |
@@ -12,4 +12,4 @@ The following table lists capabitilites of built-in data loaders.
 | [CSV](./csv)                     |               |               |                 |                  | CSV URL/path     |
 | [Parquet](./parquet)             |               |               |                 |                  | Parquet URL/path |
 
-Additional formats may be supported by third-party data loader plugins.
+Additional data formats may be supported by third-party storage adapters.
