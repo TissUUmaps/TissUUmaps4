@@ -19,6 +19,6 @@ TissUUmaps is carefully engineered research software. As such, reproducibility, 
 
 The use of AI is encouraged for writing documentation (e.g. TypeDoc comments) and unit tests _if the alternative would be a lack of such_.
 
-Please be considerate of the societal, environmental, policital and economical impacts of AI use in general.
+Please be considerate of the societal, environmental, political and economical impacts of AI use in general.
 
 We value human interaction; please limit the use of AI in communication.

@@ -1,6 +1,6 @@
 # Supported data
 
-The following table lists capabitilites of built-in storage adapters.
+The following table lists capabilities of built-in storage adapters:
 
 | Storage adapter                  | Images        | Labels        | Points          | Shapes           | Tables           |
 | -------------------------------- | ------------- | ------------- | --------------- | ---------------- | ---------------- |

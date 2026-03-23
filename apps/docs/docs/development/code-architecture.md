@@ -45,7 +45,7 @@ flowchart BT
 
 Models are implemented using a factory pattern. For each `RawModel` there exists a derived `Model` type in which optional fields are replaced by required fields defaulting to `modelDefaults`. A corresponding `createModel()` function can be used to convert a `RawModel` into a `Model`.
 
-Most data model properties can be either "simple properties" or of a concrete `Config` type. Concrete `Config` types are union types of one ore more of the specific `ConstantConfig` (single uniform value), `FromConfig` (reference to a table column holding values), `GroupByConfig` (reference to a categorical table column holding group names), or `RandomConfig` (pseudo-random value generation) types. The active configuration source can be determined by the shared `source` property of the general `Config` type, or by checking type guards in the order listed here using `getActiveConfigSource`.
+Most data model properties can be either "simple properties" or of a concrete `Config` type. Concrete `Config` types are union types of one or more of the specific `ConstantConfig` (single uniform value), `FromConfig` (reference to a table column holding values), `GroupByConfig` (reference to a categorical table column holding group names), or `RandomConfig` (pseudo-random value generation) types. The active configuration source can be determined by the shared `source` property of the general `Config` type, or by checking type guards in the order listed here using `getActiveConfigSource`.
 
 ### Storage
 
@@ -88,7 +88,7 @@ Upon startup, all TissUUmaps plugins are initialized and the application state i
 
 ### Hooks
 
-Whenever possible and useful, React `useEffect` and `useCallback` hooks are enapsulated using custom hooks.
+Where possible and useful, React `useEffect` and `useCallback` hooks are enapsulated using custom hooks.
 
 ### Components
 
@@ -106,6 +106,6 @@ Components are structured as follows:
 
 A single Zustand store is being used, which is distributed over several slices. The main slices are `app` (transient application state), `project` (persistent project information) and data type-specific slices that hold project data (transient in-memory data and persistent metadata). Data objects return by data storage adapters are exposed to the TissUUmaps `Viewer` component using custom data type-specific store adapters. The immer middleware is used to perform immutable updates, with support for Maps and Sets enabled. Asynchronous store actions are deduplicated based on the JSON-stringified function arguments.
 
-## Dcoumentation (docs)
+## Documentation (docs)
 
 The documentation is based on Docusaurus and published to GitHub Pages using GitHub Actions. TypeDoc and typedoc-plugin-docusaurus are used to automatically build the API documentation for packages. Diagrams are powered by Mermaid.

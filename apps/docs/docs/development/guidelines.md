@@ -38,7 +38,7 @@ This is an academic project. As such, we encourage rigorous testing, but loosely
 
 ## Documentation
 
-User and developer documentation is written in markdown, rendered using Docusaurus and deplooyed to GitHub Pages (see below).
+User and developer documentation is written in markdown, rendered using Docusaurus, and deployed to GitHub Pages (see below).
 
 We are old-school and prefer readable and well-organized code over excessive inline comments.
 
