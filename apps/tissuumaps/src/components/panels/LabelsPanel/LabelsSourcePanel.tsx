@@ -1,0 +1,59 @@
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { JsonForms } from "@jsonforms/react";
+import { EditIcon } from "lucide-react";
+import { useMemo } from "react";
+
+import { type Labels } from "@tissuumaps/core";
+
+import { useTissUUmaps } from "../../../store";
+import { Field, FieldLabel } from "../../common/field";
+import { Fieldset, FieldsetLegend } from "../../common/fieldset";
+import { cells, renderers } from "../../jsonforms";
+
+export type LabelsSourcePanelProps = {
+  labels: Labels;
+  className?: string;
+};
+
+export function LabelsSourcePanel({
+  labels,
+  className,
+}: LabelsSourcePanelProps) {
+  const labelsDataLoaderRegistry = useTissUUmaps(
+    (state) => state.labelsDataLoaderRegistry,
+  );
+
+  const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
+    const value = labelsDataLoaderRegistry.get(labels.dataSource.type);
+    if (value === undefined) {
+      throw new Error(
+        `No labels data loader registered for data source type "${labels.dataSource.type}"`,
+      );
+    }
+    return value;
+  }, [labelsDataLoaderRegistry, labels.dataSource.type]);
+
+  return (
+    <Fieldset
+      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
+    >
+      <FieldsetLegend className="flex flex-row items-center font-medium text-foreground">
+        Source
+        <EditIcon className="ml-auto size-4" />
+      </FieldsetLegend>
+      <Field>
+        <FieldLabel>Type</FieldLabel>
+        <Input type="text" value={labels.dataSource.type} disabled />
+      </Field>
+      <JsonForms
+        schema={dataSourceSchema}
+        uischema={dataSourceUISchema}
+        data={labels.dataSource}
+        renderers={renderers}
+        cells={cells}
+        readonly={true}
+      />
+    </Fieldset>
+  );
+}
