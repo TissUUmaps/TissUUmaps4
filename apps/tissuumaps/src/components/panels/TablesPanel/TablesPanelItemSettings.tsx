@@ -13,19 +13,19 @@ export type TablesPanelItemSettingsProps = {
 export function TablesPanelItemSettings({
   table,
 }: TablesPanelItemSettingsProps) {
-  const tableDataLoaderRegistry = useTissUUmaps(
-    (state) => state.tableDataLoaderRegistry,
+  const tableDataStorageRegistry = useTissUUmaps(
+    (state) => state.tableDataStorageRegistry,
   );
 
   const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = tableDataLoaderRegistry.get(table.dataSource.type);
+    const value = tableDataStorageRegistry.get(table.dataSource.type);
     if (value === undefined) {
       throw new Error(
-        `No table data loader registered for data source type "${table.dataSource.type}"`,
+        `No table data storage adapter registered for data source type "${table.dataSource.type}"`,
       );
     }
     return value;
-  }, [tableDataLoaderRegistry, table.dataSource.type]);
+  }, [tableDataStorageRegistry, table.dataSource.type]);
 
   return (
     <div>

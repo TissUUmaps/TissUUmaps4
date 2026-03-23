@@ -2,11 +2,11 @@ import * as papaparse from "papaparse";
 
 import { type ProgressCallback, type TypedArray } from "@tissuumaps/core";
 
-import { AbstractTableDataLoader } from "../base";
+import { AbstractTableDataStorage } from "../base";
 import { CSVTableData } from "./CSVTableData";
 import { type CSVTableDataSource } from "./CSVTableDataSource";
 
-export class CSVTableDataLoader extends AbstractTableDataLoader<
+export class CSVTableDataStorage extends AbstractTableDataStorage<
   CSVTableDataSource,
   CSVTableData
 > {

@@ -1,7 +1,3 @@
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
-
 import {
   type Points,
   defaultPointColor,
@@ -11,6 +7,10 @@ import {
   defaultPointSizeUnit,
   defaultPointVisibility,
 } from "@tissuumaps/core";
+
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
 import { useTissUUmaps } from "../../../store";
 import {

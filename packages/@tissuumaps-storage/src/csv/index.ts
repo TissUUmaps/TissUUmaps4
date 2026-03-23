@@ -1,5 +1,5 @@
 export { CSVTableData } from "./CSVTableData";
-export { CSVTableDataLoader } from "./CSVTableDataLoader";
+export { CSVTableDataStorage } from "./CSVTableDataStorage";
 export {
   csvTableDataSourceDefaults,
   csvTableDataSourceType,

@@ -1,14 +1,14 @@
 import { type MultiPolygon, type ProgressCallback } from "../types";
-import { type DataLoader, type ItemsData } from "./base";
+import { type DataStorage, type ItemsData } from "./base";
 
 /**
- * Data loader for shape (polygon) collections
+ * Data storage adapter for shape (polygon) collections
  *
- * @typeParam TShapesData - The concrete {@link ShapesData} type produced by this loader
+ * @typeParam TShapesData - The concrete {@link ShapesData} type produced by this storage adapter
  */
-export interface ShapesDataLoader<
+export interface ShapesDataStorage<
   TShapesData extends ShapesData,
-> extends DataLoader {
+> extends DataStorage {
   /**
    * Loads the shapes data from the configured data source
    *

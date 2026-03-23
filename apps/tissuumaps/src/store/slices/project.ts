@@ -2,7 +2,7 @@ import {
   type Color,
   type DefaultMap,
   type DrawOptions,
-  Marker,
+  type Marker,
   type ProgressCallback,
   type Project,
   type RawProject,

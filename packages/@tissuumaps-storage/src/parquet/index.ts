@@ -1,5 +1,5 @@
 export { ParquetTableData } from "./ParquetTableData";
-export { ParquetTableDataLoader } from "./ParquetTableDataLoader";
+export { ParquetTableDataStorage } from "./ParquetTableDataStorage";
 export {
   parquetTableDataSourceDefaults,
   parquetTableDataSourceType,

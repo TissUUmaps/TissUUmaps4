@@ -24,7 +24,7 @@ import {
   type CoordinateSpace,
   type DefaultMap,
   type DrawOptions,
-  Marker,
+  type Marker,
 } from "../model/types";
 import { type PointsData } from "../storage/points";
 import { type TableData } from "../storage/table";

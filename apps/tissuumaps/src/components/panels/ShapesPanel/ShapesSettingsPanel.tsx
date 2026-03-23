@@ -1,5 +1,3 @@
-import { cn } from "@/lib/utils";
-
 import {
   type Shapes,
   defaultShapeFillColor,
@@ -9,6 +7,8 @@ import {
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
 } from "@tissuumaps/core";
+
+import { cn } from "@/lib/utils";
 
 import { useTissUUmaps } from "../../../store";
 import {

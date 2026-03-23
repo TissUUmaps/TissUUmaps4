@@ -1,5 +1,6 @@
-import { Input } from "@/components/ui/input";
 import { Square } from "lucide-react";
+
+import { Input } from "@/components/ui/input";
 
 import { Field, FieldLabel } from "../../common/field";
 import { SimpleColorPicker } from "../../common/simple-color-picker";

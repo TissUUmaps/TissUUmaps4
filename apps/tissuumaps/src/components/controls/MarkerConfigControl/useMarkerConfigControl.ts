@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import {
-  Marker,
+  type Marker,
   type MarkerConfig,
   getActiveConfigSource,
   isConstantConfig,

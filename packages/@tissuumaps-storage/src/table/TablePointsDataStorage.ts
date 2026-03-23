@@ -4,7 +4,7 @@ import {
   type TableData,
 } from "@tissuumaps/core";
 
-import { AbstractPointsDataLoader } from "../base";
+import { AbstractPointsDataStorage } from "../base";
 import { TablePointsData } from "./TablePointsData";
 import { type TablePointsDataSource } from "./TablePointsDataSource";
 
@@ -13,7 +13,7 @@ export type LoadTableFunction = (
   options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ) => Promise<TableData>;
 
-export class TablePointsDataLoader extends AbstractPointsDataLoader<
+export class TablePointsDataStorage extends AbstractPointsDataStorage<
   TablePointsDataSource,
   PointsData
 > {

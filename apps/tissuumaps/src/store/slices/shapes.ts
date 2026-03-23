@@ -146,18 +146,18 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
       // Load the data source if not already loaded or if a reload has been requested
       let loadedDataSource = oldLoadedDataSource;
       if (loadedDataSource === undefined || reload) {
-        const { dataLoaderFactory } =
-          state.shapesDataLoaderRegistry.get(shapes.dataSource.type) ?? {};
-        if (dataLoaderFactory === undefined) {
+        const { dataStorageFactory } =
+          state.shapesDataStorageRegistry.get(shapes.dataSource.type) ?? {};
+        if (dataStorageFactory === undefined) {
           throw new Error(
-            `No shapes data loader registered for data source type ${shapes.dataSource.type}.`,
+            `No shapes data storage adapter registered for data source type ${shapes.dataSource.type}.`,
           );
         }
-        const dataLoader = dataLoaderFactory(
+        const dataStorage = dataStorageFactory(
           shapes.dataSource,
           state.workspace,
         );
-        const data = await dataLoader.loadShapes({ signal, onProgress });
+        const data = await dataStorage.loadShapes({ signal, onProgress });
         signal?.throwIfAborted();
         // Check if the shapes have been deleted or their data source has changed
         const currentState = get();

@@ -1,5 +1,5 @@
 export { OpenSeadragonImageData } from "./OpenSeadragonImageData";
-export { OpenSeadragonImageDataLoader } from "./OpenSeadragonImageDataLoader";
+export { OpenSeadragonImageDataStorage } from "./OpenSeadragonImageDataStorage";
 export {
   openSeadragonImageDataSourceDefaults,
   openSeadragonImageDataSourceType,

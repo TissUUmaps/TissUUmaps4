@@ -13,20 +13,20 @@ export type ImagesPanelItemSettingsProps = {
 export function ImagesPanelItemSettings({
   image,
 }: ImagesPanelItemSettingsProps) {
-  const imageDataLoaderRegistry = useTissUUmaps(
-    (state) => state.imageDataLoaderRegistry,
+  const imageDataStorageRegistry = useTissUUmaps(
+    (state) => state.imageDataStorageRegistry,
   );
   const updateImage = useTissUUmaps((state) => state.updateImage);
 
   const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = imageDataLoaderRegistry.get(image.dataSource.type);
+    const value = imageDataStorageRegistry.get(image.dataSource.type);
     if (value === undefined) {
       throw new Error(
-        `No image data loader registered for data source type "${image.dataSource.type}"`,
+        `No image data storage adapter registered for data source type "${image.dataSource.type}"`,
       );
     }
     return value;
-  }, [imageDataLoaderRegistry, image.dataSource.type]);
+  }, [imageDataStorageRegistry, image.dataSource.type]);
 
   return (
     <div>
