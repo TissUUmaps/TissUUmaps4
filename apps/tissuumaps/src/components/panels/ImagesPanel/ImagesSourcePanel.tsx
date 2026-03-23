@@ -1,22 +1,28 @@
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { JsonForms } from "@jsonforms/react";
+import { EditIcon } from "lucide-react";
 import { useMemo } from "react";
 
-import { type Image, type ImageDataSource } from "@tissuumaps/core";
+import { type Image } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
+import { Field, FieldLabel } from "../../common/field";
+import { Fieldset, FieldsetLegend } from "../../common/fieldset";
 import { cells, renderers } from "../../jsonforms";
 
-export type ImagesPanelItemSettingsProps = {
+export type ImagesSourcePanelProps = {
   image: Image;
+  className?: string;
 };
 
-export function ImagesPanelItemSettings({
+export function ImagesSourcePanel({
   image,
-}: ImagesPanelItemSettingsProps) {
+  className,
+}: ImagesSourcePanelProps) {
   const imageDataLoaderRegistry = useTissUUmaps(
     (state) => state.imageDataLoaderRegistry,
   );
-  const updateImage = useTissUUmaps((state) => state.updateImage);
 
   const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
     const value = imageDataLoaderRegistry.get(image.dataSource.type);
@@ -29,25 +35,25 @@ export function ImagesPanelItemSettings({
   }, [imageDataLoaderRegistry, image.dataSource.type]);
 
   return (
-    <div>
-      {/* Data source */}
+    <Fieldset
+      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
+    >
+      <FieldsetLegend className="flex flex-row items-center font-medium text-foreground">
+        Source
+        <EditIcon className="ml-auto size-4" />
+      </FieldsetLegend>
+      <Field>
+        <FieldLabel>Type</FieldLabel>
+        <Input type="text" value={image.dataSource.type} disabled />
+      </Field>
       <JsonForms
         schema={dataSourceSchema}
         uischema={dataSourceUISchema}
         data={image.dataSource}
-        onChange={({ data, errors }) => {
-          if (errors === undefined || errors.length === 0) {
-            updateImage(image.id, {
-              dataSource: {
-                ...image.dataSource,
-                ...(data as ImageDataSource),
-              },
-            });
-          }
-        }}
         renderers={renderers}
         cells={cells}
+        readonly={true}
       />
-    </div>
+    </Fieldset>
   );
 }
