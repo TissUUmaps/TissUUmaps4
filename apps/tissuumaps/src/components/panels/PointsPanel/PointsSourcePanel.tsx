@@ -20,19 +20,19 @@ export function PointsSourcePanel({
   points,
   className,
 }: PointsSourcePanelProps) {
-  const pointsDataLoaderRegistry = useTissUUmaps(
-    (state) => state.pointsDataLoaderRegistry,
+  const pointsDataStorageRegistry = useTissUUmaps(
+    (state) => state.pointsDataStorageRegistry,
   );
 
   const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = pointsDataLoaderRegistry.get(points.dataSource.type);
+    const value = pointsDataStorageRegistry.get(points.dataSource.type);
     if (value === undefined) {
       throw new Error(
-        `No points data loader registered for data source type "${points.dataSource.type}"`,
+        `No points data storage adapter registered for data source type "${points.dataSource.type}"`,
       );
     }
     return value;
-  }, [pointsDataLoaderRegistry, points.dataSource.type]);
+  }, [pointsDataStorageRegistry, points.dataSource.type]);
 
   return (
     <Fieldset

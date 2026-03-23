@@ -12,11 +12,6 @@ import { useShallow } from "zustand/shallow";
 import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
 
 import "./App.css";
-import { useLoadedImageDataAdapter } from "./adapters/LoadedImageDataAdapter";
-import { useLoadedLabelsDataAdapter } from "./adapters/LoadedLabelsDataAdapter";
-import { useLoadedPointsDataAdapter } from "./adapters/LoadedPointsDataAdapter";
-import { useLoadedShapesDataAdapter } from "./adapters/LoadedShapesDataAdapter";
-import { useLoadedTableDataAdapter } from "./adapters/LoadedTableDataAdapter";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
 import { LabelsPanel } from "./components/panels/LabelsPanel";
 import { PointsPanel } from "./components/panels/PointsPanel";
@@ -26,6 +21,11 @@ import { TablesPanel } from "./components/panels/TablesPanel";
 import { usePlugins } from "./hooks/usePlugins";
 import { useProject } from "./hooks/useProject";
 import { useTissUUmaps } from "./store";
+import { useLoadedImageDataAdapter } from "./store/adapters/LoadedImageDataAdapter";
+import { useLoadedLabelsDataAdapter } from "./store/adapters/LoadedLabelsDataAdapter";
+import { useLoadedPointsDataAdapter } from "./store/adapters/LoadedPointsDataAdapter";
+import { useLoadedShapesDataAdapter } from "./store/adapters/LoadedShapesDataAdapter";
+import { useLoadedTableDataAdapter } from "./store/adapters/LoadedTableDataAdapter";
 
 const dockviewTheme: DockviewTheme = {
   name: "tailwindcss",
@@ -140,12 +140,12 @@ export function App() {
       viewerAnimationStartOptions: state.viewerAnimationStartOptions,
       viewerAnimationFinishOptions: state.viewerAnimationFinishOptions,
       drawOptions: state.drawOptions,
-      // rerender upon changes to data loader registries
-      _imageDataLoaderRegistry: state.imageDataLoaderRegistry,
-      _labelsDataLoaderRegistry: state.labelsDataLoaderRegistry,
-      _pointsDataLoaderRegistry: state.pointsDataLoaderRegistry,
-      _shapesDataLoaderRegistry: state.shapesDataLoaderRegistry,
-      _tableDataLoaderRegistry: state.tableDataLoaderRegistry,
+      // rerender upon changes to storage adapter registries
+      _imageDataStorageRegistry: state.imageDataStorageRegistry,
+      _labelsDataStorageRegistry: state.labelsDataStorageRegistry,
+      _pointsDataStorageRegistry: state.pointsDataStorageRegistry,
+      _shapesDataStorageRegistry: state.shapesDataStorageRegistry,
+      _tableDataStorageRegistry: state.tableDataStorageRegistry,
     })),
   );
 

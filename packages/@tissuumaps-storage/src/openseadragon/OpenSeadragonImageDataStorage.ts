@@ -1,10 +1,10 @@
 import { type ProgressCallback } from "@tissuumaps/core";
 
-import { AbstractImageDataLoader } from "../base";
+import { AbstractImageDataStorage } from "../base";
 import { OpenSeadragonImageData } from "./OpenSeadragonImageData";
 import { type OpenSeadragonImageDataSource } from "./OpenSeadragonImageDataSource";
 
-export class OpenSeadragonImageDataLoader extends AbstractImageDataLoader<
+export class OpenSeadragonImageDataStorage extends AbstractImageDataStorage<
   OpenSeadragonImageDataSource,
   OpenSeadragonImageData
 > {

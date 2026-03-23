@@ -1,14 +1,14 @@
 import { type MappableArrayLike, type ProgressCallback } from "../types";
-import { type DataLoader, type ItemsData } from "./base";
+import { type DataStorage, type ItemsData } from "./base";
 
 /**
- * Data loader for tabular data
+ * Data storage adapter for tabular data
  *
  * @typeParam TTableData - The concrete {@link TableData} type produced by this loader
  */
-export interface TableDataLoader<
+export interface TableDataStorage<
   TTableData extends TableData,
-> extends DataLoader {
+> extends DataStorage {
   /**
    * Loads the table data from the configured data source
    *

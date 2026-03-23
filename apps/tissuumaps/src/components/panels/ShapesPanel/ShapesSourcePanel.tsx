@@ -20,19 +20,19 @@ export function ShapesSourcePanel({
   shapes,
   className,
 }: ShapesSourcePanelProps) {
-  const shapesDataLoaderRegistry = useTissUUmaps(
-    (state) => state.shapesDataLoaderRegistry,
+  const shapesDataStorageRegistry = useTissUUmaps(
+    (state) => state.shapesDataStorageRegistry,
   );
 
   const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = shapesDataLoaderRegistry.get(shapes.dataSource.type);
+    const value = shapesDataStorageRegistry.get(shapes.dataSource.type);
     if (value === undefined) {
       throw new Error(
-        `No shapes data loader registered for data source type "${shapes.dataSource.type}"`,
+        `No shapes data storage adapter registered for data source type "${shapes.dataSource.type}"`,
       );
     }
     return value;
-  }, [shapesDataLoaderRegistry, shapes.dataSource.type]);
+  }, [shapesDataStorageRegistry, shapes.dataSource.type]);
 
   return (
     <Fieldset

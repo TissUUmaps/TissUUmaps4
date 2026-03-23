@@ -136,18 +136,18 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
       // Load the data source if not already loaded or if a reload has been requested
       let loadedDataSource = oldLoadedDataSource;
       if (loadedDataSource === undefined || reload) {
-        const { dataLoaderFactory } =
-          state.labelsDataLoaderRegistry.get(labels.dataSource.type) ?? {};
-        if (dataLoaderFactory === undefined) {
+        const { dataStorageFactory } =
+          state.labelsDataStorageRegistry.get(labels.dataSource.type) ?? {};
+        if (dataStorageFactory === undefined) {
           throw new Error(
-            `No labels data loader registered for data source type ${labels.dataSource.type}.`,
+            `No labels data storage adapter registered for data source type ${labels.dataSource.type}.`,
           );
         }
-        const dataLoader = dataLoaderFactory(
+        const dataStorage = dataStorageFactory(
           labels.dataSource,
           state.workspace,
         );
-        const data = await dataLoader.loadLabels({ signal, onProgress });
+        const data = await dataStorage.loadLabels({ signal, onProgress });
         signal?.throwIfAborted();
         // Check if the labels have been deleted or their data source has changed
         const currentState = get();

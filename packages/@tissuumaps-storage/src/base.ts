@@ -1,26 +1,26 @@
 import {
-  type DataLoader,
   type DataSource,
+  type DataStorage,
   type ImageData,
-  type ImageDataLoader,
   type ImageDataSource,
+  type ImageDataStorage,
   type LabelsData,
-  type LabelsDataLoader,
   type LabelsDataSource,
+  type LabelsDataStorage,
   type PointsData,
-  type PointsDataLoader,
   type PointsDataSource,
+  type PointsDataStorage,
   type ShapesData,
-  type ShapesDataLoader,
   type ShapesDataSource,
+  type ShapesDataStorage,
   type TableData,
-  type TableDataLoader,
   type TableDataSource,
+  type TableDataStorage,
 } from "@tissuumaps/core";
 
-export abstract class AbstractDataLoader<
+export abstract class AbstractDataStorage<
   TDataSource extends DataSource,
-> implements DataLoader {
+> implements DataStorage {
   protected readonly dataSource: TDataSource;
   protected readonly workspace: FileSystemDirectoryHandle | null;
 
@@ -33,52 +33,52 @@ export abstract class AbstractDataLoader<
   }
 }
 
-export abstract class AbstractImageDataLoader<
+export abstract class AbstractImageDataStorage<
   TImageDataSource extends ImageDataSource,
   TImageData extends ImageData,
 >
-  extends AbstractDataLoader<TImageDataSource>
-  implements ImageDataLoader<TImageData>
+  extends AbstractDataStorage<TImageDataSource>
+  implements ImageDataStorage<TImageData>
 {
   abstract loadImage(options?: { signal?: AbortSignal }): Promise<TImageData>;
 }
 
-export abstract class AbstractLabelsDataLoader<
+export abstract class AbstractLabelsDataStorage<
   TLabelsDataSource extends LabelsDataSource,
   TLabelsData extends LabelsData,
 >
-  extends AbstractDataLoader<TLabelsDataSource>
-  implements LabelsDataLoader<TLabelsData>
+  extends AbstractDataStorage<TLabelsDataSource>
+  implements LabelsDataStorage<TLabelsData>
 {
   abstract loadLabels(options?: { signal?: AbortSignal }): Promise<TLabelsData>;
 }
 
-export abstract class AbstractPointsDataLoader<
+export abstract class AbstractPointsDataStorage<
   TPointsDataSource extends PointsDataSource,
   TPointsData extends PointsData,
 >
-  extends AbstractDataLoader<TPointsDataSource>
-  implements PointsDataLoader<TPointsData>
+  extends AbstractDataStorage<TPointsDataSource>
+  implements PointsDataStorage<TPointsData>
 {
   abstract loadPoints(options?: { signal?: AbortSignal }): Promise<TPointsData>;
 }
 
-export abstract class AbstractShapesDataLoader<
+export abstract class AbstractShapesDataStorage<
   TShapesDataSource extends ShapesDataSource,
   TShapesData extends ShapesData,
 >
-  extends AbstractDataLoader<TShapesDataSource>
-  implements ShapesDataLoader<TShapesData>
+  extends AbstractDataStorage<TShapesDataSource>
+  implements ShapesDataStorage<TShapesData>
 {
   abstract loadShapes(options?: { signal?: AbortSignal }): Promise<TShapesData>;
 }
 
-export abstract class AbstractTableDataLoader<
+export abstract class AbstractTableDataStorage<
   TTableDataSource extends TableDataSource,
   TTableData extends TableData,
 >
-  extends AbstractDataLoader<TTableDataSource>
-  implements TableDataLoader<TTableData>
+  extends AbstractDataStorage<TTableDataSource>
+  implements TableDataStorage<TTableData>
 {
   abstract loadTable(options?: { signal?: AbortSignal }): Promise<TTableData>;
 }

@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import { type LabelsData, type UintArray } from "@tissuumaps/core";
 import { type ViewerAdapter } from "@tissuumaps/viewer";
 
-import { useTissUUmaps } from "../store";
+import { useTissUUmaps } from "..";
 
 export class LoadedLabelsDataAdapter implements LabelsData {
   private readonly _labelsId: string;

@@ -157,15 +157,18 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
       // Load the data source if not already loaded or if a reload has been requested
       let loadedDataSource = oldLoadedDataSource;
       if (loadedDataSource === undefined || reload) {
-        const { dataLoaderFactory } =
-          state.tableDataLoaderRegistry.get(table.dataSource.type) ?? {};
-        if (dataLoaderFactory === undefined) {
+        const { dataStorageFactory } =
+          state.tableDataStorageRegistry.get(table.dataSource.type) ?? {};
+        if (dataStorageFactory === undefined) {
           throw new Error(
-            `No table data loader registered for data source type ${table.dataSource.type}.`,
+            `No table data storage adapter registered for data source type ${table.dataSource.type}.`,
           );
         }
-        const dataLoader = dataLoaderFactory(table.dataSource, state.workspace);
-        const data = await dataLoader.loadTable({ signal, onProgress });
+        const dataStorage = dataStorageFactory(
+          table.dataSource,
+          state.workspace,
+        );
+        const data = await dataStorage.loadTable({ signal, onProgress });
         signal?.throwIfAborted();
         // Check if the table has been deleted or its data source has changed
         const currentState = get();
