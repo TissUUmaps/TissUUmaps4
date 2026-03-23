@@ -1,6 +1,7 @@
-import { Input } from "@/components/ui/input";
 import { type CellProps } from "@jsonforms/core";
 import { withJsonFormsCellProps } from "@jsonforms/react";
+
+import { Input } from "@/components/ui/input";
 
 export const TextCell = withJsonFormsCellProps((props: CellProps) => {
   const options = {

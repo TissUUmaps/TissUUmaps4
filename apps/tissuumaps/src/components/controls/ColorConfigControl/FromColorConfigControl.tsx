@@ -1,6 +1,6 @@
-import { Input } from "@/components/ui/input";
-
 import { colorPalettes } from "@tissuumaps/core";
+
+import { Input } from "@/components/ui/input";
 
 import { useTableColumnSelector } from "../../../hooks/useTableColumnSelector";
 import { useTissUUmaps } from "../../../store";

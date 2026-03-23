@@ -1,4 +1,4 @@
-import * as geojson from "geojson";
+import type * as geojson from "geojson";
 
 import {
   type MultiPolygon,

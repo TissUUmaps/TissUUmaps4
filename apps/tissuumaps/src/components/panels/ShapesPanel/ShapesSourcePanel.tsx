@@ -1,10 +1,11 @@
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { JsonForms } from "@jsonforms/react";
 import { EditIcon } from "lucide-react";
 import { useMemo } from "react";
 
 import { type Shapes } from "@tissuumaps/core";
+
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 import { useTissUUmaps } from "../../../store";
 import { Field, FieldLabel } from "../../common/field";

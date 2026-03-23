@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
   type ArrayControlProps,
   composePaths,
@@ -12,6 +11,8 @@ import {
 } from "@jsonforms/react";
 import { ArrowDownIcon, ArrowUpIcon, XIcon } from "lucide-react";
 import { useMemo } from "react";
+
+import { Button } from "@/components/ui/button";
 
 import { Field, FieldError, FieldItem, FieldLabel } from "../../common/field";
 

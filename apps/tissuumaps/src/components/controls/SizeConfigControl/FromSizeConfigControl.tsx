@@ -1,6 +1,6 @@
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
 import { type CoordinateSpace } from "@tissuumaps/core";
+
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import { useTableColumnSelector } from "../../../hooks/useTableColumnSelector";
 import { useTissUUmaps } from "../../../store";

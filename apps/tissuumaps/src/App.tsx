@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
   DockviewDefaultTab,
   DockviewReact,
@@ -10,6 +9,8 @@ import { Moon, Sun } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 
 import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
+
+import { Button } from "@/components/ui/button";
 
 import "./App.css";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
