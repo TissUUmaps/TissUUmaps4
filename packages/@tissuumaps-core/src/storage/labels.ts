@@ -4,7 +4,7 @@ import { type DataStorage, type ItemsData } from "./base";
 /**
  * Data storage adapter for label images
  *
- * @typeParam TLabelsData - The concrete {@link LabelsData} type produced by this loader
+ * @typeParam TLabelsData - The concrete {@link LabelsData} type produced by this storage adapter
  */
 export interface LabelsDataStorage<
   TLabelsData extends LabelsData,

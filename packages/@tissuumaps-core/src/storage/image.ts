@@ -4,7 +4,7 @@ import { type Data, type DataStorage } from "./base";
 /**
  * Data storage adapter for raster images
  *
- * @typeParam TImageData - The concrete {@link ImageData} type produced by this loader
+ * @typeParam TImageData - The concrete {@link ImageData} type produced by this storage adapter
  */
 export interface ImageDataStorage<
   TImageData extends ImageData,

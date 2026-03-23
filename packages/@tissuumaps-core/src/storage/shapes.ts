@@ -4,7 +4,7 @@ import { type DataStorage, type ItemsData } from "./base";
 /**
  * Data storage adapter for shape (polygon) collections
  *
- * @typeParam TShapesData - The concrete {@link ShapesData} type produced by this loader
+ * @typeParam TShapesData - The concrete {@link ShapesData} type produced by this storage adapter
  */
 export interface ShapesDataStorage<
   TShapesData extends ShapesData,

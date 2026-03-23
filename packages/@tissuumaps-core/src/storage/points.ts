@@ -4,7 +4,7 @@ import { type DataStorage, type ItemsData } from "./base";
 /**
  * Data storage adapter for point clouds
  *
- * @typeParam TPointsData - The concrete {@link PointsData} type produced by this loader
+ * @typeParam TPointsData - The concrete {@link PointsData} type produced by this storage adapter
  */
 export interface PointsDataStorage<
   TPointsData extends PointsData,

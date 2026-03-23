@@ -4,7 +4,7 @@ import { type DataStorage, type ItemsData } from "./base";
 /**
  * Data storage adapter for tabular data
  *
- * @typeParam TTableData - The concrete {@link TableData} type produced by this loader
+ * @typeParam TTableData - The concrete {@link TableData} type produced by this storage adapter
  */
 export interface TableDataStorage<
   TTableData extends TableData,
