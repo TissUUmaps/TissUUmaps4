@@ -1,8 +1,8 @@
 ---
-sidebar_position: 1
+sidebar_position: 2
 ---
 
-# Architecture
+# Code architecture
 
 This project is structured as a pnpm monorepo as follows:
 
@@ -17,35 +17,27 @@ This project is structured as a pnpm monorepo as follows:
   - @tissuumaps-viewer   # The TissUUmaps viewer (React component)
 ```
 
-## docs
+The following diagram outlines the dependency structure among packages and the TissUUmaps application:
 
-The documentation is based on Docusaurus and published to GitHub Pages using GitHub Actions. TypeDoc and typedoc-plugin-docusaurus are used to automatically build the API documentation for packages. Diagrams are powered by Mermaid.
+```mermaid
+flowchart BT
+    core["@tissuumaps/core"]
 
-## tissuumaps
+    viewer["@tissuumaps/viewer"]
+    viewer --> core
 
-### App
+    storage["@tissuumaps/storage"]
+    storage --> core
 
-Upon startup, all TissUUmaps plugins are initialized and the application state is initialized using a project file loaded from `project.json` (if available) or from the URL given in the `project` GET parameter.
+    plugins["@tissuumaps/plugins"]
+    plugins --> core
 
-### Hooks
-
-Whenever possible and useful, React `useEffect` and `useCallback` hooks are enapsulated using custom hooks.
-
-### Components
-
-The user interface is built primarily using TailwindCSS, shadcn/ui, Base UI components, and the Dockview layout manager.
-
-Components are structured as follows:
-
-- `common` - custom low-level components that are commonly reused throughout the codebase
-- `controls` - configuration components used to configure the appearance of rendered data objects
-- `jsforms` - JSForms-related components that are used for rendering data source configuration forms
-- `panels` - groups of components that are used as building blocks for the application's user interface
-- `ui` - shadcn/ui components, adapted to the application as needed (be careful when updating!)
-
-### State management
-
-A single Zustand store is being used, which is distributed over several slices. The main slices are `app` (transient application state), `project` (persistent project information) and data type-specific slices that hold project data (transient in-memory data and persistent metadata). Data objects return by data storage adapters are exposed to the TissUUmaps `Viewer` component using custom data type-specific store adapters. The immer middleware is used to perform immutable updates, with support for Maps and Sets enabled. Asynchronous store actions are deduplicated based on the JSON-stringified function arguments.
+    tissuumaps["TissUUmaps"]
+    tissuumaps --> core
+    tissuumaps --> storage
+    tissuumaps --> plugins
+    tissuumaps --> viewer
+```
 
 ## @tissuumaps/core
 
@@ -87,3 +79,33 @@ Each plugin has its own dedicated directory and is separately exported in the `p
 ## @tissuumaps/viewer
 
 The TissUUmaps `Viewer` component uses an adapter pattern facilitated by `ViewerProvider`. It makes use of custom `useOpenSeadragon` and `useWebGL` hooks that encapsulate the `OpenSeadragonController` and the `WebGLController` from `@tissuumaps/core`, respectively (separation of concerns). The WebGL canvas element is appended as a child to the `viewer.canvas` div element (child of the `viewer.container` div element, parent of the `viewer.drawer.canvas` canvas element) to allow for proper compositioning, where `viewer` is the `OpenSeadragon.Viewer` instance.
+
+## TissUUmaps (tissuumaps)
+
+### App
+
+Upon startup, all TissUUmaps plugins are initialized and the application state is initialized using a project file loaded from `project.json` (if available) or from the URL given in the `project` GET parameter.
+
+### Hooks
+
+Whenever possible and useful, React `useEffect` and `useCallback` hooks are enapsulated using custom hooks.
+
+### Components
+
+The user interface is built primarily using TailwindCSS, shadcn/ui, Base UI components, and the Dockview layout manager.
+
+Components are structured as follows:
+
+- `common` - custom low-level components that are commonly reused throughout the codebase
+- `controls` - configuration components used to configure the appearance of rendered data objects
+- `jsforms` - JSForms-related components that are used for rendering data source configuration forms
+- `panels` - groups of components that are used as building blocks for the application's user interface
+- `ui` - shadcn/ui components, adapted to the application as needed (be careful when updating!)
+
+### State management
+
+A single Zustand store is being used, which is distributed over several slices. The main slices are `app` (transient application state), `project` (persistent project information) and data type-specific slices that hold project data (transient in-memory data and persistent metadata). Data objects return by data storage adapters are exposed to the TissUUmaps `Viewer` component using custom data type-specific store adapters. The immer middleware is used to perform immutable updates, with support for Maps and Sets enabled. Asynchronous store actions are deduplicated based on the JSON-stringified function arguments.
+
+## Dcoumentation (docs)
+
+The documentation is based on Docusaurus and published to GitHub Pages using GitHub Actions. TypeDoc and typedoc-plugin-docusaurus are used to automatically build the API documentation for packages. Diagrams are powered by Mermaid.

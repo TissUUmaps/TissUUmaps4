@@ -1,4 +1,4 @@
-# Data formats
+# Supported data
 
 The following table lists capabitilites of built-in storage adapters.
 

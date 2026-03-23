@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 7
 ---
 
 # Plugins
@@ -8,9 +8,17 @@ Plugins can register themselves at any time as follows:
 
 ```javascript
 window.TissUUmapsPlugins ??= []; // ATTENTION: do NOT override this!
-window.TissUUmapsPlugins.push({ name: "My plugin", init: (store) => {} });
+window.TissUUmapsPlugins.push({ name: "My plugin", setup: (store) => {} });
 ```
 
-The plugin's `init` function receives a reference to the application's Zustand store. Using this `store` reference, plugins can for example get the current value of `myProperty` using `store.getState().myProperty`, set its value to `myValue` using `store.setState((state) => { state.myProperty = myValue; })`, or call the action `myFunction` using `store.getState().myFunction(...)`.
+The plugin's `setup` function receives a reference to the application's Zustand store. Using this `store` reference, plugins can for example get the current value of `myProperty` using `store.getState().myProperty`, set its value to `myValue` using `store.setState((state) => { state.myProperty = myValue; })`, or call the action `myFunction` using `store.getState().myFunction(...)`.
 
-Optionally, the plugin's `init` function may return a cleanup handler of type `() => void`.
+Optionally, the plugin's `setup` function may return a cleanup handler of type `() => void`.
+
+## User interface plugins
+
+TODO
+
+## Storage adapter plugins
+
+TODO
