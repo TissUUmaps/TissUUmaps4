@@ -99,7 +99,7 @@ export class SVGController {
       this._containerSize.width !== width ||
       this._containerSize.height !== height
     ) {
-      this._containerSize = newContainerSize;
+      this._containerSize = { width, height };
       this.container.setAttribute("width", width.toString());
       this.container.setAttribute("height", height.toString());
       this._updateTransformNode();
