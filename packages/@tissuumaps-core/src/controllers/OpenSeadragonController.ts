@@ -440,7 +440,7 @@ export class OpenSeadragonController {
           this._updateTiledImageGeometry(tiledImageState);
         }
         this._viewer.viewport.fitBounds(
-          tiledImageState.tiledImage.getBounds(),
+          tiledImageState.tiledImage.getBoundsNoRotate(),
           true,
         );
         if (tiledImageState.deferredDelete) {
@@ -497,7 +497,7 @@ export class OpenSeadragonController {
     );
     mat3.multiply(m, layerToWorldMatrix, m);
     const dataToWorldTransform = TransformUtils.fromSimilarityMatrix(m);
-    const bounds = tiledImageState.tiledImage.getBounds();
+    const bounds = tiledImageState.tiledImage.getBoundsNoRotate();
     if (
       tiledImageState.tiledImage.getFlip() !==
       tiledImageState.ref.layerConfig.flip
