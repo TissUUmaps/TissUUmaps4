@@ -1,5 +1,6 @@
 export { OpenSeadragonController } from "./controllers/OpenSeadragonController";
 export { WebGLController } from "./controllers/WebGLController";
+export { SVGController } from "./controllers/SVGController";
 
 export * from "./model/base";
 export * from "./model/configs";

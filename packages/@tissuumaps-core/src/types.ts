@@ -23,6 +23,11 @@ export type MappableArrayLike<T> = ArrayLike<T> & {
 };
 
 /**
+ * Interaction mode, determining how mouse events are interpreted
+ */
+export type InteractionMode = "pan";
+
+/**
  * A callback function that receives progress updates as a percentage (0-100)
  *
  * @param progress - The current progress as a percentage (0-100)

@@ -4,6 +4,7 @@ import { type OpenSeadragonController } from "@tissuumaps/core";
 
 import { type ViewerAdapter } from "../../adapter";
 import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
+import { useSVG } from "../../hooks/useSVG";
 import { useWebGL } from "../../hooks/useWebGL";
 
 export type ViewerProps = { adapter: ViewerAdapter; className?: string };
@@ -14,38 +15,47 @@ export function Viewer({ adapter, className }: ViewerProps) {
   const { setViewerElementRef, controllerRef: osRef } =
     useOpenSeadragon(adapter);
 
-  const glCanvas = useMemo(() => os?.viewer.canvas ?? null, [os]);
-  const glViewport = useMemo(
+  const parent = useMemo(() => os?.viewer.canvas ?? null, [os]);
+  const viewport = useMemo(
     () => os?.viewer.viewport.getBoundsNoRotate(true) ?? null,
     [os],
   );
-  const { controllerRef: glRef } = useWebGL(adapter, glCanvas, glViewport);
+  const { controllerRef: glRef } = useWebGL(adapter, parent, viewport);
+  const { controllerRef: svgRef } = useSVG(adapter, parent, viewport);
 
   useEffect(() => {
     const os = osRef.current;
     const resizeHandler = (event: OpenSeadragon.ResizeEvent) => {
+      console.debug("Resizing WebGL canvas and SVG container");
+      const newSize = {
+        width: event.newContainerSize.x,
+        height: event.newContainerSize.y,
+      };
       const gl = glRef.current;
       if (gl !== null) {
-        console.debug("Resizing WebGL canvas");
-        const canvasResized = gl.resizeCanvas({
-          width: event.newContainerSize.x,
-          height: event.newContainerSize.y,
-        });
+        const canvasResized = gl.resizeCanvas(newSize);
         if (canvasResized) {
           gl.draw();
         }
       }
+      const svg = svgRef.current;
+      if (svg !== null) {
+        svg.resizeContainer(newSize);
+      }
     };
     const viewportChangeHandler = (event: OpenSeadragon.ViewerEvent) => {
+      console.debug("Changing WebGL viewport and SVG viewport");
+      const newViewport = event.eventSource.viewport.getBoundsNoRotate(true);
       const gl = glRef.current;
       if (gl !== null) {
-        console.debug("Changing WebGL viewport");
-        const viewportChanged = gl.setViewport(
-          event.eventSource.viewport.getBoundsNoRotate(true),
-        );
+        const viewportChanged = gl.setViewport(newViewport);
         if (viewportChanged) {
           gl.draw();
         }
+      }
+      const svg = svgRef.current;
+      if (svg !== null) {
+        svg.setViewport(newViewport);
       }
     };
     if (os !== null) {
@@ -59,7 +69,7 @@ export function Viewer({ adapter, className }: ViewerProps) {
         os.viewer.removeHandler("viewport-change", viewportChangeHandler);
       }
     };
-  }, [osRef, glRef, setOS]);
+  }, [osRef, glRef, svgRef, setOS]);
 
   return <div ref={setViewerElementRef} className={className} />;
 }
