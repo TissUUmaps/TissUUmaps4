@@ -91,6 +91,26 @@ export class OpenSeadragonController {
     }
   }
 
+  addControl(
+    element: HTMLElement,
+    options?: OpenSeadragon.TControlOptions,
+  ): void {
+    this._viewer.setControlsEnabled(true);
+    this._viewer.addControl(element, options ?? {});
+  }
+
+  removeControl(element: HTMLElement): void {
+    this._viewer.removeControl(
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore: OpenSeadragon typings are incorrect for this method
+      element,
+    );
+  }
+
+  clearControls(): void {
+    this._viewer.clearControls();
+  }
+
   /**
    * Installs OpenSeadragon `animation-start` and `animation-finish` handlers
    *
