@@ -183,11 +183,11 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
   ]);
 
   const resizeCanvas = useCallback(
-    (size: { width: number; height: number }): void => {
+    (newCanvasSize: { width: number; height: number }): void => {
       const controller = controllerRef.current;
       if (controllerVersion && controller !== null) {
-        console.debug("Resizing WebGL canvas to", size);
-        const canvasResized = controller.resizeCanvas(size);
+        console.debug("Resizing WebGL canvas to", newCanvasSize);
+        const canvasResized = controller.resizeCanvas(newCanvasSize);
         if (canvasResized) {
           controller.draw();
         }
@@ -197,11 +197,11 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
   );
 
   const setViewport = useCallback(
-    (viewport: Rect): void => {
+    (newViewport: Rect): void => {
       const controller = controllerRef.current;
       if (controllerVersion && controller !== null) {
-        console.debug("Setting WebGL viewport to", viewport);
-        const viewportChanged = controller.setViewport(viewport);
+        console.debug("Setting WebGL viewport to", newViewport);
+        const viewportChanged = controller.setViewport(newViewport);
         if (viewportChanged) {
           controller.draw();
         }

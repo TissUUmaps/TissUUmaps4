@@ -55,12 +55,12 @@ export function useOpenSeadragon(options?: {
             }
             if (onViewportChanged !== undefined) {
               viewer.addHandler("viewport-change", () => {
-                onViewportChanged(viewer.viewport.getBounds(true));
+                onViewportChanged(viewer.viewport.getBoundsNoRotate(true));
               });
             }
             setViewerState({
               canvas: viewer.canvas,
-              initialViewport: viewer.viewport.getBounds(true),
+              initialViewport: viewer.viewport.getBoundsNoRotate(true),
             });
           },
         );
