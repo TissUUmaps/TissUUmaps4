@@ -17,7 +17,6 @@ export function useSVG(
   useEffect(() => {
     let container: SVGSVGElement | undefined;
     let controller: SVGController | undefined;
-    const abortController = new AbortController();
     if (parent !== null && viewport !== null) {
       console.debug("Initializing SVG");
       container = parent.appendChild(SVGController.createContainer());
@@ -28,7 +27,6 @@ export function useSVG(
       markControllerReady();
     }
     return () => {
-      abortController.abort();
       if (controller !== undefined) {
         controllerRef.current = null;
         controller.destroy();
