@@ -3,6 +3,7 @@ import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
 import {
   type ImageData,
   type ImageDataStorage,
+  type InteractionMode,
   type LabelsData,
   type LabelsDataStorage,
   type PointsData,
@@ -17,7 +18,6 @@ import {
   type TableData,
   type TableDataStorage,
 } from "@tissuumaps/core";
-import { type InteractionMode } from "@tissuumaps/core";
 import {
   CSVTableDataStorage,
   GeoJSONShapesDataStorage,
