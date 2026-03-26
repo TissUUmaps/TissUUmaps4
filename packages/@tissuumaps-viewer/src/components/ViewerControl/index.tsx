@@ -29,8 +29,7 @@ export function ViewerControl({
     }
     return () => {
       if (os !== null) {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore OpenSeadragon typings are wrong
+        // @ts-expect-error OpenSeadragon typings are wrong
         os.viewer.removeControl(container);
       }
     };
