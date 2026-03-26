@@ -1,10 +1,11 @@
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { JsonForms } from "@jsonforms/react";
 import { EditIcon } from "lucide-react";
 import { useMemo } from "react";
 
 import { type Image } from "@tissuumaps/core";
+
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 import { useTissUUmaps } from "../../../store";
 import { Field, FieldLabel } from "../../common/field";
@@ -20,19 +21,19 @@ export function ImagesSourcePanel({
   image,
   className,
 }: ImagesSourcePanelProps) {
-  const imageDataLoaderRegistry = useTissUUmaps(
-    (state) => state.imageDataLoaderRegistry,
+  const imageDataStorageRegistry = useTissUUmaps(
+    (state) => state.imageDataStorageRegistry,
   );
 
   const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = imageDataLoaderRegistry.get(image.dataSource.type);
+    const value = imageDataStorageRegistry.get(image.dataSource.type);
     if (value === undefined) {
       throw new Error(
-        `No image data loader registered for data source type "${image.dataSource.type}"`,
+        `No image data storage adapter registered for data source type "${image.dataSource.type}"`,
       );
     }
     return value;
-  }, [imageDataLoaderRegistry, image.dataSource.type]);
+  }, [imageDataStorageRegistry, image.dataSource.type]);
 
   return (
     <Fieldset

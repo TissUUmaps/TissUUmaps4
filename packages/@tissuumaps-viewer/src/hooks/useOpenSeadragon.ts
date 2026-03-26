@@ -1,27 +1,11 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
-import { OpenSeadragonController, type Rect } from "@tissuumaps/core";
+import { OpenSeadragonController } from "@tissuumaps/core";
 
 import { useViewer } from "../context";
 
-export function useOpenSeadragon(options?: {
-  onContainerResized?: (newContainerSize: {
-    width: number;
-    height: number;
-  }) => void;
-  onViewportChanged?: (newViewport: Rect) => void;
-}) {
-  const { onContainerResized, onViewportChanged } = options ?? {};
-
+export function useOpenSeadragon() {
   const controllerRef = useRef<OpenSeadragonController | null>(null);
-  const [controllerVersion, incrementControllerVersion] = useReducer(
-    (version) => version + 1,
-    0,
-  );
-  const [viewerState, setViewerState] = useState<{
-    canvas: Element | null;
-    initialViewport: Rect | null;
-  }>({ canvas: null, initialViewport: null });
 
   const {
     workspace,
@@ -38,46 +22,23 @@ export function useOpenSeadragon(options?: {
   // use a ref callback for initializing the OpenSeadragon viewer
   // (note: ref callbacks are always executed before useEffect hooks)
   // https://react.dev/reference/react-dom/components/common#ref-callback
-  const viewerElementRef = useCallback(
+  const setViewerElementRef = useCallback(
     (viewerElement: HTMLDivElement | null) => {
+      let controller: OpenSeadragonController | undefined;
       if (viewerElement !== null) {
         console.debug("Initializing OpenSeadragon");
-        const controller = new OpenSeadragonController(
-          viewerElement,
-          (viewer) => {
-            if (onContainerResized !== undefined) {
-              viewer.addHandler("resize", (event) => {
-                onContainerResized({
-                  width: event.newContainerSize.x,
-                  height: event.newContainerSize.y,
-                });
-              });
-            }
-            if (onViewportChanged !== undefined) {
-              viewer.addHandler("viewport-change", () => {
-                onViewportChanged(viewer.viewport.getBounds(true));
-              });
-            }
-            setViewerState({
-              canvas: viewer.canvas,
-              initialViewport: viewer.viewport.getBounds(true),
-            });
-          },
-        );
+        controller = new OpenSeadragonController(viewerElement);
         controllerRef.current = controller;
-        incrementControllerVersion();
       }
       // React 19 added cleanup functions for ref callbacks
       return () => {
-        const controller = controllerRef.current;
-        if (controller !== null) {
-          console.debug("Destroying OpenSeadragon");
-          controller.destroy();
+        if (controller !== undefined) {
           controllerRef.current = null;
+          controller.destroy();
         }
       };
     },
-    [onContainerResized, onViewportChanged],
+    [],
   );
 
   useEffect(() => {
@@ -86,7 +47,7 @@ export function useOpenSeadragon(options?: {
       console.debug("Setting OpenSeadragon viewer options");
       controller.setViewerOptions(viewerOptions);
     }
-  }, [controllerVersion, viewerOptions]);
+  }, [viewerOptions]);
 
   useEffect(() => {
     const controller = controllerRef.current;
@@ -97,11 +58,7 @@ export function useOpenSeadragon(options?: {
         viewerAnimationFinishOptions,
       );
     }
-  }, [
-    controllerVersion,
-    viewerAnimationStartOptions,
-    viewerAnimationFinishOptions,
-  ]);
+  }, [viewerAnimationStartOptions, viewerAnimationFinishOptions]);
 
   useEffect(() => {
     const controller = controllerRef.current;
@@ -112,31 +69,16 @@ export function useOpenSeadragon(options?: {
         .synchronize(layers, images, labels, loadImage, loadLabels, {
           signal: abortController.signal,
         })
-        .then(
-          () => {
-            if (!abortController.signal.aborted) {
-              console.debug("OpenSeadragon viewer synchronized");
-            }
-          },
-          (error) => {
-            if (!abortController.signal.aborted) {
-              throw error;
-            }
-          },
-        );
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error synchronizing OpenSeadragon viewer", error);
+          }
+        });
     }
     return () => {
       abortController.abort();
     };
-  }, [
-    controllerVersion,
-    workspace,
-    layers,
-    images,
-    labels,
-    loadImage,
-    loadLabels,
-  ]);
+  }, [workspace, layers, images, labels, loadImage, loadLabels]);
 
-  return { viewerElementRef, viewerState };
+  return { setViewerElementRef, controllerRef };
 }

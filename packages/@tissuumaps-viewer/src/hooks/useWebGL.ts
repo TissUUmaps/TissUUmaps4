@@ -1,15 +1,12 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef } from "react";
 
 import { type Rect, WebGLController } from "@tissuumaps/core";
 
 import { useViewer } from "../context";
 
-export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
+export function useWebGL(parent: Element | null, viewport: Rect | null) {
   const controllerRef = useRef<WebGLController | null>(null);
-  const [controllerVersion, incrementControllerVersion] = useReducer(
-    (version) => version + 1,
-    0,
-  );
+  const [controllerReady, markControllerReady] = useReducer((x) => x + 1, 0);
   const [syncPoints, dispatchSyncPoints] = useReducer((pass) => pass + 1, 0);
   const [syncShapes, dispatchSyncShapes] = useReducer((pass) => pass + 1, 0);
 
@@ -30,48 +27,44 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
   } = useViewer();
 
   useEffect(() => {
-    let canvas: HTMLCanvasElement | null = null;
+    let canvas: HTMLCanvasElement | undefined;
+    let controller: WebGLController | undefined;
     const abortController = new AbortController();
-    if (parent !== null && initialViewport !== null) {
+    if (parent !== null && viewport !== null) {
       console.debug("Initializing WebGL");
-      canvas = WebGLController.createCanvas();
-      parent.appendChild(canvas);
-      const controller = new WebGLController(canvas, initialViewport);
-      controllerRef.current = controller;
-      incrementControllerVersion();
+      canvas = parent.appendChild(WebGLController.createCanvas());
+      controller = new WebGLController(canvas, viewport);
       controller.initialize({ signal: abortController.signal }).then(
         (controller) => {
           if (!abortController.signal.aborted) {
-            console.debug("WebGL initialized");
+            controllerRef.current = controller;
+            markControllerReady();
             controller.draw();
           }
         },
         (error) => {
           if (!abortController.signal.aborted) {
-            throw error;
+            console.error("Error initializing WebGL", error);
           }
         },
       );
     }
     return () => {
-      abortController.abort();
-      const controller = controllerRef.current;
-      if (controller !== null) {
-        console.debug("Destroying WebGL");
-        controller.destroy();
+      abortController?.abort();
+      if (controller !== undefined) {
         controllerRef.current = null;
+        controller.destroy();
       }
-      if (parent !== null && canvas !== null) {
+      if (canvas !== undefined && parent !== null) {
         parent.removeChild(canvas);
-        canvas = null;
       }
     };
-  }, [parent, initialViewport]);
+  }, [parent, viewport]);
 
   useEffect(() => {
     const controller = controllerRef.current;
-    if (controllerVersion && controller !== null) {
-      console.debug("Setting draw options");
+    if (controller !== null) {
+      console.debug("Setting WebGL draw options");
       const { syncPoints, syncShapes, redraw } =
         controller.setDrawOptions(drawOptions);
       if (syncPoints) {
@@ -84,13 +77,13 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
         controller.draw();
       }
     }
-  }, [controllerVersion, drawOptions]);
+  }, [controllerReady, drawOptions]);
 
   useEffect(() => {
-    const abortController = new AbortController();
     const controller = controllerRef.current;
-    if (controllerVersion && controller !== null) {
-      console.debug("Synchronizing points");
+    const abortController = new AbortController();
+    if (controller !== null) {
+      console.debug("Synchronizing WebGL points");
       controller
         .synchronizePoints(
           layers,
@@ -107,13 +100,12 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
         .then(
           () => {
             if (!abortController.signal.aborted) {
-              console.debug("Points synchronized");
               controller.draw();
             }
           },
           (error) => {
             if (!abortController.signal.aborted) {
-              throw error;
+              console.error("Error synchronizing WebGL points", error);
             }
           },
         );
@@ -122,7 +114,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
       abortController.abort();
     };
   }, [
-    controllerVersion,
+    controllerReady,
     syncPoints,
     layers,
     points,
@@ -137,10 +129,10 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
   ]);
 
   useEffect(() => {
-    const abortController = new AbortController();
     const controller = controllerRef.current;
-    if (controllerVersion && controller !== null) {
-      console.debug("Synchronizing shapes");
+    const abortController = new AbortController();
+    if (controller !== null) {
+      console.debug("Synchronizing WebGL shapes");
       controller
         .synchronizeShapes(
           layers,
@@ -155,13 +147,12 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
         .then(
           () => {
             if (!abortController.signal.aborted) {
-              console.debug("Shapes synchronized");
               controller.draw();
             }
           },
           (error) => {
             if (!abortController.signal.aborted) {
-              throw error;
+              console.error("Error synchronizing WebGL shapes", error);
             }
           },
         );
@@ -170,7 +161,7 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
       abortController.abort();
     };
   }, [
-    controllerVersion,
+    controllerReady,
     syncShapes,
     layers,
     shapes,
@@ -182,33 +173,5 @@ export function useWebGL(parent: Element | null, initialViewport: Rect | null) {
     loadTable,
   ]);
 
-  const resizeCanvas = useCallback(
-    (size: { width: number; height: number }): void => {
-      const controller = controllerRef.current;
-      if (controllerVersion && controller !== null) {
-        console.debug("Resizing WebGL canvas to", size);
-        const canvasResized = controller.resizeCanvas(size);
-        if (canvasResized) {
-          controller.draw();
-        }
-      }
-    },
-    [controllerVersion],
-  );
-
-  const setViewport = useCallback(
-    (viewport: Rect): void => {
-      const controller = controllerRef.current;
-      if (controllerVersion && controller !== null) {
-        console.debug("Setting WebGL viewport to", viewport);
-        const viewportChanged = controller.setViewport(viewport);
-        if (viewportChanged) {
-          controller.draw();
-        }
-      }
-    },
-    [controllerVersion],
-  );
-
-  return { resizeCanvas, setViewport };
+  return { controllerRef, controllerReady };
 }

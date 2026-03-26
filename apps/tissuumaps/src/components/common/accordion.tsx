@@ -1,6 +1,7 @@
-import { cn } from "@/lib/utils";
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 export function Accordion({
   className,

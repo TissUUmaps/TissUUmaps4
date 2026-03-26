@@ -1,7 +1,7 @@
+import { type CoordinateSpace } from "@tissuumaps/core";
+
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-import { type CoordinateSpace } from "@tissuumaps/core";
 
 import { Field, FieldItem, FieldLabel } from "../../common/field";
 import { type SizeConfigControlState } from "./useSizeConfigControl";

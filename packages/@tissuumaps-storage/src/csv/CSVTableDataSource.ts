@@ -1,4 +1,4 @@
-import * as papaparse from "papaparse";
+import type * as papaparse from "papaparse";
 
 import {
   type RawTableDataSource,

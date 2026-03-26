@@ -1,14 +1,14 @@
 import { type ProgressCallback } from "../types";
-import { type DataLoader, type ItemsData } from "./base";
+import { type DataStorage, type ItemsData } from "./base";
 
 /**
- * Data loader for point clouds
+ * Data storage adapter for point clouds
  *
- * @typeParam TPointsData - The concrete {@link PointsData} type produced by this loader
+ * @typeParam TPointsData - The concrete {@link PointsData} type produced by this storage adapter
  */
-export interface PointsDataLoader<
+export interface PointsDataStorage<
   TPointsData extends PointsData,
-> extends DataLoader {
+> extends DataStorage {
   /**
    * Loads the points data from the configured data source
    *

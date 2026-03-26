@@ -146,18 +146,18 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
       // Load the data source if not already loaded or if a reload has been requested
       let loadedDataSource = oldLoadedDataSource;
       if (loadedDataSource === undefined || reload) {
-        const { dataLoaderFactory } =
-          state.pointsDataLoaderRegistry.get(points.dataSource.type) ?? {};
-        if (dataLoaderFactory === undefined) {
+        const { dataStorageFactory } =
+          state.pointsDataStorageRegistry.get(points.dataSource.type) ?? {};
+        if (dataStorageFactory === undefined) {
           throw new Error(
-            `No points data loader registered for data source type ${points.dataSource.type}.`,
+            `No points data storage adapter registered for data source type ${points.dataSource.type}.`,
           );
         }
-        const dataLoader = dataLoaderFactory(
+        const dataStorage = dataStorageFactory(
           points.dataSource,
           state.workspace,
         );
-        const data = await dataLoader.loadPoints({ signal, onProgress });
+        const data = await dataStorage.loadPoints({ signal, onProgress });
         signal?.throwIfAborted();
         // Check if the points have been deleted or their data source has changed
         const currentState = get();

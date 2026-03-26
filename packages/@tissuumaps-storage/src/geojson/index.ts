@@ -1,5 +1,5 @@
 export { GeoJSONShapesData } from "./GeoJSONShapesData";
-export { GeoJSONShapesDataLoader } from "./GeoJSONShapesDataLoader";
+export { GeoJSONShapesDataStorage } from "./GeoJSONShapesDataStorage";
 export {
   geoJSONShapesDataSourceDefaults,
   geoJSONShapesDataSourceType,

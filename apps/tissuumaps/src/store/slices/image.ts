@@ -136,15 +136,18 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
       // Load the data source if not already loaded or if a reload has been requested
       let loadedDataSource = oldLoadedDataSource;
       if (loadedDataSource === undefined || reload) {
-        const { dataLoaderFactory } =
-          state.imageDataLoaderRegistry.get(image.dataSource.type) ?? {};
-        if (dataLoaderFactory === undefined) {
+        const { dataStorageFactory } =
+          state.imageDataStorageRegistry.get(image.dataSource.type) ?? {};
+        if (dataStorageFactory === undefined) {
           throw new Error(
-            `No image data loader registered for data source type ${image.dataSource.type}.`,
+            `No image data storage adapter registered for data source type ${image.dataSource.type}.`,
           );
         }
-        const dataLoader = dataLoaderFactory(image.dataSource, state.workspace);
-        const data = await dataLoader.loadImage({ signal, onProgress });
+        const dataStorage = dataStorageFactory(
+          image.dataSource,
+          state.workspace,
+        );
+        const data = await dataStorage.loadImage({ signal, onProgress });
         signal?.throwIfAborted();
         // Check if the image has been deleted or its data source has changed
         const currentState = get();

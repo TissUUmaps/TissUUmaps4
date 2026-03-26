@@ -4,11 +4,11 @@ import { parquetReadColumn } from "hyparquet/src/read.js";
 
 import { type ProgressCallback } from "@tissuumaps/core";
 
-import { AbstractTableDataLoader } from "../base";
+import { AbstractTableDataStorage } from "../base";
 import { ParquetTableData } from "./ParquetTableData";
 import { type ParquetTableDataSource } from "./ParquetTableDataSource";
 
-export class ParquetTableDataLoader extends AbstractTableDataLoader<
+export class ParquetTableDataStorage extends AbstractTableDataStorage<
   ParquetTableDataSource,
   ParquetTableData
 > {

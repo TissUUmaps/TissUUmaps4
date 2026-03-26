@@ -1,14 +1,14 @@
 import { type ProgressCallback } from "../types";
-import { type Data, type DataLoader } from "./base";
+import { type Data, type DataStorage } from "./base";
 
 /**
- * Data loader for raster images
+ * Data storage adapter for raster images
  *
- * @typeParam TImageData - The concrete {@link ImageData} type produced by this loader
+ * @typeParam TImageData - The concrete {@link ImageData} type produced by this storage adapter
  */
-export interface ImageDataLoader<
+export interface ImageDataStorage<
   TImageData extends ImageData,
-> extends DataLoader {
+> extends DataStorage {
   /**
    * Loads the image data from the configured data source
    *

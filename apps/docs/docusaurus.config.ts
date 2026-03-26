@@ -78,17 +78,17 @@ const config: Config = {
           label: "Packages",
         },
         {
-          href: "https://github.com/TissUUmaps/TissUUmaps4",
+          href: "https://github.com/TissUUmaps/TissUUmaps4/",
           label: "GitHub",
           position: "right",
         },
         {
-          href: "https://tissuumaps.github.io/TissUUmaps4/live",
+          href: "https://tissuumaps.github.io/TissUUmaps4/live/",
           label: "Live",
           position: "right",
         },
         {
-          href: "https://tissuumaps.github.io/TissUUmaps4/live-dev",
+          href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart/project_heart_cropped.json",
           label: "Live (development)",
           position: "right",
         },
@@ -124,14 +124,14 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/TissUUmaps/TissUUmaps4",
+              href: "https://github.com/TissUUmaps/TissUUmaps4/",
             },
             {
-              href: "https://tissuumaps.github.io/TissUUmaps4/live",
+              href: "https://tissuumaps.github.io/TissUUmaps4/live/",
               label: "Live",
             },
             {
-              href: "https://tissuumaps.github.io/TissUUmaps4/live-dev",
+              href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart/project_heart_cropped.json",
               label: "Live (development)",
             },
           ],
@@ -162,6 +162,13 @@ const config: Config = {
       },
     ],
   ],
+
+  // mermaid diagrams
+  // https://docusaurus.io/docs/markdown-features/diagrams
+  markdown: {
+    mermaid: true,
+  },
+  themes: ["@docusaurus/theme-mermaid"],
 };
 
 export default config;

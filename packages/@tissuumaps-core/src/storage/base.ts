@@ -1,8 +1,8 @@
 /**
- * Base interface for data loaders
+ * Base interface for data storage adapters
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface DataLoader {}
+export interface DataStorage {}
 
 /**
  * Base interface for loaded data objects

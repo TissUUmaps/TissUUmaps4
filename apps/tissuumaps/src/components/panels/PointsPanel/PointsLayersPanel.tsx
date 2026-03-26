@@ -1,6 +1,6 @@
-import { cn } from "@/lib/utils";
-
 import { type Points } from "@tissuumaps/core";
+
+import { cn } from "@/lib/utils";
 
 import { Fieldset, FieldsetLegend } from "../../common/fieldset";
 

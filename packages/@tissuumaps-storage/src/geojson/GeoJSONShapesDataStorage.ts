@@ -1,4 +1,4 @@
-import * as geojson from "geojson";
+import type * as geojson from "geojson";
 
 import {
   type MultiPolygon,
@@ -6,11 +6,11 @@ import {
   type ProgressCallback,
 } from "@tissuumaps/core";
 
-import { AbstractShapesDataLoader } from "../base";
+import { AbstractShapesDataStorage } from "../base";
 import { GeoJSONShapesData } from "./GeoJSONShapesData";
 import { type GeoJSONShapesDataSource } from "./GeoJSONShapesDataSource";
 
-export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
+export class GeoJSONShapesDataStorage extends AbstractShapesDataStorage<
   GeoJSONShapesDataSource,
   GeoJSONShapesData
 > {
@@ -22,7 +22,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
     signal?.throwIfAborted();
     const geo = await this._loadGeoJSON({ signal });
     signal?.throwIfAborted();
-    const multiPolygons = GeoJSONShapesDataLoader._parseGeoJSON(geo);
+    const multiPolygons = GeoJSONShapesDataStorage._parseGeoJSON(geo);
     let ids;
     const idProperty = this.dataSource.idProperty;
     if (idProperty !== undefined) {
@@ -88,19 +88,19 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
       case "FeatureCollection":
         return geo.features.flatMap((feature) =>
           feature.geometry !== null
-            ? GeoJSONShapesDataLoader._parseGeoJSONGeometry(feature.geometry)
+            ? GeoJSONShapesDataStorage._parseGeoJSONGeometry(feature.geometry)
             : [],
         );
       case "Feature":
         return geo.geometry !== null
-          ? GeoJSONShapesDataLoader._parseGeoJSONGeometry(geo.geometry)
+          ? GeoJSONShapesDataStorage._parseGeoJSONGeometry(geo.geometry)
           : [];
       case "GeometryCollection":
         return geo.geometries.flatMap((geometry) =>
-          GeoJSONShapesDataLoader._parseGeoJSONGeometry(geometry),
+          GeoJSONShapesDataStorage._parseGeoJSONGeometry(geometry),
         );
       default:
-        return GeoJSONShapesDataLoader._parseGeoJSONGeometry(geo);
+        return GeoJSONShapesDataStorage._parseGeoJSONGeometry(geo);
     }
   }
 
@@ -112,7 +112,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
         return [
           {
             polygons: [
-              GeoJSONShapesDataLoader._parseGeoJSONGeometryRings(
+              GeoJSONShapesDataStorage._parseGeoJSONGeometryRings(
                 geometry.coordinates,
               ),
             ],
@@ -122,7 +122,7 @@ export class GeoJSONShapesDataLoader extends AbstractShapesDataLoader<
         return [
           {
             polygons: geometry.coordinates.map((rings) =>
-              GeoJSONShapesDataLoader._parseGeoJSONGeometryRings(rings),
+              GeoJSONShapesDataStorage._parseGeoJSONGeometryRings(rings),
             ),
           },
         ];

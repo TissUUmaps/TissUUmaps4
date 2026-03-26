@@ -1,12 +1,13 @@
+import { HexColorPicker } from "react-colorful";
+
+import { type Color, ColorUtils } from "@tissuumaps/core";
+
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { HexColorPicker } from "react-colorful";
-
-import { type Color, ColorUtils } from "@tissuumaps/core";
 
 export type SimpleColorPickerProps = {
   color: Color;

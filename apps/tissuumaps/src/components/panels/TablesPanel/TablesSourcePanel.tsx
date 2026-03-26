@@ -1,10 +1,11 @@
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { JsonForms } from "@jsonforms/react";
 import { EditIcon } from "lucide-react";
 import { useMemo } from "react";
 
 import { type Table } from "@tissuumaps/core";
+
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 import { useTissUUmaps } from "../../../store";
 import { Field, FieldLabel } from "../../common/field";
@@ -20,19 +21,19 @@ export function TablesSourcePanel({
   table,
   className,
 }: TablesSourcePanelProps) {
-  const tableDataLoaderRegistry = useTissUUmaps(
-    (state) => state.tableDataLoaderRegistry,
+  const tableDataStorageRegistry = useTissUUmaps(
+    (state) => state.tableDataStorageRegistry,
   );
 
   const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = tableDataLoaderRegistry.get(table.dataSource.type);
+    const value = tableDataStorageRegistry.get(table.dataSource.type);
     if (value === undefined) {
       throw new Error(
-        `No table data loader registered for data source type "${table.dataSource.type}"`,
+        `No table data storage adapter registered for data source type "${table.dataSource.type}"`,
       );
     }
     return value;
-  }, [tableDataLoaderRegistry, table.dataSource.type]);
+  }, [tableDataStorageRegistry, table.dataSource.type]);
 
   return (
     <Fieldset

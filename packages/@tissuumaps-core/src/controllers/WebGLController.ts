@@ -18,7 +18,7 @@ export class WebGLController {
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas#maximum_canvas_size
   private static readonly _maxCanvasSize = 4096;
 
-  private readonly _canvas: HTMLCanvasElement;
+  public readonly canvas: HTMLCanvasElement;
   private _viewport: Rect;
   private _drawOptions: DrawOptions;
   private _gl: WebGL2RenderingContext;
@@ -28,10 +28,11 @@ export class WebGLController {
   /** Creates a positioned, full-size `<canvas>` element for the WebGL overlay */
   static createCanvas(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
-    canvas.style.setProperty("position", "relative");
-    canvas.style.setProperty("width", "100%");
-    canvas.style.setProperty("height", "100%");
-    canvas.style.setProperty("z-index", "50");
+    canvas.style.position = "absolute";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
     return canvas;
   }
 
@@ -40,17 +41,17 @@ export class WebGLController {
    * @param viewport - Initial world-space viewport rectangle
    */
   constructor(canvas: HTMLCanvasElement, viewport: Rect) {
-    this._canvas = canvas;
+    this.canvas = canvas;
     this._viewport = viewport;
     this._drawOptions = structuredClone(defaultDrawOptions);
-    this._gl = WebGLController._createWebGLContext(this._canvas);
+    this._gl = WebGLController._createWebGLContext(this.canvas);
     this._pointsController = new WebGLPointsController(this._gl);
     this._shapesController = new WebGLShapesController(this._gl);
-    this._canvas.addEventListener("webglcontextlost", (event) => {
+    this.canvas.addEventListener("webglcontextlost", (event) => {
       event.preventDefault(); // allow context to be restored
     });
-    this._canvas.addEventListener("webglcontextrestored", () => {
-      this._gl = WebGLController._createWebGLContext(this._canvas);
+    this.canvas.addEventListener("webglcontextrestored", () => {
+      this._gl = WebGLController._createWebGLContext(this.canvas);
       this._pointsController = new WebGLPointsController(this._gl);
       this._shapesController = new WebGLShapesController(this._gl);
     });
@@ -59,17 +60,17 @@ export class WebGLController {
   /**
    * Updates the world-space viewport rectangle
    *
-   * @param viewport - New viewport bounds in world coordinates
+   * @param newViewport - New viewport bounds in world coordinates
    * @returns `true` if the viewport actually changed, `false` otherwise
    */
-  setViewport(viewport: Rect): boolean {
+  setViewport(newViewport: Rect): boolean {
     if (
-      this._viewport.x !== viewport.x ||
-      this._viewport.y !== viewport.y ||
-      this._viewport.width !== viewport.width ||
-      this._viewport.height !== viewport.height
+      this._viewport.x !== newViewport.x ||
+      this._viewport.y !== newViewport.y ||
+      this._viewport.width !== newViewport.width ||
+      this._viewport.height !== newViewport.height
     ) {
-      this._viewport = viewport;
+      this._viewport = newViewport;
       return true;
     }
     return false;
@@ -127,14 +128,14 @@ export class WebGLController {
   }
 
   /**
-   * Resizes the canvas to match the given CSS pixel size, accounting for
-   * `devicePixelRatio` and clamping to {@link _maxCanvasSize}
+   * Resizes the canvas to match the given screen-space dimensions,
+   * accounting for `devicePixelRatio` and clamping to {@link _maxCanvasSize}
    *
-   * @param size - Desired CSS pixel dimensions
+   * @param newCanvasSize - Desired canvas size in screen-space pixels
    * @returns `true` if the canvas size actually changed, `false` otherwise
    */
-  resizeCanvas(size: { width: number; height: number }): boolean {
-    let { width, height } = size;
+  resizeCanvas(newCanvasSize: { width: number; height: number }): boolean {
+    let { width, height } = newCanvasSize;
     width *= window.devicePixelRatio;
     height *= window.devicePixelRatio;
     if (width <= 0 || height <= 0) {
@@ -148,9 +149,9 @@ export class WebGLController {
       width = Math.floor(width * scale);
       height = Math.floor(height * scale);
     }
-    if (this._canvas.width !== width || this._canvas.height !== height) {
-      this._canvas.width = width;
-      this._canvas.height = height;
+    if (this.canvas.width !== width || this.canvas.height !== height) {
+      this.canvas.width = width;
+      this.canvas.height = height;
       this._gl.viewport(0, 0, width, height);
       return true;
     }

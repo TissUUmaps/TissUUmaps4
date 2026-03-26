@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 # Dependencies
@@ -11,7 +11,7 @@ sidebar_position: 2
 - TypeScript
 - ESLint (linting)
 - Prettier (formatting)
-- Vitest (testing)
+- Vitest (testing with coverage)
 - Husky + lint-staged (pre-commit hooks)
 - Docusaurus + TypeDoc + GitHub Pages (documentation)
 - GitHub Actions (CI/CD)
@@ -19,20 +19,24 @@ sidebar_position: 2
 ## Core dependencies
 
 - React (frontend library)
-- Dockview (layout manager)
-- Zustand + immer (state management)
-- OpenSeadragon (images and labels rendering)
+- Zustand (state management)
 - Tailwind CSS (CSS framework)
+- Dockview (docking layout manager)
+- Shadcn/ui + Base UI (component library) + Lucide (icon component library)
+- OpenSeadragon (zoomable image and labels rendering)
+- JSON Forms (JSON Schema-based form renderer)
 
 ## Data loading
 
-- GeoTIFF (TIFF)
-- Hyparquet + hyparquet-compressors (Parquet)
-- PapaParse (CSV)
+- GeoJSON (GeoJSON shapes)
+- Hyparquet (Parquet tables)
+- PapaParse (CSV tables)
 
 ## Utilities
 
-- gl-matrix (matrix operations)
+- dnd-kit (drag and drop interfaces)
+- fast-equals (equality comparison)
+- gl-matrix (WebGL matrix operations)
 
 ## Web APIs (selection)
 

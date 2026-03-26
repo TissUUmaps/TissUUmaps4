@@ -1,14 +1,14 @@
 import { type ProgressCallback, type UintArray } from "../types";
-import { type DataLoader, type ItemsData } from "./base";
+import { type DataStorage, type ItemsData } from "./base";
 
 /**
- * Data loader for label images
+ * Data storage adapter for label images
  *
- * @typeParam TLabelsData - The concrete {@link LabelsData} type produced by this loader
+ * @typeParam TLabelsData - The concrete {@link LabelsData} type produced by this storage adapter
  */
-export interface LabelsDataLoader<
+export interface LabelsDataStorage<
   TLabelsData extends LabelsData,
-> extends DataLoader {
+> extends DataStorage {
   /**
    * Loads the labels data from the configured data source
    *

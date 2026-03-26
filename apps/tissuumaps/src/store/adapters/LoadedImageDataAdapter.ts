@@ -7,7 +7,7 @@ import {
 } from "@tissuumaps/core";
 import { type ViewerAdapter } from "@tissuumaps/viewer";
 
-import { useTissUUmaps } from "../store";
+import { useTissUUmaps } from "..";
 
 export class LoadedImageDataAdapter implements ImageData {
   private readonly _imageId: string;

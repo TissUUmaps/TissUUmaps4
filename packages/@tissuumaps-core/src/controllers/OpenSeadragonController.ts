@@ -18,7 +18,7 @@ import { TransformUtils } from "../utils/TransformUtils";
  * computation, opacity, and viewer animation options.
  */
 export class OpenSeadragonController {
-  private readonly _viewer: OpenSeadragon.Viewer;
+  public readonly viewer: OpenSeadragon.Viewer;
   private _tiledImageStates: TiledImageState[] = [];
   private _animationMemory?: {
     viewerOptions: Partial<ViewerOptions>;
@@ -32,27 +32,20 @@ export class OpenSeadragonController {
 
   /**
    * @param viewerElement - DOM element in which the OpenSeadragon viewer is created
-   * @param viewerInit - Optional callback invoked with the viewer immediately after creation
    */
-  constructor(
-    viewerElement: HTMLElement,
-    viewerInit?: (viewer: OpenSeadragon.Viewer) => void,
-  ) {
-    this._viewer = new OpenSeadragon.Viewer({
+  constructor(viewerElement: HTMLElement) {
+    this.viewer = new OpenSeadragon.Viewer({
       ...structuredClone(defaultViewerOptions),
       // do not forget to exclude properties from the ViewerOptions type when setting them here
       element: viewerElement,
     });
-    this._viewer.addHandler("canvas-key", (event) => {
+    this.viewer.addHandler("canvas-key", (event) => {
       // disable key bindings for rotation and flipping
       const originalEvent = event.originalEvent as KeyboardEvent;
       if (["r", "R", "f"].includes(originalEvent.key)) {
         event.preventDefaultAction = true;
       }
     });
-    if (viewerInit !== undefined) {
-      viewerInit(this._viewer);
-    }
   }
 
   /**
@@ -67,20 +60,20 @@ export class OpenSeadragonController {
     // TODO allow more than one level (deep nested shallow merge)
     for (const [key, value] of Object.entries(viewerOptions)) {
       // @ts-expect-error: dynamic property access
-      if (key in this._viewer && this._viewer[key] !== value) {
+      if (key in this.viewer && this.viewer[key] !== value) {
         // shallow merge of nested objects (first level only)
         if (typeof value === "object" && value !== null) {
           // @ts-expect-error: dynamic property access
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          this._viewer[key] = { ...this._viewer[key], ...value };
+          this.viewer[key] = { ...this.viewer[key], ...value };
         } else {
           // @ts-expect-error: dynamic property access
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          this._viewer[key] = value;
+          this.viewer[key] = value;
         }
       }
-      for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
-        const tiledImage = this._viewer.world.getItemAt(i);
+      for (let i = 0; i < this.viewer.world.getItemCount(); i++) {
+        const tiledImage = this.viewer.world.getItemAt(i);
         // @ts-expect-error: dynamic property access
         if (key in tiledImage && tiledImage[key] !== value) {
           // shallow merge of nested objects (first level only)
@@ -115,13 +108,10 @@ export class OpenSeadragonController {
     viewerAnimationFinishOptions: ViewerOptions,
   ): void {
     if (this._animationStartHandler !== undefined) {
-      this._viewer.removeHandler(
-        "animation-start",
-        this._animationStartHandler,
-      );
+      this.viewer.removeHandler("animation-start", this._animationStartHandler);
     }
     if (this._animationFinishHandler !== undefined) {
-      this._viewer.removeHandler(
+      this.viewer.removeHandler(
         "animation-finish",
         this._animationFinishHandler,
       );
@@ -134,10 +124,10 @@ export class OpenSeadragonController {
       for (const key of Object.keys(viewerAnimationStartOptions)) {
         // @ts-expect-error: dynamic property access
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        this._animationMemory.viewerOptions[key] = this._viewer[key];
+        this._animationMemory.viewerOptions[key] = this.viewer[key];
       }
-      for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
-        const tiledImage = this._viewer.world.getItemAt(i);
+      for (let i = 0; i < this.viewer.world.getItemCount(); i++) {
+        const tiledImage = this.viewer.world.getItemAt(i);
         const tiledImageViewerOptions: Partial<ViewerOptions> = {};
         for (const key of Object.keys(viewerAnimationStartOptions)) {
           if (key in tiledImage) {
@@ -158,8 +148,8 @@ export class OpenSeadragonController {
         ...this._animationMemory?.viewerOptions,
         ...viewerAnimationFinishOptions,
       });
-      for (let i = 0; i < this._viewer.world.getItemCount(); i++) {
-        const tiledImage = this._viewer.world.getItemAt(i);
+      for (let i = 0; i < this.viewer.world.getItemCount(); i++) {
+        const tiledImage = this.viewer.world.getItemAt(i);
         const tiledImageViewerOptions = {
           ...this._animationMemory?.tiledImageViewerOptions.get(tiledImage),
           ...viewerAnimationFinishOptions,
@@ -172,8 +162,8 @@ export class OpenSeadragonController {
       }
       this._animationMemory = undefined;
     };
-    this._viewer.addHandler("animation-start", this._animationStartHandler);
-    this._viewer.addHandler("animation-finish", this._animationFinishHandler);
+    this.viewer.addHandler("animation-start", this._animationStartHandler);
+    this.viewer.addHandler("animation-finish", this._animationFinishHandler);
   }
 
   /**
@@ -224,7 +214,7 @@ export class OpenSeadragonController {
 
   /** Destroys the OpenSeadragon viewer and releases all tiled image state */
   destroy(): void {
-    this._viewer.destroy();
+    this.viewer.destroy();
     this._tiledImageStates = [];
   }
 
@@ -332,7 +322,7 @@ export class OpenSeadragonController {
         tiledImageStatesByRef.set(ref, tiledImageState);
       } else {
         if (tiledImageState.tiledImage !== undefined) {
-          this._viewer.world.removeItem(tiledImageState.tiledImage);
+          this.viewer.world.removeItem(tiledImageState.tiledImage);
         } else {
           tiledImageState.deferredDelete = true;
         }
@@ -377,7 +367,7 @@ export class OpenSeadragonController {
         const currentIndex = this._tiledImageStates.indexOf(tiledImageState);
         if (currentIndex !== i) {
           if (tiledImageState.tiledImage !== undefined) {
-            this._viewer.world.setItemIndex(tiledImageState.tiledImage, i);
+            this.viewer.world.setItemIndex(tiledImageState.tiledImage, i);
           } else {
             tiledImageState.deferredIndex = i;
           }
@@ -406,7 +396,7 @@ export class OpenSeadragonController {
    */
   private _createTiledImage(index: number, ref: ObjectRef): TiledImageState {
     const tiledImageState: TiledImageState = { ref };
-    this._viewer.addTiledImage({
+    this.viewer.addTiledImage({
       tileSource:
         "image" in ref
           ? ref.data.getTileSource()
@@ -426,7 +416,7 @@ export class OpenSeadragonController {
           tiledImageState.deferredIndex !== undefined &&
           tiledImageState.deferredIndex !== index
         ) {
-          this._viewer.world.setItemIndex(
+          this.viewer.world.setItemIndex(
             tiledImageState.tiledImage,
             tiledImageState.deferredIndex,
           );
@@ -439,12 +429,12 @@ export class OpenSeadragonController {
           // always update geometry
           this._updateTiledImageGeometry(tiledImageState);
         }
-        this._viewer.viewport.fitBounds(
-          tiledImageState.tiledImage.getBounds(),
+        this.viewer.viewport.fitBounds(
+          tiledImageState.tiledImage.getBoundsNoRotate(),
           true,
         );
         if (tiledImageState.deferredDelete) {
-          this._viewer.world.removeItem(tiledImageState.tiledImage);
+          this.viewer.world.removeItem(tiledImageState.tiledImage);
           tiledImageState.deferredDelete = undefined;
         }
       },
@@ -497,7 +487,7 @@ export class OpenSeadragonController {
     );
     mat3.multiply(m, layerToWorldMatrix, m);
     const dataToWorldTransform = TransformUtils.fromSimilarityMatrix(m);
-    const bounds = tiledImageState.tiledImage.getBounds();
+    const bounds = tiledImageState.tiledImage.getBoundsNoRotate();
     if (
       tiledImageState.tiledImage.getFlip() !==
       tiledImageState.ref.layerConfig.flip
