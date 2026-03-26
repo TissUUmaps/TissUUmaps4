@@ -1,8 +1,15 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
-import { GripVertical } from "lucide-react";
+import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 
 import { type Labels } from "@tissuumaps/core";
+
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 
 import { useTissUUmaps } from "../../../store";
 import {
@@ -13,7 +20,9 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "../../common/accordion";
-import { LabelsPanelItem } from "./LabelsPanelItem";
+import { LabelsLayersPanel } from "./LabelsLayersPanel";
+import { LabelsSettingsPanel } from "./LabelsSettingsPanel";
+import { LabelsSourcePanel } from "./LabelsSourcePanel";
 
 export type LabelsPanelProps = {
   className?: string;
@@ -28,8 +37,6 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
       onDragEnd={(event) => {
         const { source, canceled } = event.operation;
         if (isSortable(source) && !canceled) {
-          // dnd-kit optimistically updates the DOM
-          // https://github.com/clauderic/dnd-kit/issues/1564
           moveLabels(source.id as string, source.index);
         }
       }}
@@ -53,18 +60,70 @@ type LabelsAccordionItemProps = {
 };
 
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
+  const updateLabels = useTissUUmaps((state) => state.updateLabels);
+  const deleteLabels = useTissUUmaps((state) => state.deleteLabels);
+
   const { ref, handleRef } = useSortable({ id: labels.id, index });
 
   return (
     <div ref={ref}>
-      <AccordionItem>
+      <AccordionItem className="border rounded-md bg-sidebar p-2">
         <AccordionHeader>
           <GripVertical ref={handleRef} />
-          <AccordionTrigger>{labels.name}</AccordionTrigger>
-          <AccordionTriggerUpDownIcon className="ml-auto" />
+          <div className="flex-1 w-full">
+            <AccordionTrigger className="w-full cursor-pointer">
+              {labels.name}
+            </AccordionTrigger>
+          </div>
+          <div className="ml-auto flex flex-row items-center gap-x-2">
+            <InputGroup className="w-24">
+              <InputGroupAddon>OPA</InputGroupAddon>
+              <InputGroupInput
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={labels.opacity}
+                onChange={(event) => {
+                  const opacity = event.target.valueAsNumber;
+                  if (Number.isFinite(opacity)) {
+                    updateLabels(labels.id, {
+                      opacity: Math.min(Math.max(0, opacity), 1),
+                    });
+                  }
+                }}
+              />
+            </InputGroup>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                updateLabels(labels.id, { visibility: !labels.visibility })
+              }
+            >
+              {labels.visibility ? <EyeIcon /> : <EyeOffIcon />}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Are you sure you want to delete these labels?",
+                  )
+                ) {
+                  deleteLabels(labels.id);
+                }
+              }}
+              title="Delete labels"
+            >
+              <Trash2Icon />
+            </Button>
+          </div>
+          <AccordionTriggerUpDownIcon />
         </AccordionHeader>
-        <AccordionPanel>
-          <LabelsPanelItem labels={labels} />
+        <AccordionPanel className="pt-2 flex flex-col gap-y-2">
+          <LabelsSourcePanel labels={labels} className="bg-card" />
+          <LabelsSettingsPanel labels={labels} className="bg-card" />
+          <LabelsLayersPanel labels={labels} className="bg-card" />
         </AccordionPanel>
       </AccordionItem>
     </div>

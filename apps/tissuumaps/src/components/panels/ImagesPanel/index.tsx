@@ -1,8 +1,15 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
-import { GripVertical } from "lucide-react";
+import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 
 import { type Image } from "@tissuumaps/core";
+
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 
 import { useTissUUmaps } from "../../../store";
 import {
@@ -13,7 +20,9 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "../../common/accordion";
-import { ImagesPanelItem } from "./ImagesPanelItem";
+import { ImagesLayersPanel } from "./ImagesLayersPanel";
+import { ImagesSettingsPanel } from "./ImagesSettingsPanel";
+import { ImagesSourcePanel } from "./ImagesSourcePanel";
 
 export type ImagesPanelProps = {
   className?: string;
@@ -49,18 +58,71 @@ type ImageAccordionItemProps = {
 };
 
 function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
+  const updateImage = useTissUUmaps((state) => state.updateImage);
+  const deleteImage = useTissUUmaps((state) => state.deleteImage);
+
   const { ref, handleRef } = useSortable({ id: image.id, index });
 
   return (
-    <AccordionItem render={<div ref={ref} />}>
-      <AccordionHeader>
-        <GripVertical ref={handleRef} />
-        <AccordionTrigger>{image.name}</AccordionTrigger>
-        <AccordionTriggerUpDownIcon className="ml-auto" />
-      </AccordionHeader>
-      <AccordionPanel>
-        <ImagesPanelItem image={image} />
-      </AccordionPanel>
-    </AccordionItem>
+    <div ref={ref}>
+      <AccordionItem className="border rounded-md bg-sidebar p-2">
+        <AccordionHeader>
+          <GripVertical ref={handleRef} />
+          <div className="flex-1 w-full">
+            <AccordionTrigger className="w-full cursor-pointer">
+              {image.name}
+            </AccordionTrigger>
+          </div>
+          <div className="ml-auto flex flex-row items-center gap-x-2">
+            <InputGroup className="w-24">
+              <InputGroupAddon>OPA</InputGroupAddon>
+              <InputGroupInput
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={image.opacity}
+                onChange={(event) => {
+                  const opacity = event.target.valueAsNumber;
+                  if (Number.isFinite(opacity)) {
+                    updateImage(image.id, {
+                      opacity: Math.min(Math.max(0, opacity), 1),
+                    });
+                  }
+                }}
+              />
+            </InputGroup>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                updateImage(image.id, { visibility: !image.visibility })
+              }
+            >
+              {image.visibility ? <EyeIcon /> : <EyeOffIcon />}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                // TODO replace by dialog overlay
+                if (
+                  window.confirm("Are you sure you want to delete this image?")
+                ) {
+                  deleteImage(image.id);
+                }
+              }}
+              title="Delete image"
+            >
+              <Trash2Icon />
+            </Button>
+          </div>
+          <AccordionTriggerUpDownIcon />
+        </AccordionHeader>
+        <AccordionPanel className="pt-2 flex flex-col gap-y-2">
+          <ImagesSourcePanel image={image} className="bg-card" />
+          <ImagesSettingsPanel image={image} className="bg-card" />
+          <ImagesLayersPanel image={image} className="bg-card" />
+        </AccordionPanel>
+      </AccordionItem>
+    </div>
   );
 }
