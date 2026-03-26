@@ -103,6 +103,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             <Button
               variant="ghost"
               onClick={() => {
+                // TODO replace by dialog overlay
                 if (
                   window.confirm("Are you sure you want to delete this image?")
                 ) {
