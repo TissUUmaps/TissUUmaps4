@@ -2,22 +2,24 @@ import { useEffect, useMemo, useState } from "react";
 
 import { type OpenSeadragonController } from "@tissuumaps/core";
 
+import { type ViewerAdapter } from "../../adapter";
 import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
 import { useWebGL } from "../../hooks/useWebGL";
 
-export type ViewerProps = { className?: string };
+export type ViewerProps = { adapter: ViewerAdapter; className?: string };
 
-export function Viewer({ className }: ViewerProps) {
+export function Viewer({ adapter, className }: ViewerProps) {
   const [os, setOS] = useState<OpenSeadragonController | null>(null);
 
-  const { setViewerElementRef, controllerRef: osRef } = useOpenSeadragon();
+  const { setViewerElementRef, controllerRef: osRef } =
+    useOpenSeadragon(adapter);
 
   const glCanvas = useMemo(() => os?.viewer.canvas ?? null, [os]);
   const glViewport = useMemo(
     () => os?.viewer.viewport.getBoundsNoRotate(true) ?? null,
     [os],
   );
-  const { controllerRef: glRef } = useWebGL(glCanvas, glViewport);
+  const { controllerRef: glRef } = useWebGL(adapter, glCanvas, glViewport);
 
   useEffect(() => {
     const os = osRef.current;

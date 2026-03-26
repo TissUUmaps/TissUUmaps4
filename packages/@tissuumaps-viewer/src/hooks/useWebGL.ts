@@ -2,14 +2,13 @@ import { useEffect, useReducer, useRef } from "react";
 
 import { type Rect, WebGLController } from "@tissuumaps/core";
 
-import { useViewer } from "../context";
+import { type ViewerAdapter } from "../adapter";
 
-export function useWebGL(parent: Element | null, viewport: Rect | null) {
-  const controllerRef = useRef<WebGLController | null>(null);
-  const [controllerReady, markControllerReady] = useReducer((x) => x + 1, 0);
-  const [syncPoints, dispatchSyncPoints] = useReducer((pass) => pass + 1, 0);
-  const [syncShapes, dispatchSyncShapes] = useReducer((pass) => pass + 1, 0);
-
+export function useWebGL(
+  adapter: ViewerAdapter,
+  parent: Element | null,
+  viewport: Rect | null,
+) {
   const {
     workspace,
     layers,
@@ -24,7 +23,12 @@ export function useWebGL(parent: Element | null, viewport: Rect | null) {
     loadPoints,
     loadShapes,
     loadTable,
-  } = useViewer();
+  } = adapter;
+
+  const controllerRef = useRef<WebGLController | null>(null);
+  const [controllerReady, markControllerReady] = useReducer((x) => x + 1, 0);
+  const [syncPoints, dispatchSyncPoints] = useReducer((pass) => pass + 1, 0);
+  const [syncShapes, dispatchSyncShapes] = useReducer((pass) => pass + 1, 0);
 
   useEffect(() => {
     let canvas: HTMLCanvasElement | undefined;

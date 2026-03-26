@@ -1,5 +1,3 @@
-import { createContext, useContext } from "react";
-
 import {
   type Color,
   type DefaultMap,
@@ -54,14 +52,4 @@ export interface ViewerAdapter {
     tableId: string,
     options?: { signal?: AbortSignal },
   ) => Promise<TableData>;
-}
-
-export const ViewerContext = createContext<ViewerAdapter | null>(null);
-
-export function useViewer(): ViewerAdapter {
-  const context = useContext(ViewerContext);
-  if (!context) {
-    throw new Error("Viewer must be used within a ViewerProvider");
-  }
-  return context;
 }
