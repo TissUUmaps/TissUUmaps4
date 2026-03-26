@@ -2,11 +2,9 @@ import { useCallback, useEffect, useRef } from "react";
 
 import { OpenSeadragonController } from "@tissuumaps/core";
 
-import { useViewer } from "../context";
+import { type ViewerAdapter } from "../adapter";
 
-export function useOpenSeadragon() {
-  const controllerRef = useRef<OpenSeadragonController | null>(null);
-
+export function useOpenSeadragon(adapter: ViewerAdapter) {
   const {
     workspace,
     layers,
@@ -17,7 +15,9 @@ export function useOpenSeadragon() {
     viewerAnimationFinishOptions,
     loadImage,
     loadLabels,
-  } = useViewer();
+  } = adapter;
+
+  const controllerRef = useRef<OpenSeadragonController | null>(null);
 
   // use a ref callback for initializing the OpenSeadragon viewer
   // (note: ref callbacks are always executed before useEffect hooks)

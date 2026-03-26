@@ -6,9 +6,6 @@ import {
   type IDockviewPanelHeaderProps,
 } from "dockview-react";
 import { Moon, Sun } from "lucide-react";
-import { useShallow } from "zustand/shallow";
-
-import { Viewer, ViewerProvider } from "@tissuumaps/viewer";
 
 import { Button } from "@/components/ui/button";
 
@@ -19,14 +16,10 @@ import { PointsPanel } from "./components/panels/PointsPanel";
 import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
+import { ViewerPanel } from "./components/panels/ViewerPanel";
 import { usePlugins } from "./hooks/usePlugins";
 import { useProject } from "./hooks/useProject";
 import { useTissUUmaps } from "./store";
-import { useLoadedImageDataAdapter } from "./store/adapters/LoadedImageDataAdapter";
-import { useLoadedLabelsDataAdapter } from "./store/adapters/LoadedLabelsDataAdapter";
-import { useLoadedPointsDataAdapter } from "./store/adapters/LoadedPointsDataAdapter";
-import { useLoadedShapesDataAdapter } from "./store/adapters/LoadedShapesDataAdapter";
-import { useLoadedTableDataAdapter } from "./store/adapters/LoadedTableDataAdapter";
 
 const dockviewTheme: DockviewTheme = {
   name: "tailwindcss",
@@ -34,7 +27,7 @@ const dockviewTheme: DockviewTheme = {
 };
 
 const dockviewComponents = {
-  ViewerPanel: () => <Viewer className="size-full" />,
+  ViewerPanel: () => <ViewerPanel className="size-full" />,
   ProjectPanel: () => <ProjectPanel className="m-2" />,
   ImagesPanel: () => <ImagesPanel className="m-2" />,
   LabelsPanel: () => <LabelsPanel className="m-2" />,
@@ -124,54 +117,16 @@ export function App() {
 
   const dark = useTissUUmaps((state) => state.dark);
 
-  const viewerState = useTissUUmaps(
-    useShallow((state) => ({
-      workspace: state.workspace,
-      layers: state.layers,
-      images: state.images,
-      labels: state.labels,
-      points: state.points,
-      shapes: state.shapes,
-      markerMaps: state.markerMaps,
-      sizeMaps: state.sizeMaps,
-      colorMaps: state.colorMaps,
-      visibilityMaps: state.visibilityMaps,
-      opacityMaps: state.opacityMaps,
-      viewerOptions: state.viewerOptions,
-      viewerAnimationStartOptions: state.viewerAnimationStartOptions,
-      viewerAnimationFinishOptions: state.viewerAnimationFinishOptions,
-      drawOptions: state.drawOptions,
-      // rerender upon changes to storage adapter registries
-      _imageDataStorageRegistry: state.imageDataStorageRegistry,
-      _labelsDataStorageRegistry: state.labelsDataStorageRegistry,
-      _pointsDataStorageRegistry: state.pointsDataStorageRegistry,
-      _shapesDataStorageRegistry: state.shapesDataStorageRegistry,
-      _tableDataStorageRegistry: state.tableDataStorageRegistry,
-    })),
-  );
-
-  const viewerActions = {
-    loadImage: useLoadedImageDataAdapter(),
-    loadLabels: useLoadedLabelsDataAdapter(),
-    loadPoints: useLoadedPointsDataAdapter(),
-    loadShapes: useLoadedShapesDataAdapter(),
-    loadTable: useLoadedTableDataAdapter(),
-  };
-
-  const viewerAdapter = { ...viewerState, ...viewerActions };
-
   return (
     // https://tailwindcss.com/docs/dark-mode
     <div className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}>
-      <ViewerProvider adapter={viewerAdapter}>
-        <DockviewReact
-          theme={dockviewTheme}
-          components={dockviewComponents}
-          tabComponents={dockviewTabComponents}
-          rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
-          onReady={onDockviewReady}
-        />
-      </ViewerProvider>
+      <DockviewReact
+        theme={dockviewTheme}
+        components={dockviewComponents}
+        tabComponents={dockviewTabComponents}
+        rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
+        onReady={onDockviewReady}
+      />
     </div>
   );
 }
