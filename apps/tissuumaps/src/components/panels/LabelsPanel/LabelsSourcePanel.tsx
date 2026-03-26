@@ -1,10 +1,11 @@
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { JsonForms } from "@jsonforms/react";
 import { EditIcon } from "lucide-react";
 import { useMemo } from "react";
 
 import { type Labels } from "@tissuumaps/core";
+
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 import { useTissUUmaps } from "../../../store";
 import { Field, FieldLabel } from "../../common/field";
@@ -20,19 +21,19 @@ export function LabelsSourcePanel({
   labels,
   className,
 }: LabelsSourcePanelProps) {
-  const labelsDataLoaderRegistry = useTissUUmaps(
-    (state) => state.labelsDataLoaderRegistry,
+  const labelsDataStorageRegistry = useTissUUmaps(
+    (state) => state.labelsDataStorageRegistry,
   );
 
   const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = labelsDataLoaderRegistry.get(labels.dataSource.type);
+    const value = labelsDataStorageRegistry.get(labels.dataSource.type);
     if (value === undefined) {
       throw new Error(
-        `No labels data loader registered for data source type "${labels.dataSource.type}"`,
+        `No labels data Storage registered for data source type "${labels.dataSource.type}"`,
       );
     }
     return value;
-  }, [labelsDataLoaderRegistry, labels.dataSource.type]);
+  }, [labelsDataStorageRegistry, labels.dataSource.type]);
 
   return (
     <Fieldset
