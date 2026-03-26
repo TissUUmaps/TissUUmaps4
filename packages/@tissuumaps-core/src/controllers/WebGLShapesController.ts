@@ -58,48 +58,48 @@ export class WebGLShapesController extends WebGLControllerBase {
   constructor(gl: WebGL2RenderingContext) {
     super(gl);
     this._program = WebGLUtils.loadProgram(
-      this._gl,
+      this.gl,
       shapesVertexShader,
       shapesFragmentShader,
     );
     this._uniformLocations = {
       viewportToWorldMatrix: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_viewportToWorldMatrix",
       ),
       worldToDataMatrix: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_worldToDataMatrix",
       ),
       strokeWidth: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_strokeWidth",
       ),
       numScanlines: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_numScanlines",
       ),
       objectBounds: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_objectBounds",
       ),
       scanlineData: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_scanlineData",
       ),
       shapeFillColors: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_shapeFillColors",
       ),
       shapeStrokeColors: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_shapeStrokeColors",
       ),
@@ -121,7 +121,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       // invalidate scanline data textures
       for (const glShapes of this._glShapes) {
         if (glShapes.scanlineDataTexture !== undefined) {
-          this._gl.deleteTexture(glShapes.scanlineDataTexture);
+          this.gl.deleteTexture(glShapes.scanlineDataTexture);
         }
         glShapes.scanlineDataTexture = undefined;
       }
@@ -191,26 +191,23 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @param drawOptions - Current draw options (e.g. stroke width)
    */
   draw(viewport: Rect, drawOptions: DrawOptions): void {
-    this._gl.useProgram(this._program);
-    this._gl.uniformMatrix3x2fv(
+    this.gl.useProgram(this._program);
+    this.gl.uniformMatrix3x2fv(
       this._uniformLocations.viewportToWorldMatrix,
       false,
       TransformUtils.asGLMat3x2(
         WebGLShapesController.createViewportToWorldMatrix(viewport),
       ),
     );
-    this._gl.uniform1ui(
-      this._uniformLocations.numScanlines,
-      this._numScanlines,
-    );
-    this._gl.uniform1f(
+    this.gl.uniform1ui(this._uniformLocations.numScanlines, this._numScanlines);
+    this.gl.uniform1f(
       this._uniformLocations.strokeWidth,
       drawOptions.shapeStrokeWidth,
     );
-    this._gl.uniform1i(this._uniformLocations.scanlineData, 1);
-    this._gl.uniform1i(this._uniformLocations.shapeFillColors, 2);
-    this._gl.uniform1i(this._uniformLocations.shapeStrokeColors, 3);
-    WebGLUtils.enableAlphaBlending(this._gl);
+    this.gl.uniform1i(this._uniformLocations.scanlineData, 1);
+    this.gl.uniform1i(this._uniformLocations.shapeFillColors, 2);
+    this.gl.uniform1i(this._uniformLocations.shapeStrokeColors, 3);
+    WebGLUtils.enableAlphaBlending(this.gl);
     for (const glShapes of this._glShapes) {
       if (glShapes.scanlineDataTexture === undefined) {
         continue; // scanline data texture is currently being regenerated
@@ -219,39 +216,36 @@ export class WebGLShapesController extends WebGLControllerBase {
         glShapes.ref.layer,
         glShapes.ref.layerConfig,
       );
-      this._gl.uniformMatrix3x2fv(
+      this.gl.uniformMatrix3x2fv(
         this._uniformLocations.worldToDataMatrix,
         false,
         TransformUtils.asGLMat3x2(worldToDataMatrix),
       );
-      this._gl.uniform4f(
+      this.gl.uniform4f(
         this._uniformLocations.objectBounds,
         glShapes.objectBounds.x,
         glShapes.objectBounds.y,
         glShapes.objectBounds.width,
         glShapes.objectBounds.height,
       );
-      this._gl.activeTexture(this._gl.TEXTURE1);
-      this._gl.bindTexture(this._gl.TEXTURE_2D, glShapes.scanlineDataTexture);
-      this._gl.activeTexture(this._gl.TEXTURE2);
-      this._gl.bindTexture(
-        this._gl.TEXTURE_2D,
-        glShapes.shapeFillColorsTexture,
-      );
-      this._gl.activeTexture(this._gl.TEXTURE3);
-      this._gl.bindTexture(
-        this._gl.TEXTURE_2D,
+      this.gl.activeTexture(this.gl.TEXTURE1);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, glShapes.scanlineDataTexture);
+      this.gl.activeTexture(this.gl.TEXTURE2);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, glShapes.shapeFillColorsTexture);
+      this.gl.activeTexture(this.gl.TEXTURE3);
+      this.gl.bindTexture(
+        this.gl.TEXTURE_2D,
         glShapes.shapeStrokeColorsTexture,
       );
-      this._gl.drawArrays(this._gl.TRIANGLE_STRIP, 0, 4);
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
-    WebGLUtils.disableAlphaBlending(this._gl);
-    this._gl.useProgram(null);
+    WebGLUtils.disableAlphaBlending(this.gl);
+    this.gl.useProgram(null);
   }
 
   /** Releases the shader program and all per-object GPU textures */
   destroy(): void {
-    this._gl.deleteProgram(this._program);
+    this.gl.deleteProgram(this._program);
     for (const glShapes of this._glShapes) {
       this._destroyGLShapes(glShapes);
     }
@@ -507,12 +501,12 @@ export class WebGLShapesController extends WebGLControllerBase {
     );
     const scanlineData = new Float32Array(scanlineBuffer);
     const scanlineDataTexture = WebGLUtils.createDataTexture(
-      this._gl,
-      this._gl.RGBA32F,
+      this.gl,
+      this.gl.RGBA32F,
       WebGLShapesController._scanlineDataTextureWidth,
       scanlineData.length / numValuesPerTextureLine,
-      this._gl.RGBA,
-      this._gl.FLOAT,
+      this.gl.RGBA,
+      this.gl.FLOAT,
       scanlineData,
     );
     return scanlineDataTexture;
@@ -583,12 +577,12 @@ export class WebGLShapesController extends WebGLControllerBase {
       signal?.throwIfAborted();
     }
     const shapeFillColorsTexture = WebGLUtils.createDataTexture(
-      this._gl,
-      this._gl.R32UI,
+      this.gl,
+      this.gl.R32UI,
       WebGLShapesController._shapeFillColorsTextureWidth,
       colorData.length / numValuesPerTextureLine,
-      this._gl.RED_INTEGER,
-      this._gl.UNSIGNED_INT,
+      this.gl.RED_INTEGER,
+      this.gl.UNSIGNED_INT,
       colorData,
     );
     return shapeFillColorsTexture;
@@ -659,12 +653,12 @@ export class WebGLShapesController extends WebGLControllerBase {
       signal?.throwIfAborted();
     }
     const shapeStrokeColorsTexture = WebGLUtils.createDataTexture(
-      this._gl,
-      this._gl.R32UI,
+      this.gl,
+      this.gl.R32UI,
       WebGLShapesController._shapeStrokeColorsTextureWidth,
       colorData.length / numValuesPerTextureLine,
-      this._gl.RED_INTEGER,
-      this._gl.UNSIGNED_INT,
+      this.gl.RED_INTEGER,
+      this.gl.UNSIGNED_INT,
       colorData,
     );
     return shapeStrokeColorsTexture;
@@ -673,10 +667,10 @@ export class WebGLShapesController extends WebGLControllerBase {
   /** Deletes all GPU textures owned by a single GLShapes entry */
   private _destroyGLShapes(glShapes: GLShapes): void {
     if (glShapes.scanlineDataTexture !== undefined) {
-      this._gl.deleteTexture(glShapes.scanlineDataTexture);
+      this.gl.deleteTexture(glShapes.scanlineDataTexture);
     }
-    this._gl.deleteTexture(glShapes.shapeFillColorsTexture);
-    this._gl.deleteTexture(glShapes.shapeStrokeColorsTexture);
+    this.gl.deleteTexture(glShapes.shapeFillColorsTexture);
+    this.gl.deleteTexture(glShapes.shapeStrokeColorsTexture);
   }
 
   /**

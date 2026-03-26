@@ -12,11 +12,11 @@ import { TransformUtils } from "../utils/TransformUtils";
  * data space, layer space, world space, and viewport space.
  */
 export class WebGLControllerBase {
-  protected readonly _gl: WebGL2RenderingContext;
+  public readonly gl: WebGL2RenderingContext;
 
   /** @param gl - The WebGL 2 rendering context shared with the parent {@link WebGLController} */
   constructor(gl: WebGL2RenderingContext) {
-    this._gl = gl;
+    this.gl = gl;
   }
 
   /**
