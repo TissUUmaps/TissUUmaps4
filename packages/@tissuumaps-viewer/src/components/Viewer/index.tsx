@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { type Rect } from "@tissuumaps/core";
+import { type OpenSeadragonController } from "@tissuumaps/core";
 
 import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
 import { useWebGL } from "../../hooks/useWebGL";
@@ -8,32 +8,56 @@ import { useWebGL } from "../../hooks/useWebGL";
 export type ViewerProps = { className?: string };
 
 export function Viewer({ className }: ViewerProps) {
-  const glRef = useRef<ReturnType<typeof useWebGL> | null>(null);
-  const resizeGLCanvas = useCallback(
-    (newContainerSize: { width: number; height: number }) => {
+  const [os, setOS] = useState<OpenSeadragonController | null>(null);
+
+  const { setViewerElementRef, controllerRef: osRef } = useOpenSeadragon();
+
+  const glCanvas = useMemo(() => os?.viewer.canvas ?? null, [os]);
+  const glViewport = useMemo(
+    () => os?.viewer.viewport.getBoundsNoRotate(true) ?? null,
+    [os],
+  );
+  const { controllerRef: glRef } = useWebGL(glCanvas, glViewport);
+
+  useEffect(() => {
+    const os = osRef.current;
+    const resizeHandler = (event: OpenSeadragon.ResizeEvent) => {
       const gl = glRef.current;
       if (gl !== null) {
-        gl.resizeCanvas(newContainerSize);
+        console.debug("Resizing WebGL canvas");
+        const canvasResized = gl.resizeCanvas({
+          width: event.newContainerSize.x,
+          height: event.newContainerSize.y,
+        });
+        if (canvasResized) {
+          gl.draw();
+        }
       }
-    },
-    [],
-  );
-  const setGLViewport = useCallback((newViewport: Rect) => {
-    const gl = glRef.current;
-    if (gl !== null) {
-      gl.setViewport(newViewport);
-    }
-  }, []);
-  const { viewerElementRef, viewerState } = useOpenSeadragon({
-    onContainerResized: resizeGLCanvas,
-    onViewportChanged: setGLViewport,
-  });
-  const gl = useWebGL(viewerState.canvas, viewerState.initialViewport);
-  useEffect(() => {
-    glRef.current = gl;
-    return () => {
-      glRef.current = null;
     };
-  }, [gl]);
-  return <div ref={viewerElementRef} className={className} />;
+    const viewportChangeHandler = (event: OpenSeadragon.ViewerEvent) => {
+      const gl = glRef.current;
+      if (gl !== null) {
+        console.debug("Changing WebGL viewport");
+        const viewportChanged = gl.setViewport(
+          event.eventSource.viewport.getBoundsNoRotate(true),
+        );
+        if (viewportChanged) {
+          gl.draw();
+        }
+      }
+    };
+    if (os !== null) {
+      setOS(os);
+      os.viewer.addHandler("resize", resizeHandler);
+      os.viewer.addHandler("viewport-change", viewportChangeHandler);
+    }
+    return () => {
+      if (os !== null) {
+        os.viewer.removeHandler("resize", resizeHandler);
+        os.viewer.removeHandler("viewport-change", viewportChangeHandler);
+      }
+    };
+  }, [osRef, glRef, setOS]);
+
+  return <div ref={setViewerElementRef} className={className} />;
 }

@@ -18,7 +18,7 @@ export class WebGLController {
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas#maximum_canvas_size
   private static readonly _maxCanvasSize = 4096;
 
-  private readonly _canvas: HTMLCanvasElement;
+  public readonly canvas: HTMLCanvasElement;
   private _viewport: Rect;
   private _drawOptions: DrawOptions;
   private _gl: WebGL2RenderingContext;
@@ -38,20 +38,20 @@ export class WebGLController {
 
   /**
    * @param canvas - The canvas element to draw on (typically created by {@link createCanvas})
-   * @param initialViewport - Initial world-space viewport rectangle
+   * @param viewport - Initial world-space viewport rectangle
    */
-  constructor(canvas: HTMLCanvasElement, initialViewport: Rect) {
-    this._canvas = canvas;
-    this._viewport = initialViewport;
+  constructor(canvas: HTMLCanvasElement, viewport: Rect) {
+    this.canvas = canvas;
+    this._viewport = viewport;
     this._drawOptions = structuredClone(defaultDrawOptions);
-    this._gl = WebGLController._createWebGLContext(this._canvas);
+    this._gl = WebGLController._createWebGLContext(this.canvas);
     this._pointsController = new WebGLPointsController(this._gl);
     this._shapesController = new WebGLShapesController(this._gl);
-    this._canvas.addEventListener("webglcontextlost", (event) => {
+    this.canvas.addEventListener("webglcontextlost", (event) => {
       event.preventDefault(); // allow context to be restored
     });
-    this._canvas.addEventListener("webglcontextrestored", () => {
-      this._gl = WebGLController._createWebGLContext(this._canvas);
+    this.canvas.addEventListener("webglcontextrestored", () => {
+      this._gl = WebGLController._createWebGLContext(this.canvas);
       this._pointsController = new WebGLPointsController(this._gl);
       this._shapesController = new WebGLShapesController(this._gl);
     });
@@ -149,9 +149,9 @@ export class WebGLController {
       width = Math.floor(width * scale);
       height = Math.floor(height * scale);
     }
-    if (this._canvas.width !== width || this._canvas.height !== height) {
-      this._canvas.width = width;
-      this._canvas.height = height;
+    if (this.canvas.width !== width || this.canvas.height !== height) {
+      this.canvas.width = width;
+      this.canvas.height = height;
       this._gl.viewport(0, 0, width, height);
       return true;
     }

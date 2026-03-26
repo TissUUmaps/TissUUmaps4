@@ -91,116 +91,116 @@ export class WebGLPointsController extends WebGLControllerBase {
     super(gl);
     // load program
     this._program = WebGLUtils.loadProgram(
-      this._gl,
+      this.gl,
       pointsVertexShader,
       pointsFragmentShader,
     );
     // get uniform locations
     this._uniformLocations = {
       worldPointSizeFactor: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_worldPointSizeFactor",
       ),
       worldToViewportMatrix: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_worldToViewportMatrix",
       ),
       viewportSize: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_viewportSize",
       ),
       canvasSize: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_canvasSize",
       ),
       devicePixelRatio: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_devicePixelRatio",
       ),
       markerAtlas: WebGLUtils.getUniformLocation(
-        this._gl,
+        this.gl,
         this._program,
         "u_markerAtlas",
       ),
     };
     // get block indices
     this._uniformBlockIndices = {
-      objectsUBO: this._gl.getUniformBlockIndex(this._program, "ObjectsUBO"),
+      objectsUBO: this.gl.getUniformBlockIndex(this._program, "ObjectsUBO"),
     };
     // create buffers and allocate space for UBOs
     this._buffers = {
-      x: WebGLUtils.createBuffer(this._gl),
-      y: WebGLUtils.createBuffer(this._gl),
-      size: WebGLUtils.createBuffer(this._gl),
-      color: WebGLUtils.createBuffer(this._gl),
-      marker: WebGLUtils.createBuffer(this._gl),
-      object: WebGLUtils.createBuffer(this._gl),
-      objectsUBO: WebGLUtils.createBuffer(this._gl),
+      x: WebGLUtils.createBuffer(this.gl),
+      y: WebGLUtils.createBuffer(this.gl),
+      size: WebGLUtils.createBuffer(this.gl),
+      color: WebGLUtils.createBuffer(this.gl),
+      marker: WebGLUtils.createBuffer(this.gl),
+      object: WebGLUtils.createBuffer(this.gl),
+      objectsUBO: WebGLUtils.createBuffer(this.gl),
     };
     WebGLUtils.resizeBuffer(
-      this._gl,
-      this._gl.UNIFORM_BUFFER,
+      this.gl,
+      this.gl.UNIFORM_BUFFER,
       this._buffers.objectsUBO,
       WebGLPointsController._maxNumObjects * 8 * Float32Array.BYTES_PER_ELEMENT,
-      this._gl.DYNAMIC_DRAW,
+      this.gl.DYNAMIC_DRAW,
     );
     // create and configure VAO
-    this._vao = WebGLUtils.createVertexArray(this._gl);
-    this._gl.bindVertexArray(this._vao);
+    this._vao = WebGLUtils.createVertexArray(this.gl);
+    this.gl.bindVertexArray(this._vao);
     WebGLUtils.configureVertexFloatAttribute(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.x,
       WebGLPointsController._attribLocations.X,
       1,
-      this._gl.FLOAT,
+      this.gl.FLOAT,
     );
     WebGLUtils.configureVertexFloatAttribute(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.y,
       WebGLPointsController._attribLocations.Y,
       1,
-      this._gl.FLOAT,
+      this.gl.FLOAT,
     );
     WebGLUtils.configureVertexFloatAttribute(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.size,
       WebGLPointsController._attribLocations.SIZE,
       1,
-      this._gl.FLOAT,
+      this.gl.FLOAT,
     );
     WebGLUtils.configureVertexIntAttribute(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.color,
       WebGLPointsController._attribLocations.COLOR,
       1,
-      this._gl.UNSIGNED_INT,
+      this.gl.UNSIGNED_INT,
     );
     WebGLUtils.configureVertexIntAttribute(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.marker,
       WebGLPointsController._attribLocations.MARKER,
       1,
-      this._gl.UNSIGNED_BYTE,
+      this.gl.UNSIGNED_BYTE,
     );
     WebGLUtils.configureVertexIntAttribute(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.object,
       WebGLPointsController._attribLocations.OBJECT,
       1,
-      this._gl.UNSIGNED_SHORT,
+      this.gl.UNSIGNED_SHORT,
     );
-    this._gl.bindVertexArray(null);
+    this.gl.bindVertexArray(null);
   }
 
   /**
@@ -217,7 +217,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     this._markerAtlasTexture = await WebGLUtils.loadImageTextureFromUrl(
-      this._gl,
+      this.gl,
       markersUrl,
       { mipmap: true, signal },
     );
@@ -308,62 +308,62 @@ export class WebGLPointsController extends WebGLControllerBase {
     ) {
       return;
     }
-    this._gl.useProgram(this._program);
-    this._gl.bindVertexArray(this._vao);
-    this._gl.bindBufferBase(
-      this._gl.UNIFORM_BUFFER,
+    this.gl.useProgram(this._program);
+    this.gl.bindVertexArray(this._vao);
+    this.gl.bindBufferBase(
+      this.gl.UNIFORM_BUFFER,
       WebGLPointsController._bindingPoints.OBJECTS_UBO,
       this._buffers.objectsUBO,
     );
-    this._gl.uniformBlockBinding(
+    this.gl.uniformBlockBinding(
       this._program,
       this._uniformBlockIndices.objectsUBO,
       WebGLPointsController._bindingPoints.OBJECTS_UBO,
     );
-    this._gl.uniform1f(
+    this.gl.uniform1f(
       this._uniformLocations.worldPointSizeFactor,
       drawOptions.pointSizeFactor,
     );
-    this._gl.uniformMatrix3x2fv(
+    this.gl.uniformMatrix3x2fv(
       this._uniformLocations.worldToViewportMatrix,
       false,
       TransformUtils.asGLMat3x2(
         WebGLPointsController.createWorldToViewportMatrix(viewport),
       ),
     );
-    this._gl.uniform2f(
+    this.gl.uniform2f(
       this._uniformLocations.viewportSize,
       viewport.width,
       viewport.height,
     );
-    this._gl.uniform2f(
+    this.gl.uniform2f(
       this._uniformLocations.canvasSize,
-      this._gl.canvas.width,
-      this._gl.canvas.height,
+      this.gl.canvas.width,
+      this.gl.canvas.height,
     );
-    this._gl.uniform1f(
+    this.gl.uniform1f(
       this._uniformLocations.devicePixelRatio,
       window.devicePixelRatio,
     );
-    this._gl.activeTexture(this._gl.TEXTURE0);
-    this._gl.bindTexture(this._gl.TEXTURE_2D, this._markerAtlasTexture);
-    this._gl.uniform1i(this._uniformLocations.markerAtlas, 0);
-    WebGLUtils.enableAlphaBlending(this._gl);
-    this._gl.drawArrays(this._gl.POINTS, 0, this._currentBufferSize);
-    WebGLUtils.disableAlphaBlending(this._gl);
-    this._gl.bindVertexArray(null);
-    this._gl.useProgram(null);
+    this.gl.activeTexture(this.gl.TEXTURE0);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this._markerAtlasTexture);
+    this.gl.uniform1i(this._uniformLocations.markerAtlas, 0);
+    WebGLUtils.enableAlphaBlending(this.gl);
+    this.gl.drawArrays(this.gl.POINTS, 0, this._currentBufferSize);
+    WebGLUtils.disableAlphaBlending(this.gl);
+    this.gl.bindVertexArray(null);
+    this.gl.useProgram(null);
   }
 
   /** Releases the shader program, VAO, marker atlas texture, and all GPU buffers */
   destroy(): void {
-    this._gl.deleteProgram(this._program);
-    this._gl.deleteVertexArray(this._vao);
+    this.gl.deleteProgram(this._program);
+    this.gl.deleteVertexArray(this._vao);
     if (this._markerAtlasTexture !== undefined) {
-      this._gl.deleteTexture(this._markerAtlasTexture);
+      this.gl.deleteTexture(this._markerAtlasTexture);
     }
     for (const buffer of Object.values(this._buffers)) {
-      this._gl.deleteBuffer(buffer);
+      this.gl.deleteBuffer(buffer);
     }
   }
 
@@ -376,46 +376,46 @@ export class WebGLPointsController extends WebGLControllerBase {
    */
   private _resizePointBuffers(n: number): void {
     WebGLUtils.resizeBuffer(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.x,
       n * Float32Array.BYTES_PER_ELEMENT,
-      this._gl.STATIC_DRAW,
+      this.gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.y,
       n * Float32Array.BYTES_PER_ELEMENT,
-      this._gl.STATIC_DRAW,
+      this.gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.size,
       n * Float32Array.BYTES_PER_ELEMENT,
-      this._gl.STATIC_DRAW,
+      this.gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.color,
       n * Uint32Array.BYTES_PER_ELEMENT,
-      this._gl.STATIC_DRAW,
+      this.gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.marker,
       n * Uint8Array.BYTES_PER_ELEMENT,
-      this._gl.STATIC_DRAW,
+      this.gl.STATIC_DRAW,
     );
     WebGLUtils.resizeBuffer(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.object,
       n * Uint16Array.BYTES_PER_ELEMENT,
-      this._gl.STATIC_DRAW,
+      this.gl.STATIC_DRAW,
     );
     this._currentBufferSize = n;
   }
@@ -526,8 +526,8 @@ export class WebGLPointsController extends WebGLControllerBase {
         });
         signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
-          this._gl,
-          this._gl.ARRAY_BUFFER,
+          this.gl,
+          this.gl.ARRAY_BUFFER,
           this._buffers.x,
           xData,
           { offset },
@@ -543,8 +543,8 @@ export class WebGLPointsController extends WebGLControllerBase {
         });
         signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
-          this._gl,
-          this._gl.ARRAY_BUFFER,
+          this.gl,
+          this.gl.ARRAY_BUFFER,
           this._buffers.y,
           yData,
           { offset },
@@ -568,8 +568,8 @@ export class WebGLPointsController extends WebGLControllerBase {
         );
         signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
-          this._gl,
-          this._gl.ARRAY_BUFFER,
+          this.gl,
+          this.gl.ARRAY_BUFFER,
           this._buffers.marker,
           markerData,
           { offset },
@@ -630,8 +630,8 @@ export class WebGLPointsController extends WebGLControllerBase {
         );
         signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
-          this._gl,
-          this._gl.ARRAY_BUFFER,
+          this.gl,
+          this.gl.ARRAY_BUFFER,
           this._buffers.size,
           sizeData,
           { offset },
@@ -697,8 +697,8 @@ export class WebGLPointsController extends WebGLControllerBase {
           signal?.throwIfAborted();
         }
         WebGLUtils.loadBuffer(
-          this._gl,
-          this._gl.ARRAY_BUFFER,
+          this.gl,
+          this.gl.ARRAY_BUFFER,
           this._buffers.color,
           colorData,
           { offset },
@@ -706,8 +706,8 @@ export class WebGLPointsController extends WebGLControllerBase {
       }
       if (bufferSliceChanged) {
         WebGLUtils.loadBuffer(
-          this._gl,
-          this._gl.ARRAY_BUFFER,
+          this.gl,
+          this.gl.ARRAY_BUFFER,
           this._buffers.object,
           new Uint16Array(numPoints).fill(i),
           { offset },
@@ -753,8 +753,8 @@ export class WebGLPointsController extends WebGLControllerBase {
       offset += numPoints;
     }
     WebGLUtils.loadBuffer(
-      this._gl,
-      this._gl.ARRAY_BUFFER,
+      this.gl,
+      this.gl.ARRAY_BUFFER,
       this._buffers.objectsUBO,
       objectsUBOData,
     );
