@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { type OpenSeadragonController } from "@tissuumaps/core";
 
 import { type ViewerAdapter } from "../../adapter";
+import { OpenSeadragonControllerProvider } from "../../context/OpenSeadragonControllerProvider";
 import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
 import { useWebGL } from "../../hooks/useWebGL";
 
-export type ViewerProps = { adapter: ViewerAdapter; className?: string };
+export type ViewerProps = {
+  adapter: ViewerAdapter;
+  children?: ReactNode;
+  className?: string;
+};
 
-export function Viewer({ adapter, className }: ViewerProps) {
+export function Viewer({ adapter, children, className }: ViewerProps) {
   const [os, setOS] = useState<OpenSeadragonController | null>(null);
 
   const { setViewerElementRef, controllerRef: osRef } =
@@ -61,5 +66,11 @@ export function Viewer({ adapter, className }: ViewerProps) {
     };
   }, [osRef, glRef, setOS]);
 
-  return <div ref={setViewerElementRef} className={className} />;
+  return (
+    <div ref={setViewerElementRef} className={className}>
+      <OpenSeadragonControllerProvider controller={os}>
+        {children}
+      </OpenSeadragonControllerProvider>
+    </div>
+  );
 }
