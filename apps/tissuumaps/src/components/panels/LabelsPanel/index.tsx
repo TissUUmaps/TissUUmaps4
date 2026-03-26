@@ -1,14 +1,15 @@
+import { DragDropProvider } from "@dnd-kit/react";
+import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+
+import { type Labels } from "@tissuumaps/core";
+
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { DragDropProvider } from "@dnd-kit/react";
-import { isSortable, useSortable } from "@dnd-kit/react/sortable";
-import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-
-import { type Labels } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import {

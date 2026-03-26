@@ -1,7 +1,7 @@
+import { type Table } from "@tissuumaps/core";
+
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-
-import { type Table } from "@tissuumaps/core";
 
 import { useTissUUmaps } from "../../../store";
 import { Field, FieldLabel } from "../../common/field";
