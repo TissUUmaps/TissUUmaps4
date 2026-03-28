@@ -137,6 +137,9 @@ importers:
       "@tanstack/react-table":
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      "@tanstack/react-virtual":
+        specifier: ^3.13.23
+        version: 3.13.23(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       "@tissuumaps/core":
         specifier: workspace:^
         version: link:../../packages/@tissuumaps-core
@@ -3693,12 +3696,27 @@ packages:
       react: ">=16.8"
       react-dom: ">=16.8"
 
+  "@tanstack/react-virtual@3.13.23":
+    resolution:
+      {
+        integrity: sha512-XnMRnHQ23piOVj2bzJqHrRrLg4r+F86fuBcwteKfbIjJrtGxb4z7tIvPVAe4B+4UVwo9G4Giuz5fmapcrnZ0OQ==,
+      }
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   "@tanstack/table-core@8.21.3":
     resolution:
       {
         integrity: sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg==,
       }
     engines: { node: ">=12" }
+
+  "@tanstack/virtual-core@3.13.23":
+    resolution:
+      {
+        integrity: sha512-zSz2Z2HNyLjCplANTDyl3BcdQJc2k1+yyFoKhNRmCr7V7dY8o8q5m8uFTI1/Pg1kL+Hgrz6u3Xo6eFUB7l66cg==,
+      }
 
   "@trivago/prettier-plugin-sort-imports@6.0.2":
     resolution:
@@ -15549,7 +15567,15 @@ snapshots:
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
 
+  "@tanstack/react-virtual@3.13.23(react-dom@19.2.5(react@19.2.5))(react@19.2.5)":
+    dependencies:
+      "@tanstack/virtual-core": 3.13.23
+      react: 19.2.5
+      react-dom: 19.2.5(react@19.2.5)
+
   "@tanstack/table-core@8.21.3": {}
+
+  "@tanstack/virtual-core@3.13.23": {}
 
   "@trivago/prettier-plugin-sort-imports@6.0.2(prettier@3.8.2)":
     dependencies:

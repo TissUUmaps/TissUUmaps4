@@ -19,6 +19,7 @@
     "@jsonforms/core": "^3.7.0",
     "@jsonforms/react": "^3.7.0",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.23",
     "@tissuumaps/core": "workspace:^",
     "@tissuumaps/plugins": "workspace:^",
     "@tissuumaps/storage": "workspace:^",
