@@ -12,58 +12,36 @@ export class LoadedLabelsDataAdapter implements LabelsData {
     this._labelsId = labelsId;
   }
 
-  get loadedLabels() {
-    const state = useTissUUmaps.getState();
-    const loadedLabels = state.loadedLabels.get(this._labelsId);
-    if (loadedLabels === undefined) {
-      throw new Error(`Labels with ID ${this._labelsId} is not loaded.`);
-    }
-    return loadedLabels;
-  }
-
-  get loadedLabelsDataSource() {
-    const state = useTissUUmaps.getState();
-    const loadedLabelsDataSource = state.loadedLabelsDataSources.get(
-      this.loadedLabels.loadedDataSourceKey,
-    );
-    if (loadedLabelsDataSource === undefined) {
-      throw new Error(
-        `Data source with key ${this.loadedLabels.loadedDataSourceKey} for labels with ID ${this._labelsId} is not loaded.`,
-      );
-    }
-    return loadedLabelsDataSource;
-  }
-
   getIds(): number[] {
-    return this.loadedLabelsDataSource.data.getIds();
+    return this._getData().getIds();
   }
 
   getSize(): number {
-    return this.loadedLabelsDataSource.data.getSize();
+    return this._getData().getSize();
   }
 
   getWidth(level?: number): number {
-    return this.loadedLabelsDataSource.data.getWidth(level);
+    return this._getData().getWidth(level);
   }
 
   getHeight(level?: number): number {
-    return this.loadedLabelsDataSource.data.getHeight(level);
+    return this._getData().getHeight(level);
   }
 
   getLevelCount(): number {
-    return this.loadedLabelsDataSource.data.getLevelCount();
+    return this._getData().getLevelCount();
   }
 
   getLevelScale(level: number): number {
-    return this.loadedLabelsDataSource.data.getLevelScale(level);
+    return this._getData().getLevelScale(level);
   }
 
   getTileWidth(level: number): number {
-    return this.loadedLabelsDataSource.data.getTileWidth(level);
+    return this._getData().getTileWidth(level);
   }
 
   getTileHeight(level: number): number {
-    return this.loadedLabelsDataSource.data.getTileHeight(level);
+    return this._getData().getTileHeight(level);
   }
 
   loadTile(): Promise<UintArray> {
@@ -72,6 +50,18 @@ export class LoadedLabelsDataAdapter implements LabelsData {
 
   destroy(): void {
     // ignored intentionally
+  }
+
+  private _getData() {
+    const state = useTissUUmaps.getState();
+    const loadedDataKey = state.loadedLabels.get(this._labelsId);
+    if (loadedDataKey !== undefined) {
+      const loadedData = state.loadedLabelsData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    throw new Error(`Data source not loaded for labels ID ${this._labelsId}`);
   }
 }
 

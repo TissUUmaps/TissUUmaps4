@@ -10,11 +10,7 @@ import {
 import { deduplicate } from "../deduplicate";
 import { type TissUUmapsStateCreator } from "../index";
 
-type LoadedImage = {
-  loadedDataSourceKey: string;
-};
-
-type LoadedImageDataSource = {
+type CachedImageData = {
   dataSource: ImageDataSource;
   data: ImageData;
 };
@@ -23,8 +19,8 @@ export type ImageSlice = ImageSliceState & ImageSliceActions;
 
 export type ImageSliceState = {
   images: Image[];
-  loadedImages: Map<string, LoadedImage>;
-  loadedImageDataSources: Map<string, LoadedImageDataSource>;
+  loadedImages: Map<string, string>;
+  loadedImageData: Map<string, CachedImageData>;
 };
 
 export type ImageSliceActions = {
@@ -40,7 +36,7 @@ export type ImageSliceActions = {
       reload?: boolean;
       onProgress?: ProgressCallback;
     },
-  ) => Promise<LoadedImage>;
+  ) => Promise<ImageData>;
   unloadImage: (imageId: string) => boolean;
 };
 
@@ -106,8 +102,8 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
   },
   clearImages: () => {
     const state = get();
-    for (const loadedDataSource of state.loadedImageDataSources.values()) {
-      loadedDataSource.data.destroy();
+    for (const loadedData of state.loadedImageData.values()) {
+      loadedData.data.destroy();
     }
     set(createInitialImageSliceState());
   },
@@ -117,25 +113,28 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
       signal?.throwIfAborted();
       // Check if the image is already loaded
       const state = get();
-      const loadedImage = state.loadedImages.get(imageId);
-      if (loadedImage !== undefined && !reload) {
-        return loadedImage;
+      const loadedDataKey = state.loadedImages.get(imageId);
+      if (loadedDataKey !== undefined && !reload) {
+        const loadedData = state.loadedImageData.get(loadedDataKey);
+        if (loadedData !== undefined) {
+          return loadedData.data;
+        }
       }
       // Find the image and the corresponding data source (if loaded)
       const image = state.images.find((image) => image.id === imageId);
       if (image === undefined) {
         throw new Error(`Image with ID ${imageId} not found.`);
       }
-      let oldLoadedDataSource: LoadedImageDataSource | undefined;
-      for (const loadedDataSource of state.loadedImageDataSources.values()) {
-        if (deepEqual(loadedDataSource.dataSource, image.dataSource)) {
-          oldLoadedDataSource = loadedDataSource;
+      let oldLoadedData: CachedImageData | undefined;
+      for (const loadedData of state.loadedImageData.values()) {
+        if (deepEqual(loadedData.dataSource, image.dataSource)) {
+          oldLoadedData = loadedData;
           break;
         }
       }
       // Load the data source if not already loaded or if a reload has been requested
-      let loadedDataSource = oldLoadedDataSource;
-      if (loadedDataSource === undefined || reload) {
+      let loadedData = oldLoadedData;
+      if (loadedData === undefined || reload) {
         const { dataStorageFactory } =
           state.imageDataStorageRegistry.get(image.dataSource.type) ?? {};
         if (dataStorageFactory === undefined) {
@@ -164,56 +163,49 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
             "AbortError",
           );
         }
-        loadedDataSource = { dataSource: image.dataSource, data };
+        loadedData = { dataSource: currentImage.dataSource, data };
       }
       // Store the loaded image and the corresponding data source in the state
-      let newLoadedImage: LoadedImage;
       set((draft) => {
-        let loadedDataSourceKey;
-        for (const [key, value] of draft.loadedImageDataSources) {
-          if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
-            loadedDataSourceKey = key;
+        let loadedDataKey;
+        for (const [key, value] of draft.loadedImageData) {
+          if (deepEqual(value.dataSource, loadedData.dataSource)) {
+            loadedDataKey = key;
             break;
           }
         }
-        if (loadedDataSourceKey === undefined) {
+        if (loadedDataKey === undefined) {
           do {
-            loadedDataSourceKey = crypto.randomUUID();
-          } while (draft.loadedImageDataSources.has(loadedDataSourceKey));
+            loadedDataKey = crypto.randomUUID();
+          } while (draft.loadedImageData.has(loadedDataKey));
         }
-        newLoadedImage = { loadedDataSourceKey };
-        draft.loadedImages.set(imageId, newLoadedImage);
-        draft.loadedImageDataSources.set(loadedDataSourceKey, loadedDataSource);
+        draft.loadedImages.set(imageId, loadedDataKey);
+        draft.loadedImageData.set(loadedDataKey, loadedData);
       });
       // Clean up old data if the loaded data source has changed
       if (
-        oldLoadedDataSource !== undefined &&
-        oldLoadedDataSource.data !== loadedDataSource.data
+        oldLoadedData !== undefined &&
+        oldLoadedData.data !== loadedData.data
       ) {
-        oldLoadedDataSource.data.destroy();
+        oldLoadedData.data.destroy();
       }
-      return newLoadedImage!;
+      return loadedData.data;
     },
     (_imageId, options) => options?.signal,
   ),
   unloadImage: (imageId) => {
     const state = get();
-    const loadedImage = state.loadedImages.get(imageId);
-    if (loadedImage === undefined) {
+    const loadedDataKey = state.loadedImages.get(imageId);
+    if (loadedDataKey === undefined) {
       return false;
     }
-    const loadedDataSource = state.loadedImageDataSources.get(
-      loadedImage.loadedDataSourceKey,
-    );
-    if (loadedDataSource === undefined) {
+    const loadedData = state.loadedImageData.get(loadedDataKey);
+    if (loadedData === undefined) {
       throw new Error(`Data source for image with ID ${imageId} not loaded.`);
     }
     let destroy = true;
-    for (const [otherImageId, otherLoadedImage] of state.loadedImages) {
-      if (
-        otherImageId !== imageId &&
-        otherLoadedImage.loadedDataSourceKey === loadedImage.loadedDataSourceKey
-      ) {
+    for (const [otherImageId, otherLoadedDataKey] of state.loadedImages) {
+      if (otherImageId !== imageId && otherLoadedDataKey === loadedDataKey) {
         destroy = false;
         break;
       }
@@ -221,11 +213,11 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
     set((draft) => {
       draft.loadedImages.delete(imageId);
       if (destroy) {
-        draft.loadedImageDataSources.delete(loadedImage.loadedDataSourceKey);
+        draft.loadedImageData.delete(loadedDataKey);
       }
     });
     if (destroy) {
-      loadedDataSource.data.destroy();
+      loadedData.data.destroy();
     }
     return true;
   },
@@ -235,6 +227,6 @@ function createInitialImageSliceState(): ImageSliceState {
   return {
     images: [],
     loadedImages: new Map(),
-    loadedImageDataSources: new Map(),
+    loadedImageData: new Map(),
   };
 }

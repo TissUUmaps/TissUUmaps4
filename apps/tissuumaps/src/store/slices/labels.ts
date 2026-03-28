@@ -10,11 +10,7 @@ import {
 import { deduplicate } from "../deduplicate";
 import { type TissUUmapsStateCreator } from "../index";
 
-type LoadedLabels = {
-  loadedDataSourceKey: string;
-};
-
-type LoadedLabelsDataSource = {
+type LoadedLabelsData = {
   dataSource: LabelsDataSource;
   data: LabelsData;
 };
@@ -23,8 +19,8 @@ export type LabelsSlice = LabelsSliceState & LabelsSliceActions;
 
 export type LabelsSliceState = {
   labels: Labels[];
-  loadedLabels: Map<string, LoadedLabels>;
-  loadedLabelsDataSources: Map<string, LoadedLabelsDataSource>;
+  loadedLabels: Map<string, string>;
+  loadedLabelsData: Map<string, LoadedLabelsData>;
 };
 
 export type LabelsSliceActions = {
@@ -40,7 +36,7 @@ export type LabelsSliceActions = {
       reload?: boolean;
       onProgress?: ProgressCallback;
     },
-  ) => Promise<LoadedLabels>;
+  ) => Promise<LabelsData>;
   unloadLabels: (labelsId: string) => boolean;
 };
 
@@ -106,8 +102,8 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
   },
   clearLabels: () => {
     const state = get();
-    for (const loadedDataSource of state.loadedLabelsDataSources.values()) {
-      loadedDataSource.data.destroy();
+    for (const loadedData of state.loadedLabelsData.values()) {
+      loadedData.data.destroy();
     }
     set(createInitialLabelsSliceState());
   },
@@ -117,25 +113,28 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
       signal?.throwIfAborted();
       // Check if the labels are already loaded
       const state = get();
-      const loadedLabels = state.loadedLabels.get(labelsId);
-      if (loadedLabels !== undefined && !reload) {
-        return loadedLabels;
+      const loadedDataKey = state.loadedLabels.get(labelsId);
+      if (loadedDataKey !== undefined && !reload) {
+        const loadedData = state.loadedLabelsData.get(loadedDataKey);
+        if (loadedData !== undefined) {
+          return loadedData.data;
+        }
       }
       // Find the labels and the corresponding data source (if loaded)
       const labels = state.labels.find((labels) => labels.id === labelsId);
       if (labels === undefined) {
         throw new Error(`Labels with ID ${labelsId} not found.`);
       }
-      let oldLoadedDataSource: LoadedLabelsDataSource | undefined;
-      for (const loadedDataSource of state.loadedLabelsDataSources.values()) {
-        if (deepEqual(loadedDataSource.dataSource, labels.dataSource)) {
-          oldLoadedDataSource = loadedDataSource;
+      let oldLoadedData: LoadedLabelsData | undefined;
+      for (const loadedData of state.loadedLabelsData.values()) {
+        if (deepEqual(loadedData.dataSource, labels.dataSource)) {
+          oldLoadedData = loadedData;
           break;
         }
       }
       // Load the data source if not already loaded or if a reload has been requested
-      let loadedDataSource = oldLoadedDataSource;
-      if (loadedDataSource === undefined || reload) {
+      let loadedData = oldLoadedData;
+      if (loadedData === undefined || reload) {
         const { dataStorageFactory } =
           state.labelsDataStorageRegistry.get(labels.dataSource.type) ?? {};
         if (dataStorageFactory === undefined) {
@@ -164,60 +163,49 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
             "AbortError",
           );
         }
-        loadedDataSource = { dataSource: labels.dataSource, data };
+        loadedData = { dataSource: currentLabels.dataSource, data };
       }
       // Store the loaded labels and the corresponding data source in the state
-      let newLoadedLabels: LoadedLabels;
       set((draft) => {
-        let loadedDataSourceKey;
-        for (const [key, value] of draft.loadedLabelsDataSources) {
-          if (deepEqual(value.dataSource, loadedDataSource.dataSource)) {
-            loadedDataSourceKey = key;
+        let loadedDataKey;
+        for (const [key, value] of draft.loadedLabelsData) {
+          if (deepEqual(value.dataSource, loadedData.dataSource)) {
+            loadedDataKey = key;
             break;
           }
         }
-        if (loadedDataSourceKey === undefined) {
+        if (loadedDataKey === undefined) {
           do {
-            loadedDataSourceKey = crypto.randomUUID();
-          } while (draft.loadedLabelsDataSources.has(loadedDataSourceKey));
+            loadedDataKey = crypto.randomUUID();
+          } while (draft.loadedLabelsData.has(loadedDataKey));
         }
-        newLoadedLabels = { loadedDataSourceKey };
-        draft.loadedLabels.set(labelsId, newLoadedLabels);
-        draft.loadedLabelsDataSources.set(
-          loadedDataSourceKey,
-          loadedDataSource,
-        );
+        draft.loadedLabels.set(labelsId, loadedDataKey);
+        draft.loadedLabelsData.set(loadedDataKey, loadedData);
       });
       // Clean up old data if the loaded data source has changed
       if (
-        oldLoadedDataSource !== undefined &&
-        oldLoadedDataSource.data !== loadedDataSource.data
+        oldLoadedData !== undefined &&
+        oldLoadedData.data !== loadedData.data
       ) {
-        oldLoadedDataSource.data.destroy();
+        oldLoadedData.data.destroy();
       }
-      return newLoadedLabels!;
+      return loadedData.data;
     },
     (_labelsId, options) => options?.signal,
   ),
   unloadLabels: (labelsId) => {
     const state = get();
-    const loadedLabels = state.loadedLabels.get(labelsId);
-    if (loadedLabels === undefined) {
+    const loadedDataKey = state.loadedLabels.get(labelsId);
+    if (loadedDataKey === undefined) {
       return false;
     }
-    const loadedDataSource = state.loadedLabelsDataSources.get(
-      loadedLabels.loadedDataSourceKey,
-    );
-    if (loadedDataSource === undefined) {
+    const loadedData = state.loadedLabelsData.get(loadedDataKey);
+    if (loadedData === undefined) {
       throw new Error(`Data source for labels with ID ${labelsId} not loaded.`);
     }
     let destroy = true;
-    for (const [otherLabelsId, otherLoadedLabels] of state.loadedLabels) {
-      if (
-        otherLabelsId !== labelsId &&
-        otherLoadedLabels.loadedDataSourceKey ===
-          loadedLabels.loadedDataSourceKey
-      ) {
+    for (const [otherLabelsId, otherLoadedData] of state.loadedLabels) {
+      if (otherLabelsId !== labelsId && otherLoadedData === loadedDataKey) {
         destroy = false;
         break;
       }
@@ -225,11 +213,11 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
     set((draft) => {
       draft.loadedLabels.delete(labelsId);
       if (destroy) {
-        draft.loadedLabelsDataSources.delete(loadedLabels.loadedDataSourceKey);
+        draft.loadedLabelsData.delete(loadedDataKey);
       }
     });
     if (destroy) {
-      loadedDataSource.data.destroy();
+      loadedData.data.destroy();
     }
     return true;
   },
@@ -239,6 +227,6 @@ function createInitialLabelsSliceState(): LabelsSliceState {
   return {
     labels: [],
     loadedLabels: new Map(),
-    loadedLabelsDataSources: new Map(),
+    loadedLabelsData: new Map(),
   };
 }

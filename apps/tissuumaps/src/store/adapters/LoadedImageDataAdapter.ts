@@ -16,34 +16,24 @@ export class LoadedImageDataAdapter implements ImageData {
     this._imageId = imageId;
   }
 
-  get loadedImage() {
-    const state = useTissUUmaps.getState();
-    const loadedImage = state.loadedImages.get(this._imageId);
-    if (loadedImage === undefined) {
-      throw new Error(`Image with ID ${this._imageId} is not loaded.`);
-    }
-    return loadedImage;
-  }
-
-  get loadedImageDataSource() {
-    const state = useTissUUmaps.getState();
-    const loadedImageDataSource = state.loadedImageDataSources.get(
-      this.loadedImage.loadedDataSourceKey,
-    );
-    if (loadedImageDataSource === undefined) {
-      throw new Error(
-        `Data source with key ${this.loadedImage.loadedDataSourceKey} for image with ID ${this._imageId} is not loaded.`,
-      );
-    }
-    return loadedImageDataSource;
-  }
-
   getTileSource(): string | TileSourceConfig | CustomTileSource {
-    return this.loadedImageDataSource.data.getTileSource();
+    return this._getData().getTileSource();
   }
 
   destroy(): void {
     // ignored intentionally
+  }
+
+  private _getData() {
+    const state = useTissUUmaps.getState();
+    const loadedDataKey = state.loadedImages.get(this._imageId);
+    if (loadedDataKey !== undefined) {
+      const loadedData = state.loadedImageData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    throw new Error(`Data source not loaded for image ID ${this._imageId}`);
   }
 }
 

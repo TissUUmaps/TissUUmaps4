@@ -12,34 +12,12 @@ export class LoadedPointsDataAdapter implements PointsData {
     this._pointsId = pointsId;
   }
 
-  get loadedPoints() {
-    const state = useTissUUmaps.getState();
-    const loadedPoints = state.loadedPoints.get(this._pointsId);
-    if (loadedPoints === undefined) {
-      throw new Error(`Points with ID ${this._pointsId} is not loaded.`);
-    }
-    return loadedPoints;
-  }
-
-  get loadedPointsDataSource() {
-    const state = useTissUUmaps.getState();
-    const loadedPointsDataSource = state.loadedPointsDataSources.get(
-      this.loadedPoints.loadedDataSourceKey,
-    );
-    if (loadedPointsDataSource === undefined) {
-      throw new Error(
-        `Data source with key ${this.loadedPoints.loadedDataSourceKey} for points with ID ${this._pointsId} is not loaded.`,
-      );
-    }
-    return loadedPointsDataSource;
-  }
-
   getIds(): number[] {
-    return this.loadedPointsDataSource.data.getIds();
+    return this._getData().getIds();
   }
 
   getSize(): number {
-    return this.loadedPointsDataSource.data.getSize();
+    return this._getData().getSize();
   }
 
   async suggestDimensionQueries(
@@ -48,10 +26,7 @@ export class LoadedPointsDataAdapter implements PointsData {
   ): Promise<string[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    return await this.loadedPointsDataSource.data.suggestDimensionQueries(
-      currentQuery,
-      options,
-    );
+    return await this._getData().suggestDimensionQueries(currentQuery, options);
   }
 
   async resolveDimensionQuery(
@@ -60,10 +35,7 @@ export class LoadedPointsDataAdapter implements PointsData {
   ): Promise<string | null> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    return await this.loadedPointsDataSource.data.resolveDimensionQuery(
-      query,
-      options,
-    );
+    return await this._getData().resolveDimensionQuery(query, options);
   }
 
   async loadCoordinates(
@@ -81,6 +53,18 @@ export class LoadedPointsDataAdapter implements PointsData {
 
   destroy(): void {
     // ignored intentionally
+  }
+
+  private _getData() {
+    const state = useTissUUmaps.getState();
+    const loadedDataKey = state.loadedPoints.get(this._pointsId);
+    if (loadedDataKey !== undefined) {
+      const loadedData = state.loadedPointsData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    throw new Error(`Data source not loaded for points ID ${this._pointsId}`);
   }
 }
 
