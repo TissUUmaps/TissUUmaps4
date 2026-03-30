@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +29,20 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
   const loadProjectFromFile = useTissUUmaps(
     (state) => state.loadProjectFromFile,
   );
+  const clearProject = useTissUUmaps((state) => state.clearProject);
+
+  const confirmClearProject = useCallback(() => {
+    if (
+      window.confirm(
+        "Are you sure you want to clear the project? All unsaved changes will be lost.",
+      )
+    ) {
+      clearProject();
+      const url = new URL(window.location.href);
+      url.searchParams.delete("project");
+      window.history.replaceState({}, "", url);
+    }
+  }, [clearProject]);
 
   return (
     <div className={className}>
@@ -99,6 +113,20 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
                 }}
               >
                 Download project
+              </Button>
+            }
+          />
+        </Field>
+        <Field>
+          <FieldControl
+            render={
+              <Button
+                onClick={(event) => {
+                  event.preventDefault();
+                  confirmClearProject();
+                }}
+              >
+                Clear project
               </Button>
             }
           />
