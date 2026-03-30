@@ -31,6 +31,7 @@ export type ProjectSliceState = {
 
 export type ProjectSliceActions = {
   setProjectName: (name: string) => void;
+  setDrawOptions: (options: Partial<DrawOptions>) => void;
   loadProject: (
     project: Project,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
@@ -56,6 +57,11 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
   setProjectName: (name) => {
     set((draft) => {
       draft.projectName = name;
+    });
+  },
+  setDrawOptions: (options) => {
+    set((draft) => {
+      draft.drawOptions = { ...draft.drawOptions, ...options };
     });
   },
   loadProject: deduplicate(
