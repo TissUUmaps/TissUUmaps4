@@ -86,8 +86,7 @@ export function ProjectSettingsDialog() {
               }
             />
             <FieldDescription className="text-xs text-muted-foreground">
-              Number of scanlines for shape rasterization (higher = more
-              accurate but slower)
+              Number of scanlines for shape rasterization
             </FieldDescription>
           </Field>
         </div>
