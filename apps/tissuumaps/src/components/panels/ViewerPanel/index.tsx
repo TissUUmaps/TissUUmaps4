@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { Viewer } from "@tissuumaps/viewer";
+import { Viewer, ViewerControl, ViewerControlAnchor } from "@tissuumaps/viewer";
 
 import { useTissUUmaps } from "../../../store";
 import { useLoadedImageDataAdapter } from "../../../store/adapters/LoadedImageDataAdapter";
@@ -9,6 +9,7 @@ import { useLoadedLabelsDataAdapter } from "../../../store/adapters/LoadedLabels
 import { useLoadedPointsDataAdapter } from "../../../store/adapters/LoadedPointsDataAdapter";
 import { useLoadedShapesDataAdapter } from "../../../store/adapters/LoadedShapesDataAdapter";
 import { useLoadedTableDataAdapter } from "../../../store/adapters/LoadedTableDataAdapter";
+import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
 
 export type ViewerPanelProps = {
   className?: string;
@@ -59,5 +60,11 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     [viewerState, loadImage, loadLabels, loadPoints, loadShapes, loadTable],
   );
 
-  return <Viewer adapter={viewerAdapter} className={className} />;
+  return (
+    <Viewer adapter={viewerAdapter} className={className}>
+      <ViewerControl anchor={ViewerControlAnchor.TOP_LEFT}>
+        <InteractionModeViewerControls />
+      </ViewerControl>
+    </Viewer>
+  );
 }
