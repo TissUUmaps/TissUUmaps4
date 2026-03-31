@@ -18,14 +18,18 @@ If this PR depends on another PR (even in another repo), please link to it with 
 
 # List of changes made
 
-<!-- Specify what changes have been made and why -->
+<!-- Specify what changes have been made and why. -->
 
 -
 -
 
 # Screenshot of the fix
 
-<!-- Attach screenshot if relevant -->
+<!-- Attach screenshot if relevant. -->
+
+# Use of AI
+
+<!-- Please specify if AI was used in any way during the process of creating the pull request and the code inside it. If yes, specify in which way it was used. -->
 
 # Testing
 
@@ -38,12 +42,7 @@ If this PR depends on another PR (even in another repo), please link to it with 
 
 # Further comments
 
-<!-- Specify questions or related information -->
-<!--
-What does this pull request (PR) do?
-Is it a new feature, a bug fix, an improvement, or something else? Why is it necessary?
-If relevant, please add a screenshot or a screen capture: "An image is worth a thousand words!"
--->
+<!-- Specify questions or related information. -->
 
 <!--
 Final Checklist:
