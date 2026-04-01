@@ -31,6 +31,16 @@
         "ideas",
         "review"
       ]
+    },
+    {
+      "login": "Jessica-Sandler",
+      "name": "Jessica Sandler",
+      "avatar_url": "https://avatars.githubusercontent.com/u/123460937?v=4",
+      "profile": "https://github.com/Jessica-Sandler",
+      "contributions": [
+        "code",
+        "review"
+      ]
     }
   ]
 }
