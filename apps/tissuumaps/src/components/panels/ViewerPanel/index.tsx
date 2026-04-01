@@ -18,6 +18,7 @@ export type ViewerPanelProps = {
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const viewerState = useTissUUmaps(
     useShallow((state) => ({
+      interactionMode: state.interactionMode,
       workspace: state.workspace,
       layers: state.layers,
       images: state.images,

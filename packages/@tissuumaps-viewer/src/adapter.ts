@@ -4,10 +4,12 @@ import {
   type DrawOptions,
   type Image,
   type ImageData,
+  type InteractionMode,
   type Labels,
   type LabelsData,
   type Layer,
   type Marker,
+  type MultiPolygon,
   type Points,
   type PointsData,
   type Shapes,
@@ -17,6 +19,7 @@ import {
 } from "@tissuumaps/core";
 
 export interface ViewerAdapter {
+  interactionMode: InteractionMode;
   workspace: FileSystemDirectoryHandle | null;
   layers: Layer[];
   images: Image[];
@@ -52,4 +55,5 @@ export interface ViewerAdapter {
     tableId: string,
     options?: { signal?: AbortSignal },
   ) => Promise<TableData>;
+  addShape?: (shape: MultiPolygon) => void;
 }

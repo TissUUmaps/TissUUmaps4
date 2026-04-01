@@ -3,6 +3,7 @@ import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
 import {
   type ImageData,
   type ImageDataStorage,
+  type InteractionMode,
   type LabelsData,
   type LabelsDataStorage,
   type PointsData,
@@ -88,6 +89,7 @@ export type AppSlice = AppSliceState & AppSliceActions;
 
 export type AppSliceState = {
   dark: boolean;
+  interactionMode: InteractionMode;
   workspace: FileSystemDirectoryHandle | null;
   imageDataStorageRegistry: Map<
     string,
@@ -113,6 +115,7 @@ export type AppSliceState = {
 
 export type AppSliceActions = {
   setDark: (dark: boolean) => void;
+  setInteractionMode: (interactionMode: InteractionMode) => void;
   setWorkspace: (workspace: FileSystemDirectoryHandle | null) => void;
   registerImageDataStorage: (
     type: string,
@@ -141,6 +144,11 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
   setDark: (dark) => {
     set((draft) => {
       draft.dark = dark;
+    });
+  },
+  setInteractionMode: (interactionMode) => {
+    set((draft) => {
+      draft.interactionMode = interactionMode;
     });
   },
   setWorkspace: (dir) => {
@@ -179,6 +187,7 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
 function createInitialAppSliceState(): AppSliceState {
   return {
     dark: false,
+    interactionMode: "pan",
     workspace: null,
     imageDataStorageRegistry: new Map([
       [
