@@ -4,14 +4,6 @@ import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 
 import { type Image, MathUtils } from "@tissuumaps/core";
 
-import { Button } from "@/components/ui/button";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
-
-import { useTissUUmaps } from "../../../store";
 import {
   Accordion,
   AccordionHeader,
@@ -19,7 +11,15 @@ import {
   AccordionPanel,
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
-} from "../../common/accordion";
+} from "@/components/common/accordion";
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { useTissUUmaps } from "@/store";
+
 import { ImagesLayersPanel } from "./ImagesLayersPanel";
 import { ImagesSettingsPanel } from "./ImagesSettingsPanel";
 import { ImagesSourcePanel } from "./ImagesSourcePanel";

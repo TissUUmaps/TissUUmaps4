@@ -4,7 +4,8 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useTissUUmaps } from "../../../../store";
+import { useTissUUmaps } from "@/store";
+
 import { type SizeConfigWidgetState } from "./useSizeConfigWidget";
 
 export type ActiveSizeConfigValueProps = {

@@ -1,11 +1,10 @@
 import { type Table } from "@tissuumaps/core";
 
+import { Field, FieldLabel } from "@/components/common/field";
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-
-import { useTissUUmaps } from "../../../store";
-import { Field, FieldLabel } from "../../common/field";
-import { Fieldset, FieldsetLegend } from "../../common/fieldset";
+import { useTissUUmaps } from "@/store";
 
 export type TablesSettingsPanelProps = {
   table: Table;

@@ -1,13 +1,12 @@
-import { Input } from "@/components/ui/input";
-
-import { useTissUUmaps } from "../../../store";
 import {
   Field,
   FieldControl,
   FieldDescription,
   FieldLabel,
-} from "../../common/field";
-import { Fieldset, FieldsetLegend } from "../../common/fieldset";
+} from "@/components/common/field";
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { Input } from "@/components/ui/input";
+import { useTissUUmaps } from "@/store";
 
 export function ProjectSettingsDialog() {
   const drawOptions = useTissUUmaps((state) => state.drawOptions);

@@ -6,11 +6,6 @@ import {
   defaultLabelVisibility,
 } from "@tissuumaps/core";
 
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
-
-import { useTissUUmaps } from "../../../store";
 import {
   Accordion,
   AccordionHeader,
@@ -18,24 +13,28 @@ import {
   AccordionPanel,
   AccordionTrigger,
   AccordionTriggerRightDownIcon,
-} from "../../common/accordion";
-import { Field, FieldLabel } from "../../common/field";
-import { Fieldset, FieldsetLegend } from "../../common/fieldset";
+} from "@/components/common/accordion";
+import { Field, FieldLabel } from "@/components/common/field";
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   ColorConfigSourceToggleGroup,
   ColorConfigWidget,
-} from "../../widgets/config/ColorConfigWidget";
-import { useColorConfigWidget } from "../../widgets/config/ColorConfigWidget/useColorConfigWidget";
+} from "@/components/widgets/config/ColorConfigWidget";
+import { useColorConfigWidget } from "@/components/widgets/config/ColorConfigWidget/useColorConfigWidget";
 import {
   OpacityConfigSourceToggleGroup,
   OpacityConfigWidget,
-} from "../../widgets/config/OpacityConfigWidget";
-import { useOpacityConfigWidget } from "../../widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
+} from "@/components/widgets/config/OpacityConfigWidget";
+import { useOpacityConfigWidget } from "@/components/widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
 import {
   VisibilityConfigSourceToggleGroup,
   VisibilityConfigWidget,
-} from "../../widgets/config/VisibilityConfigWidget";
-import { useVisibilityConfigWidget } from "../../widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
+} from "@/components/widgets/config/VisibilityConfigWidget";
+import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
+import { cn } from "@/lib/utils";
+import { useTissUUmaps } from "@/store";
 
 export type LabelsSettingsPanelProps = {
   labels: Labels;

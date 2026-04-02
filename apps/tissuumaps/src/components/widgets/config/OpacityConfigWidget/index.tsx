@@ -1,12 +1,12 @@
 import { MathUtils } from "@tissuumaps/core";
 
+import { Field, FieldLabel } from "@/components/common/field";
+import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
+import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
+import { useTissUUmaps } from "@/store";
 
-import { useTableColumnSelector } from "../../../../hooks/useTableColumnSelector";
-import { useTissUUmaps } from "../../../../store";
-import { Field, FieldLabel } from "../../../common/field";
-import { SimpleAsyncCombobox } from "../../../common/simple-combobox";
-import { SimpleSelect } from "../../../common/simple-select";
 import { type OpacityConfigWidgetState } from "./useOpacityConfigWidget";
 
 export { ActiveOpacityConfigValue } from "./ActiveOpacityConfigValue";

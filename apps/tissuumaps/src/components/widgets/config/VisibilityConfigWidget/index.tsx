@@ -1,10 +1,10 @@
+import { Field, FieldLabel } from "@/components/common/field";
+import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Switch } from "@/components/ui/switch";
+import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
+import { useTissUUmaps } from "@/store";
 
-import { useTableColumnSelector } from "../../../../hooks/useTableColumnSelector";
-import { useTissUUmaps } from "../../../../store";
-import { Field, FieldLabel } from "../../../common/field";
-import { SimpleAsyncCombobox } from "../../../common/simple-combobox";
-import { SimpleSelect } from "../../../common/simple-select";
 import { type VisibilityConfigWidgetState } from "./useVisibilityConfigWidget";
 
 export { ActiveVisibilityConfigValue } from "./ActiveVisibilityConfigValue";

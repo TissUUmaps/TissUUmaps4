@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { useTissUUmaps } from "../store";
+import { useTissUUmaps } from "@/store";
 
 type Plugin = {
   name: string;

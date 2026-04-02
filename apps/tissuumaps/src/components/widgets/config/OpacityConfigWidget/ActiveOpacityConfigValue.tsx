@@ -4,7 +4,8 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useTissUUmaps } from "../../../../store";
+import { useTissUUmaps } from "@/store";
+
 import { type OpacityConfigWidgetState } from "./useOpacityConfigWidget";
 
 export type ActiveOpacityConfigValueProps = {
