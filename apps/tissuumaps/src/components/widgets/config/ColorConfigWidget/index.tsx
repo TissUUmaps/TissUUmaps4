@@ -10,43 +10,49 @@ import { Input } from "@/components/ui/input";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
-import { type ColorConfigWidgetState } from "./useColorConfigWidget";
+import { type ColorConfigWidgetAdapter } from "./adapter";
 
 export { ActiveColorConfigValue } from "./ActiveColorConfigValue";
 export { ColorConfigSourceToggleGroup } from "./ColorConfigSourceToggleGroup";
 
 export type ColorConfigWidgetProps = {
-  state: ColorConfigWidgetState;
+  adapter: ColorConfigWidgetAdapter;
   className?: string;
 };
 
 export function ColorConfigWidget({
-  state,
+  adapter,
   className,
 }: ColorConfigWidgetProps) {
-  switch (state.currentSource) {
+  switch (adapter.currentSource) {
     case "constant":
-      return <ConstantColorConfigWidget state={state} className={className} />;
+      return (
+        <ConstantColorConfigWidget adapter={adapter} className={className} />
+      );
     case "from":
-      return <FromColorConfigWidget state={state} className={className} />;
+      return <FromColorConfigWidget adapter={adapter} className={className} />;
     case "groupBy":
-      return <GroupByColorConfigWidget state={state} className={className} />;
+      return (
+        <GroupByColorConfigWidget adapter={adapter} className={className} />
+      );
     case "random":
-      return <RandomColorConfigWidget state={state} className={className} />;
+      return (
+        <RandomColorConfigWidget adapter={adapter} className={className} />
+      );
   }
 }
 
 type ConstantColorConfigWidgetProps = {
-  state: ColorConfigWidgetState;
+  adapter: ColorConfigWidgetAdapter;
   className?: string;
 };
 
 function ConstantColorConfigWidget({
-  state,
+  adapter,
   className,
 }: ConstantColorConfigWidgetProps) {
   const { currentConstantValue: color, setCurrentConstantValue: setColor } =
-    state;
+    adapter;
 
   return (
     <div className={className}>
@@ -115,12 +121,12 @@ function ConstantColorConfigWidget({
 }
 
 type FromColorConfigWidgetProps = {
-  state: ColorConfigWidgetState;
+  adapter: ColorConfigWidgetAdapter;
   className?: string;
 };
 
 function FromColorConfigWidget({
-  state,
+  adapter,
   className,
 }: FromColorConfigWidgetProps) {
   const {
@@ -134,7 +140,7 @@ function FromColorConfigWidget({
     setCurrentFromRangeMin: setRangeMin,
     setCurrentFromRangeMax: setRangeMax,
     setCurrentFromPalette: setPalette,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
 
@@ -212,12 +218,12 @@ function FromColorConfigWidget({
 }
 
 type GroupByColorConfigWidgetProps = {
-  state: ColorConfigWidgetState;
+  adapter: ColorConfigWidgetAdapter;
   className?: string;
 };
 
 function GroupByColorConfigWidget({
-  state,
+  adapter,
   className,
 }: GroupByColorConfigWidgetProps) {
   const {
@@ -229,7 +235,7 @@ function GroupByColorConfigWidget({
     setCurrentGroupByColumn: setColumn,
     setCurrentGroupByPalette: setPalette,
     setCurrentGroupByMap: setMap,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
   const colorMaps = useTissUUmaps((state) => state.colorMaps);
@@ -286,16 +292,16 @@ function GroupByColorConfigWidget({
 }
 
 type RandomColorConfigWidgetProps = {
-  state: ColorConfigWidgetState;
+  adapter: ColorConfigWidgetAdapter;
   className?: string;
 };
 
 function RandomColorConfigWidget({
-  state,
+  adapter,
   className,
 }: RandomColorConfigWidgetProps) {
   const { currentRandomPalette: palette, setCurrentRandomPalette: setPalette } =
-    state;
+    adapter;
   return (
     <div className={className}>
       <Field>

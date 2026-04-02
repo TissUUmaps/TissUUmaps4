@@ -22,17 +22,17 @@ import {
   ColorConfigSourceToggleGroup,
   ColorConfigWidget,
 } from "@/components/widgets/config/ColorConfigWidget";
-import { useColorConfigWidget } from "@/components/widgets/config/ColorConfigWidget/useColorConfigWidget";
+import { useColorConfigWidget } from "@/components/widgets/config/ColorConfigWidget/hooks";
 import {
   OpacityConfigSourceToggleGroup,
   OpacityConfigWidget,
 } from "@/components/widgets/config/OpacityConfigWidget";
-import { useOpacityConfigWidget } from "@/components/widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
+import { useOpacityConfigWidget } from "@/components/widgets/config/OpacityConfigWidget/hooks";
 import {
   VisibilityConfigSourceToggleGroup,
   VisibilityConfigWidget,
 } from "@/components/widgets/config/VisibilityConfigWidget";
-import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
+import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/hooks";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
@@ -47,18 +47,18 @@ export function LabelsSettingsPanel({
 }: LabelsSettingsPanelProps) {
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
 
-  const labelColorConfigWidgetState = useColorConfigWidget(
+  const labelColorConfigWidgetAdapter = useColorConfigWidget(
     labels.labelColor,
     (newColorConfig) => updateLabels(labels.id, { labelColor: newColorConfig }),
     defaultLabelColor,
   );
-  const labelVisibilityConfigWidgetState = useVisibilityConfigWidget(
+  const labelVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
     labels.labelVisibility,
     (newVisibilityConfig) =>
       updateLabels(labels.id, { labelVisibility: newVisibilityConfig }),
     defaultLabelVisibility,
   );
-  const labelOpacityConfigWidgetState = useOpacityConfigWidget(
+  const labelOpacityConfigWidgetAdapter = useOpacityConfigWidget(
     labels.labelOpacity,
     (newOpacityConfig) =>
       updateLabels(labels.id, { labelOpacity: newOpacityConfig }),
@@ -130,12 +130,12 @@ export function LabelsSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label color</AccordionTrigger>
             <ColorConfigSourceToggleGroup
-              state={labelColorConfigWidgetState}
+              adapter={labelColorConfigWidgetAdapter}
               className="ml-auto"
             />
           </AccordionHeader>
           <AccordionPanel>
-            <ColorConfigWidget state={labelColorConfigWidgetState} />
+            <ColorConfigWidget adapter={labelColorConfigWidgetAdapter} />
           </AccordionPanel>
         </AccordionItem>
         {/* Label visibility */}
@@ -144,12 +144,14 @@ export function LabelsSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label visibility</AccordionTrigger>
             <VisibilityConfigSourceToggleGroup
-              state={labelVisibilityConfigWidgetState}
+              adapter={labelVisibilityConfigWidgetAdapter}
               className="ml-auto"
             />
           </AccordionHeader>
           <AccordionPanel>
-            <VisibilityConfigWidget state={labelVisibilityConfigWidgetState} />
+            <VisibilityConfigWidget
+              adapter={labelVisibilityConfigWidgetAdapter}
+            />
           </AccordionPanel>
         </AccordionItem>
         {/* Label opacity */}
@@ -158,12 +160,12 @@ export function LabelsSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label opacity</AccordionTrigger>
             <OpacityConfigSourceToggleGroup
-              state={labelOpacityConfigWidgetState}
+              adapter={labelOpacityConfigWidgetAdapter}
               className="ml-auto"
             />
           </AccordionHeader>
           <AccordionPanel>
-            <OpacityConfigWidget state={labelOpacityConfigWidgetState} />
+            <OpacityConfigWidget adapter={labelOpacityConfigWidgetAdapter} />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>

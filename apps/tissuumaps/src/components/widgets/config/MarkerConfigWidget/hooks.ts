@@ -9,33 +9,16 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-type MarkerConfigSource = Exclude<MarkerConfig["source"], undefined>;
-
-export type MarkerConfigWidgetState = {
-  markerConfig: MarkerConfig;
-  defaultMarker: Marker;
-  activeSource: MarkerConfigSource;
-  currentSource: MarkerConfigSource;
-  currentConstantValue: Marker;
-  currentFromTable: string | null;
-  currentFromColumn: string | null;
-  currentGroupByTable: string | null;
-  currentGroupByColumn: string | null;
-  currentGroupByMap: string | null;
-  setCurrentSource: (newCurrentSource: MarkerConfigSource) => void;
-  setCurrentConstantValue: (newCurrentValue: Marker) => void;
-  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
-  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
-  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
-  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
-  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
-};
+import {
+  type MarkerConfigSource,
+  type MarkerConfigWidgetAdapter,
+} from "./adapter";
 
 export function useMarkerConfigWidget(
   markerConfig: MarkerConfig,
   onMarkerConfigChange: (newMarkerConfig: MarkerConfig) => void,
   defaultMarker: Marker,
-): MarkerConfigWidgetState {
+): MarkerConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(markerConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<MarkerConfigSource>(
     markerConfig.source ?? "constant",

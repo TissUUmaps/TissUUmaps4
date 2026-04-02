@@ -1,19 +1,19 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { type OpacityConfigWidgetState } from "./useOpacityConfigWidget";
+import { type OpacityConfigWidgetAdapter } from "./adapter";
 
 export type OpacityConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],
   "value" | "onValueChange"
 > & {
-  state: OpacityConfigWidgetState;
+  adapter: OpacityConfigWidgetAdapter;
 };
 
 export function OpacityConfigSourceToggleGroup({
-  state,
+  adapter,
   ...props
 }: OpacityConfigSourceToggleGroupProps) {
-  const { activeSource, currentSource, setCurrentSource } = state;
+  const { activeSource, currentSource, setCurrentSource } = adapter;
 
   return (
     <ToggleGroup

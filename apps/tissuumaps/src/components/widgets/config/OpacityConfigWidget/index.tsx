@@ -7,43 +7,47 @@ import { Input } from "@/components/ui/input";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
-import { type OpacityConfigWidgetState } from "./useOpacityConfigWidget";
+import { type OpacityConfigWidgetAdapter } from "./adapter";
 
 export { ActiveOpacityConfigValue } from "./ActiveOpacityConfigValue";
 export { OpacityConfigSourceToggleGroup } from "./OpacityConfigSourceToggleGroup";
 
 export type OpacityConfigWidgetProps = {
-  state: OpacityConfigWidgetState;
+  adapter: OpacityConfigWidgetAdapter;
   className?: string;
 };
 
 export function OpacityConfigWidget({
-  state,
+  adapter,
   className,
 }: OpacityConfigWidgetProps) {
-  switch (state.currentSource) {
+  switch (adapter.currentSource) {
     case "constant":
       return (
-        <ConstantOpacityConfigWidget state={state} className={className} />
+        <ConstantOpacityConfigWidget adapter={adapter} className={className} />
       );
     case "from":
-      return <FromOpacityConfigWidget state={state} className={className} />;
+      return (
+        <FromOpacityConfigWidget adapter={adapter} className={className} />
+      );
     case "groupBy":
-      return <GroupByOpacityConfigWidget state={state} className={className} />;
+      return (
+        <GroupByOpacityConfigWidget adapter={adapter} className={className} />
+      );
   }
 }
 
 type ConstantOpacityConfigWidgetProps = {
-  state: OpacityConfigWidgetState;
+  adapter: OpacityConfigWidgetAdapter;
   className?: string;
 };
 
 function ConstantOpacityConfigWidget({
-  state,
+  adapter,
   className,
 }: ConstantOpacityConfigWidgetProps) {
   const { currentConstantValue: value, setCurrentConstantValue: setValue } =
-    state;
+    adapter;
 
   return (
     <div className={className}>
@@ -68,12 +72,12 @@ function ConstantOpacityConfigWidget({
 }
 
 type FromOpacityConfigWidgetProps = {
-  state: OpacityConfigWidgetState;
+  adapter: OpacityConfigWidgetAdapter;
   className?: string;
 };
 
 function FromOpacityConfigWidget({
-  state,
+  adapter,
   className,
 }: FromOpacityConfigWidgetProps) {
   const {
@@ -81,7 +85,7 @@ function FromOpacityConfigWidget({
     currentFromColumn: column,
     setCurrentFromTable: setTable,
     setCurrentFromColumn: setColumn,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
 
@@ -117,12 +121,12 @@ function FromOpacityConfigWidget({
 }
 
 type GroupByOpacityConfigWidgetProps = {
-  state: OpacityConfigWidgetState;
+  adapter: OpacityConfigWidgetAdapter;
   className?: string;
 };
 
 function GroupByOpacityConfigWidget({
-  state,
+  adapter,
   className,
 }: GroupByOpacityConfigWidgetProps) {
   const {
@@ -132,7 +136,7 @@ function GroupByOpacityConfigWidget({
     setCurrentGroupByTable: setTable,
     setCurrentGroupByColumn: setColumn,
     setCurrentGroupByMap: setMap,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
   const opacityMaps = useTissUUmaps((state) => state.opacityMaps);

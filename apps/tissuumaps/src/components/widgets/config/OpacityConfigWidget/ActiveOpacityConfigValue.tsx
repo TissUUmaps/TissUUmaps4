@@ -6,20 +6,20 @@ import {
 
 import { useTissUUmaps } from "@/store";
 
-import { type OpacityConfigWidgetState } from "./useOpacityConfigWidget";
+import { type OpacityConfigWidgetAdapter } from "./adapter";
 
 export type ActiveOpacityConfigValueProps = {
-  state: OpacityConfigWidgetState;
+  adapter: OpacityConfigWidgetAdapter;
   className?: string;
 };
 
 export function ActiveOpacityConfigValue({
-  state,
+  adapter,
   className,
 }: ActiveOpacityConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, opacityConfig, defaultOpacity } = state;
+  const { activeSource, opacityConfig, defaultOpacity } = adapter;
 
   if (activeSource === "constant" && isConstantConfig(opacityConfig)) {
     return (

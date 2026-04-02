@@ -6,20 +6,20 @@ import {
 
 import { useTissUUmaps } from "@/store";
 
-import { type SizeConfigWidgetState } from "./useSizeConfigWidget";
+import { type SizeConfigWidgetAdapter } from "./adapter";
 
 export type ActiveSizeConfigValueProps = {
-  state: SizeConfigWidgetState;
+  adapter: SizeConfigWidgetAdapter;
   className?: string;
 };
 
 export function ActiveSizeConfigValue({
-  state,
+  adapter,
   className,
 }: ActiveSizeConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, sizeConfig, defaultSize } = state;
+  const { activeSource, sizeConfig, defaultSize } = adapter;
 
   if (activeSource === "constant" && isConstantConfig(sizeConfig)) {
     return <div className={className}>{sizeConfig.constant.value}</div>;

@@ -9,20 +9,20 @@ import {
 
 import { useTissUUmaps } from "@/store";
 
-import { type ColorConfigWidgetState } from "./useColorConfigWidget";
+import { type ColorConfigWidgetAdapter } from "./adapter";
 
 export type ActiveColorConfigValueProps = {
-  state: ColorConfigWidgetState;
+  adapter: ColorConfigWidgetAdapter;
   className?: string;
 };
 
 export function ActiveColorConfigValue({
-  state,
+  adapter,
   className,
 }: ActiveColorConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, colorConfig, defaultColor } = state;
+  const { activeSource, colorConfig, defaultColor } = adapter;
 
   if (activeSource === "constant" && isConstantConfig(colorConfig)) {
     const { r, g, b } = colorConfig.constant.value;

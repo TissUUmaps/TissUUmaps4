@@ -5,45 +5,53 @@ import { Switch } from "@/components/ui/switch";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
-import { type VisibilityConfigWidgetState } from "./useVisibilityConfigWidget";
+import { type VisibilityConfigWidgetAdapter } from "./adapter";
 
 export { ActiveVisibilityConfigValue } from "./ActiveVisibilityConfigValue";
 export { VisibilityConfigSourceToggleGroup } from "./VisibilityConfigSourceToggleGroup";
 
 export type VisibilityConfigWidgetProps = {
-  state: VisibilityConfigWidgetState;
+  adapter: VisibilityConfigWidgetAdapter;
   className?: string;
 };
 
 export function VisibilityConfigWidget({
-  state,
+  adapter,
   className,
 }: VisibilityConfigWidgetProps) {
-  switch (state.currentSource) {
+  switch (adapter.currentSource) {
     case "constant":
       return (
-        <ConstantVisibilityConfigWidget state={state} className={className} />
+        <ConstantVisibilityConfigWidget
+          adapter={adapter}
+          className={className}
+        />
       );
     case "from":
-      return <FromVisibilityConfigWidget state={state} className={className} />;
+      return (
+        <FromVisibilityConfigWidget adapter={adapter} className={className} />
+      );
     case "groupBy":
       return (
-        <GroupByVisibilityConfigWidget state={state} className={className} />
+        <GroupByVisibilityConfigWidget
+          adapter={adapter}
+          className={className}
+        />
       );
   }
 }
 
 type ConstantVisibilityConfigWidgetProps = {
-  state: VisibilityConfigWidgetState;
+  adapter: VisibilityConfigWidgetAdapter;
   className?: string;
 };
 
 function ConstantVisibilityConfigWidget({
-  state,
+  adapter,
   className,
 }: ConstantVisibilityConfigWidgetProps) {
   const { currentConstantValue: value, setCurrentConstantValue: setValue } =
-    state;
+    adapter;
 
   return (
     <div className={className}>
@@ -59,12 +67,12 @@ function ConstantVisibilityConfigWidget({
 }
 
 type FromVisibilityConfigWidgetProps = {
-  state: VisibilityConfigWidgetState;
+  adapter: VisibilityConfigWidgetAdapter;
   className?: string;
 };
 
 function FromVisibilityConfigWidget({
-  state,
+  adapter,
   className,
 }: FromVisibilityConfigWidgetProps) {
   const {
@@ -72,7 +80,7 @@ function FromVisibilityConfigWidget({
     currentFromColumn: column,
     setCurrentFromTable: setTable,
     setCurrentFromColumn: setColumn,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
 
@@ -108,12 +116,12 @@ function FromVisibilityConfigWidget({
 }
 
 type GroupByVisibilityConfigWidgetProps = {
-  state: VisibilityConfigWidgetState;
+  adapter: VisibilityConfigWidgetAdapter;
   className?: string;
 };
 
 function GroupByVisibilityConfigWidget({
-  state,
+  adapter,
   className,
 }: GroupByVisibilityConfigWidgetProps) {
   const {
@@ -123,7 +131,7 @@ function GroupByVisibilityConfigWidget({
     setCurrentGroupByTable: setTable,
     setCurrentGroupByColumn: setColumn,
     setCurrentGroupByMap: setMap,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
   const visibilityMaps = useTissUUmaps((state) => state.visibilityMaps);

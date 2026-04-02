@@ -8,20 +8,20 @@ import {
 
 import { useTissUUmaps } from "@/store";
 
-import { type VisibilityConfigWidgetState } from "./useVisibilityConfigWidget";
+import { type VisibilityConfigWidgetAdapter } from "./adapter";
 
 export type ActiveVisibilityConfigValueProps = {
-  state: VisibilityConfigWidgetState;
+  adapter: VisibilityConfigWidgetAdapter;
   className?: string;
 };
 
 export function ActiveVisibilityConfigValue({
-  state,
+  adapter,
   className,
 }: ActiveVisibilityConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, visibilityConfig, defaultVisibility } = state;
+  const { activeSource, visibilityConfig, defaultVisibility } = adapter;
 
   if (activeSource === "constant" && isConstantConfig(visibilityConfig)) {
     return (

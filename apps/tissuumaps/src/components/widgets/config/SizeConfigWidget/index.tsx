@@ -8,34 +8,41 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
-import { type SizeConfigWidgetState } from "./useSizeConfigWidget";
+import { type SizeConfigWidgetAdapter } from "./adapter";
 
 export { ActiveSizeConfigValue } from "./ActiveSizeConfigValue";
 export { SizeConfigSourceToggleGroup } from "./SizeConfigSourceToggleGroup";
 
 export type SizeConfigWidgetProps = {
-  state: SizeConfigWidgetState;
+  adapter: SizeConfigWidgetAdapter;
   className?: string;
 };
 
-export function SizeConfigWidget({ state, className }: SizeConfigWidgetProps) {
-  switch (state.currentSource) {
+export function SizeConfigWidget({
+  adapter,
+  className,
+}: SizeConfigWidgetProps) {
+  switch (adapter.currentSource) {
     case "constant":
-      return <ConstantSizeConfigWidget state={state} className={className} />;
+      return (
+        <ConstantSizeConfigWidget adapter={adapter} className={className} />
+      );
     case "from":
-      return <FromSizeConfigWidget state={state} className={className} />;
+      return <FromSizeConfigWidget adapter={adapter} className={className} />;
     case "groupBy":
-      return <GroupBySizeConfigWidget state={state} className={className} />;
+      return (
+        <GroupBySizeConfigWidget adapter={adapter} className={className} />
+      );
   }
 }
 
 type ConstantSizeConfigWidgetProps = {
-  state: SizeConfigWidgetState;
+  adapter: SizeConfigWidgetAdapter;
   className?: string;
 };
 
 function ConstantSizeConfigWidget({
-  state,
+  adapter,
   className,
 }: ConstantSizeConfigWidgetProps) {
   const {
@@ -43,7 +50,7 @@ function ConstantSizeConfigWidget({
     currentConstantUnit: unit,
     setCurrentConstantValue: setValue,
     setCurrentConstantUnit: setUnit,
-  } = state;
+  } = adapter;
 
   return (
     <div className={className}>
@@ -87,11 +94,14 @@ function ConstantSizeConfigWidget({
 }
 
 type FromSizeConfigWidgetProps = {
-  state: SizeConfigWidgetState;
+  adapter: SizeConfigWidgetAdapter;
   className?: string;
 };
 
-function FromSizeConfigWidget({ state, className }: FromSizeConfigWidgetProps) {
+function FromSizeConfigWidget({
+  adapter,
+  className,
+}: FromSizeConfigWidgetProps) {
   const {
     currentFromTable: table,
     currentFromColumn: column,
@@ -99,7 +109,7 @@ function FromSizeConfigWidget({ state, className }: FromSizeConfigWidgetProps) {
     setCurrentFromTable: setTable,
     setCurrentFromColumn: setColumn,
     setCurrentFromUnit: setUnit,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
 
@@ -156,12 +166,12 @@ function FromSizeConfigWidget({ state, className }: FromSizeConfigWidgetProps) {
 }
 
 type GroupBySizeConfigWidgetProps = {
-  state: SizeConfigWidgetState;
+  adapter: SizeConfigWidgetAdapter;
   className?: string;
 };
 
 function GroupBySizeConfigWidget({
-  state,
+  adapter,
   className,
 }: GroupBySizeConfigWidgetProps) {
   const {
@@ -173,7 +183,7 @@ function GroupBySizeConfigWidget({
     setCurrentGroupByColumn: setColumn,
     setCurrentGroupByMap: setMap,
     setCurrentGroupByUnit: setUnit,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
   const sizeMaps = useTissUUmaps((state) => state.sizeMaps);
