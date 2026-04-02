@@ -28,7 +28,7 @@ export function LabelsSourcePanel({
     const value = labelsDataStorageRegistry.get(labels.dataSource.type);
     if (value === undefined) {
       throw new Error(
-        `No labels data Storage registered for data source type "${labels.dataSource.type}"`,
+        `No labels data storage adapter registered for data source type "${labels.dataSource.type}"`,
       );
     }
     return value;
