@@ -7,7 +7,7 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { useTissUUmaps } from "../../../store";
+import { useTissUUmaps } from "../../../../store";
 import { type ColorConfigWidgetState } from "./useColorConfigWidget";
 
 export type ActiveColorConfigValueProps = {

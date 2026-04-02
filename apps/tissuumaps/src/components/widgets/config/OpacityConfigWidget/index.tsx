@@ -1,72 +1,79 @@
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 
-import { useTableColumnSelector } from "../../../hooks/useTableColumnSelector";
-import { useTissUUmaps } from "../../../store";
-import { Field, FieldLabel } from "../../common/field";
-import { SimpleAsyncCombobox } from "../../common/simple-combobox";
-import { SimpleSelect } from "../../common/simple-select";
-import { type VisibilityConfigWidgetState } from "./useVisibilityConfigWidget";
+import { useTableColumnSelector } from "../../../../hooks/useTableColumnSelector";
+import { useTissUUmaps } from "../../../../store";
+import { Field, FieldLabel } from "../../../common/field";
+import { SimpleAsyncCombobox } from "../../../common/simple-combobox";
+import { SimpleSelect } from "../../../common/simple-select";
+import { type OpacityConfigWidgetState } from "./useOpacityConfigWidget";
 
-export { ActiveVisibilityConfigValue } from "./ActiveVisibilityConfigValue";
-export { VisibilityConfigSourceToggleGroup } from "./VisibilityConfigSourceToggleGroup";
+export { ActiveOpacityConfigValue } from "./ActiveOpacityConfigValue";
+export { OpacityConfigSourceToggleGroup } from "./OpacityConfigSourceToggleGroup";
 
-export type VisibilityConfigWidgetProps = {
-  state: VisibilityConfigWidgetState;
+export type OpacityConfigWidgetProps = {
+  state: OpacityConfigWidgetState;
   className?: string;
 };
 
-export function VisibilityConfigWidget({
+export function OpacityConfigWidget({
   state,
   className,
-}: VisibilityConfigWidgetProps) {
+}: OpacityConfigWidgetProps) {
   switch (state.currentSource) {
     case "constant":
       return (
-        <ConstantVisibilityConfigWidget state={state} className={className} />
+        <ConstantOpacityConfigWidget state={state} className={className} />
       );
     case "from":
-      return <FromVisibilityConfigWidget state={state} className={className} />;
+      return <FromOpacityConfigWidget state={state} className={className} />;
     case "groupBy":
-      return (
-        <GroupByVisibilityConfigWidget state={state} className={className} />
-      );
+      return <GroupByOpacityConfigWidget state={state} className={className} />;
   }
 }
 
-type ConstantVisibilityConfigWidgetProps = {
-  state: VisibilityConfigWidgetState;
+type ConstantOpacityConfigWidgetProps = {
+  state: OpacityConfigWidgetState;
   className?: string;
 };
 
-function ConstantVisibilityConfigWidget({
+function ConstantOpacityConfigWidget({
   state,
   className,
-}: ConstantVisibilityConfigWidgetProps) {
+}: ConstantOpacityConfigWidgetProps) {
   const { currentConstantValue: value, setCurrentConstantValue: setValue } =
     state;
 
   return (
     <div className={className}>
       <Field>
-        <FieldLabel>Visibility</FieldLabel>
-        <div className="flex flex-row items-center gap-x-2">
-          <Switch checked={value} onCheckedChange={setValue} />
-          {value ? "Visible" : "Hidden"}
-        </div>
+        <FieldLabel>Opacity</FieldLabel>
+        <Input
+          type="number"
+          min={0}
+          max={1}
+          step={0.01}
+          value={value}
+          onChange={(event) => {
+            const opacity = event.target.valueAsNumber;
+            if (Number.isFinite(opacity)) {
+              setValue(Math.min(Math.max(0, opacity), 1));
+            }
+          }}
+        />
       </Field>
     </div>
   );
 }
 
-type FromVisibilityConfigWidgetProps = {
-  state: VisibilityConfigWidgetState;
+type FromOpacityConfigWidgetProps = {
+  state: OpacityConfigWidgetState;
   className?: string;
 };
 
-function FromVisibilityConfigWidget({
+function FromOpacityConfigWidget({
   state,
   className,
-}: FromVisibilityConfigWidgetProps) {
+}: FromOpacityConfigWidgetProps) {
   const {
     currentFromTable: table,
     currentFromColumn: column,
@@ -107,15 +114,15 @@ function FromVisibilityConfigWidget({
   );
 }
 
-type GroupByVisibilityConfigWidgetProps = {
-  state: VisibilityConfigWidgetState;
+type GroupByOpacityConfigWidgetProps = {
+  state: OpacityConfigWidgetState;
   className?: string;
 };
 
-function GroupByVisibilityConfigWidget({
+function GroupByOpacityConfigWidget({
   state,
   className,
-}: GroupByVisibilityConfigWidgetProps) {
+}: GroupByOpacityConfigWidgetProps) {
   const {
     currentGroupByTable: table,
     currentGroupByColumn: column,
@@ -126,7 +133,7 @@ function GroupByVisibilityConfigWidget({
   } = state;
 
   const tables = useTissUUmaps((state) => state.tables);
-  const visibilityMaps = useTissUUmaps((state) => state.visibilityMaps);
+  const opacityMaps = useTissUUmaps((state) => state.opacityMaps);
 
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
     useTableColumnSelector(table);
@@ -156,11 +163,11 @@ function GroupByVisibilityConfigWidget({
         </Field>
       </div>
       <Field>
-        <FieldLabel>Visibility map</FieldLabel>
+        <FieldLabel>Opacity map</FieldLabel>
         <SimpleSelect
-          items={visibilityMaps}
-          itemLabel={(visibilityMap) => visibilityMap.name}
-          itemValue={(visibilityMap) => visibilityMap.id}
+          items={opacityMaps}
+          itemLabel={(opacityMap) => opacityMap.name}
+          itemValue={(opacityMap) => opacityMap.id}
           value={map}
           onValueChange={setMap}
         />

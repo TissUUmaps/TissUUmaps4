@@ -23,18 +23,18 @@ import { Fieldset, FieldsetLegend } from "../../common/fieldset";
 import {
   ColorConfigSourceToggleGroup,
   ColorConfigWidget,
-} from "../../controls/ColorConfigWidget";
-import { useColorConfigWidget } from "../../controls/ColorConfigWidget/useColorConfigWidget";
+} from "../../widgets/config/ColorConfigWidget";
+import { useColorConfigWidget } from "../../widgets/config/ColorConfigWidget/useColorConfigWidget";
 import {
   OpacityConfigSourceToggleGroup,
   OpacityConfigWidget,
-} from "../../controls/OpacityConfigWidget";
-import { useOpacityConfigWidget } from "../../controls/OpacityConfigWidget/useOpacityConfigWidget";
+} from "../../widgets/config/OpacityConfigWidget";
+import { useOpacityConfigWidget } from "../../widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
 import {
   VisibilityConfigSourceToggleGroup,
   VisibilityConfigWidget,
-} from "../../controls/VisibilityConfigWidget";
-import { useVisibilityConfigWidget } from "../../controls/VisibilityConfigWidget/useVisibilityConfigWidget";
+} from "../../widgets/config/VisibilityConfigWidget";
+import { useVisibilityConfigWidget } from "../../widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
 
 export type LabelsSettingsPanelProps = {
   labels: Labels;

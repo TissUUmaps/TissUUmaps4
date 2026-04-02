@@ -4,12 +4,12 @@ import { colorPalettes } from "@tissuumaps/core";
 
 import { Input } from "@/components/ui/input";
 
-import { useTableColumnSelector } from "../../../hooks/useTableColumnSelector";
-import { useTissUUmaps } from "../../../store";
-import { Field, FieldLabel } from "../../common/field";
-import { SimpleColorPicker } from "../../common/simple-color-picker";
-import { SimpleAsyncCombobox } from "../../common/simple-combobox";
-import { SimpleSelect } from "../../common/simple-select";
+import { useTableColumnSelector } from "../../../../hooks/useTableColumnSelector";
+import { useTissUUmaps } from "../../../../store";
+import { Field, FieldLabel } from "../../../common/field";
+import { SimpleColorPicker } from "../../../common/simple-color-picker";
+import { SimpleAsyncCombobox } from "../../../common/simple-combobox";
+import { SimpleSelect } from "../../../common/simple-select";
 import { type ColorConfigWidgetState } from "./useColorConfigWidget";
 
 export { ActiveColorConfigValue } from "./ActiveColorConfigValue";

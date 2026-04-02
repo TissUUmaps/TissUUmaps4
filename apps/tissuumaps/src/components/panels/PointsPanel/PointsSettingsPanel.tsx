@@ -27,32 +27,32 @@ import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
   ColorConfigWidget,
-} from "../../controls/ColorConfigWidget";
-import { useColorConfigWidget } from "../../controls/ColorConfigWidget/useColorConfigWidget";
+} from "../../widgets/config/ColorConfigWidget";
+import { useColorConfigWidget } from "../../widgets/config/ColorConfigWidget/useColorConfigWidget";
 import {
   ActiveMarkerConfigValue,
   MarkerConfigSourceToggleGroup,
   MarkerConfigWidget,
-} from "../../controls/MarkerConfigWidget";
-import { useMarkerConfigWidget } from "../../controls/MarkerConfigWidget/useMarkerConfigWidget";
+} from "../../widgets/config/MarkerConfigWidget";
+import { useMarkerConfigWidget } from "../../widgets/config/MarkerConfigWidget/useMarkerConfigWidget";
 import {
   ActiveOpacityConfigValue,
   OpacityConfigSourceToggleGroup,
   OpacityConfigWidget,
-} from "../../controls/OpacityConfigWidget";
-import { useOpacityConfigWidget } from "../../controls/OpacityConfigWidget/useOpacityConfigWidget";
+} from "../../widgets/config/OpacityConfigWidget";
+import { useOpacityConfigWidget } from "../../widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
 import {
   ActiveSizeConfigValue,
   SizeConfigSourceToggleGroup,
   SizeConfigWidget,
-} from "../../controls/SizeConfigWidget";
-import { useSizeConfigWidget } from "../../controls/SizeConfigWidget/useSizeConfigWidget";
+} from "../../widgets/config/SizeConfigWidget";
+import { useSizeConfigWidget } from "../../widgets/config/SizeConfigWidget/useSizeConfigWidget";
 import {
   ActiveVisibilityConfigValue,
   VisibilityConfigSourceToggleGroup,
   VisibilityConfigWidget,
-} from "../../controls/VisibilityConfigWidget";
-import { useVisibilityConfigWidget } from "../../controls/VisibilityConfigWidget/useVisibilityConfigWidget";
+} from "../../widgets/config/VisibilityConfigWidget";
+import { useVisibilityConfigWidget } from "../../widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
 
 export type PointsSettingsPanelProps = {
   points: Points;

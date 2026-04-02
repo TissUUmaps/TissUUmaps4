@@ -1,8 +1,8 @@
-import { useTableColumnSelector } from "../../../hooks/useTableColumnSelector";
-import { useTissUUmaps } from "../../../store";
-import { Field, FieldLabel } from "../../common/field";
-import { SimpleAsyncCombobox } from "../../common/simple-combobox";
-import { SimpleSelect } from "../../common/simple-select";
+import { useTableColumnSelector } from "../../../../hooks/useTableColumnSelector";
+import { useTissUUmaps } from "../../../../store";
+import { Field, FieldLabel } from "../../../common/field";
+import { SimpleAsyncCombobox } from "../../../common/simple-combobox";
+import { SimpleSelect } from "../../../common/simple-select";
 import { markers } from "./markers";
 import { type MarkerConfigWidgetState } from "./useMarkerConfigWidget";
 

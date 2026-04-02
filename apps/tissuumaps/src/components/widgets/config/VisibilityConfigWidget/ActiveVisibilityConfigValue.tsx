@@ -6,7 +6,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useTissUUmaps } from "../../../store";
+import { useTissUUmaps } from "../../../../store";
 import { type VisibilityConfigWidgetState } from "./useVisibilityConfigWidget";
 
 export type ActiveVisibilityConfigValueProps = {

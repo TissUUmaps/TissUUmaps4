@@ -21,26 +21,26 @@ import {
 } from "../../common/accordion";
 import { Field, FieldLabel } from "../../common/field";
 import { Fieldset, FieldsetLegend } from "../../common/fieldset";
+import { Input } from "../../ui/input";
+import { Switch } from "../../ui/switch";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
   ColorConfigWidget,
-} from "../../controls/ColorConfigWidget";
-import { useColorConfigWidget } from "../../controls/ColorConfigWidget/useColorConfigWidget";
+} from "../../widgets/config/ColorConfigWidget";
+import { useColorConfigWidget } from "../../widgets/config/ColorConfigWidget/useColorConfigWidget";
 import {
   ActiveOpacityConfigValue,
   OpacityConfigSourceToggleGroup,
   OpacityConfigWidget,
-} from "../../controls/OpacityConfigWidget";
-import { useOpacityConfigWidget } from "../../controls/OpacityConfigWidget/useOpacityConfigWidget";
+} from "../../widgets/config/OpacityConfigWidget";
+import { useOpacityConfigWidget } from "../../widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
 import {
   ActiveVisibilityConfigValue,
   VisibilityConfigSourceToggleGroup,
   VisibilityConfigWidget,
-} from "../../controls/VisibilityConfigWidget";
-import { useVisibilityConfigWidget } from "../../controls/VisibilityConfigWidget/useVisibilityConfigWidget";
-import { Input } from "../../ui/input";
-import { Switch } from "../../ui/switch";
+} from "../../widgets/config/VisibilityConfigWidget";
+import { useVisibilityConfigWidget } from "../../widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
 
 export type ShapesSettingsPanelProps = {
   shapes: Shapes;
