@@ -16,34 +16,12 @@ export class LoadedTableDataAdapter implements TableData {
     this._tableId = tableId;
   }
 
-  get loadedTable() {
-    const state = useTissUUmaps.getState();
-    const loadedTable = state.loadedTables.get(this._tableId);
-    if (loadedTable === undefined) {
-      throw new Error(`Table with ID ${this._tableId} is not loaded.`);
-    }
-    return loadedTable;
-  }
-
-  get loadedTableDataSource() {
-    const state = useTissUUmaps.getState();
-    const loadedTableDataSource = state.loadedTableDataSources.get(
-      this.loadedTable.loadedDataSourceKey,
-    );
-    if (loadedTableDataSource === undefined) {
-      throw new Error(
-        `Data source with key ${this.loadedTable.loadedDataSourceKey} for table with ID ${this._tableId} is not loaded.`,
-      );
-    }
-    return loadedTableDataSource;
-  }
-
   getIds(): number[] {
-    return this.loadedTableDataSource.data.getIds();
+    return this._getData().getIds();
   }
 
   getSize(): number {
-    return this.loadedTableDataSource.data.getSize();
+    return this._getData().getSize();
   }
 
   async suggestColumnQueries(
@@ -52,10 +30,7 @@ export class LoadedTableDataAdapter implements TableData {
   ): Promise<string[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    return await this.loadedTableDataSource.data.suggestColumnQueries(
-      currentQuery,
-      options,
-    );
+    return await this._getData().suggestColumnQueries(currentQuery, options);
   }
 
   async resolveColumnQuery(
@@ -64,10 +39,7 @@ export class LoadedTableDataAdapter implements TableData {
   ): Promise<string | null> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    return await this.loadedTableDataSource.data.resolveColumnQuery(
-      query,
-      options,
-    );
+    return await this._getData().resolveColumnQuery(query, options);
   }
 
   async loadValues<T>(
@@ -98,6 +70,18 @@ export class LoadedTableDataAdapter implements TableData {
 
   destroy(): void {
     // ignored intentionally
+  }
+
+  private _getData() {
+    const state = useTissUUmaps.getState();
+    const loadedDataKey = state.loadedTables.get(this._tableId);
+    if (loadedDataKey !== undefined) {
+      const loadedData = state.loadedTableData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    throw new Error(`Data source not loaded for table ID ${this._tableId}`);
   }
 }
 

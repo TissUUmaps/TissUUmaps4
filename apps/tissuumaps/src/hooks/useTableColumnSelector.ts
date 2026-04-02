@@ -10,17 +10,9 @@ export function useTableColumnSelector(tableId: string | null) {
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       if (tableId !== null) {
-        const loadedTable = await loadTable(tableId, { signal });
+        const data = await loadTable(tableId, { signal });
         signal?.throwIfAborted();
-        const loadedTableDataSource = useTissUUmaps
-          .getState()
-          .loadedTableDataSources.get(loadedTable.loadedDataSourceKey);
-        if (loadedTableDataSource !== undefined) {
-          return await loadedTableDataSource.data.suggestColumnQueries(
-            currentQuery,
-            { signal },
-          );
-        }
+        return await data.suggestColumnQueries(currentQuery, { signal });
       }
       return [];
     },
@@ -32,16 +24,9 @@ export function useTableColumnSelector(tableId: string | null) {
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       if (tableId !== null) {
-        const loadedTable = await loadTable(tableId, { signal });
+        const data = await loadTable(tableId, { signal });
         signal?.throwIfAborted();
-        const loadedTableDataSource = useTissUUmaps
-          .getState()
-          .loadedTableDataSources.get(loadedTable.loadedDataSourceKey);
-        if (loadedTableDataSource !== undefined) {
-          return await loadedTableDataSource.data.resolveColumnQuery(query, {
-            signal,
-          });
-        }
+        return await data.resolveColumnQuery(query, { signal });
       }
       return null;
     },

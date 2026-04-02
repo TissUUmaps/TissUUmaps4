@@ -16,34 +16,12 @@ export class LoadedShapesDataAdapter implements ShapesData {
     this._shapesId = shapesId;
   }
 
-  get loadedShapes() {
-    const state = useTissUUmaps.getState();
-    const loadedShapes = state.loadedShapes.get(this._shapesId);
-    if (loadedShapes === undefined) {
-      throw new Error(`Shapes with ID ${this._shapesId} is not loaded.`);
-    }
-    return loadedShapes;
-  }
-
-  get loadedShapesDataSource() {
-    const state = useTissUUmaps.getState();
-    const loadedShapesDataSource = state.loadedShapesDataSources.get(
-      this.loadedShapes.loadedDataSourceKey,
-    );
-    if (loadedShapesDataSource === undefined) {
-      throw new Error(
-        `Data source with key ${this.loadedShapes.loadedDataSourceKey} for shapes with ID ${this._shapesId} is not loaded.`,
-      );
-    }
-    return loadedShapesDataSource;
-  }
-
   getIds(): number[] {
-    return this.loadedShapesDataSource.data.getIds();
+    return this._getData().getIds();
   }
 
   getSize(): number {
-    return this.loadedShapesDataSource.data.getSize();
+    return this._getData().getSize();
   }
 
   async loadMultiPolygons(options?: {
@@ -61,6 +39,18 @@ export class LoadedShapesDataAdapter implements ShapesData {
 
   destroy(): void {
     // ignored intentionally
+  }
+
+  private _getData() {
+    const state = useTissUUmaps.getState();
+    const loadedDataKey = state.loadedShapes.get(this._shapesId);
+    if (loadedDataKey !== undefined) {
+      const loadedData = state.loadedShapesData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    throw new Error(`Data source not loaded for shapes ID ${this._shapesId}`);
   }
 }
 
