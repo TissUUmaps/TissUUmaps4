@@ -4,13 +4,12 @@ import { useMemo } from "react";
 
 import { type Shapes } from "@tissuumaps/core";
 
+import { Field, FieldLabel } from "@/components/common/field";
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { cells, renderers } from "@/components/jsonforms";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-
-import { useTissUUmaps } from "../../../store";
-import { Field, FieldLabel } from "../../common/field";
-import { Fieldset, FieldsetLegend } from "../../common/fieldset";
-import { cells, renderers } from "../../jsonforms";
+import { useTissUUmaps } from "@/store";
 
 export type ShapesSourcePanelProps = {
   shapes: Shapes;

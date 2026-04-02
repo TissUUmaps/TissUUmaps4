@@ -1,8 +1,7 @@
 import { type Points } from "@tissuumaps/core";
 
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { cn } from "@/lib/utils";
-
-import { Fieldset, FieldsetLegend } from "../../common/fieldset";
 
 export type PointsGroupsPanelProps = {
   points: Points;

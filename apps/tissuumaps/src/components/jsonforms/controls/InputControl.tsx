@@ -11,7 +11,7 @@ import {
   FieldDescription,
   FieldError,
   FieldLabel,
-} from "../../common/field";
+} from "@/components/common/field";
 
 export const InputControl = withJsonFormsControlProps((props: ControlProps) => {
   const [isFocused, setFocused] = useState<boolean>(false);

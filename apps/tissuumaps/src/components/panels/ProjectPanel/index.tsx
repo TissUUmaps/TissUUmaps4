@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 
+import { Field, FieldControl, FieldLabel } from "@/components/common/field";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,10 +10,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useProjectDownload } from "@/hooks/useProjectDownload";
+import { useTissUUmaps } from "@/store";
 
-import { useProjectDownload } from "../../../hooks/useProjectDownload";
-import { useTissUUmaps } from "../../../store";
-import { Field, FieldControl, FieldLabel } from "../../common/field";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
 export type ProjectPanelProps = {

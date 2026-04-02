@@ -3,12 +3,13 @@ import { useShallow } from "zustand/shallow";
 
 import { Viewer, ViewerControl, ViewerControlAnchor } from "@tissuumaps/viewer";
 
-import { useTissUUmaps } from "../../../store";
-import { useLoadedImageDataAdapter } from "../../../store/adapters/LoadedImageDataAdapter";
-import { useLoadedLabelsDataAdapter } from "../../../store/adapters/LoadedLabelsDataAdapter";
-import { useLoadedPointsDataAdapter } from "../../../store/adapters/LoadedPointsDataAdapter";
-import { useLoadedShapesDataAdapter } from "../../../store/adapters/LoadedShapesDataAdapter";
-import { useLoadedTableDataAdapter } from "../../../store/adapters/LoadedTableDataAdapter";
+import { useTissUUmaps } from "@/store";
+import { useLoadedImageDataAdapter } from "@/store/adapters/LoadedImageDataAdapter";
+import { useLoadedLabelsDataAdapter } from "@/store/adapters/LoadedLabelsDataAdapter";
+import { useLoadedPointsDataAdapter } from "@/store/adapters/LoadedPointsDataAdapter";
+import { useLoadedShapesDataAdapter } from "@/store/adapters/LoadedShapesDataAdapter";
+import { useLoadedTableDataAdapter } from "@/store/adapters/LoadedTableDataAdapter";
+
 import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
 
 export type ViewerPanelProps = {

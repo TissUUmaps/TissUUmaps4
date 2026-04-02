@@ -12,9 +12,13 @@ import {
 import { ArrowDownIcon, ArrowUpIcon, XIcon } from "lucide-react";
 import { useMemo } from "react";
 
+import {
+  Field,
+  FieldError,
+  FieldItem,
+  FieldLabel,
+} from "@/components/common/field";
 import { Button } from "@/components/ui/button";
-
-import { Field, FieldError, FieldItem, FieldLabel } from "../../common/field";
 
 export const ArrayControl = withJsonFormsArrayControlProps(
   (props: ArrayControlProps) => {

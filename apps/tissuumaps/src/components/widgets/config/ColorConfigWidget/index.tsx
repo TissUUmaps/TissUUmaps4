@@ -2,14 +2,14 @@ import { Square } from "lucide-react";
 
 import { MathUtils, colorPalettes } from "@tissuumaps/core";
 
+import { Field, FieldLabel } from "@/components/common/field";
+import { SimpleColorPicker } from "@/components/common/simple-color-picker";
+import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
+import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
+import { useTissUUmaps } from "@/store";
 
-import { useTableColumnSelector } from "../../../../hooks/useTableColumnSelector";
-import { useTissUUmaps } from "../../../../store";
-import { Field, FieldLabel } from "../../../common/field";
-import { SimpleColorPicker } from "../../../common/simple-color-picker";
-import { SimpleAsyncCombobox } from "../../../common/simple-combobox";
-import { SimpleSelect } from "../../../common/simple-select";
 import { type ColorConfigWidgetState } from "./useColorConfigWidget";
 
 export { ActiveColorConfigValue } from "./ActiveColorConfigValue";

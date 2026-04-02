@@ -4,7 +4,8 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useTissUUmaps } from "../../../../store";
+import { useTissUUmaps } from "@/store";
+
 import { markers } from "./markers";
 import { type MarkerConfigWidgetState } from "./useMarkerConfigWidget";
 

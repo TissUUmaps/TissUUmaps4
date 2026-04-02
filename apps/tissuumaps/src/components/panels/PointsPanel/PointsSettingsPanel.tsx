@@ -9,11 +9,6 @@ import {
   defaultPointVisibility,
 } from "@tissuumaps/core";
 
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
-
-import { useTissUUmaps } from "../../../store";
 import {
   Accordion,
   AccordionHeader,
@@ -21,39 +16,43 @@ import {
   AccordionPanel,
   AccordionTrigger,
   AccordionTriggerRightDownIcon,
-} from "../../common/accordion";
-import { Field, FieldLabel } from "../../common/field";
-import { Fieldset, FieldsetLegend } from "../../common/fieldset";
+} from "@/components/common/accordion";
+import { Field, FieldLabel } from "@/components/common/field";
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
   ColorConfigWidget,
-} from "../../widgets/config/ColorConfigWidget";
-import { useColorConfigWidget } from "../../widgets/config/ColorConfigWidget/useColorConfigWidget";
+} from "@/components/widgets/config/ColorConfigWidget";
+import { useColorConfigWidget } from "@/components/widgets/config/ColorConfigWidget/useColorConfigWidget";
 import {
   ActiveMarkerConfigValue,
   MarkerConfigSourceToggleGroup,
   MarkerConfigWidget,
-} from "../../widgets/config/MarkerConfigWidget";
-import { useMarkerConfigWidget } from "../../widgets/config/MarkerConfigWidget/useMarkerConfigWidget";
+} from "@/components/widgets/config/MarkerConfigWidget";
+import { useMarkerConfigWidget } from "@/components/widgets/config/MarkerConfigWidget/useMarkerConfigWidget";
 import {
   ActiveOpacityConfigValue,
   OpacityConfigSourceToggleGroup,
   OpacityConfigWidget,
-} from "../../widgets/config/OpacityConfigWidget";
-import { useOpacityConfigWidget } from "../../widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
+} from "@/components/widgets/config/OpacityConfigWidget";
+import { useOpacityConfigWidget } from "@/components/widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
 import {
   ActiveSizeConfigValue,
   SizeConfigSourceToggleGroup,
   SizeConfigWidget,
-} from "../../widgets/config/SizeConfigWidget";
-import { useSizeConfigWidget } from "../../widgets/config/SizeConfigWidget/useSizeConfigWidget";
+} from "@/components/widgets/config/SizeConfigWidget";
+import { useSizeConfigWidget } from "@/components/widgets/config/SizeConfigWidget/useSizeConfigWidget";
 import {
   ActiveVisibilityConfigValue,
   VisibilityConfigSourceToggleGroup,
   VisibilityConfigWidget,
-} from "../../widgets/config/VisibilityConfigWidget";
-import { useVisibilityConfigWidget } from "../../widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
+} from "@/components/widgets/config/VisibilityConfigWidget";
+import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
+import { cn } from "@/lib/utils";
+import { useTissUUmaps } from "@/store";
 
 export type PointsSettingsPanelProps = {
   points: Points;

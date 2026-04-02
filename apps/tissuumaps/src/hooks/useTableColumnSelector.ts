@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import { useTissUUmaps } from "../store";
+import { useTissUUmaps } from "@/store";
 
 export function useTableColumnSelector(tableId: string | null) {
   const loadTable = useTissUUmaps((state) => state.loadTable);
