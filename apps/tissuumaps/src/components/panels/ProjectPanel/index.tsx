@@ -80,12 +80,13 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
             ref={loadProjectFileInputRef}
             type="file"
             onChange={(event) => {
-              event.preventDefault();
-              const file = event.target.files?.[0];
-              if (file !== undefined) {
-                loadProjectFromFile(file).catch((error) => {
-                  console.error("Failed to load project from file", error);
-                });
+              if (event.target.files !== null) {
+                const file = event.target.files[0];
+                if (file !== undefined) {
+                  loadProjectFromFile(file).catch((error) => {
+                    console.error("Failed to load project from file", error);
+                  });
+                }
               }
             }}
             hidden
@@ -93,9 +94,11 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
           <FieldControl
             render={
               <Button
-                onClick={(event) => {
-                  event.preventDefault();
-                  loadProjectFileInputRef.current?.click();
+                onClick={() => {
+                  const loadProjectFileInput = loadProjectFileInputRef.current;
+                  if (loadProjectFileInput !== null) {
+                    loadProjectFileInput.click();
+                  }
                 }}
               >
                 Load project
@@ -106,12 +109,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
         <Field>
           <FieldControl
             render={
-              <Button
-                onClick={(event) => {
-                  event.preventDefault();
-                  downloadProject();
-                }}
-              >
+              <Button onClick={() => downloadProject()}>
                 Download project
               </Button>
             }
@@ -120,12 +118,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
         <Field>
           <FieldControl
             render={
-              <Button
-                onClick={(event) => {
-                  event.preventDefault();
-                  confirmClearProject();
-                }}
-              >
+              <Button onClick={() => confirmClearProject()}>
                 Clear project
               </Button>
             }

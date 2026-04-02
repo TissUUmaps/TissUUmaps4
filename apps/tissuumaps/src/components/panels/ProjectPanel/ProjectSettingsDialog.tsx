@@ -25,14 +25,19 @@ export function ProjectSettingsDialog() {
                 <Input
                   type="number"
                   inputMode="decimal"
-                  min={0.1}
                   step={0.1}
+                  min={0}
                   value={drawOptions.pointSizeFactor}
-                  onChange={(e) =>
-                    setDrawOptions({
-                      pointSizeFactor: parseFloat(e.target.value) || 1,
-                    })
-                  }
+                  onChange={(event) => {
+                    if (event.target.value !== "") {
+                      setDrawOptions({
+                        pointSizeFactor: Math.max(
+                          0,
+                          parseFloat(event.target.value),
+                        ),
+                      });
+                    }
+                  }}
                 />
               }
             />
@@ -47,15 +52,18 @@ export function ProjectSettingsDialog() {
               render={
                 <Input
                   type="number"
-                  inputMode="decimal"
                   min={0}
-                  step={1}
                   value={drawOptions.shapeStrokeWidth}
-                  onChange={(e) =>
-                    setDrawOptions({
-                      shapeStrokeWidth: parseFloat(e.target.value) || 1,
-                    })
-                  }
+                  onChange={(event) => {
+                    if (event.target.value !== "") {
+                      setDrawOptions({
+                        shapeStrokeWidth: Math.max(
+                          0,
+                          parseInt(event.target.value),
+                        ),
+                      });
+                    }
+                  }}
                 />
               }
             />
@@ -70,18 +78,18 @@ export function ProjectSettingsDialog() {
               render={
                 <Input
                   type="number"
-                  inputMode="numeric"
                   min={1}
-                  step={1}
                   value={drawOptions.numShapesScanlines}
-                  onChange={(e) =>
-                    setDrawOptions({
-                      numShapesScanlines: Math.max(
-                        1,
-                        parseInt(e.target.value, 10) || 1,
-                      ),
-                    })
-                  }
+                  onChange={(event) => {
+                    if (event.target.value !== "") {
+                      setDrawOptions({
+                        numShapesScanlines: Math.max(
+                          1,
+                          parseInt(event.target.value),
+                        ),
+                      });
+                    }
+                  }}
                 />
               }
             />

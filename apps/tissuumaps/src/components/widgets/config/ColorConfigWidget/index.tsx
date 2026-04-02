@@ -1,6 +1,6 @@
 import { Square } from "lucide-react";
 
-import { colorPalettes } from "@tissuumaps/core";
+import { MathUtils, colorPalettes } from "@tissuumaps/core";
 
 import { Input } from "@/components/ui/input";
 
@@ -59,11 +59,10 @@ function ConstantColorConfigWidget({
             max={255}
             value={color.r}
             onChange={(event) => {
-              const r = event.target.valueAsNumber;
-              if (Number.isFinite(r)) {
+              if (event.target.value !== "") {
                 setColor({
                   ...color,
-                  r: Math.min(Math.max(0, r), 255),
+                  r: MathUtils.clamp(parseInt(event.target.value), 0, 255),
                 });
               }
             }}
@@ -77,11 +76,10 @@ function ConstantColorConfigWidget({
             max={255}
             value={color.g}
             onChange={(event) => {
-              const g = event.target.valueAsNumber;
-              if (Number.isFinite(g)) {
+              if (event.target.value !== "") {
                 setColor({
                   ...color,
-                  g: Math.min(Math.max(0, g), 255),
+                  g: MathUtils.clamp(parseInt(event.target.value), 0, 255),
                 });
               }
             }}
@@ -95,11 +93,10 @@ function ConstantColorConfigWidget({
             max={255}
             value={color.b}
             onChange={(event) => {
-              const b = event.target.valueAsNumber;
-              if (Number.isFinite(b)) {
+              if (event.target.value !== "") {
                 setColor({
                   ...color,
-                  b: Math.min(Math.max(0, b), 255),
+                  b: MathUtils.clamp(parseInt(event.target.value), 0, 255),
                 });
               }
             }}
@@ -183,9 +180,14 @@ function FromColorConfigWidget({
           <FieldLabel>Min. value</FieldLabel>
           <Input
             type="number"
+            inputMode="decimal"
             value={rangeMin ?? ""}
             onChange={(event) =>
-              setRangeMin(event.target.value ? +event.target.value : null)
+              setRangeMin(
+                event.target.value !== ""
+                  ? parseFloat(event.target.value)
+                  : null,
+              )
             }
           />
         </Field>
@@ -193,9 +195,14 @@ function FromColorConfigWidget({
           <FieldLabel>Max. value</FieldLabel>
           <Input
             type="number"
+            inputMode="decimal"
             value={rangeMax ?? ""}
             onChange={(event) =>
-              setRangeMax(event.target.value ? +event.target.value : null)
+              setRangeMax(
+                event.target.value !== ""
+                  ? parseFloat(event.target.value)
+                  : null,
+              )
             }
           />
         </Field>

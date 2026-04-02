@@ -1,3 +1,5 @@
+import { MathUtils } from "@tissuumaps/core";
+
 import { Input } from "@/components/ui/input";
 
 import { useTableColumnSelector } from "../../../../hooks/useTableColumnSelector";
@@ -49,14 +51,14 @@ function ConstantOpacityConfigWidget({
         <FieldLabel>Opacity</FieldLabel>
         <Input
           type="number"
+          inputMode="decimal"
+          step={0.01}
           min={0}
           max={1}
-          step={0.01}
           value={value}
           onChange={(event) => {
-            const opacity = event.target.valueAsNumber;
-            if (Number.isFinite(opacity)) {
-              setValue(Math.min(Math.max(0, opacity), 1));
+            if (event.target.value !== "") {
+              setValue(MathUtils.clamp(parseFloat(event.target.value), 0, 1));
             }
           }}
         />

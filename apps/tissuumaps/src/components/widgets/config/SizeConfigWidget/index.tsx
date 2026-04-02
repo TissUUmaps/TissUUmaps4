@@ -51,9 +51,14 @@ function ConstantSizeConfigWidget({
         <FieldLabel>Size</FieldLabel>
         <Input
           type="number"
+          inputMode="decimal"
           min={0}
           value={value}
-          onChange={(event) => setValue(Math.max(0, +event.target.value))}
+          onChange={(event) => {
+            if (event.target.value !== "") {
+              setValue(Math.max(0, parseFloat(event.target.value)));
+            }
+          }}
         />
       </Field>
       <Field>

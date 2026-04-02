@@ -1,5 +1,6 @@
 import {
   type Labels,
+  MathUtils,
   defaultLabelColor,
   defaultLabelOpacity,
   defaultLabelVisibility,
@@ -104,15 +105,19 @@ export function LabelsSettingsPanel({
               <FieldLabel>Opacity</FieldLabel>
               <Input
                 type="number"
+                inputMode="decimal"
+                step={0.01}
                 min={0}
                 max={1}
-                step={0.01}
                 value={labels.opacity}
                 onChange={(event) => {
-                  const opacity = event.target.valueAsNumber;
-                  if (Number.isFinite(opacity)) {
+                  if (event.target.value !== "") {
                     updateLabels(labels.id, {
-                      opacity: Math.min(Math.max(0, opacity), 1),
+                      opacity: MathUtils.clamp(
+                        parseFloat(event.target.value),
+                        0,
+                        1,
+                      ),
                     });
                   }
                 }}
