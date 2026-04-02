@@ -97,10 +97,10 @@ The user interface is built primarily using TailwindCSS, shadcn/ui, Base UI comp
 Components are structured as follows:
 
 - `common` - custom low-level components that are commonly reused throughout the codebase
-- `controls` - configuration components used to configure the appearance of rendered data objects
 - `jsforms` - JSForms-related components that are used for rendering data source configuration forms
-- `panels` - groups of components that are used as building blocks for the application's user interface
+- `panels` - high-level UI building blocks (layout components) that are used as Dockview panels
 - `ui` - shadcn/ui components, adapted to the application as needed (be careful when updating!)
+- `widgets` - independent high-level components (e.g. configuration widgets) used across panels
 
 ### State management
 
