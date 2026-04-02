@@ -82,6 +82,8 @@ The TissUUmaps `Viewer` component uses an adapter pattern facilitated by `Viewer
 
 ## TissUUmaps (tissuumaps)
 
+Absolute ("@/") imports are preferred over relative parent imports.
+
 ### App
 
 Upon startup, all TissUUmaps plugins are initialized and the application state is initialized using a project file loaded from `project.json` (if available) or from the URL given in the `project` GET parameter.
