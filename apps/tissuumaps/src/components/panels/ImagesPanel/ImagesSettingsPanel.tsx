@@ -1,4 +1,4 @@
-import { type Image } from "@tissuumaps/core";
+import { type Image, MathUtils } from "@tissuumaps/core";
 
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -51,15 +51,15 @@ export function ImagesSettingsPanel({
         <FieldLabel>Opacity</FieldLabel>
         <Input
           type="number"
+          inputMode="decimal"
+          step={0.01}
           min={0}
           max={1}
-          step={0.01}
           value={image.opacity}
           onChange={(event) => {
-            const opacity = event.target.valueAsNumber;
-            if (Number.isFinite(opacity)) {
+            if (event.target.value !== "") {
               updateImage(image.id, {
-                opacity: Math.min(Math.max(0, opacity), 1),
+                opacity: MathUtils.clamp(parseFloat(event.target.value), 0, 1),
               });
             }
           }}

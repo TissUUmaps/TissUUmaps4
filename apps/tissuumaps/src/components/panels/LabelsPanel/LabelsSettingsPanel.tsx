@@ -1,5 +1,6 @@
 import {
   type Labels,
+  MathUtils,
   defaultLabelColor,
   defaultLabelOpacity,
   defaultLabelVisibility,
@@ -21,20 +22,20 @@ import {
 import { Field, FieldLabel } from "../../common/field";
 import { Fieldset, FieldsetLegend } from "../../common/fieldset";
 import {
-  ColorConfigControl,
   ColorConfigSourceToggleGroup,
-} from "../../controls/ColorConfigControl";
-import { useColorConfigControl } from "../../controls/ColorConfigControl/useColorConfigControl";
+  ColorConfigWidget,
+} from "../../widgets/config/ColorConfigWidget";
+import { useColorConfigWidget } from "../../widgets/config/ColorConfigWidget/useColorConfigWidget";
 import {
-  OpacityConfigControl,
   OpacityConfigSourceToggleGroup,
-} from "../../controls/OpacityConfigControl";
-import { useOpacityConfigControl } from "../../controls/OpacityConfigControl/useOpacityConfigControl";
+  OpacityConfigWidget,
+} from "../../widgets/config/OpacityConfigWidget";
+import { useOpacityConfigWidget } from "../../widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
 import {
-  VisibilityConfigControl,
   VisibilityConfigSourceToggleGroup,
-} from "../../controls/VisibilityConfigControl";
-import { useVisibilityConfigControl } from "../../controls/VisibilityConfigControl/useVisibilityConfigControl";
+  VisibilityConfigWidget,
+} from "../../widgets/config/VisibilityConfigWidget";
+import { useVisibilityConfigWidget } from "../../widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
 
 export type LabelsSettingsPanelProps = {
   labels: Labels;
@@ -47,18 +48,18 @@ export function LabelsSettingsPanel({
 }: LabelsSettingsPanelProps) {
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
 
-  const labelColorConfigControlState = useColorConfigControl(
+  const labelColorConfigWidgetState = useColorConfigWidget(
     labels.labelColor,
     (newColorConfig) => updateLabels(labels.id, { labelColor: newColorConfig }),
     defaultLabelColor,
   );
-  const labelVisibilityConfigControlState = useVisibilityConfigControl(
+  const labelVisibilityConfigWidgetState = useVisibilityConfigWidget(
     labels.labelVisibility,
     (newVisibilityConfig) =>
       updateLabels(labels.id, { labelVisibility: newVisibilityConfig }),
     defaultLabelVisibility,
   );
-  const labelOpacityConfigControlState = useOpacityConfigControl(
+  const labelOpacityConfigWidgetState = useOpacityConfigWidget(
     labels.labelOpacity,
     (newOpacityConfig) =>
       updateLabels(labels.id, { labelOpacity: newOpacityConfig }),
@@ -104,15 +105,19 @@ export function LabelsSettingsPanel({
               <FieldLabel>Opacity</FieldLabel>
               <Input
                 type="number"
+                inputMode="decimal"
+                step={0.01}
                 min={0}
                 max={1}
-                step={0.01}
                 value={labels.opacity}
                 onChange={(event) => {
-                  const opacity = event.target.valueAsNumber;
-                  if (Number.isFinite(opacity)) {
+                  if (event.target.value !== "") {
                     updateLabels(labels.id, {
-                      opacity: Math.min(Math.max(0, opacity), 1),
+                      opacity: MathUtils.clamp(
+                        parseFloat(event.target.value),
+                        0,
+                        1,
+                      ),
                     });
                   }
                 }}
@@ -126,12 +131,12 @@ export function LabelsSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label color</AccordionTrigger>
             <ColorConfigSourceToggleGroup
-              state={labelColorConfigControlState}
+              state={labelColorConfigWidgetState}
               className="ml-auto"
             />
           </AccordionHeader>
           <AccordionPanel>
-            <ColorConfigControl state={labelColorConfigControlState} />
+            <ColorConfigWidget state={labelColorConfigWidgetState} />
           </AccordionPanel>
         </AccordionItem>
         {/* Label visibility */}
@@ -140,14 +145,12 @@ export function LabelsSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label visibility</AccordionTrigger>
             <VisibilityConfigSourceToggleGroup
-              state={labelVisibilityConfigControlState}
+              state={labelVisibilityConfigWidgetState}
               className="ml-auto"
             />
           </AccordionHeader>
           <AccordionPanel>
-            <VisibilityConfigControl
-              state={labelVisibilityConfigControlState}
-            />
+            <VisibilityConfigWidget state={labelVisibilityConfigWidgetState} />
           </AccordionPanel>
         </AccordionItem>
         {/* Label opacity */}
@@ -156,12 +159,12 @@ export function LabelsSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label opacity</AccordionTrigger>
             <OpacityConfigSourceToggleGroup
-              state={labelOpacityConfigControlState}
+              state={labelOpacityConfigWidgetState}
               className="ml-auto"
             />
           </AccordionHeader>
           <AccordionPanel>
-            <OpacityConfigControl state={labelOpacityConfigControlState} />
+            <OpacityConfigWidget state={labelOpacityConfigWidgetState} />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>

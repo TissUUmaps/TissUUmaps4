@@ -1,4 +1,5 @@
 import {
+  MathUtils,
   type Shapes,
   defaultShapeFillColor,
   defaultShapeFillOpacity,
@@ -21,26 +22,26 @@ import {
 } from "../../common/accordion";
 import { Field, FieldLabel } from "../../common/field";
 import { Fieldset, FieldsetLegend } from "../../common/fieldset";
-import {
-  ActiveColorConfigValue,
-  ColorConfigControl,
-  ColorConfigSourceToggleGroup,
-} from "../../controls/ColorConfigControl";
-import { useColorConfigControl } from "../../controls/ColorConfigControl/useColorConfigControl";
-import {
-  ActiveOpacityConfigValue,
-  OpacityConfigControl,
-  OpacityConfigSourceToggleGroup,
-} from "../../controls/OpacityConfigControl";
-import { useOpacityConfigControl } from "../../controls/OpacityConfigControl/useOpacityConfigControl";
-import {
-  ActiveVisibilityConfigValue,
-  VisibilityConfigControl,
-  VisibilityConfigSourceToggleGroup,
-} from "../../controls/VisibilityConfigControl";
-import { useVisibilityConfigControl } from "../../controls/VisibilityConfigControl/useVisibilityConfigControl";
 import { Input } from "../../ui/input";
 import { Switch } from "../../ui/switch";
+import {
+  ActiveColorConfigValue,
+  ColorConfigSourceToggleGroup,
+  ColorConfigWidget,
+} from "../../widgets/config/ColorConfigWidget";
+import { useColorConfigWidget } from "../../widgets/config/ColorConfigWidget/useColorConfigWidget";
+import {
+  ActiveOpacityConfigValue,
+  OpacityConfigSourceToggleGroup,
+  OpacityConfigWidget,
+} from "../../widgets/config/OpacityConfigWidget";
+import { useOpacityConfigWidget } from "../../widgets/config/OpacityConfigWidget/useOpacityConfigWidget";
+import {
+  ActiveVisibilityConfigValue,
+  VisibilityConfigSourceToggleGroup,
+  VisibilityConfigWidget,
+} from "../../widgets/config/VisibilityConfigWidget";
+import { useVisibilityConfigWidget } from "../../widgets/config/VisibilityConfigWidget/useVisibilityConfigWidget";
 
 export type ShapesSettingsPanelProps = {
   shapes: Shapes;
@@ -53,31 +54,31 @@ export function ShapesSettingsPanel({
 }: ShapesSettingsPanelProps) {
   const updateShapes = useTissUUmaps((state) => state.updateShapes);
 
-  const shapeFillColorConfigControlState = useColorConfigControl(
+  const shapeFillColorConfigWidgetState = useColorConfigWidget(
     shapes.shapeFillColor,
     (newColorConfig) =>
       updateShapes(shapes.id, { shapeFillColor: newColorConfig }),
     defaultShapeFillColor,
   );
-  const shapeFillVisibilityConfigControlState = useVisibilityConfigControl(
+  const shapeFillVisibilityConfigWidgetState = useVisibilityConfigWidget(
     shapes.shapeFillVisibility,
     (newVisibilityConfig) =>
       updateShapes(shapes.id, { shapeFillVisibility: newVisibilityConfig }),
     defaultShapeFillVisibility,
   );
-  const shapeFillOpacityConfigControlState = useOpacityConfigControl(
+  const shapeFillOpacityConfigWidgetState = useOpacityConfigWidget(
     shapes.shapeFillOpacity,
     (newOpacityConfig) =>
       updateShapes(shapes.id, { shapeFillOpacity: newOpacityConfig }),
     defaultShapeFillOpacity,
   );
-  const shapeStrokeColorConfigControlState = useColorConfigControl(
+  const shapeStrokeColorConfigWidgetState = useColorConfigWidget(
     shapes.shapeStrokeColor,
     (newColorConfig) =>
       updateShapes(shapes.id, { shapeStrokeColor: newColorConfig }),
     defaultShapeStrokeColor,
   );
-  const shapeStrokeVisibilityConfigControlState = useVisibilityConfigControl(
+  const shapeStrokeVisibilityConfigWidgetState = useVisibilityConfigWidget(
     shapes.shapeStrokeVisibility,
     (newVisibilityConfig) =>
       updateShapes(shapes.id, {
@@ -85,7 +86,7 @@ export function ShapesSettingsPanel({
       }),
     defaultShapeStrokeVisibility,
   );
-  const shapeStrokeOpacityConfigControlState = useOpacityConfigControl(
+  const shapeStrokeOpacityConfigWidgetState = useOpacityConfigWidget(
     shapes.shapeStrokeOpacity,
     (newOpacityConfig) =>
       updateShapes(shapes.id, { shapeStrokeOpacity: newOpacityConfig }),
@@ -131,15 +132,19 @@ export function ShapesSettingsPanel({
               <FieldLabel>Opacity</FieldLabel>
               <Input
                 type="number"
+                inputMode="decimal"
+                step={0.01}
                 min={0}
                 max={1}
-                step={0.01}
                 value={shapes.opacity}
                 onChange={(event) => {
-                  const opacity = event.target.valueAsNumber;
-                  if (Number.isFinite(opacity)) {
+                  if (event.target.value !== "") {
                     updateShapes(shapes.id, {
-                      opacity: Math.min(Math.max(0, opacity), 1),
+                      opacity: MathUtils.clamp(
+                        parseFloat(event.target.value),
+                        0,
+                        1,
+                      ),
                     });
                   }
                 }}
@@ -153,16 +158,16 @@ export function ShapesSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Fill color</AccordionTrigger>
             <ActiveColorConfigValue
-              state={shapeFillColorConfigControlState}
+              state={shapeFillColorConfigWidgetState}
               className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <ColorConfigSourceToggleGroup
-              state={shapeFillColorConfigControlState}
+              state={shapeFillColorConfigWidgetState}
               className="border rounded"
             />
-            <ColorConfigControl state={shapeFillColorConfigControlState} />
+            <ColorConfigWidget state={shapeFillColorConfigWidgetState} />
           </AccordionPanel>
         </AccordionItem>
         {/* Shape fill visibility */}
@@ -171,17 +176,17 @@ export function ShapesSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Fill visibility</AccordionTrigger>
             <ActiveVisibilityConfigValue
-              state={shapeFillVisibilityConfigControlState}
+              state={shapeFillVisibilityConfigWidgetState}
               className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <VisibilityConfigSourceToggleGroup
-              state={shapeFillVisibilityConfigControlState}
+              state={shapeFillVisibilityConfigWidgetState}
               className="border rounded"
             />
-            <VisibilityConfigControl
-              state={shapeFillVisibilityConfigControlState}
+            <VisibilityConfigWidget
+              state={shapeFillVisibilityConfigWidgetState}
             />
           </AccordionPanel>
         </AccordionItem>
@@ -191,16 +196,16 @@ export function ShapesSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Fill opacity</AccordionTrigger>
             <ActiveOpacityConfigValue
-              state={shapeFillOpacityConfigControlState}
+              state={shapeFillOpacityConfigWidgetState}
               className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <OpacityConfigSourceToggleGroup
-              state={shapeFillOpacityConfigControlState}
+              state={shapeFillOpacityConfigWidgetState}
               className="border rounded"
             />
-            <OpacityConfigControl state={shapeFillOpacityConfigControlState} />
+            <OpacityConfigWidget state={shapeFillOpacityConfigWidgetState} />
           </AccordionPanel>
         </AccordionItem>
         {/* Shape stroke color */}
@@ -209,16 +214,16 @@ export function ShapesSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Stroke color</AccordionTrigger>
             <ActiveColorConfigValue
-              state={shapeStrokeColorConfigControlState}
+              state={shapeStrokeColorConfigWidgetState}
               className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <ColorConfigSourceToggleGroup
-              state={shapeStrokeColorConfigControlState}
+              state={shapeStrokeColorConfigWidgetState}
               className="border rounded"
             />
-            <ColorConfigControl state={shapeStrokeColorConfigControlState} />
+            <ColorConfigWidget state={shapeStrokeColorConfigWidgetState} />
           </AccordionPanel>
         </AccordionItem>
         {/* Shape stroke visibility */}
@@ -227,17 +232,17 @@ export function ShapesSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Stroke visibility</AccordionTrigger>
             <ActiveVisibilityConfigValue
-              state={shapeStrokeVisibilityConfigControlState}
+              state={shapeStrokeVisibilityConfigWidgetState}
               className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <VisibilityConfigSourceToggleGroup
-              state={shapeStrokeVisibilityConfigControlState}
+              state={shapeStrokeVisibilityConfigWidgetState}
               className="border rounded"
             />
-            <VisibilityConfigControl
-              state={shapeStrokeVisibilityConfigControlState}
+            <VisibilityConfigWidget
+              state={shapeStrokeVisibilityConfigWidgetState}
             />
           </AccordionPanel>
         </AccordionItem>
@@ -247,18 +252,16 @@ export function ShapesSettingsPanel({
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Stroke opacity</AccordionTrigger>
             <ActiveOpacityConfigValue
-              state={shapeStrokeOpacityConfigControlState}
+              state={shapeStrokeOpacityConfigWidgetState}
               className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <OpacityConfigSourceToggleGroup
-              state={shapeStrokeOpacityConfigControlState}
+              state={shapeStrokeOpacityConfigWidgetState}
               className="border rounded"
             />
-            <OpacityConfigControl
-              state={shapeStrokeOpacityConfigControlState}
-            />
+            <OpacityConfigWidget state={shapeStrokeOpacityConfigWidgetState} />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>

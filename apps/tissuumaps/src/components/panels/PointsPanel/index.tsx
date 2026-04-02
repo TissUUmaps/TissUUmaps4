@@ -2,7 +2,7 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 
-import { type Points } from "@tissuumaps/core";
+import { MathUtils, type Points } from "@tissuumaps/core";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -83,12 +83,18 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               <InputGroupAddon>PSF</InputGroupAddon>
               <InputGroupInput
                 type="number"
+                inputMode="decimal"
+                step={0.1}
                 min={0}
                 value={points.pointSizeFactor}
                 onChange={(event) => {
-                  const value = event.target.valueAsNumber;
-                  if (Number.isFinite(value)) {
-                    updatePoints(points.id, { pointSizeFactor: value });
+                  if (event.target.value !== "") {
+                    updatePoints(points.id, {
+                      pointSizeFactor: Math.max(
+                        0,
+                        parseFloat(event.target.value),
+                      ),
+                    });
                   }
                 }}
               />
@@ -97,15 +103,19 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               <InputGroupAddon>OPA</InputGroupAddon>
               <InputGroupInput
                 type="number"
+                inputMode="decimal"
+                step={0.01}
                 min={0}
                 max={1}
-                step={0.01}
                 value={points.opacity}
                 onChange={(event) => {
-                  const opacity = event.target.valueAsNumber;
-                  if (Number.isFinite(opacity)) {
+                  if (event.target.value !== "") {
                     updatePoints(points.id, {
-                      opacity: Math.min(Math.max(0, opacity), 1),
+                      opacity: MathUtils.clamp(
+                        parseFloat(event.target.value),
+                        0,
+                        1,
+                      ),
                     });
                   }
                 }}

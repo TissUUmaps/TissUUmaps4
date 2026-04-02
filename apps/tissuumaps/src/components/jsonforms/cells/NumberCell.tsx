@@ -11,13 +11,16 @@ export const NumberCell = withJsonFormsCellProps((props: CellProps) => {
   return (
     <Input
       type="number"
+      inputMode="decimal"
       step="0.1"
       id={props.id}
       value={(props.data as string | number | undefined | null) ?? ""}
       onChange={(event) =>
         props.handleChange(
           props.path,
-          event.target.value === "" ? undefined : Number(event.target.value),
+          event.target.value !== ""
+            ? parseFloat(event.target.value)
+            : undefined,
         )
       }
       disabled={!props.enabled}

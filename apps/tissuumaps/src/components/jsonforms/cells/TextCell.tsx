@@ -16,7 +16,7 @@ export const TextCell = withJsonFormsCellProps((props: CellProps) => {
       onChange={(event) =>
         props.handleChange(
           props.path,
-          event.target.value === "" ? undefined : event.target.value,
+          event.target.value !== "" ? event.target.value : undefined,
         )
       }
       disabled={!props.enabled}

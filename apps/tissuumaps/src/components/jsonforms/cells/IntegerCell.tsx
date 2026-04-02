@@ -17,9 +17,7 @@ export const IntegerCell = withJsonFormsCellProps((props: CellProps) => {
       onChange={(event) =>
         props.handleChange(
           props.path,
-          event.target.value === ""
-            ? undefined
-            : parseInt(event.target.value, 10),
+          event.target.value !== "" ? parseInt(event.target.value) : undefined,
         )
       }
       disabled={!props.enabled}
