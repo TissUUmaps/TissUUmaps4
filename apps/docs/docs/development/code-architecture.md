@@ -82,7 +82,7 @@ The TissUUmaps `Viewer` component uses an adapter pattern facilitated by `Viewer
 
 ## TissUUmaps (tissuumaps)
 
-Absolute ("@/") imports are preferred over relative parent imports.
+In the TissUUmaps React app, absolute ("@/") imports are preferred over relative parent imports for cross-module imports, while relative imports remain acceptable within a module or feature directory.
 
 ### App
 
