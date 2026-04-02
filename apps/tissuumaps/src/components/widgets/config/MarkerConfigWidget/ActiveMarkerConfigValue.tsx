@@ -6,21 +6,21 @@ import {
 
 import { useTissUUmaps } from "@/store";
 
+import { type MarkerConfigWidgetAdapter } from "./adapter";
 import { markers } from "./markers";
-import { type MarkerConfigWidgetState } from "./useMarkerConfigWidget";
 
 export type ActiveMarkerConfigValueProps = {
-  state: MarkerConfigWidgetState;
+  adapter: MarkerConfigWidgetAdapter;
   className?: string;
 };
 
 export function ActiveMarkerConfigValue({
-  state,
+  adapter,
   className,
 }: ActiveMarkerConfigValueProps) {
   const tables = useTissUUmaps((state) => state.tables);
 
-  const { activeSource, markerConfig, defaultMarker } = state;
+  const { activeSource, markerConfig, defaultMarker } = adapter;
 
   if (activeSource === "constant" && isConstantConfig(markerConfig)) {
     const markerIcon = markers.find(

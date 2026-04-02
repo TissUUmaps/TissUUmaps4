@@ -1,19 +1,19 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { type ColorConfigWidgetState } from "./useColorConfigWidget";
+import { type ColorConfigWidgetAdapter } from "./adapter";
 
 export type ColorConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],
   "value" | "onValueChange"
 > & {
-  state: ColorConfigWidgetState;
+  adapter: ColorConfigWidgetAdapter;
 };
 
 export function ColorConfigSourceToggleGroup({
-  state,
+  adapter,
   ...props
 }: ColorConfigSourceToggleGroupProps) {
-  const { activeSource, currentSource, setCurrentSource } = state;
+  const { activeSource, currentSource, setCurrentSource } = adapter;
 
   return (
     <ToggleGroup

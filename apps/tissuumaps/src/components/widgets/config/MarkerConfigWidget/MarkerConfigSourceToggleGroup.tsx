@@ -1,19 +1,19 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { type MarkerConfigWidgetState } from "./useMarkerConfigWidget";
+import { type MarkerConfigWidgetAdapter } from "./adapter";
 
 export type MarkerConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],
   "value" | "onValueChange"
 > & {
-  state: MarkerConfigWidgetState;
+  adapter: MarkerConfigWidgetAdapter;
 };
 
 export function MarkerConfigSourceToggleGroup({
-  state,
+  adapter,
   ...props
 }: MarkerConfigSourceToggleGroupProps) {
-  const { activeSource, currentSource, setCurrentSource } = state;
+  const { activeSource, currentSource, setCurrentSource } = adapter;
 
   return (
     <ToggleGroup

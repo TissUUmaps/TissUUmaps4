@@ -8,33 +8,16 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-type OpacityConfigSource = Exclude<OpacityConfig["source"], undefined>;
-
-export type OpacityConfigWidgetState = {
-  opacityConfig: OpacityConfig;
-  defaultOpacity: number;
-  activeSource: OpacityConfigSource;
-  currentSource: OpacityConfigSource;
-  currentConstantValue: number;
-  currentFromTable: string | null;
-  currentFromColumn: string | null;
-  currentGroupByTable: string | null;
-  currentGroupByColumn: string | null;
-  currentGroupByMap: string | null;
-  setCurrentSource: (newCurrentSource: OpacityConfigSource) => void;
-  setCurrentConstantValue: (newCurrentConstantValue: number) => void;
-  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
-  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
-  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
-  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
-  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
-};
+import {
+  type OpacityConfigSource,
+  type OpacityConfigWidgetAdapter,
+} from "./adapter";
 
 export function useOpacityConfigWidget(
   opacityConfig: OpacityConfig,
   onOpacityConfigChange: (newOpacityConfig: OpacityConfig) => void,
   defaultOpacity: number,
-): OpacityConfigWidgetState {
+): OpacityConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(opacityConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<OpacityConfigSource>(
     opacityConfig.source ?? "constant",

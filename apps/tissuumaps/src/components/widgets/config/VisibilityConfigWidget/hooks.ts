@@ -8,33 +8,16 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-type VisibilityConfigSource = Exclude<VisibilityConfig["source"], undefined>;
-
-export type VisibilityConfigWidgetState = {
-  visibilityConfig: VisibilityConfig;
-  defaultVisibility: boolean;
-  activeSource: VisibilityConfigSource;
-  currentSource: VisibilityConfigSource;
-  currentConstantValue: boolean;
-  currentFromTable: string | null;
-  currentFromColumn: string | null;
-  currentGroupByTable: string | null;
-  currentGroupByColumn: string | null;
-  currentGroupByMap: string | null;
-  setCurrentSource: (newCurrentSource: VisibilityConfigSource) => void;
-  setCurrentConstantValue: (newCurrentConstantValue: boolean) => void;
-  setCurrentFromTable: (newCurrentFromTable: string | null) => void;
-  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
-  setCurrentGroupByTable: (newCurrentGroupByTable: string | null) => void;
-  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
-  setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
-};
+import {
+  type VisibilityConfigSource,
+  type VisibilityConfigWidgetAdapter,
+} from "./adapter";
 
 export function useVisibilityConfigWidget(
   visibilityConfig: VisibilityConfig,
   onVisibilityConfigChange: (newVisibilityConfig: VisibilityConfig) => void,
   defaultVisibility: boolean,
-): VisibilityConfigWidgetState {
+): VisibilityConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(visibilityConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<VisibilityConfigSource>(
     visibilityConfig.source ?? "constant",

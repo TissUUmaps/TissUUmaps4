@@ -4,42 +4,46 @@ import { SimpleSelect } from "@/components/common/simple-select";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
+import { type MarkerConfigWidgetAdapter } from "./adapter";
 import { markers } from "./markers";
-import { type MarkerConfigWidgetState } from "./useMarkerConfigWidget";
 
 export { ActiveMarkerConfigValue } from "./ActiveMarkerConfigValue";
 export { MarkerConfigSourceToggleGroup } from "./MarkerConfigSourceToggleGroup";
 
 export type MarkerConfigWidgetProps = {
-  state: MarkerConfigWidgetState;
+  adapter: MarkerConfigWidgetAdapter;
   className?: string;
 };
 
 export function MarkerConfigWidget({
-  state,
+  adapter,
   className,
 }: MarkerConfigWidgetProps) {
-  switch (state.currentSource) {
+  switch (adapter.currentSource) {
     case "constant":
-      return <ConstantMarkerConfigWidget state={state} className={className} />;
+      return (
+        <ConstantMarkerConfigWidget adapter={adapter} className={className} />
+      );
     case "from":
-      return <FromMarkerConfigWidget state={state} className={className} />;
+      return <FromMarkerConfigWidget adapter={adapter} className={className} />;
     case "groupBy":
-      return <GroupByMarkerConfigWidget state={state} className={className} />;
+      return (
+        <GroupByMarkerConfigWidget adapter={adapter} className={className} />
+      );
   }
 }
 
 type ConstantMarkerConfigWidgetProps = {
-  state: MarkerConfigWidgetState;
+  adapter: MarkerConfigWidgetAdapter;
   className?: string;
 };
 
 function ConstantMarkerConfigWidget({
-  state,
+  adapter,
   className,
 }: ConstantMarkerConfigWidgetProps) {
   const { currentConstantValue: value, setCurrentConstantValue: setValue } =
-    state;
+    adapter;
 
   return (
     <div className={className}>
@@ -66,12 +70,12 @@ function ConstantMarkerConfigWidget({
 }
 
 type FromMarkerConfigWidgetProps = {
-  state: MarkerConfigWidgetState;
+  adapter: MarkerConfigWidgetAdapter;
   className?: string;
 };
 
 function FromMarkerConfigWidget({
-  state,
+  adapter,
   className,
 }: FromMarkerConfigWidgetProps) {
   const {
@@ -79,7 +83,7 @@ function FromMarkerConfigWidget({
     currentFromColumn: column,
     setCurrentFromTable: setTable,
     setCurrentFromColumn: setColumn,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
 
@@ -115,12 +119,12 @@ function FromMarkerConfigWidget({
 }
 
 type GroupByMarkerConfigWidgetProps = {
-  state: MarkerConfigWidgetState;
+  adapter: MarkerConfigWidgetAdapter;
   className?: string;
 };
 
 function GroupByMarkerConfigWidget({
-  state,
+  adapter,
   className,
 }: GroupByMarkerConfigWidgetProps) {
   const {
@@ -130,7 +134,7 @@ function GroupByMarkerConfigWidget({
     setCurrentGroupByTable: setTable,
     setCurrentGroupByColumn: setColumn,
     setCurrentGroupByMap: setMap,
-  } = state;
+  } = adapter;
 
   const tables = useTissUUmaps((state) => state.tables);
   const markerMaps = useTissUUmaps((state) => state.markerMaps);
