@@ -10,7 +10,7 @@ import {
 import { deduplicate } from "../deduplicate";
 import { type TissUUmapsStateCreator } from "../index";
 
-type CachedImageData = {
+type LoadedImageData = {
   dataSource: ImageDataSource;
   data: ImageData;
 };
@@ -20,7 +20,7 @@ export type ImageSlice = ImageSliceState & ImageSliceActions;
 export type ImageSliceState = {
   images: Image[];
   loadedImages: Map<string, string>;
-  loadedImageData: Map<string, CachedImageData>;
+  loadedImageData: Map<string, LoadedImageData>;
 };
 
 export type ImageSliceActions = {
@@ -125,7 +125,7 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
       if (image === undefined) {
         throw new Error(`Image with ID ${imageId} not found.`);
       }
-      let oldLoadedData: CachedImageData | undefined;
+      let oldLoadedData: LoadedImageData | undefined;
       for (const loadedData of state.loadedImageData.values()) {
         if (deepEqual(loadedData.dataSource, image.dataSource)) {
           oldLoadedData = loadedData;
