@@ -1,4 +1,4 @@
-import type { PointsDataSource } from "../model/points";
+import { type PointsDataSource } from "../model/points";
 import { type ProgressCallback } from "../types";
 import { type DataProvider, type ItemsData } from "./base";
 
