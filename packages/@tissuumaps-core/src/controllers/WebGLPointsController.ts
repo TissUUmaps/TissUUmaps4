@@ -690,9 +690,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             colorMaps,
             defaultPointColor,
             loadTable,
-            visibilityData,
-            opacityData,
-            { signal },
+            { signal, visibilityData, opacityData },
           );
           signal?.throwIfAborted();
         }

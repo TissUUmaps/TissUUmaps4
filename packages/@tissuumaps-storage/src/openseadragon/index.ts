@@ -1,11 +1,9 @@
 export { OpenSeadragonImageData } from "./OpenSeadragonImageData";
-export { OpenSeadragonImageDataStorage } from "./OpenSeadragonImageDataStorage";
+export { OpenSeadragonImageDataProvider } from "./OpenSeadragonImageDataProvider";
 export {
   openSeadragonImageDataSourceDefaults,
   openSeadragonImageDataSourceType,
-  openSeadragonImageDataSourceSchema,
-  openSeadragonImageDataSourceUISchema,
-  type RawOpenSeadragonImageDataSource,
+  type DefaultOpenSeadragonImageDataSource,
   type OpenSeadragonImageDataSource,
-  createOpenSeadragonImageDataSource,
+  createDefaultOpenSeadragonImageDataSource,
 } from "./OpenSeadragonImageDataSource";

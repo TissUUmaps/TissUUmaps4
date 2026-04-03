@@ -125,5 +125,5 @@ export class ParquetTableData implements TableData {
     return valueRange;
   }
 
-  destroy(): void {}
+  close(): void {}
 }

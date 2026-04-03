@@ -69,9 +69,9 @@ export class ResolveUtils {
         data,
         ids,
         markerConfig,
+        defaultMarker,
         loadTable,
         parseMarker,
-        defaultMarker,
         encodeMarker,
         { signal },
       );
@@ -94,9 +94,9 @@ export class ResolveUtils {
           data,
           ids,
           markerConfig,
+          defaultMarker,
           loadTable,
           (group) => groupMarkers.get(group) ?? defaultGroupMarker,
-          defaultMarker,
           encodeMarker,
           { signal },
         );
@@ -106,10 +106,10 @@ export class ResolveUtils {
           data,
           ids,
           markerConfig,
+          defaultMarker,
           loadTable,
           (group) =>
             markerPalette[HashUtils.djb2(group) % markerPalette.length]!,
-          defaultMarker,
           encodeMarker,
           { signal },
         );
@@ -170,9 +170,9 @@ export class ResolveUtils {
         data,
         ids,
         sizeConfig,
+        defaultSize,
         loadTable,
         parseSize,
-        defaultSize,
         encodeSize,
         { signal },
       );
@@ -188,9 +188,9 @@ export class ResolveUtils {
           data,
           ids,
           sizeConfig,
+          defaultSize,
           loadTable,
           (group) => groupSizes.get(group) ?? sizeMap.default,
-          defaultSize,
           encodeSize,
           { signal },
         );
@@ -221,9 +221,7 @@ export class ResolveUtils {
    * @param colorMaps - Named maps from group strings to {@link Color} values
    * @param defaultColor - Fallback color used when a value cannot be resolved
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param visibilityData - Resolved visibility data produced by {@link resolveVisibilities}
-   * @param opacityData - Resolved opacity data produced by {@link resolveOpacities}
-   * @param options - Optional abort signal and alignment for the output array length
+   * @param options - Optional abort signal,  alignment for the output array length and visibility/opacity data for alpha channel setting
    * @returns A `Uint32Array` of length `align(ids.length, align)` with packed RGBA colors
    */
   static async resolveColors(
@@ -235,11 +233,14 @@ export class ResolveUtils {
       tableId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    visibilityData: Uint8Array,
-    opacityData: Uint8Array,
-    options?: { signal?: AbortSignal; align?: number },
+    options?: {
+      signal?: AbortSignal;
+      align?: number;
+      visibilityData?: Uint8Array;
+      opacityData?: Uint8Array;
+    },
   ): Promise<Uint32Array> {
-    const { signal, align = 1 } = options ?? {};
+    const { signal, align = 1, visibilityData, opacityData } = options ?? {};
     signal?.throwIfAborted();
     const encodeColor = (color: Color) => ColorUtils.packColor(color);
     const data = new Uint32Array(MathUtils.align(ids.length, align));
@@ -272,9 +273,9 @@ export class ResolveUtils {
           data,
           ids,
           colorConfig,
+          defaultColor,
           loadTable,
           parseColor,
-          defaultColor,
           encodeColor,
           { signal },
         );
@@ -312,9 +313,9 @@ export class ResolveUtils {
           data,
           ids,
           colorConfig,
+          defaultColor,
           loadTable,
           (group) => groupColors.get(group) ?? defaultGroupColor,
-          defaultColor,
           encodeColor,
           { signal },
         );
@@ -328,9 +329,9 @@ export class ResolveUtils {
           data,
           ids,
           colorConfig,
+          defaultColor,
           loadTable,
           (group) => colors[HashUtils.djb2(group) % colors.length]!,
-          defaultColor,
           encodeColor,
           { signal },
         );
@@ -363,8 +364,11 @@ export class ResolveUtils {
       data.fill(encodeColor(defaultColor), 0, ids.length);
     }
     for (let i = 0; i < ids.length; i++) {
-      const c = MathUtils.safeLeftShift(data[i]!, 8);
-      data[i] = c + (visibilityData[i]! > 0 ? opacityData[i]! : 0);
+      let c = MathUtils.safeLeftShift(data[i]!, 8);
+      if (visibilityData === undefined || visibilityData[i]! > 0) {
+        c += opacityData !== undefined ? opacityData[i]! : 255;
+      }
+      data[i] = c;
     }
     return data;
   }
@@ -425,9 +429,9 @@ export class ResolveUtils {
         data,
         ids,
         visibilityConfig,
+        defaultVisibility,
         loadTable,
         parseVisibility,
-        defaultVisibility,
         encodeVisibility,
         { signal },
       );
@@ -445,9 +449,9 @@ export class ResolveUtils {
           data,
           ids,
           visibilityConfig,
+          defaultVisibility,
           loadTable,
           (group) => groupVisibilities.get(group) ?? visibilityMap.default,
-          defaultVisibility,
           encodeVisibility,
           { signal },
         );
@@ -512,9 +516,9 @@ export class ResolveUtils {
         data,
         ids,
         opacityConfig,
+        defaultOpacity,
         loadTable,
         parseOpacity,
-        defaultOpacity,
         encodeOpacity,
         { signal },
       );
@@ -532,9 +536,9 @@ export class ResolveUtils {
           data,
           ids,
           opacityConfig,
+          defaultOpacity,
           loadTable,
           (group) => groupOpacities.get(group) ?? opacityMap.default,
-          defaultOpacity,
           encodeOpacity,
           { signal },
         );
@@ -558,9 +562,9 @@ export class ResolveUtils {
    * @param data - Output typed array to fill
    * @param ids - Ordered list of item IDs
    * @param config - A `FromConfig` specifying the source table and column
+   * @param defaultValue - Value used when the ID is missing or parsing fails
    * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param parseValue - Converts a raw cell value to `TValue`, or `undefined` on failure
-   * @param defaultValue - Value used when the ID is missing or parsing fails
    * @param encodeValue - Converts `TValue` to the numeric representation stored in `data`
    * @param options - Optional abort signal
    */
@@ -568,6 +572,7 @@ export class ResolveUtils {
     data: TypedArray,
     ids: number[],
     config: FromConfig,
+    defaultValue: TValue,
     loadTable: (
       tableId: string,
       options?: { signal?: AbortSignal },
@@ -576,7 +581,6 @@ export class ResolveUtils {
       value: unknown,
       valueRange: [number, number] | undefined,
     ) => TValue | undefined,
-    defaultValue: TValue,
     encodeValue: (value: TValue) => number,
     options?: { signal?: AbortSignal },
   ): Promise<void> {
@@ -616,9 +620,9 @@ export class ResolveUtils {
    * @param data - Output typed array to fill
    * @param ids - Ordered list of item IDs
    * @param config - A `GroupByConfig` specifying the source table and column
+   * @param defaultValue - Value used when the ID is missing or the group is unmapped
    * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param mapGroupToValue - Maps a JSON-stringified group key to `TValue`, or `undefined`
-   * @param defaultValue - Value used when the ID is missing or the group is unmapped
    * @param encodeValue - Converts `TValue` to the numeric representation stored in `data`
    * @param options - Optional abort signal
    */
@@ -626,12 +630,12 @@ export class ResolveUtils {
     data: TypedArray,
     ids: number[],
     config: GroupByConfig<TMapRequired>,
+    defaultValue: TValue,
     loadTable: (
       tableId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
     mapGroupToValue: (group: string) => TValue | undefined,
-    defaultValue: TValue,
     encodeValue: (value: TValue) => number,
     options?: { signal?: AbortSignal },
   ): Promise<void> {

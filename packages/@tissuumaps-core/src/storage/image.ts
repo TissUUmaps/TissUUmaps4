@@ -1,25 +1,16 @@
-import { type ProgressCallback } from "../types";
-import { type Data, type DataStorage } from "./base";
+import { type ImageDataSource } from "../model/image";
+import { type Data, type DataProvider } from "./base";
 
 /**
- * Data storage adapter for raster images
+ * Data provider for raster images
  *
- * @typeParam TImageData - The concrete {@link ImageData} type produced by this storage adapter
+ * @typeParam TImageData - The concrete {@link ImageData} type produced by this data provider
  */
-export interface ImageDataStorage<
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ImageDataProvider<
+  TImageDataSource extends ImageDataSource,
   TImageData extends ImageData,
-> extends DataStorage {
-  /**
-   * Loads the image data from the configured data source
-   *
-   * @param options - Optional abort signal and progress callback
-   * @returns The loaded image data
-   */
-  loadImage(options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  }): Promise<TImageData>;
-}
+> extends DataProvider<TImageDataSource, TImageData> {}
 
 /**
  * Loaded image data providing an OpenSeadragon-compatible tile source

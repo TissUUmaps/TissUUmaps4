@@ -48,7 +48,7 @@ export class LoadedLabelsDataAdapter implements LabelsData {
     throw new Error("Method not implemented.");
   }
 
-  destroy(): void {
+  close(): void {
     // ignored intentionally
   }
 

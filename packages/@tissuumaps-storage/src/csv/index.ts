@@ -1,11 +1,9 @@
 export { CSVTableData } from "./CSVTableData";
-export { CSVTableDataStorage } from "./CSVTableDataStorage";
+export { CSVTableDataProvider } from "./CSVTableDataProvider";
 export {
   csvTableDataSourceDefaults,
   csvTableDataSourceType,
-  csvTableDataSourceSchema,
-  csvTableDataSourceUISchema,
-  type RawCSVTableDataSource,
   type CSVTableDataSource,
-  createCSVTableDataSource,
+  type DefaultCSVTableDataSource,
+  createDefaultCSVTableDataSource,
 } from "./CSVTableDataSource";

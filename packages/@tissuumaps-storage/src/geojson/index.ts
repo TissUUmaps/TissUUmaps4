@@ -1,11 +1,9 @@
 export { GeoJSONShapesData } from "./GeoJSONShapesData";
-export { GeoJSONShapesDataStorage } from "./GeoJSONShapesDataStorage";
+export { GeoJSONShapesDataProvider } from "./GeoJSONShapesDataProvider";
 export {
   geoJSONShapesDataSourceDefaults,
   geoJSONShapesDataSourceType,
-  geoJSONShapesDataSourceSchema,
-  geoJSONShapesDataSourceUISchema,
-  type RawGeoJSONShapesDataSource,
+  type DefaultGeoJSONShapesDataSource,
   type GeoJSONShapesDataSource,
-  createGeoJSONShapesDataSource,
+  createDefaultGeoJSONShapesDataSource,
 } from "./GeoJSONShapesDataSource";

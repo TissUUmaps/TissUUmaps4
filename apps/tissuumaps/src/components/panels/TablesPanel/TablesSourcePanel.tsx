@@ -20,19 +20,17 @@ export function TablesSourcePanel({
   table,
   className,
 }: TablesSourcePanelProps) {
-  const tableDataStorageRegistry = useTissUUmaps(
-    (state) => state.tableDataStorageRegistry,
-  );
+  const tableDataProviders = useTissUUmaps((state) => state.tableDataProviders);
 
-  const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = tableDataStorageRegistry.get(table.dataSource.type);
-    if (value === undefined) {
+  const tableDataProvider = useMemo(() => {
+    const tableDataProvider = tableDataProviders.get(table.dataSource.type);
+    if (tableDataProvider === undefined) {
       throw new Error(
-        `No table data storage adapter registered for data source type "${table.dataSource.type}"`,
+        `No table data provider registered for data source type "${table.dataSource.type}"`,
       );
     }
-    return value;
-  }, [tableDataStorageRegistry, table.dataSource.type]);
+    return tableDataProvider;
+  }, [tableDataProviders, table.dataSource.type]);
 
   return (
     <Fieldset
@@ -47,8 +45,8 @@ export function TablesSourcePanel({
         <Input type="text" value={table.dataSource.type} disabled />
       </Field>
       <JsonForms
-        schema={dataSourceSchema}
-        uischema={dataSourceUISchema}
+        schema={tableDataProvider.schema}
+        uischema={tableDataProvider.uiSchema}
         data={table.dataSource}
         renderers={renderers}
         cells={cells}

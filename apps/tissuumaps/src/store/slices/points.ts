@@ -113,7 +113,7 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
   clearPoints: () => {
     const state = get();
     for (const loadedData of state.loadedPointsData.values()) {
-      loadedData.data.destroy();
+      loadedData.data.close();
     }
     set(createInitialPointsSliceState());
   },
@@ -145,18 +145,19 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
       // Load the data source if not already loaded or if a reload has been requested
       let loadedData = oldLoadedData;
       if (loadedData === undefined || reload) {
-        const { dataStorageFactory } =
-          state.pointsDataStorageRegistry.get(points.dataSource.type) ?? {};
-        if (dataStorageFactory === undefined) {
+        const dataProvider = state.pointsDataProviders.get(
+          points.dataSource.type,
+        );
+        if (dataProvider === undefined) {
           throw new Error(
-            `No points data storage adapter registered for data source type ${points.dataSource.type}.`,
+            `No points data provider registered for data source type ${points.dataSource.type}.`,
           );
         }
-        const dataStorage = dataStorageFactory(
-          points.dataSource,
-          state.workspace,
-        );
-        const data = await dataStorage.loadPoints({ signal, onProgress });
+        const data = await dataProvider.open(points.dataSource, {
+          signal,
+          onProgress,
+          workspace: state.workspace,
+        });
         signal?.throwIfAborted();
         // Check if the points have been deleted or their data source has changed
         const currentState = get();
@@ -167,7 +168,7 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
           currentPoints === undefined ||
           !deepEqual(currentPoints.dataSource, points.dataSource)
         ) {
-          data.destroy();
+          data.close();
           throw new DOMException(
             `Points with ID ${pointsId} have been deleted or their data source has changed.`,
             "AbortError",
@@ -201,7 +202,7 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
         oldLoadedData !== undefined &&
         oldLoadedData.data !== loadedData.data
       ) {
-        oldLoadedData.data.destroy();
+        oldLoadedData.data.close();
       }
       return loadedData.data;
     },
@@ -290,7 +291,7 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
       }
     });
     if (destroy) {
-      loadedData.data.destroy();
+      loadedData.data.close();
     }
     return true;
   },

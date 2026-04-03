@@ -1,25 +1,17 @@
+import { type ShapesDataSource } from "../model/shapes";
 import { type MultiPolygon, type ProgressCallback } from "../types";
-import { type DataStorage, type ItemsData } from "./base";
+import { type DataProvider, type ItemsData } from "./base";
 
 /**
- * Data storage adapter for shape (polygon) collections
+ * Data provider for shape (polygon) collections
  *
- * @typeParam TShapesData - The concrete {@link ShapesData} type produced by this storage adapter
+ * @typeParam TShapesData - The concrete {@link ShapesData} type produced by this data provider
  */
-export interface ShapesDataStorage<
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ShapesDataProvider<
+  TShapesDataSource extends ShapesDataSource,
   TShapesData extends ShapesData,
-> extends DataStorage {
-  /**
-   * Loads the shapes data from the configured data source
-   *
-   * @param options - Optional abort signal and progress callback
-   * @returns The loaded shapes data
-   */
-  loadShapes: (options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  }) => Promise<TShapesData>;
-}
+> extends DataProvider<TShapesDataSource, TShapesData> {}
 
 /**
  * Loaded shape collection data providing multi-polygon geometry access

@@ -1,8 +1,8 @@
 # Supported data
 
-The following table lists capabilities of built-in storage adapters:
+The following table lists capabilities of built-in data providers:
 
-| Storage adapter                  | Images        | Labels        | Points          | Shapes           | Tables           |
+| Data provider                    | Images        | Labels        | Points          | Shapes           | Tables           |
 | -------------------------------- | ------------- | ------------- | --------------- | ---------------- | ---------------- |
 | [OpenSeadragon](./openseadragon) | Tile source   |               |                 |                  |                  |
 | [TIFF](./tiff)                   | TIFF URL/path | TIFF URL/path |                 |                  |                  |
@@ -12,4 +12,4 @@ The following table lists capabilities of built-in storage adapters:
 | [CSV](./csv)                     |               |               |                 |                  | CSV URL/path     |
 | [Parquet](./parquet)             |               |               |                 |                  | Parquet URL/path |
 
-Additional data formats may be supported by third-party storage adapters.
+Additional data formats may be supported by third-party data providers.

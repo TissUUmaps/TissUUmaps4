@@ -124,7 +124,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
   clearTables: () => {
     const state = get();
     for (const loadedData of state.loadedTableData.values()) {
-      loadedData.data.destroy();
+      loadedData.data.close();
     }
     set(createInitialTableSliceState());
   },
@@ -156,18 +156,19 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
       // Load the data source if not already loaded or if a reload has been requested
       let loadedData = oldLoadedData;
       if (loadedData === undefined || reload) {
-        const { dataStorageFactory } =
-          state.tableDataStorageRegistry.get(table.dataSource.type) ?? {};
-        if (dataStorageFactory === undefined) {
+        const dataProvider = state.tableDataProviders.get(
+          table.dataSource.type,
+        );
+        if (dataProvider === undefined) {
           throw new Error(
-            `No table data storage adapter registered for data source type ${table.dataSource.type}.`,
+            `No table data provider registered for data source type ${table.dataSource.type}.`,
           );
         }
-        const dataStorage = dataStorageFactory(
-          table.dataSource,
-          state.workspace,
-        );
-        const data = await dataStorage.loadTable({ signal, onProgress });
+        const data = await dataProvider.open(table.dataSource, {
+          signal,
+          onProgress,
+          workspace: state.workspace,
+        });
         signal?.throwIfAborted();
         // Check if the table has been deleted or its data source has changed
         const currentState = get();
@@ -178,7 +179,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
           currentTable === undefined ||
           !deepEqual(currentTable.dataSource, table.dataSource)
         ) {
-          data.destroy();
+          data.close();
           throw new DOMException(
             `Table with ID ${tableId} has been deleted or its data source has changed.`,
             "AbortError",
@@ -213,7 +214,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
         oldLoadedData !== undefined &&
         oldLoadedData.data !== loadedData.data
       ) {
-        oldLoadedData.data.destroy();
+        oldLoadedData.data.close();
       }
       return loadedData.data;
     },
@@ -364,7 +365,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
       }
     });
     if (destroy) {
-      loadedData.data.destroy();
+      loadedData.data.close();
     }
     return true;
   },

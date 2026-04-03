@@ -1,25 +1,17 @@
+import { type LabelsDataSource } from "../model/labels";
 import { type ProgressCallback, type UintArray } from "../types";
-import { type DataStorage, type ItemsData } from "./base";
+import { type DataProvider, type ItemsData } from "./base";
 
 /**
- * Data storage adapter for label images
+ * Data provider for label images
  *
- * @typeParam TLabelsData - The concrete {@link LabelsData} type produced by this storage adapter
+ * @typeParam TLabelsData - The concrete {@link LabelsData} type produced by this data provider
  */
-export interface LabelsDataStorage<
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface LabelsDataProvider<
+  TLabelsDataSource extends LabelsDataSource,
   TLabelsData extends LabelsData,
-> extends DataStorage {
-  /**
-   * Loads the labels data from the configured data source
-   *
-   * @param options - Optional abort signal and progress callback
-   * @returns The loaded labels data
-   */
-  loadLabels(options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  }): Promise<TLabelsData>;
-}
+> extends DataProvider<TLabelsDataSource, TLabelsData> {}
 
 /**
  * Loaded label image data providing a tiled, multi-resolution integer raster

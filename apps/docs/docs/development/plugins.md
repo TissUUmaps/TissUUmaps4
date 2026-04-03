@@ -19,6 +19,6 @@ Optionally, the plugin's `setup` function may return a cleanup handler of type `
 
 TODO
 
-## Storage adapter plugins
+## Data provider plugins
 
 TODO

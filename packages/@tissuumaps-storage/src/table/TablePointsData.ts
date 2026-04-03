@@ -59,5 +59,5 @@ export class TablePointsData implements PointsData {
       : Float32Array.from(columnValues);
   }
 
-  destroy(): void {}
+  close(): void {}
 }

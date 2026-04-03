@@ -20,19 +20,19 @@ export function ShapesSourcePanel({
   shapes,
   className,
 }: ShapesSourcePanelProps) {
-  const shapesDataStorageRegistry = useTissUUmaps(
-    (state) => state.shapesDataStorageRegistry,
+  const shapesDataProviders = useTissUUmaps(
+    (state) => state.shapesDataProviders,
   );
 
-  const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = shapesDataStorageRegistry.get(shapes.dataSource.type);
-    if (value === undefined) {
+  const shapesDataProvider = useMemo(() => {
+    const shapesDataProvider = shapesDataProviders.get(shapes.dataSource.type);
+    if (shapesDataProvider === undefined) {
       throw new Error(
-        `No shapes data storage adapter registered for data source type "${shapes.dataSource.type}"`,
+        `No shapes data provider registered for data source type "${shapes.dataSource.type}"`,
       );
     }
-    return value;
-  }, [shapesDataStorageRegistry, shapes.dataSource.type]);
+    return shapesDataProvider;
+  }, [shapesDataProviders, shapes.dataSource.type]);
 
   return (
     <Fieldset
@@ -47,8 +47,8 @@ export function ShapesSourcePanel({
         <Input type="text" value={shapes.dataSource.type} disabled />
       </Field>
       <JsonForms
-        schema={dataSourceSchema}
-        uischema={dataSourceUISchema}
+        schema={shapesDataProvider.schema}
+        uischema={shapesDataProvider.uiSchema}
         data={shapes.dataSource}
         renderers={renderers}
         cells={cells}

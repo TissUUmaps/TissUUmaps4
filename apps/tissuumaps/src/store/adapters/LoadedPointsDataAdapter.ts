@@ -51,7 +51,7 @@ export class LoadedPointsDataAdapter implements PointsData {
     });
   }
 
-  destroy(): void {
+  close(): void {
     // ignored intentionally
   }
 
