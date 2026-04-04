@@ -24,6 +24,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
       // TODO path
       // TODO tileSourceConfig
     },
+    required: ["url"], // TODO ... or path/tileSourceConfig
   };
 
   readonly uiSchema = {
@@ -37,7 +38,6 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
       // TODO path
       // TODO tileSourceConfig
     ],
-    required: ["url"], // TODO ... or path/tileSourceConfig
   };
 
   async open(

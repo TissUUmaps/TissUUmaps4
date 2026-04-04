@@ -30,6 +30,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
         type: "string",
       },
     },
+    required: ["url"], // TODO ... or path
   };
 
   readonly uiSchema = {
@@ -47,7 +48,6 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
         label: "ID Property",
       },
     ],
-    required: ["url"], // TODO ... or path
   };
 
   async open(
