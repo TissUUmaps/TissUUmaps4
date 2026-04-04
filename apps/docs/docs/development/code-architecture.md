@@ -106,7 +106,7 @@ Components are structured as follows:
 
 ### State management
 
-A single Zustand store is being used, which is distributed over several slices. The main slices are `app` (transient application state), `project` (persistent project information) and data type-specific slices that hold project data (transient in-memory data and persistent metadata). Data objects return by data providers are exposed to the TissUUmaps `Viewer` component using custom data type-specific store adapters. The immer middleware is used to perform immutable updates, with support for Maps and Sets enabled. Asynchronous store actions are deduplicated based on the JSON-stringified function arguments.
+A single Zustand store is being used, which is distributed over several slices. The main slices are `app` (transient application state), `project` (persistent project information) and data type-specific slices that hold project data (transient in-memory data and persistent metadata). Data objects returned by data providers are exposed to the TissUUmaps `Viewer` component using custom data type-specific store adapters. The immer middleware is used to perform immutable updates, with support for Maps and Sets enabled. Asynchronous store actions are deduplicated based on the JSON-stringified function arguments.
 
 ## Documentation (docs)
 
