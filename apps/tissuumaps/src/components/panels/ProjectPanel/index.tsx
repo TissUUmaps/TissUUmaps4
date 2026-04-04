@@ -22,14 +22,14 @@ export type ProjectPanelProps = {
 export function ProjectPanel({ className }: ProjectPanelProps) {
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const { downloadProject } = useProjectDownload();
-
   const projectName = useTissUUmaps((state) => state.projectName);
   const setProjectName = useTissUUmaps((state) => state.setProjectName);
   const loadProjectFromFile = useTissUUmaps(
     (state) => state.loadProjectFromFile,
   );
   const clearProject = useTissUUmaps((state) => state.clearProject);
+
+  const { downloadProject } = useProjectDownload();
 
   const confirmClearProject = useCallback(() => {
     if (

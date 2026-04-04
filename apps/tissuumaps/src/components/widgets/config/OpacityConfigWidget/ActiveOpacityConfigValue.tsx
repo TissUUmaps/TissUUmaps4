@@ -17,9 +17,9 @@ export function ActiveOpacityConfigValue({
   adapter,
   className,
 }: ActiveOpacityConfigValueProps) {
-  const tables = useTissUUmaps((state) => state.tables);
-
   const { activeSource, opacityConfig, defaultOpacity } = adapter;
+
+  const tables = useTissUUmaps((state) => state.tables);
 
   if (activeSource === "constant" && isConstantConfig(opacityConfig)) {
     return (

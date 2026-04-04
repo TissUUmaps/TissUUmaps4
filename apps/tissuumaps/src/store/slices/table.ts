@@ -38,6 +38,7 @@ export type TableSliceActions = {
       signal?: AbortSignal;
       reload?: boolean;
       onProgress?: ProgressCallback;
+      newDataSource?: TableDataSource;
     },
   ) => Promise<TableData>;
   loadTableValues: <T>(
@@ -130,47 +131,70 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
   },
   loadTable: deduplicate(
     async (tableId, options) => {
-      const { signal, reload = false, onProgress } = options ?? {};
+      const {
+        signal,
+        reload = false,
+        onProgress,
+        newDataSource,
+      } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the table is already loaded
+
       const state = get();
-      const loadedDataKey = state.loadedTables.get(tableId);
-      if (loadedDataKey !== undefined && !reload) {
-        const loadedData = state.loadedTableData.get(loadedDataKey);
-        if (loadedData !== undefined) {
-          return loadedData.data;
-        }
-      }
-      // Find the table and the corresponding data source (if loaded)
       const table = state.tables.find((table) => table.id === tableId);
       if (table === undefined) {
         throw new Error(`Table with ID ${tableId} not found.`);
       }
-      let oldLoadedData: LoadedTableData | undefined;
-      for (const loadedData of state.loadedTableData.values()) {
-        if (deepEqual(loadedData.dataSource, table.dataSource)) {
-          oldLoadedData = loadedData;
-          break;
+      const dataSource = newDataSource ?? table.dataSource;
+
+      let oldLoadedData;
+      const oldLoadedDataKey = state.loadedTables.get(tableId);
+      if (oldLoadedDataKey !== undefined) {
+        oldLoadedData = state.loadedTableData.get(oldLoadedDataKey);
+        if (
+          !reload &&
+          newDataSource === undefined &&
+          oldLoadedData !== undefined
+        ) {
+          return oldLoadedData.data;
         }
       }
-      // Load the data source if not already loaded or if a reload has been requested
-      let loadedData = oldLoadedData;
-      if (loadedData === undefined || reload) {
-        const dataProvider = state.tableDataProviders.get(
-          table.dataSource.type,
-        );
+
+      let existingLoadedData = oldLoadedData;
+      if (existingLoadedData === undefined) {
+        for (const [key, value] of state.loadedTableData) {
+          if (deepEqual(value.dataSource, dataSource)) {
+            existingLoadedData = value;
+            if (!reload) {
+              set((draft) => {
+                draft.loadedTables.set(tableId, key);
+                if (newDataSource !== undefined) {
+                  const tableDraft = draft.tables.find(
+                    (table) => table.id === tableId,
+                  )!;
+                  tableDraft.dataSource = newDataSource;
+                }
+              });
+              return existingLoadedData.data;
+            }
+            break;
+          }
+        }
+      }
+
+      let data = existingLoadedData?.data;
+      if (reload || newDataSource !== undefined || data === undefined) {
+        const dataProvider = state.tableDataProviders.get(dataSource.type);
         if (dataProvider === undefined) {
           throw new Error(
-            `No table data provider registered for data source type ${table.dataSource.type}.`,
+            `No table data provider registered for data source type ${dataSource.type}.`,
           );
         }
-        const data = await dataProvider.open(table.dataSource, {
+        data = await dataProvider.open(dataSource, {
           signal,
           onProgress,
           workspace: state.workspace,
         });
         signal?.throwIfAborted();
-        // Check if the table has been deleted or its data source has changed
         const currentState = get();
         const currentTable = currentState.tables.find(
           (table) => table.id === tableId,
@@ -185,18 +209,12 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
             "AbortError",
           );
         }
-        loadedData = {
-          dataSource: currentTable.dataSource,
-          data,
-          loadedValues: new Map(),
-          loadedValueRanges: new Map(),
-        };
       }
-      // Store the loaded table and the corresponding data source in the state
+
       set((draft) => {
         let loadedDataKey;
         for (const [key, value] of draft.loadedTableData) {
-          if (deepEqual(value.dataSource, loadedData.dataSource)) {
+          if (deepEqual(value.dataSource, dataSource)) {
             loadedDataKey = key;
             break;
           }
@@ -206,17 +224,29 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
             loadedDataKey = crypto.randomUUID();
           } while (draft.loadedTableData.has(loadedDataKey));
         }
+        draft.loadedTableData.set(loadedDataKey, {
+          dataSource,
+          data,
+          loadedValues: new Map(),
+          loadedValueRanges: new Map(),
+        });
         draft.loadedTables.set(tableId, loadedDataKey);
-        draft.loadedTableData.set(loadedDataKey, loadedData);
+        if (newDataSource !== undefined) {
+          const tableDraft = draft.tables.find(
+            (table) => table.id === tableId,
+          )!;
+          tableDraft.dataSource = newDataSource;
+        }
       });
-      // Clean up old data if the loaded data source has changed
+
       if (
-        oldLoadedData !== undefined &&
-        oldLoadedData.data !== loadedData.data
+        existingLoadedData !== undefined &&
+        existingLoadedData.data !== data
       ) {
-        oldLoadedData.data.close();
+        existingLoadedData.data.close();
       }
-      return loadedData.data;
+
+      return data;
     },
     (_tableId, options) => options?.signal,
   ),

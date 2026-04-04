@@ -36,15 +36,15 @@ import { useVisibilityConfigWidget } from "@/components/widgets/config/Visibilit
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-export type LabelsSettingsPanelProps = {
+export type LabelsSettingsWidgetProps = {
   labels: Labels;
   className?: string;
 };
 
-export function LabelsSettingsPanel({
+export function LabelsSettingsWidget({
   labels,
   className,
-}: LabelsSettingsPanelProps) {
+}: LabelsSettingsWidgetProps) {
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
 
   const labelColorConfigWidgetAdapter = useColorConfigWidget(

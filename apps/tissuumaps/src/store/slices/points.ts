@@ -36,6 +36,7 @@ export type PointsSliceActions = {
       signal?: AbortSignal;
       reload?: boolean;
       onProgress?: ProgressCallback;
+      newDataSource?: PointsDataSource;
     },
   ) => Promise<PointsData>;
   loadPointsCoordinates: (
@@ -119,47 +120,70 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
   },
   loadPoints: deduplicate(
     async (pointsId, options) => {
-      const { signal, reload = false, onProgress } = options ?? {};
+      const {
+        signal,
+        reload = false,
+        onProgress,
+        newDataSource,
+      } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the points are already loaded
+
       const state = get();
-      const loadedDataKey = state.loadedPoints.get(pointsId);
-      if (loadedDataKey !== undefined && !reload) {
-        const loadedData = state.loadedPointsData.get(loadedDataKey);
-        if (loadedData !== undefined) {
-          return loadedData.data;
-        }
-      }
-      // Find the points and the corresponding data source (if loaded)
       const points = state.points.find((points) => points.id === pointsId);
       if (points === undefined) {
         throw new Error(`Points with ID ${pointsId} not found.`);
       }
-      let oldLoadedData: LoadedPointsData | undefined;
-      for (const loadedData of state.loadedPointsData.values()) {
-        if (deepEqual(loadedData.dataSource, points.dataSource)) {
-          oldLoadedData = loadedData;
-          break;
+      const dataSource = newDataSource ?? points.dataSource;
+
+      let oldLoadedData;
+      const oldLoadedDataKey = state.loadedPoints.get(pointsId);
+      if (oldLoadedDataKey !== undefined) {
+        oldLoadedData = state.loadedPointsData.get(oldLoadedDataKey);
+        if (
+          !reload &&
+          newDataSource === undefined &&
+          oldLoadedData !== undefined
+        ) {
+          return oldLoadedData.data;
         }
       }
-      // Load the data source if not already loaded or if a reload has been requested
-      let loadedData = oldLoadedData;
-      if (loadedData === undefined || reload) {
-        const dataProvider = state.pointsDataProviders.get(
-          points.dataSource.type,
-        );
+
+      let existingLoadedData = oldLoadedData;
+      if (existingLoadedData === undefined) {
+        for (const [key, value] of state.loadedPointsData) {
+          if (deepEqual(value.dataSource, dataSource)) {
+            existingLoadedData = value;
+            if (!reload) {
+              set((draft) => {
+                draft.loadedPoints.set(pointsId, key);
+                if (newDataSource !== undefined) {
+                  const pointsDraft = draft.points.find(
+                    (points) => points.id === pointsId,
+                  )!;
+                  pointsDraft.dataSource = newDataSource;
+                }
+              });
+              return existingLoadedData.data;
+            }
+            break;
+          }
+        }
+      }
+
+      let data = existingLoadedData?.data;
+      if (reload || newDataSource !== undefined || data === undefined) {
+        const dataProvider = state.pointsDataProviders.get(dataSource.type);
         if (dataProvider === undefined) {
           throw new Error(
-            `No points data provider registered for data source type ${points.dataSource.type}.`,
+            `No points data provider registered for data source type ${dataSource.type}.`,
           );
         }
-        const data = await dataProvider.open(points.dataSource, {
+        data = await dataProvider.open(dataSource, {
           signal,
           onProgress,
           workspace: state.workspace,
         });
         signal?.throwIfAborted();
-        // Check if the points have been deleted or their data source has changed
         const currentState = get();
         const currentPoints = currentState.points.find(
           (points) => points.id === pointsId,
@@ -174,17 +198,12 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
             "AbortError",
           );
         }
-        loadedData = {
-          dataSource: currentPoints.dataSource,
-          data,
-          loadedCoordinates: new Map(),
-        };
       }
-      // Store the loaded points and the corresponding data source in the state
+
       set((draft) => {
         let loadedDataKey;
         for (const [key, value] of draft.loadedPointsData) {
-          if (deepEqual(value.dataSource, loadedData.dataSource)) {
+          if (deepEqual(value.dataSource, dataSource)) {
             loadedDataKey = key;
             break;
           }
@@ -194,17 +213,28 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
             loadedDataKey = crypto.randomUUID();
           } while (draft.loadedPointsData.has(loadedDataKey));
         }
+        draft.loadedPointsData.set(loadedDataKey, {
+          dataSource,
+          data,
+          loadedCoordinates: new Map(),
+        });
         draft.loadedPoints.set(pointsId, loadedDataKey);
-        draft.loadedPointsData.set(loadedDataKey, loadedData);
+        if (newDataSource !== undefined) {
+          const pointsDraft = draft.points.find(
+            (points) => points.id === pointsId,
+          )!;
+          pointsDraft.dataSource = newDataSource;
+        }
       });
-      // Clean up old data if the loaded data source has changed
+
       if (
-        oldLoadedData !== undefined &&
-        oldLoadedData.data !== loadedData.data
+        existingLoadedData !== undefined &&
+        existingLoadedData.data !== data
       ) {
-        oldLoadedData.data.close();
+        existingLoadedData.data.close();
       }
-      return loadedData.data;
+
+      return data;
     },
     (_pointsId, options) => options?.signal,
   ),

@@ -34,7 +34,7 @@ export class TablePointsDataProvider implements PointsDataProvider<
     required: ["table"],
   };
 
-  readonly uiSchema = {
+  readonly uischema = {
     type: "VerticalLayout",
     elements: [
       {

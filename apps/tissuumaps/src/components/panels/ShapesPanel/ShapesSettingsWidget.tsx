@@ -1,12 +1,12 @@
 import {
   MathUtils,
-  type Points,
-  defaultPointColor,
-  defaultPointMarker,
-  defaultPointOpacity,
-  defaultPointSize,
-  defaultPointSizeUnit,
-  defaultPointVisibility,
+  type Shapes,
+  defaultShapeFillColor,
+  defaultShapeFillOpacity,
+  defaultShapeFillVisibility,
+  defaultShapeStrokeColor,
+  defaultShapeStrokeOpacity,
+  defaultShapeStrokeVisibility,
 } from "@tissuumaps/core";
 
 import {
@@ -28,23 +28,11 @@ import {
 } from "@/components/widgets/config/ColorConfigWidget";
 import { useColorConfigWidget } from "@/components/widgets/config/ColorConfigWidget/hooks";
 import {
-  ActiveMarkerConfigValue,
-  MarkerConfigSourceToggleGroup,
-  MarkerConfigWidget,
-} from "@/components/widgets/config/MarkerConfigWidget";
-import { useMarkerConfigWidget } from "@/components/widgets/config/MarkerConfigWidget/hooks";
-import {
   ActiveOpacityConfigValue,
   OpacityConfigSourceToggleGroup,
   OpacityConfigWidget,
 } from "@/components/widgets/config/OpacityConfigWidget";
 import { useOpacityConfigWidget } from "@/components/widgets/config/OpacityConfigWidget/hooks";
-import {
-  ActiveSizeConfigValue,
-  SizeConfigSourceToggleGroup,
-  SizeConfigWidget,
-} from "@/components/widgets/config/SizeConfigWidget";
-import { useSizeConfigWidget } from "@/components/widgets/config/SizeConfigWidget/hooks";
 import {
   ActiveVisibilityConfigValue,
   VisibilityConfigSourceToggleGroup,
@@ -54,45 +42,54 @@ import { useVisibilityConfigWidget } from "@/components/widgets/config/Visibilit
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-export type PointsSettingsPanelProps = {
-  points: Points;
+export type ShapesSettingsWidgetProps = {
+  shapes: Shapes;
   className?: string;
 };
 
-export function PointsSettingsPanel({
-  points,
+export function ShapesSettingsWidget({
+  shapes,
   className,
-}: PointsSettingsPanelProps) {
-  const updatePoints = useTissUUmaps((state) => state.updatePoints);
+}: ShapesSettingsWidgetProps) {
+  const updateShapes = useTissUUmaps((state) => state.updateShapes);
 
-  const pointMarkerConfigWidgetAdapter = useMarkerConfigWidget(
-    points.pointMarker,
-    (newMarkerConfig) =>
-      updatePoints(points.id, { pointMarker: newMarkerConfig }),
-    defaultPointMarker,
+  const shapeFillColorConfigWidgetAdapter = useColorConfigWidget(
+    shapes.shapeFillColor,
+    (newColorConfig) =>
+      updateShapes(shapes.id, { shapeFillColor: newColorConfig }),
+    defaultShapeFillColor,
   );
-  const pointSizeConfigWidgetAdapter = useSizeConfigWidget(
-    points.pointSize,
-    (newSizeConfig) => updatePoints(points.id, { pointSize: newSizeConfig }),
-    defaultPointSize,
-    defaultPointSizeUnit,
-  );
-  const pointColorConfigWidgetAdapter = useColorConfigWidget(
-    points.pointColor,
-    (newColorConfig) => updatePoints(points.id, { pointColor: newColorConfig }),
-    defaultPointColor,
-  );
-  const pointVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
-    points.pointVisibility,
+  const shapeFillVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
+    shapes.shapeFillVisibility,
     (newVisibilityConfig) =>
-      updatePoints(points.id, { pointVisibility: newVisibilityConfig }),
-    defaultPointVisibility,
+      updateShapes(shapes.id, { shapeFillVisibility: newVisibilityConfig }),
+    defaultShapeFillVisibility,
   );
-  const pointOpacityConfigWidgetAdapter = useOpacityConfigWidget(
-    points.pointOpacity,
+  const shapeFillOpacityConfigWidgetAdapter = useOpacityConfigWidget(
+    shapes.shapeFillOpacity,
     (newOpacityConfig) =>
-      updatePoints(points.id, { pointOpacity: newOpacityConfig }),
-    defaultPointOpacity,
+      updateShapes(shapes.id, { shapeFillOpacity: newOpacityConfig }),
+    defaultShapeFillOpacity,
+  );
+  const shapeStrokeColorConfigWidgetAdapter = useColorConfigWidget(
+    shapes.shapeStrokeColor,
+    (newColorConfig) =>
+      updateShapes(shapes.id, { shapeStrokeColor: newColorConfig }),
+    defaultShapeStrokeColor,
+  );
+  const shapeStrokeVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
+    shapes.shapeStrokeVisibility,
+    (newVisibilityConfig) =>
+      updateShapes(shapes.id, {
+        shapeStrokeVisibility: newVisibilityConfig,
+      }),
+    defaultShapeStrokeVisibility,
+  );
+  const shapeStrokeOpacityConfigWidgetAdapter = useOpacityConfigWidget(
+    shapes.shapeStrokeOpacity,
+    (newOpacityConfig) =>
+      updateShapes(shapes.id, { shapeStrokeOpacity: newOpacityConfig }),
+    defaultShapeStrokeOpacity,
   );
 
   return (
@@ -112,9 +109,9 @@ export function PointsSettingsPanel({
             <Field>
               <FieldLabel>Name</FieldLabel>
               <Input
-                value={points.name}
+                value={shapes.name}
                 onChange={(event) =>
-                  updatePoints(points.id, { name: event.target.value })
+                  updateShapes(shapes.id, { name: event.target.value })
                 }
               />
             </Field>
@@ -122,12 +119,12 @@ export function PointsSettingsPanel({
               <FieldLabel>Visibility</FieldLabel>
               <div className="flex flex-row items-center gap-x-2">
                 <Switch
-                  checked={points.visibility}
+                  checked={shapes.visibility}
                   onCheckedChange={(checked) =>
-                    updatePoints(points.id, { visibility: checked })
+                    updateShapes(shapes.id, { visibility: checked })
                   }
                 />
-                {points.visibility ? "Visible" : "Hidden"}
+                {shapes.visibility ? "Visible" : "Hidden"}
               </div>
             </Field>
             <Field>
@@ -138,10 +135,10 @@ export function PointsSettingsPanel({
                 step={0.01}
                 min={0}
                 max={1}
-                value={points.opacity}
+                value={shapes.opacity}
                 onChange={(event) => {
                   if (event.target.value !== "") {
-                    updatePoints(points.id, {
+                    updateShapes(shapes.id, {
                       opacity: MathUtils.clamp(
                         parseFloat(event.target.value),
                         0,
@@ -152,118 +149,122 @@ export function PointsSettingsPanel({
                 }}
               />
             </Field>
-            <Field>
-              <FieldLabel>Point size factor</FieldLabel>
-              <Input
-                type="number"
-                inputMode="decimal"
-                step={0.1}
-                min={0}
-                value={points.pointSizeFactor}
-                onChange={(event) => {
-                  if (event.target.value !== "") {
-                    updatePoints(points.id, {
-                      pointSizeFactor: Math.max(
-                        0,
-                        parseFloat(event.target.value),
-                      ),
-                    });
-                  }
-                }}
-              />
-            </Field>
           </AccordionPanel>
         </AccordionItem>
-        {/* Point marker */}
-        <AccordionItem value="pointMarker">
+        {/* Shape fill color */}
+        <AccordionItem value="shapeFillColor">
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Point marker</AccordionTrigger>
-            <ActiveMarkerConfigValue
-              adapter={pointMarkerConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-            />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <MarkerConfigSourceToggleGroup
-              adapter={pointMarkerConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <MarkerConfigWidget adapter={pointMarkerConfigWidgetAdapter} />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Point size */}
-        <AccordionItem value="pointSize">
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Point size</AccordionTrigger>
-            <ActiveSizeConfigValue
-              adapter={pointSizeConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-            />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <SizeConfigSourceToggleGroup
-              adapter={pointSizeConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <SizeConfigWidget adapter={pointSizeConfigWidgetAdapter} />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Point color */}
-        <AccordionItem value="pointColor">
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Point color</AccordionTrigger>
+            <AccordionTrigger>Fill color</AccordionTrigger>
             <ActiveColorConfigValue
-              adapter={pointColorConfigWidgetAdapter}
+              adapter={shapeFillColorConfigWidgetAdapter}
               className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <ColorConfigSourceToggleGroup
-              adapter={pointColorConfigWidgetAdapter}
+              adapter={shapeFillColorConfigWidgetAdapter}
               className="border rounded"
             />
-            <ColorConfigWidget adapter={pointColorConfigWidgetAdapter} />
+            <ColorConfigWidget adapter={shapeFillColorConfigWidgetAdapter} />
           </AccordionPanel>
         </AccordionItem>
-        {/* Point visibility */}
-        <AccordionItem value="pointVisibility">
+        {/* Shape fill visibility */}
+        <AccordionItem value="shapeFillVisibility">
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Point visibility</AccordionTrigger>
+            <AccordionTrigger>Fill visibility</AccordionTrigger>
             <ActiveVisibilityConfigValue
-              adapter={pointVisibilityConfigWidgetAdapter}
+              adapter={shapeFillVisibilityConfigWidgetAdapter}
               className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <VisibilityConfigSourceToggleGroup
-              adapter={pointVisibilityConfigWidgetAdapter}
+              adapter={shapeFillVisibilityConfigWidgetAdapter}
               className="border rounded"
             />
             <VisibilityConfigWidget
-              adapter={pointVisibilityConfigWidgetAdapter}
+              adapter={shapeFillVisibilityConfigWidgetAdapter}
             />
           </AccordionPanel>
         </AccordionItem>
-        {/* Point opacity */}
-        <AccordionItem value="pointOpacity">
+        {/* Shape fill opacity */}
+        <AccordionItem value="shapeFillOpacity">
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Point opacity</AccordionTrigger>
+            <AccordionTrigger>Fill opacity</AccordionTrigger>
             <ActiveOpacityConfigValue
-              adapter={pointOpacityConfigWidgetAdapter}
+              adapter={shapeFillOpacityConfigWidgetAdapter}
               className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <OpacityConfigSourceToggleGroup
-              adapter={pointOpacityConfigWidgetAdapter}
+              adapter={shapeFillOpacityConfigWidgetAdapter}
               className="border rounded"
             />
-            <OpacityConfigWidget adapter={pointOpacityConfigWidgetAdapter} />
+            <OpacityConfigWidget
+              adapter={shapeFillOpacityConfigWidgetAdapter}
+            />
+          </AccordionPanel>
+        </AccordionItem>
+        {/* Shape stroke color */}
+        <AccordionItem value="shapeStrokeColor">
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Stroke color</AccordionTrigger>
+            <ActiveColorConfigValue
+              adapter={shapeStrokeColorConfigWidgetAdapter}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <ColorConfigSourceToggleGroup
+              adapter={shapeStrokeColorConfigWidgetAdapter}
+              className="border rounded"
+            />
+            <ColorConfigWidget adapter={shapeStrokeColorConfigWidgetAdapter} />
+          </AccordionPanel>
+        </AccordionItem>
+        {/* Shape stroke visibility */}
+        <AccordionItem value="shapeStrokeVisibility">
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Stroke visibility</AccordionTrigger>
+            <ActiveVisibilityConfigValue
+              adapter={shapeStrokeVisibilityConfigWidgetAdapter}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <VisibilityConfigSourceToggleGroup
+              adapter={shapeStrokeVisibilityConfigWidgetAdapter}
+              className="border rounded"
+            />
+            <VisibilityConfigWidget
+              adapter={shapeStrokeVisibilityConfigWidgetAdapter}
+            />
+          </AccordionPanel>
+        </AccordionItem>
+        {/* Shape stroke opacity */}
+        <AccordionItem value="shapeStrokeOpacity">
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Stroke opacity</AccordionTrigger>
+            <ActiveOpacityConfigValue
+              adapter={shapeStrokeOpacityConfigWidgetAdapter}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <OpacityConfigSourceToggleGroup
+              adapter={shapeStrokeOpacityConfigWidgetAdapter}
+              className="border rounded"
+            />
+            <OpacityConfigWidget
+              adapter={shapeStrokeOpacityConfigWidgetAdapter}
+            />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>

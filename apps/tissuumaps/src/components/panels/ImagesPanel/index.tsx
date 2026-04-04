@@ -18,11 +18,10 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useTissUUmaps } from "@/store";
 
-import { ImagesLayersPanel } from "./ImagesLayersPanel";
-import { ImagesSettingsPanel } from "./ImagesSettingsPanel";
-import { ImagesSourcePanel } from "./ImagesSourcePanel";
+import { ImageSettingsWidget } from "./ImageSettingsWidget";
 
 export type ImagesPanelProps = {
   className?: string;
@@ -58,8 +57,10 @@ type ImageAccordionItemProps = {
 };
 
 function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
+  const imageDataProviders = useTissUUmaps((state) => state.imageDataProviders);
   const updateImage = useTissUUmaps((state) => state.updateImage);
   const deleteImage = useTissUUmaps((state) => state.deleteImage);
+  const loadImage = useTissUUmaps((state) => state.loadImage);
 
   const { ref, handleRef } = useSortable({ id: image.id, index });
 
@@ -122,9 +123,17 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
           <AccordionTriggerUpDownIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
-          <ImagesSourcePanel image={image} className="bg-card" />
-          <ImagesSettingsPanel image={image} className="bg-card" />
-          <ImagesLayersPanel image={image} className="bg-card" />
+          <DataSourceWidget
+            dataSource={image.dataSource}
+            dataProviders={imageDataProviders}
+            onDataSourceChange={(newDataSource) => {
+              // TODO signal, progress callback
+              loadImage(image.id, { newDataSource }).catch(console.error);
+            }}
+            className="bg-card"
+          />
+          <ImageSettingsWidget image={image} className="bg-card" />
+          {/* TODO layer configs */}
         </AccordionPanel>
       </AccordionItem>
     </div>

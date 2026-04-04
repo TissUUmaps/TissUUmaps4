@@ -1,6 +1,5 @@
-import { Fieldset } from "@base-ui/react";
 import {
-  type GroupLayout as GroupLayoutSchema,
+  type HorizontalLayout as HorizontalLayoutSchema,
   type LayoutProps,
 } from "@jsonforms/core";
 import {
@@ -8,15 +7,14 @@ import {
   useJsonForms,
   withJsonFormsLayoutProps,
 } from "@jsonforms/react";
-import React from "react";
+import { memo } from "react";
 
 // eslint-disable-next-line react-refresh/only-export-components
-const MemoizedGroupLayout = React.memo((props: Omit<LayoutProps, "data">) => {
-  const layout = props.uischema as GroupLayoutSchema;
+const MemoizedHorizontalLayout = memo((props: Omit<LayoutProps, "data">) => {
+  const layout = props.uischema as HorizontalLayoutSchema;
   const { renderers, cells } = useJsonForms();
   return (
-    <Fieldset.Root hidden={!props.visible} className="flex flex-col">
-      {props.label && <Fieldset.Legend>{props.label}</Fieldset.Legend>}
+    <div hidden={!props.visible} className="grid grid-flow-col">
       {layout.elements.map((element, i) => (
         <div key={`${props.path}-${i}`}>
           <JsonFormsDispatch
@@ -29,14 +27,14 @@ const MemoizedGroupLayout = React.memo((props: Omit<LayoutProps, "data">) => {
           />
         </div>
       ))}
-    </Fieldset.Root>
+    </div>
   );
 });
 
-export const GroupLayout = withJsonFormsLayoutProps(
+export const HorizontalLayout = withJsonFormsLayoutProps(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ({ data, ...otherProps }: LayoutProps) => {
-    return <MemoizedGroupLayout {...otherProps} />;
+    return <MemoizedHorizontalLayout {...otherProps} />;
   },
   false,
 );

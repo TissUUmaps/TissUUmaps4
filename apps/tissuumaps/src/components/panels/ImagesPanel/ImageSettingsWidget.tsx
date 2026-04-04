@@ -7,15 +7,15 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-export type ImagesSettingsPanelProps = {
+export type ImageSettingsWidgetProps = {
   image: Image;
   className?: string;
 };
 
-export function ImagesSettingsPanel({
+export function ImageSettingsWidget({
   image,
   className,
-}: ImagesSettingsPanelProps) {
+}: ImageSettingsWidgetProps) {
   const updateImage = useTissUUmaps((state) => state.updateImage);
 
   return (

@@ -33,7 +33,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
     required: ["url"], // TODO ... or path
   };
 
-  readonly uiSchema = {
+  readonly uischema = {
     type: "VerticalLayout",
     elements: [
       {

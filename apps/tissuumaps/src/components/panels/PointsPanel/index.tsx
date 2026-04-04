@@ -18,12 +18,10 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useTissUUmaps } from "@/store";
 
-import { PointsGroupsPanel } from "./PointsGroupsPanel";
-import { PointsLayersPanel } from "./PointsLayersPanel";
-import { PointsSettingsPanel } from "./PointsSettingsPanel";
-import { PointsSourcePanel } from "./PointsSourcePanel";
+import { PointsSettingsWidget } from "./PointsSettingsWidget";
 
 export type PointsPanelProps = {
   className?: string;
@@ -63,8 +61,12 @@ type PointsAccordionItemProps = {
 };
 
 function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
+  const pointsDataProviders = useTissUUmaps(
+    (state) => state.pointsDataProviders,
+  );
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
   const deletePoints = useTissUUmaps((state) => state.deletePoints);
+  const loadPoints = useTissUUmaps((state) => state.loadPoints);
 
   const { ref, handleRef } = useSortable({ id: points.id, index });
 
@@ -148,10 +150,18 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           <AccordionTriggerUpDownIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
-          <PointsSourcePanel points={points} className="bg-card" />
-          <PointsSettingsPanel points={points} className="bg-card" />
-          <PointsLayersPanel points={points} className="bg-card" />
-          <PointsGroupsPanel points={points} className="bg-card" />
+          <DataSourceWidget
+            dataSource={points.dataSource}
+            dataProviders={pointsDataProviders}
+            onDataSourceChange={(newDataSource) => {
+              // TODO signal, progress callback
+              loadPoints(points.id, { newDataSource }).catch(console.error);
+            }}
+            className="bg-card"
+          />
+          <PointsSettingsWidget points={points} className="bg-card" />
+          {/* TODO layer configs */}
+          {/* TODO table */}
         </AccordionPanel>
       </AccordionItem>
     </div>

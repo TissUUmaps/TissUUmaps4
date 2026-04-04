@@ -102,7 +102,7 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
     set((draft) => {
       draft.workspace = dir;
     });
-    // TODO reload data if necessary
+    // TODO reload data if necessary?
   },
   registerImageDataProvider: (type, dataProvider) => {
     set((draft) => {
@@ -156,6 +156,7 @@ function createInitialAppSliceState(): AppSliceState {
           const { signal, onProgress } = options ?? {};
           signal?.throwIfAborted();
           const state = useTissUUmaps.getState();
+          // TODO pass on workspace?
           await state.loadTable(tableId, { signal, onProgress });
           signal?.throwIfAborted();
           return new LoadedTableDataAdapter(tableId);

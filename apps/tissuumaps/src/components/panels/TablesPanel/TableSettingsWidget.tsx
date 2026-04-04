@@ -6,15 +6,15 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-export type TablesSettingsPanelProps = {
+export type TableSettingsWidgetProps = {
   table: Table;
   className?: string;
 };
 
-export function TablesSettingsPanel({
+export function TableSettingsWidget({
   table,
   className,
-}: TablesSettingsPanelProps) {
+}: TableSettingsWidgetProps) {
   const updateTable = useTissUUmaps((state) => state.updateTable);
 
   return (

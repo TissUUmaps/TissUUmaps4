@@ -27,7 +27,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     required: ["url"], // TODO ... or path/tileSourceConfig
   };
 
-  readonly uiSchema = {
+  readonly uischema = {
     type: "VerticalLayout",
     elements: [
       {
