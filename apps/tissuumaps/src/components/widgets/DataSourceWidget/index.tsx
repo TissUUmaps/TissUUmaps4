@@ -18,7 +18,7 @@ import { renderers } from "./renderers";
 export type DataSourceWidgetProps<TDataSource extends DataSource> = {
   dataSource: TDataSource;
   dataProviders: Map<string, DataProvider<DataSource, Data>>;
-  onDataSourceChange?: (newDataSource: TDataSource) => void;
+  onDataSourceChange: (newDataSource: TDataSource) => void;
   className?: string;
 };
 
@@ -59,9 +59,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
             variant="ghost"
             className="ml-auto"
             onClick={() => {
-              if (onDataSourceChange !== undefined) {
-                onDataSourceChange(dataSourceDraft);
-              }
+              onDataSourceChange(dataSourceDraft);
               setDataSourceDraft(null);
             }}
           >
