@@ -32,5 +32,5 @@ export class GeoJSONShapesData implements ShapesData {
     return Promise.resolve(this._multiPolygons);
   }
 
-  destroy(): void {}
+  close(): void {}
 }

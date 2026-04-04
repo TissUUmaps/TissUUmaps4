@@ -12,7 +12,7 @@ This project is structured as a pnpm monorepo as follows:
   - tissuumaps           # The TissUUmaps React application
 - packages
   - @tissuumaps-core     # The TissUUmaps JavaScript library
-  - @tissuumaps-storage  # Officially supported storage adapters
+  - @tissuumaps-storage  # Officially supported data providers
   - @tissuumaps-plugins  # Officially supported TissUUmaps plugins
   - @tissuumaps-viewer   # The TissUUmaps viewer (React component)
 ```
@@ -49,7 +49,7 @@ Most data model properties can be either "simple properties" or of a concrete `C
 
 ### Storage
 
-Storage adapters (e.g. a specific points storage adapter) offer functionality for accessing data objects (e.g. a point cloud), which can in turn be used to access parts of the associated data (e.g. point coordinates for a specific dimension). They have a unique `type` and need to be registered in the application state before attempting to access data of that type. All storage adapters and data object functions starting with `load...` are asynchronous.
+Data providers (e.g. a specific points data provider) offer functionality for creating data accessors (e.g. for a point cloud), which can be used to access parts of the associated data (e.g. point coordinates for a specific dimension). They have a unique `type` and need to be registered in the application state before attempting to access data of that type. All data accessor functions starting with `load...` are asynchronous.
 
 ### Controllers
 
@@ -68,9 +68,9 @@ Utilities are exclusively implemented as static classes.
 
 ## @tissuumaps/storage
 
-A storage adapter implementation consists of a concrete `DataStorage` (e.g. `PointsStorage`) adapter that is configurable using concrete `DataSource` (e.g. `PointsDataSource`) configurations and provides access to concrete `Data` (e.g. `PointsData`) objects.
+A data provider implementation consists of a concrete `DataProvider`, whose `open()` method takes a concrete `DataSource` and returns a concrete `Data` accessor.
 
-Each storage adapter has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files.
+Each data provider has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files.
 
 ## @tissuumaps/plugins
 
@@ -106,7 +106,7 @@ Components are structured as follows:
 
 ### State management
 
-A single Zustand store is being used, which is distributed over several slices. The main slices are `app` (transient application state), `project` (persistent project information) and data type-specific slices that hold project data (transient in-memory data and persistent metadata). Data objects return by data storage adapters are exposed to the TissUUmaps `Viewer` component using custom data type-specific store adapters. The immer middleware is used to perform immutable updates, with support for Maps and Sets enabled. Asynchronous store actions are deduplicated based on the JSON-stringified function arguments.
+A single Zustand store is being used, which is distributed over several slices. The main slices are `app` (transient application state), `project` (persistent project information) and data type-specific slices that hold project data (transient in-memory data and persistent metadata). Data objects returned by data providers are exposed to the TissUUmaps `Viewer` component using custom data type-specific store adapters. The immer middleware is used to perform immutable updates, with support for Maps and Sets enabled. Asynchronous store actions are deduplicated based on the JSON-stringified function arguments.
 
 ## Documentation (docs)
 

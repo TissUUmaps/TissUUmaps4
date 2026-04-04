@@ -1,25 +1,17 @@
+import { type PointsDataSource } from "../model/points";
 import { type ProgressCallback } from "../types";
-import { type DataStorage, type ItemsData } from "./base";
+import { type DataProvider, type ItemsData } from "./base";
 
 /**
- * Data storage adapter for point clouds
+ * Data provider for point clouds
  *
- * @typeParam TPointsData - The concrete {@link PointsData} type produced by this storage adapter
+ * @typeParam TPointsData - The concrete {@link PointsData} type produced by this data provider
  */
-export interface PointsDataStorage<
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface PointsDataProvider<
+  TPointsDataSource extends PointsDataSource,
   TPointsData extends PointsData,
-> extends DataStorage {
-  /**
-   * Loads the points data from the configured data source
-   *
-   * @param options - Optional abort signal and progress callback
-   * @returns The loaded points data
-   */
-  loadPoints(options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  }): Promise<TPointsData>;
-}
+> extends DataProvider<TPointsDataSource, TPointsData> {}
 
 /**
  * Loaded point cloud data providing coordinate access by dimension name

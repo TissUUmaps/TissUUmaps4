@@ -1,15 +1,47 @@
+import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
+
+import { type DataSource } from "../model/base";
+import { type ProgressCallback } from "../types";
+
 /**
- * Base interface for data storage adapters
+ * Base interface for data providers
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface DataStorage {}
+export interface DataProvider<
+  TDataSource extends DataSource,
+  TData extends Data,
+> {
+  /** The name of the data provider */
+  readonly name: string;
+
+  /** The JSON schema for the data source */
+  readonly schema: JsonSchema;
+
+  /** The JSON Forms UI schema for the data source */
+  readonly uiSchema: UISchemaElement;
+
+  /**
+   * Opens a data source and returns the loaded data accessor
+   *
+   * @param dataSource - The data source to open
+   * @param options - Optional abort signal, progress callback, and workspace directory handle
+   * @returns A promise that resolves to the loaded data accessor
+   */
+  open(
+    dataSource: TDataSource,
+    options?: {
+      signal?: AbortSignal;
+      onProgress?: ProgressCallback;
+      workspace?: FileSystemDirectoryHandle | null;
+    },
+  ): Promise<TData>;
+}
 
 /**
  * Base interface for loaded data objects
  */
 export interface Data {
   /** Releases all resources held by this data object */
-  destroy(): void;
+  close(): void;
 }
 
 /**

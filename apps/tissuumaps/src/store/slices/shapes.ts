@@ -113,7 +113,7 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
   clearShapes: () => {
     const state = get();
     for (const loadedData of state.loadedShapesData.values()) {
-      loadedData.data.destroy();
+      loadedData.data.close();
     }
     set(createInitialShapesSliceState());
   },
@@ -145,18 +145,19 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
       // Load the data source if not already loaded or if a reload has been requested
       let loadedData = oldLoadedData;
       if (loadedData === undefined || reload) {
-        const { dataStorageFactory } =
-          state.shapesDataStorageRegistry.get(shapes.dataSource.type) ?? {};
-        if (dataStorageFactory === undefined) {
+        const dataProvider = state.shapesDataProviders.get(
+          shapes.dataSource.type,
+        );
+        if (dataProvider === undefined) {
           throw new Error(
-            `No shapes data storage adapter registered for data source type ${shapes.dataSource.type}.`,
+            `No shapes data provider registered for data source type ${shapes.dataSource.type}.`,
           );
         }
-        const dataStorage = dataStorageFactory(
-          shapes.dataSource,
-          state.workspace,
-        );
-        const data = await dataStorage.loadShapes({ signal, onProgress });
+        const data = await dataProvider.open(shapes.dataSource, {
+          signal,
+          onProgress,
+          workspace: state.workspace,
+        });
         signal?.throwIfAborted();
         // Check if the shapes have been deleted or their data source has changed
         const currentState = get();
@@ -167,7 +168,7 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
           currentShapes === undefined ||
           !deepEqual(currentShapes.dataSource, shapes.dataSource)
         ) {
-          data.destroy();
+          data.close();
           throw new DOMException(
             `Shapes with ID ${shapesId} have been deleted or their data source has changed.`,
             "AbortError",
@@ -197,7 +198,7 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
         oldLoadedData !== undefined &&
         oldLoadedData.data !== loadedData.data
       ) {
-        oldLoadedData.data.destroy();
+        oldLoadedData.data.close();
       }
       return loadedData.data;
     },
@@ -286,7 +287,7 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
       }
     });
     if (destroy) {
-      loadedData.data.destroy();
+      loadedData.data.close();
     }
     return true;
   },

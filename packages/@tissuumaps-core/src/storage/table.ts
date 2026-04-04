@@ -1,25 +1,17 @@
+import { type TableDataSource } from "../model/table";
 import { type MappableArrayLike, type ProgressCallback } from "../types";
-import { type DataStorage, type ItemsData } from "./base";
+import { type DataProvider, type ItemsData } from "./base";
 
 /**
- * Data storage adapter for tabular data
+ * Data provider for tabular data
  *
- * @typeParam TTableData - The concrete {@link TableData} type produced by this storage adapter
+ * @typeParam TTableData - The concrete {@link TableData} type produced by this data provider
  */
-export interface TableDataStorage<
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface TableDataProvider<
+  TTableDataSource extends TableDataSource,
   TTableData extends TableData,
-> extends DataStorage {
-  /**
-   * Loads the table data from the configured data source
-   *
-   * @param options - Optional abort signal and progress callback
-   * @returns The loaded table data
-   */
-  loadTable(options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  }): Promise<TTableData>;
-}
+> extends DataProvider<TTableDataSource, TTableData> {}
 
 /**
  * Loaded tabular data providing column-wise access

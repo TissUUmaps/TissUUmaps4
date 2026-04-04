@@ -37,7 +37,7 @@ export class LoadedShapesDataAdapter implements ShapesData {
     });
   }
 
-  destroy(): void {
+  close(): void {
     // ignored intentionally
   }
 

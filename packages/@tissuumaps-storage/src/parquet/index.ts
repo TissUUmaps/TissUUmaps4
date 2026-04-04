@@ -1,11 +1,9 @@
 export { ParquetTableData } from "./ParquetTableData";
-export { ParquetTableDataStorage } from "./ParquetTableDataStorage";
+export { ParquetTableDataProvider } from "./ParquetTableDataProvider";
 export {
   parquetTableDataSourceDefaults,
   parquetTableDataSourceType,
-  parquetTableDataSourceSchema,
-  parquetTableDataSourceUISchema,
-  type RawParquetTableDataSource,
+  type DefaultParquetTableDataSource,
   type ParquetTableDataSource,
-  createParquetTableDataSource,
+  createDefaultParquetTableDataSource,
 } from "./ParquetTableDataSource";

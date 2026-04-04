@@ -103,7 +103,7 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
   clearImages: () => {
     const state = get();
     for (const loadedData of state.loadedImageData.values()) {
-      loadedData.data.destroy();
+      loadedData.data.close();
     }
     set(createInitialImageSliceState());
   },
@@ -135,18 +135,19 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
       // Load the data source if not already loaded or if a reload has been requested
       let loadedData = oldLoadedData;
       if (loadedData === undefined || reload) {
-        const { dataStorageFactory } =
-          state.imageDataStorageRegistry.get(image.dataSource.type) ?? {};
-        if (dataStorageFactory === undefined) {
+        const dataProvider = state.imageDataProviders.get(
+          image.dataSource.type,
+        );
+        if (dataProvider === undefined) {
           throw new Error(
-            `No image data storage adapter registered for data source type ${image.dataSource.type}.`,
+            `No image data provider registered for data source type ${image.dataSource.type}.`,
           );
         }
-        const dataStorage = dataStorageFactory(
-          image.dataSource,
-          state.workspace,
-        );
-        const data = await dataStorage.loadImage({ signal, onProgress });
+        const data = await dataProvider.open(image.dataSource, {
+          signal,
+          onProgress,
+          workspace: state.workspace,
+        });
         signal?.throwIfAborted();
         // Check if the image has been deleted or its data source has changed
         const currentState = get();
@@ -157,7 +158,7 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
           currentImage === undefined ||
           !deepEqual(currentImage.dataSource, image.dataSource)
         ) {
-          data.destroy();
+          data.close();
           throw new DOMException(
             `Image with ID ${imageId} has been deleted or its data source has changed.`,
             "AbortError",
@@ -187,7 +188,7 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
         oldLoadedData !== undefined &&
         oldLoadedData.data !== loadedData.data
       ) {
-        oldLoadedData.data.destroy();
+        oldLoadedData.data.close();
       }
       return loadedData.data;
     },
@@ -217,7 +218,7 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
       }
     });
     if (destroy) {
-      loadedData.data.destroy();
+      loadedData.data.close();
     }
     return true;
   },

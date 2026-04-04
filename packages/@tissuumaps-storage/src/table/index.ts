@@ -1,14 +1,12 @@
 export { TablePointsData } from "./TablePointsData";
 export {
-  TablePointsDataStorage,
+  TablePointsDataProvider,
   type LoadTableFunction,
-} from "./TablePointsDataStorage";
+} from "./TablePointsDataProvider";
 export {
   tablePointsDataSourceDefaults,
   tablePointsDataSourceType,
-  tablePointsDataSourceSchema,
-  tablePointsDataSourceUISchema,
-  type RawTablePointsDataSource,
+  type DefaultTablePointsDataSource,
   type TablePointsDataSource,
-  createTablePointsDataSource,
+  createDefaultTablePointsDataSource,
 } from "./TablePointsDataSource";

@@ -68,7 +68,7 @@ export class LoadedTableDataAdapter implements TableData {
     });
   }
 
-  destroy(): void {
+  close(): void {
     // ignored intentionally
   }
 

@@ -20,7 +20,7 @@ export class LoadedImageDataAdapter implements ImageData {
     return this._getData().getTileSource();
   }
 
-  destroy(): void {
+  close(): void {
     // ignored intentionally
   }
 

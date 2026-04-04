@@ -34,7 +34,7 @@ const computeRange = (values: unknown[]): [number, number] | undefined => {
 const createTableData = (ids: number[], columns: ColumnMap): TableData => ({
   getIds: () => ids,
   getSize: () => ids.length,
-  destroy: () => undefined,
+  close: () => undefined,
   suggestColumnQueries: () => Promise.resolve([]),
   resolveColumnQuery: (query: string) =>
     Promise.resolve(query in columns ? query : null),
@@ -611,8 +611,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const packed = ColorUtils.packColor({ r: 1, g: 2, b: 3 });
@@ -645,8 +644,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const color0 = palette.colors[0]!;
@@ -675,8 +673,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const index0 = MathUtils.clamp(
@@ -719,8 +716,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const index0 = MathUtils.clamp(
@@ -765,8 +761,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const colorIndex = MathUtils.clamp(
@@ -804,8 +799,7 @@ describe("ResolveUtils", () => {
         [],
         defaultColor,
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const expected =
@@ -830,8 +824,7 @@ describe("ResolveUtils", () => {
         [],
         defaultColor,
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const expected =
@@ -855,8 +848,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 1, g: 1, b: 1 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const expected =
@@ -890,8 +882,7 @@ describe("ResolveUtils", () => {
         colorMaps,
         { r: 0, g: 0, b: 0 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const expected = [
@@ -930,8 +921,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const expected =
@@ -960,8 +950,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 2, g: 2, b: 2 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const expected =
@@ -986,8 +975,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 3, g: 3, b: 3 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const expected =
@@ -1018,8 +1006,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 0, g: 0, b: 0 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const index0 = MathUtils.clamp(
@@ -1061,8 +1048,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 4, g: 4, b: 4 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const expected =
@@ -1084,8 +1070,7 @@ describe("ResolveUtils", () => {
         [],
         { r: 5, g: 5, b: 5 },
         loadTable,
-        visibilityData,
-        opacityData,
+        { visibilityData, opacityData },
       );
 
       const expected =

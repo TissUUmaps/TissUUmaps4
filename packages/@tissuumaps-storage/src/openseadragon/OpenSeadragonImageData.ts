@@ -17,7 +17,7 @@ export class OpenSeadragonImageData implements ImageData {
     return this._tileSource;
   }
 
-  destroy(): void {
+  close(): void {
     if (this._objectUrl) {
       URL.revokeObjectURL(this._objectUrl);
     }

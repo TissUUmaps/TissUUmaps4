@@ -35,12 +35,12 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       viewerAnimationStartOptions: state.viewerAnimationStartOptions,
       viewerAnimationFinishOptions: state.viewerAnimationFinishOptions,
       drawOptions: state.drawOptions,
-      // rerender upon changes to storage adapter registries
-      _imageDataStorageRegistry: state.imageDataStorageRegistry,
-      _labelsDataStorageRegistry: state.labelsDataStorageRegistry,
-      _pointsDataStorageRegistry: state.pointsDataStorageRegistry,
-      _shapesDataStorageRegistry: state.shapesDataStorageRegistry,
-      _tableDataStorageRegistry: state.tableDataStorageRegistry,
+      // rerender upon changes to data providers
+      _imageDataProviders: state.imageDataProviders,
+      _labelsDataProviders: state.labelsDataProviders,
+      _pointsDataProviders: state.pointsDataProviders,
+      _shapesDataProviders: state.shapesDataProviders,
+      _tableDataProviders: state.tableDataProviders,
     })),
   );
 

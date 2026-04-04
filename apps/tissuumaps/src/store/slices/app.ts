@@ -1,115 +1,62 @@
-import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
-
 import {
   type ImageData,
-  type ImageDataStorage,
+  type ImageDataProvider,
+  type ImageDataSource,
   type InteractionMode,
   type LabelsData,
-  type LabelsDataStorage,
+  type LabelsDataProvider,
+  type LabelsDataSource,
   type PointsData,
-  type PointsDataStorage,
-  type RawImageDataSource,
-  type RawLabelsDataSource,
-  type RawPointsDataSource,
-  type RawShapesDataSource,
-  type RawTableDataSource,
+  type PointsDataProvider,
+  type PointsDataSource,
   type ShapesData,
-  type ShapesDataStorage,
+  type ShapesDataProvider,
+  type ShapesDataSource,
   type TableData,
-  type TableDataStorage,
+  type TableDataProvider,
+  type TableDataSource,
 } from "@tissuumaps/core";
 import {
-  CSVTableDataStorage,
-  GeoJSONShapesDataStorage,
-  OpenSeadragonImageDataStorage,
-  ParquetTableDataStorage,
-  type RawCSVTableDataSource,
-  type RawGeoJSONShapesDataSource,
-  type RawOpenSeadragonImageDataSource,
-  type RawParquetTableDataSource,
-  type RawTablePointsDataSource,
-  TablePointsDataStorage,
-  createCSVTableDataSource,
-  createGeoJSONShapesDataSource,
-  createOpenSeadragonImageDataSource,
-  createParquetTableDataSource,
-  createTablePointsDataSource,
-  csvTableDataSourceSchema,
+  CSVTableDataProvider,
+  GeoJSONShapesDataProvider,
+  OpenSeadragonImageDataProvider,
+  ParquetTableDataProvider,
+  TablePointsDataProvider,
   csvTableDataSourceType,
-  csvTableDataSourceUISchema,
-  geoJSONShapesDataSourceSchema,
   geoJSONShapesDataSourceType,
-  geoJSONShapesDataSourceUISchema,
-  openSeadragonImageDataSourceSchema,
   openSeadragonImageDataSourceType,
-  openSeadragonImageDataSourceUISchema,
-  parquetTableDataSourceSchema,
   parquetTableDataSourceType,
-  parquetTableDataSourceUISchema,
-  tablePointsDataSourceSchema,
   tablePointsDataSourceType,
-  tablePointsDataSourceUISchema,
 } from "@tissuumaps/storage";
 
 import { LoadedTableDataAdapter } from "../adapters/LoadedTableDataAdapter";
 import { type TissUUmapsStateCreator, useTissUUmaps } from "../index";
 
-type ImageDataStorageFactory = (
-  rawDataSource: RawImageDataSource,
-  workspace: FileSystemDirectoryHandle | null,
-) => ImageDataStorage<ImageData>;
-
-type LabelsDataStorageFactory = (
-  dataSource: RawLabelsDataSource,
-  workspace: FileSystemDirectoryHandle | null,
-) => LabelsDataStorage<LabelsData>;
-
-type PointsDataStorageFactory = (
-  dataSource: RawPointsDataSource,
-  workspace: FileSystemDirectoryHandle | null,
-) => PointsDataStorage<PointsData>;
-
-type ShapesDataStorageFactory = (
-  dataSource: RawShapesDataSource,
-  workspace: FileSystemDirectoryHandle | null,
-) => ShapesDataStorage<ShapesData>;
-
-type TableDataStorageFactory = (
-  dataSource: RawTableDataSource,
-  workspace: FileSystemDirectoryHandle | null,
-) => TableDataStorage<TableData>;
-
-type DataStorageRegistryValue<TStorageFactory> = {
-  dataSourceSchema: JsonSchema;
-  dataSourceUISchema: UISchemaElement;
-  dataStorageFactory: TStorageFactory;
-};
-
 export type AppSlice = AppSliceState & AppSliceActions;
 
 export type AppSliceState = {
   dark: boolean;
-  interactionMode: InteractionMode;
   workspace: FileSystemDirectoryHandle | null;
-  imageDataStorageRegistry: Map<
+  interactionMode: InteractionMode;
+  imageDataProviders: Map<
     string,
-    DataStorageRegistryValue<ImageDataStorageFactory>
+    ImageDataProvider<ImageDataSource, ImageData>
   >;
-  labelsDataStorageRegistry: Map<
+  labelsDataProviders: Map<
     string,
-    DataStorageRegistryValue<LabelsDataStorageFactory>
+    LabelsDataProvider<LabelsDataSource, LabelsData>
   >;
-  pointsDataStorageRegistry: Map<
+  pointsDataProviders: Map<
     string,
-    DataStorageRegistryValue<PointsDataStorageFactory>
+    PointsDataProvider<PointsDataSource, PointsData>
   >;
-  shapesDataStorageRegistry: Map<
+  shapesDataProviders: Map<
     string,
-    DataStorageRegistryValue<ShapesDataStorageFactory>
+    ShapesDataProvider<ShapesDataSource, ShapesData>
   >;
-  tableDataStorageRegistry: Map<
+  tableDataProviders: Map<
     string,
-    DataStorageRegistryValue<TableDataStorageFactory>
+    TableDataProvider<TableDataSource, TableData>
   >;
 };
 
@@ -117,25 +64,25 @@ export type AppSliceActions = {
   setDark: (dark: boolean) => void;
   setInteractionMode: (interactionMode: InteractionMode) => void;
   setWorkspace: (workspace: FileSystemDirectoryHandle | null) => void;
-  registerImageDataStorage: (
+  registerImageDataProvider: (
     type: string,
-    value: DataStorageRegistryValue<ImageDataStorageFactory>,
+    dataProvider: ImageDataProvider<ImageDataSource, ImageData>,
   ) => void;
-  registerLabelsDataStorage: (
+  registerLabelsDataProvider: (
     type: string,
-    value: DataStorageRegistryValue<LabelsDataStorageFactory>,
+    dataProvider: LabelsDataProvider<LabelsDataSource, LabelsData>,
   ) => void;
-  registerPointsDataStorage: (
+  registerPointsDataProvider: (
     type: string,
-    value: DataStorageRegistryValue<PointsDataStorageFactory>,
+    dataProvider: PointsDataProvider<PointsDataSource, PointsData>,
   ) => void;
-  registerShapesDataStorage: (
+  registerShapesDataProvider: (
     type: string,
-    value: DataStorageRegistryValue<ShapesDataStorageFactory>,
+    dataProvider: ShapesDataProvider<ShapesDataSource, ShapesData>,
   ) => void;
-  registerTableDataStorage: (
+  registerTableDataProvider: (
     type: string,
-    value: DataStorageRegistryValue<TableDataStorageFactory>,
+    dataProvider: TableDataProvider<TableDataSource, TableData>,
   ) => void;
 };
 
@@ -157,29 +104,29 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
     });
     // TODO reload data if necessary
   },
-  registerImageDataStorage: (type, value) => {
+  registerImageDataProvider: (type, dataProvider) => {
     set((draft) => {
-      draft.imageDataStorageRegistry.set(type, value);
+      draft.imageDataProviders.set(type, dataProvider);
     });
   },
-  registerLabelsDataStorage: (type, value) => {
+  registerLabelsDataProvider: (type, dataProvider) => {
     set((draft) => {
-      draft.labelsDataStorageRegistry.set(type, value);
+      draft.labelsDataProviders.set(type, dataProvider);
     });
   },
-  registerPointsDataStorage: (type, value) => {
+  registerPointsDataProvider: (type, dataProvider) => {
     set((draft) => {
-      draft.pointsDataStorageRegistry.set(type, value);
+      draft.pointsDataProviders.set(type, dataProvider);
     });
   },
-  registerShapesDataStorage: (type, value) => {
+  registerShapesDataProvider: (type, dataProvider) => {
     set((draft) => {
-      draft.shapesDataStorageRegistry.set(type, value);
+      draft.shapesDataProviders.set(type, dataProvider);
     });
   },
-  registerTableDataStorage: (type, value) => {
+  registerTableDataProvider: (type, dataProvider) => {
     set((draft) => {
-      draft.tableDataStorageRegistry.set(type, value);
+      draft.tableDataProviders.set(type, dataProvider);
     });
   },
 });
@@ -187,92 +134,44 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
 function createInitialAppSliceState(): AppSliceState {
   return {
     dark: false,
-    interactionMode: "pan",
     workspace: null,
-    imageDataStorageRegistry: new Map([
-      [
-        openSeadragonImageDataSourceType,
-        {
-          dataSourceSchema: openSeadragonImageDataSourceSchema,
-          dataSourceUISchema: openSeadragonImageDataSourceUISchema,
-          dataStorageFactory: (rawDataSource, workspace) =>
-            new OpenSeadragonImageDataStorage(
-              createOpenSeadragonImageDataSource(
-                rawDataSource as RawOpenSeadragonImageDataSource,
-              ),
-              workspace,
-            ),
-        },
-      ],
+    interactionMode: "pan",
+    imageDataProviders: new Map<
+      string,
+      ImageDataProvider<ImageDataSource, ImageData>
+    >([
+      [openSeadragonImageDataSourceType, new OpenSeadragonImageDataProvider()],
     ]),
-    labelsDataStorageRegistry: new Map([]),
-    pointsDataStorageRegistry: new Map([
+    labelsDataProviders: new Map<
+      string,
+      LabelsDataProvider<LabelsDataSource, LabelsData>
+    >([]),
+    pointsDataProviders: new Map<
+      string,
+      PointsDataProvider<PointsDataSource, PointsData>
+    >([
       [
         tablePointsDataSourceType,
-        {
-          dataSourceSchema: tablePointsDataSourceSchema,
-          dataSourceUISchema: tablePointsDataSourceUISchema,
-          dataStorageFactory: (rawDataSource, workspace) =>
-            new TablePointsDataStorage(
-              createTablePointsDataSource(
-                rawDataSource as RawTablePointsDataSource,
-              ),
-              workspace,
-              async (tableId, options) => {
-                const { signal, onProgress } = options ?? {};
-                signal?.throwIfAborted();
-                const state = useTissUUmaps.getState();
-                await state.loadTable(tableId, { signal, onProgress });
-                signal?.throwIfAborted();
-                return new LoadedTableDataAdapter(tableId);
-              },
-            ),
-        },
+        new TablePointsDataProvider(async (tableId, options) => {
+          const { signal, onProgress } = options ?? {};
+          signal?.throwIfAborted();
+          const state = useTissUUmaps.getState();
+          await state.loadTable(tableId, { signal, onProgress });
+          signal?.throwIfAborted();
+          return new LoadedTableDataAdapter(tableId);
+        }),
       ],
     ]),
-    shapesDataStorageRegistry: new Map([
-      [
-        geoJSONShapesDataSourceType,
-        {
-          dataSourceSchema: geoJSONShapesDataSourceSchema,
-          dataSourceUISchema: geoJSONShapesDataSourceUISchema,
-          dataStorageFactory: (rawDataSource, workspace) =>
-            new GeoJSONShapesDataStorage(
-              createGeoJSONShapesDataSource(
-                rawDataSource as RawGeoJSONShapesDataSource,
-              ),
-              workspace,
-            ),
-        },
-      ],
-    ]),
-    tableDataStorageRegistry: new Map([
-      [
-        csvTableDataSourceType,
-        {
-          dataSourceSchema: csvTableDataSourceSchema,
-          dataSourceUISchema: csvTableDataSourceUISchema,
-          dataStorageFactory: (rawDataSource, workspace) =>
-            new CSVTableDataStorage(
-              createCSVTableDataSource(rawDataSource as RawCSVTableDataSource),
-              workspace,
-            ),
-        },
-      ],
-      [
-        parquetTableDataSourceType,
-        {
-          dataSourceSchema: parquetTableDataSourceSchema,
-          dataSourceUISchema: parquetTableDataSourceUISchema,
-          dataStorageFactory: (rawDataSource, workspace) =>
-            new ParquetTableDataStorage(
-              createParquetTableDataSource(
-                rawDataSource as RawParquetTableDataSource,
-              ),
-              workspace,
-            ),
-        },
-      ],
+    shapesDataProviders: new Map<
+      string,
+      ShapesDataProvider<ShapesDataSource, ShapesData>
+    >([[geoJSONShapesDataSourceType, new GeoJSONShapesDataProvider()]]),
+    tableDataProviders: new Map<
+      string,
+      TableDataProvider<TableDataSource, TableData>
+    >([
+      [csvTableDataSourceType, new CSVTableDataProvider()],
+      [parquetTableDataSourceType, new ParquetTableDataProvider()],
     ]),
   };
 }

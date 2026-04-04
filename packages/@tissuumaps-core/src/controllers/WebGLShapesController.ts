@@ -570,9 +570,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         colorMaps,
         defaultShapeFillColor,
         loadTable,
-        visibilityData,
-        opacityData,
-        { signal, align: numValuesPerTextureLine },
+        { signal, align: numValuesPerTextureLine, visibilityData, opacityData },
       );
       signal?.throwIfAborted();
     }
@@ -646,9 +644,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         colorMaps,
         defaultShapeStrokeColor,
         loadTable,
-        visibilityData,
-        opacityData,
-        { signal, align: numValuesPerTextureLine },
+        { signal, align: numValuesPerTextureLine, visibilityData, opacityData },
       );
       signal?.throwIfAborted();
     }

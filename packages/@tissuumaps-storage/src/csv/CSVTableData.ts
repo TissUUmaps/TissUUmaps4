@@ -107,5 +107,5 @@ export class CSVTableData implements TableData {
     return await Promise.resolve(valueRange);
   }
 
-  destroy(): void {}
+  close(): void {}
 }

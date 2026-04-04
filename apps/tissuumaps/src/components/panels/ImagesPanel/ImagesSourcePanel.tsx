@@ -20,19 +20,17 @@ export function ImagesSourcePanel({
   image,
   className,
 }: ImagesSourcePanelProps) {
-  const imageDataStorageRegistry = useTissUUmaps(
-    (state) => state.imageDataStorageRegistry,
-  );
+  const imageDataProviders = useTissUUmaps((state) => state.imageDataProviders);
 
-  const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = imageDataStorageRegistry.get(image.dataSource.type);
-    if (value === undefined) {
+  const imageDataProvider = useMemo(() => {
+    const imageDataProvider = imageDataProviders.get(image.dataSource.type);
+    if (imageDataProvider === undefined) {
       throw new Error(
-        `No image data storage adapter registered for data source type "${image.dataSource.type}"`,
+        `No image data provider registered for data source type "${image.dataSource.type}"`,
       );
     }
-    return value;
-  }, [imageDataStorageRegistry, image.dataSource.type]);
+    return imageDataProvider;
+  }, [imageDataProviders, image.dataSource.type]);
 
   return (
     <Fieldset
@@ -47,8 +45,8 @@ export function ImagesSourcePanel({
         <Input type="text" value={image.dataSource.type} disabled />
       </Field>
       <JsonForms
-        schema={dataSourceSchema}
-        uischema={dataSourceUISchema}
+        schema={imageDataProvider.schema}
+        uischema={imageDataProvider.uiSchema}
         data={image.dataSource}
         renderers={renderers}
         cells={cells}

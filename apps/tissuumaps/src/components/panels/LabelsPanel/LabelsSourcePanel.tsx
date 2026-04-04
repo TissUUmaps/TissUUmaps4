@@ -20,19 +20,19 @@ export function LabelsSourcePanel({
   labels,
   className,
 }: LabelsSourcePanelProps) {
-  const labelsDataStorageRegistry = useTissUUmaps(
-    (state) => state.labelsDataStorageRegistry,
+  const labelsDataProviders = useTissUUmaps(
+    (state) => state.labelsDataProviders,
   );
 
-  const { dataSourceSchema, dataSourceUISchema } = useMemo(() => {
-    const value = labelsDataStorageRegistry.get(labels.dataSource.type);
-    if (value === undefined) {
+  const labelsDataProvider = useMemo(() => {
+    const labelsDataProvider = labelsDataProviders.get(labels.dataSource.type);
+    if (labelsDataProvider === undefined) {
       throw new Error(
-        `No labels data storage adapter registered for data source type "${labels.dataSource.type}"`,
+        `No labels data provider registered for data source type "${labels.dataSource.type}"`,
       );
     }
-    return value;
-  }, [labelsDataStorageRegistry, labels.dataSource.type]);
+    return labelsDataProvider;
+  }, [labelsDataProviders, labels.dataSource.type]);
 
   return (
     <Fieldset
@@ -47,8 +47,8 @@ export function LabelsSourcePanel({
         <Input type="text" value={labels.dataSource.type} disabled />
       </Field>
       <JsonForms
-        schema={dataSourceSchema}
-        uischema={dataSourceUISchema}
+        schema={labelsDataProvider.schema}
+        uischema={labelsDataProvider.uiSchema}
         data={labels.dataSource}
         renderers={renderers}
         cells={cells}
