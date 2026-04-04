@@ -56,6 +56,7 @@ export class TablePointsDataProvider implements PointsDataProvider<
     options?: {
       signal?: AbortSignal;
       onProgress?: ProgressCallback;
+      workspace: FileSystemDirectoryHandle | null;
     },
   ): Promise<TablePointsData> {
     const { signal, onProgress } = options ?? {};
