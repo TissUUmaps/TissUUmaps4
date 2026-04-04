@@ -19,9 +19,9 @@ export function ActiveVisibilityConfigValue({
   adapter,
   className,
 }: ActiveVisibilityConfigValueProps) {
-  const tables = useTissUUmaps((state) => state.tables);
-
   const { activeSource, visibilityConfig, defaultVisibility } = adapter;
+
+  const tables = useTissUUmaps((state) => state.tables);
 
   if (activeSource === "constant" && isConstantConfig(visibilityConfig)) {
     return (

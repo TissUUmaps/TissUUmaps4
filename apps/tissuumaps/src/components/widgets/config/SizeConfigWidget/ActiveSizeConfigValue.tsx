@@ -17,9 +17,9 @@ export function ActiveSizeConfigValue({
   adapter,
   className,
 }: ActiveSizeConfigValueProps) {
-  const tables = useTissUUmaps((state) => state.tables);
-
   const { activeSource, sizeConfig, defaultSize } = adapter;
+
+  const tables = useTissUUmaps((state) => state.tables);
 
   if (activeSource === "constant" && isConstantConfig(sizeConfig)) {
     return <div className={className}>{sizeConfig.constant.value}</div>;

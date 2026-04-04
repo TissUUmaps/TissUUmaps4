@@ -20,11 +20,13 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
   const { setViewerElementRef, controllerRef: osRef } =
     useOpenSeadragon(adapter);
 
-  const parent = useMemo(() => os?.viewer.canvas ?? null, [os]);
-  const viewport = useMemo(
-    () => os?.viewer.viewport.getBoundsNoRotate(true) ?? null,
-    [os],
-  );
+  const parent = os !== null ? os.viewer.canvas : null;
+  const viewport = useMemo(() => {
+    if (os !== null) {
+      return os.viewer.viewport.getBoundsNoRotate(true);
+    }
+    return null;
+  }, [os]);
   const { controllerRef: glRef } = useWebGL(adapter, parent, viewport);
   const { controllerRef: svgRef } = useSVG(adapter, parent, viewport);
 

@@ -20,9 +20,9 @@ export function ActiveColorConfigValue({
   adapter,
   className,
 }: ActiveColorConfigValueProps) {
-  const tables = useTissUUmaps((state) => state.tables);
-
   const { activeSource, colorConfig, defaultColor } = adapter;
+
+  const tables = useTissUUmaps((state) => state.tables);
 
   if (activeSource === "constant" && isConstantConfig(colorConfig)) {
     const { r, g, b } = colorConfig.constant.value;

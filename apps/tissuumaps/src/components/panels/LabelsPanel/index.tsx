@@ -18,11 +18,10 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useTissUUmaps } from "@/store";
 
-import { LabelsLayersPanel } from "./LabelsLayersPanel";
-import { LabelsSettingsPanel } from "./LabelsSettingsPanel";
-import { LabelsSourcePanel } from "./LabelsSourcePanel";
+import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
 
 export type LabelsPanelProps = {
   className?: string;
@@ -60,8 +59,12 @@ type LabelsAccordionItemProps = {
 };
 
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
+  const labelsDataProviders = useTissUUmaps(
+    (state) => state.labelsDataProviders,
+  );
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
   const deleteLabels = useTissUUmaps((state) => state.deleteLabels);
+  const loadLabels = useTissUUmaps((state) => state.loadLabels);
 
   const { ref, handleRef } = useSortable({ id: labels.id, index });
 
@@ -125,9 +128,18 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
           <AccordionTriggerUpDownIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
-          <LabelsSourcePanel labels={labels} className="bg-card" />
-          <LabelsSettingsPanel labels={labels} className="bg-card" />
-          <LabelsLayersPanel labels={labels} className="bg-card" />
+          <DataSourceWidget
+            dataSource={labels.dataSource}
+            dataProviders={labelsDataProviders}
+            onDataSourceChange={(newDataSource) => {
+              // TODO signal, progress callback
+              loadLabels(labels.id, { newDataSource }).catch(console.error);
+            }}
+            className="bg-card"
+          />
+          <LabelsSettingsWidget labels={labels} className="bg-card" />
+          {/* TODO layer configs */}
+          {/* TODO table */}
         </AccordionPanel>
       </AccordionItem>
     </div>

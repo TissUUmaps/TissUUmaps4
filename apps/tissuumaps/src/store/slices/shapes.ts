@@ -37,6 +37,7 @@ export type ShapesSliceActions = {
       signal?: AbortSignal;
       reload?: boolean;
       onProgress?: ProgressCallback;
+      newDataSource?: ShapesDataSource;
     },
   ) => Promise<ShapesData>;
   loadShapesMultiPolygons: (
@@ -119,47 +120,70 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
   },
   loadShapes: deduplicate(
     async (shapesId, options) => {
-      const { signal, reload = false, onProgress } = options ?? {};
+      const {
+        signal,
+        reload = false,
+        onProgress,
+        newDataSource,
+      } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the shapes are already loaded
+
       const state = get();
-      const loadedDataKey = state.loadedShapes.get(shapesId);
-      if (loadedDataKey !== undefined && !reload) {
-        const loadedData = state.loadedShapesData.get(loadedDataKey);
-        if (loadedData !== undefined) {
-          return loadedData.data;
-        }
-      }
-      // Find the shapes and the corresponding data source (if loaded)
       const shapes = state.shapes.find((shapes) => shapes.id === shapesId);
       if (shapes === undefined) {
         throw new Error(`Shapes with ID ${shapesId} not found.`);
       }
-      let oldLoadedData: LoadedShapesData | undefined;
-      for (const loadedData of state.loadedShapesData.values()) {
-        if (deepEqual(loadedData.dataSource, shapes.dataSource)) {
-          oldLoadedData = loadedData;
-          break;
+      const dataSource = newDataSource ?? shapes.dataSource;
+
+      let oldLoadedData;
+      const oldLoadedDataKey = state.loadedShapes.get(shapesId);
+      if (oldLoadedDataKey !== undefined) {
+        oldLoadedData = state.loadedShapesData.get(oldLoadedDataKey);
+        if (
+          !reload &&
+          newDataSource === undefined &&
+          oldLoadedData !== undefined
+        ) {
+          return oldLoadedData.data;
         }
       }
-      // Load the data source if not already loaded or if a reload has been requested
-      let loadedData = oldLoadedData;
-      if (loadedData === undefined || reload) {
-        const dataProvider = state.shapesDataProviders.get(
-          shapes.dataSource.type,
-        );
+
+      let existingLoadedData = oldLoadedData;
+      if (existingLoadedData === undefined) {
+        for (const [key, value] of state.loadedShapesData) {
+          if (deepEqual(value.dataSource, dataSource)) {
+            existingLoadedData = value;
+            if (!reload) {
+              set((draft) => {
+                draft.loadedShapes.set(shapesId, key);
+                if (newDataSource !== undefined) {
+                  const shapesDraft = draft.shapes.find(
+                    (shapes) => shapes.id === shapesId,
+                  )!;
+                  shapesDraft.dataSource = newDataSource;
+                }
+              });
+              return existingLoadedData.data;
+            }
+            break;
+          }
+        }
+      }
+
+      let data = existingLoadedData?.data;
+      if (reload || newDataSource !== undefined || data === undefined) {
+        const dataProvider = state.shapesDataProviders.get(dataSource.type);
         if (dataProvider === undefined) {
           throw new Error(
-            `No shapes data provider registered for data source type ${shapes.dataSource.type}.`,
+            `No shapes data provider registered for data source type ${dataSource.type}.`,
           );
         }
-        const data = await dataProvider.open(shapes.dataSource, {
+        data = await dataProvider.open(dataSource, {
           signal,
           onProgress,
           workspace: state.workspace,
         });
         signal?.throwIfAborted();
-        // Check if the shapes have been deleted or their data source has changed
         const currentState = get();
         const currentShapes = currentState.shapes.find(
           (shapes) => shapes.id === shapesId,
@@ -174,13 +198,11 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
             "AbortError",
           );
         }
-        loadedData = { dataSource: currentShapes.dataSource, data };
       }
-      // Store the loaded shapes and the corresponding data source in the state
       set((draft) => {
         let loadedDataKey;
         for (const [key, value] of draft.loadedShapesData) {
-          if (deepEqual(value.dataSource, loadedData.dataSource)) {
+          if (deepEqual(value.dataSource, dataSource)) {
             loadedDataKey = key;
             break;
           }
@@ -190,17 +212,24 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
             loadedDataKey = crypto.randomUUID();
           } while (draft.loadedShapesData.has(loadedDataKey));
         }
+        draft.loadedShapesData.set(loadedDataKey, { dataSource, data });
         draft.loadedShapes.set(shapesId, loadedDataKey);
-        draft.loadedShapesData.set(loadedDataKey, loadedData);
+        if (newDataSource !== undefined) {
+          const shapesDraft = draft.shapes.find(
+            (shapes) => shapes.id === shapesId,
+          )!;
+          shapesDraft.dataSource = newDataSource;
+        }
       });
-      // Clean up old data if the loaded data source has changed
+
       if (
-        oldLoadedData !== undefined &&
-        oldLoadedData.data !== loadedData.data
+        existingLoadedData !== undefined &&
+        existingLoadedData.data !== data
       ) {
-        oldLoadedData.data.close();
+        existingLoadedData.data.close();
       }
-      return loadedData.data;
+
+      return data;
     },
     (_shapesId, options) => options?.signal,
   ),

@@ -13,10 +13,10 @@ import {
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
 import { Button } from "@/components/ui/button";
+import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useTissUUmaps } from "@/store";
 
-import { TablesSettingsPanel } from "./TablesSettingsPanel";
-import { TablesSourcePanel } from "./TablesSourcePanel";
+import { TableSettingsWidget } from "./TableSettingsWidget";
 
 export type TablesPanelProps = {
   className?: string;
@@ -50,7 +50,9 @@ type TableAccordionItemProps = {
 };
 
 function TableAccordionItem({ table, index }: TableAccordionItemProps) {
+  const tableDataProviders = useTissUUmaps((state) => state.tableDataProviders);
   const deleteTable = useTissUUmaps((state) => state.deleteTable);
+  const loadTable = useTissUUmaps((state) => state.loadTable);
 
   const { ref, handleRef } = useSortable({ id: table.id, index });
 
@@ -82,8 +84,16 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
           <AccordionTriggerUpDownIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
-          <TablesSourcePanel table={table} className="bg-card" />
-          <TablesSettingsPanel table={table} className="bg-card" />
+          <DataSourceWidget
+            dataSource={table.dataSource}
+            dataProviders={tableDataProviders}
+            onDataSourceChange={(newDataSource) => {
+              // TODO signal, progress callback
+              loadTable(table.id, { newDataSource }).catch(console.error);
+            }}
+            className="bg-card"
+          />
+          <TableSettingsWidget table={table} className="bg-card" />
         </AccordionPanel>
       </AccordionItem>
     </div>

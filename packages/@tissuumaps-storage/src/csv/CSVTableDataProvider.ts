@@ -36,7 +36,7 @@ export class CSVTableDataProvider implements TableDataProvider<
     required: ["url"], // TODO ... or path
   };
 
-  readonly uiSchema = {
+  readonly uischema = {
     type: "VerticalLayout",
     elements: [
       {

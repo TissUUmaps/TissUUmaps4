@@ -17,7 +17,7 @@ export interface DataProvider<
   readonly schema: JsonSchema;
 
   /** The JSON Forms UI schema for the data source */
-  readonly uiSchema: UISchemaElement;
+  readonly uischema: UISchemaElement;
 
   /**
    * Opens a data source and returns the loaded data accessor

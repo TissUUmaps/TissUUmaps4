@@ -35,6 +35,7 @@ export type ImageSliceActions = {
       signal?: AbortSignal;
       reload?: boolean;
       onProgress?: ProgressCallback;
+      newDataSource?: ImageDataSource;
     },
   ) => Promise<ImageData>;
   unloadImage: (imageId: string) => boolean;
@@ -109,47 +110,70 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
   },
   loadImage: deduplicate(
     async (imageId, options) => {
-      const { signal, reload = false, onProgress } = options ?? {};
+      const {
+        signal,
+        reload = false,
+        onProgress,
+        newDataSource,
+      } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the image is already loaded
+
       const state = get();
-      const loadedDataKey = state.loadedImages.get(imageId);
-      if (loadedDataKey !== undefined && !reload) {
-        const loadedData = state.loadedImageData.get(loadedDataKey);
-        if (loadedData !== undefined) {
-          return loadedData.data;
-        }
-      }
-      // Find the image and the corresponding data source (if loaded)
       const image = state.images.find((image) => image.id === imageId);
       if (image === undefined) {
         throw new Error(`Image with ID ${imageId} not found.`);
       }
-      let oldLoadedData: LoadedImageData | undefined;
-      for (const loadedData of state.loadedImageData.values()) {
-        if (deepEqual(loadedData.dataSource, image.dataSource)) {
-          oldLoadedData = loadedData;
-          break;
+      const dataSource = newDataSource ?? image.dataSource;
+
+      let oldLoadedData;
+      const oldLoadedDataKey = state.loadedImages.get(imageId);
+      if (oldLoadedDataKey !== undefined) {
+        oldLoadedData = state.loadedImageData.get(oldLoadedDataKey);
+        if (
+          !reload &&
+          newDataSource === undefined &&
+          oldLoadedData !== undefined
+        ) {
+          return oldLoadedData.data;
         }
       }
-      // Load the data source if not already loaded or if a reload has been requested
-      let loadedData = oldLoadedData;
-      if (loadedData === undefined || reload) {
-        const dataProvider = state.imageDataProviders.get(
-          image.dataSource.type,
-        );
+
+      let existingLoadedData = oldLoadedData;
+      if (existingLoadedData === undefined) {
+        for (const [key, value] of state.loadedImageData) {
+          if (deepEqual(value.dataSource, dataSource)) {
+            existingLoadedData = value;
+            if (!reload) {
+              set((draft) => {
+                draft.loadedImages.set(imageId, key);
+                if (newDataSource !== undefined) {
+                  const imageDraft = draft.images.find(
+                    (image) => image.id === imageId,
+                  )!;
+                  imageDraft.dataSource = newDataSource;
+                }
+              });
+              return existingLoadedData.data;
+            }
+            break;
+          }
+        }
+      }
+
+      let data = existingLoadedData?.data;
+      if (reload || newDataSource !== undefined || data === undefined) {
+        const dataProvider = state.imageDataProviders.get(dataSource.type);
         if (dataProvider === undefined) {
           throw new Error(
-            `No image data provider registered for data source type ${image.dataSource.type}.`,
+            `No image data provider registered for data source type ${dataSource.type}.`,
           );
         }
-        const data = await dataProvider.open(image.dataSource, {
+        data = await dataProvider.open(dataSource, {
           signal,
           onProgress,
           workspace: state.workspace,
         });
         signal?.throwIfAborted();
-        // Check if the image has been deleted or its data source has changed
         const currentState = get();
         const currentImage = currentState.images.find(
           (image) => image.id === imageId,
@@ -164,13 +188,12 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
             "AbortError",
           );
         }
-        loadedData = { dataSource: currentImage.dataSource, data };
       }
-      // Store the loaded image and the corresponding data source in the state
+
       set((draft) => {
         let loadedDataKey;
         for (const [key, value] of draft.loadedImageData) {
-          if (deepEqual(value.dataSource, loadedData.dataSource)) {
+          if (deepEqual(value.dataSource, dataSource)) {
             loadedDataKey = key;
             break;
           }
@@ -180,17 +203,24 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
             loadedDataKey = crypto.randomUUID();
           } while (draft.loadedImageData.has(loadedDataKey));
         }
+        draft.loadedImageData.set(loadedDataKey, { dataSource, data });
         draft.loadedImages.set(imageId, loadedDataKey);
-        draft.loadedImageData.set(loadedDataKey, loadedData);
+        if (newDataSource !== undefined) {
+          const imageDraft = draft.images.find(
+            (image) => image.id === imageId,
+          )!;
+          imageDraft.dataSource = newDataSource;
+        }
       });
-      // Clean up old data if the loaded data source has changed
+
       if (
-        oldLoadedData !== undefined &&
-        oldLoadedData.data !== loadedData.data
+        existingLoadedData !== undefined &&
+        existingLoadedData.data !== data
       ) {
-        oldLoadedData.data.close();
+        existingLoadedData.data.close();
       }
-      return loadedData.data;
+
+      return data;
     },
     (_imageId, options) => options?.signal,
   ),

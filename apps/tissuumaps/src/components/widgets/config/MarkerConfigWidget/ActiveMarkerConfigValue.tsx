@@ -18,9 +18,9 @@ export function ActiveMarkerConfigValue({
   adapter,
   className,
 }: ActiveMarkerConfigValueProps) {
-  const tables = useTissUUmaps((state) => state.tables);
-
   const { activeSource, markerConfig, defaultMarker } = adapter;
+
+  const tables = useTissUUmaps((state) => state.tables);
 
   if (activeSource === "constant" && isConstantConfig(markerConfig)) {
     const markerIcon = markers.find(
