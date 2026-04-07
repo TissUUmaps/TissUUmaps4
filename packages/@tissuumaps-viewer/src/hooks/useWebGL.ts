@@ -7,7 +7,7 @@ import { type ViewerAdapter } from "../adapter";
 export function useWebGL(
   adapter: ViewerAdapter,
   parent: Element | null,
-  viewport: Rect | null,
+  initialViewport: Rect | null,
 ) {
   const {
     workspace,
@@ -34,10 +34,10 @@ export function useWebGL(
     let canvas: HTMLCanvasElement | undefined;
     let controller: WebGLController | undefined;
     const abortController = new AbortController();
-    if (parent !== null && viewport !== null) {
+    if (parent !== null && initialViewport !== null) {
       console.debug("Initializing WebGL");
       canvas = parent.appendChild(WebGLController.createCanvas());
-      controller = new WebGLController(canvas, viewport);
+      controller = new WebGLController(canvas, initialViewport);
       controller.initialize({ signal: abortController.signal }).then(
         (controller) => {
           if (!abortController.signal.aborted) {
@@ -63,7 +63,7 @@ export function useWebGL(
         parent.removeChild(canvas);
       }
     };
-  }, [parent, viewport]);
+  }, [parent, initialViewport]);
 
   useEffect(() => {
     const controller = controllerRef.current;

@@ -38,11 +38,11 @@ export class WebGLController {
 
   /**
    * @param canvas - The canvas element to draw on (typically created by {@link createCanvas})
-   * @param viewport - Initial world-space viewport rectangle
+   * @param initialViewport - Initial world-space viewport rectangle
    */
-  constructor(canvas: HTMLCanvasElement, viewport: Rect) {
+  constructor(canvas: HTMLCanvasElement, initialViewport: Rect) {
     this.canvas = canvas;
-    this._viewport = viewport;
+    this._viewport = initialViewport;
     this._drawOptions = structuredClone(defaultDrawOptions);
     this._gl = WebGLController._createWebGLContext(this.canvas);
     this._pointsController = new WebGLPointsController(this._gl);
