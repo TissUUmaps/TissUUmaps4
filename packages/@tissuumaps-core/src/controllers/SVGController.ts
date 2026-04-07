@@ -28,12 +28,12 @@ export class SVGController {
 
   /**
    * @param container - The `<svg>` element to draw on (typically created by {@link createContainer})
-   * @param viewport - Initial world-space viewport rectangle
+   * @param initialViewport - Initial world-space viewport rectangle
    * @param options - Optional shape drawing event handlers
    */
   constructor(
     container: SVGSVGElement,
-    viewport: Rect,
+    initialViewport: Rect,
     options?: { onShapeComplete?: (shape: MultiPolygon) => void },
   ) {
     this.container = container;
@@ -43,7 +43,7 @@ export class SVGController {
       width: parseFloat(container.getAttribute("width") ?? "0"),
       height: parseFloat(container.getAttribute("height") ?? "0"),
     };
-    this._viewport = viewport;
+    this._viewport = initialViewport;
     container.replaceChildren(this.transformNode);
     // TODO register mouse event handlers on container
   }

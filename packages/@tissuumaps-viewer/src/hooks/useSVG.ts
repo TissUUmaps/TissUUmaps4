@@ -7,7 +7,7 @@ import { type ViewerAdapter } from "../adapter";
 export function useSVG(
   adapter: ViewerAdapter,
   parent: Element | null,
-  viewport: Rect | null,
+  initialViewport: Rect | null,
 ) {
   const { interactionMode, addShape } = adapter;
 
@@ -17,10 +17,10 @@ export function useSVG(
   useEffect(() => {
     let container: SVGSVGElement | undefined;
     let controller: SVGController | undefined;
-    if (parent !== null && viewport !== null) {
+    if (parent !== null && initialViewport !== null) {
       console.debug("Initializing SVG");
       container = parent.appendChild(SVGController.createContainer());
-      controller = new SVGController(container, viewport, {
+      controller = new SVGController(container, initialViewport, {
         onShapeComplete: addShape,
       });
       controllerRef.current = controller;
@@ -35,7 +35,7 @@ export function useSVG(
         parent.removeChild(container);
       }
     };
-  }, [parent, viewport, addShape]);
+  }, [parent, initialViewport, addShape]);
 
   useEffect(() => {
     const controller = controllerRef.current;
