@@ -7,34 +7,41 @@ import {
 
 export class CSVTableData implements TableData {
   private readonly _n: number;
+  private _ids: number[] | undefined;
+  private _names: string[] | undefined;
   private readonly _columns: string[];
   private readonly _columnValues: Map<string, string[] | TypedArray>;
-  private readonly _columnValueRanges: Map<string, [number, number]>;
-  private _ids?: number[];
+  private readonly _columnValueRanges: Map<string, [number, number]> =
+    new Map();
 
   constructor(
     n: number,
+    ids: number[] | undefined,
+    names: string[] | undefined,
     columns: string[],
     columnValues: Map<string, string[] | TypedArray>,
-    ids?: number[],
   ) {
     this._n = n;
+    this._ids = ids;
+    this._names = names;
     this._columns = columns;
     this._columnValues = columnValues;
-    this._columnValueRanges = new Map();
-    this._ids = ids;
   }
 
   getIds(): number[] {
     if (this._ids === undefined) {
-      console.warn("No ID column specified, using sequential IDs instead");
-      this._ids = Array.from({ length: this._n }, (_, i) => i);
+      console.warn("No ID column specified, assigning sequential IDs instead");
+      this._ids = Array.from({ length: this.getSize() }, (_, i) => i);
     }
     return this._ids;
   }
 
   getSize(): number {
     return this._n;
+  }
+
+  getNames(): string[] | undefined {
+    return this._names;
   }
 
   async suggestColumnQueries(

@@ -29,6 +29,9 @@ export class ParquetTableDataProvider implements TableDataProvider<
       idColumn: {
         type: "string",
       },
+      nameColumn: {
+        type: "string",
+      },
     },
     required: ["url"], // TODO ... or path
   };
@@ -46,6 +49,11 @@ export class ParquetTableDataProvider implements TableDataProvider<
         type: "Control",
         scope: "#/properties/idColumn",
         label: "ID Column",
+      },
+      {
+        type: "Control",
+        scope: "#/properties/nameColumn",
+        label: "Name Column",
       },
     ],
   };
@@ -105,6 +113,26 @@ export class ParquetTableDataProvider implements TableDataProvider<
       ids = Array.from(rawIdColumnData);
     }
 
-    return new ParquetTableData(buffer, metadata, ids);
+    let names;
+    if (defaultDataSource.nameColumn !== undefined) {
+      const rawNameColumnData = await parquetReadColumn({
+        file: buffer,
+        columns: [defaultDataSource.nameColumn],
+        metadata: metadata,
+        compressors: compressors,
+      });
+      signal?.throwIfAborted();
+      for (let i = 0; i < rawNameColumnData.length; i++) {
+        const name = rawNameColumnData[i] as unknown;
+        if (name === undefined) {
+          throw new Error(
+            `Name column "${defaultDataSource.nameColumn}" contains undefined values.`,
+          );
+        }
+      }
+      names = Array.from(rawNameColumnData, String);
+    }
+
+    return new ParquetTableData(ids, names, buffer, metadata);
   }
 }

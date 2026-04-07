@@ -56,4 +56,7 @@ export interface ItemsData extends Data {
 
   /** Returns the total number of items */
   getSize(): number;
+
+  /** Returns the item names if available, otherwise undefined */
+  getNames(): string[] | undefined;
 }

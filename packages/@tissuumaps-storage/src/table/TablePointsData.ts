@@ -21,6 +21,10 @@ export class TablePointsData implements PointsData {
     return this._tableData.getSize();
   }
 
+  getNames(): string[] | undefined {
+    return this._tableData.getNames();
+  }
+
   async suggestDimensionQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },

@@ -9,41 +9,45 @@ import {
 } from "@tissuumaps/core";
 
 export class ParquetTableData implements TableData {
+  private _ids: number[] | undefined;
+  private _names: string[] | undefined;
   private readonly _buffer: hyparquet.AsyncBuffer;
   private readonly _metadata: hyparquet.FileMetaData;
   private readonly _columns: string[];
-  private readonly _columnValues: Map<string, MappableArrayLike<unknown>>;
-  private readonly _columnValueRanges: Map<string, [number, number]>;
-  private _ids?: number[];
+  private readonly _columnValues: Map<string, MappableArrayLike<unknown>> =
+    new Map();
+  private readonly _columnValueRanges: Map<string, [number, number]> =
+    new Map();
 
   constructor(
+    ids: number[] | undefined,
+    names: string[] | undefined,
     buffer: hyparquet.AsyncBuffer,
     metadata: hyparquet.FileMetaData,
-    ids?: number[],
   ) {
+    this._ids = ids;
+    this._names = names;
     this._buffer = buffer;
     this._metadata = metadata;
     this._columns = hyparquet
       .parquetSchema(metadata)
       .children.map((c) => c.element.name);
-    this._columnValues = new Map();
-    this._columnValueRanges = new Map();
-    this._ids = ids;
   }
 
   getIds(): number[] {
     if (this._ids === undefined) {
       console.warn("No ID column specified, using sequential IDs instead");
-      this._ids = Array.from(
-        { length: Number(this._metadata.num_rows) },
-        (_, i) => i,
-      );
+      this._ids = Array.from({ length: this.getSize() }, (_, i) => i);
     }
     return this._ids;
   }
 
   getSize(): number {
     return Number(this._metadata.num_rows);
+  }
+
+  getNames(): string[] | undefined {
+    return this._names;
   }
 
   async suggestColumnQueries(

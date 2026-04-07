@@ -29,6 +29,9 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       idProperty: {
         type: "string",
       },
+      nameProperty: {
+        type: "string",
+      },
     },
     required: ["url"], // TODO ... or path
   };
@@ -46,6 +49,11 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
         type: "Control",
         scope: "#/properties/idProperty",
         label: "ID Property",
+      },
+      {
+        type: "Control",
+        scope: "#/properties/nameProperty",
+        label: "Name Property",
       },
     ],
   };
@@ -89,9 +97,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       throw new Error("A URL or workspace path is required to load data.");
     }
 
-    const multiPolygons = GeoJSONShapesDataProvider._parseGeoJSON(geo);
-
-    let ids;
+    let ids: number[] | undefined;
     const idProperty = defaultDataSource.idProperty;
     if (idProperty !== undefined) {
       if (geo === null || geo.type !== "FeatureCollection") {
@@ -112,7 +118,27 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       });
     }
 
-    return new GeoJSONShapesData(multiPolygons, ids);
+    let names: string[] | undefined;
+    const nameProperty = defaultDataSource.nameProperty;
+    if (nameProperty !== undefined) {
+      if (geo === null || geo.type !== "FeatureCollection") {
+        throw new Error(
+          "Name properties can only be used with GeoJSON FeatureCollections.",
+        );
+      }
+      names = geo.features.map((feature) => {
+        const name = feature.properties?.[nameProperty] as unknown;
+        if (name === undefined) {
+          throw new Error(`Feature is missing name '${nameProperty}'.`);
+        }
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        return String(name);
+      });
+    }
+
+    const multiPolygons = GeoJSONShapesDataProvider._parseGeoJSON(geo);
+
+    return new GeoJSONShapesData(ids, names, multiPolygons);
   }
 
   private static _parseGeoJSON(
