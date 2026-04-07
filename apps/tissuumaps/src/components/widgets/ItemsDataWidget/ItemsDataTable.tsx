@@ -1,13 +1,30 @@
 "use no memo"; // https://github.com/TanStack/table/issues/5567
 import {
+  type ColumnDef,
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
+  getGroupedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useMemo, useRef } from "react";
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { type ItemsData } from "@tissuumaps/core";
+import {
+  type ItemsData,
+  type MappableArrayLike,
+  type TableData,
+} from "@tissuumaps/core";
+
+import { Button } from "@/components/ui/button";
+import { useTissUUmaps } from "@/store";
+
+type ItemRowData = {
+  id: number;
+  name?: string;
+  group?: string;
+};
 
 export type ItemsDataTableProps = {
   data: ItemsData;
@@ -16,31 +33,98 @@ export type ItemsDataTableProps = {
   groupByColumn?: string | null;
 };
 
-export function ItemsDataTable({ data, height }: ItemsDataTableProps) {
+export function ItemsDataTable({
+  data,
+  height,
+  table,
+  groupByColumn,
+}: ItemsDataTableProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { rowData, columnDefs } = useMemo(() => {
+  const [tableData, setTableData] = useState<TableData | null>(null);
+  const [tableGroups, setTableGroups] =
+    useState<MappableArrayLike<string> | null>(null);
+
+  const loadTable = useTissUUmaps((state) => state.loadTable);
+
+  useEffect(() => {
+    setTableData(null);
+    if (table !== undefined && table !== null) {
+      loadTable(table).then(setTableData, console.error);
+    }
+  }, [table, loadTable]);
+
+  useEffect(() => {
+    setTableGroups(null);
+    if (
+      tableData !== null &&
+      groupByColumn !== undefined &&
+      groupByColumn !== null
+    ) {
+      tableData
+        .loadValues<string>(groupByColumn)
+        .then(setTableGroups, console.error);
+    }
+  }, [tableData, groupByColumn]);
+
+  const { rowData, columnDefs, grouping } = useMemo(() => {
     const ids = data.getIds();
-    const names = data.getNames();
-    const rowData = ids.map((id, i) => ({
+
+    let names = data.getNames();
+    let groups: string[] | undefined;
+    if (tableData !== null) {
+      const tableNames = tableData.getNames();
+      if (tableNames !== undefined) {
+        const tableIds = tableData.getIds();
+        names = ids.map((id) => {
+          const index = tableIds.indexOf(id);
+          return index >= 0 ? tableNames[index]! : "";
+        });
+      }
+      if (tableGroups !== null) {
+        const tableIds = tableData.getIds();
+        groups = ids.map((id) => {
+          const index = tableIds.indexOf(id);
+          return index >= 0 ? tableGroups[index]! : "";
+        });
+      }
+    }
+
+    const rowData: ItemRowData[] = ids.map((id, i) => ({
       id,
       ...(names !== undefined && { name: names[i]! }),
+      ...(groups !== undefined && { group: groups[i]! }),
     }));
-    const columnDefs = [{ id: "id", header: "ID", accessorKey: "id" }];
+
+    const columnDefs: ColumnDef<ItemRowData>[] = [
+      { id: "id", header: "ID", accessorKey: "id" },
+    ];
     if (names !== undefined) {
       columnDefs.push({ id: "name", header: "Name", accessorKey: "name" });
     }
-    // TODO add groupBy columns from table
-    return { rowData, columnDefs };
-  }, [data]);
+    if (groups !== undefined) {
+      columnDefs.push({
+        id: "group",
+        header: groupByColumn!,
+        accessorKey: "group",
+        cell: ({ getValue }) => getValue(), // TODO expand/collapse
+      });
+    }
 
-  // TODO add groupBy support based on table and groupByColumn
+    const grouping = groups !== undefined ? ["group"] : [];
+
+    return { rowData, columnDefs, grouping };
+  }, [data, tableData, tableGroups, groupByColumn]);
+
   // eslint-disable-next-line react-hooks/incompatible-library
   const reactTable = useReactTable({
     data: rowData,
     columns: columnDefs,
-    getCoreRowModel: getCoreRowModel(),
+    state: { grouping },
     getRowId: (row) => row.id.toString(),
+    getCoreRowModel: getCoreRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
   });
 
   const reactTableRows = reactTable.getRowModel().rows;
@@ -48,8 +132,8 @@ export function ItemsDataTable({ data, height }: ItemsDataTableProps) {
   const reactTableRowVirtualizer = useVirtualizer({
     count: reactTableRows.length,
     getScrollElement: () => containerRef.current,
-    estimateSize: () => 35, // TODO estimated row height
-    getItemKey: (index) => reactTableRows[index]!.id, // see getRowId in useReactTable
+    estimateSize: () => 36,
+    getItemKey: (index) => reactTableRows[index]!.id,
   });
 
   return (
@@ -70,12 +154,14 @@ export function ItemsDataTable({ data, height }: ItemsDataTableProps) {
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
+                  colSpan={header.colSpan}
                   style={{ display: "flex", width: header.getSize() }}
                 >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
+                  {!header.isPlaceholder &&
+                    flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
                 </th>
               ))}
             </tr>
@@ -88,30 +174,52 @@ export function ItemsDataTable({ data, height }: ItemsDataTableProps) {
             position: "relative",
           }}
         >
-          {reactTableRowVirtualizer.getVirtualItems().map((virtualRow) => (
-            <tr
-              key={virtualRow.key}
-              data-index={virtualRow.index} // required for dynamic row height measurement
-              ref={(node) => reactTableRowVirtualizer.measureElement(node)} // measure dynamic row height
-              style={{
-                display: "flex",
-                position: "absolute",
-                transform: `translateY(${virtualRow.start}px)`,
-                width: "100%",
-              }}
-            >
-              {reactTableRows[virtualRow.index]!.getVisibleCells().map(
-                (cell) => (
+          {reactTableRowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const row = reactTableRows[virtualRow.index]!;
+            return (
+              <tr
+                key={virtualRow.key}
+                data-index={virtualRow.index} // required for dynamic row height measurement
+                ref={(node) => reactTableRowVirtualizer.measureElement(node)} // measure dynamic row height
+                style={{
+                  display: "flex",
+                  position: "absolute",
+                  transform: `translateY(${virtualRow.start}px)`,
+                  width: "100%",
+                }}
+              >
+                {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
-                    style={{ display: "flex", width: cell.column.getSize() }}
+                    style={{
+                      display: "flex",
+                      width: cell.column.getSize(),
+                    }}
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {cell.getIsPlaceholder() ? null : cell.getIsGrouped() ? (
+                      <Button
+                        variant="ghost"
+                        onClick={row.getToggleExpandedHandler()}
+                      >
+                        {row.getIsExpanded() ? (
+                          <ChevronDownIcon />
+                        ) : (
+                          <ChevronRightIcon />
+                        )}{" "}
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}{" "}
+                        ({row.subRows.length})
+                      </Button>
+                    ) : row.getIsGrouped() ? null : (
+                      flexRender(cell.column.columnDef.cell, cell.getContext())
+                    )}
                   </td>
-                ),
-              )}
-            </tr>
-          ))}
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
