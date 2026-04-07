@@ -32,6 +32,13 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
   const { controllerRef: svgRef } = useSVG(adapter, parent, initialViewport);
 
   useEffect(() => {
+    if (os !== null) {
+      const enabled = adapter.interactionMode === "pan";
+      os.viewer.setMouseNavEnabled(enabled);
+    }
+  }, [os, adapter.interactionMode]);
+
+  useEffect(() => {
     const os = osRef.current;
     const resizeHandler = (event: OpenSeadragon.ResizeEvent) => {
       console.debug("Resizing WebGL canvas and SVG container");
