@@ -364,6 +364,7 @@ export class OpenSeadragonController {
       ) {
         tiledImageState = this._createTiledImage(i, ref);
       } else {
+        tiledImageState.ref = ref;
         const currentIndex = this._tiledImageStates.indexOf(tiledImageState);
         if (currentIndex !== i) {
           if (tiledImageState.tiledImage !== undefined) {
