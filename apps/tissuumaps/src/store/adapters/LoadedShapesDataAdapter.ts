@@ -24,6 +24,10 @@ export class LoadedShapesDataAdapter implements ShapesData {
     return this._getData().getSize();
   }
 
+  getNames(): string[] | undefined {
+    return this._getData().getNames();
+  }
+
   async loadMultiPolygons(options?: {
     signal?: AbortSignal;
     onProgress?: ProgressCallback;

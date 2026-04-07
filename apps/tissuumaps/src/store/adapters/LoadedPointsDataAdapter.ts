@@ -20,6 +20,10 @@ export class LoadedPointsDataAdapter implements PointsData {
     return this._getData().getSize();
   }
 
+  getNames(): string[] | undefined {
+    return this._getData().getNames();
+  }
+
   async suggestDimensionQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },

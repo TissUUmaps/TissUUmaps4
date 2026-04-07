@@ -24,6 +24,10 @@ export class LoadedTableDataAdapter implements TableData {
     return this._getData().getSize();
   }
 
+  getNames(): string[] | undefined {
+    return this._getData().getNames();
+  }
+
   async suggestColumnQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },
