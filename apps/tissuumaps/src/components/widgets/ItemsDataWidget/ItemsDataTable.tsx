@@ -20,9 +20,17 @@ export function ItemsDataTable({ data, height }: ItemsDataTableProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { rowData, columnDefs } = useMemo(() => {
-    const rowData = data.getIds().map((id) => ({ id }));
+    const ids = data.getIds();
+    const names = data.getNames();
+    const rowData = ids.map((id, i) => ({
+      id,
+      ...(names !== undefined && { name: names[i]! }),
+    }));
     const columnDefs = [{ id: "id", header: "ID", accessorKey: "id" }];
-    // TODO add name column (optional) and groupBy columns from table
+    if (names !== undefined) {
+      columnDefs.push({ id: "name", header: "Name", accessorKey: "name" });
+    }
+    // TODO add groupBy columns from table
     return { rowData, columnDefs };
   }, [data]);
 
