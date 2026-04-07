@@ -71,6 +71,7 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
               variant="ghost"
               onClick={() => {
                 if (
+                  // TODO replace by dialog overlay
                   window.confirm("Are you sure you want to delete this table?")
                 ) {
                   deleteTable(table.id);

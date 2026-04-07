@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useMemo } from "react";
 
 import { type Labels, MathUtils } from "@tissuumaps/core";
 
@@ -19,6 +20,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
@@ -59,6 +61,10 @@ type LabelsAccordionItemProps = {
 };
 
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
+  const { ref, handleRef } = useSortable({ id: labels.id, index });
+
+  const loadedLabels = useTissUUmaps((state) => state.loadedLabels);
+  const loadedLabelsData = useTissUUmaps((state) => state.loadedLabelsData);
   const labelsDataProviders = useTissUUmaps(
     (state) => state.labelsDataProviders,
   );
@@ -66,7 +72,16 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const deleteLabels = useTissUUmaps((state) => state.deleteLabels);
   const loadLabels = useTissUUmaps((state) => state.loadLabels);
 
-  const { ref, handleRef } = useSortable({ id: labels.id, index });
+  const data = useMemo(() => {
+    const loadedDataKey = loadedLabels.get(labels.id);
+    if (loadedDataKey !== undefined) {
+      const loadedData = loadedLabelsData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    return null;
+  }, [labels.id, loadedLabels, loadedLabelsData]);
 
   return (
     <div ref={ref}>
@@ -110,6 +125,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
               variant="ghost"
               onClick={() => {
                 if (
+                  // TODO replace by dialog overlay
                   window.confirm(
                     "Are you sure you want to delete these labels?",
                   )
@@ -136,7 +152,13 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
           />
           <LabelsSettingsWidget labels={labels} className="bg-card" />
           {/* TODO layer configs */}
-          {/* TODO table */}
+          {data !== null && (
+            <ItemsDataWidget
+              data={data}
+              tableHeight={200}
+              className="bg-card"
+            />
+          )}
         </AccordionPanel>
       </AccordionItem>
     </div>

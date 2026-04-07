@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useMemo } from "react";
 
 import { MathUtils, type Points } from "@tissuumaps/core";
 
@@ -19,6 +20,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
@@ -61,6 +63,10 @@ type PointsAccordionItemProps = {
 };
 
 function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
+  const { ref, handleRef } = useSortable({ id: points.id, index });
+
+  const loadedPoints = useTissUUmaps((state) => state.loadedPoints);
+  const loadedPointsData = useTissUUmaps((state) => state.loadedPointsData);
   const pointsDataProviders = useTissUUmaps(
     (state) => state.pointsDataProviders,
   );
@@ -68,7 +74,16 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const deletePoints = useTissUUmaps((state) => state.deletePoints);
   const loadPoints = useTissUUmaps((state) => state.loadPoints);
 
-  const { ref, handleRef } = useSortable({ id: points.id, index });
+  const data = useMemo(() => {
+    const loadedDataKey = loadedPoints.get(points.id);
+    if (loadedDataKey !== undefined) {
+      const loadedData = loadedPointsData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    return null;
+  }, [points.id, loadedPoints, loadedPointsData]);
 
   return (
     <div ref={ref}>
@@ -130,6 +145,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               variant="ghost"
               onClick={() => {
                 if (
+                  // TODO replace by dialog overlay
                   window.confirm(
                     "Are you sure you want to delete this point cloud?",
                   )
@@ -156,7 +172,13 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           />
           <PointsSettingsWidget points={points} className="bg-card" />
           {/* TODO layer configs */}
-          {/* TODO table */}
+          {data !== null && (
+            <ItemsDataWidget
+              data={data}
+              tableHeight={200}
+              className="bg-card"
+            />
+          )}
         </AccordionPanel>
       </AccordionItem>
     </div>
