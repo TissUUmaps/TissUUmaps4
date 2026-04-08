@@ -11,7 +11,9 @@ export class SVGController {
   public readonly shapeCompleteHandler?: (shape: MultiPolygon) => void;
   private _containerSize: { width: number; height: number };
   private _viewport: Rect;
-  private _interactionMode: InteractionMode = "pan";
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore currently not used, but will be needed in the future
+  private _interactionMode?: InteractionMode;
 
   /** Creates a positioned, full-size `<svg>` element for the SVG overlay */
   static createContainer(): SVGSVGElement {
@@ -21,7 +23,6 @@ export class SVGController {
     container.style.left = "0";
     container.style.width = "100%";
     container.style.height = "100%";
-    container.style.pointerEvents = "none";
     return container;
   }
 
@@ -44,6 +45,7 @@ export class SVGController {
     };
     this._viewport = initialViewport;
     container.replaceChildren(this.transformNode);
+    // TODO register mouse event handlers on container
   }
 
   /**
@@ -67,17 +69,12 @@ export class SVGController {
   }
 
   /**
-   * Updates the interaction mode. In "pan" mode, pointer events pass through
-   * to the underlying OpenSeadragon canvas. In drawing modes, the SVG overlay
-   * captures pointer events to handle shape drawing.
+   * Updates the interaction mode
    *
    * @param newInteractionMode - New interaction mode
    */
   setInteractionMode(newInteractionMode: InteractionMode) {
-    if (this._interactionMode === newInteractionMode) return;
     this._interactionMode = newInteractionMode;
-    this.container.style.pointerEvents =
-      newInteractionMode === "pan" ? "none" : "auto";
   }
 
   /**
@@ -111,9 +108,10 @@ export class SVGController {
     return false;
   }
 
-  destroy(): void {
-    this.setInteractionMode("pan");
-  }
+  destroy(): void {}
+
+  // TODO implement mouse event handlers for shape drawing; upon shape completion, call shapeCompleteHandler (if defined);
+  // mouse coordinates can be transformed to world space coordinates using transformNode.getScreenCTM().inverse()
 
   /**
    * Updates the world-to-viewport transform based on the current container size

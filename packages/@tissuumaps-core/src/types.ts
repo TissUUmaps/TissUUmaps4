@@ -25,11 +25,7 @@ export type MappableArrayLike<T> = ArrayLike<T> & {
 /**
  * Interaction mode, determining how mouse events are interpreted
  */
-export type InteractionMode =
-  | "pan"
-  | "drawRectangle"
-  | "drawPolygon"
-  | "drawFreehand";
+export type InteractionMode = "pan";
 
 /**
  * A callback function that receives progress updates as a percentage (0-100)
