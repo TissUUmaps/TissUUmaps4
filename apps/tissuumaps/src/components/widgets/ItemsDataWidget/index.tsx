@@ -52,9 +52,9 @@ export function ItemsDataWidget({
       <FieldsetLegend className="font-medium text-foreground">
         Data
       </FieldsetLegend>
-      <div className="grid grid-cols-[auto_1fr] gap-x-2 items-center">
-        <Field className="contents">
-          <FieldLabel>Table:</FieldLabel>
+      <div className="grid grid-cols-2 gap-x-2">
+        <Field>
+          <FieldLabel>Table</FieldLabel>
           <SimpleSelect
             items={tables}
             itemLabel={(table) => table.name}
@@ -63,8 +63,8 @@ export function ItemsDataWidget({
             onValueChange={setSelectedTable}
           />
         </Field>
-        <Field className="contents">
-          <FieldLabel>Group by:</FieldLabel>
+        <Field disabled={selectedTable === null}>
+          <FieldLabel>Group by</FieldLabel>
           <SimpleAsyncCombobox
             suggestQueries={suggestTableColumnQueries}
             getItem={resolveTableColumnQuery}
