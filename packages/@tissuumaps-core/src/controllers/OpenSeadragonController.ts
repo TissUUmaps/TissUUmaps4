@@ -532,6 +532,18 @@ export class OpenSeadragonController {
     const opacity = ref.layer.opacity * object.opacity;
     return visibility ? opacity : 0;
   }
+
+  /**
+   * Enables or disables mouse navigation on the viewer
+   *
+   * When disabled, mouse events won't pan/zoom the viewport,
+   * allowing other layers (like SVG) to capture them for drawing.
+   *
+   * @param enabled - Whether mouse navigation should be enabled
+   */
+  setMouseNavEnabled(enabled: boolean): void {
+    this.viewer.setMouseNavEnabled(enabled);
+  }
 }
 
 /** Reference binding an image to a specific layer and layer configuration */

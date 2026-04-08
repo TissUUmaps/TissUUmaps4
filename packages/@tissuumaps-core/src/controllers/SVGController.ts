@@ -1,6 +1,17 @@
-import { type InteractionMode, type MultiPolygon, type Rect } from "../types";
+import {
+  type InteractionMode,
+  type MultiPolygon,
+  type Rect,
+  type Vertex,
+} from "../types";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+interface DrawingState {
+  isDrawing: boolean;
+  startPoint: Vertex | null;
+  currentRect: SVGRectElement | null;
+}
 
 /**
  * Controller for managing the drawing of SVG shapes
@@ -14,6 +25,12 @@ export class SVGController {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore currently not used, but will be needed in the future
   private _interactionMode?: InteractionMode;
+
+  private _drawingState: DrawingState = {
+    isDrawing: false,
+    startPoint: null,
+    currentRect: null,
+  };
 
   /** Creates a positioned, full-size `<svg>` element for the SVG overlay */
   static createContainer(): SVGSVGElement {
@@ -45,7 +62,8 @@ export class SVGController {
     };
     this._viewport = initialViewport;
     container.replaceChildren(this.transformNode);
-    // TODO register mouse event handlers on container
+
+    this._registerEventHandlers();
   }
 
   /**
@@ -108,10 +126,169 @@ export class SVGController {
     return false;
   }
 
-  destroy(): void {}
+  destroy(): void {
+    this._unregisterEventHandlers();
+  }
 
   // TODO implement mouse event handlers for shape drawing; upon shape completion, call shapeCompleteHandler (if defined);
   // mouse coordinates can be transformed to world space coordinates using transformNode.getScreenCTM().inverse()
+
+  // ─────────────────────────────────────────────────────────────
+  // Event Handling
+  // ─────────────────────────────────────────────────────────────
+
+  private _registerEventHandlers(): void {
+    console.debug("Registering SVG event handlers");
+    this.container.addEventListener("mousedown", this._handleMouseDown);
+    this.container.addEventListener("mousemove", this._handleMouseMove);
+    this.container.addEventListener("mouseup", this._handleMouseUp);
+  }
+
+  private _unregisterEventHandlers(): void {
+    this.container.removeEventListener("mousedown", this._handleMouseDown);
+    this.container.removeEventListener("mousemove", this._handleMouseMove);
+    this.container.removeEventListener("mouseup", this._handleMouseUp);
+  }
+
+  private _handleMouseDown = (event: MouseEvent): void => {
+    if (this._interactionMode !== "draw") return;
+    if (event.button !== 0) return; // Only left click
+
+    const worldPoint = this._screenToWorld(event.clientX, event.clientY);
+
+    this._drawingState = {
+      isDrawing: true,
+      startPoint: worldPoint,
+      currentRect: this._createPreviewRect(worldPoint),
+    };
+  };
+
+  private _handleMouseMove = (event: MouseEvent): void => {
+    if (!this._drawingState.isDrawing || !this._drawingState.currentRect)
+      return;
+
+    const worldPoint = this._screenToWorld(event.clientX, event.clientY);
+    this._updatePreviewRect(
+      this._drawingState.currentRect,
+      this._drawingState.startPoint!,
+      worldPoint,
+    );
+  };
+
+  private _handleMouseUp = (event: MouseEvent): void => {
+    if (!this._drawingState.isDrawing || event.button !== 0) return;
+
+    const worldPoint = this._screenToWorld(event.clientX, event.clientY);
+
+    if (this._drawingState.startPoint) {
+      const multiPolygon = this._createRectangleMultiPolygon(
+        this._drawingState.startPoint,
+        worldPoint,
+      );
+
+      if (this._hasMinimumSize(this._drawingState.startPoint, worldPoint)) {
+        this.shapeCompleteHandler?.(multiPolygon);
+      }
+    }
+
+    this._finishDrawing();
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Drawing Helpers
+  // ─────────────────────────────────────────────────────────────
+
+  private _createPreviewRect(startPoint: Vertex): SVGRectElement {
+    const rect = document.createElementNS(SVG_NAMESPACE, "rect");
+    rect.setAttribute("x", startPoint.x.toString());
+    rect.setAttribute("y", startPoint.y.toString());
+    rect.setAttribute("width", "0");
+    rect.setAttribute("height", "0");
+    rect.setAttribute("fill", "rgba(255, 0, 0, 0.2)");
+    rect.setAttribute("stroke", "#FF0000");
+    rect.setAttribute("stroke-width", "20");
+    rect.classList.add("drawing-preview");
+
+    this.transformNode.appendChild(rect);
+    return rect;
+  }
+
+  private _updatePreviewRect(
+    rect: SVGRectElement,
+    start: Vertex,
+    end: Vertex,
+  ): void {
+    const x = Math.min(start.x, end.x);
+    const y = Math.min(start.y, end.y);
+    const width = Math.abs(end.x - start.x);
+    const height = Math.abs(end.y - start.y);
+
+    rect.setAttribute("x", x.toString());
+    rect.setAttribute("y", y.toString());
+    rect.setAttribute("width", width.toString());
+    rect.setAttribute("height", height.toString());
+  }
+
+  private _createRectangleMultiPolygon(
+    start: Vertex,
+    end: Vertex,
+  ): MultiPolygon {
+    const x1 = Math.min(start.x, end.x);
+    const y1 = Math.min(start.y, end.y);
+    const x2 = Math.max(start.x, end.x);
+    const y2 = Math.max(start.y, end.y);
+
+    return {
+      polygons: [
+        {
+          shell: [
+            { x: x1, y: y1 },
+            { x: x2, y: y1 },
+            { x: x2, y: y2 },
+            { x: x1, y: y2 },
+          ],
+          holes: [],
+        },
+      ],
+    };
+  }
+
+  private _hasMinimumSize(start: Vertex, end: Vertex): boolean {
+    const minSize = this._viewport.width * 0.001; // Adjust threshold as needed
+    return (
+      Math.abs(end.x - start.x) > minSize && Math.abs(end.y - start.y) > minSize
+    );
+  }
+
+  private _finishDrawing(): void {
+    // Remove preview element - WebGL will render the actual shape
+    this._drawingState.currentRect?.remove();
+    this._drawingState = {
+      isDrawing: false,
+      startPoint: null,
+      currentRect: null,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Coordinate Transformation
+  // ─────────────────────────────────────────────────────────────
+
+  private _screenToWorld(screenX: number, screenY: number): Vertex {
+    const ctm = this.transformNode.getScreenCTM();
+    if (!ctm) {
+      console.warn("Could not get screen CTM");
+      return { x: 0, y: 0 };
+    }
+
+    const inverse = ctm.inverse();
+    const svgPoint = this.container.createSVGPoint();
+    svgPoint.x = screenX;
+    svgPoint.y = screenY;
+
+    const worldPoint = svgPoint.matrixTransform(inverse);
+    return { x: worldPoint.x, y: worldPoint.y };
+  }
 
   /**
    * Updates the world-to-viewport transform based on the current container size
