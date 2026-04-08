@@ -25,6 +25,7 @@ import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
+import { PointsLayerConfigsWidget } from "./PointsLayerConfigsWidget";
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
 import { usePointsDataTableColumns } from "./usePointsDataTableColumns";
 import { usePointsDataWidget } from "./usePointsDataWidget";
@@ -212,7 +213,14 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             }}
             className="bg-card"
           />
-          {/* TODO layer configs */}
+          <PointsLayerConfigsWidget
+            pointsId={points.id}
+            layerConfigs={points.layerConfigs}
+            onChange={(newLayerConfigs) =>
+              updatePoints(points.id, { layerConfigs: newLayerConfigs })
+            }
+            className="bg-card"
+          />
           <PointsSettingsWidget
             points={points}
             activeCategory={activeSettingsCategory}

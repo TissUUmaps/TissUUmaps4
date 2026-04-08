@@ -25,6 +25,7 @@ import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
+import { ShapesLayerConfigsWidget } from "./ShapesLayerConfigsWidget";
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
 import { useShapesDataTableColumns } from "./useShapesDataTableColumns";
 import { useShapesDataWidget } from "./useShapesDataWidget";
@@ -191,7 +192,13 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             }}
             className="bg-card"
           />
-          {/* TODO layer configs */}
+          <ShapesLayerConfigsWidget
+            layerConfigs={shapes.layerConfigs}
+            onChange={(newLayerConfigs) =>
+              updateShapes(shapes.id, { layerConfigs: newLayerConfigs })
+            }
+            className="bg-card"
+          />
           <ShapesSettingsWidget
             shapes={shapes}
             activeCategory={activeSettingsCategory}

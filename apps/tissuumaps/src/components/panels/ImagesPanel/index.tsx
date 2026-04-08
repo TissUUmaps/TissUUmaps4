@@ -23,6 +23,7 @@ import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
+import { ImageLayerConfigsWidget } from "./ImageLayerConfigsWidget";
 import { ImageSettingsWidget } from "./ImageSettingsWidget";
 
 export type ImagesPanelProps = {
@@ -149,8 +150,14 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             }}
             className="bg-card"
           />
+          <ImageLayerConfigsWidget
+            layerConfigs={image.layerConfigs}
+            onChange={(newLayerConfigs) =>
+              updateImage(image.id, { layerConfigs: newLayerConfigs })
+            }
+            className="bg-card"
+          />
           <ImageSettingsWidget image={image} className="bg-card" />
-          {/* TODO layer configs */}
         </AccordionPanel>
       </AccordionItem>
     </div>
