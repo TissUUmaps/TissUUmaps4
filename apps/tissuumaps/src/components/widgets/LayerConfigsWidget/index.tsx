@@ -13,6 +13,7 @@ import {
 } from "@/components/common/accordion";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -179,20 +180,15 @@ function LayerConfigItem({
                   readOnly
                 />
               ) : (
-                <select
-                  className="w-full border rounded-md px-2 py-1 text-sm bg-background text-foreground"
+                <SimpleSelect
+                  items={layers}
+                  itemLabel={(layer) => layer.name}
+                  itemValue={(layer) => layer.id}
                   value={layerValue}
-                  onChange={(e) => onUpdate({ layer: e.target.value })}
-                >
-                  {layers.map((layer) => (
-                    <option key={layer.id} value={layer.id}>
-                      {layer.name}
-                    </option>
-                  ))}
-                  {layers.length === 0 && (
-                    <option value={layerValue}>{layerValue}</option>
-                  )}
-                </select>
+                  onValueChange={(value) =>
+                    onUpdate({ layer: value ?? undefined })
+                  }
+                />
               )}
             </Field>
           </AccordionPanel>
