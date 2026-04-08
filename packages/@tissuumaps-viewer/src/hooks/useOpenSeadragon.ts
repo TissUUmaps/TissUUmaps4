@@ -6,6 +6,7 @@ import { type ViewerAdapter } from "../adapter";
 
 export function useOpenSeadragon(adapter: ViewerAdapter) {
   const {
+    interactionMode,
     workspace,
     layers,
     images,
@@ -79,6 +80,17 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
       abortController.abort();
     };
   }, [workspace, layers, images, labels, loadImage, loadLabels]);
+
+  useEffect(() => {
+    const controller = controllerRef.current;
+    if (controller !== null) {
+      const enableMouseNav = interactionMode === "pan";
+      console.debug(
+        `Setting OpenSeadragon mouse nav enabled: ${enableMouseNav}`,
+      );
+      controller.setMouseNavEnabled(enableMouseNav);
+    }
+  }, [interactionMode]);
 
   return { setViewerElementRef, controllerRef };
 }
