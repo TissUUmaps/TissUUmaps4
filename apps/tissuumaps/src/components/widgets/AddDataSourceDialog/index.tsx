@@ -70,11 +70,6 @@ export function AddDataSourceDialog({
   if (providerEntries.length === 0) {
     return null;
   }
-  console.log(
-    "render AddDataSourceDialog with dataSourceDraft",
-    dataSourceDraft,
-    selectedProvider,
-  );
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
@@ -91,8 +86,9 @@ export function AddDataSourceDialog({
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label>Name</Label>
+            <Label htmlFor="add-datasource-name">Name</Label>
             <Input
+              id="add-datasource-name"
               type="text"
               placeholder="Enter a name"
               value={name}
@@ -104,12 +100,15 @@ export function AddDataSourceDialog({
             <div className="flex flex-col gap-2">
               <Label>Source type</Label>
               <RadioGroup value={selectedType} onValueChange={handleTypeChange}>
-                {providerEntries.map(([type, provider]) => (
-                  <div key={type} className="flex items-center gap-2">
-                    <RadioGroupItem value={type} />
-                    <Label>{provider.name}</Label>
-                  </div>
-                ))}
+                {providerEntries.map(([type, provider]) => {
+                  const radioId = `data-source-type-${type}`;
+                  return (
+                    <div key={type} className="flex items-center gap-2">
+                      <RadioGroupItem id={radioId} value={type} />
+                      <Label htmlFor={radioId}>{provider.name}</Label>
+                    </div>
+                  );
+                })}
               </RadioGroup>
             </div>
           )}
