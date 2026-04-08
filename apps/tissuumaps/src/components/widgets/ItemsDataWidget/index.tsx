@@ -18,6 +18,7 @@ export type ItemsDataWidgetProps = {
   selectedGroupByColumn?: string | null;
   onSelectedTableChange?: (table: string | null) => void;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
+  selectionDisabled?: boolean;
   className?: string;
 };
 
@@ -28,6 +29,7 @@ export function ItemsDataWidget({
   selectedGroupByColumn: controlledSelectedGroupByColumn,
   onSelectedTableChange: setControlledSelectedTable,
   onSelectedGroupByColumnChange: setControlledSelectedGroupByColumn,
+  selectionDisabled,
   className,
 }: ItemsDataWidgetProps) {
   const [selectedTable, setSelectedTable] = useControlled(
@@ -53,7 +55,7 @@ export function ItemsDataWidget({
         Data
       </FieldsetLegend>
       <div className="grid grid-cols-2 gap-x-2">
-        <Field>
+        <Field disabled={selectionDisabled}>
           <FieldLabel>Table</FieldLabel>
           <SimpleSelect
             items={tables}
@@ -63,7 +65,7 @@ export function ItemsDataWidget({
             onValueChange={setSelectedTable}
           />
         </Field>
-        <Field disabled={selectedTable === null}>
+        <Field disabled={selectionDisabled || selectedTable === null}>
           <FieldLabel>Group by</FieldLabel>
           <SimpleAsyncCombobox
             suggestQueries={suggestTableColumnQueries}

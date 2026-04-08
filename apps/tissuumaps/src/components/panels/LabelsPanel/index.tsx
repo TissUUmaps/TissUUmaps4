@@ -1,9 +1,14 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
-import { type Labels, MathUtils } from "@tissuumaps/core";
+import {
+  type Labels,
+  MathUtils,
+  getActiveConfigSource,
+  isGroupByConfig,
+} from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -24,6 +29,7 @@ import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
+import { LabelsSettingsCategory } from "./types";
 
 export type LabelsPanelProps = {
   className?: string;
@@ -61,6 +67,15 @@ type LabelsAccordionItemProps = {
 };
 
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
+  const [activeSettingsCategory, setActiveSettingsCategory] =
+    useState<LabelsSettingsCategory | null>(null);
+  const [selectedDataTable, setSelectedDataTable] = useState<string | null>(
+    null,
+  );
+  const [selectedDataGroupByColumn, setSelectedDataGroupByColumn] = useState<
+    string | null
+  >(null);
+
   const { ref, handleRef } = useSortable({ id: labels.id, index });
 
   const loadedLabels = useTissUUmaps((state) => state.loadedLabels);
@@ -82,6 +97,46 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
     }
     return null;
   }, [labels.id, loadedLabels, loadedLabelsData]);
+
+  const {
+    table: memoizedDataTable,
+    column: memoizedDataGroupByColumn,
+    selectionDisabled: dataSelectionDisabled,
+  } = useMemo(() => {
+    if (
+      activeSettingsCategory === LabelsSettingsCategory.labelColor &&
+      getActiveConfigSource(labels.labelColor) === "groupBy" &&
+      isGroupByConfig(labels.labelColor)
+    ) {
+      return { ...labels.labelColor.groupBy, selectionDisabled: true };
+    }
+    if (
+      activeSettingsCategory === LabelsSettingsCategory.labelVisibility &&
+      getActiveConfigSource(labels.labelVisibility) === "groupBy" &&
+      isGroupByConfig(labels.labelVisibility)
+    ) {
+      return { ...labels.labelVisibility.groupBy, selectionDisabled: true };
+    }
+    if (
+      activeSettingsCategory === LabelsSettingsCategory.labelOpacity &&
+      getActiveConfigSource(labels.labelOpacity) === "groupBy" &&
+      isGroupByConfig(labels.labelOpacity)
+    ) {
+      return { ...labels.labelOpacity.groupBy, selectionDisabled: true };
+    }
+    return {
+      table: selectedDataTable,
+      column: selectedDataGroupByColumn,
+      selectionDisabled: false,
+    };
+  }, [
+    activeSettingsCategory,
+    labels.labelColor,
+    labels.labelVisibility,
+    labels.labelOpacity,
+    selectedDataTable,
+    selectedDataGroupByColumn,
+  ]);
 
   return (
     <div ref={ref}>
@@ -150,12 +205,22 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             }}
             className="bg-card"
           />
-          <LabelsSettingsWidget labels={labels} className="bg-card" />
           {/* TODO layer configs */}
+          <LabelsSettingsWidget
+            labels={labels}
+            activeCategory={activeSettingsCategory}
+            onActiveCategoryChange={setActiveSettingsCategory}
+            className="bg-card"
+          />
           {data !== null && (
             <ItemsDataWidget
               data={data}
               tableHeight={200}
+              selectedTable={memoizedDataTable}
+              onSelectedTableChange={setSelectedDataTable}
+              selectedGroupByColumn={memoizedDataGroupByColumn}
+              onSelectedGroupByColumnChange={setSelectedDataGroupByColumn}
+              selectionDisabled={dataSelectionDisabled}
               className="bg-card"
             />
           )}

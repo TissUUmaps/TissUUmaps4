@@ -1,9 +1,14 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
-import { MathUtils, type Shapes } from "@tissuumaps/core";
+import {
+  MathUtils,
+  type Shapes,
+  getActiveConfigSource,
+  isGroupByConfig,
+} from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -24,6 +29,7 @@ import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
+import { ShapesSettingsCategory } from "./types";
 
 export type ShapesPanelProps = {
   className?: string;
@@ -63,6 +69,15 @@ type ShapesAccordionItemProps = {
 };
 
 function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
+  const [activeSettingsCategory, setActiveSettingsCategory] =
+    useState<ShapesSettingsCategory | null>(null);
+  const [selectedDataTable, setSelectedDataTable] = useState<string | null>(
+    null,
+  );
+  const [selectedDataGroupByColumn, setSelectedDataGroupByColumn] = useState<
+    string | null
+  >(null);
+
   const { ref, handleRef } = useSortable({ id: shapes.id, index });
 
   const loadedShapes = useTissUUmaps((state) => state.loadedShapes);
@@ -84,6 +99,74 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
     }
     return null;
   }, [shapes.id, loadedShapes, loadedShapesData]);
+
+  const {
+    table: memoizedDataTable,
+    column: memoizedDataGroupByColumn,
+    selectionDisabled: dataSelectionDisabled,
+  } = useMemo(() => {
+    if (
+      activeSettingsCategory === ShapesSettingsCategory.shapeFillColor &&
+      getActiveConfigSource(shapes.shapeFillColor) === "groupBy" &&
+      isGroupByConfig(shapes.shapeFillColor)
+    ) {
+      return { ...shapes.shapeFillColor.groupBy, selectionDisabled: true };
+    }
+    if (
+      activeSettingsCategory === ShapesSettingsCategory.shapeFillVisibility &&
+      getActiveConfigSource(shapes.shapeFillVisibility) === "groupBy" &&
+      isGroupByConfig(shapes.shapeFillVisibility)
+    ) {
+      return { ...shapes.shapeFillVisibility.groupBy, selectionDisabled: true };
+    }
+    if (
+      activeSettingsCategory === ShapesSettingsCategory.shapeFillOpacity &&
+      getActiveConfigSource(shapes.shapeFillOpacity) === "groupBy" &&
+      isGroupByConfig(shapes.shapeFillOpacity)
+    ) {
+      return { ...shapes.shapeFillOpacity.groupBy, selectionDisabled: true };
+    }
+    if (
+      activeSettingsCategory === ShapesSettingsCategory.shapeStrokeColor &&
+      getActiveConfigSource(shapes.shapeStrokeColor) === "groupBy" &&
+      isGroupByConfig(shapes.shapeStrokeColor)
+    ) {
+      return { ...shapes.shapeStrokeColor.groupBy, selectionDisabled: true };
+    }
+    if (
+      activeSettingsCategory === ShapesSettingsCategory.shapeStrokeVisibility &&
+      getActiveConfigSource(shapes.shapeStrokeVisibility) === "groupBy" &&
+      isGroupByConfig(shapes.shapeStrokeVisibility)
+    ) {
+      return {
+        ...shapes.shapeStrokeVisibility.groupBy,
+        selectionDisabled: true,
+      };
+    }
+    if (
+      activeSettingsCategory === ShapesSettingsCategory.shapeStrokeOpacity &&
+      getActiveConfigSource(shapes.shapeStrokeOpacity) === "groupBy" &&
+      isGroupByConfig(shapes.shapeStrokeOpacity)
+    ) {
+      return { ...shapes.shapeStrokeOpacity.groupBy, selectionDisabled: true };
+    }
+
+    return {
+      table: selectedDataTable,
+      column: selectedDataGroupByColumn,
+      selectionDisabled: false,
+    };
+  }, [
+    activeSettingsCategory,
+    shapes.shapeFillColor,
+    shapes.shapeFillVisibility,
+    shapes.shapeFillOpacity,
+    shapes.shapeStrokeColor,
+    shapes.shapeStrokeVisibility,
+    shapes.shapeStrokeOpacity,
+    selectedDataTable,
+    selectedDataGroupByColumn,
+  ]);
 
   return (
     <div ref={ref}>
@@ -152,12 +235,22 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             }}
             className="bg-card"
           />
-          <ShapesSettingsWidget shapes={shapes} className="bg-card" />
           {/* TODO layer configs */}
+          <ShapesSettingsWidget
+            shapes={shapes}
+            activeCategory={activeSettingsCategory}
+            onActiveCategoryChange={setActiveSettingsCategory}
+            className="bg-card"
+          />
           {data !== null && (
             <ItemsDataWidget
               data={data}
               tableHeight={200}
+              selectedTable={memoizedDataTable}
+              onSelectedTableChange={setSelectedDataTable}
+              selectedGroupByColumn={memoizedDataGroupByColumn}
+              onSelectedGroupByColumnChange={setSelectedDataGroupByColumn}
+              selectionDisabled={dataSelectionDisabled}
               className="bg-card"
             />
           )}{" "}

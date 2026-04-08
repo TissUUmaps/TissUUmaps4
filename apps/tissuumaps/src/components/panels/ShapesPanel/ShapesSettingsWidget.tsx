@@ -47,7 +47,7 @@ import { ShapesSettingsCategory } from "./types";
 
 export type ShapesSettingsWidgetProps = {
   shapes: Shapes;
-  activeCategory?: ShapesSettingsCategory;
+  activeCategory?: ShapesSettingsCategory | null;
   onActiveCategoryChange?: (
     newActiveCategory: ShapesSettingsCategory | null,
   ) => void;
