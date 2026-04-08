@@ -1,11 +1,10 @@
-import { useCallback, useState } from "react";
-
 import { type ItemsData } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
+import { useControlled } from "@/hooks/useControlled";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
@@ -27,42 +26,19 @@ export function ItemsDataWidget({
   tableHeight,
   selectedTable: controlledSelectedTable,
   selectedGroupByColumn: controlledSelectedGroupByColumn,
-  onSelectedTableChange,
-  onSelectedGroupByColumnChange,
+  onSelectedTableChange: setControlledSelectedTable,
+  onSelectedGroupByColumnChange: setControlledSelectedGroupByColumn,
   className,
 }: ItemsDataWidgetProps) {
-  const [uncontrolledSelectedTable, setUncontrolledSelectedTable] = useState<
-    string | null
-  >(null);
-  const [
-    uncontrolledSelectedGroupByColumn,
-    setUncontrolledSelectedGroupByColumn,
-  ] = useState<string | null>(null);
-  const selectedTable =
-    controlledSelectedTable !== undefined
-      ? controlledSelectedTable
-      : uncontrolledSelectedTable;
-  const selectedGroupByColumn =
-    controlledSelectedGroupByColumn !== undefined
-      ? controlledSelectedGroupByColumn
-      : uncontrolledSelectedGroupByColumn;
-  const setSelectedTable = useCallback(
-    (table: string | null) => {
-      setUncontrolledSelectedTable(table);
-      if (onSelectedTableChange !== undefined) {
-        onSelectedTableChange(table);
-      }
-    },
-    [onSelectedTableChange],
+  const [selectedTable, setSelectedTable] = useControlled(
+    controlledSelectedTable,
+    setControlledSelectedTable,
+    null,
   );
-  const setSelectedGroupByColumn = useCallback(
-    (column: string | null) => {
-      setUncontrolledSelectedGroupByColumn(column);
-      if (onSelectedGroupByColumnChange !== undefined) {
-        onSelectedGroupByColumnChange(column);
-      }
-    },
-    [onSelectedGroupByColumnChange],
+  const [selectedGroupByColumn, setSelectedGroupByColumn] = useControlled(
+    controlledSelectedGroupByColumn,
+    setControlledSelectedGroupByColumn,
+    null,
   );
 
   const tables = useTissUUmaps((state) => state.tables);

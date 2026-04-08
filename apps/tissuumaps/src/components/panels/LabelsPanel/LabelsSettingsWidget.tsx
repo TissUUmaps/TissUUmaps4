@@ -33,18 +33,33 @@ import {
   VisibilityConfigWidget,
 } from "@/components/widgets/config/VisibilityConfigWidget";
 import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/hooks";
+import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
+import { LabelsSettingsCategory } from "./types";
+
 export type LabelsSettingsWidgetProps = {
   labels: Labels;
+  activeCategory?: LabelsSettingsCategory | null;
+  onActiveCategoryChange?: (
+    newActiveCategory: LabelsSettingsCategory | null,
+  ) => void;
   className?: string;
 };
 
 export function LabelsSettingsWidget({
   labels,
+  activeCategory: controlledActiveCategory,
+  onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: LabelsSettingsWidgetProps) {
+  const [activeCategory, setActiveCategory] = useControlled(
+    controlledActiveCategory,
+    setControlledActiveCategory,
+    null,
+  );
+
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
 
   const labelColorConfigWidgetAdapter = useColorConfigWidget(
@@ -72,57 +87,26 @@ export function LabelsSettingsWidget({
       <FieldsetLegend className="font-medium text-foreground">
         Settings
       </FieldsetLegend>
-      <Accordion>
-        <AccordionItem value="general">
+      <Accordion
+        value={activeCategory !== null ? [activeCategory] : []}
+        onValueChange={(value) =>
+          setActiveCategory(
+            value.length > 0 ? (value[0] as LabelsSettingsCategory) : null,
+          )
+        }
+      >
+        {/* General */}
+        <AccordionItem value={LabelsSettingsCategory.general}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>General</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <Field>
-              <FieldLabel>Name</FieldLabel>
-              <Input
-                value={labels.name}
-                onChange={(event) =>
-                  updateLabels(labels.id, { name: event.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Visibility</FieldLabel>
-              <div className="flex flex-row items-center gap-x-2">
-                <Switch
-                  checked={labels.visibility}
-                  onCheckedChange={(checked) =>
-                    updateLabels(labels.id, { visibility: checked })
-                  }
-                />
-                {labels.visibility ? "Visible" : "Hidden"}
-              </div>
-            </Field>
-            <Field>
-              <FieldLabel>Opacity</FieldLabel>
-              <Input
-                type="number"
-                inputMode="decimal"
-                step={0.01}
-                min={0}
-                max={1}
-                value={labels.opacity}
-                onChange={(event) => {
-                  const newValue = event.target.valueAsNumber;
-                  if (!isNaN(newValue)) {
-                    updateLabels(labels.id, {
-                      opacity: MathUtils.clamp(newValue, 0, 1),
-                    });
-                  }
-                }}
-              />
-            </Field>
+            <GeneralLabelsSettingsWidget labels={labels} />
           </AccordionPanel>
         </AccordionItem>
         {/* Label color */}
-        <AccordionItem value="labelColor">
+        <AccordionItem value={LabelsSettingsCategory.labelColor}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label color</AccordionTrigger>
@@ -136,7 +120,7 @@ export function LabelsSettingsWidget({
           </AccordionPanel>
         </AccordionItem>
         {/* Label visibility */}
-        <AccordionItem value="labelVisibility">
+        <AccordionItem value={LabelsSettingsCategory.labelVisibility}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label visibility</AccordionTrigger>
@@ -152,7 +136,7 @@ export function LabelsSettingsWidget({
           </AccordionPanel>
         </AccordionItem>
         {/* Label opacity */}
-        <AccordionItem value="labelOpacity">
+        <AccordionItem value={LabelsSettingsCategory.labelOpacity}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label opacity</AccordionTrigger>
@@ -167,5 +151,62 @@ export function LabelsSettingsWidget({
         </AccordionItem>
       </Accordion>
     </Fieldset>
+  );
+}
+
+type GeneralLabelsSettingsWidgetProps = {
+  labels: Labels;
+  className?: string;
+};
+
+function GeneralLabelsSettingsWidget({
+  labels,
+  className,
+}: GeneralLabelsSettingsWidgetProps) {
+  const updateLabels = useTissUUmaps((state) => state.updateLabels);
+
+  return (
+    <div className={className}>
+      <Field>
+        <FieldLabel>Name</FieldLabel>
+        <Input
+          value={labels.name}
+          onChange={(event) =>
+            updateLabels(labels.id, { name: event.target.value })
+          }
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Visibility</FieldLabel>
+        <div className="flex flex-row items-center gap-x-2">
+          <Switch
+            checked={labels.visibility}
+            onCheckedChange={(checked) =>
+              updateLabels(labels.id, { visibility: checked })
+            }
+          />
+          {labels.visibility ? "Visible" : "Hidden"}
+        </div>
+      </Field>
+      <Field>
+        <FieldLabel>Opacity</FieldLabel>
+        <Input
+          type="number"
+          inputMode="decimal"
+          step={0.01}
+          min={0}
+          max={1}
+          value={labels.opacity}
+          onChange={(event) => {
+            const newValue = event.target.valueAsNumber;
+            if (!isNaN(newValue)) {
+              updateLabels(labels.id, {
+                opacity: MathUtils.clamp(newValue, 0, 1),
+              });
+            }
+          }}
+        />
+      </Field>
+    </div>
   );
 }

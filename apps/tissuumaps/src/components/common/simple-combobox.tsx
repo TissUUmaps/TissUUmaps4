@@ -2,6 +2,8 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
 import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 
+import { useControlled } from "@/hooks/useControlled";
+
 export type SimpleAsyncComboboxProps<TItem> = {
   suggestQueries: (currentQuery: string) => Promise<string[]>;
   getItem: (query: string) => Promise<TItem | null>;
@@ -15,24 +17,12 @@ export function SimpleAsyncCombobox<TItem>({
   getItem,
   itemQuery,
   selectedItem: controlledSelectedItem,
-  onSelectedItemChange,
+  onSelectedItemChange: setControlledSelectedItem,
 }: SimpleAsyncComboboxProps<TItem>) {
-  const [uncontrolledSelectedItem, setUncontrolledSelectedItem] =
-    useState<TItem | null>(null);
-
-  // selected item (controlled or uncontrolled)
-  const selectedItem =
-    controlledSelectedItem !== undefined
-      ? controlledSelectedItem
-      : uncontrolledSelectedItem;
-  const setSelectedItem = useCallback(
-    (item: TItem | null) => {
-      setUncontrolledSelectedItem(item);
-      if (onSelectedItemChange !== undefined) {
-        onSelectedItemChange(item);
-      }
-    },
-    [onSelectedItemChange],
+  const [selectedItem, setSelectedItem] = useControlled(
+    controlledSelectedItem,
+    setControlledSelectedItem,
+    null,
   );
 
   // selected query (derived from the selected item)
