@@ -2,7 +2,7 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { GripVertical, Trash2Icon } from "lucide-react";
 
-import { type Table } from "@tissuumaps/core";
+import { type Table, createTable } from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -13,7 +13,9 @@ import {
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
 import { Button } from "@/components/ui/button";
+import { AddDataSourceDialog } from "@/components/widgets/AddDataSourceDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
 import { TableSettingsWidget } from "./TableSettingsWidget";
@@ -24,25 +26,43 @@ export type TablesPanelProps = {
 
 export function TablesPanel({ className }: TablesPanelProps) {
   const tables = useTissUUmaps((state) => state.tables);
+  const tableDataProviders = useTissUUmaps((state) => state.tableDataProviders);
+  const addTable = useTissUUmaps((state) => state.addTable);
+  const loadTable = useTissUUmaps((state) => state.loadTable);
   const moveTable = useTissUUmaps((state) => state.moveTable);
 
   return (
-    <DragDropProvider
-      onDragEnd={(event) => {
-        const { source, canceled } = event.operation;
-        if (isSortable(source) && !canceled) {
+    <div className={cn("flex flex-col gap-y-2", className)}>
+      <DragDropProvider
+        onDragEnd={(event) => {
+          const { source, canceled } = event.operation;
+          if (isSortable(source) && !canceled) {
           // dnd-kit optimistically updates the DOM
           // https://github.com/clauderic/dnd-kit/issues/1564
-          moveTable(source.id as string, source.index);
-        }
-      }}
-    >
-      <Accordion className={className} multiple>
-        {tables.map((table, index) => (
-          <TableAccordionItem key={table.id} table={table} index={index} />
-        ))}
-      </Accordion>
-    </DragDropProvider>
+            moveTable(source.id as string, source.index);
+          }
+        }}
+      >
+        <Accordion multiple className="gap-y-2">
+          {tables.map((table, index) => (
+            <TableAccordionItem key={table.id} table={table} index={index} />
+          ))}
+        </Accordion>
+      </DragDropProvider>
+      <AddDataSourceDialog
+        title="Add table"
+        dataProviders={tableDataProviders}
+        onAdd={(name, _type, dataSource) => {
+          const table = createTable({
+            id: crypto.randomUUID(),
+            name,
+            dataSource: dataSource as Table["dataSource"],
+          });
+          addTable(table);
+          loadTable(table.id).catch(console.error);
+        }}
+      />
+    </div>
   );
 }
 

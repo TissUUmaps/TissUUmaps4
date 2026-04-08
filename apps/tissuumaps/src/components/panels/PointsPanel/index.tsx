@@ -3,7 +3,7 @@ import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 import { useMemo } from "react";
 
-import { MathUtils, type Points } from "@tissuumaps/core";
+import { MathUtils, type Points, createPoints } from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -19,8 +19,10 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { AddDataSourceDialog } from "@/components/widgets/AddDataSourceDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
+import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
@@ -33,29 +35,52 @@ export type PointsPanelProps = {
 
 export function PointsPanel({ className }: PointsPanelProps) {
   const points = useTissUUmaps((state) => state.points);
+  const layers = useTissUUmaps((state) => state.layers);
+  const pointsDataProviders = useTissUUmaps(
+    (state) => state.pointsDataProviders,
+  );
+  const addPoints = useTissUUmaps((state) => state.addPoints);
+  const loadPoints = useTissUUmaps((state) => state.loadPoints);
   const movePoints = useTissUUmaps((state) => state.movePoints);
 
   return (
-    <DragDropProvider
-      onDragEnd={(event) => {
-        const { source, canceled } = event.operation;
-        if (isSortable(source) && !canceled) {
-          // dnd-kit optimistically updates the DOM
-          // https://github.com/clauderic/dnd-kit/issues/1564
-          movePoints(source.id as string, source.index);
-        }
-      }}
-    >
-      <Accordion className={className} multiple>
-        {points.map((currentPoints, index) => (
-          <PointsAccordionItem
-            key={currentPoints.id}
-            points={currentPoints}
-            index={index}
-          />
-        ))}
-      </Accordion>
-    </DragDropProvider>
+    <div className={cn("flex flex-col gap-y-2", className)}>
+      <DragDropProvider
+        onDragEnd={(event) => {
+          const { source, canceled } = event.operation;
+          if (isSortable(source) && !canceled) {
+            // dnd-kit optimistically updates the DOM
+            // https://github.com/clauderic/dnd-kit/issues/1564
+            movePoints(source.id as string, source.index);
+          }
+        }}
+      >
+        <Accordion multiple className="gap-y-2">
+          {points.map((currentPoints, index) => (
+            <PointsAccordionItem
+              key={currentPoints.id}
+              points={currentPoints}
+              index={index}
+            />
+          ))}
+        </Accordion>
+      </DragDropProvider>
+      <AddDataSourceDialog
+        title="Add points"
+        dataProviders={pointsDataProviders}
+        onAdd={(name, _type, dataSource) => {
+          const newPoints = createPoints({
+            id: crypto.randomUUID(),
+            name,
+            dataSource: dataSource as Points["dataSource"],
+            layerConfigs:
+              layers.length > 0 ? [{ layer: layers[0]!.id, x: "", y: "" }] : [],
+          });
+          addPoints(newPoints);
+          loadPoints(newPoints.id).catch(console.error);
+        }}
+      />
+    </div>
   );
 }
 
