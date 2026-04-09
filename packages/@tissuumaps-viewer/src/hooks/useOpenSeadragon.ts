@@ -6,7 +6,6 @@ import { type ViewerAdapter } from "../adapter";
 
 export function useOpenSeadragon(adapter: ViewerAdapter) {
   const {
-    interactionMode,
     workspace,
     layers,
     images,
@@ -80,17 +79,6 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
       abortController.abort();
     };
   }, [workspace, layers, images, labels, loadImage, loadLabels]);
-
-  useEffect(() => {
-    const controller = controllerRef.current;
-    if (controller !== null) {
-      const enableDragToPan = interactionMode === "pan";
-      console.debug(
-        `Setting OpenSeadragon drag-to-pan enabled: ${enableDragToPan}`,
-      );
-      controller.setDragToPanEnabled(enableDragToPan);
-    }
-  }, [interactionMode]);
 
   return { setViewerElementRef, controllerRef };
 }

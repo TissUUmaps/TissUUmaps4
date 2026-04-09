@@ -152,7 +152,14 @@ export class SVGController {
 
   private _handlePointerDown = (event: PointerEvent): void => {
     if (this._interactionMode !== "draw") return;
-    if (event.button !== 0) return; // Only left click
+    if (event.button !== 0) return;
+    if (event.shiftKey) {
+      // Shift held = don't draw, let instead OpenSeadragon handle panning
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
 

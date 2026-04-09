@@ -525,21 +525,6 @@ export class OpenSeadragonController {
     const opacity = ref.layer.opacity * object.opacity;
     return visibility ? opacity : 0;
   }
-
-  /**
-   * Enables or disables drag-to-pan on the viewer for all device types
-   *
-   * When disabled, dragging won't pan the viewport, allowing other layers
-   * (like SVG) to capture drag events for drawing. Zoom still works.
-   *
-   * @param enabled - Whether drag-to-pan should be enabled
-   */
-  setDragToPanEnabled(enabled: boolean): void {
-    this.viewer.gestureSettingsByDeviceType("mouse").dragToPan = enabled;
-    this.viewer.gestureSettingsByDeviceType("touch").dragToPan = enabled;
-    this.viewer.gestureSettingsByDeviceType("pen").dragToPan = enabled;
-    this.viewer.gestureSettingsByDeviceType("unknown").dragToPan = enabled;
-  }
 }
 
 /** Reference binding an image to a specific layer and layer configuration */
