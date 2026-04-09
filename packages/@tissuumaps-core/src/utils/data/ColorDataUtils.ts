@@ -296,7 +296,7 @@ export class ColorDataUtils extends DataUtilsBase {
     const data = ColorDataUtils._createColorDataBuffer(ids.length, { align });
     for (let i = 0; i < ids.length; i++) {
       const colorIndex = MathUtils.clamp(
-        Math.round(Math.random() * colorPalette.colors.length),
+        Math.floor(Math.random() * colorPalette.colors.length),
         0,
         colorPalette.colors.length - 1,
       );
