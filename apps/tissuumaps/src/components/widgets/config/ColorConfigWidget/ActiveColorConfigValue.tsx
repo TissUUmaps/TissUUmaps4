@@ -34,9 +34,8 @@ export function ActiveColorConfigValue({
   }
 
   if (activeSource === "from" && isFromConfig(colorConfig)) {
-    const tableName =
-      tables.find((table) => table.id === colorConfig.from.table)?.name ??
-      colorConfig.from.table;
+    const table = tables.find((t) => t.id === colorConfig.from.table);
+    const tableName = table !== undefined ? table.name : colorConfig.from.table;
     return (
       <div className={className}>
         {tableName} ({colorConfig.from.column})
@@ -45,9 +44,9 @@ export function ActiveColorConfigValue({
   }
 
   if (activeSource === "groupBy" && isGroupByConfig(colorConfig)) {
+    const table = tables.find((t) => t.id === colorConfig.groupBy.table);
     const tableName =
-      tables.find((table) => table.id === colorConfig.groupBy.table)?.name ??
-      colorConfig.groupBy.table;
+      table !== undefined ? table.name : colorConfig.groupBy.table;
     return (
       <div className={className}>
         {tableName} ({colorConfig.groupBy.column})
