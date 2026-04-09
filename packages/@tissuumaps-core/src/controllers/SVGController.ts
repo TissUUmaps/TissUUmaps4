@@ -139,18 +139,18 @@ export class SVGController {
 
   private _registerEventHandlers(): void {
     console.debug("Registering SVG event handlers");
-    this.container.addEventListener("mousedown", this._handleMouseDown);
-    document.addEventListener("mousemove", this._handleMouseMove);
-    document.addEventListener("mouseup", this._handleMouseUp);
+    this.container.addEventListener("pointerdown", this._handlePointerDown);
+    document.addEventListener("pointermove", this._handlePointerMove);
+    document.addEventListener("pointerup", this._handlePointerUp);
   }
 
   private _unregisterEventHandlers(): void {
-    this.container.removeEventListener("mousedown", this._handleMouseDown);
-    document.removeEventListener("mousemove", this._handleMouseMove);
-    document.removeEventListener("mouseup", this._handleMouseUp);
+    this.container.removeEventListener("pointerdown", this._handlePointerDown);
+    document.removeEventListener("pointermove", this._handlePointerMove);
+    document.removeEventListener("pointerup", this._handlePointerUp);
   }
 
-  private _handleMouseDown = (event: MouseEvent): void => {
+  private _handlePointerDown = (event: PointerEvent): void => {
     if (this._interactionMode !== "draw") return;
     if (event.button !== 0) return; // Only left click
 
@@ -163,7 +163,7 @@ export class SVGController {
     };
   };
 
-  private _handleMouseMove = (event: MouseEvent): void => {
+  private _handlePointerMove = (event: PointerEvent): void => {
     if (!this._drawingState.isDrawing || !this._drawingState.currentRect)
       return;
 
@@ -175,7 +175,7 @@ export class SVGController {
     );
   };
 
-  private _handleMouseUp = (event: MouseEvent): void => {
+  private _handlePointerUp = (event: PointerEvent): void => {
     if (!this._drawingState.isDrawing || event.button !== 0) return;
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);

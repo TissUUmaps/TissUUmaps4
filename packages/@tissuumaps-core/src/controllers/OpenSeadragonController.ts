@@ -527,15 +527,18 @@ export class OpenSeadragonController {
   }
 
   /**
-   * Enables or disables mouse navigation on the viewer
+   * Enables or disables drag-to-pan on the viewer for all device types
    *
-   * When disabled, mouse events won't pan/zoom the viewport,
-   * allowing other layers (like SVG) to capture them for drawing.
+   * When disabled, dragging won't pan the viewport, allowing other layers
+   * (like SVG) to capture drag events for drawing. Zoom still works.
    *
-   * @param enabled - Whether mouse navigation should be enabled
+   * @param enabled - Whether drag-to-pan should be enabled
    */
-  setMouseNavEnabled(enabled: boolean): void {
-    this.viewer.setMouseNavEnabled(enabled);
+  setDragToPanEnabled(enabled: boolean): void {
+    this.viewer.gestureSettingsByDeviceType("mouse").dragToPan = enabled;
+    this.viewer.gestureSettingsByDeviceType("touch").dragToPan = enabled;
+    this.viewer.gestureSettingsByDeviceType("pen").dragToPan = enabled;
+    this.viewer.gestureSettingsByDeviceType("unknown").dragToPan = enabled;
   }
 }
 
