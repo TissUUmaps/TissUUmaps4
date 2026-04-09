@@ -4,10 +4,10 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
+import { markers } from "@/components/markers";
 import { useTissUUmaps } from "@/store";
 
 import { type MarkerConfigWidgetAdapter } from "./adapter";
-import { markers } from "./markers";
 
 export type ActiveMarkerConfigValueProps = {
   adapter: MarkerConfigWidgetAdapter;
@@ -24,8 +24,8 @@ export function ActiveMarkerConfigValue({
 
   if (activeSource === "constant" && isConstantConfig(markerConfig)) {
     const marker =
-      markers.find((m) => m.value === markerConfig.constant.value) ??
-      markers.find((m) => m.value === defaultMarker)!;
+      markers.find((marker) => marker.value === markerConfig.constant.value) ??
+      markers.find((marker) => marker.value === defaultMarker)!;
     return <div className={className}>{marker.icon}</div>;
   }
 
@@ -51,6 +51,6 @@ export function ActiveMarkerConfigValue({
     );
   }
 
-  const marker = markers.find((m) => m.value === defaultMarker)!;
+  const marker = markers.find((marker) => marker.value === defaultMarker)!;
   return <div className={className}>{marker.icon}</div>;
 }

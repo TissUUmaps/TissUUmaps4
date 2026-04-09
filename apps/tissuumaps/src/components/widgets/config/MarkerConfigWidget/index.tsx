@@ -1,11 +1,11 @@
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
+import { markers } from "@/components/markers";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
 import { type MarkerConfigWidgetAdapter } from "./adapter";
-import { markers } from "./markers";
 
 export { ActiveMarkerConfigValue } from "./ActiveMarkerConfigValue";
 export { MarkerConfigSourceToggleGroup } from "./MarkerConfigSourceToggleGroup";
