@@ -218,9 +218,9 @@ export class ColorDataUtils extends DataUtilsBase {
         data,
         ids,
         config,
-        colorMap.default ?? defaultColor,
+        defaultColor,
         loadTable,
-        (group) => groupColors.get(group),
+        (group) => groupColors.get(group) ?? colorMap.default,
         (color) => ColorDataUtils.encodeColor(color),
         { signal },
       );

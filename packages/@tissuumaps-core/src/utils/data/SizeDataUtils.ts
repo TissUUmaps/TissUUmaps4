@@ -175,9 +175,9 @@ export class SizeDataUtils extends DataUtilsBase {
       data,
       ids,
       config,
-      sizeMap.default ?? defaultSizeValue,
+      defaultSizeValue,
       loadTable,
-      (group) => groupSizes.get(group),
+      (group) => groupSizes.get(group) ?? sizeMap.default,
       (sizeValue) => SizeDataUtils.encodeSize(sizeValue, { sizeFactor }),
       { signal },
     );

@@ -179,9 +179,9 @@ export class MarkerDataUtils extends DataUtilsBase {
         data,
         ids,
         config,
-        markerMap.default ?? defaultMarker,
+        defaultMarker,
         loadTable,
-        (group) => groupMarkers.get(group),
+        (group) => groupMarkers.get(group) ?? markerMap.default,
         (marker) => MarkerDataUtils.encodeMarker(marker),
         { signal },
       );

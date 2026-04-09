@@ -180,9 +180,9 @@ export class VisibilityDataUtils extends DataUtilsBase {
       data,
       ids,
       config,
-      visibilityMap.default ?? defaultVisibility,
+      defaultVisibility,
       loadTable,
-      (group) => groupVisibilities.get(group),
+      (group) => groupVisibilities.get(group) ?? visibilityMap.default,
       (visibility) => VisibilityDataUtils.encodeVisibility(visibility),
       { signal },
     );

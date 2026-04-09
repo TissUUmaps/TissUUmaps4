@@ -181,9 +181,9 @@ export class OpacityDataUtils extends DataUtilsBase {
       data,
       ids,
       config,
-      opacityMap.default ?? defaultOpacity,
+      defaultOpacity,
       loadTable,
-      (group) => groupOpacities.get(group),
+      (group) => groupOpacities.get(group) ?? opacityMap.default,
       (opacity) => OpacityDataUtils.encodeOpacity(opacity, { opacityFactor }),
       { signal },
     );
