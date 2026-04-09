@@ -140,14 +140,14 @@ export class SVGController {
   private _registerEventHandlers(): void {
     console.debug("Registering SVG event handlers");
     this.container.addEventListener("mousedown", this._handleMouseDown);
-    this.container.addEventListener("mousemove", this._handleMouseMove);
-    this.container.addEventListener("mouseup", this._handleMouseUp);
+    document.addEventListener("mousemove", this._handleMouseMove);
+    document.addEventListener("mouseup", this._handleMouseUp);
   }
 
   private _unregisterEventHandlers(): void {
     this.container.removeEventListener("mousedown", this._handleMouseDown);
-    this.container.removeEventListener("mousemove", this._handleMouseMove);
-    this.container.removeEventListener("mouseup", this._handleMouseUp);
+    document.removeEventListener("mousemove", this._handleMouseMove);
+    document.removeEventListener("mouseup", this._handleMouseUp);
   }
 
   private _handleMouseDown = (event: MouseEvent): void => {
