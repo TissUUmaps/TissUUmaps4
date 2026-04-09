@@ -482,6 +482,32 @@ describe("ColorDataUtils", () => {
       expect(data[0]).toBeGreaterThan(0);
     });
 
+    it("dispatches to groupBy config", async () => {
+      const ids = [1];
+      const tableData = createMockTableData(ids, ["cat-a"]);
+      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const colorMap: DefaultMap<Color> = {
+        id: "cm1",
+        name: "CM",
+        values: { [JSON.stringify("cat-a")]: red },
+      };
+      const config = {
+        source: "groupBy" as const,
+        groupBy: { table: "t1", column: "col1", map: "cm1" },
+      };
+
+      const data = await ColorDataUtils.loadColorData(
+        ids,
+        config,
+        [colorMap],
+        black,
+        loadTable,
+      );
+
+      const encoded = ColorDataUtils.encodeColor(red);
+      expect(data[0]).toBe(MathUtils.safeLeftShift(encoded, 8) + 255);
+    });
+
     it("falls back to default color for unknown config", async () => {
       const ids = [1];
       const config = {} as never;
