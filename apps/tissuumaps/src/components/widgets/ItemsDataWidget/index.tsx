@@ -1,3 +1,5 @@
+import { type ColumnDef } from "@tanstack/react-table";
+
 import { type ItemsData } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
@@ -9,7 +11,7 @@ import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-import { ItemsDataTable } from "./ItemsDataTable";
+import { ItemsDataTable, type ItemsDataTableRowData } from "./ItemsDataTable";
 
 export type ItemsDataWidgetProps = {
   data: ItemsData;
@@ -18,6 +20,7 @@ export type ItemsDataWidgetProps = {
   selectedGroupByColumn?: string | null;
   onSelectedTableChange?: (table: string | null) => void;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
+  extraTableColumnDefs?: ColumnDef<ItemsDataTableRowData>[];
   selectionDisabled?: boolean;
   className?: string;
 };
@@ -29,6 +32,7 @@ export function ItemsDataWidget({
   selectedGroupByColumn: controlledSelectedGroupByColumn,
   onSelectedTableChange: setControlledSelectedTable,
   onSelectedGroupByColumnChange: setControlledSelectedGroupByColumn,
+  extraTableColumnDefs,
   selectionDisabled,
   className,
 }: ItemsDataWidgetProps) {
@@ -81,6 +85,7 @@ export function ItemsDataWidget({
         height={tableHeight}
         table={selectedTable}
         groupByColumn={selectedGroupByColumn}
+        extraColumnDefs={extraTableColumnDefs}
       />
     </Fieldset>
   );

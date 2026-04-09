@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTissUUmaps } from "@/store";
 
-type ItemRowData = {
+export type ItemsDataTableRowData = {
   id: number;
   name?: string;
   group?: string;
@@ -31,6 +31,7 @@ export type ItemsDataTableProps = {
   height: number;
   table?: string | null;
   groupByColumn?: string | null;
+  extraColumnDefs?: ColumnDef<ItemsDataTableRowData>[];
 };
 
 export function ItemsDataTable({
@@ -38,6 +39,7 @@ export function ItemsDataTable({
   height,
   table,
   groupByColumn,
+  extraColumnDefs,
 }: ItemsDataTableProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -71,7 +73,7 @@ export function ItemsDataTable({
     const ids = data.getIds();
 
     let names = data.getNames();
-    let groups: string[] | undefined;
+    let groups: (string | null)[] | undefined;
     if (tableData !== null) {
       const tableNames = tableData.getNames();
       if (tableNames !== undefined) {
@@ -85,36 +87,52 @@ export function ItemsDataTable({
         const tableIds = tableData.getIds();
         groups = ids.map((id) => {
           const index = tableIds.indexOf(id);
-          return index >= 0 ? tableGroups[index]! : "";
+          return index >= 0 ? tableGroups[index]! : null;
         });
       }
     }
 
-    const rowData: ItemRowData[] = ids.map((id, i) => ({
+    const rowData: ItemsDataTableRowData[] = ids.map((id, i) => ({
       id,
       ...(names !== undefined && { name: names[i]! }),
       ...(groups !== undefined && { group: groups[i]! }),
     }));
 
-    const columnDefs: ColumnDef<ItemRowData>[] = [
-      { id: "id", header: "ID", accessorKey: "id" },
+    const columnDefs: ColumnDef<ItemsDataTableRowData>[] = [
+      {
+        id: "id",
+        header: "ID",
+        accessorKey: "id",
+        aggregationFn: () => null,
+        aggregatedCell: () => null,
+      },
     ];
     if (names !== undefined) {
-      columnDefs.push({ id: "name", header: "Name", accessorKey: "name" });
+      columnDefs.push({
+        id: "name",
+        header: "Name",
+        accessorKey: "name",
+        aggregationFn: () => null,
+        aggregatedCell: () => null,
+      });
     }
     if (groups !== undefined) {
       columnDefs.push({
         id: "group",
         header: groupByColumn!,
         accessorKey: "group",
-        cell: ({ getValue }) => getValue(), // TODO expand/collapse
+        cell: ({ getValue }) =>
+          getValue() ?? <span className="italic">Other</span>,
       });
+    }
+    if (extraColumnDefs !== undefined) {
+      columnDefs.push(...extraColumnDefs);
     }
 
     const grouping = groups !== undefined ? ["group"] : [];
 
     return { rowData, columnDefs, grouping };
-  }, [data, tableData, tableGroups, groupByColumn]);
+  }, [data, tableData, tableGroups, groupByColumn, extraColumnDefs]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const reactTable = useReactTable({
@@ -212,7 +230,12 @@ export function ItemsDataTable({
                         )}{" "}
                         ({row.subRows.length})
                       </Button>
-                    ) : row.getIsGrouped() ? null : (
+                    ) : cell.getIsAggregated() ? (
+                      flexRender(
+                        cell.column.columnDef.aggregatedCell,
+                        cell.getContext(),
+                      )
+                    ) : (
                       flexRender(cell.column.columnDef.cell, cell.getContext())
                     )}
                   </td>
