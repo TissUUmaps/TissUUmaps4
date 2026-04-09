@@ -23,7 +23,7 @@ export class SizeDataUtils extends DataUtilsBase {
    * @param ids - Ordered list of item IDs
    * @param config - Size configuration specifying the data source
    * @param sizeMaps - Available size maps for groupBy lookups
-   * @param defaultSizeValue - Fallback size when no valid config or value is found
+   * @param defaultSize - Fallback size when no valid config or value is found
    * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal, buffer alignment, and size scaling factor
    * @returns A `Float32Array` of encoded size values, one per ID
@@ -32,7 +32,7 @@ export class SizeDataUtils extends DataUtilsBase {
     ids: number[],
     config: SizeConfig,
     sizeMaps: DefaultMap<number>[],
-    defaultSizeValue: number,
+    defaultSize: number,
     loadTable: (
       tableId: string,
       options?: { signal?: AbortSignal },
@@ -52,7 +52,7 @@ export class SizeDataUtils extends DataUtilsBase {
       return await SizeDataUtils.loadFromSizeData(
         ids,
         config,
-        defaultSizeValue,
+        defaultSize,
         loadTable,
         { signal, align, sizeFactor },
       );
@@ -62,13 +62,13 @@ export class SizeDataUtils extends DataUtilsBase {
         ids,
         config,
         sizeMaps,
-        defaultSizeValue,
+        defaultSize,
         loadTable,
         { signal, align, sizeFactor },
       );
     }
     console.warn("No valid size config found, using default size");
-    return SizeDataUtils.createUniformSizeData(ids.length, defaultSizeValue, {
+    return SizeDataUtils.createUniformSizeData(ids.length, defaultSize, {
       align,
       sizeFactor,
     });
@@ -100,7 +100,7 @@ export class SizeDataUtils extends DataUtilsBase {
    *
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source table and column
-   * @param defaultSizeValue - Fallback size when a value is missing or invalid
+   * @param defaultSize - Fallback size when a value is missing or invalid
    * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal, buffer alignment, and size scaling factor
    * @returns A `Float32Array` of encoded size values
@@ -108,7 +108,7 @@ export class SizeDataUtils extends DataUtilsBase {
   static async loadFromSizeData(
     ids: number[],
     config: Extract<SizeConfig, FromConfig>,
-    defaultSizeValue: number,
+    defaultSize: number,
     loadTable: (
       tableId: string,
       options?: { signal?: AbortSignal },
@@ -122,7 +122,7 @@ export class SizeDataUtils extends DataUtilsBase {
       data,
       ids,
       config,
-      defaultSizeValue,
+      defaultSize,
       loadTable,
       (value) => SizeDataUtils.parseSizeValue(value),
       (size) => SizeDataUtils.encodeSize(size, { sizeFactor }),
@@ -139,7 +139,7 @@ export class SizeDataUtils extends DataUtilsBase {
    * @param ids - Ordered list of item IDs
    * @param config - GroupBy configuration specifying the source table, column, and map
    * @param sizeMaps - Available size maps for group-to-size lookups
-   * @param defaultSizeValue - Fallback size when the map is not found or a group is unmapped
+   * @param defaultSize - Fallback size when the map is not found or a group is unmapped
    * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal, buffer alignment, and size scaling factor
    * @returns A `Float32Array` of encoded size values
@@ -148,7 +148,7 @@ export class SizeDataUtils extends DataUtilsBase {
     ids: number[],
     config: Extract<SizeConfig, GroupByConfig<true>>,
     sizeMaps: DefaultMap<number>[],
-    defaultSizeValue: number,
+    defaultSize: number,
     loadTable: (
       tableId: string,
       options?: { signal?: AbortSignal },
@@ -164,21 +164,21 @@ export class SizeDataUtils extends DataUtilsBase {
       console.warn(
         `Size map ${config.groupBy.map} not found, using default size`,
       );
-      return SizeDataUtils.createUniformSizeData(ids.length, defaultSizeValue, {
+      return SizeDataUtils.createUniformSizeData(ids.length, defaultSize, {
         align,
         sizeFactor,
       });
     }
-    const groupSizes = new Map(Object.entries(sizeMap.values));
     const data = SizeDataUtils._createSizeDataBuffer(ids.length, { align });
+    const groupSizes = new Map(Object.entries(sizeMap.values));
     await SizeDataUtils.fillGroupByConfigData(
       data,
       ids,
       config,
-      defaultSizeValue,
+      sizeMap.default ?? defaultSize,
       loadTable,
-      (group) => groupSizes.get(group) ?? sizeMap.default,
-      (sizeValue) => SizeDataUtils.encodeSize(sizeValue, { sizeFactor }),
+      (group) => groupSizes.get(group),
+      (size) => SizeDataUtils.encodeSize(size, { sizeFactor }),
       { signal },
     );
     signal?.throwIfAborted();
@@ -188,20 +188,20 @@ export class SizeDataUtils extends DataUtilsBase {
   /**
    * Creates a size data buffer of the given size filled with a single size value.
    *
-   * @param size - Number of elements
-   * @param sizeValue - The size value to fill with
+   * @param n - Number of elements
+   * @param size - The size value to fill with
    * @param options - Optional buffer alignment and size scaling factor
    * @returns A `Float32Array` filled with the encoded size value
    */
   static createUniformSizeData(
+    n: number,
     size: number,
-    sizeValue: number,
     options?: { align?: number; sizeFactor?: number },
   ): Float32Array {
     const { align = 1, sizeFactor = 1 } = options ?? {};
-    const data = SizeDataUtils._createSizeDataBuffer(size, { align });
-    const value = SizeDataUtils.encodeSize(sizeValue, { sizeFactor });
-    data.fill(value, 0, size);
+    const data = SizeDataUtils._createSizeDataBuffer(n, { align });
+    const value = SizeDataUtils.encodeSize(size, { sizeFactor });
+    data.fill(value, 0, n);
     return data;
   }
 
@@ -222,16 +222,13 @@ export class SizeDataUtils extends DataUtilsBase {
   /**
    * Encodes a size value, optionally scaled by a size factor.
    *
-   * @param sizeValue - The size value to encode
+   * @param size - The size value to encode
    * @param options - Optional size scaling factor (defaults to 1)
    * @returns The scaled size value
    */
-  static encodeSize(
-    sizeValue: number,
-    options?: { sizeFactor?: number },
-  ): number {
+  static encodeSize(size: number, options?: { sizeFactor?: number }): number {
     const { sizeFactor = 1 } = options ?? {};
-    return sizeValue * sizeFactor;
+    return size * sizeFactor;
   }
 
   private static _createSizeDataBuffer(
