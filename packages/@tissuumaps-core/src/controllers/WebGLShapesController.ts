@@ -18,9 +18,11 @@ import { type ShapesData } from "../storage/shapes";
 import { type TableData } from "../storage/table";
 import { type MultiPolygon, type Rect, type Vertex } from "../types";
 import { MathUtils } from "../utils/MathUtils";
-import { ResolveUtils } from "../utils/ResolveUtils";
 import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
+import { ColorDataUtils } from "../utils/data/ColorDataUtils";
+import { OpacityDataUtils } from "../utils/data/OpacityDataUtils";
+import { VisibilityDataUtils } from "../utils/data/VisibilityDataUtils";
 import { WebGLControllerBase } from "./WebGLControllerBase";
 
 /**
@@ -542,7 +544,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     ) {
       colorData = new Uint32Array(ref.data.getSize()).fill(0);
     } else {
-      const visibilityData = await ResolveUtils.resolveVisibilities(
+      const visibilityData = await VisibilityDataUtils.loadVisibilityData(
         ref.data.getIds(),
         ref.shapes.shapeFillVisibility,
         visibilityMaps,
@@ -551,7 +553,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         { signal, align: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
-      const opacityData = await ResolveUtils.resolveOpacities(
+      const opacityData = await OpacityDataUtils.loadOpacityData(
         ref.data.getIds(),
         ref.shapes.shapeFillOpacity,
         opacityMaps,
@@ -564,7 +566,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         },
       );
       signal?.throwIfAborted();
-      colorData = await ResolveUtils.resolveColors(
+      colorData = await ColorDataUtils.loadColorData(
         ref.data.getIds(),
         ref.shapes.shapeFillColor,
         colorMaps,
@@ -616,7 +618,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     ) {
       colorData = new Uint32Array(ref.data.getSize()).fill(0);
     } else {
-      const visibilityData = await ResolveUtils.resolveVisibilities(
+      const visibilityData = await VisibilityDataUtils.loadVisibilityData(
         ref.data.getIds(),
         ref.shapes.shapeStrokeVisibility,
         visibilityMaps,
@@ -625,7 +627,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         { signal, align: numValuesPerTextureLine },
       );
       signal?.throwIfAborted();
-      const opacityData = await ResolveUtils.resolveOpacities(
+      const opacityData = await OpacityDataUtils.loadOpacityData(
         ref.data.getIds(),
         ref.shapes.shapeStrokeOpacity,
         opacityMaps,
@@ -638,7 +640,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         },
       );
       signal?.throwIfAborted();
-      colorData = await ResolveUtils.resolveColors(
+      colorData = await ColorDataUtils.loadColorData(
         ref.data.getIds(),
         ref.shapes.shapeStrokeColor,
         colorMaps,

@@ -29,9 +29,13 @@ import {
 import { type PointsData } from "../storage/points";
 import { type TableData } from "../storage/table";
 import { type Rect } from "../types";
-import { ResolveUtils } from "../utils/ResolveUtils";
 import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
+import { ColorDataUtils } from "../utils/data/ColorDataUtils";
+import { MarkerDataUtils } from "../utils/data/MarkerDataUtils";
+import { OpacityDataUtils } from "../utils/data/OpacityDataUtils";
+import { SizeDataUtils } from "../utils/data/SizeDataUtils";
+import { VisibilityDataUtils } from "../utils/data/VisibilityDataUtils";
 import { WebGLControllerBase } from "./WebGLControllerBase";
 
 /**
@@ -558,7 +562,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.points.pointMarker,
         )
       ) {
-        const markerData = await ResolveUtils.resolveMarkers(
+        const markerData = await MarkerDataUtils.loadMarkerData(
           ref.data.getIds(),
           ref.points.pointMarker,
           markerMaps,
@@ -620,7 +624,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         if (activeUnit === "data" || activeUnit === "layer") {
           sizeFactor *= ref.layer.transform.scale;
         }
-        const sizeData = await ResolveUtils.resolveSizes(
+        const sizeData = await SizeDataUtils.loadSizeData(
           ref.data.getIds(),
           ref.points.pointSize,
           sizeMaps,
@@ -666,7 +670,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         ) {
           colorData = new Uint32Array(numPoints).fill(0);
         } else {
-          const visibilityData = await ResolveUtils.resolveVisibilities(
+          const visibilityData = await VisibilityDataUtils.loadVisibilityData(
             ref.data.getIds(),
             ref.points.pointVisibility,
             visibilityMaps,
@@ -675,7 +679,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             { signal },
           );
           signal?.throwIfAborted();
-          const opacityData = await ResolveUtils.resolveOpacities(
+          const opacityData = await OpacityDataUtils.loadOpacityData(
             ref.data.getIds(),
             ref.points.pointOpacity,
             opacityMaps,
@@ -684,7 +688,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             { signal, opacityFactor: ref.layer.opacity * ref.points.opacity },
           );
           signal?.throwIfAborted();
-          colorData = await ResolveUtils.resolveColors(
+          colorData = await ColorDataUtils.loadColorData(
             ref.data.getIds(),
             ref.points.pointColor,
             colorMaps,

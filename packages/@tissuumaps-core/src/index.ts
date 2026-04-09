@@ -23,10 +23,14 @@ export * from "./storage/table";
 
 export { ColorUtils } from "./utils/ColorUtils";
 export { HashUtils } from "./utils/HashUtils";
-export { ResolveUtils } from "./utils/ResolveUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 export { WebGLUtils } from "./utils/WebGLUtils";
+export { MarkerDataUtils } from "./utils/data/MarkerDataUtils";
+export { SizeDataUtils } from "./utils/data/SizeDataUtils";
+export { ColorDataUtils } from "./utils/data/ColorDataUtils";
+export { VisibilityDataUtils } from "./utils/data/VisibilityDataUtils";
+export { OpacityDataUtils } from "./utils/data/OpacityDataUtils";
 
 export * from "./palettes";
 export * from "./types";
