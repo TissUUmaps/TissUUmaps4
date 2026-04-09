@@ -51,7 +51,7 @@ export class ColorDataUtils extends DataUtilsBase {
   ): Promise<Uint32Array> {
     const { signal, align = 1, visibilityData, opacityData } = options ?? {};
     signal?.throwIfAborted();
-    let data;
+    let data: Uint32Array;
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
       data = ColorDataUtils.loadConstantColorData(ids, config, { align });
