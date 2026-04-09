@@ -84,11 +84,11 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
   useEffect(() => {
     const controller = controllerRef.current;
     if (controller !== null) {
-      const enableMouseNav = interactionMode === "pan";
+      const enableDragToPan = interactionMode === "pan";
       console.debug(
-        `Setting OpenSeadragon mouse nav enabled: ${enableMouseNav}`,
+        `Setting OpenSeadragon drag-to-pan enabled: ${enableDragToPan}`,
       );
-      controller.setMouseNavEnabled(enableMouseNav);
+      controller.setDragToPanEnabled(enableDragToPan);
     }
   }, [interactionMode]);
 
