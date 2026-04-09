@@ -10,6 +10,7 @@ function createMockTableData(ids: number[], values: unknown[]): TableData {
   return {
     getIds: () => ids,
     getSize: () => ids.length,
+    getNames: () => undefined,
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
     loadValueRange: vi.fn().mockResolvedValue(undefined),

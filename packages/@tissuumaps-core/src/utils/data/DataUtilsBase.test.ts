@@ -25,6 +25,7 @@ function createMockTableData(
   return {
     getIds: () => ids,
     getSize: () => ids.length,
+    getNames: () => undefined,
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
     loadValueRange: vi.fn().mockResolvedValue(valueRange),
@@ -49,7 +50,7 @@ describe("DataUtilsBase", () => {
         0,
         loadTable,
         (value) => (typeof value === "number" ? value : undefined),
-        (v) => v * 2,
+        (v) => (v as number) * 2,
       );
 
       expect(loadTable).toHaveBeenCalledWith("t1", { signal: undefined });
@@ -72,7 +73,7 @@ describe("DataUtilsBase", () => {
         99,
         loadTable,
         (value) => (typeof value === "number" ? value : undefined),
-        (v) => v,
+        (v) => v as number,
       );
 
       expect(data[0]).toBe(99); // "bad" failed parsing → default
@@ -93,7 +94,7 @@ describe("DataUtilsBase", () => {
         -1,
         loadTable,
         (value) => (typeof value === "number" ? value : undefined),
-        (v) => v,
+        (v) => v as number,
       );
 
       expect(data[0]).toBe(10);
@@ -123,7 +124,7 @@ describe("DataUtilsBase", () => {
         0,
         loadTable,
         parseTableValue,
-        (v: number) => v,
+        (v) => v as number,
       );
 
       expect(parseTableValue).toHaveBeenCalledWith(50, [0, 100]);
@@ -173,7 +174,7 @@ describe("DataUtilsBase", () => {
         0,
         loadTable,
         mapGroupToValue,
-        (v: number) => v,
+        (v) => v as number,
       );
 
       expect(data[0]).toBe(10);
@@ -197,7 +198,7 @@ describe("DataUtilsBase", () => {
         42,
         loadTable,
         () => undefined,
-        (v: number) => v,
+        (v) => v as number,
       );
 
       expect(data[0]).toBe(42);
@@ -219,7 +220,7 @@ describe("DataUtilsBase", () => {
         99,
         loadTable,
         () => 10,
-        (v: number) => v,
+        (v) => v as number,
       );
 
       expect(data[0]).toBe(10);
@@ -245,7 +246,7 @@ describe("DataUtilsBase", () => {
         0,
         loadTable,
         mapGroupToValue,
-        (v: number) => v,
+        (v) => v as number,
       );
 
       // numeric 42 becomes "42" after JSON.stringify
