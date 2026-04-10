@@ -1,6 +1,6 @@
 import { HandIcon, PencilIcon, PentagonIcon, SquareIcon } from "lucide-react";
 
-import type { InteractionMode } from "@tissuumaps/core";
+import { type InteractionMode } from "@tissuumaps/core";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
@@ -11,22 +11,20 @@ export type InteractionModeViewerControlsProps = { className?: string };
 export function InteractionModeViewerControls({
   className,
 }: InteractionModeViewerControlsProps) {
-  const interactionMode = useTissUUmaps((s) => s.interactionMode);
-  const setInteractionMode = useTissUUmaps((s) => s.setInteractionMode);
+  const interactionMode = useTissUUmaps((state) => state.interactionMode);
+  const setInteractionMode = useTissUUmaps((state) => state.setInteractionMode);
 
   return (
     <ToggleGroup
       className={cn(
-        "m-2 gap-1 rounded-xl border border-border bg-background p-1.5 shadow-lg",
+        "m-2 rounded-xl border border-border bg-background p-1.5 shadow-lg",
         className,
       )}
-      variant="default"
-      size="default"
+      spacing={1}
       value={[interactionMode]}
       onValueChange={(value) => {
-        const mode = value[value.length - 1] as InteractionMode | undefined;
-        if (mode !== undefined) {
-          setInteractionMode(mode);
+        if (value.length > 0) {
+          setInteractionMode(value[0] as InteractionMode);
         }
       }}
     >

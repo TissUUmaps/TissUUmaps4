@@ -94,7 +94,6 @@ export const createAppSlice: TissUUmapsStateCreator<AppSlice> = (set) => ({
     });
   },
   setInteractionMode: (interactionMode) => {
-    console.debug("Setting interaction mode to", interactionMode);
     set((draft) => {
       draft.interactionMode = interactionMode;
     });
