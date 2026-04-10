@@ -453,11 +453,17 @@ export class OpenSeadragonController {
     if (tiledImageState.tiledImage === undefined) {
       throw new Error("Cannot update tiled image before it is created");
     }
-    const opacity = OpenSeadragonController._calculateOpacity(
+    const oldOpacity = tiledImageState.tiledImage.getOpacity();
+    const newOpacity = OpenSeadragonController._calculateOpacity(
       tiledImageState.ref,
     );
-    if (tiledImageState.tiledImage.getOpacity() !== opacity) {
-      tiledImageState.tiledImage.setOpacity(opacity);
+    if (oldOpacity !== newOpacity) {
+      tiledImageState.tiledImage.setOpacity(newOpacity);
+      if (oldOpacity === 0 && newOpacity > 0) {
+        // OpenSeadragon does not load tiles for invisible images,
+        // so we need to trigger a reload when an image becomes visible
+        tiledImageState.tiledImage.update(true);
+      }
     }
     this._updateTiledImageGeometry(tiledImageState);
   }
