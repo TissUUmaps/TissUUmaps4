@@ -19,11 +19,13 @@ import {
 import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
+  OMEZarrImageDataProvider,
   OpenSeadragonImageDataProvider,
   ParquetTableDataProvider,
   TablePointsDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
+  omeZarrImageDataSourceType,
   openSeadragonImageDataSourceType,
   parquetTableDataSourceType,
   tablePointsDataSourceType,
@@ -140,6 +142,7 @@ function createInitialAppSliceState(): AppSliceState {
       string,
       ImageDataProvider<ImageDataSource, ImageData>
     >([
+      [omeZarrImageDataSourceType, new OMEZarrImageDataProvider()],
       [openSeadragonImageDataSourceType, new OpenSeadragonImageDataProvider()],
     ]),
     labelsDataProviders: new Map<
