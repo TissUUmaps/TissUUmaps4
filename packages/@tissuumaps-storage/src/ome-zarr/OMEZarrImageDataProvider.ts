@@ -99,7 +99,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         z: defaultDataSource.z,
         t: defaultDataSource.t,
       });
-      return new OMEZarrImageData(tileSource, defaultDataSource.url);
+      return new OMEZarrImageData(tileSource, undefined);
     }
 
     if (defaultDataSource.path !== undefined) {
