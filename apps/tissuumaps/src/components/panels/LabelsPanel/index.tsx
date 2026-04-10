@@ -3,12 +3,7 @@ import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import {
-  type Labels,
-  MathUtils,
-  getActiveConfigSource,
-  isGroupByConfig,
-} from "@tissuumaps/core";
+import { type Labels, MathUtils } from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -29,7 +24,9 @@ import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
-import { LabelsSettingsCategory } from "./types";
+import { type LabelsSettingsCategory } from "./category";
+import { useLabelsDataTableColumns } from "./useLabelsDataTableColumns";
+import { useLabelsDataWidget } from "./useLabelsDataWidget";
 
 export type LabelsPanelProps = {
   className?: string;
@@ -44,6 +41,8 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
       onDragEnd={(event) => {
         const { source, canceled } = event.operation;
         if (isSortable(source) && !canceled) {
+          // dnd-kit optimistically updates the DOM
+          // https://github.com/clauderic/dnd-kit/issues/1564
           moveLabels(source.id as string, source.index);
         }
       }}
@@ -69,10 +68,8 @@ type LabelsAccordionItemProps = {
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const [activeSettingsCategory, setActiveSettingsCategory] =
     useState<LabelsSettingsCategory | null>(null);
-  const [selectedDataTable, setSelectedDataTable] = useState<string | null>(
-    null,
-  );
-  const [selectedDataGroupByColumn, setSelectedDataGroupByColumn] = useState<
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<
     string | null
   >(null);
 
@@ -98,45 +95,18 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
     return null;
   }, [labels.id, loadedLabels, loadedLabelsData]);
 
-  const {
-    table: memoizedDataTable,
-    column: memoizedDataGroupByColumn,
-    selectionDisabled: dataSelectionDisabled,
-  } = useMemo(() => {
-    if (
-      activeSettingsCategory === LabelsSettingsCategory.labelColor &&
-      getActiveConfigSource(labels.labelColor) === "groupBy" &&
-      isGroupByConfig(labels.labelColor)
-    ) {
-      return { ...labels.labelColor.groupBy, selectionDisabled: true };
-    }
-    if (
-      activeSettingsCategory === LabelsSettingsCategory.labelVisibility &&
-      getActiveConfigSource(labels.labelVisibility) === "groupBy" &&
-      isGroupByConfig(labels.labelVisibility)
-    ) {
-      return { ...labels.labelVisibility.groupBy, selectionDisabled: true };
-    }
-    if (
-      activeSettingsCategory === LabelsSettingsCategory.labelOpacity &&
-      getActiveConfigSource(labels.labelOpacity) === "groupBy" &&
-      isGroupByConfig(labels.labelOpacity)
-    ) {
-      return { ...labels.labelOpacity.groupBy, selectionDisabled: true };
-    }
-    return {
-      table: selectedDataTable,
-      column: selectedDataGroupByColumn,
-      selectionDisabled: false,
-    };
-  }, [
+  const { synced, syncedTable, syncedGroupByColumn } = useLabelsDataWidget(
+    labels,
+    selectedTable,
+    selectedGroupByColumn,
     activeSettingsCategory,
-    labels.labelColor,
-    labels.labelVisibility,
-    labels.labelOpacity,
-    selectedDataTable,
-    selectedDataGroupByColumn,
-  ]);
+  );
+
+  const { extraTableColumnDefs } = useLabelsDataTableColumns(
+    labels,
+    syncedTable,
+    syncedGroupByColumn,
+  );
 
   return (
     <div ref={ref}>
@@ -216,11 +186,12 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             <ItemsDataWidget
               data={data}
               tableHeight={200}
-              selectedTable={memoizedDataTable}
-              onSelectedTableChange={setSelectedDataTable}
-              selectedGroupByColumn={memoizedDataGroupByColumn}
-              onSelectedGroupByColumnChange={setSelectedDataGroupByColumn}
-              selectionDisabled={dataSelectionDisabled}
+              selectedTable={syncedTable}
+              onSelectedTableChange={setSelectedTable}
+              selectedGroupByColumn={syncedGroupByColumn}
+              onSelectedGroupByColumnChange={setSelectedGroupByColumn}
+              extraTableColumnDefs={extraTableColumnDefs}
+              selectionDisabled={synced}
               className="bg-card"
             />
           )}

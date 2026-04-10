@@ -19,16 +19,19 @@ import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
+  ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
   ColorConfigWidget,
 } from "@/components/widgets/config/ColorConfigWidget";
 import { useColorConfigWidget } from "@/components/widgets/config/ColorConfigWidget/hooks";
 import {
+  ActiveOpacityConfigValue,
   OpacityConfigSourceToggleGroup,
   OpacityConfigWidget,
 } from "@/components/widgets/config/OpacityConfigWidget";
 import { useOpacityConfigWidget } from "@/components/widgets/config/OpacityConfigWidget/hooks";
 import {
+  ActiveVisibilityConfigValue,
   VisibilityConfigSourceToggleGroup,
   VisibilityConfigWidget,
 } from "@/components/widgets/config/VisibilityConfigWidget";
@@ -37,7 +40,7 @@ import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-import { LabelsSettingsCategory } from "./types";
+import { LabelsSettingsCategory } from "./category";
 
 export type LabelsSettingsWidgetProps = {
   labels: Labels;
@@ -110,12 +113,16 @@ export function LabelsSettingsWidget({
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label color</AccordionTrigger>
-            <ColorConfigSourceToggleGroup
+            <ActiveColorConfigValue
               adapter={labelColorConfigWidgetAdapter}
-              className="ml-auto"
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel>
+            <ColorConfigSourceToggleGroup
+              adapter={labelColorConfigWidgetAdapter}
+              className="border rounded"
+            />
             <ColorConfigWidget adapter={labelColorConfigWidgetAdapter} />
           </AccordionPanel>
         </AccordionItem>
@@ -124,12 +131,16 @@ export function LabelsSettingsWidget({
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label visibility</AccordionTrigger>
-            <VisibilityConfigSourceToggleGroup
+            <ActiveVisibilityConfigValue
               adapter={labelVisibilityConfigWidgetAdapter}
-              className="ml-auto"
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel>
+            <VisibilityConfigSourceToggleGroup
+              adapter={labelVisibilityConfigWidgetAdapter}
+              className="border rounded"
+            />
             <VisibilityConfigWidget
               adapter={labelVisibilityConfigWidgetAdapter}
             />
@@ -140,12 +151,16 @@ export function LabelsSettingsWidget({
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Label opacity</AccordionTrigger>
-            <OpacityConfigSourceToggleGroup
+            <ActiveOpacityConfigValue
               adapter={labelOpacityConfigWidgetAdapter}
-              className="ml-auto"
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
             />
           </AccordionHeader>
           <AccordionPanel>
+            <OpacityConfigSourceToggleGroup
+              adapter={labelOpacityConfigWidgetAdapter}
+              className="border rounded"
+            />
             <OpacityConfigWidget adapter={labelOpacityConfigWidgetAdapter} />
           </AccordionPanel>
         </AccordionItem>

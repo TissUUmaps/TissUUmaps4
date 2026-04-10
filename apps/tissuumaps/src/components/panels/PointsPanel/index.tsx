@@ -3,12 +3,7 @@ import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import {
-  MathUtils,
-  type Points,
-  getActiveConfigSource,
-  isGroupByConfig,
-} from "@tissuumaps/core";
+import { MathUtils, type Points } from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -29,7 +24,9 @@ import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
-import { PointsSettingsCategory } from "./types";
+import { type PointsSettingsCategory } from "./category";
+import { usePointsDataTableColumns } from "./usePointsDataTableColumns";
+import { usePointsDataWidget } from "./usePointsDataWidget";
 
 export type PointsPanelProps = {
   className?: string;
@@ -71,10 +68,8 @@ type PointsAccordionItemProps = {
 function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const [activeSettingsCategory, setActiveSettingsCategory] =
     useState<PointsSettingsCategory | null>(null);
-  const [selectedDataTable, setSelectedDataTable] = useState<string | null>(
-    null,
-  );
-  const [selectedDataGroupByColumn, setSelectedDataGroupByColumn] = useState<
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<
     string | null
   >(null);
 
@@ -100,61 +95,18 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
     return null;
   }, [points.id, loadedPoints, loadedPointsData]);
 
-  const {
-    table: memoizedDataTable,
-    column: memoizedDataGroupByColumn,
-    selectionDisabled: dataSelectionDisabled,
-  } = useMemo(() => {
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointMarker &&
-      getActiveConfigSource(points.pointMarker) === "groupBy" &&
-      isGroupByConfig(points.pointMarker)
-    ) {
-      return { ...points.pointMarker.groupBy, selectionDisabled: true };
-    }
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointSize &&
-      getActiveConfigSource(points.pointSize) === "groupBy" &&
-      isGroupByConfig(points.pointSize)
-    ) {
-      return { ...points.pointSize.groupBy, selectionDisabled: true };
-    }
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointColor &&
-      getActiveConfigSource(points.pointColor) === "groupBy" &&
-      isGroupByConfig(points.pointColor)
-    ) {
-      return { ...points.pointColor.groupBy, selectionDisabled: true };
-    }
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointVisibility &&
-      getActiveConfigSource(points.pointVisibility) === "groupBy" &&
-      isGroupByConfig(points.pointVisibility)
-    ) {
-      return { ...points.pointVisibility.groupBy, selectionDisabled: true };
-    }
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointOpacity &&
-      getActiveConfigSource(points.pointOpacity) === "groupBy" &&
-      isGroupByConfig(points.pointOpacity)
-    ) {
-      return { ...points.pointOpacity.groupBy, selectionDisabled: true };
-    }
-    return {
-      table: selectedDataTable,
-      column: selectedDataGroupByColumn,
-      selectionDisabled: false,
-    };
-  }, [
+  const { synced, syncedTable, syncedGroupByColumn } = usePointsDataWidget(
+    points,
+    selectedTable,
+    selectedGroupByColumn,
     activeSettingsCategory,
-    points.pointMarker,
-    points.pointSize,
-    points.pointColor,
-    points.pointVisibility,
-    points.pointOpacity,
-    selectedDataTable,
-    selectedDataGroupByColumn,
-  ]);
+  );
+
+  const { extraTableColumnDefs } = usePointsDataTableColumns(
+    points,
+    syncedTable,
+    syncedGroupByColumn,
+  );
 
   return (
     <div ref={ref}>
@@ -252,11 +204,12 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             <ItemsDataWidget
               data={data}
               tableHeight={200}
-              selectedTable={memoizedDataTable}
-              onSelectedTableChange={setSelectedDataTable}
-              selectedGroupByColumn={memoizedDataGroupByColumn}
-              onSelectedGroupByColumnChange={setSelectedDataGroupByColumn}
-              selectionDisabled={dataSelectionDisabled}
+              selectedTable={syncedTable}
+              onSelectedTableChange={setSelectedTable}
+              selectedGroupByColumn={syncedGroupByColumn}
+              onSelectedGroupByColumnChange={setSelectedGroupByColumn}
+              extraTableColumnDefs={extraTableColumnDefs}
+              selectionDisabled={synced}
               className="bg-card"
             />
           )}

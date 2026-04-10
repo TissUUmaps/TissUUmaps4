@@ -43,7 +43,7 @@ import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-import { ShapesSettingsCategory } from "./types";
+import { ShapesSettingsCategory } from "./category";
 
 export type ShapesSettingsWidgetProps = {
   shapes: Shapes;

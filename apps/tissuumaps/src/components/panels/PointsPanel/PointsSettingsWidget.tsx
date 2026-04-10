@@ -55,7 +55,7 @@ import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-import { PointsSettingsCategory } from "./types";
+import { PointsSettingsCategory } from "./category";
 
 export type PointsSettingsWidgetProps = {
   points: Points;
