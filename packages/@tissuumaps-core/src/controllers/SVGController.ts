@@ -56,12 +56,10 @@ export class SVGController {
     this.container = container;
     this.transformNode = document.createElementNS(SVG_NAMESPACE, "g");
     this.shapeCompleteHandler = options?.onShapeComplete;
-    this._containerSize = {
-      width: parseFloat(container.getAttribute("width") ?? "0"),
-      height: parseFloat(container.getAttribute("height") ?? "0"),
-    };
-    this._viewport = initialViewport;
     container.replaceChildren(this.transformNode);
+    this._containerSize = container.getBoundingClientRect();
+    this._viewport = initialViewport;
+    this._updateTransformNode();
 
     this._registerEventHandlers();
   }
