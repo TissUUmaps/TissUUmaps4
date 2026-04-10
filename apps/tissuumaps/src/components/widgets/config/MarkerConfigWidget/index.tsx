@@ -58,11 +58,7 @@ function ConstantMarkerConfigWidget({
           )}
           itemValue={(marker) => marker.value}
           value={value}
-          onValueChange={(value) => {
-            if (value !== null) {
-              setValue(value);
-            }
-          }}
+          onValueChange={(value) => setValue(value!)} // value cannot be null
         />
       </Field>
     </div>
@@ -101,6 +97,7 @@ function FromMarkerConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -153,6 +150,7 @@ function GroupByMarkerConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>

@@ -127,6 +127,7 @@ function FromSizeConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -202,6 +203,7 @@ function GroupBySizeConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -223,6 +225,7 @@ function GroupBySizeConfigWidget({
           itemValue={(sizeMap) => sizeMap.id}
           value={map}
           onValueChange={setMap}
+          nullable
         />
       </Field>
       <Field>

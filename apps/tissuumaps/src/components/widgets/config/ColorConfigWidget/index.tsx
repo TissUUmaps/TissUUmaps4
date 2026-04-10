@@ -158,6 +158,7 @@ function FromColorConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -179,6 +180,7 @@ function FromColorConfigWidget({
           itemValue={(colorPalette) => colorPalette.id}
           value={palette}
           onValueChange={setPalette}
+          nullable
         />
       </Field>
       <div className="grid grid-cols-2 gap-x-2">
@@ -254,6 +256,7 @@ function GroupByColorConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -275,6 +278,7 @@ function GroupByColorConfigWidget({
           itemValue={(colorPalette) => colorPalette.id}
           value={palette}
           onValueChange={setPalette}
+          nullable
         />
       </Field>
       <Field>
@@ -285,6 +289,7 @@ function GroupByColorConfigWidget({
           itemValue={(colorMap) => colorMap.id}
           value={map}
           onValueChange={setMap}
+          nullable
         />
       </Field>
     </div>
@@ -312,6 +317,7 @@ function RandomColorConfigWidget({
           itemValue={(colorPalette) => colorPalette.id}
           value={palette}
           onValueChange={setPalette}
+          nullable
         />
       </Field>
     </div>
