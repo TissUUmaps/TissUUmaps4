@@ -140,13 +140,10 @@ export function PointsSettingsWidget({
                 max={1}
                 value={points.opacity}
                 onChange={(event) => {
-                  if (event.target.value !== "") {
+                  const value = event.target.valueAsNumber;
+                  if (!isNaN(value)) {
                     updatePoints(points.id, {
-                      opacity: MathUtils.clamp(
-                        parseFloat(event.target.value),
-                        0,
-                        1,
-                      ),
+                      opacity: MathUtils.clamp(value, 0, 1),
                     });
                   }
                 }}
@@ -161,12 +158,10 @@ export function PointsSettingsWidget({
                 min={0}
                 value={points.pointSizeFactor}
                 onChange={(event) => {
-                  if (event.target.value !== "") {
+                  const value = event.target.valueAsNumber;
+                  if (!isNaN(value)) {
                     updatePoints(points.id, {
-                      pointSizeFactor: Math.max(
-                        0,
-                        parseFloat(event.target.value),
-                      ),
+                      pointSizeFactor: Math.max(0, value),
                     });
                   }
                 }}

@@ -30,12 +30,10 @@ export function ProjectSettingsDialog() {
                 min={0}
                 value={drawOptions.pointSizeFactor}
                 onChange={(event) => {
-                  if (event.target.value !== "") {
+                  const value = event.target.valueAsNumber;
+                  if (!isNaN(value)) {
                     setDrawOptions({
-                      pointSizeFactor: Math.max(
-                        0,
-                        parseFloat(event.target.value),
-                      ),
+                      pointSizeFactor: Math.max(0, value),
                     });
                   }
                 }}
@@ -56,12 +54,10 @@ export function ProjectSettingsDialog() {
                 min={0}
                 value={drawOptions.shapeStrokeWidth}
                 onChange={(event) => {
-                  if (event.target.value !== "") {
+                  const value = event.target.valueAsNumber;
+                  if (!isNaN(value)) {
                     setDrawOptions({
-                      shapeStrokeWidth: Math.max(
-                        0,
-                        parseInt(event.target.value),
-                      ),
+                      shapeStrokeWidth: Math.max(0, Math.trunc(value)),
                     });
                   }
                 }}
@@ -82,12 +78,10 @@ export function ProjectSettingsDialog() {
                 min={1}
                 value={drawOptions.numShapesScanlines}
                 onChange={(event) => {
-                  if (event.target.value !== "") {
+                  const value = event.target.valueAsNumber;
+                  if (!isNaN(value)) {
                     setDrawOptions({
-                      numShapesScanlines: Math.max(
-                        1,
-                        parseInt(event.target.value),
-                      ),
+                      numShapesScanlines: Math.max(1, Math.trunc(value)),
                     });
                   }
                 }}

@@ -65,10 +65,11 @@ function ConstantColorConfigWidget({
             max={255}
             value={color.r}
             onChange={(event) => {
-              if (event.target.value !== "") {
+              const value = event.target.valueAsNumber;
+              if (!isNaN(value)) {
                 setColor({
                   ...color,
-                  r: MathUtils.clamp(parseInt(event.target.value), 0, 255),
+                  r: MathUtils.clamp(Math.trunc(value), 0, 255),
                 });
               }
             }}
@@ -82,10 +83,11 @@ function ConstantColorConfigWidget({
             max={255}
             value={color.g}
             onChange={(event) => {
-              if (event.target.value !== "") {
+              const value = event.target.valueAsNumber;
+              if (!isNaN(value)) {
                 setColor({
                   ...color,
-                  g: MathUtils.clamp(parseInt(event.target.value), 0, 255),
+                  g: MathUtils.clamp(Math.trunc(value), 0, 255),
                 });
               }
             }}
@@ -99,10 +101,11 @@ function ConstantColorConfigWidget({
             max={255}
             value={color.b}
             onChange={(event) => {
-              if (event.target.value !== "") {
+              const value = event.target.valueAsNumber;
+              if (!isNaN(value)) {
                 setColor({
                   ...color,
-                  b: MathUtils.clamp(parseInt(event.target.value), 0, 255),
+                  b: MathUtils.clamp(Math.trunc(value), 0, 255),
                 });
               }
             }}
@@ -188,13 +191,10 @@ function FromColorConfigWidget({
             type="number"
             inputMode="decimal"
             value={rangeMin ?? ""}
-            onChange={(event) =>
-              setRangeMin(
-                event.target.value !== ""
-                  ? parseFloat(event.target.value)
-                  : null,
-              )
-            }
+            onChange={(event) => {
+              const value = event.target.valueAsNumber;
+              setRangeMin(!isNaN(value) ? value : null);
+            }}
           />
         </Field>
         <Field>
@@ -203,13 +203,10 @@ function FromColorConfigWidget({
             type="number"
             inputMode="decimal"
             value={rangeMax ?? ""}
-            onChange={(event) =>
-              setRangeMax(
-                event.target.value !== ""
-                  ? parseFloat(event.target.value)
-                  : null,
-              )
-            }
+            onChange={(event) => {
+              const value = event.target.valueAsNumber;
+              setRangeMax(!isNaN(value) ? value : null);
+            }}
           />
         </Field>
       </div>

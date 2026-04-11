@@ -85,13 +85,10 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
                 max={1}
                 value={image.opacity}
                 onChange={(event) => {
-                  if (event.target.value !== "") {
+                  const value = event.target.valueAsNumber;
+                  if (!isNaN(value)) {
                     updateImage(image.id, {
-                      opacity: MathUtils.clamp(
-                        parseFloat(event.target.value),
-                        0,
-                        1,
-                      ),
+                      opacity: MathUtils.clamp(value, 0, 1),
                     });
                   }
                 }}
