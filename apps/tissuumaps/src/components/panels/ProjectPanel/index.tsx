@@ -53,7 +53,6 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
             render={
               <Input
                 type="text"
-                placeholder="My awesome project"
                 value={projectName}
                 onChange={(event) => setProjectName(event.target.value)}
               />
@@ -80,13 +79,11 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
             ref={loadProjectFileInputRef}
             type="file"
             onChange={(event) => {
-              if (event.target.files !== null) {
-                const file = event.target.files[0];
-                if (file !== undefined) {
-                  loadProjectFromFile(file).catch((error) => {
-                    console.error("Failed to load project from file", error);
-                  });
-                }
+              const files = event.target.files;
+              if (files !== null && files.length > 0) {
+                loadProjectFromFile(files[0]!).catch((error) => {
+                  console.error("Failed to load project from file", error);
+                });
               }
             }}
             hidden

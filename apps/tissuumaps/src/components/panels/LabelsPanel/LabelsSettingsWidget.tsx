@@ -110,13 +110,10 @@ export function LabelsSettingsWidget({
                 max={1}
                 value={labels.opacity}
                 onChange={(event) => {
-                  if (event.target.value !== "") {
+                  const newValue = event.target.valueAsNumber;
+                  if (!isNaN(newValue)) {
                     updateLabels(labels.id, {
-                      opacity: MathUtils.clamp(
-                        parseFloat(event.target.value),
-                        0,
-                        1,
-                      ),
+                      opacity: MathUtils.clamp(newValue, 0, 1),
                     });
                   }
                 }}
