@@ -192,8 +192,14 @@ function FromColorConfigWidget({
             inputMode="decimal"
             value={rangeMin ?? ""}
             onChange={(event) => {
-              const newValue = event.target.valueAsNumber;
-              setRangeMin(!isNaN(newValue) ? newValue : null);
+              if (event.target.value === "") {
+                setRangeMin(null);
+              } else {
+                const newValue = event.target.valueAsNumber;
+                if (!isNaN(newValue)) {
+                  setRangeMin(newValue);
+                }
+              }
             }}
           />
         </Field>
@@ -204,8 +210,14 @@ function FromColorConfigWidget({
             inputMode="decimal"
             value={rangeMax ?? ""}
             onChange={(event) => {
-              const newValue = event.target.valueAsNumber;
-              setRangeMax(!isNaN(newValue) ? newValue : null);
+              if (event.target.value === "") {
+                setRangeMax(null);
+              } else {
+                const newValue = event.target.valueAsNumber;
+                if (!isNaN(newValue)) {
+                  setRangeMax(newValue);
+                }
+              }
             }}
           />
         </Field>
