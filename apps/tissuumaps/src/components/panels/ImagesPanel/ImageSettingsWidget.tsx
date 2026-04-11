@@ -56,9 +56,11 @@ export function ImageSettingsWidget({
           max={1}
           value={image.opacity}
           onChange={(event) => {
-            const value = event.target.valueAsNumber;
-            if (!isNaN(value)) {
-              updateImage(image.id, { opacity: MathUtils.clamp(value, 0, 1) });
+            const newValue = event.target.valueAsNumber;
+            if (!isNaN(newValue)) {
+              updateImage(image.id, {
+                opacity: MathUtils.clamp(newValue, 0, 1),
+              });
             }
           }}
         />

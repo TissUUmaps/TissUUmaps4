@@ -61,9 +61,9 @@ function ConstantOpacityConfigWidget({
           max={1}
           value={value}
           onChange={(event) => {
-            const value = event.target.valueAsNumber;
-            if (!isNaN(value)) {
-              setValue(MathUtils.clamp(value, 0, 1));
+            const newValue = event.target.valueAsNumber;
+            if (!isNaN(newValue)) {
+              setValue(MathUtils.clamp(newValue, 0, 1));
             }
           }}
         />

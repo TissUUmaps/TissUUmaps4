@@ -62,9 +62,9 @@ function ConstantSizeConfigWidget({
           min={0}
           value={value}
           onChange={(event) => {
-            const value = event.target.valueAsNumber;
-            if (!isNaN(value)) {
-              setValue(Math.max(0, value));
+            const newValue = event.target.valueAsNumber;
+            if (!isNaN(newValue)) {
+              setValue(Math.max(0, newValue));
             }
           }}
         />
