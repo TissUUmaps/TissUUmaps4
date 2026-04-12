@@ -58,7 +58,11 @@ function ConstantMarkerConfigWidget({
           )}
           itemValue={(marker) => marker.value}
           value={value}
-          onValueChange={(value) => setValue(value!)} // value cannot be null
+          onValueChange={(value) => {
+            if (value !== null) {
+              setValue(value);
+            }
+          }}
         />
       </Field>
     </div>
@@ -172,6 +176,7 @@ function GroupByMarkerConfigWidget({
           itemValue={(markerMap) => markerMap.id}
           value={map}
           onValueChange={setMap}
+          nullable
         />
       </Field>
     </div>
