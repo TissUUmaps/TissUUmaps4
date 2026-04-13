@@ -1,6 +1,7 @@
-import { mat3 } from "gl-matrix";
+import { mat3, vec2 } from "gl-matrix";
 
 import { type SimilarityTransform } from "../model/types";
+import { type Rect } from "../types";
 
 /**
  * Utility methods for converting between {@link SimilarityTransform}
@@ -87,5 +88,29 @@ export class TransformUtils {
     // gl-matrix, like OpenGL, uses column-major order.
     // In OpenGL, mat2x4 has two columns and four rows.
     return [m[0], m[3], m[6], 0, m[1], m[4], m[7], 0];
+  }
+
+  /**
+   * Transforms an axis-aligned rectangle and returns the axis-aligned bounding box of the transformed corners
+   *
+   * @param rect - The rectangle to transform
+   * @param m - The transformation matrix to apply to the rectangle corners
+   * @returns The axis-aligned bounding box of the transformed rectangle
+   */
+  static transformBoundingBox(rect: Rect, m: mat3): Rect {
+    const { x, y, width, height } = rect;
+    const p0 = vec2.fromValues(x, y);
+    const p1 = vec2.fromValues(x + width, y);
+    const p2 = vec2.fromValues(x, y + height);
+    const p3 = vec2.fromValues(x + width, y + height);
+    vec2.transformMat3(p0, p0, m);
+    vec2.transformMat3(p1, p1, m);
+    vec2.transformMat3(p2, p2, m);
+    vec2.transformMat3(p3, p3, m);
+    const xMin = Math.min(p0[0], p1[0], p2[0], p3[0]);
+    const yMin = Math.min(p0[1], p1[1], p2[1], p3[1]);
+    const xMax = Math.max(p0[0], p1[0], p2[0], p3[0]);
+    const yMax = Math.max(p0[1], p1[1], p2[1], p3[1]);
+    return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
   }
 }

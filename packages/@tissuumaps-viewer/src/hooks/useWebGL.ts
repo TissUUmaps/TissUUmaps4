@@ -67,7 +67,7 @@ export function useWebGL(
 
   useEffect(() => {
     const controller = controllerRef.current;
-    if (controller !== null) {
+    if (controllerReady && controller !== null) {
       console.debug("Setting WebGL draw options");
       const { syncPoints, syncShapes, redraw } =
         controller.setDrawOptions(drawOptions);
@@ -86,7 +86,7 @@ export function useWebGL(
   useEffect(() => {
     const controller = controllerRef.current;
     const abortController = new AbortController();
-    if (controller !== null) {
+    if (controllerReady && controller !== null) {
       console.debug("Synchronizing WebGL points");
       controller
         .synchronizePoints(
@@ -135,7 +135,7 @@ export function useWebGL(
   useEffect(() => {
     const controller = controllerRef.current;
     const abortController = new AbortController();
-    if (controller !== null) {
+    if (controllerReady && controller !== null) {
       console.debug("Synchronizing WebGL shapes");
       controller
         .synchronizeShapes(

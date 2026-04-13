@@ -166,6 +166,30 @@ export class WebGLController {
     this._shapesController.draw(this._viewport, this._drawOptions);
   }
 
+  /**
+   * Computes the axis-aligned bounding box of all rendered points and shapes in world coordinates
+   *
+   * @returns Bounding box in world coordinates, or `null` if no points or shapes are rendered
+   */
+  getWorldBounds(): Rect | null {
+    const pointsBounds = this._pointsController.getWorldBounds();
+    const shapesBounds = this._shapesController.getWorldBounds();
+    if (pointsBounds !== null && shapesBounds !== null) {
+      const xMin = Math.min(pointsBounds.x, shapesBounds.x);
+      const yMin = Math.min(pointsBounds.y, shapesBounds.y);
+      const xMax = Math.max(
+        pointsBounds.x + pointsBounds.width,
+        shapesBounds.x + shapesBounds.width,
+      );
+      const yMax = Math.max(
+        pointsBounds.y + pointsBounds.height,
+        shapesBounds.y + shapesBounds.height,
+      );
+      return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
+    }
+    return pointsBounds ?? shapesBounds ?? null;
+  }
+
   /** Releases all WebGL resources held by the points and shapes sub-controllers */
   destroy(): void {
     this._pointsController.destroy();

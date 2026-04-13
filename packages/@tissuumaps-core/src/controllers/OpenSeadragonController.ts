@@ -8,6 +8,7 @@ import { type Layer } from "../model/layer";
 import { type ViewerOptions } from "../model/types";
 import { type ImageData } from "../storage/image";
 import { type LabelsData } from "../storage/labels";
+import { type Rect } from "../types";
 import { TransformUtils } from "../utils/TransformUtils";
 
 /**
@@ -18,8 +19,11 @@ import { TransformUtils } from "../utils/TransformUtils";
  * computation, opacity, and viewer animation options.
  */
 export class OpenSeadragonController {
+  private static readonly _transparentPixelUrl =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR4AQEFAPr/AAAAAAAABQABZHiVOAAAAABJRU5ErkJggg==";
   public readonly viewer: OpenSeadragon.Viewer;
   private _tiledImageStates: TiledImageState[] = [];
+  private _dummyTiledImage?: OpenSeadragon.TiledImage;
   private _animationMemory?: {
     viewerOptions: Partial<ViewerOptions>;
     tiledImageViewerOptions: Map<
@@ -192,9 +196,9 @@ export class OpenSeadragonController {
       labelsId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; dummyBounds?: Rect | null },
   ): Promise<void> {
-    const { signal } = options ?? {};
+    const { signal, dummyBounds = null } = options ?? {};
     signal?.throwIfAborted();
     const refs = await this._loadObjects(
       layers,
@@ -210,6 +214,7 @@ export class OpenSeadragonController {
       refs,
       tiledImageStatesByRef,
     );
+    this._updateDummy(dummyBounds);
   }
 
   /** Destroys the OpenSeadragon viewer and releases all tiled image state */
@@ -410,15 +415,16 @@ export class OpenSeadragonController {
       // flipped: layerConfig.flip,
       opacity: OpenSeadragonController._calculateOpacity(ref),
       success: (event) => {
-        tiledImageState.tiledImage = (
-          event as unknown as { item: OpenSeadragon.TiledImage }
-        ).item;
+        const { item: tiledImage } = event as unknown as {
+          item: OpenSeadragon.TiledImage;
+        };
+        tiledImageState.tiledImage = tiledImage;
         if (
           tiledImageState.deferredIndex !== undefined &&
           tiledImageState.deferredIndex !== index
         ) {
           this.viewer.world.setItemIndex(
-            tiledImageState.tiledImage,
+            tiledImage,
             tiledImageState.deferredIndex,
           );
           tiledImageState.deferredIndex = undefined;
@@ -430,12 +436,9 @@ export class OpenSeadragonController {
           // always update geometry
           this._updateTiledImageGeometry(tiledImageState);
         }
-        this.viewer.viewport.fitBounds(
-          tiledImageState.tiledImage.getBoundsNoRotate(),
-          true,
-        );
+        this.viewer.viewport.fitBounds(tiledImage.getBoundsNoRotate(), true);
         if (tiledImageState.deferredDelete) {
-          this.viewer.world.removeItem(tiledImageState.tiledImage);
+          this.viewer.world.removeItem(tiledImage);
           tiledImageState.deferredDelete = undefined;
         }
       },
@@ -517,6 +520,40 @@ export class OpenSeadragonController {
         new OpenSeadragon.Point(x, y),
         true,
       );
+    }
+  }
+
+  private _updateDummy(dummyBounds: Rect | null): void {
+    if (
+      this._tiledImageStates.length === 0 &&
+      this._dummyTiledImage === undefined &&
+      dummyBounds !== null
+    ) {
+      const index = this.viewer.world.getItemCount();
+      this.viewer.addTiledImage({
+        tileSource: {
+          type: "image",
+          url: OpenSeadragonController._transparentPixelUrl,
+        },
+        opacity: 0,
+        x: dummyBounds.x,
+        y: dummyBounds.y,
+        width: dummyBounds.width,
+        height: dummyBounds.height,
+        success: (event) => {
+          const { item: tiledImage } = event as unknown as {
+            item: OpenSeadragon.TiledImage;
+          };
+          this.viewer.viewport.fitBounds(tiledImage.getBoundsNoRotate(), true);
+        },
+      });
+      this._dummyTiledImage = this.viewer.world.getItemAt(index);
+    } else if (
+      this._tiledImageStates.length > 0 &&
+      this._dummyTiledImage !== undefined
+    ) {
+      this.viewer.world.removeItem(this._dummyTiledImage);
+      this._dummyTiledImage = undefined;
     }
   }
 

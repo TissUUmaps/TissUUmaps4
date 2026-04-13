@@ -39,7 +39,7 @@ export function useSVG(
 
   useEffect(() => {
     const controller = controllerRef.current;
-    if (controller !== null) {
+    if (controllerReady && controller !== null) {
       console.debug("Setting interaction mode");
       controller.setInteractionMode(interactionMode);
     }

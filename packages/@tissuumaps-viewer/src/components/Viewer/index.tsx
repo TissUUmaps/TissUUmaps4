@@ -1,4 +1,10 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import { type OpenSeadragonController } from "@tissuumaps/core";
 
@@ -16,68 +22,86 @@ export type ViewerProps = {
 
 export function Viewer({ adapter, children, className }: ViewerProps) {
   const [os, setOS] = useState<OpenSeadragonController | null>(null);
-
-  const { setViewerElementRef, controllerRef: osRef } =
-    useOpenSeadragon(adapter);
-
-  const parent = os !== null ? os.viewer.canvas : null;
-  const initialViewport = useMemo(() => {
+  const { parent, initialViewport } = useMemo(() => {
     if (os !== null) {
-      // getBoundsNoRotate does not return a stable reference --> memoize!
-      return os.viewer.viewport.getBoundsNoRotate(true);
+      return {
+        parent: os.viewer.canvas,
+        initialViewport: os.viewer.viewport.getBoundsNoRotate(true),
+      };
     }
-    return null;
+    return { parent: null, initialViewport: null };
   }, [os]);
-  const { controllerRef: glRef } = useWebGL(adapter, parent, initialViewport);
-  const { controllerRef: svgRef } = useSVG(adapter, parent, initialViewport);
+
+  const { controllerRef: glRef, controllerReady: glReady } = useWebGL(
+    adapter,
+    parent,
+    initialViewport,
+  );
+
+  const { controllerRef: svgRef, controllerReady: svgReady } = useSVG(
+    adapter,
+    parent,
+    initialViewport,
+  );
+
+  const fallbackBounds = useCallback(
+    () => glRef.current?.getWorldBounds() ?? null,
+    [glRef],
+  );
+  const {
+    setViewerElementRef,
+    controllerRef: osRef,
+    controllerReady: osReady,
+  } = useOpenSeadragon(adapter, fallbackBounds);
 
   useEffect(() => {
     const os = osRef.current;
+    const gl = glRef.current;
+    const svg = svgRef.current;
+
     const resizeHandler = (event: OpenSeadragon.ResizeEvent) => {
-      console.debug("Resizing WebGL canvas and SVG container");
-      const newSize = {
+      const containerSize = {
         width: event.newContainerSize.x,
         height: event.newContainerSize.y,
       };
-      const gl = glRef.current;
-      if (gl !== null) {
-        const canvasResized = gl.resizeCanvas(newSize);
+      if (glReady && gl !== null) {
+        const canvasResized = gl.resizeCanvas(containerSize);
         if (canvasResized) {
           gl.draw();
         }
       }
-      const svg = svgRef.current;
-      if (svg !== null) {
-        svg.resizeContainer(newSize);
+      if (svgReady && svg !== null) {
+        svg.resizeContainer(containerSize);
       }
     };
+
     const viewportChangeHandler = (event: OpenSeadragon.ViewerEvent) => {
-      console.debug("Changing WebGL viewport and SVG viewport");
-      const newViewport = event.eventSource.viewport.getBoundsNoRotate(true);
-      const gl = glRef.current;
-      if (gl !== null) {
-        const viewportChanged = gl.setViewport(newViewport);
+      const viewport = event.eventSource.viewport.getBoundsNoRotate(true);
+      if (glReady && gl !== null) {
+        const viewportChanged = gl.setViewport(viewport);
         if (viewportChanged) {
           gl.draw();
         }
       }
-      const svg = svgRef.current;
-      if (svg !== null) {
-        svg.setViewport(newViewport);
+      if (svgReady && svg !== null) {
+        svg.setViewport(viewport);
       }
     };
-    if (os !== null) {
-      setOS(os);
+
+    if (osReady && os !== null) {
       os.viewer.addHandler("resize", resizeHandler);
       os.viewer.addHandler("viewport-change", viewportChangeHandler);
+      setOS(os);
     }
+
     return () => {
       if (os !== null) {
+        setOS(null);
         os.viewer.removeHandler("resize", resizeHandler);
         os.viewer.removeHandler("viewport-change", viewportChangeHandler);
       }
     };
-  }, [osRef, glRef, svgRef, setOS]);
+  }, [osRef, osReady, glRef, glReady, svgRef, svgReady]);
 
   return (
     <div ref={setViewerElementRef} className={className}>
