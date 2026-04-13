@@ -225,10 +225,10 @@ export class WebGLShapesController extends WebGLControllerBase {
       );
       this.gl.uniform4f(
         this._uniformLocations.objectBounds,
-        glShapes.objectBounds.x,
-        glShapes.objectBounds.y,
-        glShapes.objectBounds.width,
-        glShapes.objectBounds.height,
+        glShapes.dataBounds.x,
+        glShapes.dataBounds.y,
+        glShapes.dataBounds.width,
+        glShapes.dataBounds.height,
       );
       this.gl.activeTexture(this.gl.TEXTURE1);
       this.gl.bindTexture(this.gl.TEXTURE_2D, glShapes.scanlineDataTexture);
@@ -243,6 +243,44 @@ export class WebGLShapesController extends WebGLControllerBase {
     }
     WebGLUtils.disableAlphaBlending(this.gl);
     this.gl.useProgram(null);
+  }
+
+  /**
+   * Computes the axis-aligned bounding box of all rendered shapes in world coordinates
+   *
+   * @returns Bounding box in world coordinates, or `null` if no shapes are rendered
+   */
+  getWorldBounds(): Rect | null {
+    if (this._glShapes.length > 0) {
+      let xMin = Infinity,
+        yMin = Infinity,
+        xMax = -Infinity,
+        yMax = -Infinity;
+      for (const glShapes of this._glShapes) {
+        const transform = WebGLShapesController.createDataToWorldMatrix(
+          glShapes.ref.layer,
+          glShapes.ref.layerConfig,
+        );
+        const { x, y, width, height } = TransformUtils.transformBoundingBox(
+          glShapes.dataBounds,
+          transform,
+        );
+        if (x < xMin) {
+          xMin = x;
+        }
+        if (y < yMin) {
+          yMin = y;
+        }
+        if (x + width > xMax) {
+          xMax = x + width;
+        }
+        if (y + height > yMax) {
+          yMax = y + height;
+        }
+      }
+      return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
+    }
+    return null;
   }
 
   /** Releases the shader program and all per-object GPU textures */
@@ -363,20 +401,20 @@ export class WebGLShapesController extends WebGLControllerBase {
     for (const ref of refs) {
       const numShapes = ref.data.getSize();
       const glShapes = glShapesByRef.get(ref);
-      let objectBounds = glShapes?.objectBounds;
+      let dataBounds = glShapes?.dataBounds;
       let scanlineDataTexture = glShapes?.scanlineDataTexture;
       if (
         glShapes === undefined ||
-        objectBounds === undefined ||
+        dataBounds === undefined ||
         scanlineDataTexture === undefined ||
         glShapes.numShapes !== numShapes
       ) {
         const multiPolygons = await ref.data.loadMultiPolygons({ signal });
         signal?.throwIfAborted();
-        objectBounds = WebGLShapesController._getObjectBounds(multiPolygons);
+        dataBounds = WebGLShapesController._getDataBounds(multiPolygons);
         scanlineDataTexture = this._createScanlineDataTexture(
           multiPolygons,
-          objectBounds,
+          dataBounds,
         );
         signal?.throwIfAborted();
       }
@@ -445,7 +483,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       newGLShapes.push({
         ref,
         numShapes,
-        objectBounds,
+        dataBounds,
         scanlineDataTexture,
         shapeFillColorsTexture,
         shapeStrokeColorsTexture,
@@ -677,24 +715,35 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @param multiPolygons - Polygon geometry
    * @returns The bounding rectangle in data-space coordinates
    */
-  private static _getObjectBounds(multiPolygons: MultiPolygon[]): Rect {
-    let xMin = Infinity,
-      yMin = Infinity,
-      xMax = -Infinity,
-      yMax = -Infinity;
-    for (const multiPolygon of multiPolygons) {
-      for (const polygon of multiPolygon.polygons) {
-        for (const path of [polygon.shell, ...polygon.holes]) {
-          for (const vertex of path) {
-            xMin = Math.min(xMin, vertex.x);
-            yMin = Math.min(yMin, vertex.y);
-            xMax = Math.max(xMax, vertex.x);
-            yMax = Math.max(yMax, vertex.y);
+  private static _getDataBounds(multiPolygons: MultiPolygon[]): Rect {
+    if (multiPolygons.length > 0) {
+      let xMin = Infinity,
+        yMin = Infinity,
+        xMax = -Infinity,
+        yMax = -Infinity;
+      for (const multiPolygon of multiPolygons) {
+        for (const polygon of multiPolygon.polygons) {
+          for (const path of [polygon.shell, ...polygon.holes]) {
+            for (const vertex of path) {
+              if (vertex.x < xMin) {
+                xMin = vertex.x;
+              }
+              if (vertex.y < yMin) {
+                yMin = vertex.y;
+              }
+              if (vertex.x > xMax) {
+                xMax = vertex.x;
+              }
+              if (vertex.y > yMax) {
+                yMax = vertex.y;
+              }
+            }
           }
         }
       }
+      return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
     }
-    return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
+    return { x: 0, y: 0, width: 0, height: 0 };
   }
 
   /**
@@ -934,7 +983,7 @@ type GLShapes = {
   /** Number of shapes in the object at the time the textures were built */
   numShapes: number;
   /** Axis-aligned bounding box of all shapes in data-space coordinates */
-  objectBounds: Rect;
+  dataBounds: Rect;
   /** Scanline data texture (RGBA32F); `undefined` while being regenerated */
   scanlineDataTexture?: WebGLTexture;
   /** Per-shape fill color texture (R32UI) */

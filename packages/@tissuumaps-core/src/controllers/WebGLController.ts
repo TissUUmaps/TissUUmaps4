@@ -19,11 +19,11 @@ export class WebGLController {
   private static readonly _maxCanvasSize = 4096;
 
   public readonly canvas: HTMLCanvasElement;
-  private _viewport: Rect;
   private _drawOptions: DrawOptions;
   private _gl: WebGL2RenderingContext;
   private _pointsController: WebGLPointsController;
   private _shapesController: WebGLShapesController;
+  private _viewport?: Rect;
 
   /** Creates a positioned, full-size `<canvas>` element for the WebGL overlay */
   static createCanvas(): HTMLCanvasElement {
@@ -38,11 +38,9 @@ export class WebGLController {
 
   /**
    * @param canvas - The canvas element to draw on (typically created by {@link createCanvas})
-   * @param initialViewport - Initial world-space viewport rectangle
    */
-  constructor(canvas: HTMLCanvasElement, initialViewport: Rect) {
+  constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    this._viewport = initialViewport;
     this._drawOptions = structuredClone(defaultDrawOptions);
     this._gl = WebGLController._createWebGLContext(this.canvas);
     this._pointsController = new WebGLPointsController(this._gl);
@@ -65,6 +63,7 @@ export class WebGLController {
    */
   setViewport(newViewport: Rect): boolean {
     if (
+      this._viewport === undefined ||
       this._viewport.x !== newViewport.x ||
       this._viewport.y !== newViewport.y ||
       this._viewport.width !== newViewport.width ||
@@ -162,8 +161,34 @@ export class WebGLController {
   draw(): void {
     this._gl.clearColor(0, 0, 0, 0);
     this._gl.clear(this._gl.COLOR_BUFFER_BIT);
-    this._pointsController.draw(this._viewport, this._drawOptions);
-    this._shapesController.draw(this._viewport, this._drawOptions);
+    if (this._viewport !== undefined) {
+      this._pointsController.draw(this._viewport, this._drawOptions);
+      this._shapesController.draw(this._viewport, this._drawOptions);
+    }
+  }
+
+  /**
+   * Computes the axis-aligned bounding box of all rendered points and shapes in world coordinates
+   *
+   * @returns Bounding box in world coordinates, or `null` if no points or shapes are rendered
+   */
+  getWorldBounds(): Rect | null {
+    const pointsBounds = this._pointsController.getWorldBounds();
+    const shapesBounds = this._shapesController.getWorldBounds();
+    if (pointsBounds !== null && shapesBounds !== null) {
+      const xMin = Math.min(pointsBounds.x, shapesBounds.x);
+      const yMin = Math.min(pointsBounds.y, shapesBounds.y);
+      const xMax = Math.max(
+        pointsBounds.x + pointsBounds.width,
+        shapesBounds.x + shapesBounds.width,
+      );
+      const yMax = Math.max(
+        pointsBounds.y + pointsBounds.height,
+        shapesBounds.y + shapesBounds.height,
+      );
+      return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
+    }
+    return pointsBounds ?? shapesBounds ?? null;
   }
 
   /** Releases all WebGL resources held by the points and shapes sub-controllers */

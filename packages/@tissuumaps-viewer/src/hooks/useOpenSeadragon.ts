@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 
-import { OpenSeadragonController } from "@tissuumaps/core";
+import { OpenSeadragonController, type Rect } from "@tissuumaps/core";
 
 import { type ViewerAdapter } from "../adapter";
 
-export function useOpenSeadragon(adapter: ViewerAdapter) {
+export function useOpenSeadragon(
+  adapter: ViewerAdapter,
+  fallbackBounds: () => Rect | null,
+) {
   const {
     workspace,
     layers,
@@ -18,6 +21,7 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
   } = adapter;
 
   const controllerRef = useRef<OpenSeadragonController | null>(null);
+  const [controllerReady, markControllerReady] = useReducer((x) => x + 1, 0);
 
   // use a ref callback for initializing the OpenSeadragon viewer
   // (note: ref callbacks are always executed before useEffect hooks)
@@ -29,6 +33,7 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
         console.debug("Initializing OpenSeadragon");
         controller = new OpenSeadragonController(viewerElement);
         controllerRef.current = controller;
+        markControllerReady();
       }
       // React 19 added cleanup functions for ref callbacks
       return () => {
@@ -68,6 +73,7 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
       controller
         .synchronize(layers, images, labels, loadImage, loadLabels, {
           signal: abortController.signal,
+          dummyBounds: fallbackBounds(),
         })
         .catch((error) => {
           if (!abortController.signal.aborted) {
@@ -78,7 +84,15 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
     return () => {
       abortController.abort();
     };
-  }, [workspace, layers, images, labels, loadImage, loadLabels]);
+  }, [
+    workspace,
+    layers,
+    images,
+    labels,
+    loadImage,
+    loadLabels,
+    fallbackBounds,
+  ]);
 
-  return { setViewerElementRef, controllerRef };
+  return { setViewerElementRef, controllerRef, controllerReady };
 }

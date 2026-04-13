@@ -1,14 +1,10 @@
 import { useEffect, useReducer, useRef } from "react";
 
-import { type Rect, SVGController } from "@tissuumaps/core";
+import { SVGController } from "@tissuumaps/core";
 
 import { type ViewerAdapter } from "../adapter";
 
-export function useSVG(
-  adapter: ViewerAdapter,
-  parent: Element | null,
-  initialViewport: Rect | null,
-) {
+export function useSVG(adapter: ViewerAdapter, parent: Element | null) {
   const { interactionMode, addShape } = adapter;
 
   const controllerRef = useRef<SVGController | null>(null);
@@ -17,12 +13,11 @@ export function useSVG(
   useEffect(() => {
     let container: SVGSVGElement | undefined;
     let controller: SVGController | undefined;
-    if (parent !== null && initialViewport !== null) {
+    if (parent !== null) {
       console.debug("Initializing SVG");
-      container = parent.appendChild(SVGController.createContainer());
-      controller = new SVGController(container, initialViewport, {
-        onShapeComplete: addShape,
-      });
+      container = SVGController.createContainer();
+      parent.appendChild(container);
+      controller = new SVGController(container, { onShapeComplete: addShape });
       controllerRef.current = controller;
       markControllerReady();
     }
@@ -35,11 +30,11 @@ export function useSVG(
         parent.removeChild(container);
       }
     };
-  }, [parent, initialViewport, addShape]);
+  }, [parent, addShape]);
 
   useEffect(() => {
     const controller = controllerRef.current;
-    if (controller !== null) {
+    if (controllerReady && controller !== null) {
       console.debug("Setting interaction mode");
       controller.setInteractionMode(interactionMode);
     }

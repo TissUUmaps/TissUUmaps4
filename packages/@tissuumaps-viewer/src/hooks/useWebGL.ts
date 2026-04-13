@@ -1,14 +1,10 @@
 import { useEffect, useReducer, useRef } from "react";
 
-import { type Rect, WebGLController } from "@tissuumaps/core";
+import { WebGLController } from "@tissuumaps/core";
 
 import { type ViewerAdapter } from "../adapter";
 
-export function useWebGL(
-  adapter: ViewerAdapter,
-  parent: Element | null,
-  initialViewport: Rect | null,
-) {
+export function useWebGL(adapter: ViewerAdapter, parent: Element | null) {
   const {
     workspace,
     layers,
@@ -34,10 +30,11 @@ export function useWebGL(
     let canvas: HTMLCanvasElement | undefined;
     let controller: WebGLController | undefined;
     const abortController = new AbortController();
-    if (parent !== null && initialViewport !== null) {
+    if (parent !== null) {
       console.debug("Initializing WebGL");
-      canvas = parent.appendChild(WebGLController.createCanvas());
-      controller = new WebGLController(canvas, initialViewport);
+      canvas = WebGLController.createCanvas();
+      parent.appendChild(canvas);
+      controller = new WebGLController(canvas);
       controller.initialize({ signal: abortController.signal }).then(
         (controller) => {
           if (!abortController.signal.aborted) {
@@ -63,11 +60,11 @@ export function useWebGL(
         parent.removeChild(canvas);
       }
     };
-  }, [parent, initialViewport]);
+  }, [parent]);
 
   useEffect(() => {
     const controller = controllerRef.current;
-    if (controller !== null) {
+    if (controllerReady && controller !== null) {
       console.debug("Setting WebGL draw options");
       const { syncPoints, syncShapes, redraw } =
         controller.setDrawOptions(drawOptions);
@@ -86,7 +83,7 @@ export function useWebGL(
   useEffect(() => {
     const controller = controllerRef.current;
     const abortController = new AbortController();
-    if (controller !== null) {
+    if (controllerReady && controller !== null) {
       console.debug("Synchronizing WebGL points");
       controller
         .synchronizePoints(
@@ -135,7 +132,7 @@ export function useWebGL(
   useEffect(() => {
     const controller = controllerRef.current;
     const abortController = new AbortController();
-    if (controller !== null) {
+    if (controllerReady && controller !== null) {
       console.debug("Synchronizing WebGL shapes");
       controller
         .synchronizeShapes(
