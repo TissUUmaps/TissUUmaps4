@@ -37,13 +37,13 @@ export class SVGController {
     options?: { onShapeComplete?: (shape: MultiPolygon) => void },
   ) {
     this.container = container;
-    this._viewport = initialViewport;
     this.transformNode = document.createElementNS(SVG_NAMESPACE, "g");
     this.shapeCompleteHandler = options?.onShapeComplete;
     this._containerSize = {
       width: parseFloat(container.getAttribute("width") ?? "0"),
       height: parseFloat(container.getAttribute("height") ?? "0"),
     };
+    this._viewport = initialViewport;
     container.replaceChildren(this.transformNode);
     // TODO register mouse event handlers on container
   }
