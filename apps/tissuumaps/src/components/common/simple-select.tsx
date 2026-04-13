@@ -4,12 +4,15 @@ import { type ReactNode, useMemo } from "react";
 
 export type SimpleSelectProps<
   TItem,
-  TValue extends string | number,
+  TNullable extends boolean | undefined,
+  TValue extends string | number | (TNullable extends true ? null : never),
   TMultiple extends boolean | undefined = false,
 > = {
   items: TItem[];
   itemLabel: (item: TItem) => ReactNode;
   itemValue: (item: TItem) => TValue;
+  nullable?: TNullable;
+  placeholder?: string;
 } & Omit<
   SelectPrimitive.Root.Props<TValue, TMultiple>,
   "items" | "itemToStringLabel" | "itemToStringValue"
@@ -17,22 +20,27 @@ export type SimpleSelectProps<
 
 export function SimpleSelect<
   TItem,
-  TValue extends string | number,
+  TNullable extends boolean | undefined,
+  TValue extends string | number | (TNullable extends true ? null : never),
   TMultiple extends boolean | undefined = false,
 >({
   items,
   itemLabel,
   itemValue,
+  nullable,
+  placeholder,
   ...props
-}: SimpleSelectProps<TItem, TValue, TMultiple>) {
-  const memoizedItems = useMemo(
-    () =>
-      items.map((item) => ({
-        label: itemLabel(item),
-        value: itemValue(item),
-      })),
-    [items, itemLabel, itemValue],
-  );
+}: SimpleSelectProps<TItem, TNullable, TValue, TMultiple>) {
+  const memoizedItems = useMemo(() => {
+    const result = items.map((item) => ({
+      label: itemLabel(item),
+      value: itemValue(item),
+    }));
+    if (nullable) {
+      result.unshift({ label: placeholder ?? "None", value: null as TValue });
+    }
+    return result;
+  }, [items, itemLabel, itemValue, nullable, placeholder]);
 
   // style adapted from https://base-ui.com/react/components/select main example, with the following changes:
   // - set trigger width to w-full
@@ -63,7 +71,7 @@ export function SimpleSelect<
             >
               {memoizedItems.map(({ label, value }) => (
                 <SelectPrimitive.Item
-                  key={value}
+                  key={String(value)}
                   value={value}
                   className="grid cursor-default grid-cols-[0.75rem_1fr] items-center gap-2 py-2 pr-4 pl-2.5 text-sm leading-4 outline-none select-none group-data-[side=none]:pr-12 group-data-[side=none]:text-base group-data-[side=none]:leading-4 data-highlighted:relative data-highlighted:z-0 data-highlighted:text-gray-50 data-highlighted:before:absolute data-highlighted:before:inset-x-1 data-highlighted:before:inset-y-0 data-highlighted:before:z-[-1] data-highlighted:before:rounded-sm data-highlighted:before:bg-gray-900 pointer-coarse:py-2.5 pointer-coarse:text-[0.925rem]"
                 >

@@ -101,6 +101,7 @@ function FromMarkerConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -153,6 +154,7 @@ function GroupByMarkerConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -174,6 +176,7 @@ function GroupByMarkerConfigWidget({
           itemValue={(markerMap) => markerMap.id}
           value={map}
           onValueChange={setMap}
+          nullable
         />
       </Field>
     </div>

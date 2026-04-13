@@ -98,6 +98,7 @@ function FromVisibilityConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -150,6 +151,7 @@ function GroupByVisibilityConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -171,6 +173,7 @@ function GroupByVisibilityConfigWidget({
           itemValue={(visibilityMap) => visibilityMap.id}
           value={map}
           onValueChange={setMap}
+          nullable
         />
       </Field>
     </div>

@@ -104,6 +104,7 @@ function FromOpacityConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -156,6 +157,7 @@ function GroupByOpacityConfigWidget({
             itemValue={(table) => table.id}
             value={table}
             onValueChange={setTable}
+            nullable
           />
         </Field>
         <Field disabled={table === null}>
@@ -177,6 +179,7 @@ function GroupByOpacityConfigWidget({
           itemValue={(opacityMap) => opacityMap.id}
           value={map}
           onValueChange={setMap}
+          nullable
         />
       </Field>
     </div>
