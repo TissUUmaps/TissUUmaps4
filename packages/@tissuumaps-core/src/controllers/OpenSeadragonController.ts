@@ -415,15 +415,16 @@ export class OpenSeadragonController {
       // flipped: layerConfig.flip,
       opacity: OpenSeadragonController._calculateOpacity(ref),
       success: (event) => {
-        tiledImageState.tiledImage = (
-          event as unknown as { item: OpenSeadragon.TiledImage }
-        ).item;
+        const { item: tiledImage } = event as unknown as {
+          item: OpenSeadragon.TiledImage;
+        };
+        tiledImageState.tiledImage = tiledImage;
         if (
           tiledImageState.deferredIndex !== undefined &&
           tiledImageState.deferredIndex !== index
         ) {
           this.viewer.world.setItemIndex(
-            tiledImageState.tiledImage,
+            tiledImage,
             tiledImageState.deferredIndex,
           );
           tiledImageState.deferredIndex = undefined;
@@ -435,12 +436,9 @@ export class OpenSeadragonController {
           // always update geometry
           this._updateTiledImageGeometry(tiledImageState);
         }
-        this.viewer.viewport.fitBounds(
-          tiledImageState.tiledImage.getBoundsNoRotate(),
-          true,
-        );
+        this.viewer.viewport.fitBounds(tiledImage.getBoundsNoRotate(), true);
         if (tiledImageState.deferredDelete) {
-          this.viewer.world.removeItem(tiledImageState.tiledImage);
+          this.viewer.world.removeItem(tiledImage);
           tiledImageState.deferredDelete = undefined;
         }
       },
@@ -542,12 +540,14 @@ export class OpenSeadragonController {
         y: dummyBounds.y,
         width: dummyBounds.width,
         height: dummyBounds.height,
+        success: (event) => {
+          const { item: tiledImage } = event as unknown as {
+            item: OpenSeadragon.TiledImage;
+          };
+          this.viewer.viewport.fitBounds(tiledImage.getBoundsNoRotate(), true);
+        },
       });
       this._dummyTiledImage = this.viewer.world.getItemAt(index);
-      this.viewer.viewport.fitBounds(
-        this._dummyTiledImage.getBoundsNoRotate(),
-        true,
-      );
     } else if (
       this._tiledImageStates.length > 0 &&
       this._dummyTiledImage !== undefined
