@@ -7,3 +7,4 @@ onlyBuiltDependencies:
   - core-js
   - core-js-pure
   - esbuild
+  - omezarr-tilesource

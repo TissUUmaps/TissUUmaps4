@@ -17,6 +17,7 @@ export default defineConfig({
         index: resolve(__dirname, "src/index.ts"),
         csv: resolve(__dirname, "src/csv/index.ts"),
         geojson: resolve(__dirname, "src/geojson/index.ts"),
+        "ome-zarr": resolve(__dirname, "src/ome-zarr/index.ts"),
         openseadragon: resolve(__dirname, "src/openseadragon/index.ts"),
         parquet: resolve(__dirname, "src/parquet/index.ts"),
         table: resolve(__dirname, "src/table/index.ts"),

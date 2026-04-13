@@ -28,6 +28,12 @@
       "import": "./dist/geojson.js",
       "require": "./dist/geojson.cjs"
     },
+    "./ome-zarr": {
+      "development": "./src/ome-zarr/index.ts",
+      "types": "./dist/ome-zarr.d.ts",
+      "import": "./dist/ome-zarr.js",
+      "require": "./dist/ome-zarr.cjs"
+    },
     "./openseadragon": {
       "development": "./src/openseadragon/index.ts",
       "types": "./dist/openseadragon.d.ts",
@@ -55,8 +61,9 @@
   "dependencies": {
     "@jsonforms/core": "^3.7.0",
     "geojson": "^0.5.0",
-    "hyparquet": "^1.25.1",
+    "hyparquet": "^1.25.6",
     "hyparquet-compressors": "^1.1.1",
+    "omezarr-tilesource": "^0.1.1",
     "papaparse": "^5.5.3"
   },
   "devDependencies": {
