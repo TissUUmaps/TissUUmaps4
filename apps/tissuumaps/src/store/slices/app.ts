@@ -138,7 +138,7 @@ function createInitialAppSliceState(): AppSliceState {
   return {
     dark: false,
     workspace: null,
-    interactionMode: "draw", // hardcode interaction mode for development
+    interactionMode: "pan",
     imageDataProviders: new Map<
       string,
       ImageDataProvider<ImageDataSource, ImageData>

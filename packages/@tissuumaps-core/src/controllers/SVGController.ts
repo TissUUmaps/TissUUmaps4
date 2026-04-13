@@ -136,25 +136,23 @@ export class SVGController {
   // ─────────────────────────────────────────────────────────────
 
   private _registerEventHandlers(): void {
-    console.debug("Registering SVG event handlers");
     this.container.addEventListener("pointerdown", this._handlePointerDown);
-    document.addEventListener("pointermove", this._handlePointerMove);
-    document.addEventListener("pointerup", this._handlePointerUp);
   }
 
   private _unregisterEventHandlers(): void {
     this.container.removeEventListener("pointerdown", this._handlePointerDown);
-    document.removeEventListener("pointermove", this._handlePointerMove);
-    document.removeEventListener("pointerup", this._handlePointerUp);
   }
 
   private _handlePointerDown = (event: PointerEvent): void => {
-    if (this._interactionMode !== "draw") return;
+    if (this._interactionMode !== "drawRectangle") return;
     if (event.button !== 0) return;
     if (event.shiftKey) {
       // Shift held = don't draw, let instead OpenSeadragon handle panning
       return;
     }
+
+    document.addEventListener("pointermove", this._handlePointerMove);
+    document.addEventListener("pointerup", this._handlePointerUp);
 
     event.preventDefault();
     event.stopPropagation();
@@ -211,7 +209,10 @@ export class SVGController {
     rect.setAttribute("height", "0");
     rect.setAttribute("fill", "rgba(255, 0, 0, 0.2)");
     rect.setAttribute("stroke", "#FF0000");
-    rect.setAttribute("stroke-width", "20");
+    rect.setAttribute(
+      "stroke-width",
+      (this._viewport.width * 0.0005).toString(),
+    );
     rect.classList.add("drawing-preview");
 
     this.transformNode.appendChild(rect);
@@ -273,6 +274,9 @@ export class SVGController {
       startPoint: null,
       currentRect: null,
     };
+
+    document.removeEventListener("pointermove", this._handlePointerMove);
+    document.removeEventListener("pointerup", this._handlePointerUp);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -282,8 +286,7 @@ export class SVGController {
   private _screenToWorld(screenX: number, screenY: number): Vertex {
     const ctm = this.transformNode.getScreenCTM();
     if (!ctm) {
-      console.warn("Could not get screen CTM");
-      return { x: 0, y: 0 };
+      throw new Error("Could not get screen CTM");
     }
 
     const inverse = ctm.inverse();
