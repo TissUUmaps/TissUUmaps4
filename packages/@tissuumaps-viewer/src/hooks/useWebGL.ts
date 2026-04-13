@@ -1,10 +1,14 @@
 import { useEffect, useReducer, useRef } from "react";
 
-import { WebGLController } from "@tissuumaps/core";
+import { type Rect, WebGLController } from "@tissuumaps/core";
 
 import { type ViewerAdapter } from "../adapter";
 
-export function useWebGL(adapter: ViewerAdapter, parent: Element | null) {
+export function useWebGL(
+  adapter: ViewerAdapter,
+  parent: Element | null,
+  initialViewport: Rect | null,
+) {
   const {
     workspace,
     layers,
@@ -30,11 +34,10 @@ export function useWebGL(adapter: ViewerAdapter, parent: Element | null) {
     let canvas: HTMLCanvasElement | undefined;
     let controller: WebGLController | undefined;
     const abortController = new AbortController();
-    if (parent !== null) {
+    if (parent !== null && initialViewport !== null) {
       console.debug("Initializing WebGL");
-      canvas = WebGLController.createCanvas();
-      parent.appendChild(canvas);
-      controller = new WebGLController(canvas);
+      canvas = parent.appendChild(WebGLController.createCanvas());
+      controller = new WebGLController(canvas, initialViewport);
       controller.initialize({ signal: abortController.signal }).then(
         (controller) => {
           if (!abortController.signal.aborted) {
@@ -60,7 +63,7 @@ export function useWebGL(adapter: ViewerAdapter, parent: Element | null) {
         parent.removeChild(canvas);
       }
     };
-  }, [parent]);
+  }, [parent, initialViewport]);
 
   useEffect(() => {
     const controller = controllerRef.current;

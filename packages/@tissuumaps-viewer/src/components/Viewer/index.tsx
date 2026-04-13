@@ -1,4 +1,10 @@
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import { type OpenSeadragonController } from "@tissuumaps/core";
 
@@ -16,15 +22,26 @@ export type ViewerProps = {
 
 export function Viewer({ adapter, children, className }: ViewerProps) {
   const [os, setOS] = useState<OpenSeadragonController | null>(null);
+  const { parent, initialViewport } = useMemo(() => {
+    if (os !== null) {
+      return {
+        parent: os.viewer.canvas,
+        initialViewport: os.viewer.viewport.getBoundsNoRotate(true),
+      };
+    }
+    return { parent: null, initialViewport: null };
+  }, [os]);
 
   const { controllerRef: glRef, controllerReady: glReady } = useWebGL(
     adapter,
-    os !== null ? os.viewer.canvas : null,
+    parent,
+    initialViewport,
   );
 
   const { controllerRef: svgRef, controllerReady: svgReady } = useSVG(
     adapter,
-    os !== null ? os.viewer.canvas : null,
+    parent,
+    initialViewport,
   );
 
   const fallbackBounds = useCallback(
@@ -79,6 +96,7 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
 
     return () => {
       if (os !== null) {
+        setOS(null);
         os.viewer.removeHandler("resize", resizeHandler);
         os.viewer.removeHandler("viewport-change", viewportChangeHandler);
       }

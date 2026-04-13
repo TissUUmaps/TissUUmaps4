@@ -10,7 +10,7 @@ export class SVGController {
   public readonly transformNode: SVGGElement;
   public readonly shapeCompleteHandler?: (shape: MultiPolygon) => void;
   private _containerSize: { width: number; height: number };
-  private _viewport?: Rect;
+  private _viewport: Rect;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore currently not used, but will be needed in the future
   private _interactionMode?: InteractionMode;
@@ -28,13 +28,16 @@ export class SVGController {
 
   /**
    * @param container - The `<svg>` element to draw on (typically created by {@link createContainer})
+   * @param initialViewport - Initial world-space viewport rectangle
    * @param options - Optional shape drawing event handlers
    */
   constructor(
     container: SVGSVGElement,
+    initialViewport: Rect,
     options?: { onShapeComplete?: (shape: MultiPolygon) => void },
   ) {
     this.container = container;
+    this._viewport = initialViewport;
     this.transformNode = document.createElementNS(SVG_NAMESPACE, "g");
     this.shapeCompleteHandler = options?.onShapeComplete;
     this._containerSize = {
@@ -53,7 +56,6 @@ export class SVGController {
    */
   setViewport(newViewport: Rect): boolean {
     if (
-      this._viewport === undefined ||
       this._viewport.x !== newViewport.x ||
       this._viewport.y !== newViewport.y ||
       this._viewport.width !== newViewport.width ||
@@ -116,17 +118,13 @@ export class SVGController {
    * (in screen coordinates) and the current viewport (in world coordinates)
    */
   private _updateTransformNode() {
-    if (this._viewport !== undefined) {
-      const sx = this._containerSize.width / this._viewport.width;
-      const sy = this._containerSize.height / this._viewport.height;
-      const tx = -this._viewport.x * sx;
-      const ty = -this._viewport.y * sy;
-      this.transformNode.setAttribute(
-        "transform",
-        `translate(${tx} ${ty}) scale(${sx} ${sy})`,
-      );
-    } else {
-      this.transformNode.removeAttribute("transform");
-    }
+    const sx = this._containerSize.width / this._viewport.width;
+    const sy = this._containerSize.height / this._viewport.height;
+    const tx = -this._viewport.x * sx;
+    const ty = -this._viewport.y * sy;
+    this.transformNode.setAttribute(
+      "transform",
+      `translate(${tx} ${ty}) scale(${sx} ${sy})`,
+    );
   }
 }
