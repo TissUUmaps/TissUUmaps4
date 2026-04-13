@@ -20,7 +20,7 @@ import {
 } from "@tissuumaps/core";
 
 import { markers } from "@/components/markers";
-import { type ItemsDataTableRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
+import { type ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
 import { useTissUUmaps } from "@/store";
 
 export function usePointsDataTableColumns(
@@ -34,17 +34,18 @@ export function usePointsDataTableColumns(
   const visibilityMaps = useTissUUmaps((state) => state.visibilityMaps);
   const opacityMaps = useTissUUmaps((state) => state.opacityMaps);
 
-  const extraTableColumnDefs: ColumnDef<ItemsDataTableRowData>[] =
+  const extraTableGroupColumnDefs: ColumnDef<ItemsDataTableGroupRowData>[] =
     useMemo(() => {
-      let isMarkerGroup = false;
-      let groupMarkers: Map<string, Marker> | undefined;
+      const columnDefs: ColumnDef<ItemsDataTableGroupRowData>[] = [];
+
+      // marker
       if (
         getActiveConfigSource(points.pointMarker) === "groupBy" &&
         isGroupByConfig(points.pointMarker) &&
         points.pointMarker.groupBy.table === currentTable &&
         points.pointMarker.groupBy.column === currentGroupByColumn
       ) {
-        isMarkerGroup = true;
+        let groupMarkers: Map<string, Marker> | undefined;
         const markerMapId = points.pointMarker.groupBy.map;
         if (markerMapId !== undefined) {
           const markerMap = markerMaps.find((map) => map.id === markerMapId);
@@ -52,17 +53,31 @@ export function usePointsDataTableColumns(
             groupMarkers = new Map(Object.entries(markerMap.values));
           }
         }
+        columnDefs.push({
+          id: "marker",
+          size: 60,
+          header: "marker",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let marker: Marker | undefined;
+            if (groupMarkers !== undefined) {
+              marker = groupMarkers.get(group) ?? defaultPointMarker;
+            } else {
+              marker = HashUtils.djb2Pick(markerPalette, group);
+            }
+            return markers.find((m) => m.value === marker)!.icon;
+          },
+        });
       }
 
-      let isSizeGroup = false;
-      let groupSizes: Map<string, number> | undefined;
+      // size
       if (
         getActiveConfigSource(points.pointSize) === "groupBy" &&
         isGroupByConfig(points.pointSize) &&
         points.pointSize.groupBy.table === currentTable &&
         points.pointSize.groupBy.column === currentGroupByColumn
       ) {
-        isSizeGroup = true;
+        let groupSizes: Map<string, number> | undefined;
         const sizeMapId = points.pointSize.groupBy.map;
         if (sizeMapId !== undefined) {
           const sizeMap = sizeMaps.find((map) => map.id === sizeMapId);
@@ -70,18 +85,31 @@ export function usePointsDataTableColumns(
             groupSizes = new Map(Object.entries(sizeMap.values));
           }
         }
+        columnDefs.push({
+          id: "size",
+          size: 60,
+          header: "size",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let size: number | undefined;
+            if (groupSizes !== undefined) {
+              size = groupSizes.get(group) ?? defaultPointSize;
+            } else {
+              size = defaultPointSize;
+            }
+            return size;
+          },
+        });
       }
 
-      let isColorGroup = false;
-      let groupColors: Map<string, Color> | undefined;
-      let colorPalette: ColorPalette | undefined;
+      // color
       if (
         getActiveConfigSource(points.pointColor) === "groupBy" &&
         isGroupByConfig(points.pointColor) &&
         points.pointColor.groupBy.table === currentTable &&
         points.pointColor.groupBy.column === currentGroupByColumn
       ) {
-        isColorGroup = true;
+        let groupColors: Map<string, Color> | undefined;
         const colorMapId = points.pointColor.groupBy.map;
         if (colorMapId !== undefined) {
           const colorMap = colorMaps.find(
@@ -91,23 +119,45 @@ export function usePointsDataTableColumns(
             groupColors = new Map(Object.entries(colorMap.values));
           }
         }
+        let colorPalette: ColorPalette | undefined;
         const colorPaletteId = points.pointColor.groupBy.palette;
         if (colorPaletteId !== undefined) {
           colorPalette = colorPalettes.find(
             (palette) => palette.id === colorPaletteId,
           );
         }
+        columnDefs.push({
+          id: "color",
+          size: 60,
+          header: "color",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let color: Color | undefined;
+            if (groupColors !== undefined) {
+              color = groupColors.get(group) ?? defaultPointColor;
+            } else if (colorPalette !== undefined) {
+              color = HashUtils.djb2Pick(colorPalette.colors, group);
+            } else {
+              color = defaultPointColor;
+            }
+            return (
+              <Square
+                fill={`rgb(${color.r}, ${color.g}, ${color.b})`}
+                className="size-4"
+              />
+            );
+          },
+        });
       }
 
-      let isVisibilityGroup = false;
-      let groupVisibilities: Map<string, boolean> | undefined;
+      // visibility
       if (
         getActiveConfigSource(points.pointVisibility) === "groupBy" &&
         isGroupByConfig(points.pointVisibility) &&
         points.pointVisibility.groupBy.table === currentTable &&
         points.pointVisibility.groupBy.column === currentGroupByColumn
       ) {
-        isVisibilityGroup = true;
+        let groupVisibilities: Map<string, boolean> | undefined;
         const visibilityMapId = points.pointVisibility.groupBy.map;
         if (visibilityMapId !== undefined) {
           const visibilityMap = visibilityMaps.find(
@@ -117,17 +167,32 @@ export function usePointsDataTableColumns(
             groupVisibilities = new Map(Object.entries(visibilityMap.values));
           }
         }
+        columnDefs.push({
+          id: "visibility",
+          size: 60,
+          header: "visibility",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let visibility: boolean | undefined;
+            if (groupVisibilities !== undefined) {
+              visibility =
+                groupVisibilities.get(group) ?? defaultPointVisibility;
+            } else {
+              visibility = defaultPointVisibility;
+            }
+            return visibility ? <EyeIcon /> : <EyeOffIcon />;
+          },
+        });
       }
 
-      let isOpacityGroup = false;
-      let groupOpacities: Map<string, number> | undefined;
+      // opacity
       if (
         getActiveConfigSource(points.pointOpacity) === "groupBy" &&
         isGroupByConfig(points.pointOpacity) &&
         points.pointOpacity.groupBy.table === currentTable &&
         points.pointOpacity.groupBy.column === currentGroupByColumn
       ) {
-        isOpacityGroup = true;
+        let groupOpacities: Map<string, number> | undefined;
         const opacityMapId = points.pointOpacity.groupBy.map;
         if (opacityMapId !== undefined) {
           const opacityMap = opacityMaps.find(
@@ -137,120 +202,24 @@ export function usePointsDataTableColumns(
             groupOpacities = new Map(Object.entries(opacityMap.values));
           }
         }
+        columnDefs.push({
+          id: "opacity",
+          size: 60,
+          header: "opacity",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let opacity: number | undefined;
+            if (groupOpacities !== undefined) {
+              opacity = groupOpacities.get(group) ?? defaultPointOpacity;
+            } else {
+              opacity = defaultPointOpacity;
+            }
+            return opacity;
+          },
+        });
       }
 
-      return [
-        {
-          id: "marker",
-          header: "Marker",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isMarkerGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let marker: Marker | undefined;
-                if (groupMarkers !== undefined) {
-                  marker = groupMarkers.get(group) ?? defaultPointMarker;
-                } else {
-                  marker = HashUtils.djb2Pick(markerPalette, group);
-                }
-                return markers.find((m) => m.value === marker)!.icon;
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "size",
-          header: "Size",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isSizeGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let size: number | undefined;
-                if (groupSizes !== undefined) {
-                  size = groupSizes.get(group) ?? defaultPointSize;
-                } else {
-                  size = defaultPointSize;
-                }
-                return size;
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "color",
-          header: "Color",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isColorGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let color: Color | undefined;
-                if (groupColors !== undefined) {
-                  color = groupColors.get(group) ?? defaultPointColor;
-                } else if (colorPalette !== undefined) {
-                  color = HashUtils.djb2Pick(colorPalette.colors, group);
-                } else {
-                  color = defaultPointColor;
-                }
-                return (
-                  <Square fill={`rgb(${color.r}, ${color.g}, ${color.b})`} />
-                );
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "visibility",
-          header: "Visibility",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isVisibilityGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let visibility: boolean | undefined;
-                if (groupVisibilities !== undefined) {
-                  visibility =
-                    groupVisibilities.get(group) ?? defaultPointVisibility;
-                } else {
-                  visibility = defaultPointVisibility;
-                }
-                return visibility ? <EyeIcon /> : <EyeOffIcon />;
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "opacity",
-          header: "Opacity",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isOpacityGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let opacity: number | undefined;
-                if (groupOpacities !== undefined) {
-                  opacity = groupOpacities.get(group) ?? defaultPointOpacity;
-                } else {
-                  opacity = defaultPointOpacity;
-                }
-                return opacity;
-              }
-            }
-            return null;
-          },
-        },
-      ];
+      return columnDefs;
     }, [
       currentTable,
       currentGroupByColumn,
@@ -266,5 +235,5 @@ export function usePointsDataTableColumns(
       points.pointOpacity,
     ]);
 
-  return { extraTableColumnDefs };
+  return { extraTableGroupColumnDefs };
 }

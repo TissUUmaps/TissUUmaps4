@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   type Labels,
@@ -8,23 +8,24 @@ import {
 
 import { LabelsSettingsCategory } from "./category";
 
-export function useLabelsDataWidget(
-  labels: Labels,
-  selectedTable: string | null,
-  selectedGroupByColumn: string | null,
-  activeSettingsCategory: LabelsSettingsCategory | null,
-) {
-  const [synced, syncedTable, syncedGroupByColumn] = useMemo(() => {
+export function useLabelsDataWidget(labels: Labels) {
+  const [activeSettingsCategory, setActiveSettingsCategory] =
+    useState<LabelsSettingsCategory | null>(null);
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<
+    string | null
+  >(null);
+
+  const [activeTable, activeGroupByColumn] = useMemo(() => {
     if (
       activeSettingsCategory === LabelsSettingsCategory.labelColor &&
       getActiveConfigSource(labels.labelColor) === "groupBy" &&
       isGroupByConfig(labels.labelColor)
     ) {
       return [
-        true,
         labels.labelColor.groupBy.table,
         labels.labelColor.groupBy.column,
-      ];
+      ] as const;
     }
     if (
       activeSettingsCategory === LabelsSettingsCategory.labelVisibility &&
@@ -32,10 +33,9 @@ export function useLabelsDataWidget(
       isGroupByConfig(labels.labelVisibility)
     ) {
       return [
-        true,
         labels.labelVisibility.groupBy.table,
         labels.labelVisibility.groupBy.column,
-      ];
+      ] as const;
     }
     if (
       activeSettingsCategory === LabelsSettingsCategory.labelOpacity &&
@@ -43,20 +43,42 @@ export function useLabelsDataWidget(
       isGroupByConfig(labels.labelOpacity)
     ) {
       return [
-        true,
         labels.labelOpacity.groupBy.table,
         labels.labelOpacity.groupBy.column,
-      ];
+      ] as const;
     }
-    return [false, selectedTable, selectedGroupByColumn];
+    return [null, null] as const;
   }, [
-    selectedTable,
-    selectedGroupByColumn,
     activeSettingsCategory,
     labels.labelColor,
     labels.labelVisibility,
     labels.labelOpacity,
   ]);
 
-  return { synced, syncedTable, syncedGroupByColumn };
+  const [prevActiveTable, setPrevActiveTable] = useState(activeTable);
+  const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
+    useState(activeGroupByColumn);
+
+  if (activeTable !== prevActiveTable) {
+    setPrevActiveTable(activeTable);
+    if (activeTable !== null) {
+      setSelectedTable(activeTable);
+    }
+  }
+
+  if (activeGroupByColumn !== prevActiveGroupByColumn) {
+    setPrevActiveGroupByColumn(activeGroupByColumn);
+    if (activeGroupByColumn !== null) {
+      setSelectedGroupByColumn(activeGroupByColumn);
+    }
+  }
+
+  return {
+    activeSettingsCategory,
+    setActiveSettingsCategory,
+    selectedTable,
+    setSelectedTable,
+    selectedGroupByColumn,
+    setSelectedGroupByColumn,
+  };
 }

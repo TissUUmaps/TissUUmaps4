@@ -1,7 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { MathUtils, type Shapes } from "@tissuumaps/core";
 
@@ -24,7 +24,6 @@ import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
-import { type ShapesSettingsCategory } from "./category";
 import { useShapesDataTableColumns } from "./useShapesDataTableColumns";
 import { useShapesDataWidget } from "./useShapesDataWidget";
 
@@ -66,14 +65,14 @@ type ShapesAccordionItemProps = {
 };
 
 function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
-  const [activeSettingsCategory, setActiveSettingsCategory] =
-    useState<ShapesSettingsCategory | null>(null);
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
-  const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<
-    string | null
-  >(null);
-
-  const { ref, handleRef } = useSortable({ id: shapes.id, index });
+  const {
+    activeSettingsCategory,
+    setActiveSettingsCategory,
+    selectedTable,
+    setSelectedTable,
+    selectedGroupByColumn,
+    setSelectedGroupByColumn,
+  } = useShapesDataWidget(shapes);
 
   const loadedShapes = useTissUUmaps((state) => state.loadedShapes);
   const loadedShapesData = useTissUUmaps((state) => state.loadedShapesData);
@@ -83,6 +82,8 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
   const updateShapes = useTissUUmaps((state) => state.updateShapes);
   const deleteShapes = useTissUUmaps((state) => state.deleteShapes);
   const loadShapes = useTissUUmaps((state) => state.loadShapes);
+
+  const { ref, handleRef } = useSortable({ id: shapes.id, index });
 
   const data = useMemo(() => {
     const loadedDataKey = loadedShapes.get(shapes.id);
@@ -95,17 +96,10 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
     return null;
   }, [shapes.id, loadedShapes, loadedShapesData]);
 
-  const { synced, syncedTable, syncedGroupByColumn } = useShapesDataWidget(
+  const { extraTableGroupColumnDefs } = useShapesDataTableColumns(
     shapes,
     selectedTable,
     selectedGroupByColumn,
-    activeSettingsCategory,
-  );
-
-  const { extraTableColumnDefs } = useShapesDataTableColumns(
-    shapes,
-    syncedTable,
-    syncedGroupByColumn,
   );
 
   return (
@@ -119,12 +113,12 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             </AccordionTrigger>
           </div>
           <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-24">
-              <InputGroupAddon>OPA</InputGroupAddon>
+            <InputGroup className="w-20">
+              <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
                 inputMode="decimal"
-                step={0.01}
+                step={0.05}
                 min={0}
                 max={1}
                 value={shapes.opacity}
@@ -186,15 +180,14 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             <ItemsDataWidget
               data={data}
               tableHeight={200}
-              selectedTable={syncedTable}
+              selectedTable={selectedTable}
               onSelectedTableChange={setSelectedTable}
-              selectedGroupByColumn={syncedGroupByColumn}
+              selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraTableColumnDefs={extraTableColumnDefs}
-              selectionDisabled={synced}
+              extraTableGroupColumnDefs={extraTableGroupColumnDefs}
               className="bg-card"
             />
-          )}{" "}
+          )}
         </AccordionPanel>
       </AccordionItem>
     </div>

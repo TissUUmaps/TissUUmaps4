@@ -10,17 +10,15 @@ export type FloatArray = Float32Array | Float64Array; // Float16Array will be pa
 /** Union of all numeric typed arrays */
 export type TypedArray = IntArray | UintArray | FloatArray;
 
-/**
- * An {@link ArrayLike} that also exposes a `map` method, making it usable
- * in contexts that require both indexed access and functional transforms
- * (e.g. typed arrays and regular arrays)
- */
-export type MappableArrayLike<T> = ArrayLike<T> & {
-  map<U>(
-    callbackFn: (element: T, index: number, array: MappableArrayLike<T>) => U,
-    thisArg?: unknown,
-  ): MappableArrayLike<U>;
-};
+/** A union of all array types that can hold numeric values */
+export type NumericArray<T extends number = number> = T[] | TypedArray;
+
+/** A union of all array types */
+export type GenericArray<T> = T extends number
+  ? NumericArray<T>
+  : unknown extends T
+    ? NumericArray | T[]
+    : T[];
 
 /**
  * Interaction mode, determining how mouse events are interpreted

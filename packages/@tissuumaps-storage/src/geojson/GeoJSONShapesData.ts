@@ -1,4 +1,8 @@
-import { type MultiPolygon, type ShapesData } from "@tissuumaps/core";
+import {
+  type MultiPolygon,
+  type ProgressCallback,
+  type ShapesData,
+} from "@tissuumaps/core";
 
 export class GeoJSONShapesData implements ShapesData {
   private _ids: number[] | undefined;
@@ -33,6 +37,7 @@ export class GeoJSONShapesData implements ShapesData {
 
   loadMultiPolygons(options?: {
     signal?: AbortSignal;
+    onProgress?: ProgressCallback;
   }): Promise<MultiPolygon[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();

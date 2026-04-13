@@ -1,7 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { MathUtils, type Points } from "@tissuumaps/core";
 
@@ -24,7 +24,6 @@ import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
-import { type PointsSettingsCategory } from "./category";
 import { usePointsDataTableColumns } from "./usePointsDataTableColumns";
 import { usePointsDataWidget } from "./usePointsDataWidget";
 
@@ -66,14 +65,14 @@ type PointsAccordionItemProps = {
 };
 
 function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
-  const [activeSettingsCategory, setActiveSettingsCategory] =
-    useState<PointsSettingsCategory | null>(null);
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
-  const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<
-    string | null
-  >(null);
-
-  const { ref, handleRef } = useSortable({ id: points.id, index });
+  const {
+    activeSettingsCategory,
+    setActiveSettingsCategory,
+    selectedTable,
+    setSelectedTable,
+    selectedGroupByColumn,
+    setSelectedGroupByColumn,
+  } = usePointsDataWidget(points);
 
   const loadedPoints = useTissUUmaps((state) => state.loadedPoints);
   const loadedPointsData = useTissUUmaps((state) => state.loadedPointsData);
@@ -83,6 +82,8 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
   const deletePoints = useTissUUmaps((state) => state.deletePoints);
   const loadPoints = useTissUUmaps((state) => state.loadPoints);
+
+  const { ref, handleRef } = useSortable({ id: points.id, index });
 
   const data = useMemo(() => {
     const loadedDataKey = loadedPoints.get(points.id);
@@ -95,17 +96,10 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
     return null;
   }, [points.id, loadedPoints, loadedPointsData]);
 
-  const { synced, syncedTable, syncedGroupByColumn } = usePointsDataWidget(
+  const { extraTableGroupColumnDefs } = usePointsDataTableColumns(
     points,
     selectedTable,
     selectedGroupByColumn,
-    activeSettingsCategory,
-  );
-
-  const { extraTableColumnDefs } = usePointsDataTableColumns(
-    points,
-    syncedTable,
-    syncedGroupByColumn,
   );
 
   return (
@@ -119,8 +113,8 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </AccordionTrigger>
           </div>
           <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-24">
-              <InputGroupAddon>PSF</InputGroupAddon>
+            <InputGroup className="w-20">
+              <InputGroupAddon>s</InputGroupAddon>
               <InputGroupInput
                 type="number"
                 inputMode="decimal"
@@ -137,12 +131,12 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
                 }}
               />
             </InputGroup>
-            <InputGroup className="w-24">
-              <InputGroupAddon>OPA</InputGroupAddon>
+            <InputGroup className="w-20">
+              <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
                 inputMode="decimal"
-                step={0.01}
+                step={0.05}
                 min={0}
                 max={1}
                 value={points.opacity}
@@ -204,12 +198,11 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             <ItemsDataWidget
               data={data}
               tableHeight={200}
-              selectedTable={syncedTable}
+              selectedTable={selectedTable}
               onSelectedTableChange={setSelectedTable}
-              selectedGroupByColumn={syncedGroupByColumn}
+              selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraTableColumnDefs={extraTableColumnDefs}
-              selectionDisabled={synced}
+              extraTableGroupColumnDefs={extraTableGroupColumnDefs}
               className="bg-card"
             />
           )}

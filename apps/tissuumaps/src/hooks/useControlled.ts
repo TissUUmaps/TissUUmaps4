@@ -16,5 +16,5 @@ export function useControlled<T>(
       setControlledValue(newValue);
     }
   };
-  return [value, setValue];
+  return [value, setValue] as const;
 }

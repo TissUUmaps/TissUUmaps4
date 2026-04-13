@@ -3,7 +3,7 @@ import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
 import {
-  type MappableArrayLike,
+  type GenericArray,
   type ProgressCallback,
   type TableData,
 } from "@tissuumaps/core";
@@ -14,10 +14,6 @@ export class ParquetTableData implements TableData {
   private readonly _buffer: hyparquet.AsyncBuffer;
   private readonly _metadata: hyparquet.FileMetaData;
   private readonly _columns: string[];
-  private readonly _columnValues: Map<string, MappableArrayLike<unknown>> =
-    new Map();
-  private readonly _columnValueRanges: Map<string, [number, number]> =
-    new Map();
 
   constructor(
     ids: number[] | undefined,
@@ -75,15 +71,9 @@ export class ParquetTableData implements TableData {
   async loadValues<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<MappableArrayLike<T>> {
+  ): Promise<GenericArray<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    let columnValues = this._columnValues.get(column) as
-      | MappableArrayLike<T>
-      | undefined;
-    if (columnValues !== undefined) {
-      return columnValues;
-    }
     const rawColumnData = await parquetReadColumn({
       file: this._buffer,
       columns: [column],
@@ -91,27 +81,33 @@ export class ParquetTableData implements TableData {
       compressors: compressors,
     });
     signal?.throwIfAborted();
-    columnValues = Array.from(rawColumnData) as MappableArrayLike<T>;
-    this._columnValues.set(column, columnValues);
-    return columnValues;
+    return Array.from(rawColumnData) as GenericArray<T>;
+  }
+
+  async loadUniqueValues<T>(
+    column: string,
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+  ): Promise<GenericArray<T>> {
+    const { signal, onProgress } = options ?? {};
+    signal?.throwIfAborted();
+    const values = await this.loadValues(column, { signal, onProgress });
+    signal?.throwIfAborted();
+    const uniqueValues = Array.from(new Set(values));
+    return await Promise.resolve(uniqueValues as GenericArray<T>);
   }
 
   async loadValueRange(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<[number, number] | undefined> {
-    const { signal } = options ?? {};
+    const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
-    let valueRange = this._columnValueRanges.get(column);
-    if (valueRange !== undefined) {
-      return valueRange;
-    }
-    const columnValues = await this.loadValues(column, { signal });
+    const values = await this.loadValues(column, { signal, onProgress });
     signal?.throwIfAborted();
-    if (typeof columnValues[0] === "number") {
+    if (typeof values[0] === "number") {
       let vmin, vmax;
-      for (let i = 0; i < columnValues.length; i++) {
-        const v = columnValues[i];
+      for (let i = 0; i < values.length; i++) {
+        const v = values[i];
         if (typeof v === "number" && Number.isFinite(v)) {
           if (vmin === undefined || v < vmin) {
             vmin = v;
@@ -122,11 +118,10 @@ export class ParquetTableData implements TableData {
         }
       }
       if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
-        valueRange = [vmin, vmax];
-        this._columnValueRanges.set(column, valueRange);
+        return [vmin, vmax];
       }
     }
-    return valueRange;
+    return undefined;
   }
 
   close(): void {}

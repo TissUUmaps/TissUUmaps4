@@ -1,7 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { type Labels, MathUtils } from "@tissuumaps/core";
 
@@ -24,7 +24,6 @@ import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
-import { type LabelsSettingsCategory } from "./category";
 import { useLabelsDataTableColumns } from "./useLabelsDataTableColumns";
 import { useLabelsDataWidget } from "./useLabelsDataWidget";
 
@@ -66,14 +65,14 @@ type LabelsAccordionItemProps = {
 };
 
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
-  const [activeSettingsCategory, setActiveSettingsCategory] =
-    useState<LabelsSettingsCategory | null>(null);
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
-  const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<
-    string | null
-  >(null);
-
-  const { ref, handleRef } = useSortable({ id: labels.id, index });
+  const {
+    activeSettingsCategory,
+    setActiveSettingsCategory,
+    selectedTable,
+    setSelectedTable,
+    selectedGroupByColumn,
+    setSelectedGroupByColumn,
+  } = useLabelsDataWidget(labels);
 
   const loadedLabels = useTissUUmaps((state) => state.loadedLabels);
   const loadedLabelsData = useTissUUmaps((state) => state.loadedLabelsData);
@@ -83,6 +82,8 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
   const deleteLabels = useTissUUmaps((state) => state.deleteLabels);
   const loadLabels = useTissUUmaps((state) => state.loadLabels);
+
+  const { ref, handleRef } = useSortable({ id: labels.id, index });
 
   const data = useMemo(() => {
     const loadedDataKey = loadedLabels.get(labels.id);
@@ -95,17 +96,10 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
     return null;
   }, [labels.id, loadedLabels, loadedLabelsData]);
 
-  const { synced, syncedTable, syncedGroupByColumn } = useLabelsDataWidget(
+  const { extraTableGroupColumnDefs } = useLabelsDataTableColumns(
     labels,
     selectedTable,
     selectedGroupByColumn,
-    activeSettingsCategory,
-  );
-
-  const { extraTableColumnDefs } = useLabelsDataTableColumns(
-    labels,
-    syncedTable,
-    syncedGroupByColumn,
   );
 
   return (
@@ -119,12 +113,12 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             </AccordionTrigger>
           </div>
           <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-24">
-              <InputGroupAddon>OPA</InputGroupAddon>
+            <InputGroup className="w-20">
+              <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
                 inputMode="decimal"
-                step={0.01}
+                step={0.05}
                 min={0}
                 max={1}
                 value={labels.opacity}
@@ -186,12 +180,11 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             <ItemsDataWidget
               data={data}
               tableHeight={200}
-              selectedTable={syncedTable}
+              selectedTable={selectedTable}
               onSelectedTableChange={setSelectedTable}
-              selectedGroupByColumn={syncedGroupByColumn}
+              selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraTableColumnDefs={extraTableColumnDefs}
-              selectionDisabled={synced}
+              extraTableGroupColumnDefs={extraTableGroupColumnDefs}
               className="bg-card"
             />
           )}

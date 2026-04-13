@@ -18,7 +18,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { type ItemsDataTableRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
+import { type ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
 import { useTissUUmaps } from "@/store";
 
 export function useShapesDataTableColumns(
@@ -30,18 +30,18 @@ export function useShapesDataTableColumns(
   const visibilityMaps = useTissUUmaps((state) => state.visibilityMaps);
   const opacityMaps = useTissUUmaps((state) => state.opacityMaps);
 
-  const extraTableColumnDefs: ColumnDef<ItemsDataTableRowData>[] =
+  const extraTableGroupColumnDefs: ColumnDef<ItemsDataTableGroupRowData>[] =
     useMemo(() => {
-      let isFillColorGroup = false;
-      let groupFillColors: Map<string, Color> | undefined;
-      let fillColorPalette: ColorPalette | undefined;
+      const columnDefs: ColumnDef<ItemsDataTableGroupRowData>[] = [];
+
+      // fill color
       if (
         getActiveConfigSource(shapes.shapeFillColor) === "groupBy" &&
         isGroupByConfig(shapes.shapeFillColor) &&
         shapes.shapeFillColor.groupBy.table === currentTable &&
         shapes.shapeFillColor.groupBy.column === currentGroupByColumn
       ) {
-        isFillColorGroup = true;
+        let groupFillColors: Map<string, Color> | undefined;
         const colorMapId = shapes.shapeFillColor.groupBy.map;
         if (colorMapId !== undefined) {
           const colorMap = colorMaps.find((map) => map.id === colorMapId);
@@ -49,23 +49,45 @@ export function useShapesDataTableColumns(
             groupFillColors = new Map(Object.entries(colorMap.values));
           }
         }
+        let fillColorPalette: ColorPalette | undefined;
         const colorPaletteId = shapes.shapeFillColor.groupBy.palette;
         if (colorPaletteId !== undefined) {
           fillColorPalette = colorPalettes.find(
             (palette) => palette.id === colorPaletteId,
           );
         }
+        columnDefs.push({
+          id: "fillColor",
+          size: 60,
+          header: "fill",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let fillColor: Color | undefined;
+            if (groupFillColors !== undefined) {
+              fillColor = groupFillColors.get(group) ?? defaultShapeFillColor;
+            } else if (fillColorPalette !== undefined) {
+              fillColor = HashUtils.djb2Pick(fillColorPalette.colors, group);
+            } else {
+              fillColor = defaultShapeFillColor;
+            }
+            return (
+              <Square
+                fill={`rgb(${fillColor.r}, ${fillColor.g}, ${fillColor.b})`}
+                className="size-4"
+              />
+            );
+          },
+        });
       }
 
-      let isFillVisibilityGroup = false;
-      let groupFillVisibilities: Map<string, boolean> | undefined;
+      // fill visibility
       if (
         getActiveConfigSource(shapes.shapeFillVisibility) === "groupBy" &&
         isGroupByConfig(shapes.shapeFillVisibility) &&
         shapes.shapeFillVisibility.groupBy.table === currentTable &&
         shapes.shapeFillVisibility.groupBy.column === currentGroupByColumn
       ) {
-        isFillVisibilityGroup = true;
+        let groupFillVisibilities: Map<string, boolean> | undefined;
         const visibilityMapId = shapes.shapeFillVisibility.groupBy.map;
         if (visibilityMapId !== undefined) {
           const visibilityMap = visibilityMaps.find(
@@ -77,17 +99,32 @@ export function useShapesDataTableColumns(
             );
           }
         }
+        columnDefs.push({
+          id: "fillVisibility",
+          size: 60,
+          header: "visibility",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let fillVisibility: boolean | undefined;
+            if (groupFillVisibilities !== undefined) {
+              fillVisibility =
+                groupFillVisibilities.get(group) ?? defaultShapeFillVisibility;
+            } else {
+              fillVisibility = defaultShapeFillVisibility;
+            }
+            return fillVisibility ? <EyeIcon /> : <EyeOffIcon />;
+          },
+        });
       }
 
-      let isFillOpacityGroup = false;
-      let groupFillOpacities: Map<string, number> | undefined;
+      // fill opacity
       if (
         getActiveConfigSource(shapes.shapeFillOpacity) === "groupBy" &&
         isGroupByConfig(shapes.shapeFillOpacity) &&
         shapes.shapeFillOpacity.groupBy.table === currentTable &&
         shapes.shapeFillOpacity.groupBy.column === currentGroupByColumn
       ) {
-        isFillOpacityGroup = true;
+        let groupFillOpacities: Map<string, number> | undefined;
         const opacityMapId = shapes.shapeFillOpacity.groupBy.map;
         if (opacityMapId !== undefined) {
           const opacityMap = opacityMaps.find(
@@ -97,18 +134,32 @@ export function useShapesDataTableColumns(
             groupFillOpacities = new Map(Object.entries(opacityMap.values));
           }
         }
+        columnDefs.push({
+          id: "fillOpacity",
+          size: 60,
+          header: "opacity",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let fillOpacity: number | undefined;
+            if (groupFillOpacities !== undefined) {
+              fillOpacity =
+                groupFillOpacities.get(group) ?? defaultShapeFillOpacity;
+            } else {
+              fillOpacity = defaultShapeFillOpacity;
+            }
+            return fillOpacity;
+          },
+        });
       }
 
-      let isStrokeColorGroup = false;
-      let groupStrokeColors: Map<string, Color> | undefined;
-      let strokeColorPalette: ColorPalette | undefined;
+      // stroke color
       if (
         getActiveConfigSource(shapes.shapeStrokeColor) === "groupBy" &&
         isGroupByConfig(shapes.shapeStrokeColor) &&
         shapes.shapeStrokeColor.groupBy.table === currentTable &&
         shapes.shapeStrokeColor.groupBy.column === currentGroupByColumn
       ) {
-        isStrokeColorGroup = true;
+        let groupStrokeColors: Map<string, Color> | undefined;
         const colorMapId = shapes.shapeStrokeColor.groupBy.map;
         if (colorMapId !== undefined) {
           const colorMap = colorMaps.find(
@@ -118,23 +169,49 @@ export function useShapesDataTableColumns(
             groupStrokeColors = new Map(Object.entries(colorMap.values));
           }
         }
+        let strokeColorPalette: ColorPalette | undefined;
         const colorPaletteId = shapes.shapeStrokeColor.groupBy.palette;
         if (colorPaletteId !== undefined) {
           strokeColorPalette = colorPalettes.find(
             (palette) => palette.id === colorPaletteId,
           );
         }
+        columnDefs.push({
+          id: "strokeColor",
+          size: 60,
+          header: "outline",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let strokeColor: Color | undefined;
+            if (groupStrokeColors !== undefined) {
+              strokeColor =
+                groupStrokeColors.get(group) ?? defaultShapeStrokeColor;
+            } else if (strokeColorPalette !== undefined) {
+              strokeColor = HashUtils.djb2Pick(
+                strokeColorPalette.colors,
+                group,
+              );
+            } else {
+              strokeColor = defaultShapeStrokeColor;
+            }
+            return (
+              <Square
+                fill={`rgb(${strokeColor.r}, ${strokeColor.g}, ${strokeColor.b})`}
+                className="size-4"
+              />
+            );
+          },
+        });
       }
 
-      let isStrokeVisibilityGroup = false;
-      let groupStrokeVisibilities: Map<string, boolean> | undefined;
+      // stroke visibility
       if (
         getActiveConfigSource(shapes.shapeStrokeVisibility) === "groupBy" &&
         isGroupByConfig(shapes.shapeStrokeVisibility) &&
         shapes.shapeStrokeVisibility.groupBy.table === currentTable &&
         shapes.shapeStrokeVisibility.groupBy.column === currentGroupByColumn
       ) {
-        isStrokeVisibilityGroup = true;
+        let groupStrokeVisibilities: Map<string, boolean> | undefined;
         const visibilityMapId = shapes.shapeStrokeVisibility.groupBy.map;
         if (visibilityMapId !== undefined) {
           const visibilityMap = visibilityMaps.find(
@@ -146,17 +223,33 @@ export function useShapesDataTableColumns(
             );
           }
         }
+        columnDefs.push({
+          id: "strokeVisibility",
+          size: 60,
+          header: "visibility",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let strokeVisibility: boolean | undefined;
+            if (groupStrokeVisibilities !== undefined) {
+              strokeVisibility =
+                groupStrokeVisibilities.get(group) ??
+                defaultShapeStrokeVisibility;
+            } else {
+              strokeVisibility = defaultShapeStrokeVisibility;
+            }
+            return strokeVisibility ? <EyeIcon /> : <EyeOffIcon />;
+          },
+        });
       }
 
-      let isStrokeOpacityGroup = false;
-      let groupStrokeOpacities: Map<string, number> | undefined;
+      // stroke opacity
       if (
         getActiveConfigSource(shapes.shapeStrokeOpacity) === "groupBy" &&
         isGroupByConfig(shapes.shapeStrokeOpacity) &&
         shapes.shapeStrokeOpacity.groupBy.table === currentTable &&
         shapes.shapeStrokeOpacity.groupBy.column === currentGroupByColumn
       ) {
-        isStrokeOpacityGroup = true;
+        let groupStrokeOpacities: Map<string, number> | undefined;
         const opacityMapId = shapes.shapeStrokeOpacity.groupBy.map;
         if (opacityMapId !== undefined) {
           const opacityMap = opacityMaps.find(
@@ -166,163 +259,25 @@ export function useShapesDataTableColumns(
             groupStrokeOpacities = new Map(Object.entries(opacityMap.values));
           }
         }
+        columnDefs.push({
+          id: "strokeOpacity",
+          size: 60,
+          header: "opacity",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let strokeOpacity: number | undefined;
+            if (groupStrokeOpacities !== undefined) {
+              strokeOpacity =
+                groupStrokeOpacities.get(group) ?? defaultShapeStrokeOpacity;
+            } else {
+              strokeOpacity = defaultShapeStrokeOpacity;
+            }
+            return strokeOpacity;
+          },
+        });
       }
 
-      return [
-        {
-          id: "fillColor",
-          header: "Fill Color",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isFillColorGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let fillColor: Color | undefined;
-                if (groupFillColors !== undefined) {
-                  fillColor =
-                    groupFillColors.get(group) ?? defaultShapeFillColor;
-                } else if (fillColorPalette !== undefined) {
-                  fillColor = HashUtils.djb2Pick(
-                    fillColorPalette.colors,
-                    group,
-                  );
-                } else {
-                  fillColor = defaultShapeFillColor;
-                }
-                return (
-                  <Square
-                    fill={`rgb(${fillColor.r}, ${fillColor.g}, ${fillColor.b})`}
-                  />
-                );
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "fillVisibility",
-          header: "Fill Visibility",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isFillVisibilityGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let fillVisibility: boolean | undefined;
-                if (groupFillVisibilities !== undefined) {
-                  fillVisibility =
-                    groupFillVisibilities.get(group) ??
-                    defaultShapeFillVisibility;
-                } else {
-                  fillVisibility = defaultShapeFillVisibility;
-                }
-                return fillVisibility ? <EyeIcon /> : <EyeOffIcon />;
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "fillOpacity",
-          header: "Fill Opacity",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isFillOpacityGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let fillOpacity: number | undefined;
-                if (groupFillOpacities !== undefined) {
-                  fillOpacity =
-                    groupFillOpacities.get(group) ?? defaultShapeFillOpacity;
-                } else {
-                  fillOpacity = defaultShapeFillOpacity;
-                }
-                return fillOpacity;
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "strokeColor",
-          header: "Stroke Color",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isStrokeColorGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let strokeColor: Color | undefined;
-                if (groupStrokeColors !== undefined) {
-                  strokeColor =
-                    groupStrokeColors.get(group) ?? defaultShapeStrokeColor;
-                } else if (strokeColorPalette !== undefined) {
-                  strokeColor = HashUtils.djb2Pick(
-                    strokeColorPalette.colors,
-                    group,
-                  );
-                } else {
-                  strokeColor = defaultShapeStrokeColor;
-                }
-                return (
-                  <Square
-                    fill={`rgb(${strokeColor.r}, ${strokeColor.g}, ${strokeColor.b})`}
-                  />
-                );
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "strokeVisibility",
-          header: "Stroke Visibility",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isStrokeVisibilityGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let strokeVisibility: boolean | undefined;
-                if (groupStrokeVisibilities !== undefined) {
-                  strokeVisibility =
-                    groupStrokeVisibilities.get(group) ??
-                    defaultShapeStrokeVisibility;
-                } else {
-                  strokeVisibility = defaultShapeStrokeVisibility;
-                }
-                return strokeVisibility ? <EyeIcon /> : <EyeOffIcon />;
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "strokeOpacity",
-          header: "Stroke Opacity",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isStrokeOpacityGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let strokeOpacity: number | undefined;
-                if (groupStrokeOpacities !== undefined) {
-                  strokeOpacity =
-                    groupStrokeOpacities.get(group) ??
-                    defaultShapeStrokeOpacity;
-                } else {
-                  strokeOpacity = defaultShapeStrokeOpacity;
-                }
-                return strokeOpacity;
-              }
-            }
-            return null;
-          },
-        },
-      ];
+      return columnDefs;
     }, [
       currentTable,
       currentGroupByColumn,
@@ -337,5 +292,5 @@ export function useShapesDataTableColumns(
       shapes.shapeStrokeOpacity,
     ]);
 
-  return { extraTableColumnDefs };
+  return { extraTableGroupColumnDefs };
 }

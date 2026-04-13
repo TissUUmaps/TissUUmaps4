@@ -11,7 +11,11 @@ import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-import { ItemsDataTable, type ItemsDataTableRowData } from "./ItemsDataTable";
+import {
+  ItemsDataTable,
+  type ItemsDataTableGroupRowData,
+  type ItemsDataTableRowData,
+} from "./ItemsDataTable";
 
 export type ItemsDataWidgetProps = {
   data: ItemsData;
@@ -21,7 +25,7 @@ export type ItemsDataWidgetProps = {
   onSelectedTableChange?: (table: string | null) => void;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
   extraTableColumnDefs?: ColumnDef<ItemsDataTableRowData>[];
-  selectionDisabled?: boolean;
+  extraTableGroupColumnDefs?: ColumnDef<ItemsDataTableGroupRowData>[];
   className?: string;
 };
 
@@ -33,7 +37,7 @@ export function ItemsDataWidget({
   onSelectedTableChange: setControlledSelectedTable,
   onSelectedGroupByColumnChange: setControlledSelectedGroupByColumn,
   extraTableColumnDefs,
-  selectionDisabled,
+  extraTableGroupColumnDefs,
   className,
 }: ItemsDataWidgetProps) {
   const [selectedTable, setSelectedTable] = useControlled(
@@ -59,17 +63,21 @@ export function ItemsDataWidget({
         Data
       </FieldsetLegend>
       <div className="grid grid-cols-2 gap-x-2">
-        <Field disabled={selectionDisabled}>
+        <Field>
           <FieldLabel>Table</FieldLabel>
           <SimpleSelect
             items={tables}
             itemLabel={(table) => table.name}
             itemValue={(table) => table.id}
             value={selectedTable}
-            onValueChange={setSelectedTable}
+            onValueChange={(value) => {
+              setSelectedGroupByColumn(null);
+              setSelectedTable(value);
+            }}
+            nullable
           />
         </Field>
-        <Field disabled={selectionDisabled || selectedTable === null}>
+        <Field disabled={selectedTable === null}>
           <FieldLabel>Group by</FieldLabel>
           <SimpleAsyncCombobox
             suggestQueries={suggestTableColumnQueries}
@@ -86,6 +94,7 @@ export function ItemsDataWidget({
         table={selectedTable}
         groupByColumn={selectedGroupByColumn}
         extraColumnDefs={extraTableColumnDefs}
+        extraGroupColumnDefs={extraTableGroupColumnDefs}
       />
     </Fieldset>
   );

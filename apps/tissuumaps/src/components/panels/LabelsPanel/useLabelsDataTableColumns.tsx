@@ -15,7 +15,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { type ItemsDataTableRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
+import { type ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
 import { useTissUUmaps } from "@/store";
 
 export function useLabelsDataTableColumns(
@@ -27,18 +27,18 @@ export function useLabelsDataTableColumns(
   const visibilityMaps = useTissUUmaps((state) => state.visibilityMaps);
   const opacityMaps = useTissUUmaps((state) => state.opacityMaps);
 
-  const extraTableColumnDefs: ColumnDef<ItemsDataTableRowData>[] =
+  const extraTableGroupColumnDefs: ColumnDef<ItemsDataTableGroupRowData>[] =
     useMemo(() => {
-      let isColorGroup = false;
-      let groupColors: Map<string, Color> | undefined;
-      let colorPalette: ColorPalette | undefined;
+      const columnDefs: ColumnDef<ItemsDataTableGroupRowData>[] = [];
+
+      // color
       if (
         getActiveConfigSource(labels.labelColor) === "groupBy" &&
         isGroupByConfig(labels.labelColor) &&
         labels.labelColor.groupBy.table === currentTable &&
         labels.labelColor.groupBy.column === currentGroupByColumn
       ) {
-        isColorGroup = true;
+        let groupColors: Map<string, Color> | undefined;
         const colorMapId = labels.labelColor.groupBy.map;
         if (colorMapId !== undefined) {
           const colorMap = colorMaps.find((map) => map.id === colorMapId);
@@ -46,23 +46,45 @@ export function useLabelsDataTableColumns(
             groupColors = new Map(Object.entries(colorMap.values));
           }
         }
+        let colorPalette: ColorPalette | undefined;
         const colorPaletteId = labels.labelColor.groupBy.palette;
         if (colorPaletteId !== undefined) {
           colorPalette = colorPalettes.find(
             (palette) => palette.id === colorPaletteId,
           );
         }
+        columnDefs.push({
+          id: "color",
+          size: 60,
+          header: "color",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let color: Color | undefined;
+            if (groupColors !== undefined) {
+              color = groupColors.get(group) ?? defaultLabelColor;
+            } else if (colorPalette !== undefined) {
+              color = HashUtils.djb2Pick(colorPalette.colors, group);
+            } else {
+              color = defaultLabelColor;
+            }
+            return (
+              <Square
+                fill={`rgb(${color.r}, ${color.g}, ${color.b})`}
+                className="size-4"
+              />
+            );
+          },
+        });
       }
 
-      let isVisibilityGroup = false;
-      let groupVisibilities: Map<string, boolean> | undefined;
+      // visibility
       if (
         getActiveConfigSource(labels.labelVisibility) === "groupBy" &&
         isGroupByConfig(labels.labelVisibility) &&
         labels.labelVisibility.groupBy.table === currentTable &&
         labels.labelVisibility.groupBy.column === currentGroupByColumn
       ) {
-        isVisibilityGroup = true;
+        let groupVisibilities: Map<string, boolean> | undefined;
         const visibilityMapId = labels.labelVisibility.groupBy.map;
         if (visibilityMapId !== undefined) {
           const visibilityMap = visibilityMaps.find(
@@ -72,17 +94,32 @@ export function useLabelsDataTableColumns(
             groupVisibilities = new Map(Object.entries(visibilityMap.values));
           }
         }
+        columnDefs.push({
+          id: "visibility",
+          size: 60,
+          header: "visibility",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let visibility: boolean | undefined;
+            if (groupVisibilities !== undefined) {
+              visibility =
+                groupVisibilities.get(group) ?? defaultLabelVisibility;
+            } else {
+              visibility = defaultLabelVisibility;
+            }
+            return visibility ? <EyeIcon /> : <EyeOffIcon />;
+          },
+        });
       }
 
-      let isOpacityGroup = false;
-      let groupOpacities: Map<string, number> | undefined;
+      // opacity
       if (
         getActiveConfigSource(labels.labelOpacity) === "groupBy" &&
         isGroupByConfig(labels.labelOpacity) &&
         labels.labelOpacity.groupBy.table === currentTable &&
         labels.labelOpacity.groupBy.column === currentGroupByColumn
       ) {
-        isOpacityGroup = true;
+        let groupOpacities: Map<string, number> | undefined;
         const opacityMapId = labels.labelOpacity.groupBy.map;
         if (opacityMapId !== undefined) {
           const opacityMap = opacityMaps.find(
@@ -92,78 +129,24 @@ export function useLabelsDataTableColumns(
             groupOpacities = new Map(Object.entries(opacityMap.values));
           }
         }
+        columnDefs.push({
+          id: "opacity",
+          size: 60,
+          header: "opacity",
+          cell: ({ row }) => {
+            const group = row.getValue<string>("group");
+            let opacity: number | undefined;
+            if (groupOpacities !== undefined) {
+              opacity = groupOpacities.get(group) ?? defaultLabelOpacity;
+            } else {
+              opacity = defaultLabelOpacity;
+            }
+            return opacity;
+          },
+        });
       }
 
-      return [
-        {
-          id: "color",
-          header: "Color",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isColorGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let color: Color | undefined;
-                if (groupColors !== undefined) {
-                  color = groupColors.get(group) ?? defaultLabelColor;
-                } else if (colorPalette !== undefined) {
-                  color = HashUtils.djb2Pick(colorPalette.colors, group);
-                } else {
-                  color = defaultLabelColor;
-                }
-                return (
-                  <Square fill={`rgb(${color.r}, ${color.g}, ${color.b})`} />
-                );
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "visibility",
-          header: "Visibility",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isVisibilityGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let visibility: boolean | undefined;
-                if (groupVisibilities !== undefined) {
-                  visibility =
-                    groupVisibilities.get(group) ?? defaultLabelVisibility;
-                } else {
-                  visibility = defaultLabelVisibility;
-                }
-                return visibility ? <EyeIcon /> : <EyeOffIcon />;
-              }
-            }
-            return null;
-          },
-        },
-        {
-          id: "opacity",
-          header: "Opacity",
-          cell: () => null,
-          aggregationFn: () => null,
-          aggregatedCell: ({ row }) => {
-            if (isOpacityGroup) {
-              const group = row.getGroupingValue("group") as string | undefined;
-              if (group !== undefined) {
-                let opacity: number | undefined;
-                if (groupOpacities !== undefined) {
-                  opacity = groupOpacities.get(group) ?? defaultLabelOpacity;
-                } else {
-                  opacity = defaultLabelOpacity;
-                }
-                return opacity;
-              }
-            }
-            return null;
-          },
-        },
-      ];
+      return columnDefs;
     }, [
       currentTable,
       currentGroupByColumn,
@@ -175,5 +158,5 @@ export function useLabelsDataTableColumns(
       labels.labelOpacity,
     ]);
 
-  return { extraTableColumnDefs };
+  return { extraTableGroupColumnDefs };
 }

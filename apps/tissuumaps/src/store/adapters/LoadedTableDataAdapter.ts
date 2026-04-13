@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 
 import {
-  type MappableArrayLike,
+  type GenericArray,
   type ProgressCallback,
   type TableData,
 } from "@tissuumaps/core";
@@ -49,11 +49,24 @@ export class LoadedTableDataAdapter implements TableData {
   async loadValues<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<MappableArrayLike<T>> {
+  ): Promise<GenericArray<T>> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const state = useTissUUmaps.getState();
     return await state.loadTableValues<T>(this._tableId, column, {
+      signal,
+      onProgress,
+    });
+  }
+
+  async loadUniqueValues<T>(
+    column: string,
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+  ): Promise<GenericArray<T>> {
+    const { signal, onProgress } = options ?? {};
+    signal?.throwIfAborted();
+    const state = useTissUUmaps.getState();
+    return await state.loadUniqueTableValues<T>(this._tableId, column, {
       signal,
       onProgress,
     });

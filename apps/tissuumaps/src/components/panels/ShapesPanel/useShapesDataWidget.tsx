@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   type Shapes,
@@ -8,23 +8,24 @@ import {
 
 import { ShapesSettingsCategory } from "./category";
 
-export function useShapesDataWidget(
-  shapes: Shapes,
-  selectedTable: string | null,
-  selectedGroupByColumn: string | null,
-  activeSettingsCategory: ShapesSettingsCategory | null,
-) {
-  const [synced, syncedTable, syncedGroupByColumn] = useMemo(() => {
+export function useShapesDataWidget(shapes: Shapes) {
+  const [activeSettingsCategory, setActiveSettingsCategory] =
+    useState<ShapesSettingsCategory | null>(null);
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<
+    string | null
+  >(null);
+
+  const [activeTable, activeGroupByColumn] = useMemo(() => {
     if (
       activeSettingsCategory === ShapesSettingsCategory.shapeFillColor &&
       getActiveConfigSource(shapes.shapeFillColor) === "groupBy" &&
       isGroupByConfig(shapes.shapeFillColor)
     ) {
       return [
-        true,
         shapes.shapeFillColor.groupBy.table,
         shapes.shapeFillColor.groupBy.column,
-      ];
+      ] as const;
     }
     if (
       activeSettingsCategory === ShapesSettingsCategory.shapeFillVisibility &&
@@ -32,10 +33,9 @@ export function useShapesDataWidget(
       isGroupByConfig(shapes.shapeFillVisibility)
     ) {
       return [
-        true,
         shapes.shapeFillVisibility.groupBy.table,
         shapes.shapeFillVisibility.groupBy.column,
-      ];
+      ] as const;
     }
     if (
       activeSettingsCategory === ShapesSettingsCategory.shapeFillOpacity &&
@@ -43,10 +43,9 @@ export function useShapesDataWidget(
       isGroupByConfig(shapes.shapeFillOpacity)
     ) {
       return [
-        true,
         shapes.shapeFillOpacity.groupBy.table,
         shapes.shapeFillOpacity.groupBy.column,
-      ];
+      ] as const;
     }
     if (
       activeSettingsCategory === ShapesSettingsCategory.shapeStrokeColor &&
@@ -54,10 +53,9 @@ export function useShapesDataWidget(
       isGroupByConfig(shapes.shapeStrokeColor)
     ) {
       return [
-        true,
         shapes.shapeStrokeColor.groupBy.table,
         shapes.shapeStrokeColor.groupBy.column,
-      ];
+      ] as const;
     }
     if (
       activeSettingsCategory === ShapesSettingsCategory.shapeStrokeVisibility &&
@@ -65,10 +63,9 @@ export function useShapesDataWidget(
       isGroupByConfig(shapes.shapeStrokeVisibility)
     ) {
       return [
-        true,
         shapes.shapeStrokeVisibility.groupBy.table,
         shapes.shapeStrokeVisibility.groupBy.column,
-      ];
+      ] as const;
     }
     if (
       activeSettingsCategory === ShapesSettingsCategory.shapeStrokeOpacity &&
@@ -76,15 +73,12 @@ export function useShapesDataWidget(
       isGroupByConfig(shapes.shapeStrokeOpacity)
     ) {
       return [
-        true,
         shapes.shapeStrokeOpacity.groupBy.table,
         shapes.shapeStrokeOpacity.groupBy.column,
-      ];
+      ] as const;
     }
-    return [false, selectedTable, selectedGroupByColumn];
+    return [null, null] as const;
   }, [
-    selectedTable,
-    selectedGroupByColumn,
     activeSettingsCategory,
     shapes.shapeFillColor,
     shapes.shapeFillVisibility,
@@ -94,5 +88,30 @@ export function useShapesDataWidget(
     shapes.shapeStrokeOpacity,
   ]);
 
-  return { synced, syncedTable, syncedGroupByColumn };
+  const [prevActiveTable, setPrevActiveTable] = useState(activeTable);
+  const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
+    useState(activeGroupByColumn);
+
+  if (activeTable !== prevActiveTable) {
+    setPrevActiveTable(activeTable);
+    if (activeTable !== null) {
+      setSelectedTable(activeTable);
+    }
+  }
+
+  if (activeGroupByColumn !== prevActiveGroupByColumn) {
+    setPrevActiveGroupByColumn(activeGroupByColumn);
+    if (activeGroupByColumn !== null) {
+      setSelectedGroupByColumn(activeGroupByColumn);
+    }
+  }
+
+  return {
+    activeSettingsCategory,
+    setActiveSettingsCategory,
+    selectedTable,
+    setSelectedTable,
+    selectedGroupByColumn,
+    setSelectedGroupByColumn,
+  };
 }
