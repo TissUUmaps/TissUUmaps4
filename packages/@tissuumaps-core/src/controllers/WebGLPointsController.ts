@@ -365,33 +365,36 @@ export class WebGLPointsController extends WebGLControllerBase {
    * @returns Bounding box in world coordinates, or `null` if no points are rendered
    */
   getWorldBounds(): Rect | null {
-    if (this._bufferSliceStates.length > 0) {
-      let xMin = Infinity,
-        yMin = Infinity,
-        xMax = -Infinity,
-        yMax = -Infinity;
-      for (const bufferSliceState of this._bufferSliceStates) {
-        const transform = WebGLPointsController.createDataToWorldMatrix(
-          bufferSliceState.ref.layer,
-          bufferSliceState.ref.layerConfig,
-        );
-        const { x, y, width, height } = TransformUtils.transformBoundingBox(
-          bufferSliceState.dataBounds,
-          transform,
-        );
-        if (x < xMin) {
-          xMin = x;
-        }
-        if (y < yMin) {
-          yMin = y;
-        }
-        if (x + width > xMax) {
-          xMax = x + width;
-        }
-        if (y + height > yMax) {
-          yMax = y + height;
-        }
+    if (this._bufferSliceStates.length === 0) {
+      return null;
+    }
+    let xMin = Infinity,
+      yMin = Infinity,
+      xMax = -Infinity,
+      yMax = -Infinity;
+    for (const bufferSliceState of this._bufferSliceStates) {
+      const transform = WebGLPointsController.createDataToWorldMatrix(
+        bufferSliceState.ref.layer,
+        bufferSliceState.ref.layerConfig,
+      );
+      const { x, y, width, height } = TransformUtils.transformBoundingBox(
+        bufferSliceState.dataBounds,
+        transform,
+      );
+      if (x < xMin) {
+        xMin = x;
       }
+      if (y < yMin) {
+        yMin = y;
+      }
+      if (x + width > xMax) {
+        xMax = x + width;
+      }
+      if (y + height > yMax) {
+        yMax = y + height;
+      }
+    }
+    if (xMax > xMin && yMax > yMin) {
       return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
     }
     return null;
@@ -500,7 +503,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             }
           }
           signal?.throwIfAborted();
-          if (data !== undefined) {
+          if (data !== undefined && data.getSize() > 0) {
             refs.push({
               layer,
               points: currentPoints,
@@ -804,17 +807,17 @@ export class WebGLPointsController extends WebGLControllerBase {
     xData: Float32Array,
     yData: Float32Array,
   ): Rect {
-    if (xData.length !== yData.length) {
-      throw new Error("X and Y coordinate arrays must have the same length");
-    }
     if (xData.length === 0 || yData.length === 0) {
-      return { x: 0, y: 0, width: 0, height: 0 };
+      throw new Error("Coordinate arrays must not be empty");
+    }
+    if (xData.length !== yData.length) {
+      throw new Error("Coordinate arrays must have the same length");
     }
     let xMin = Infinity,
       yMin = Infinity,
       xMax = -Infinity,
       yMax = -Infinity;
-    for (let i = 0; i < xData.length; i++) {
+    for (let i = 0; i < Math.min(xData.length, yData.length); i++) {
       const x = xData[i]!;
       const y = yData[i]!;
       if (x < xMin) {

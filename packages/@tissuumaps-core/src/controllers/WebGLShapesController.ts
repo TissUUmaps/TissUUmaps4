@@ -251,33 +251,36 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @returns Bounding box in world coordinates, or `null` if no shapes are rendered
    */
   getWorldBounds(): Rect | null {
-    if (this._glShapes.length > 0) {
-      let xMin = Infinity,
-        yMin = Infinity,
-        xMax = -Infinity,
-        yMax = -Infinity;
-      for (const glShapes of this._glShapes) {
-        const transform = WebGLShapesController.createDataToWorldMatrix(
-          glShapes.ref.layer,
-          glShapes.ref.layerConfig,
-        );
-        const { x, y, width, height } = TransformUtils.transformBoundingBox(
-          glShapes.dataBounds,
-          transform,
-        );
-        if (x < xMin) {
-          xMin = x;
-        }
-        if (y < yMin) {
-          yMin = y;
-        }
-        if (x + width > xMax) {
-          xMax = x + width;
-        }
-        if (y + height > yMax) {
-          yMax = y + height;
-        }
+    if (this._glShapes.length === 0) {
+      return null;
+    }
+    let xMin = Infinity,
+      yMin = Infinity,
+      xMax = -Infinity,
+      yMax = -Infinity;
+    for (const glShapes of this._glShapes) {
+      const transform = WebGLShapesController.createDataToWorldMatrix(
+        glShapes.ref.layer,
+        glShapes.ref.layerConfig,
+      );
+      const { x, y, width, height } = TransformUtils.transformBoundingBox(
+        glShapes.dataBounds,
+        transform,
+      );
+      if (x < xMin) {
+        xMin = x;
       }
+      if (y < yMin) {
+        yMin = y;
+      }
+      if (x + width > xMax) {
+        xMax = x + width;
+      }
+      if (y + height > yMax) {
+        yMax = y + height;
+      }
+    }
+    if (xMax > xMin && yMax > yMin) {
       return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
     }
     return null;
@@ -328,7 +331,7 @@ export class WebGLShapesController extends WebGLControllerBase {
             );
           }
           signal?.throwIfAborted();
-          if (data !== undefined) {
+          if (data !== undefined && data.getSize() > 0) {
             refs.push({
               layer,
               shapes: currentShapes,
@@ -716,34 +719,34 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @returns The bounding rectangle in data-space coordinates
    */
   private static _getDataBounds(multiPolygons: MultiPolygon[]): Rect {
-    if (multiPolygons.length > 0) {
-      let xMin = Infinity,
-        yMin = Infinity,
-        xMax = -Infinity,
-        yMax = -Infinity;
-      for (const multiPolygon of multiPolygons) {
-        for (const polygon of multiPolygon.polygons) {
-          for (const path of [polygon.shell, ...polygon.holes]) {
-            for (const vertex of path) {
-              if (vertex.x < xMin) {
-                xMin = vertex.x;
-              }
-              if (vertex.y < yMin) {
-                yMin = vertex.y;
-              }
-              if (vertex.x > xMax) {
-                xMax = vertex.x;
-              }
-              if (vertex.y > yMax) {
-                yMax = vertex.y;
-              }
+    if (multiPolygons.length === 0) {
+      throw new Error("Multi-polygons array must not be empty");
+    }
+    let xMin = Infinity,
+      yMin = Infinity,
+      xMax = -Infinity,
+      yMax = -Infinity;
+    for (const multiPolygon of multiPolygons) {
+      for (const polygon of multiPolygon.polygons) {
+        for (const path of [polygon.shell, ...polygon.holes]) {
+          for (const vertex of path) {
+            if (vertex.x < xMin) {
+              xMin = vertex.x;
+            }
+            if (vertex.y < yMin) {
+              yMin = vertex.y;
+            }
+            if (vertex.x > xMax) {
+              xMax = vertex.x;
+            }
+            if (vertex.y > yMax) {
+              yMax = vertex.y;
             }
           }
         }
       }
-      return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
     }
-    return { x: 0, y: 0, width: 0, height: 0 };
+    return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
   }
 
   /**
