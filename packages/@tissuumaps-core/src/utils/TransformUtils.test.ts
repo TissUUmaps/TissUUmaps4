@@ -188,4 +188,83 @@ describe("TransformUtils", () => {
       ]);
     });
   });
+
+  describe("transformBoundingBox", () => {
+    it("returns the same rect for identity transform", () => {
+      const rect = { x: 10, y: 20, width: 30, height: 40 };
+      const result = TransformUtils.transformBoundingBox(rect, mat3.create());
+      expect(result.x).toBeCloseTo(10);
+      expect(result.y).toBeCloseTo(20);
+      expect(result.width).toBeCloseTo(30);
+      expect(result.height).toBeCloseTo(40);
+    });
+
+    it("applies translation", () => {
+      const rect = { x: 0, y: 0, width: 10, height: 10 };
+      const m = mat3.create();
+      mat3.translate(m, m, [5, -3]);
+      const result = TransformUtils.transformBoundingBox(rect, m);
+      expect(result.x).toBeCloseTo(5);
+      expect(result.y).toBeCloseTo(-3);
+      expect(result.width).toBeCloseTo(10);
+      expect(result.height).toBeCloseTo(10);
+    });
+
+    it("applies uniform scale", () => {
+      const rect = { x: 1, y: 2, width: 3, height: 4 };
+      const m = mat3.create();
+      mat3.scale(m, m, [2, 2]);
+      const result = TransformUtils.transformBoundingBox(rect, m);
+      expect(result.x).toBeCloseTo(2);
+      expect(result.y).toBeCloseTo(4);
+      expect(result.width).toBeCloseTo(6);
+      expect(result.height).toBeCloseTo(8);
+    });
+
+    it("expands bounding box for 45° rotation", () => {
+      const rect = { x: 0, y: 0, width: 10, height: 10 };
+      const m = mat3.create();
+      mat3.rotate(m, m, Math.PI / 4);
+      const result = TransformUtils.transformBoundingBox(rect, m);
+      const d = 10 * Math.SQRT2;
+      expect(result.x).toBeCloseTo(-10 * Math.sin(Math.PI / 4));
+      expect(result.y).toBeCloseTo(0);
+      expect(result.width).toBeCloseTo(d);
+      expect(result.height).toBeCloseTo(d);
+    });
+
+    it("swaps width and height for 90° rotation", () => {
+      const rect = { x: 0, y: 0, width: 6, height: 4 };
+      const m = mat3.create();
+      mat3.rotate(m, m, Math.PI / 2);
+      const result = TransformUtils.transformBoundingBox(rect, m);
+      expect(result.width).toBeCloseTo(4);
+      expect(result.height).toBeCloseTo(6);
+    });
+
+    it("handles a zero-size rect", () => {
+      const rect = { x: 5, y: 5, width: 0, height: 0 };
+      const m = mat3.create();
+      mat3.translate(m, m, [1, 1]);
+      const result = TransformUtils.transformBoundingBox(rect, m);
+      expect(result.x).toBeCloseTo(6);
+      expect(result.y).toBeCloseTo(6);
+      expect(result.width).toBeCloseTo(0);
+      expect(result.height).toBeCloseTo(0);
+    });
+
+    it("handles combined scale, rotation, and translation", () => {
+      const rect = { x: 0, y: 0, width: 2, height: 2 };
+      const m = mat3.create();
+      mat3.translate(m, m, [10, 10]);
+      mat3.rotate(m, m, Math.PI / 2);
+      mat3.scale(m, m, [3, 3]);
+      const result = TransformUtils.transformBoundingBox(rect, m);
+      // Corners after transform: (10,10), (10,16), (4,10), (4,16)
+      expect(result.x).toBeCloseTo(4);
+      expect(result.y).toBeCloseTo(10);
+      expect(result.width).toBeCloseTo(6);
+      expect(result.height).toBeCloseTo(6);
+    });
+  });
 });
