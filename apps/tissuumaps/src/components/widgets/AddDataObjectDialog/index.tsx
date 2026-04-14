@@ -8,6 +8,8 @@ import {
   type DataSource,
 } from "@tissuumaps/core";
 
+import { Field, FieldLabel } from "@/components/common/field";
+import { Fieldset } from "@/components/common/fieldset";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -90,21 +92,20 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="add-datasource-name">Name</Label>
+        <Fieldset className="flex flex-col gap-4">
+          <Field className="flex flex-col gap-2">
+            <FieldLabel>Name</FieldLabel>
             <Input
-              id="add-datasource-name"
               type="text"
               placeholder="Enter a name"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-          </div>
+          </Field>
 
           {providerEntries.length >= 1 && (
-            <div className="flex flex-col gap-2">
-              <Label>Source type</Label>
+            <Field className="flex flex-col gap-2">
+              <FieldLabel>Source type</FieldLabel>
               <RadioGroup value={selectedType} onValueChange={handleTypeChange}>
                 {providerEntries.map(([type, provider]) => {
                   const radioId = `data-source-type-${type}`;
@@ -116,12 +117,12 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
                   );
                 })}
               </RadioGroup>
-            </div>
+            </Field>
           )}
 
           {selectedProvider && (
-            <div className="flex flex-col gap-2">
-              <Label>Configuration</Label>
+            <Field className="flex flex-col gap-2">
+              <FieldLabel>Configuration</FieldLabel>
               <JsonForms
                 data={dataSourceDraft}
                 onChange={({ data }) => setDataSourceDraft(data as TDataSource)}
@@ -130,9 +131,9 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
                 renderers={renderers}
                 cells={cells}
               />
-            </div>
+            </Field>
           )}
-        </div>
+        </Fieldset>
 
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>
