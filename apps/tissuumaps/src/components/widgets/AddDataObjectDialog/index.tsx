@@ -10,6 +10,7 @@ import {
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset } from "@/components/common/fieldset";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,8 +22,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import { cells } from "../DataSourceWidget/cells";
 import { renderers } from "../DataSourceWidget/renderers";
@@ -62,7 +61,8 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
     setDataSourceDraft({ type: defaultType } as TDataSource);
   }, [providerEntries]);
 
-  const handleTypeChange = useCallback((value: string) => {
+  const handleTypeChange = useCallback((value: string | null) => {
+    if (value == null) return;
     setSelectedType(value);
     setDataSourceDraft({ type: value } as TDataSource);
   }, []);
@@ -106,17 +106,13 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
           {providerEntries.length >= 1 && (
             <Field className="flex flex-col gap-2">
               <FieldLabel>Source type</FieldLabel>
-              <RadioGroup value={selectedType} onValueChange={handleTypeChange}>
-                {providerEntries.map(([type, provider]) => {
-                  const radioId = `data-source-type-${type}`;
-                  return (
-                    <div key={type} className="flex items-center gap-2">
-                      <RadioGroupItem id={radioId} value={type} />
-                      <Label htmlFor={radioId}>{provider.name}</Label>
-                    </div>
-                  );
-                })}
-              </RadioGroup>
+              <SimpleSelect
+                items={providerEntries}
+                itemLabel={([, provider]) => provider.name}
+                itemValue={([type]) => type}
+                value={selectedType}
+                onValueChange={handleTypeChange}
+              />
             </Field>
           )}
 
