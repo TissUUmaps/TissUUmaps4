@@ -4,10 +4,10 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
+import { markers } from "@/components/markers";
 import { useTissUUmaps } from "@/store";
 
 import { type MarkerConfigWidgetAdapter } from "./adapter";
-import { markers } from "./markers";
 
 export type ActiveMarkerConfigValueProps = {
   adapter: MarkerConfigWidgetAdapter;
@@ -23,16 +23,16 @@ export function ActiveMarkerConfigValue({
   const tables = useTissUUmaps((state) => state.tables);
 
   if (activeSource === "constant" && isConstantConfig(markerConfig)) {
-    const markerIcon = markers.find(
-      (marker) => marker.value === markerConfig.constant.value,
-    )!.icon;
-    return <div className={className}>{markerIcon}</div>;
+    const marker =
+      markers.find((marker) => marker.value === markerConfig.constant.value) ??
+      markers.find((marker) => marker.value === defaultMarker)!;
+    return <div className={className}>{marker.icon}</div>;
   }
 
   if (activeSource === "from" && isFromConfig(markerConfig)) {
+    const table = tables.find((t) => t.id === markerConfig.from.table);
     const tableName =
-      tables.find((table) => table.id === markerConfig.from.table)?.name ??
-      markerConfig.from.table;
+      table !== undefined ? table.name : markerConfig.from.table;
     return (
       <div className={className}>
         {tableName} ({markerConfig.from.column})
@@ -41,9 +41,9 @@ export function ActiveMarkerConfigValue({
   }
 
   if (activeSource === "groupBy" && isGroupByConfig(markerConfig)) {
+    const table = tables.find((t) => t.id === markerConfig.groupBy.table);
     const tableName =
-      tables.find((table) => table.id === markerConfig.groupBy.table)?.name ??
-      markerConfig.groupBy.table;
+      table !== undefined ? table.name : markerConfig.groupBy.table;
     return (
       <div className={className}>
         {tableName} ({markerConfig.groupBy.column})
@@ -51,8 +51,6 @@ export function ActiveMarkerConfigValue({
     );
   }
 
-  const markerIcon = markers.find(
-    (marker) => marker.value === defaultMarker,
-  )!.icon;
-  return <div className={className}>{markerIcon}</div>;
+  const marker = markers.find((marker) => marker.value === defaultMarker)!;
+  return <div className={className}>{marker.icon}</div>;
 }

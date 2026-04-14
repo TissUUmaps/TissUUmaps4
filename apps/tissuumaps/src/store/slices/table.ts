@@ -1,7 +1,7 @@
 import { deepEqual } from "fast-equals";
 
 import {
-  type MappableArrayLike,
+  type GenericArray,
   type ProgressCallback,
   type Table,
   type TableData,
@@ -14,7 +14,8 @@ import { type TissUUmapsStateCreator } from "../index";
 type LoadedTableData = {
   dataSource: TableDataSource;
   data: TableData;
-  loadedValues: Map<string, MappableArrayLike<unknown>>;
+  loadedValues: Map<string, GenericArray<unknown>>;
+  loadedUniqueValues: Map<string, GenericArray<unknown>>;
   loadedValueRanges: Map<string, [number, number] | undefined>;
 };
 
@@ -49,7 +50,16 @@ export type TableSliceActions = {
       reload?: boolean;
       onProgress?: ProgressCallback;
     },
-  ) => Promise<MappableArrayLike<T>>;
+  ) => Promise<GenericArray<T>>;
+  loadUniqueTableValues: <T>(
+    tableId: string,
+    column: string,
+    options?: {
+      signal?: AbortSignal;
+      reload?: boolean;
+      onProgress?: ProgressCallback;
+    },
+  ) => Promise<GenericArray<T>>;
   loadTableValueRange: (
     tableId: string,
     column: string,
@@ -228,6 +238,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
           dataSource,
           data,
           loadedValues: new Map(),
+          loadedUniqueValues: new Map(),
           loadedValueRanges: new Map(),
         });
         draft.loadedTables.set(tableId, loadedDataKey);
@@ -274,7 +285,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
       }
       const oldValues = loadedData.loadedValues.get(column);
       if (oldValues !== undefined && !reload) {
-        return oldValues as MappableArrayLike<T>;
+        return oldValues as GenericArray<T>;
       }
       // Load the requested values
       const values = await loadedData.data.loadValues<T>(column, {
@@ -315,6 +326,71 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
     },
     (_tableId, _column, options) => options?.signal,
   ),
+  loadUniqueTableValues: deduplicate(
+    async <T>(
+      tableId: string,
+      column: string,
+      options?: {
+        signal?: AbortSignal;
+        reload?: boolean;
+        onProgress?: ProgressCallback;
+      },
+    ) => {
+      const { signal, reload = false, onProgress } = options ?? {};
+      signal?.throwIfAborted();
+      // Check if the table, the corresponding data source, and the requested unique values are already loaded
+      const state = get();
+      const loadedDataKey = state.loadedTables.get(tableId);
+      if (loadedDataKey === undefined) {
+        throw new Error(`Table with ID ${tableId} not loaded.`);
+      }
+      const loadedData = state.loadedTableData.get(loadedDataKey);
+      if (loadedData === undefined) {
+        throw new Error(`Data source for table with ID ${tableId} not loaded.`);
+      }
+      const oldUniqueValues = loadedData.loadedUniqueValues.get(column);
+      if (oldUniqueValues !== undefined && !reload) {
+        return oldUniqueValues as GenericArray<T>;
+      }
+      // Load the requested unique values
+      const uniqueValues = await loadedData.data.loadUniqueValues<T>(column, {
+        signal,
+        onProgress,
+      });
+      signal?.throwIfAborted();
+      // Check if the table has been unloaded or its data source has changed
+      const currentState = get();
+      const currentLoadedDataKey = currentState.loadedTables.get(tableId);
+      if (
+        currentLoadedDataKey === undefined ||
+        currentLoadedDataKey !== loadedDataKey
+      ) {
+        throw new DOMException(
+          `Table with ID ${tableId} has been unloaded or its data source has changed.`,
+          "AbortError",
+        );
+      }
+      const currentLoadedData =
+        currentState.loadedTableData.get(currentLoadedDataKey);
+      if (
+        currentLoadedData === undefined ||
+        !deepEqual(currentLoadedData.dataSource, loadedData.dataSource)
+      ) {
+        throw new DOMException(
+          `Data source for table with ID ${tableId} has been unloaded or changed.`,
+          "AbortError",
+        );
+      }
+      // Store the loaded unique values in the state
+      set((draft) => {
+        const loadedDataDraft =
+          draft.loadedTableData.get(currentLoadedDataKey)!;
+        loadedDataDraft.loadedUniqueValues.set(column, uniqueValues);
+      });
+      return uniqueValues;
+    },
+    (_tableId, _column, options) => options?.signal,
+  ),
   loadTableValueRange: deduplicate(
     async (tableId, column, options) => {
       const { signal, reload = false, onProgress } = options ?? {};
@@ -329,6 +405,7 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
       if (loadedData === undefined) {
         throw new Error(`Data source for table with ID ${tableId} not loaded.`);
       }
+      // use has() to allow caching undefined value ranges!
       if (loadedData.loadedValueRanges.has(column) && !reload) {
         return loadedData.loadedValueRanges.get(column);
       }

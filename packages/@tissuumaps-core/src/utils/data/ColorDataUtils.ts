@@ -210,10 +210,10 @@ export class ColorDataUtils extends DataUtilsBase {
           align,
         });
       }
-      const groupColors = new Map(Object.entries(colorMap.values));
       const data = ColorDataUtils._createColorDataBuffer(ids.length, {
         align,
       });
+      const groupColors = new Map(Object.entries(colorMap.values));
       await ColorDataUtils.fillGroupByConfigData(
         data,
         ids,
@@ -248,10 +248,7 @@ export class ColorDataUtils extends DataUtilsBase {
         config,
         defaultColor,
         loadTable,
-        (group) =>
-          colorPalette.colors[
-            HashUtils.djb2(group) % colorPalette.colors.length
-          ]!,
+        (group) => HashUtils.djb2Pick(colorPalette.colors, group),
         (color) => ColorDataUtils.encodeColor(color),
         { signal },
       );
@@ -295,12 +292,8 @@ export class ColorDataUtils extends DataUtilsBase {
     }
     const data = ColorDataUtils._createColorDataBuffer(ids.length, { align });
     for (let i = 0; i < ids.length; i++) {
-      const colorIndex = MathUtils.clamp(
-        Math.floor(Math.random() * colorPalette.colors.length),
-        0,
-        colorPalette.colors.length - 1,
-      );
-      const color = colorPalette.colors[colorIndex]!;
+      const index = Math.floor(Math.random() * colorPalette.colors.length);
+      const color = colorPalette.colors[index]!;
       data[i] = ColorDataUtils.encodeColor(color);
     }
     return data;
@@ -309,20 +302,20 @@ export class ColorDataUtils extends DataUtilsBase {
   /**
    * Creates a color data buffer of the given size filled with a single color.
    *
-   * @param size - Number of elements
+   * @param n - Number of elements
    * @param color - The color to fill with
    * @param options - Optional buffer alignment
    * @returns A `Uint32Array` filled with the encoded color
    */
   static createUniformColorData(
-    size: number,
+    n: number,
     color: Color,
     options?: { align?: number },
   ): Uint32Array {
     const { align = 1 } = options ?? {};
-    const data = ColorDataUtils._createColorDataBuffer(size, { align });
+    const data = ColorDataUtils._createColorDataBuffer(n, { align });
     const value = ColorDataUtils.encodeColor(color);
-    data.fill(value, 0, size);
+    data.fill(value, 0, n);
     return data;
   }
 

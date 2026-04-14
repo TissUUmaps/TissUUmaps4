@@ -1,5 +1,5 @@
 import {
-  type MappableArrayLike,
+  type GenericArray,
   type ProgressCallback,
   type TableData,
   type TypedArray,
@@ -7,34 +7,39 @@ import {
 
 export class CSVTableData implements TableData {
   private readonly _n: number;
+  private _ids: number[] | undefined;
+  private _names: string[] | undefined;
   private readonly _columns: string[];
   private readonly _columnValues: Map<string, string[] | TypedArray>;
-  private readonly _columnValueRanges: Map<string, [number, number]>;
-  private _ids?: number[];
 
   constructor(
     n: number,
+    ids: number[] | undefined,
+    names: string[] | undefined,
     columns: string[],
     columnValues: Map<string, string[] | TypedArray>,
-    ids?: number[],
   ) {
     this._n = n;
+    this._ids = ids;
+    this._names = names;
     this._columns = columns;
     this._columnValues = columnValues;
-    this._columnValueRanges = new Map();
-    this._ids = ids;
   }
 
   getIds(): number[] {
     if (this._ids === undefined) {
-      console.warn("No ID column specified, using sequential IDs instead");
-      this._ids = Array.from({ length: this._n }, (_, i) => i);
+      console.warn("No ID column specified, assigning sequential IDs instead");
+      this._ids = Array.from({ length: this.getSize() }, (_, i) => i);
     }
     return this._ids;
   }
 
   getSize(): number {
     return this._n;
+  }
+
+  getNames(): string[] | undefined {
+    return this._names;
   }
 
   async suggestColumnQueries(
@@ -62,34 +67,40 @@ export class CSVTableData implements TableData {
   async loadValues<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<MappableArrayLike<T>> {
+  ): Promise<GenericArray<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const columnValues = this._columnValues.get(column) as unknown as
-      | MappableArrayLike<T>
-      | undefined;
+    const columnValues = this._columnValues.get(column);
     if (columnValues === undefined) {
       throw new Error(`Column ${column} does not exist in the table`);
     }
-    return await Promise.resolve(columnValues);
+    return await Promise.resolve(columnValues as GenericArray<T>);
+  }
+
+  async loadUniqueValues<T>(
+    column: string,
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+  ): Promise<GenericArray<T>> {
+    const { signal, onProgress } = options ?? {};
+    signal?.throwIfAborted();
+    const values = await this.loadValues(column, { signal, onProgress });
+    signal?.throwIfAborted();
+    const uniqueValues = Array.from(new Set(values));
+    return uniqueValues as GenericArray<T>;
   }
 
   async loadValueRange(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<[number, number] | undefined> {
-    const { signal } = options ?? {};
+    const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
-    let valueRange = this._columnValueRanges.get(column);
-    if (valueRange !== undefined) {
-      return valueRange;
-    }
-    const columnValues = await this.loadValues(column, { signal });
+    const values = await this.loadValues(column, { signal, onProgress });
     signal?.throwIfAborted();
-    if (typeof columnValues[0] === "number") {
+    if (typeof values[0] === "number") {
       let vmin, vmax;
-      for (let i = 0; i < columnValues.length; i++) {
-        const v = columnValues[i];
+      for (let i = 0; i < values.length; i++) {
+        const v = values[i];
         if (typeof v === "number" && Number.isFinite(v)) {
           if (vmin === undefined || v < vmin) {
             vmin = v;
@@ -100,11 +111,10 @@ export class CSVTableData implements TableData {
         }
       }
       if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
-        valueRange = [vmin, vmax];
-        this._columnValueRanges.set(column, valueRange);
+        return [vmin, vmax];
       }
     }
-    return await Promise.resolve(valueRange);
+    return undefined;
   }
 
   close(): void {}

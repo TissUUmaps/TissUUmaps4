@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useMemo } from "react";
 
 import { MathUtils, type Points } from "@tissuumaps/core";
 
@@ -19,9 +20,12 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
+import { usePointsDataTableColumns } from "./usePointsDataTableColumns";
+import { usePointsDataWidget } from "./usePointsDataWidget";
 
 export type PointsPanelProps = {
   className?: string;
@@ -61,6 +65,17 @@ type PointsAccordionItemProps = {
 };
 
 function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
+  const {
+    activeSettingsCategory,
+    setActiveSettingsCategory,
+    selectedTable,
+    setSelectedTable,
+    selectedGroupByColumn,
+    setSelectedGroupByColumn,
+  } = usePointsDataWidget(points);
+
+  const loadedPoints = useTissUUmaps((state) => state.loadedPoints);
+  const loadedPointsData = useTissUUmaps((state) => state.loadedPointsData);
   const pointsDataProviders = useTissUUmaps(
     (state) => state.pointsDataProviders,
   );
@@ -69,6 +84,23 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const loadPoints = useTissUUmaps((state) => state.loadPoints);
 
   const { ref, handleRef } = useSortable({ id: points.id, index });
+
+  const data = useMemo(() => {
+    const loadedDataKey = loadedPoints.get(points.id);
+    if (loadedDataKey !== undefined) {
+      const loadedData = loadedPointsData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    return null;
+  }, [points.id, loadedPoints, loadedPointsData]);
+
+  const { extraTableGroupColumnDefs } = usePointsDataTableColumns(
+    points,
+    selectedTable,
+    selectedGroupByColumn,
+  );
 
   return (
     <div ref={ref}>
@@ -81,8 +113,8 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </AccordionTrigger>
           </div>
           <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-24">
-              <InputGroupAddon>PSF</InputGroupAddon>
+            <InputGroup className="w-20">
+              <InputGroupAddon>s</InputGroupAddon>
               <InputGroupInput
                 type="number"
                 inputMode="decimal"
@@ -99,12 +131,12 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
                 }}
               />
             </InputGroup>
-            <InputGroup className="w-24">
-              <InputGroupAddon>OPA</InputGroupAddon>
+            <InputGroup className="w-20">
+              <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
                 inputMode="decimal"
-                step={0.01}
+                step={0.05}
                 min={0}
                 max={1}
                 value={points.opacity}
@@ -130,6 +162,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               variant="ghost"
               onClick={() => {
                 if (
+                  // TODO replace by dialog overlay
                   window.confirm(
                     "Are you sure you want to delete this point cloud?",
                   )
@@ -154,9 +187,25 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             }}
             className="bg-card"
           />
-          <PointsSettingsWidget points={points} className="bg-card" />
           {/* TODO layer configs */}
-          {/* TODO table */}
+          <PointsSettingsWidget
+            points={points}
+            activeCategory={activeSettingsCategory}
+            onActiveCategoryChange={setActiveSettingsCategory}
+            className="bg-card"
+          />
+          {data !== null && (
+            <ItemsDataWidget
+              data={data}
+              tableHeight={200}
+              selectedTable={selectedTable}
+              onSelectedTableChange={setSelectedTable}
+              selectedGroupByColumn={selectedGroupByColumn}
+              onSelectedGroupByColumnChange={setSelectedGroupByColumn}
+              extraTableGroupColumnDefs={extraTableGroupColumnDefs}
+              className="bg-card"
+            />
+          )}
         </AccordionPanel>
       </AccordionItem>
     </div>

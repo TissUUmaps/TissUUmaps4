@@ -8,6 +8,7 @@ export interface GeoJSONShapesDataSource extends ShapesDataSource<
   typeof geoJSONShapesDataSourceType
 > {
   idProperty?: string;
+  nameProperty?: string;
 }
 
 export type DefaultGeoJSONShapesDataSource = Required<

@@ -173,10 +173,10 @@ export class OpacityDataUtils extends DataUtilsBase {
         { align, opacityFactor },
       );
     }
-    const groupOpacities = new Map(Object.entries(opacityMap.values));
     const data = OpacityDataUtils._createOpacityDataBuffer(ids.length, {
       align,
     });
+    const groupOpacities = new Map(Object.entries(opacityMap.values));
     await OpacityDataUtils.fillGroupByConfigData(
       data,
       ids,
@@ -194,20 +194,20 @@ export class OpacityDataUtils extends DataUtilsBase {
   /**
    * Creates an opacity data buffer of the given size filled with a single opacity value.
    *
-   * @param size - Number of elements
+   * @param n - Number of elements
    * @param opacity - The opacity value (0–1) to fill with
    * @param options - Optional buffer alignment and opacity scaling factor
    * @returns A `Uint8Array` filled with the encoded opacity
    */
   static createUniformOpacityData(
-    size: number,
+    n: number,
     opacity: number,
     options?: { align?: number; opacityFactor?: number },
   ): Uint8Array {
     const { align = 1, opacityFactor = 1 } = options ?? {};
-    const data = OpacityDataUtils._createOpacityDataBuffer(size, { align });
+    const data = OpacityDataUtils._createOpacityDataBuffer(n, { align });
     const value = OpacityDataUtils.encodeOpacity(opacity, { opacityFactor });
-    data.fill(value, 0, size);
+    data.fill(value, 0, n);
     return data;
   }
 

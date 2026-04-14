@@ -1,5 +1,5 @@
 import { type TableDataSource } from "../model/table";
-import { type MappableArrayLike, type ProgressCallback } from "../types";
+import { type GenericArray, type ProgressCallback } from "../types";
 import { type DataProvider, type ItemsData } from "./base";
 
 /**
@@ -52,7 +52,20 @@ export interface TableData extends ItemsData {
   loadValues<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<MappableArrayLike<T>>;
+  ): Promise<GenericArray<T>>;
+
+  /**
+   * Load a column's unique values as a typed array-like
+   *
+   * @typeParam T - Element type of the returned array
+   * @param column - The column name
+   * @param options - Optional abort signal and progress callback
+   * @returns The unique column values
+   */
+  loadUniqueValues<T>(
+    column: string,
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+  ): Promise<GenericArray<T>>;
 
   /**
    * Load a column's minimum and maximum values

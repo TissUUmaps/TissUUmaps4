@@ -31,6 +31,8 @@ export function TablesPanel({ className }: TablesPanelProps) {
       onDragEnd={(event) => {
         const { source, canceled } = event.operation;
         if (isSortable(source) && !canceled) {
+          // dnd-kit optimistically updates the DOM
+          // https://github.com/clauderic/dnd-kit/issues/1564
           moveTable(source.id as string, source.index);
         }
       }}
@@ -71,6 +73,7 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
               variant="ghost"
               onClick={() => {
                 if (
+                  // TODO replace by dialog overlay
                   window.confirm("Are you sure you want to delete this table?")
                 ) {
                   deleteTable(table.id);

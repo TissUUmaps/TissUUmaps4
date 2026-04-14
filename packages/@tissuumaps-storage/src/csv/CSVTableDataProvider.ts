@@ -29,6 +29,9 @@ export class CSVTableDataProvider implements TableDataProvider<
       idColumn: {
         type: "string",
       },
+      nameColumn: {
+        type: "string",
+      },
       // TODO loadColumns
       // TODO chunkSize
       // TODO parseConfig
@@ -51,6 +54,11 @@ export class CSVTableDataProvider implements TableDataProvider<
         scope: "#/properties/idColumn",
         label: "ID Column",
       },
+      {
+        type: "Control",
+        scope: "#/properties/nameColumn",
+        label: "Name Column",
+      },
       // TODO loadColumns
       // TODO chunkSize
       // TODO parseConfig
@@ -70,10 +78,10 @@ export class CSVTableDataProvider implements TableDataProvider<
 
     const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
 
-    let numRows = 0;
+    let n = 0;
     let allColumns = defaultDataSource.columns;
-    let filteredColumns = defaultDataSource.loadColumns ?? allColumns;
-    let filteredColumnInfos:
+    let columns = defaultDataSource.loadColumns ?? allColumns;
+    let columnInfos:
       | {
           name: string;
           index: number;
@@ -82,8 +90,8 @@ export class CSVTableDataProvider implements TableDataProvider<
           isNaN: boolean;
         }[]
       | undefined;
-    if (allColumns !== undefined && filteredColumns !== undefined) {
-      filteredColumnInfos = filteredColumns.map((column) => ({
+    if (allColumns !== undefined && columns !== undefined) {
+      columnInfos = columns.map((column) => ({
         name: column,
         index: allColumns!.indexOf(column),
         chunks: [],
@@ -98,12 +106,12 @@ export class CSVTableDataProvider implements TableDataProvider<
     ) => {
       if (
         allColumns === undefined ||
-        filteredColumns === undefined ||
-        filteredColumnInfos === undefined
+        columns === undefined ||
+        columnInfos === undefined
       ) {
         allColumns = results.data;
-        filteredColumns ??= allColumns;
-        filteredColumnInfos = filteredColumns.map((column) => ({
+        columns ??= allColumns;
+        columnInfos = columns.map((column) => ({
           name: column,
           index: allColumns!.indexOf(column),
           chunks: [],
@@ -113,17 +121,17 @@ export class CSVTableDataProvider implements TableDataProvider<
       } else {
         if (results.data.length !== allColumns.length) {
           throw new Error(
-            `Data row ${numRows} has ${results.data.length} values, expected ${allColumns.length}.`,
+            `Data row ${n} has ${results.data.length} values, expected ${allColumns.length}.`,
           );
         }
-        for (const columnInfo of filteredColumnInfos) {
+        for (const columnInfo of columnInfos) {
           const value = results.data[columnInfo.index]!;
           columnInfo.isNaN = columnInfo.isNaN || value === "" || isNaN(+value);
           columnInfo.currentChunk.push(columnInfo.isNaN ? value : +value);
         }
-        numRows += 1;
-        if (numRows % defaultDataSource.chunkSize === 0) {
-          for (const columnInfo of filteredColumnInfos) {
+        n += 1;
+        if (n % defaultDataSource.chunkSize === 0) {
+          for (const columnInfo of columnInfos) {
             columnInfo.chunks.push(
               columnInfo.isNaN
                 ? (columnInfo.currentChunk as string[])
@@ -140,7 +148,7 @@ export class CSVTableDataProvider implements TableDataProvider<
 
     const complete = () => {
       const columnValues = new Map<string, string[] | Float32Array>();
-      for (const columnInfo of filteredColumnInfos!) {
+      for (const columnInfo of columnInfos!) {
         if (columnInfo.currentChunk.length > 0) {
           columnInfo.chunks.push(
             columnInfo.isNaN
@@ -157,7 +165,7 @@ export class CSVTableDataProvider implements TableDataProvider<
           );
           columnValues.set(columnInfo.name, values);
         } else {
-          const values = new Float32Array(numRows);
+          const values = new Float32Array(n);
           let offset = 0;
           for (const chunkValues of columnInfo.chunks) {
             values.set(chunkValues as TypedArray, offset);
@@ -170,39 +178,37 @@ export class CSVTableDataProvider implements TableDataProvider<
       return columnValues;
     };
 
-    let filteredColumnValues;
+    let columnValues;
     if (defaultDataSource.path !== undefined && workspace !== null) {
       const fh = await workspace.getFileHandle(defaultDataSource.path);
       signal?.throwIfAborted();
       const file = await fh.getFile();
       signal?.throwIfAborted();
-      filteredColumnValues = await new Promise<
-        Map<string, string[] | Float32Array>
-      >((resolve, reject) =>
-        papaparse.parse(file, {
-          ...defaultDataSource.parseConfig,
-          header: false,
-          skipEmptyLines: true,
-          step: step,
-          complete: () => resolve(complete()),
-          error: reject,
-        }),
+      columnValues = await new Promise<Map<string, string[] | Float32Array>>(
+        (resolve, reject) =>
+          papaparse.parse(file, {
+            ...defaultDataSource.parseConfig,
+            header: false,
+            skipEmptyLines: true,
+            step: step,
+            complete: () => resolve(complete()),
+            error: reject,
+          }),
       );
       signal?.throwIfAborted();
     } else if (defaultDataSource.url !== undefined) {
       const url = defaultDataSource.url;
-      filteredColumnValues = await new Promise<
-        Map<string, string[] | Float32Array>
-      >((resolve, reject) =>
-        papaparse.parse(url, {
-          ...defaultDataSource.parseConfig,
-          download: true,
-          header: false,
-          skipEmptyLines: true,
-          step: step,
-          complete: () => resolve(complete()),
-          error: reject,
-        }),
+      columnValues = await new Promise<Map<string, string[] | Float32Array>>(
+        (resolve, reject) =>
+          papaparse.parse(url, {
+            ...defaultDataSource.parseConfig,
+            download: true,
+            header: false,
+            skipEmptyLines: true,
+            step: step,
+            complete: () => resolve(complete()),
+            error: reject,
+          }),
       );
       signal?.throwIfAborted();
     } else if (defaultDataSource.path !== undefined) {
@@ -211,17 +217,15 @@ export class CSVTableDataProvider implements TableDataProvider<
       throw new Error("A URL or workspace path is required to load data.");
     }
 
-    let filteredIds;
+    let ids: number[] | undefined;
     if (defaultDataSource.idColumn !== undefined) {
-      const idColumnValues = filteredColumnValues.get(
-        defaultDataSource.idColumn,
-      );
+      const idColumnValues = columnValues.get(defaultDataSource.idColumn);
       if (idColumnValues === undefined) {
         throw new Error(
           `ID column "${defaultDataSource.idColumn}" does not exist in the table.`,
         );
       }
-      filteredIds = Array.from(
+      ids = Array.from(
         idColumnValues.map((v) => {
           if (!Number.isInteger(v)) {
             throw new Error(
@@ -233,11 +237,19 @@ export class CSVTableDataProvider implements TableDataProvider<
       );
     }
 
-    return new CSVTableData(
-      numRows,
-      filteredColumns!,
-      filteredColumnValues,
-      filteredIds,
-    );
+    let names: string[] | undefined;
+    if (defaultDataSource.nameColumn !== undefined) {
+      const nameColumnValues = columnValues.get(defaultDataSource.nameColumn);
+      if (nameColumnValues === undefined) {
+        throw new Error(
+          `Name column "${defaultDataSource.nameColumn}" does not exist in the table.`,
+        );
+      }
+      names = Array.isArray(nameColumnValues)
+        ? nameColumnValues.map(String)
+        : Array.from(nameColumnValues, String);
+    }
+
+    return new CSVTableData(n, ids, names, columns!, columnValues);
   }
 }

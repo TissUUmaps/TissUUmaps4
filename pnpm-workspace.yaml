@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 onlyBuiltDependencies:
+  - "@swc/core"
   - canvas
   - core-js
   - core-js-pure

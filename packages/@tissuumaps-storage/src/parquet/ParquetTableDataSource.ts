@@ -8,6 +8,7 @@ export interface ParquetTableDataSource extends TableDataSource<
   typeof parquetTableDataSourceType
 > {
   idColumn?: string;
+  nameColumn?: string;
   requestHeaders?: { [headerName: string]: string };
 }
 

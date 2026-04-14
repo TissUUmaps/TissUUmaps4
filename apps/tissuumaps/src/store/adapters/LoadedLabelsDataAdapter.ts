@@ -20,6 +20,10 @@ export class LoadedLabelsDataAdapter implements LabelsData {
     return this._getData().getSize();
   }
 
+  getNames(): string[] | undefined {
+    return this._getData().getNames();
+  }
+
   getWidth(level?: number): number {
     return this._getData().getWidth(level);
   }

@@ -33,6 +33,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
 
   const confirmClearProject = useCallback(() => {
     if (
+      // TODO replace by dialog overlay
       window.confirm(
         "Are you sure you want to clear the project? All unsaved changes will be lost.",
       )

@@ -28,9 +28,9 @@ export function ActiveOpacityConfigValue({
   }
 
   if (activeSource === "from" && isFromConfig(opacityConfig)) {
+    const table = tables.find((t) => t.id === opacityConfig.from.table);
     const tableName =
-      tables.find((table) => table.id === opacityConfig.from.table)?.name ??
-      opacityConfig.from.table;
+      table !== undefined ? table.name : opacityConfig.from.table;
     return (
       <div className={className}>
         {tableName} ({opacityConfig.from.column})
@@ -39,9 +39,9 @@ export function ActiveOpacityConfigValue({
   }
 
   if (activeSource === "groupBy" && isGroupByConfig(opacityConfig)) {
+    const table = tables.find((t) => t.id === opacityConfig.groupBy.table);
     const tableName =
-      tables.find((table) => table.id === opacityConfig.groupBy.table)?.name ??
-      opacityConfig.groupBy.table;
+      table !== undefined ? table.name : opacityConfig.groupBy.table;
     return (
       <div className={className}>
         {tableName} ({opacityConfig.groupBy.column})

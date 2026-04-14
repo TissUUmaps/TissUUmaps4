@@ -172,10 +172,10 @@ export class VisibilityDataUtils extends DataUtilsBase {
         { align },
       );
     }
-    const groupVisibilities = new Map(Object.entries(visibilityMap.values));
     const data = VisibilityDataUtils._createVisibilityDataBuffer(ids.length, {
       align,
     });
+    const groupVisibilities = new Map(Object.entries(visibilityMap.values));
     await VisibilityDataUtils.fillGroupByConfigData(
       data,
       ids,
@@ -193,22 +193,22 @@ export class VisibilityDataUtils extends DataUtilsBase {
   /**
    * Creates a visibility data buffer of the given size filled with a single visibility value.
    *
-   * @param size - Number of elements
+   * @param n - Number of elements
    * @param visibility - The boolean visibility to fill with
    * @param options - Optional buffer alignment
    * @returns A `Uint8Array` filled with the encoded visibility
    */
   static createUniformVisibilityData(
-    size: number,
+    n: number,
     visibility: boolean,
     options?: { align?: number },
   ): Uint8Array {
     const { align = 1 } = options ?? {};
-    const data = VisibilityDataUtils._createVisibilityDataBuffer(size, {
+    const data = VisibilityDataUtils._createVisibilityDataBuffer(n, {
       align,
     });
     const value = VisibilityDataUtils.encodeVisibility(visibility);
-    data.fill(value, 0, size);
+    data.fill(value, 0, n);
     return data;
   }
 

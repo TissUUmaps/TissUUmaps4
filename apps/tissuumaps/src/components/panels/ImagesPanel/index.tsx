@@ -75,12 +75,12 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             </AccordionTrigger>
           </div>
           <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-24">
-              <InputGroupAddon>OPA</InputGroupAddon>
+            <InputGroup className="w-20">
+              <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
                 inputMode="decimal"
-                step={0.01}
+                step={0.05}
                 min={0}
                 max={1}
                 value={image.opacity}

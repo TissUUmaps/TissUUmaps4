@@ -51,18 +51,33 @@ import {
   VisibilityConfigWidget,
 } from "@/components/widgets/config/VisibilityConfigWidget";
 import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/hooks";
+import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
+import { PointsSettingsCategory } from "./category";
+
 export type PointsSettingsWidgetProps = {
   points: Points;
+  activeCategory?: PointsSettingsCategory | null;
+  onActiveCategoryChange?: (
+    newActiveCategory: PointsSettingsCategory | null,
+  ) => void;
   className?: string;
 };
 
 export function PointsSettingsWidget({
   points,
+  activeCategory: controlledActiveCategory,
+  onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: PointsSettingsWidgetProps) {
+  const [activeCategory, setActiveCategory] = useControlled(
+    controlledActiveCategory,
+    setControlledActiveCategory,
+    null,
+  );
+
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
 
   const pointMarkerConfigWidgetAdapter = useMarkerConfigWidget(
@@ -102,75 +117,26 @@ export function PointsSettingsWidget({
       <FieldsetLegend className="font-medium text-foreground">
         Settings
       </FieldsetLegend>
-      <Accordion>
-        <AccordionItem value="general">
+      <Accordion
+        value={activeCategory !== null ? [activeCategory] : []}
+        onValueChange={(value) =>
+          setActiveCategory(
+            value.length > 0 ? (value[0] as PointsSettingsCategory) : null,
+          )
+        }
+      >
+        {/* General */}
+        <AccordionItem value={PointsSettingsCategory.general}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>General</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <Field>
-              <FieldLabel>Name</FieldLabel>
-              <Input
-                value={points.name}
-                onChange={(event) =>
-                  updatePoints(points.id, { name: event.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Visibility</FieldLabel>
-              <div className="flex flex-row items-center gap-x-2">
-                <Switch
-                  checked={points.visibility}
-                  onCheckedChange={(checked) =>
-                    updatePoints(points.id, { visibility: checked })
-                  }
-                />
-                {points.visibility ? "Visible" : "Hidden"}
-              </div>
-            </Field>
-            <Field>
-              <FieldLabel>Opacity</FieldLabel>
-              <Input
-                type="number"
-                inputMode="decimal"
-                step={0.01}
-                min={0}
-                max={1}
-                value={points.opacity}
-                onChange={(event) => {
-                  const newValue = event.target.valueAsNumber;
-                  if (!isNaN(newValue)) {
-                    updatePoints(points.id, {
-                      opacity: MathUtils.clamp(newValue, 0, 1),
-                    });
-                  }
-                }}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Point size factor</FieldLabel>
-              <Input
-                type="number"
-                inputMode="decimal"
-                step={0.1}
-                min={0}
-                value={points.pointSizeFactor}
-                onChange={(event) => {
-                  const newValue = event.target.valueAsNumber;
-                  if (!isNaN(newValue)) {
-                    updatePoints(points.id, {
-                      pointSizeFactor: Math.max(0, newValue),
-                    });
-                  }
-                }}
-              />
-            </Field>
+            <GeneralPointsSettingsWidget points={points} />
           </AccordionPanel>
         </AccordionItem>
         {/* Point marker */}
-        <AccordionItem value="pointMarker">
+        <AccordionItem value={PointsSettingsCategory.pointMarker}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Point marker</AccordionTrigger>
@@ -188,7 +154,7 @@ export function PointsSettingsWidget({
           </AccordionPanel>
         </AccordionItem>
         {/* Point size */}
-        <AccordionItem value="pointSize">
+        <AccordionItem value={PointsSettingsCategory.pointSize}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Point size</AccordionTrigger>
@@ -206,7 +172,7 @@ export function PointsSettingsWidget({
           </AccordionPanel>
         </AccordionItem>
         {/* Point color */}
-        <AccordionItem value="pointColor">
+        <AccordionItem value={PointsSettingsCategory.pointColor}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Point color</AccordionTrigger>
@@ -224,7 +190,7 @@ export function PointsSettingsWidget({
           </AccordionPanel>
         </AccordionItem>
         {/* Point visibility */}
-        <AccordionItem value="pointVisibility">
+        <AccordionItem value={PointsSettingsCategory.pointVisibility}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Point visibility</AccordionTrigger>
@@ -244,7 +210,7 @@ export function PointsSettingsWidget({
           </AccordionPanel>
         </AccordionItem>
         {/* Point opacity */}
-        <AccordionItem value="pointOpacity">
+        <AccordionItem value={PointsSettingsCategory.pointOpacity}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Point opacity</AccordionTrigger>
@@ -263,5 +229,80 @@ export function PointsSettingsWidget({
         </AccordionItem>
       </Accordion>
     </Fieldset>
+  );
+}
+
+type GeneralPointsSettingsWidgetProps = {
+  points: Points;
+  className?: string;
+};
+
+function GeneralPointsSettingsWidget({
+  points,
+  className,
+}: GeneralPointsSettingsWidgetProps) {
+  const updatePoints = useTissUUmaps((state) => state.updatePoints);
+
+  return (
+    <div className={className}>
+      <Field>
+        <FieldLabel>Name</FieldLabel>
+        <Input
+          value={points.name}
+          onChange={(event) =>
+            updatePoints(points.id, { name: event.target.value })
+          }
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Visibility</FieldLabel>
+        <div className="flex flex-row items-center gap-x-2">
+          <Switch
+            checked={points.visibility}
+            onCheckedChange={(checked) =>
+              updatePoints(points.id, { visibility: checked })
+            }
+          />
+          {points.visibility ? "Visible" : "Hidden"}
+        </div>
+      </Field>
+      <Field>
+        <FieldLabel>Opacity</FieldLabel>
+        <Input
+          type="number"
+          inputMode="decimal"
+          step={0.05}
+          min={0}
+          max={1}
+          value={points.opacity}
+          onChange={(event) => {
+            const newValue = event.target.valueAsNumber;
+            if (!isNaN(newValue)) {
+              updatePoints(points.id, {
+                opacity: MathUtils.clamp(newValue, 0, 1),
+              });
+            }
+          }}
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Point size factor</FieldLabel>
+        <Input
+          type="number"
+          inputMode="decimal"
+          step={0.1}
+          min={0}
+          value={points.pointSizeFactor}
+          onChange={(event) => {
+            const newValue = event.target.valueAsNumber;
+            if (!isNaN(newValue)) {
+              updatePoints(points.id, {
+                pointSizeFactor: Math.max(0, newValue),
+              });
+            }
+          }}
+        />
+      </Field>
+    </div>
   );
 }

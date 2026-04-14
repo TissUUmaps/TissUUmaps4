@@ -15,4 +15,19 @@ export class HashUtils {
     }
     return hash >>> 0; // ensure non-negative
   }
+
+  /**
+   * Deterministically selects a value from an array based on the djb2 hash of a key string
+   *
+   * @param values - The array of values to select from
+   * @param key - The string key to hash and use for selection
+   * @returns A value from the array corresponding to the hashed key
+   */
+  static djb2Pick<T>(values: T[], key: string): T {
+    if (values.length === 0) {
+      throw new Error("Cannot pick from an empty array");
+    }
+    const index = HashUtils.djb2(key) % values.length;
+    return values[index]!;
+  }
 }

@@ -26,9 +26,8 @@ export function ActiveSizeConfigValue({
   }
 
   if (activeSource === "from" && isFromConfig(sizeConfig)) {
-    const tableName =
-      tables.find((table) => table.id === sizeConfig.from.table)?.name ??
-      sizeConfig.from.table;
+    const table = tables.find((t) => t.id === sizeConfig.from.table);
+    const tableName = table !== undefined ? table.name : sizeConfig.from.table;
     return (
       <div className={className}>
         {tableName} ({sizeConfig.from.column})
@@ -37,9 +36,9 @@ export function ActiveSizeConfigValue({
   }
 
   if (activeSource === "groupBy" && isGroupByConfig(sizeConfig)) {
+    const table = tables.find((t) => t.id === sizeConfig.groupBy.table);
     const tableName =
-      tables.find((table) => table.id === sizeConfig.groupBy.table)?.name ??
-      sizeConfig.groupBy.table;
+      table !== undefined ? table.name : sizeConfig.groupBy.table;
     return (
       <div className={className}>
         {tableName} ({sizeConfig.groupBy.column})

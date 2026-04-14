@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useMemo } from "react";
 
 import { type Labels, MathUtils } from "@tissuumaps/core";
 
@@ -19,9 +20,12 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
+import { useLabelsDataTableColumns } from "./useLabelsDataTableColumns";
+import { useLabelsDataWidget } from "./useLabelsDataWidget";
 
 export type LabelsPanelProps = {
   className?: string;
@@ -36,6 +40,8 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
       onDragEnd={(event) => {
         const { source, canceled } = event.operation;
         if (isSortable(source) && !canceled) {
+          // dnd-kit optimistically updates the DOM
+          // https://github.com/clauderic/dnd-kit/issues/1564
           moveLabels(source.id as string, source.index);
         }
       }}
@@ -59,6 +65,17 @@ type LabelsAccordionItemProps = {
 };
 
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
+  const {
+    activeSettingsCategory,
+    setActiveSettingsCategory,
+    selectedTable,
+    setSelectedTable,
+    selectedGroupByColumn,
+    setSelectedGroupByColumn,
+  } = useLabelsDataWidget(labels);
+
+  const loadedLabels = useTissUUmaps((state) => state.loadedLabels);
+  const loadedLabelsData = useTissUUmaps((state) => state.loadedLabelsData);
   const labelsDataProviders = useTissUUmaps(
     (state) => state.labelsDataProviders,
   );
@@ -67,6 +84,23 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const loadLabels = useTissUUmaps((state) => state.loadLabels);
 
   const { ref, handleRef } = useSortable({ id: labels.id, index });
+
+  const data = useMemo(() => {
+    const loadedDataKey = loadedLabels.get(labels.id);
+    if (loadedDataKey !== undefined) {
+      const loadedData = loadedLabelsData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    return null;
+  }, [labels.id, loadedLabels, loadedLabelsData]);
+
+  const { extraTableGroupColumnDefs } = useLabelsDataTableColumns(
+    labels,
+    selectedTable,
+    selectedGroupByColumn,
+  );
 
   return (
     <div ref={ref}>
@@ -79,12 +113,12 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             </AccordionTrigger>
           </div>
           <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-24">
-              <InputGroupAddon>OPA</InputGroupAddon>
+            <InputGroup className="w-20">
+              <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
                 inputMode="decimal"
-                step={0.01}
+                step={0.05}
                 min={0}
                 max={1}
                 value={labels.opacity}
@@ -110,6 +144,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
               variant="ghost"
               onClick={() => {
                 if (
+                  // TODO replace by dialog overlay
                   window.confirm(
                     "Are you sure you want to delete these labels?",
                   )
@@ -134,9 +169,25 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             }}
             className="bg-card"
           />
-          <LabelsSettingsWidget labels={labels} className="bg-card" />
           {/* TODO layer configs */}
-          {/* TODO table */}
+          <LabelsSettingsWidget
+            labels={labels}
+            activeCategory={activeSettingsCategory}
+            onActiveCategoryChange={setActiveSettingsCategory}
+            className="bg-card"
+          />
+          {data !== null && (
+            <ItemsDataWidget
+              data={data}
+              tableHeight={200}
+              selectedTable={selectedTable}
+              onSelectedTableChange={setSelectedTable}
+              selectedGroupByColumn={selectedGroupByColumn}
+              onSelectedGroupByColumnChange={setSelectedGroupByColumn}
+              extraTableGroupColumnDefs={extraTableGroupColumnDefs}
+              className="bg-card"
+            />
+          )}
         </AccordionPanel>
       </AccordionItem>
     </div>

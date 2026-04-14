@@ -21,6 +21,10 @@ export class TablePointsData implements PointsData {
     return this._tableData.getSize();
   }
 
+  getNames(): string[] | undefined {
+    return this._tableData.getNames();
+  }
+
   async suggestDimensionQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },
@@ -48,15 +52,14 @@ export class TablePointsData implements PointsData {
     dimension: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<Float32Array> {
-    const { signal } = options ?? {};
+    const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
-    const columnValues = await this._tableData.loadValues<number>(dimension, {
+    const values = await this._tableData.loadValues<number>(dimension, {
       signal,
+      onProgress,
     });
     signal?.throwIfAborted();
-    return columnValues instanceof Float32Array
-      ? columnValues
-      : Float32Array.from(columnValues);
+    return values instanceof Float32Array ? values : Float32Array.from(values);
   }
 
   close(): void {}

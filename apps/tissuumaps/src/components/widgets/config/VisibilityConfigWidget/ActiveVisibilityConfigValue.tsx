@@ -36,9 +36,9 @@ export function ActiveVisibilityConfigValue({
   }
 
   if (activeSource === "from" && isFromConfig(visibilityConfig)) {
+    const table = tables.find((t) => t.id === visibilityConfig.from.table);
     const tableName =
-      tables.find((table) => table.id === visibilityConfig.from.table)?.name ??
-      visibilityConfig.from.table;
+      table !== undefined ? table.name : visibilityConfig.from.table;
     return (
       <div className={className}>
         {tableName} ({visibilityConfig.from.column})
@@ -47,9 +47,9 @@ export function ActiveVisibilityConfigValue({
   }
 
   if (activeSource === "groupBy" && isGroupByConfig(visibilityConfig)) {
+    const table = tables.find((t) => t.id === visibilityConfig.groupBy.table);
     const tableName =
-      tables.find((table) => table.id === visibilityConfig.groupBy.table)
-        ?.name ?? visibilityConfig.groupBy.table;
+      table !== undefined ? table.name : visibilityConfig.groupBy.table;
     return (
       <div className={className}>
         {tableName} ({visibilityConfig.groupBy.column})

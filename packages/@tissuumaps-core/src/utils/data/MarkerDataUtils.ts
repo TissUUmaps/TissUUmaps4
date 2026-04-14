@@ -171,10 +171,10 @@ export class MarkerDataUtils extends DataUtilsBase {
           { align },
         );
       }
-      const groupMarkers = new Map(Object.entries(markerMap.values));
       const data = MarkerDataUtils._createMarkerDataBuffer(ids.length, {
         align,
       });
+      const groupMarkers = new Map(Object.entries(markerMap.values));
       await MarkerDataUtils.fillGroupByConfigData(
         data,
         ids,
@@ -195,7 +195,7 @@ export class MarkerDataUtils extends DataUtilsBase {
       config,
       defaultMarker,
       loadTable,
-      (group) => markerPalette[HashUtils.djb2(group) % markerPalette.length]!,
+      (group) => HashUtils.djb2Pick(markerPalette, group),
       (marker) => MarkerDataUtils.encodeMarker(marker),
       { signal },
     );
@@ -206,20 +206,20 @@ export class MarkerDataUtils extends DataUtilsBase {
   /**
    * Creates a marker data buffer of the given size filled with a single marker.
    *
-   * @param size - Number of elements
+   * @param n - Number of elements
    * @param marker - The marker to fill with
    * @param options - Optional buffer alignment
    * @returns A `Uint8Array` filled with the encoded marker
    */
   static createUniformMarkerData(
-    size: number,
+    n: number,
     marker: Marker,
     options?: { align?: number },
   ): Uint8Array {
     const { align = 1 } = options ?? {};
-    const data = MarkerDataUtils._createMarkerDataBuffer(size, { align });
+    const data = MarkerDataUtils._createMarkerDataBuffer(n, { align });
     const value = MarkerDataUtils.encodeMarker(marker);
-    data.fill(value, 0, size);
+    data.fill(value, 0, n);
     return data;
   }
 

@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useMemo } from "react";
 
 import { MathUtils, type Shapes } from "@tissuumaps/core";
 
@@ -19,9 +20,12 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useTissUUmaps } from "@/store";
 
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
+import { useShapesDataTableColumns } from "./useShapesDataTableColumns";
+import { useShapesDataWidget } from "./useShapesDataWidget";
 
 export type ShapesPanelProps = {
   className?: string;
@@ -61,6 +65,17 @@ type ShapesAccordionItemProps = {
 };
 
 function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
+  const {
+    activeSettingsCategory,
+    setActiveSettingsCategory,
+    selectedTable,
+    setSelectedTable,
+    selectedGroupByColumn,
+    setSelectedGroupByColumn,
+  } = useShapesDataWidget(shapes);
+
+  const loadedShapes = useTissUUmaps((state) => state.loadedShapes);
+  const loadedShapesData = useTissUUmaps((state) => state.loadedShapesData);
   const shapesDataProviders = useTissUUmaps(
     (state) => state.shapesDataProviders,
   );
@@ -69,6 +84,23 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
   const loadShapes = useTissUUmaps((state) => state.loadShapes);
 
   const { ref, handleRef } = useSortable({ id: shapes.id, index });
+
+  const data = useMemo(() => {
+    const loadedDataKey = loadedShapes.get(shapes.id);
+    if (loadedDataKey !== undefined) {
+      const loadedData = loadedShapesData.get(loadedDataKey);
+      if (loadedData !== undefined) {
+        return loadedData.data;
+      }
+    }
+    return null;
+  }, [shapes.id, loadedShapes, loadedShapesData]);
+
+  const { extraTableGroupColumnDefs } = useShapesDataTableColumns(
+    shapes,
+    selectedTable,
+    selectedGroupByColumn,
+  );
 
   return (
     <div ref={ref}>
@@ -81,12 +113,12 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             </AccordionTrigger>
           </div>
           <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-24">
-              <InputGroupAddon>OPA</InputGroupAddon>
+            <InputGroup className="w-20">
+              <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
                 inputMode="decimal"
-                step={0.01}
+                step={0.05}
                 min={0}
                 max={1}
                 value={shapes.opacity}
@@ -112,6 +144,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
               variant="ghost"
               onClick={() => {
                 if (
+                  // TODO replace by dialog overlay
                   window.confirm(
                     "Are you sure you want to delete this shape cloud?",
                   )
@@ -136,9 +169,25 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             }}
             className="bg-card"
           />
-          <ShapesSettingsWidget shapes={shapes} className="bg-card" />
           {/* TODO layer configs */}
-          {/* TODO table */}
+          <ShapesSettingsWidget
+            shapes={shapes}
+            activeCategory={activeSettingsCategory}
+            onActiveCategoryChange={setActiveSettingsCategory}
+            className="bg-card"
+          />
+          {data !== null && (
+            <ItemsDataWidget
+              data={data}
+              tableHeight={200}
+              selectedTable={selectedTable}
+              onSelectedTableChange={setSelectedTable}
+              selectedGroupByColumn={selectedGroupByColumn}
+              onSelectedGroupByColumnChange={setSelectedGroupByColumn}
+              extraTableGroupColumnDefs={extraTableGroupColumnDefs}
+              className="bg-card"
+            />
+          )}
         </AccordionPanel>
       </AccordionItem>
     </div>

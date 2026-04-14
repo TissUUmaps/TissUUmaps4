@@ -16,6 +16,7 @@ export interface CSVTableDataSource extends TableDataSource<
 > {
   columns?: string[];
   idColumn?: string;
+  nameColumn?: string;
   loadColumns?: string[];
   chunkSize?: number;
   parseConfig?: Pick<

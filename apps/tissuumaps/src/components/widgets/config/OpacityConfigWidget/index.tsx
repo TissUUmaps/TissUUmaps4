@@ -56,7 +56,7 @@ function ConstantOpacityConfigWidget({
         <Input
           type="number"
           inputMode="decimal"
-          step={0.01}
+          step={0.05}
           min={0}
           max={1}
           value={value}
