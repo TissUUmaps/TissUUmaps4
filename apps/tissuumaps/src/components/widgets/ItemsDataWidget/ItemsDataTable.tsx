@@ -64,20 +64,37 @@ export function ItemsDataTable({
   );
 
   useEffect(() => {
+    const abortController = new AbortController();
     setTableData(null);
     if (table) {
-      loadTable(table).then(setTableData, console.error);
+      // TODO improve error handling
+      loadTable(table, { signal: abortController.signal }).then((tableData) => {
+        if (!abortController.signal.aborted) {
+          setTableData(tableData);
+        }
+      }, console.error);
     }
+    return () => {
+      abortController.abort();
+    };
   }, [table, loadTable]);
 
   useEffect(() => {
+    const abortController = new AbortController();
     setTableGroups(null);
     if (table && groupByColumn) {
-      loadUniqueTableValues<string>(table, groupByColumn).then(
-        setTableGroups,
-        console.error,
-      );
+      // TODO improve error handling
+      loadUniqueTableValues<string>(table, groupByColumn, {
+        signal: abortController.signal,
+      }).then((tableGroups) => {
+        if (!abortController.signal.aborted) {
+          setTableGroups(tableGroups);
+        }
+      }, console.error);
     }
+    return () => {
+      abortController.abort();
+    };
   }, [table, groupByColumn, loadUniqueTableValues]);
 
   const { rowData, columnDefs } = useMemo(() => {
