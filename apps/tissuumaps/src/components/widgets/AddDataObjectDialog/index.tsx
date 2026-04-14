@@ -25,17 +25,23 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cells } from "../DataSourceWidget/cells";
 import { renderers } from "../DataSourceWidget/renderers";
 
-export type AddDataSourceDialogProps = {
+export type AddDataObjectDialogProps<
+  TDataSource extends DataSource = DataSource,
+> = {
   title: string;
-  dataProviders: Map<string, DataProvider<DataSource, Data>>;
-  onAdd: (name: string, dataSourceType: string, dataSource: DataSource) => void;
+  dataProviders: Map<string, DataProvider<TDataSource, Data>>;
+  onAdd: (
+    name: string,
+    dataSourceType: string,
+    dataSource: TDataSource,
+  ) => void;
 };
 
-export function AddDataSourceDialog({
+export function AddDataObjectDialog<TDataSource extends DataSource>({
   title,
   dataProviders,
   onAdd,
-}: AddDataSourceDialogProps) {
+}: AddDataObjectDialogProps<TDataSource>) {
   const providerEntries = Array.from(dataProviders.entries());
 
   const [open, setOpen] = useState(false);
@@ -43,20 +49,20 @@ export function AddDataSourceDialog({
   const [selectedType, setSelectedType] = useState(
     providerEntries[0]?.[0] ?? "",
   );
-  const [dataSourceDraft, setDataSourceDraft] = useState<DataSource>({
+  const [dataSourceDraft, setDataSourceDraft] = useState<TDataSource>({
     type: selectedType,
-  });
+  } as TDataSource);
 
   const resetForm = useCallback(() => {
     const defaultType = providerEntries[0]?.[0] ?? "";
     setName("");
     setSelectedType(defaultType);
-    setDataSourceDraft({ type: defaultType });
+    setDataSourceDraft({ type: defaultType } as TDataSource);
   }, [providerEntries]);
 
   const handleTypeChange = useCallback((value: string) => {
     setSelectedType(value);
-    setDataSourceDraft({ type: value });
+    setDataSourceDraft({ type: value } as TDataSource);
   }, []);
 
   const handleAdd = useCallback(() => {
@@ -118,7 +124,7 @@ export function AddDataSourceDialog({
               <Label>Configuration</Label>
               <JsonForms
                 data={dataSourceDraft}
-                onChange={({ data }) => setDataSourceDraft(data as DataSource)}
+                onChange={({ data }) => setDataSourceDraft(data as TDataSource)}
                 schema={selectedProvider.schema}
                 uischema={selectedProvider.uischema}
                 renderers={renderers}

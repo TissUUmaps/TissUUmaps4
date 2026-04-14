@@ -13,7 +13,7 @@ import {
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
 import { Button } from "@/components/ui/button";
-import { AddDataSourceDialog } from "@/components/widgets/AddDataSourceDialog";
+import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
@@ -49,14 +49,14 @@ export function TablesPanel({ className }: TablesPanelProps) {
           ))}
         </Accordion>
       </DragDropProvider>
-      <AddDataSourceDialog
+      <AddDataObjectDialog
         title="Add table"
         dataProviders={tableDataProviders}
         onAdd={(name, _type, dataSource) => {
           const table = createTable({
             id: crypto.randomUUID(),
             name,
-            dataSource: dataSource as Table["dataSource"],
+            dataSource,
           });
           addTable(table);
           loadTable(table.id).catch(console.error);

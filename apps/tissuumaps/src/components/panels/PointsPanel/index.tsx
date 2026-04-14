@@ -19,7 +19,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { AddDataSourceDialog } from "@/components/widgets/AddDataSourceDialog";
+import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { cn } from "@/lib/utils";
@@ -65,14 +65,14 @@ export function PointsPanel({ className }: PointsPanelProps) {
           ))}
         </Accordion>
       </DragDropProvider>
-      <AddDataSourceDialog
+      <AddDataObjectDialog
         title="Add points"
         dataProviders={pointsDataProviders}
         onAdd={(name, _type, dataSource) => {
           const newPoints = createPoints({
             id: crypto.randomUUID(),
             name,
-            dataSource: dataSource as Points["dataSource"],
+            dataSource,
             layerConfigs:
               layers.length > 0 ? [{ layer: layers[0]!.id, x: "", y: "" }] : [],
           });
