@@ -176,7 +176,7 @@ export function SimpleAsyncCombobox<TItem>({
       </div>
       <ComboboxPrimitive.Portal>
         <ComboboxPrimitive.Positioner
-          className="outline-none z-60"
+          className="outline-none isolate z-50"
           sideOffset={4}
         >
           <ComboboxPrimitive.Popup
