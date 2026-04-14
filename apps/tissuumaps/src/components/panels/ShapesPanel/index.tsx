@@ -3,7 +3,7 @@ import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 import { useMemo } from "react";
 
-import { MathUtils, type Shapes } from "@tissuumaps/core";
+import { MathUtils, type Shapes, createShapes } from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -19,8 +19,10 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
+import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
@@ -33,29 +35,49 @@ export type ShapesPanelProps = {
 
 export function ShapesPanel({ className }: ShapesPanelProps) {
   const shapes = useTissUUmaps((state) => state.shapes);
+  const layers = useTissUUmaps((state) => state.layers);
+  const shapesDataProviders = useTissUUmaps(
+    (state) => state.shapesDataProviders,
+  );
+  const addShapes = useTissUUmaps((state) => state.addShapes);
   const moveShapes = useTissUUmaps((state) => state.moveShapes);
 
   return (
-    <DragDropProvider
-      onDragEnd={(event) => {
-        const { source, canceled } = event.operation;
-        if (isSortable(source) && !canceled) {
-          // dnd-kit optimistically updates the DOM
-          // https://github.com/clauderic/dnd-kit/issues/1564
-          moveShapes(source.id as string, source.index);
-        }
-      }}
-    >
-      <Accordion className={className} multiple>
-        {shapes.map((currentShapes, index) => (
-          <ShapesAccordionItem
-            key={currentShapes.id}
-            shapes={currentShapes}
-            index={index}
-          />
-        ))}
-      </Accordion>
-    </DragDropProvider>
+    <div className={cn("flex flex-col gap-y-2", className)}>
+      <DragDropProvider
+        onDragEnd={(event) => {
+          const { source, canceled } = event.operation;
+          if (isSortable(source) && !canceled) {
+            // dnd-kit optimistically updates the DOM
+            // https://github.com/clauderic/dnd-kit/issues/1564
+            moveShapes(source.id as string, source.index);
+          }
+        }}
+      >
+        <Accordion multiple className="gap-y-2">
+          {shapes.map((currentShapes, index) => (
+            <ShapesAccordionItem
+              key={currentShapes.id}
+              shapes={currentShapes}
+              index={index}
+            />
+          ))}
+        </Accordion>
+      </DragDropProvider>
+      <AddDataObjectDialog
+        title="Add shapes"
+        dataProviders={shapesDataProviders}
+        onAdd={(name, _type, dataSource) => {
+          const newShapes = createShapes({
+            id: crypto.randomUUID(),
+            name,
+            dataSource,
+            layerConfigs: layers.length > 0 ? [{ layer: layers[0]!.id }] : [],
+          });
+          addShapes(newShapes);
+        }}
+      />
+    </div>
   );
 }
 

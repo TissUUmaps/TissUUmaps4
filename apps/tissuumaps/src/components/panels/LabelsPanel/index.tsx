@@ -3,7 +3,7 @@ import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 import { useMemo } from "react";
 
-import { type Labels, MathUtils } from "@tissuumaps/core";
+import { type Labels, MathUtils, createLabels } from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -19,8 +19,10 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
+import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
@@ -33,29 +35,49 @@ export type LabelsPanelProps = {
 
 export function LabelsPanel({ className }: LabelsPanelProps) {
   const labels = useTissUUmaps((state) => state.labels);
+  const layers = useTissUUmaps((state) => state.layers);
+  const labelsDataProviders = useTissUUmaps(
+    (state) => state.labelsDataProviders,
+  );
+  const addLabels = useTissUUmaps((state) => state.addLabels);
   const moveLabels = useTissUUmaps((state) => state.moveLabels);
 
   return (
-    <DragDropProvider
-      onDragEnd={(event) => {
-        const { source, canceled } = event.operation;
-        if (isSortable(source) && !canceled) {
-          // dnd-kit optimistically updates the DOM
-          // https://github.com/clauderic/dnd-kit/issues/1564
-          moveLabels(source.id as string, source.index);
-        }
-      }}
-    >
-      <Accordion className={className} multiple>
-        {labels.map((currentLabels, index) => (
-          <LabelsAccordionItem
-            key={currentLabels.id}
-            labels={currentLabels}
-            index={index}
-          />
-        ))}
-      </Accordion>
-    </DragDropProvider>
+    <div className={cn("flex flex-col gap-y-2", className)}>
+      <DragDropProvider
+        onDragEnd={(event) => {
+          const { source, canceled } = event.operation;
+          if (isSortable(source) && !canceled) {
+            // dnd-kit optimistically updates the DOM
+            // https://github.com/clauderic/dnd-kit/issues/1564
+            moveLabels(source.id as string, source.index);
+          }
+        }}
+      >
+        <Accordion multiple className="gap-y-2">
+          {labels.map((currentLabels, index) => (
+            <LabelsAccordionItem
+              key={currentLabels.id}
+              labels={currentLabels}
+              index={index}
+            />
+          ))}
+        </Accordion>
+      </DragDropProvider>
+      <AddDataObjectDialog
+        title="Add labels"
+        dataProviders={labelsDataProviders}
+        onAdd={(name, _type, dataSource) => {
+          const newLabels = createLabels({
+            id: crypto.randomUUID(),
+            name,
+            dataSource,
+            layerConfigs: layers.length > 0 ? [{ layer: layers[0]!.id }] : [],
+          });
+          addLabels(newLabels);
+        }}
+      />
+    </div>
   );
 }
 

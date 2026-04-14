@@ -54,7 +54,7 @@ export function SimpleSelect<
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
         <SelectPrimitive.Positioner
-          className="outline-none select-none z-10"
+          className="outline-none select-none isolate z-50"
           sideOffset={8}
         >
           <SelectPrimitive.Popup

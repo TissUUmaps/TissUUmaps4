@@ -175,7 +175,10 @@ export function SimpleAsyncCombobox<TItem>({
         </div>
       </div>
       <ComboboxPrimitive.Portal>
-        <ComboboxPrimitive.Positioner className="outline-none" sideOffset={4}>
+        <ComboboxPrimitive.Positioner
+          className="outline-none isolate z-50"
+          sideOffset={4}
+        >
           <ComboboxPrimitive.Popup
             className="box-border w-(--anchor-width) max-h-[min(var(--available-height),23rem)] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto scroll-pb-2 scroll-pt-2 overscroll-contain rounded-md bg-[canvas] py-2 text-foreground shadow-[0_10px_15px_-3px_var(--color-gray-200),0_4px_6px_-4px_var(--color-gray-200)] outline-1 outline-gray-200 transition-[transform,scale,opacity] data-ending-style:transition-none data-starting-style:scale-95 data-starting-style:opacity-0 dark:bg-input/30 dark:-outline-offset-1 dark:shadow-none dark:outline-gray-300"
             aria-busy={isSearchPending || isSelectPending || undefined}

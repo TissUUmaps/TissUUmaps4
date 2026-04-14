@@ -2,7 +2,7 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 
-import { type Image, MathUtils } from "@tissuumaps/core";
+import { type Image, MathUtils, createImage } from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -18,7 +18,9 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
 import { ImageSettingsWidget } from "./ImageSettingsWidget";
@@ -29,25 +31,43 @@ export type ImagesPanelProps = {
 
 export function ImagesPanel({ className }: ImagesPanelProps) {
   const images = useTissUUmaps((state) => state.images);
+  const layers = useTissUUmaps((state) => state.layers);
+  const imageDataProviders = useTissUUmaps((state) => state.imageDataProviders);
+  const addImage = useTissUUmaps((state) => state.addImage);
   const moveImage = useTissUUmaps((state) => state.moveImage);
 
   return (
-    <DragDropProvider
-      onDragEnd={(event) => {
-        const { source, canceled } = event.operation;
-        if (isSortable(source) && !canceled) {
-          // dnd-kit optimistically updates the DOM
-          // https://github.com/clauderic/dnd-kit/issues/1564
-          moveImage(source.id as string, source.index);
-        }
-      }}
-    >
-      <Accordion className={className} multiple>
-        {images.map((image, index) => (
-          <ImageAccordionItem key={image.id} image={image} index={index} />
-        ))}
-      </Accordion>
-    </DragDropProvider>
+    <div className={cn("flex flex-col gap-y-2", className)}>
+      <DragDropProvider
+        onDragEnd={(event) => {
+          const { source, canceled } = event.operation;
+          if (isSortable(source) && !canceled) {
+            // dnd-kit optimistically updates the DOM
+            // https://github.com/clauderic/dnd-kit/issues/1564
+            moveImage(source.id as string, source.index);
+          }
+        }}
+      >
+        <Accordion multiple className="gap-y-2">
+          {images.map((image, index) => (
+            <ImageAccordionItem key={image.id} image={image} index={index} />
+          ))}
+        </Accordion>
+      </DragDropProvider>
+      <AddDataObjectDialog
+        title="Add image"
+        dataProviders={imageDataProviders}
+        onAdd={(name, _type, dataSource) => {
+          const image = createImage({
+            id: crypto.randomUUID(),
+            name,
+            dataSource,
+            layerConfigs: layers.length > 0 ? [{ layer: layers[0]!.id }] : [],
+          });
+          addImage(image);
+        }}
+      />
+    </div>
   );
 }
 

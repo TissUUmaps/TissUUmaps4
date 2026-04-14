@@ -1,4 +1,4 @@
-import { type Layer } from "@tissuumaps/core";
+import { type Layer, createLayer } from "@tissuumaps/core";
 
 import { type TissUUmapsStateCreator } from "../index";
 
@@ -20,7 +20,12 @@ export const createLayerSlice: TissUUmapsStateCreator<LayerSlice> = (
   set,
   get,
 ) => ({
-  ...createInitialLayerSliceState(),
+  layers: [
+    createLayer({
+      id: crypto.randomUUID(),
+      name: "Default",
+    }),
+  ],
   addLayer: (layer, index) => {
     const state = get();
     if (state.layers.some((x) => x.id === layer.id)) {
@@ -79,5 +84,7 @@ export const createLayerSlice: TissUUmapsStateCreator<LayerSlice> = (
 });
 
 function createInitialLayerSliceState(): LayerSliceState {
-  return { layers: [] };
+  return {
+    layers: [],
+  };
 }

@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { useTissUUmaps } from "@/store";
 
 export function useProject(projectUrlParam: string, defaultProjectUrl: string) {
-  const clearProject = useTissUUmaps((state) => state.clearProject);
   const loadProjectFromURL = useTissUUmaps((state) => state.loadProjectFromURL);
 
   useEffect(() => {
@@ -19,7 +18,6 @@ export function useProject(projectUrlParam: string, defaultProjectUrl: string) {
     );
     return () => {
       abortController.abort();
-      clearProject();
     };
-  }, [projectUrlParam, defaultProjectUrl, clearProject, loadProjectFromURL]);
+  }, [projectUrlParam, defaultProjectUrl, loadProjectFromURL]);
 }
