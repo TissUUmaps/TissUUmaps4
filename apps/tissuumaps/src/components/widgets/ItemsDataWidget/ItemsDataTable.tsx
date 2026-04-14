@@ -18,7 +18,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableHeader,
   TableRow,
@@ -179,7 +178,7 @@ export function ItemsDataTable({
   });
 
   return (
-    <TableContainer
+    <div
       ref={containerRef}
       className="overflow-auto relative"
       style={{ height: `${height}px` }}
@@ -238,6 +237,6 @@ export function ItemsDataTable({
           })}
         </TableBody>
       </Table>
-    </TableContainer>
+    </div>
   );
 }

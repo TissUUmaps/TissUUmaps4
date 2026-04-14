@@ -2,23 +2,18 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function TableContainer({ className, ...props }: React.ComponentProps<"div">) {
+function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
       data-slot="table-container"
-      className={cn("relative w-full overflow-x-auto", className)}
-      {...props}
-    />
-  );
-}
-
-function Table({ className, ...props }: React.ComponentProps<"table">) {
-  return (
-    <table
-      data-slot="table"
-      className={cn("w-full caption-bottom text-sm", className)}
-      {...props}
-    />
+      className="relative w-full overflow-x-auto"
+    >
+      <table
+        data-slot="table"
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props}
+      />
+    </div>
   );
 }
 
@@ -108,7 +103,6 @@ function TableCaption({
 }
 
 export {
-  TableContainer,
   Table,
   TableHeader,
   TableBody,
