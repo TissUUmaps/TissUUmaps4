@@ -73,7 +73,9 @@ export function PointsPanel({ className }: PointsPanelProps) {
             name,
             dataSource,
             layerConfigs:
-              layers.length > 0 ? [{ layer: layers[0]!.id, x: "", y: "" }] : [],
+              layers.length > 0
+                ? [{ layer: layers[0]!.id, x: "x", y: "y" }]
+                : [],
           });
           addPoints(newPoints);
         }}
