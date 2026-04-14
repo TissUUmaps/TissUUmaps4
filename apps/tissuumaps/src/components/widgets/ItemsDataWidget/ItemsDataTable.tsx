@@ -107,10 +107,10 @@ export function ItemsDataTable({
       const tableNames = tableData.getNames();
       if (tableNames !== undefined) {
         const tableIds = tableData.getIds();
-        names = ids.map((id) => {
-          const index = tableIds.indexOf(id);
-          return index >= 0 ? tableNames[index]! : undefined;
-        });
+        const tableNamesById = new Map(
+          tableIds.map((id, i) => [id, tableNames[i]!]),
+        );
+        names = ids.map((id) => tableNamesById.get(id));
       }
     } else {
       names = data.getNames();
