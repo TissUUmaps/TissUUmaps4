@@ -28,24 +28,12 @@ const dockviewTheme: DockviewTheme = {
 
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
-  ProjectPanel: () => (
-    <ProjectPanel className="m-2 overflow-y-auto h-[calc(100%-1rem)]" />
-  ),
-  ImagesPanel: () => (
-    <ImagesPanel className="m-2 overflow-y-auto h-[calc(100%-1rem)]" />
-  ),
-  LabelsPanel: () => (
-    <LabelsPanel className="m-2 overflow-y-auto h-[calc(100%-1rem)]" />
-  ),
-  PointsPanel: () => (
-    <PointsPanel className="m-2 overflow-y-auto h-[calc(100%-1rem)]" />
-  ),
-  ShapesPanel: () => (
-    <ShapesPanel className="m-2 overflow-y-auto h-[calc(100%-1rem)]" />
-  ),
-  TablesPanel: () => (
-    <TablesPanel className="m-2 overflow-y-auto h-[calc(100%-1rem)]" />
-  ),
+  ProjectPanel: () => <ProjectPanel className="m-2" />,
+  ImagesPanel: () => <ImagesPanel className="m-2" />,
+  LabelsPanel: () => <LabelsPanel className="m-2" />,
+  PointsPanel: () => <PointsPanel className="m-2" />,
+  ShapesPanel: () => <ShapesPanel className="m-2" />,
+  TablesPanel: () => <TablesPanel className="m-2" />,
 };
 
 const dockviewTabComponents = {
