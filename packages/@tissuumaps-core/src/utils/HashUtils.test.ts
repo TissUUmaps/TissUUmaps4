@@ -65,5 +65,11 @@ describe("HashUtils", () => {
     it("works with a single-element array", () => {
       expect(HashUtils.djb2Pick([42], "anything")).toBe(42);
     });
+
+    it("throws when given an empty array", () => {
+      expect(() => HashUtils.djb2Pick([], "key")).toThrow(
+        "Cannot pick from an empty array",
+      );
+    });
   });
 });
