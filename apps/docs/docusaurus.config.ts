@@ -83,13 +83,13 @@ const config: Config = {
           position: "right",
         },
         {
-          href: "https://tissuumaps.github.io/TissUUmaps4/live/",
+          href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/",
           label: "Live",
           position: "right",
         },
         {
-          href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart/project_heart_cropped.json",
-          label: "Live (development)",
+          href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json",
+          label: "Live (demo)",
           position: "right",
         },
       ],
@@ -127,12 +127,12 @@ const config: Config = {
               href: "https://github.com/TissUUmaps/TissUUmaps4/",
             },
             {
-              href: "https://tissuumaps.github.io/TissUUmaps4/live/",
+              href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/",
               label: "Live",
             },
             {
-              href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart/project_heart_cropped.json",
-              label: "Live (development)",
+              href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json",
+              label: "Live (demo)",
             },
           ],
         },
