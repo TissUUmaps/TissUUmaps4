@@ -54,7 +54,7 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
           }
         }}
       >
-        <Accordion multiple>
+        <Accordion multiple className="gap-y-2">
           {labels.map((currentLabels, index) => (
             <LabelsAccordionItem
               key={currentLabels.id}
