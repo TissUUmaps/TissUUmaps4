@@ -71,7 +71,6 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       get().clearProject();
       set({
         projectName: project.name,
-        layers: [],
         markerMaps: structuredClone(project.markerMaps),
         sizeMaps: structuredClone(project.sizeMaps),
         colorMaps: structuredClone(project.colorMaps),

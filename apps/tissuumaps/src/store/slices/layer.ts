@@ -20,7 +20,12 @@ export const createLayerSlice: TissUUmapsStateCreator<LayerSlice> = (
   set,
   get,
 ) => ({
-  ...createInitialLayerSliceState(),
+  layers: [
+    createLayer({
+      id: crypto.randomUUID(),
+      name: "Default",
+    }),
+  ],
   addLayer: (layer, index) => {
     const state = get();
     if (state.layers.some((x) => x.id === layer.id)) {
@@ -80,11 +85,6 @@ export const createLayerSlice: TissUUmapsStateCreator<LayerSlice> = (
 
 function createInitialLayerSliceState(): LayerSliceState {
   return {
-    layers: [
-      createLayer({
-        id: crypto.randomUUID(),
-        name: "Default",
-      }),
-    ],
+    layers: [],
   };
 }
