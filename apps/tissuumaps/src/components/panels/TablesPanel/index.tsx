@@ -36,8 +36,8 @@ export function TablesPanel({ className }: TablesPanelProps) {
         onDragEnd={(event) => {
           const { source, canceled } = event.operation;
           if (isSortable(source) && !canceled) {
-          // dnd-kit optimistically updates the DOM
-          // https://github.com/clauderic/dnd-kit/issues/1564
+            // dnd-kit optimistically updates the DOM
+            // https://github.com/clauderic/dnd-kit/issues/1564
             moveTable(source.id as string, source.index);
           }
         }}
