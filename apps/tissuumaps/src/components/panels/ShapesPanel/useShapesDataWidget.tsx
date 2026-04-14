@@ -88,10 +88,8 @@ export function useShapesDataWidget(shapes: Shapes) {
     shapes.shapeStrokeOpacity,
   ]);
 
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevActiveTable, setPrevActiveTable] = useState(activeTable);
-  const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
-    useState(activeGroupByColumn);
-
   if (activeTable !== prevActiveTable) {
     setPrevActiveTable(activeTable);
     if (activeTable !== null) {
@@ -99,6 +97,9 @@ export function useShapesDataWidget(shapes: Shapes) {
     }
   }
 
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
+    useState(activeGroupByColumn);
   if (activeGroupByColumn !== prevActiveGroupByColumn) {
     setPrevActiveGroupByColumn(activeGroupByColumn);
     if (activeGroupByColumn !== null) {

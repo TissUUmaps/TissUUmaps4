@@ -55,10 +55,8 @@ export function useLabelsDataWidget(labels: Labels) {
     labels.labelOpacity,
   ]);
 
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevActiveTable, setPrevActiveTable] = useState(activeTable);
-  const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
-    useState(activeGroupByColumn);
-
   if (activeTable !== prevActiveTable) {
     setPrevActiveTable(activeTable);
     if (activeTable !== null) {
@@ -66,6 +64,9 @@ export function useLabelsDataWidget(labels: Labels) {
     }
   }
 
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
+    useState(activeGroupByColumn);
   if (activeGroupByColumn !== prevActiveGroupByColumn) {
     setPrevActiveGroupByColumn(activeGroupByColumn);
     if (activeGroupByColumn !== null) {
