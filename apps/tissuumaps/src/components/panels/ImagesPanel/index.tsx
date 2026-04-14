@@ -34,7 +34,6 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
   const layers = useTissUUmaps((state) => state.layers);
   const imageDataProviders = useTissUUmaps((state) => state.imageDataProviders);
   const addImage = useTissUUmaps((state) => state.addImage);
-  const loadImage = useTissUUmaps((state) => state.loadImage);
   const moveImage = useTissUUmaps((state) => state.moveImage);
 
   return (
@@ -66,7 +65,6 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
             layerConfigs: layers.length > 0 ? [{ layer: layers[0]!.id }] : [],
           });
           addImage(image);
-          loadImage(image.id).catch(console.error);
         }}
       />
     </div>

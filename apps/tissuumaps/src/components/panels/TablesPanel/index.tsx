@@ -28,7 +28,6 @@ export function TablesPanel({ className }: TablesPanelProps) {
   const tables = useTissUUmaps((state) => state.tables);
   const tableDataProviders = useTissUUmaps((state) => state.tableDataProviders);
   const addTable = useTissUUmaps((state) => state.addTable);
-  const loadTable = useTissUUmaps((state) => state.loadTable);
   const moveTable = useTissUUmaps((state) => state.moveTable);
 
   return (
@@ -59,7 +58,6 @@ export function TablesPanel({ className }: TablesPanelProps) {
             dataSource,
           });
           addTable(table);
-          loadTable(table.id).catch(console.error);
         }}
       />
     </div>

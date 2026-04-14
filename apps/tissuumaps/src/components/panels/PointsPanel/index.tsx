@@ -40,7 +40,6 @@ export function PointsPanel({ className }: PointsPanelProps) {
     (state) => state.pointsDataProviders,
   );
   const addPoints = useTissUUmaps((state) => state.addPoints);
-  const loadPoints = useTissUUmaps((state) => state.loadPoints);
   const movePoints = useTissUUmaps((state) => state.movePoints);
 
   return (
@@ -77,7 +76,6 @@ export function PointsPanel({ className }: PointsPanelProps) {
               layers.length > 0 ? [{ layer: layers[0]!.id, x: "", y: "" }] : [],
           });
           addPoints(newPoints);
-          loadPoints(newPoints.id).catch(console.error);
         }}
       />
     </div>

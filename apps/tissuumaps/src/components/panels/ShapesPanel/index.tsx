@@ -40,7 +40,6 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
     (state) => state.shapesDataProviders,
   );
   const addShapes = useTissUUmaps((state) => state.addShapes);
-  const loadShapes = useTissUUmaps((state) => state.loadShapes);
   const moveShapes = useTissUUmaps((state) => state.moveShapes);
 
   return (
@@ -76,7 +75,6 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
             layerConfigs: layers.length > 0 ? [{ layer: layers[0]!.id }] : [],
           });
           addShapes(newShapes);
-          loadShapes(newShapes.id).catch(console.error);
         }}
       />
     </div>

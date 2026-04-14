@@ -40,7 +40,6 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
     (state) => state.labelsDataProviders,
   );
   const addLabels = useTissUUmaps((state) => state.addLabels);
-  const loadLabels = useTissUUmaps((state) => state.loadLabels);
   const moveLabels = useTissUUmaps((state) => state.moveLabels);
 
   return (
@@ -76,7 +75,6 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
             layerConfigs: layers.length > 0 ? [{ layer: layers[0]!.id }] : [],
           });
           addLabels(newLabels);
-          loadLabels(newLabels.id).catch(console.error);
         }}
       />
     </div>
