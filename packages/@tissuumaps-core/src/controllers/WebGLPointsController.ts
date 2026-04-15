@@ -98,12 +98,19 @@ export class WebGLPointsController extends WebGLControllerBase {
     const maxUniformBlockSize = gl.getParameter(
       gl.MAX_UNIFORM_BLOCK_SIZE,
     ) as number;
-    this._maxNumObjects = Math.floor(
-      maxUniformBlockSize / WebGLPointsController._bytesPerObject,
+    this._maxNumObjects = Math.min(
+      Math.floor(maxUniformBlockSize / WebGLPointsController._bytesPerObject),
+      65536, // object indices are stored as Uint16
     );
     // inject the computed limit into the vertex shader source
-    const resolvedVertexShader = pointsVertexShader.replace(
-      "__MAX_N_OBJECTS__",
+    const placeholder = "__MAX_N_OBJECTS__";
+    if (!pointsVertexShader.includes(placeholder)) {
+      throw new Error(
+        `Vertex shader is missing the ${placeholder} placeholder`,
+      );
+    }
+    const resolvedVertexShader = pointsVertexShader.replaceAll(
+      placeholder,
       String(this._maxNumObjects),
     );
     // load program
