@@ -1,7 +1,7 @@
 #version 300 es
 
 // maximum number of objects
-#define MAX_N_OBJECTS 2048u
+#define MAX_N_OBJECTS __MAX_N_OBJECTS__u
 
 // marker atlas configuration
 #define MARKER_ATLAS_GRID_SIZE 4u

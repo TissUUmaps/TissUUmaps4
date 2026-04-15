@@ -46,7 +46,7 @@ import { WebGLControllerBase } from "./WebGLControllerBase";
  * attributes (x, y, size, color, marker, object index).
  */
 export class WebGLPointsController extends WebGLControllerBase {
-  private static readonly _maxNumObjects = 2048; // see vertex shader
+  private static readonly _bytesPerObject = 32; // mat2x4 in std140 layout
   private static readonly _attribLocations = {
     X: 0,
     Y: 1,
@@ -60,6 +60,7 @@ export class WebGLPointsController extends WebGLControllerBase {
   };
 
   private readonly _program: WebGLProgram;
+  private readonly _maxNumObjects: number;
   private readonly _uniformLocations: {
     worldPointSizeFactor: WebGLUniformLocation;
     worldToViewportMatrix: WebGLUniformLocation;
@@ -93,10 +94,22 @@ export class WebGLPointsController extends WebGLControllerBase {
    */
   constructor(gl: WebGL2RenderingContext) {
     super(gl);
+    // query the GPU's uniform block size limit and derive max objects
+    const maxUniformBlockSize = gl.getParameter(
+      gl.MAX_UNIFORM_BLOCK_SIZE,
+    ) as number;
+    this._maxNumObjects = Math.floor(
+      maxUniformBlockSize / WebGLPointsController._bytesPerObject,
+    );
+    // inject the computed limit into the vertex shader source
+    const resolvedVertexShader = pointsVertexShader.replace(
+      "__MAX_N_OBJECTS__",
+      String(this._maxNumObjects),
+    );
     // load program
     this._program = WebGLUtils.loadProgram(
       this.gl,
-      pointsVertexShader,
+      resolvedVertexShader,
       pointsFragmentShader,
     );
     // get uniform locations
@@ -150,7 +163,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       this.gl,
       this.gl.UNIFORM_BUFFER,
       this._buffers.objectsUBO,
-      WebGLPointsController._maxNumObjects * 8 * Float32Array.BYTES_PER_ELEMENT,
+      this._maxNumObjects * 8 * Float32Array.BYTES_PER_ELEMENT,
       this.gl.DYNAMIC_DRAW,
     );
     // create and configure VAO
@@ -269,11 +282,11 @@ export class WebGLPointsController extends WebGLControllerBase {
     signal?.throwIfAborted();
     const refs = await this._loadPoints(layers, points, loadPoints, { signal });
     signal?.throwIfAborted();
-    if (refs.length > WebGLPointsController._maxNumObjects) {
+    if (refs.length > this._maxNumObjects) {
       console.warn(
-        `Only rendering the first ${WebGLPointsController._maxNumObjects} out of ${refs.length} objects`,
+        `Only rendering the first ${this._maxNumObjects} out of ${refs.length} objects`,
       );
-      refs.length = WebGLPointsController._maxNumObjects;
+      refs.length = this._maxNumObjects;
     }
     let buffersResized = false;
     const n = refs.reduce((accum, ref) => accum + ref.data.getSize(), 0);
@@ -544,9 +557,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     let offset = 0;
-    const objectsUBOData = new Float32Array(
-      WebGLPointsController._maxNumObjects * 8,
-    );
+    const objectsUBOData = new Float32Array(this._maxNumObjects * 8);
     const newBufferSliceStates: PointsBufferSliceState[] = [];
     for (let i = 0; i < refs.length; i++) {
       const ref = refs[i]!;
