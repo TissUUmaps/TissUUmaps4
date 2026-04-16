@@ -7,11 +7,11 @@ import {
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
-interface DrawingState {
+type DrawingState = {
   isDrawing: boolean;
   startPoint: Vertex | null;
   currentRect: SVGRectElement | null;
-}
+};
 
 /**
  * Controller for managing the drawing of SVG shapes
@@ -20,6 +20,10 @@ export class SVGController {
   public readonly container: SVGSVGElement;
   public readonly transformNode: SVGGElement;
   public readonly shapeCompleteHandler?: (shape: MultiPolygon) => void;
+  private static readonly _previewFillColor = "rgba(255, 0, 0, 0.2)";
+  private static readonly _previewStrokeColor = "#FF0000";
+  private static readonly _previewStrokeWidthFactor = 0.0005;
+  private static readonly _minShapeSizeFactor = 0.001;
   private _containerSize: { width: number; height: number };
   private _viewport: Rect;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -167,13 +171,17 @@ export class SVGController {
   };
 
   private _handlePointerMove = (event: PointerEvent): void => {
-    if (!this._drawingState.isDrawing || !this._drawingState.currentRect)
+    if (
+      !this._drawingState.isDrawing ||
+      !this._drawingState.currentRect ||
+      !this._drawingState.startPoint
+    )
       return;
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
     this._updatePreviewRect(
       this._drawingState.currentRect,
-      this._drawingState.startPoint!,
+      this._drawingState.startPoint,
       worldPoint,
     );
   };
@@ -194,7 +202,16 @@ export class SVGController {
       }
     }
 
-    this._finishDrawing();
+    // Remove preview element - WebGL will render the actual shape
+    this._drawingState.currentRect?.remove();
+    this._drawingState = {
+      isDrawing: false,
+      startPoint: null,
+      currentRect: null,
+    };
+
+    document.removeEventListener("pointermove", this._handlePointerMove);
+    document.removeEventListener("pointerup", this._handlePointerUp);
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -207,13 +224,14 @@ export class SVGController {
     rect.setAttribute("y", startPoint.y.toString());
     rect.setAttribute("width", "0");
     rect.setAttribute("height", "0");
-    rect.setAttribute("fill", "rgba(255, 0, 0, 0.2)");
-    rect.setAttribute("stroke", "#FF0000");
+    rect.setAttribute("fill", SVGController._previewFillColor);
+    rect.setAttribute("stroke", SVGController._previewStrokeColor);
     rect.setAttribute(
       "stroke-width",
-      (this._viewport.width * 0.0005).toString(),
+      (
+        this._viewport.width * SVGController._previewStrokeWidthFactor
+      ).toString(),
     );
-    rect.classList.add("drawing-preview");
 
     this.transformNode.appendChild(rect);
     return rect;
@@ -239,19 +257,19 @@ export class SVGController {
     start: Vertex,
     end: Vertex,
   ): MultiPolygon {
-    const x1 = Math.min(start.x, end.x);
-    const y1 = Math.min(start.y, end.y);
-    const x2 = Math.max(start.x, end.x);
-    const y2 = Math.max(start.y, end.y);
+    const x0 = Math.min(start.x, end.x);
+    const y0 = Math.min(start.y, end.y);
+    const x1 = Math.max(start.x, end.x);
+    const y1 = Math.max(start.y, end.y);
 
     return {
       polygons: [
         {
           shell: [
+            { x: x0, y: y0 },
+            { x: x1, y: y0 },
             { x: x1, y: y1 },
-            { x: x2, y: y1 },
-            { x: x2, y: y2 },
-            { x: x1, y: y2 },
+            { x: x0, y: y1 },
           ],
           holes: [],
         },
@@ -260,23 +278,10 @@ export class SVGController {
   }
 
   private _hasMinimumSize(start: Vertex, end: Vertex): boolean {
-    const minSize = this._viewport.width * 0.001; // Adjust threshold as needed
+    const minSize = this._viewport.width * SVGController._minShapeSizeFactor; // Adjust threshold as needed
     return (
       Math.abs(end.x - start.x) > minSize && Math.abs(end.y - start.y) > minSize
     );
-  }
-
-  private _finishDrawing(): void {
-    // Remove preview element - WebGL will render the actual shape
-    this._drawingState.currentRect?.remove();
-    this._drawingState = {
-      isDrawing: false,
-      startPoint: null,
-      currentRect: null,
-    };
-
-    document.removeEventListener("pointermove", this._handlePointerMove);
-    document.removeEventListener("pointerup", this._handlePointerUp);
   }
 
   // ─────────────────────────────────────────────────────────────
