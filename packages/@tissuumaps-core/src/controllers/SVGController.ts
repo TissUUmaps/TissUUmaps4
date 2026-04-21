@@ -258,7 +258,6 @@ export class SVGController {
   private _handlePolygonPointerMove = (event: PointerEvent): void => {
     // TODO
   };
-
   // @ts-expect-error currently not used
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private _handlePolygonPointerUp = (event: PointerEvent): void => {
