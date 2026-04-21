@@ -12,10 +12,12 @@ type RectangleDrawingState = {
   currentRect: SVGRectElement;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 type PolygonDrawingState = {
   // TODO extend for polygon drawing
 };
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 type FreehandDrawingState = {
   // TODO extend for freehand drawing
 };
@@ -39,8 +41,10 @@ export class SVGController {
 
   private _rectangleDrawingState: RectangleDrawingState | null = null;
 
+  // @ts-expect-error currently not used
   private _polygonDrawingState: PolygonDrawingState | null = null;
 
+  // @ts-expect-error currently not used
   private _freehandDrawingState: FreehandDrawingState | null = null;
 
   /** Creates a positioned, full-size `<svg>` element for the SVG overlay */
@@ -231,6 +235,9 @@ export class SVGController {
   // Polygon drawing
   // ─────────────────────────────────────────────────────────────
 
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+
+  // @ts-expect-error currently not used
   private _handlePolygonPointerDown = (event: PointerEvent): void => {
     // TODO implement polygon drawing logic
     // TODO: Register polygon-specific move/up handlers
@@ -238,10 +245,12 @@ export class SVGController {
     // document.addEventListener("pointerup", this._handlePolygonPointerUp)
   };
 
+  // @ts-expect-error currently not used
   private _handlePolygonPointerMove = (event: PointerEvent): void => {
     // TODO
   };
-
+  s;
+  // @ts-expect-error currently not used
   private _handlePolygonPointerUp = (event: PointerEvent): void => {
     // TODO
   };
@@ -250,19 +259,24 @@ export class SVGController {
   // Freehand Drawing
   // ─────────────────────────────────────────────────────────────
 
+  // @ts-expect-error currently not used
   private _handleFreehandPointerDown = (event: PointerEvent): void => {
     // TODO: Register freehand-specific move/up handlers
     // document.addEventListener("pointermove", this._handleFreehandPointerMove);
     // document.addEventListener("pointerup", this._handleFreehandPointerUp);
   };
 
+  // @ts-expect-error currently not used
   private _handleFreehandPointerMove = (event: PointerEvent): void => {
     // TODO
   };
 
+  // @ts-expect-error currently not used
   private _handleFreehandPointerUp = (event: PointerEvent): void => {
     // TODO
   };
+
+   
 
   // ─────────────────────────────────────────────────────────────
   // Drawing Helpers
