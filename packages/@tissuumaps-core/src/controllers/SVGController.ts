@@ -249,7 +249,7 @@ export class SVGController {
   private _handlePolygonPointerMove = (event: PointerEvent): void => {
     // TODO
   };
-  s;
+
   // @ts-expect-error currently not used
   private _handlePolygonPointerUp = (event: PointerEvent): void => {
     // TODO
@@ -275,8 +275,6 @@ export class SVGController {
   private _handleFreehandPointerUp = (event: PointerEvent): void => {
     // TODO
   };
-
-   
 
   // ─────────────────────────────────────────────────────────────
   // Drawing Helpers
