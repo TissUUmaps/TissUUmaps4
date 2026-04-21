@@ -8,18 +8,15 @@ import {
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
 type RectangleDrawingState = {
-  isDrawing: boolean;
-  startPoint: Vertex | null;
-  currentRect: SVGRectElement | null;
+  startPoint: Vertex;
+  currentRect: SVGRectElement;
 };
 
 type PolygonDrawingState = {
-  isDrawing: boolean;
   // TODO extend for polygon drawing
 };
 
 type FreehandDrawingState = {
-  isDrawing: boolean;
   // TODO extend for freehand drawing
 };
 
@@ -40,19 +37,11 @@ export class SVGController {
   // @ts-ignore currently not used, but will be needed in the future
   private _interactionMode?: InteractionMode;
 
-  private _rectangleDrawingState: RectangleDrawingState = {
-    isDrawing: false,
-    startPoint: null,
-    currentRect: null,
-  };
+  private _rectangleDrawingState: RectangleDrawingState | null = null;
 
-  private _polygonDrawingState: PolygonDrawingState = {
-    isDrawing: false,
-  };
+  private _polygonDrawingState: PolygonDrawingState | null = null;
 
-private _freehandDrawingState: FreehandDrawingState = {
-    isDrawing: false,
-  };
+  private _freehandDrawingState: FreehandDrawingState | null = null;
 
   /** Creates a positioned, full-size `<svg>` element for the SVG overlay */
   static createContainer(): SVGSVGElement {
@@ -163,7 +152,7 @@ private _freehandDrawingState: FreehandDrawingState = {
   }
 
   // Main handler for pointer down events; delegates to specific handlers based on the current interaction mode
-    private _handlePointerDown = (event: PointerEvent): void => {
+  private _handlePointerDown = (event: PointerEvent): void => {
     if (event.shiftKey || event.button !== 0) return;
 
     switch (this._interactionMode) {
@@ -193,19 +182,13 @@ private _freehandDrawingState: FreehandDrawingState = {
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
 
     this._rectangleDrawingState = {
-      isDrawing: true,
       startPoint: worldPoint,
       currentRect: this._createPreviewRect(worldPoint),
     };
   };
 
   private _handleRectanglePointerMove = (event: PointerEvent): void => {
-    if (
-      !this._rectangleDrawingState.isDrawing ||
-      !this._rectangleDrawingState.currentRect ||
-      !this._rectangleDrawingState.startPoint
-    )
-      return;
+    if (!this._rectangleDrawingState) return;
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
     this._updatePreviewRect(
@@ -216,7 +199,7 @@ private _freehandDrawingState: FreehandDrawingState = {
   };
 
   private _handleRectanglePointerUp = (event: PointerEvent): void => {
-    if (!this._rectangleDrawingState.isDrawing || event.button !== 0) return;
+    if (!this._rectangleDrawingState || event.button !== 0) return;
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
 
@@ -226,20 +209,21 @@ private _freehandDrawingState: FreehandDrawingState = {
         worldPoint,
       );
 
-      if (this._hasMinimumSize(this._rectangleDrawingState.startPoint, worldPoint)) {
+      if (
+        this._hasMinimumSize(this._rectangleDrawingState.startPoint, worldPoint)
+      ) {
         this.shapeCompleteHandler?.(multiPolygon);
       }
     }
 
     // Remove preview element - WebGL will render the actual shape
-    this._rectangleDrawingState.currentRect?.remove();
-    this._rectangleDrawingState = {
-      isDrawing: false,
-      startPoint: null,
-      currentRect: null,
-    };
+    this._rectangleDrawingState.currentRect.remove();
+    this._rectangleDrawingState = null;
 
-    document.removeEventListener("pointermove", this._handleRectanglePointerMove);
+    document.removeEventListener(
+      "pointermove",
+      this._handleRectanglePointerMove,
+    );
     document.removeEventListener("pointerup", this._handleRectanglePointerUp);
   };
 
@@ -252,7 +236,7 @@ private _freehandDrawingState: FreehandDrawingState = {
     // TODO: Register polygon-specific move/up handlers
     // document.addEventListener("pointermove", this._handlePolygonPointerMove);
     // document.addEventListener("pointerup", this._handlePolygonPointerUp)
-  }
+  };
 
   private _handlePolygonPointerMove = (event: PointerEvent): void => {
     // TODO
