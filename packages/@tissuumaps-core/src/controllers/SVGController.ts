@@ -255,6 +255,7 @@ export class SVGController {
 
     if (!this._polygonDrawingState) {
       document.addEventListener("pointermove", this._handlePolygonPointerMove);
+      document.addEventListener("keydown", this._handlePolygonKeyDown);
 
       this._polygonDrawingState = {
         vertices: [worldPoint],
@@ -287,6 +288,22 @@ export class SVGController {
       ...this._polygonDrawingState.vertices,
       worldPoint,
     ]);
+  };
+
+  private _handlePolygonKeyDown = (event: KeyboardEvent): void => {
+    if (!this._polygonDrawingState) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.key === "Escape") {
+      this._cancelPolygon();
+    } else if (
+      event.key === "Enter" &&
+      this._polygonDrawingState.vertices.length >= 3
+    ) {
+      this._completePolygon();
+    }
   };
 
   // ─────────────────────────────────────────────────────────────
