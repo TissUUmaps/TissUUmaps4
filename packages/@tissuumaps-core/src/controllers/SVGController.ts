@@ -12,9 +12,10 @@ type RectangleDrawingState = {
   currentRect: SVGRectElement;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 type PolygonDrawingState = {
-  // TODO extend for polygon drawing
+  vertices: Vertex[];
+  currentPolygon: SVGPolygonElement;
+  isNearStart: boolean;
 };
 
 type FreehandDrawingState = {
@@ -39,6 +40,7 @@ export class SVGController {
   private static readonly _minShapeSizeFactor = 0.001;
   private static readonly _closeShapeThresholdFactor = 0.01;
   private static readonly _vertexMarkerRadiusFactor = 0.0015;
+  private static readonly _closePolygonThresholdFactor = 0.01;
   private _containerSize: { width: number; height: number };
   private _viewport: Rect;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -47,7 +49,6 @@ export class SVGController {
 
   private _rectangleDrawingState: RectangleDrawingState | null = null;
 
-  // @ts-expect-error currently not used
   private _polygonDrawingState: PolygonDrawingState | null = null;
 
   private _freehandDrawingState: FreehandDrawingState | null = null;
@@ -112,6 +113,8 @@ export class SVGController {
   setInteractionMode(newInteractionMode: InteractionMode) {
     if (this._freehandDrawingState && newInteractionMode !== "drawFreehand") {
       this._cancelFreehand();
+    if (this._polygonDrawingState && newInteractionMode !== "drawPolygon") {
+      this._cancelPolygon();
     }
     this._interactionMode = newInteractionMode;
   }
@@ -244,30 +247,55 @@ export class SVGController {
   // Polygon drawing
   // ─────────────────────────────────────────────────────────────
 
-  // @ts-expect-error currently not used
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private _handlePolygonPointerDown = (event: PointerEvent): void => {
-    // TODO implement polygon drawing logic
-    // TODO: Register polygon-specific move/up handlers
-    // document.addEventListener("pointermove", this._handlePolygonPointerMove);
-    // document.addEventListener("pointerup", this._handlePolygonPointerUp)
+    event.preventDefault();
+    event.stopPropagation();
+
+    const worldPoint = this._screenToWorld(event.clientX, event.clientY);
+
+    if (!this._polygonDrawingState) {
+      document.addEventListener("pointermove", this._handlePolygonPointerMove);
+
+      this._polygonDrawingState = {
+        vertices: [worldPoint],
+        currentPolygon: this._createPreviewPolygon(worldPoint),
+        isNearStart: false,
+      };
+    } else {
+      const firstVertex = this._polygonDrawingState.vertices[0];
+      if (
+        this._polygonDrawingState.vertices.length >= 3 &&
+        this._isNearPoint(worldPoint, firstVertex!)
+      ) {
+        this._completePolygon();
+        return;
+      }
+      this._polygonDrawingState.vertices.push(worldPoint);
+      this._updatePreviewPolygon(this._polygonDrawingState.vertices);
+    }
   };
 
-  // @ts-expect-error currently not used
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private _handlePolygonPointerMove = (event: PointerEvent): void => {
-    // TODO
-  };
-  // @ts-expect-error currently not used
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private _handlePolygonPointerUp = (event: PointerEvent): void => {
-    // TODO
+    if (!this._polygonDrawingState) return;
+
+    const worldPoint = this._screenToWorld(event.clientX, event.clientY);
+    const firstVertex = this._polygonDrawingState.vertices[0];
+    this._polygonDrawingState.isNearStart =
+      this._polygonDrawingState.vertices.length >= 3 &&
+      this._isNearPoint(worldPoint, firstVertex!);
+    this._updatePreviewPolygon([
+      ...this._polygonDrawingState.vertices,
+      worldPoint,
+    ]);
   };
 
   // ─────────────────────────────────────────────────────────────
   // Freehand Drawing
   // ─────────────────────────────────────────────────────────────
 
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+
+  // @ts-expect-error currently not used
   private _handleFreehandPointerDown = (event: PointerEvent): void => {
     if (this._freehandDrawingState) return;
 
@@ -321,7 +349,7 @@ export class SVGController {
     }
 
     const existingPoints =
-      this._freehandDrawingState.currentPolyline.getAttribute("points");
+    this._freehandDrawingState.currentPolyline.getAttribute("points");
     this._freehandDrawingState.currentPolyline.setAttribute(
       "points",
       `${existingPoints} ${worldPoint.x},${worldPoint.y}`,
