@@ -14,7 +14,8 @@ type RectangleDrawingState = {
 
 type PolygonDrawingState = {
   vertices: Vertex[];
-  currentPolygon: SVGPolygonElement;
+  currentPolyline: SVGPolylineElement;
+  vertexMarkers: SVGCircleElement[];
   isNearStart: boolean;
 };
 
@@ -41,6 +42,7 @@ export class SVGController {
   private static readonly _closeShapeThresholdFactor = 0.01;
   private static readonly _vertexMarkerRadiusFactor = 0.0015;
   private static readonly _closePolygonThresholdFactor = 0.01;
+  private static readonly _vertexMarkerRadiusFactor = 0.0015;
   private _containerSize: { width: number; height: number };
   private _viewport: Rect;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -259,7 +261,8 @@ export class SVGController {
 
       this._polygonDrawingState = {
         vertices: [worldPoint],
-        currentPolygon: this._createPreviewPolygon(worldPoint),
+        currentPolyline: this._createPreviewPolyline(worldPoint),
+        vertexMarkers: [this._createVertexMarker(worldPoint)],
         isNearStart: false,
       };
     } else {
@@ -271,8 +274,13 @@ export class SVGController {
         this._completePolygon();
         return;
       }
+
       this._polygonDrawingState.vertices.push(worldPoint);
-      this._updatePreviewPolygon(this._polygonDrawingState.vertices);
+      this._polygonDrawingState.vertexMarkers.push(
+        this._createVertexMarker(worldPoint),
+      );
+
+      this._updatePreviewPolyline(this._polygonDrawingState.vertices);
     }
   };
 
@@ -281,10 +289,17 @@ export class SVGController {
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
     const firstVertex = this._polygonDrawingState.vertices[0];
-    this._polygonDrawingState.isNearStart =
+
+    const isNearStart =
       this._polygonDrawingState.vertices.length >= 3 &&
       this._isNearPoint(worldPoint, firstVertex!);
-    this._updatePreviewPolygon([
+
+    if (isNearStart !== this._polygonDrawingState.isNearStart) {
+      this._polygonDrawingState.isNearStart = isNearStart;
+      this._updateFirstVertexMarker(isNearStart);
+    }
+
+    this._updatePreviewPolyline([
       ...this._polygonDrawingState.vertices,
       worldPoint,
     ]);
