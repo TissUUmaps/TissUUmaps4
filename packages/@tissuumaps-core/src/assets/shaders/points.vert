@@ -1,27 +1,29 @@
 #version 300 es
 
-// maximum number of objects
-#define MAX_N_OBJECTS 2048u
+// Maximum number of objects
+// This variable determines the size of the uniform buffer object (UBO) for per-object data.
+// The guaranteed minimum MAX_UNIFORM_BLOCK_SIZE is 16k, which allows for a maximum of 512 objects.
+#define MAX_N_OBJECTS 512u
 
-// marker atlas configuration
+// Marker atlas configuration
 #define MARKER_ATLAS_GRID_SIZE 4u
 #define N_MARKER_ATLAS_CHANNELS 4u
 #define N_MARKERS_PER_CHANNEL (MARKER_ATLAS_GRID_SIZE * MARKER_ATLAS_GRID_SIZE)
 #define MAX_N_MARKERS (N_MARKER_ATLAS_CHANNELS * N_MARKERS_PER_CHANNEL)
 
-// macro to discard the current vertex
+// Macro to discard the current vertex
 #define DISCARD gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 0.0, 1.0); v_color = vec4(0.0); v_marker = uvec3(0); return;
 
-// uniforms
+// Uniforms
 uniform float u_worldPointSizeFactor;
 uniform mat3x2 u_worldToViewportMatrix;
 uniform vec2 u_viewportSize; // in world units
 uniform vec2 u_canvasSize; // in browser pixels
 uniform float u_devicePixelRatio; // device pixels per browser pixel
 
-// uniform buffer object (UBO) for per-object data
-// an object represents a unique combination of layer and point cloud
-// layers and point clouds were fused to reduce the number of index buffers
+// Uniform buffer object (UBO) for per-object data
+// An object represents a unique combination of a layer and a point cloud.
+// Layer and point cloud data is fused to reduce the number of index buffers.
 layout(std140) uniform ObjectsUBO {
     // https://learnopengl.com/Advanced-OpenGL/Advanced-GLSL
     // Matrices are stored as a large array of column vectors,
@@ -34,7 +36,7 @@ layout(std140) uniform ObjectsUBO {
     mat2x4 transposedDataToWorldMatrices[MAX_N_OBJECTS];
 };
 
-// vertex attributes
+// Vertex attributes
 layout(location = 0) in float a_x; // in data units
 layout(location = 1) in float a_y; // in data units
 layout(location = 2) in float a_size; // in world units
@@ -42,11 +44,11 @@ layout(location = 3) in uint a_color; // packed 8-bit RGBA
 layout(location = 4) in uint a_marker; // marker index
 layout(location = 5) in uint a_object; // object index
 
-// outputs to fragment shader
+// Outputs to fragment shader
 flat out vec4 v_color; // RGBA color
 flat out uvec3 v_marker; // (col, row, channel)
 
-// unpacks a uint-packed 8-bit RGBA color
+// Unpacks a uint-packed 8-bit RGBA color
 vec4 unpackColor(uint color) {
     float r = float((color >> 24) & 0xFFu) / 255.0;
     float g = float((color >> 16) & 0xFFu) / 255.0;
@@ -55,7 +57,7 @@ vec4 unpackColor(uint color) {
     return vec4(r, g, b, a);
 }
 
-// returns (col, row, channel) for a given marker index in the marker atlas
+// Returns (col, row, channel) for a given marker index in the marker atlas
 uvec3 markerAtlasCoords(uint marker) {
     uint col = (marker % N_MARKERS_PER_CHANNEL) % MARKER_ATLAS_GRID_SIZE;
     uint row = (marker % N_MARKERS_PER_CHANNEL) / MARKER_ATLAS_GRID_SIZE;
@@ -63,14 +65,14 @@ uvec3 markerAtlasCoords(uint marker) {
     return uvec3(col, row, channel);
 }
 
-// main vertex shader function
+// Main vertex shader function
 void main() {
-    // discard points with invalid marker or object indices
+    // Discard points with invalid marker or object indices
     if(a_marker >= MAX_N_MARKERS || a_object >= MAX_N_OBJECTS) {
         DISCARD;
     }
 
-    // compute point size in device pixels and discard points with non-positive size
+    // Compute point size in device pixels and discard points with non-positive size
     float canvasPixelRatio = dot(u_canvasSize / u_viewportSize, vec2(0.5));
     float worldPointSize = a_size * u_worldPointSizeFactor;
     float canvasPointSize = worldPointSize * canvasPixelRatio; // in browser pixels
@@ -80,7 +82,7 @@ void main() {
     }
     gl_PointSize = devicePointSize;
 
-    // compute point position in normalized device coordinates (NDCs) and discard points outside the viewport
+    // Compute point position in normalized device coordinates (NDCs) and discard points outside the viewport
     mat3x2 dataToWorldMatrix = mat3x2(transpose(transposedDataToWorldMatrices[a_object]));
     vec2 worldPosition = dataToWorldMatrix * vec3(a_x, a_y, 1.0);
     vec2 viewportPosition = u_worldToViewportMatrix * vec3(worldPosition, 1.0); // in [0, 1]
@@ -91,13 +93,13 @@ void main() {
     }
     gl_Position = vec4(ndcPosition, 0.0, 1.0);
 
-    // unpack color and discard fully transparent points
+    // Unpack color and discard fully transparent points
     vec4 color = unpackColor(a_color);
     if(color.a == 0.0) {
         DISCARD;
     }
     v_color = color;
 
-    // get marker atlas coordinates
+    // Get marker atlas coordinates
     v_marker = markerAtlasCoords(a_marker);
 }
