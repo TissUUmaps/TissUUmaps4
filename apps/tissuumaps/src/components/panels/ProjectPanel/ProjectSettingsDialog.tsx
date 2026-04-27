@@ -9,13 +9,13 @@ import { Input } from "@/components/ui/input";
 import { useTissUUmaps } from "@/store";
 
 export function ProjectSettingsDialog() {
-  const drawOptions = useTissUUmaps((state) => state.drawOptions);
-  const setDrawOptions = useTissUUmaps((state) => state.setDrawOptions);
+  const renderOptions = useTissUUmaps((state) => state.renderOptions);
+  const setRenderOptions = useTissUUmaps((state) => state.setRenderOptions);
 
   return (
     <Fieldset className="border-0 m-0 p-0">
       <FieldsetLegend className="mb-3 text-sm font-medium">
-        Draw Options
+        Render Options
       </FieldsetLegend>
 
       <div className="space-y-4">
@@ -28,11 +28,11 @@ export function ProjectSettingsDialog() {
                 inputMode="decimal"
                 step={0.1}
                 min={0}
-                value={drawOptions.pointSizeFactor}
+                value={renderOptions.pointSizeFactor}
                 onChange={(event) => {
                   const newValue = event.target.valueAsNumber;
                   if (!isNaN(newValue)) {
-                    setDrawOptions({
+                    setRenderOptions({
                       pointSizeFactor: Math.max(0, newValue),
                     });
                   }
@@ -52,11 +52,11 @@ export function ProjectSettingsDialog() {
               <Input
                 type="number"
                 min={0}
-                value={drawOptions.shapeStrokeWidth}
+                value={renderOptions.shapeStrokeWidth}
                 onChange={(event) => {
                   const newValue = event.target.valueAsNumber;
                   if (!isNaN(newValue)) {
-                    setDrawOptions({
+                    setRenderOptions({
                       shapeStrokeWidth: Math.max(0, Math.trunc(newValue)),
                     });
                   }
@@ -76,11 +76,11 @@ export function ProjectSettingsDialog() {
               <Input
                 type="number"
                 min={1}
-                value={drawOptions.numShapesScanlines}
+                value={renderOptions.numShapesScanlines}
                 onChange={(event) => {
                   const newValue = event.target.valueAsNumber;
                   if (!isNaN(newValue)) {
-                    setDrawOptions({
+                    setRenderOptions({
                       numShapesScanlines: Math.max(1, Math.trunc(newValue)),
                     });
                   }

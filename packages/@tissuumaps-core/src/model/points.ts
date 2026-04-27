@@ -84,7 +84,7 @@ export interface RawPoints extends RawRenderedDataObject<
    * A unitless scaling factor by which all point sizes are multiplied.
    *
    * Can be used to adjust the size of points without changing individual point sizes or the size unit.
-   * Note that point sizes are also affected by {@link "./layer".RawLayer.pointSizeFactor} and {@link "./project".RawProject.drawOptions}.
+   * Note that point sizes are also affected by {@link "./layer".RawLayer.pointSizeFactor} and {@link "./project".RawProject.renderOptions}.
    *
    * @defaultValue {@link pointsDefaults.pointSizeFactor}
    */

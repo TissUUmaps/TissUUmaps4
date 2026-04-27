@@ -3,7 +3,7 @@ import { deepEqual } from "fast-equals";
 import shapesFragmentShader from "../assets/shaders/shapes.frag?raw";
 import shapesVertexShader from "../assets/shaders/shapes.vert?raw";
 import {
-  defaultDrawOptions,
+  defaultRenderOptions,
   defaultShapeFillColor,
   defaultShapeFillOpacity,
   defaultShapeFillVisibility,
@@ -13,7 +13,11 @@ import {
 } from "../model/constants";
 import { type Layer } from "../model/layer";
 import { type Shapes, type ShapesLayerConfig } from "../model/shapes";
-import { type Color, type DefaultMap, type DrawOptions } from "../model/types";
+import {
+  type Color,
+  type DefaultMap,
+  type RenderOptions,
+} from "../model/types";
 import { type ShapesData } from "../storage/shapes";
 import { type TableData } from "../storage/table";
 import { type MultiPolygon, type Rect, type Vertex } from "../types";
@@ -49,7 +53,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     shapeFillColors: WebGLUniformLocation;
     shapeStrokeColors: WebGLUniformLocation;
   };
-  private _numScanlines: number = defaultDrawOptions.numShapesScanlines;
+  private _numScanlines: number = defaultRenderOptions.numShapesScanlines;
   private _glShapes: GLShapes[] = [];
 
   /**
@@ -190,9 +194,9 @@ export class WebGLShapesController extends WebGLControllerBase {
    * scanline data texture.
    *
    * @param viewport - Current world-space viewport
-   * @param drawOptions - Current draw options (e.g. stroke width)
+   * @param renderOptions - Current render options (e.g. stroke width)
    */
-  draw(viewport: Rect, drawOptions: DrawOptions): void {
+  draw(viewport: Rect, renderOptions: RenderOptions): void {
     this.gl.useProgram(this._program);
     this.gl.uniformMatrix3x2fv(
       this._uniformLocations.viewportToWorldMatrix,
@@ -204,7 +208,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     this.gl.uniform1ui(this._uniformLocations.numScanlines, this._numScanlines);
     this.gl.uniform1f(
       this._uniformLocations.strokeWidth,
-      drawOptions.shapeStrokeWidth,
+      renderOptions.shapeStrokeWidth,
     );
     this.gl.uniform1i(this._uniformLocations.scanlineData, 1);
     this.gl.uniform1i(this._uniformLocations.shapeFillColors, 2);

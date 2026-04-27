@@ -1,7 +1,6 @@
 import {
   type Color,
   type DefaultMap,
-  type DrawOptions,
   type Image,
   type ImageData,
   type InteractionMode,
@@ -12,6 +11,7 @@ import {
   type MultiPolygon,
   type Points,
   type PointsData,
+  type RenderOptions,
   type Shapes,
   type ShapesData,
   type TableData,
@@ -34,7 +34,7 @@ export interface ViewerAdapter {
   viewerOptions: ViewerOptions;
   viewerAnimationStartOptions: ViewerOptions;
   viewerAnimationFinishOptions: ViewerOptions;
-  drawOptions: DrawOptions;
+  renderOptions: RenderOptions;
   loadImage: (
     imageId: string,
     options?: { signal?: AbortSignal },

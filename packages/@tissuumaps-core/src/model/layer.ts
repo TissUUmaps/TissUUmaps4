@@ -53,7 +53,7 @@ export interface RawLayer extends RawModel {
    * A unitless scaling factor by which all point sizes are multiplied.
    *
    * Can be used to adjust the size of all points in a layer relative to other layers.
-   * Note that point sizes are also affected by {@link "./project".RawProject.drawOptions} as well as {@link "./points".RawPoints}-specific settings.
+   * Note that point sizes are also affected by {@link "./project".RawProject.renderOptions} as well as {@link "./points".RawPoints}-specific settings.
    *
    * @defaultValue {@link layerDefaults.pointSizeFactor}
    */

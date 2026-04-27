@@ -1,5 +1,5 @@
 import { type Model, type RawModel, createModel } from "./base";
-import { defaultDrawOptions, defaultViewerOptions } from "./constants";
+import { defaultRenderOptions, defaultViewerOptions } from "./constants";
 import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";
 import { type Layer, type RawLayer, createLayer } from "./layer";
@@ -9,8 +9,8 @@ import { type RawTable, type Table, createTable } from "./table";
 import {
   type Color,
   type DefaultMap,
-  type DrawOptions,
   type Marker,
+  type RenderOptions,
   type ViewerOptions,
 } from "./types";
 
@@ -23,7 +23,6 @@ export const projectDefaults = {
   colorMaps: [],
   visibilityMaps: [],
   opacityMaps: [],
-  drawOptions: defaultDrawOptions,
   viewerOptions: defaultViewerOptions,
   viewerAnimationStartOptions: {
     immediateRender: false,
@@ -32,13 +31,14 @@ export const projectDefaults = {
   viewerAnimationFinishOptions: {
     immediateRender: true, // set to true, even if initially set to false
   },
+  renderOptions: defaultRenderOptions,
 } as const satisfies Partial<RawProject>;
 
 /**
  * A TissUUmaps project
  *
  * Top-level container that assembles layers, data objects (images, labels,
- * points, shapes), tables, group-to-value maps, and viewer/draw options
+ * points, shapes), tables, group-to-value maps, and viewer/render options
  * into a single serializable configuration.
  */
 export interface RawProject extends RawModel {
@@ -113,13 +113,6 @@ export interface RawProject extends RawModel {
   opacityMaps?: DefaultMap<number>[];
 
   /**
-   * WebGL draw options for points/shapes
-   *
-   * @defaultValue {@link projectDefaults.drawOptions}
-   */
-  drawOptions?: DrawOptions;
-
-  /**
    * OpenSeadragon viewer options for images/labels
    *
    * @defaultValue {@link projectDefaults.viewerOptions}
@@ -145,6 +138,13 @@ export interface RawProject extends RawModel {
    * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
    */
   viewerAnimationFinishOptions?: ViewerOptions;
+
+  /**
+   * WebGL render options for points/shapes
+   *
+   * @defaultValue {@link projectDefaults.renderOptions}
+   */
+  renderOptions?: RenderOptions;
 }
 
 /**
