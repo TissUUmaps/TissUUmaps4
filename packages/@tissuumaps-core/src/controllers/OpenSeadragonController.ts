@@ -481,16 +481,17 @@ export class OpenSeadragonController {
     if (tiledImageState.tiledImage === undefined) {
       throw new Error("Cannot update tiled image before it is created");
     }
+    const { flip, transform } =
+      "image" in tiledImageState.ref
+        ? tiledImageState.ref.image
+        : tiledImageState.ref.labels;
     const m = mat3.create();
-    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(
-      tiledImageState.ref.layerConfig.transform,
-      {
-        center: {
-          x: tiledImageState.tiledImage.getContentSize().x / 2,
-          y: tiledImageState.tiledImage.getContentSize().y / 2,
-        },
+    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform, {
+      center: {
+        x: tiledImageState.tiledImage.getContentSize().x / 2,
+        y: tiledImageState.tiledImage.getContentSize().y / 2,
       },
-    );
+    });
     mat3.multiply(m, dataToLayerMatrix, m);
     const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
       tiledImageState.ref.layer.transform,
@@ -498,11 +499,8 @@ export class OpenSeadragonController {
     mat3.multiply(m, layerToWorldMatrix, m);
     const dataToWorldTransform = TransformUtils.fromSimilarityMatrix(m);
     const bounds = tiledImageState.tiledImage.getBoundsNoRotate();
-    if (
-      tiledImageState.tiledImage.getFlip() !==
-      tiledImageState.ref.layerConfig.flip
-    ) {
-      tiledImageState.tiledImage.setFlip(tiledImageState.ref.layerConfig.flip);
+    if (tiledImageState.tiledImage.getFlip() !== flip) {
+      tiledImageState.tiledImage.setFlip(flip);
     }
     const width =
       tiledImageState.tiledImage.getContentSize().x *
