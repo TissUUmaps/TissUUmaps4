@@ -13,8 +13,8 @@ export interface TablePointsDataSource extends PointsDataSource<
   url: undefined; // Table data does not use a URL
   path: undefined; // Table data does not use a path
   table: string;
-  x: string;
-  y: string;
+  x?: string;
+  y?: string;
 }
 
 export type DefaultTablePointsDataSource = Required<

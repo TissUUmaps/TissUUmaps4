@@ -14,7 +14,7 @@ export interface PointsDataProvider<
 > extends DataProvider<TPointsDataSource, TPointsData> {}
 
 /**
- * Loaded point cloud data providing coordinate access by dimension name
+ * Loaded point cloud data providing coordinate access
  */
 export interface PointsData extends ItemsData {
   /**
