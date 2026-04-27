@@ -46,7 +46,7 @@ import { WebGLControllerBase } from "./WebGLControllerBase";
  * attributes (x, y, size, color, marker, object index).
  */
 export class WebGLPointsController extends WebGLControllerBase {
-  private static readonly _maxNumObjects = 2048; // see vertex shader
+  private static readonly _maxNumObjects = 512; // see vertex shader
   private static readonly _attribLocations = {
     X: 0,
     Y: 1,
