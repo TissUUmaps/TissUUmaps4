@@ -7,10 +7,19 @@ import {
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
-type DrawingState = {
-  isDrawing: boolean;
-  startPoint: Vertex | null;
-  currentRect: SVGRectElement | null;
+type RectangleDrawingState = {
+  startPoint: Vertex;
+  currentRect: SVGRectElement;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+type PolygonDrawingState = {
+  // TODO extend for polygon drawing
+};
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+type FreehandDrawingState = {
+  // TODO extend for freehand drawing
 };
 
 /**
@@ -30,11 +39,13 @@ export class SVGController {
   // @ts-ignore currently not used, but will be needed in the future
   private _interactionMode?: InteractionMode;
 
-  private _drawingState: DrawingState = {
-    isDrawing: false,
-    startPoint: null,
-    currentRect: null,
-  };
+  private _rectangleDrawingState: RectangleDrawingState | null = null;
+
+  // @ts-expect-error currently not used
+  private _polygonDrawingState: PolygonDrawingState | null = null;
+
+  // @ts-expect-error currently not used
+  private _freehandDrawingState: FreehandDrawingState | null = null;
 
   /** Creates a positioned, full-size `<svg>` element for the SVG overlay */
   static createContainer(): SVGSVGElement {
@@ -132,9 +143,6 @@ export class SVGController {
     this._unregisterEventHandlers();
   }
 
-  // TODO implement mouse event handlers for shape drawing; upon shape completion, call shapeCompleteHandler (if defined);
-  // mouse coordinates can be transformed to world space coordinates using transformNode.getScreenCTM().inverse()
-
   // ─────────────────────────────────────────────────────────────
   // Event Handling
   // ─────────────────────────────────────────────────────────────
@@ -147,71 +155,125 @@ export class SVGController {
     this.container.removeEventListener("pointerdown", this._handlePointerDown);
   }
 
+  // Main handler for pointer down events; delegates to specific handlers based on the current interaction mode
   private _handlePointerDown = (event: PointerEvent): void => {
-    if (this._interactionMode !== "drawRectangle") return;
-    if (event.button !== 0) return;
-    if (event.shiftKey) {
-      // Shift held = don't draw, let instead OpenSeadragon handle panning
-      return;
-    }
+    if (event.shiftKey || event.button !== 0) return;
 
-    document.addEventListener("pointermove", this._handlePointerMove);
-    document.addEventListener("pointerup", this._handlePointerUp);
+    switch (this._interactionMode) {
+      case "drawRectangle":
+        this._handleRectanglePointerDown(event);
+        break;
+      case "drawPolygon":
+        this._handlePolygonPointerDown(event);
+        break;
+      case "drawFreehand":
+        this._handleFreehandPointerDown(event);
+        break;
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Rectangle Drawing
+  // ─────────────────────────────────────────────────────────────
+
+  private _handleRectanglePointerDown = (event: PointerEvent): void => {
+    document.addEventListener("pointermove", this._handleRectanglePointerMove);
+    document.addEventListener("pointerup", this._handleRectanglePointerUp);
 
     event.preventDefault();
     event.stopPropagation();
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
 
-    this._drawingState = {
-      isDrawing: true,
+    this._rectangleDrawingState = {
       startPoint: worldPoint,
       currentRect: this._createPreviewRect(worldPoint),
     };
   };
 
-  private _handlePointerMove = (event: PointerEvent): void => {
-    if (
-      !this._drawingState.isDrawing ||
-      !this._drawingState.currentRect ||
-      !this._drawingState.startPoint
-    )
-      return;
+  private _handleRectanglePointerMove = (event: PointerEvent): void => {
+    if (!this._rectangleDrawingState) return;
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
     this._updatePreviewRect(
-      this._drawingState.currentRect,
-      this._drawingState.startPoint,
+      this._rectangleDrawingState.currentRect,
+      this._rectangleDrawingState.startPoint,
       worldPoint,
     );
   };
 
-  private _handlePointerUp = (event: PointerEvent): void => {
-    if (!this._drawingState.isDrawing || event.button !== 0) return;
+  private _handleRectanglePointerUp = (event: PointerEvent): void => {
+    if (!this._rectangleDrawingState || event.button !== 0) return;
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
 
-    if (this._drawingState.startPoint) {
+    if (this._rectangleDrawingState.startPoint) {
       const multiPolygon = this._createRectangleMultiPolygon(
-        this._drawingState.startPoint,
+        this._rectangleDrawingState.startPoint,
         worldPoint,
       );
 
-      if (this._hasMinimumSize(this._drawingState.startPoint, worldPoint)) {
+      if (
+        this._hasMinimumSize(this._rectangleDrawingState.startPoint, worldPoint)
+      ) {
         this.shapeCompleteHandler?.(multiPolygon);
       }
     }
 
     // Remove preview element - WebGL will render the actual shape
-    this._drawingState.currentRect?.remove();
-    this._drawingState = {
-      isDrawing: false,
-      startPoint: null,
-      currentRect: null,
-    };
+    this._rectangleDrawingState.currentRect.remove();
+    this._rectangleDrawingState = null;
 
-    document.removeEventListener("pointermove", this._handlePointerMove);
-    document.removeEventListener("pointerup", this._handlePointerUp);
+    document.removeEventListener(
+      "pointermove",
+      this._handleRectanglePointerMove,
+    );
+    document.removeEventListener("pointerup", this._handleRectanglePointerUp);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Polygon drawing
+  // ─────────────────────────────────────────────────────────────
+
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+
+  // @ts-expect-error currently not used
+  private _handlePolygonPointerDown = (event: PointerEvent): void => {
+    // TODO implement polygon drawing logic
+    // TODO: Register polygon-specific move/up handlers
+    // document.addEventListener("pointermove", this._handlePolygonPointerMove);
+    // document.addEventListener("pointerup", this._handlePolygonPointerUp)
+  };
+
+  // @ts-expect-error currently not used
+  private _handlePolygonPointerMove = (event: PointerEvent): void => {
+    // TODO
+  };
+
+  // @ts-expect-error currently not used
+  private _handlePolygonPointerUp = (event: PointerEvent): void => {
+    // TODO
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Freehand Drawing
+  // ─────────────────────────────────────────────────────────────
+
+  // @ts-expect-error currently not used
+  private _handleFreehandPointerDown = (event: PointerEvent): void => {
+    // TODO: Register freehand-specific move/up handlers
+    // document.addEventListener("pointermove", this._handleFreehandPointerMove);
+    // document.addEventListener("pointerup", this._handleFreehandPointerUp);
+  };
+
+  // @ts-expect-error currently not used
+  private _handleFreehandPointerMove = (event: PointerEvent): void => {
+    // TODO
+  };
+
+  // @ts-expect-error currently not used
+  private _handleFreehandPointerUp = (event: PointerEvent): void => {
+    // TODO
   };
 
   // ─────────────────────────────────────────────────────────────
