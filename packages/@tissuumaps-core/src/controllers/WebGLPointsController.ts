@@ -766,7 +766,6 @@ export class WebGLPointsController extends WebGLControllerBase {
             pointSizeFactor: ref.points.pointSizeFactor,
             transform: structuredClone(ref.points.transform),
           },
-          layerConfig: {},
         },
       });
       objectsUBOData.set(
@@ -863,6 +862,5 @@ type PointsBufferSliceState = {
       | "pointSizeFactor"
       | "transform"
     >;
-    layerConfig: Pick<PointsLayerConfig, never>;
   };
 };
