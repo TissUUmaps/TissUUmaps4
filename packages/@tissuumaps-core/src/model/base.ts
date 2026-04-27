@@ -126,14 +126,14 @@ export interface RawRenderedDataObject<
   /**
    * Horizontal reflection, applied before transformation
    *
-   * @defaultValue {@link layerConfigDefaults.flip}
+   * @defaultValue {@link renderedDataObjectDefaults.flip}
    */
   flip?: boolean;
 
   /**
    * Transformation from data object space to layer space
    *
-   * @defaultValue {@link layerConfigDefaults.transform}
+   * @defaultValue {@link renderedDataObjectDefaults.transform}
    */
   transform?: SimilarityTransform;
 
