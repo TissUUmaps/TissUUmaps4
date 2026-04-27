@@ -23,8 +23,8 @@ import {
   type Color,
   type CoordinateSpace,
   type DefaultMap,
-  type DrawOptions,
   type Marker,
+  type RenderOptions,
 } from "../model/types";
 import { type PointsData } from "../storage/points";
 import { type TableData } from "../storage/table";
@@ -303,9 +303,9 @@ export class WebGLPointsController extends WebGLControllerBase {
    * draws all points in a single `gl.POINTS` call with alpha blending.
    *
    * @param viewport - Current world-space viewport
-   * @param drawOptions - Current draw options (e.g. point size factor)
+   * @param renderOptions - Current render options (e.g. point size factor)
    */
-  draw(viewport: Rect, drawOptions: DrawOptions): void {
+  draw(viewport: Rect, renderOptions: RenderOptions): void {
     if (
       this._currentBufferSize === 0 ||
       this._markerAtlasTexture === undefined
@@ -326,7 +326,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     );
     this.gl.uniform1f(
       this._uniformLocations.worldPointSizeFactor,
-      drawOptions.pointSizeFactor,
+      renderOptions.pointSizeFactor,
     );
     this.gl.uniformMatrix3x2fv(
       this._uniformLocations.worldToViewportMatrix,

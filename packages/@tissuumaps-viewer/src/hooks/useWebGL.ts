@@ -19,7 +19,7 @@ export function useWebGL(
     colorMaps,
     visibilityMaps,
     opacityMaps,
-    drawOptions,
+    renderOptions,
     loadPoints,
     loadShapes,
     loadTable,
@@ -68,9 +68,9 @@ export function useWebGL(
   useEffect(() => {
     const controller = controllerRef.current;
     if (controllerReady && controller !== null) {
-      console.debug("Setting WebGL draw options");
+      console.debug("Setting WebGL render options");
       const { syncPoints, syncShapes, redraw } =
-        controller.setDrawOptions(drawOptions);
+        controller.setRenderOptions(renderOptions);
       if (syncPoints) {
         dispatchSyncPoints();
       }
@@ -81,7 +81,7 @@ export function useWebGL(
         controller.draw();
       }
     }
-  }, [controllerReady, drawOptions]);
+  }, [controllerReady, renderOptions]);
 
   useEffect(() => {
     const controller = controllerRef.current;

@@ -1,11 +1,11 @@
 import {
   type Color,
   type DefaultMap,
-  type DrawOptions,
   type Marker,
   type ProgressCallback,
   type Project,
   type RawProject,
+  type RenderOptions,
   type ViewerOptions,
   createProject,
   projectDefaults,
@@ -23,15 +23,15 @@ export type ProjectSliceState = {
   colorMaps: DefaultMap<Color>[];
   visibilityMaps: DefaultMap<boolean>[];
   opacityMaps: DefaultMap<number>[];
-  drawOptions: DrawOptions;
   viewerOptions: ViewerOptions;
   viewerAnimationStartOptions: ViewerOptions;
   viewerAnimationFinishOptions: ViewerOptions;
+  renderOptions: RenderOptions;
 };
 
 export type ProjectSliceActions = {
   setProjectName: (name: string) => void;
-  setDrawOptions: (options: Partial<DrawOptions>) => void;
+  setRenderOptions: (options: Partial<RenderOptions>) => void;
   loadProject: (
     project: Project,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
@@ -59,9 +59,9 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       draft.projectName = name;
     });
   },
-  setDrawOptions: (options) => {
+  setRenderOptions: (options) => {
     set((draft) => {
-      draft.drawOptions = { ...draft.drawOptions, ...options };
+      draft.renderOptions = { ...draft.renderOptions, ...options };
     });
   },
   loadProject: deduplicate(
@@ -76,7 +76,7 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
         colorMaps: structuredClone(project.colorMaps),
         visibilityMaps: structuredClone(project.visibilityMaps),
         opacityMaps: structuredClone(project.opacityMaps),
-        drawOptions: structuredClone(project.drawOptions),
+        renderOptions: structuredClone(project.renderOptions),
         viewerOptions: structuredClone(project.viewerOptions),
         viewerAnimationStartOptions: structuredClone(
           project.viewerAnimationStartOptions,
@@ -170,7 +170,7 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       colorMaps: structuredClone(state.colorMaps),
       visibilityMaps: structuredClone(state.visibilityMaps),
       opacityMaps: structuredClone(state.opacityMaps),
-      drawOptions: structuredClone(state.drawOptions),
+      renderOptions: structuredClone(state.renderOptions),
       viewerOptions: structuredClone(state.viewerOptions),
       viewerAnimationStartOptions: structuredClone(
         state.viewerAnimationStartOptions,
@@ -203,7 +203,7 @@ function createInitialProjectSliceState(): ProjectSliceState {
     colorMaps: [],
     visibilityMaps: [],
     opacityMaps: [],
-    drawOptions: projectDefaults.drawOptions,
+    renderOptions: projectDefaults.renderOptions,
     viewerOptions: projectDefaults.viewerOptions,
     viewerAnimationStartOptions: projectDefaults.viewerAnimationStartOptions,
     viewerAnimationFinishOptions: projectDefaults.viewerAnimationFinishOptions,

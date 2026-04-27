@@ -34,7 +34,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       viewerOptions: state.viewerOptions,
       viewerAnimationStartOptions: state.viewerAnimationStartOptions,
       viewerAnimationFinishOptions: state.viewerAnimationFinishOptions,
-      drawOptions: state.drawOptions,
+      renderOptions: state.renderOptions,
       // rerender upon changes to data providers
       _imageDataProviders: state.imageDataProviders,
       _labelsDataProviders: state.labelsDataProviders,

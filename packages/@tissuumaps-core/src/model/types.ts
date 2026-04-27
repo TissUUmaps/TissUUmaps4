@@ -111,8 +111,8 @@ export type ViewerOptions = Omit<OpenSeadragon.Options, "element"> & {
   referenceStripElement?: never;
 };
 
-/** WebGL draw options for rendering points and shapes */
-export type DrawOptions = {
+/** WebGL render options for rendering points and shapes */
+export type RenderOptions = {
   /** Global point size scaling factor (unitless, multiplied with all point sizes) */
   pointSizeFactor: number;
 

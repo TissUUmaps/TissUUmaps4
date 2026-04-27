@@ -1,8 +1,8 @@
 import {
   type Color,
   type CoordinateSpace,
-  type DrawOptions,
   Marker,
+  type RenderOptions,
   type SimilarityTransform,
   type ViewerOptions,
 } from "./types";
@@ -13,13 +13,6 @@ export const identityTransform = {
   rotation: 0,
   translation: { x: 0, y: 0 },
 } as const satisfies SimilarityTransform;
-
-/** Default WebGL draw options */
-export const defaultDrawOptions = {
-  pointSizeFactor: 1,
-  shapeStrokeWidth: 1,
-  numShapesScanlines: 512,
-} as const satisfies DrawOptions;
 
 /** Default OpenSeadragon viewer options */
 export const defaultViewerOptions = {
@@ -47,6 +40,13 @@ export const defaultViewerOptions = {
   showNavigationControl: false,
   imageSmoothingEnabled: false,
 } as const satisfies ViewerOptions;
+
+/** Default WebGL render options */
+export const defaultRenderOptions = {
+  pointSizeFactor: 1,
+  shapeStrokeWidth: 1,
+  numShapesScanlines: 512,
+} as const satisfies RenderOptions;
 
 // TODO always use defaultLabelColorPalette instead
 /** Default label color */

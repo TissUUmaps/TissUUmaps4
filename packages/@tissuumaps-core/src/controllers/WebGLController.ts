@@ -1,7 +1,7 @@
 import { deepEqual } from "fast-equals";
 
-import { defaultDrawOptions } from "../model/constants";
-import { type DrawOptions } from "../model/types";
+import { defaultRenderOptions } from "../model/constants";
+import { type RenderOptions } from "../model/types";
 import { type Rect } from "../types";
 import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLPointsController } from "./WebGLPointsController";
@@ -20,7 +20,7 @@ export class WebGLController {
 
   public readonly canvas: HTMLCanvasElement;
   private _viewport: Rect;
-  private _drawOptions: DrawOptions;
+  private _renderOptions: RenderOptions;
   private _gl: WebGL2RenderingContext;
   private _pointsController: WebGLPointsController;
   private _shapesController: WebGLShapesController;
@@ -43,7 +43,7 @@ export class WebGLController {
   constructor(canvas: HTMLCanvasElement, initialViewport: Rect) {
     this.canvas = canvas;
     this._viewport = initialViewport;
-    this._drawOptions = structuredClone(defaultDrawOptions);
+    this._renderOptions = structuredClone(defaultRenderOptions);
     this._gl = WebGLController._createWebGLContext(this.canvas);
     this._pointsController = new WebGLPointsController(this._gl);
     this._shapesController = new WebGLShapesController(this._gl);
@@ -77,20 +77,20 @@ export class WebGLController {
   }
 
   /**
-   * Applies new draw options
+   * Applies new render options
    *
-   * @param drawOptions - The new draw options
+   * @param renderOptions - The new render options
    * @returns Flags indicating whether points and/or shapes need to be re-synchronized, and whether a redraw is needed
    */
-  setDrawOptions(drawOptions: DrawOptions): {
+  setRenderOptions(renderOptions: RenderOptions): {
     syncPoints: boolean;
     syncShapes: boolean;
     redraw: boolean;
   } {
-    if (!deepEqual(drawOptions, this._drawOptions)) {
-      this._drawOptions = drawOptions;
+    if (!deepEqual(renderOptions, this._renderOptions)) {
+      this._renderOptions = renderOptions;
       const syncShapes = this._shapesController.setNumScanlines(
-        drawOptions.numShapesScanlines,
+        renderOptions.numShapesScanlines,
       );
       return { syncPoints: false, syncShapes, redraw: true };
     }
@@ -162,8 +162,8 @@ export class WebGLController {
   draw(): void {
     this._gl.clearColor(0, 0, 0, 0);
     this._gl.clear(this._gl.COLOR_BUFFER_BIT);
-    this._pointsController.draw(this._viewport, this._drawOptions);
-    this._shapesController.draw(this._viewport, this._drawOptions);
+    this._pointsController.draw(this._viewport, this._renderOptions);
+    this._shapesController.draw(this._viewport, this._renderOptions);
   }
 
   /**
