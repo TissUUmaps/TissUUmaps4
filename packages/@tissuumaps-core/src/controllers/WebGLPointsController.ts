@@ -374,8 +374,8 @@ export class WebGLPointsController extends WebGLControllerBase {
       yMax = -Infinity;
     for (const bufferSliceState of this._bufferSliceStates) {
       const transform = WebGLPointsController.createDataToWorldMatrix(
+        bufferSliceState.ref.points,
         bufferSliceState.ref.layer,
-        bufferSliceState.ref.layerConfig,
       );
       const { x, y, width, height } = TransformUtils.transformBoundingBox(
         bufferSliceState.dataBounds,
@@ -616,8 +616,8 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.points.pointSizeFactor ||
         bufferSliceState.current.layer.transform.scale !==
           ref.layer.transform.scale ||
-        bufferSliceState.current.layerConfig.transform.scale !==
-          ref.layerConfig.transform.scale ||
+        bufferSliceState.current.points.transform.scale !==
+          ref.points.transform.scale ||
         !deepEqual(
           bufferSliceState.current.points.pointSize,
           ref.points.pointSize,
@@ -647,7 +647,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         }
         let sizeFactor = ref.points.pointSizeFactor * ref.layer.pointSizeFactor;
         if (activeUnit === "data") {
-          sizeFactor *= ref.layerConfig.transform.scale;
+          sizeFactor *= ref.points.transform.scale;
         }
         if (activeUnit === "data" || activeUnit === "layer") {
           sizeFactor *= ref.layer.transform.scale;
@@ -764,18 +764,14 @@ export class WebGLPointsController extends WebGLControllerBase {
             pointVisibility: structuredClone(ref.points.pointVisibility),
             pointOpacity: structuredClone(ref.points.pointOpacity),
             pointSizeFactor: ref.points.pointSizeFactor,
+            transform: structuredClone(ref.points.transform),
           },
-          layerConfig: {
-            transform: structuredClone(ref.layerConfig.transform),
-          },
+          layerConfig: {},
         },
       });
       objectsUBOData.set(
         TransformUtils.transposeAsGLMat2x4(
-          WebGLPointsController.createDataToWorldMatrix(
-            ref.layer,
-            ref.layerConfig,
-          ),
+          WebGLPointsController.createDataToWorldMatrix(ref.points, ref.layer),
         ),
         i * 8,
       );
@@ -865,7 +861,8 @@ type PointsBufferSliceState = {
       | "pointVisibility"
       | "pointOpacity"
       | "pointSizeFactor"
+      | "transform"
     >;
-    layerConfig: Pick<PointsLayerConfig, "transform">;
+    layerConfig: Pick<PointsLayerConfig, never>;
   };
 };

@@ -1,7 +1,7 @@
 import { mat3 } from "gl-matrix";
 
-import { type LayerConfig } from "../model/base";
 import { type Layer } from "../model/layer";
+import { type SimilarityTransform } from "../model/types";
 import { type Rect } from "../types";
 import { TransformUtils } from "../utils/TransformUtils";
 
@@ -25,21 +25,19 @@ export class WebGLControllerBase {
    * Applies, in order: optional horizontal flip, data → layer transform,
    * then layer → world transform.
    *
+   * @param obj - Object providing the flip flag and data → layer transform
    * @param layer - Layer providing the layer → world transform
-   * @param layerConfig - Layer configuration providing the flip flag and data → layer transform
    */
   protected static createDataToWorldMatrix(
+    obj: { flip: boolean; transform: SimilarityTransform },
     layer: Layer,
-    layerConfig: LayerConfig,
   ): mat3 {
     const dataToWorldMatrix = mat3.create();
-    if (layerConfig.flip) {
+    if (obj.flip) {
       const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
       mat3.multiply(dataToWorldMatrix, flipMatrix, dataToWorldMatrix);
     }
-    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(
-      layerConfig.transform,
-    );
+    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(obj.transform);
     mat3.multiply(dataToWorldMatrix, dataToLayerMatrix, dataToWorldMatrix);
     const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
       layer.transform,
@@ -87,12 +85,12 @@ export class WebGLControllerBase {
    * Inverse of {@link createDataToWorldMatrix}: applies world → layer,
    * layer → data, then optional horizontal un-flip.
    *
+   * @param obj - Object providing the data → layer transform (inverted) and flip flag
    * @param layer - Layer providing the layer → world transform (inverted)
-   * @param layerConfig - Layer configuration providing the data → layer transform (inverted) and flip flag
    */
   protected static createWorldToDataMatrix(
+    obj: { flip: boolean; transform: SimilarityTransform },
     layer: Layer,
-    layerConfig: LayerConfig,
   ): mat3 {
     const worldToDataMatrix = mat3.create();
     const worldToLayerMatrix = TransformUtils.toSimilarityMatrix(
@@ -100,12 +98,10 @@ export class WebGLControllerBase {
     );
     mat3.invert(worldToLayerMatrix, worldToLayerMatrix);
     mat3.multiply(worldToDataMatrix, worldToLayerMatrix, worldToDataMatrix);
-    const layerToDataMatrix = TransformUtils.toSimilarityMatrix(
-      layerConfig.transform,
-    );
+    const layerToDataMatrix = TransformUtils.toSimilarityMatrix(obj.transform);
     mat3.invert(layerToDataMatrix, layerToDataMatrix);
     mat3.multiply(worldToDataMatrix, layerToDataMatrix, worldToDataMatrix);
-    if (layerConfig.flip) {
+    if (obj.flip) {
       const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
       mat3.multiply(worldToDataMatrix, flipMatrix, worldToDataMatrix);
     }

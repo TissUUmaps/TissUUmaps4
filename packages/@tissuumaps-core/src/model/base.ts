@@ -95,6 +95,8 @@ export function createDataObject<
 export const renderedDataObjectDefaults = {
   visibility: true,
   opacity: 1,
+  flip: false,
+  transform: identityTransform,
   layerConfigs: [],
 } as const satisfies Partial<
   RawRenderedDataObject<RawDataSource<string>, RawLayerConfig>
@@ -120,6 +122,20 @@ export interface RawRenderedDataObject<
    * @defaultValue {@link renderedDataObjectDefaults.opacity}
    */
   opacity?: number;
+
+  /**
+   * Horizontal reflection, applied before transformation
+   *
+   * @defaultValue {@link layerConfigDefaults.flip}
+   */
+  flip?: boolean;
+
+  /**
+   * Transformation from data object space to layer space
+   *
+   * @defaultValue {@link layerConfigDefaults.transform}
+   */
+  transform?: SimilarityTransform;
 
   /**
    * Layer configurations specifying how this data object is displayed on each layer
@@ -227,10 +243,8 @@ export function createDataSource<TType extends string>(
 /**
  * Default values for {@link RawLayerConfig}
  */
-export const layerConfigDefaults = {
-  flip: false,
-  transform: identityTransform,
-} as const satisfies Partial<RawLayerConfig>;
+export const layerConfigDefaults =
+  {} as const satisfies Partial<RawLayerConfig>;
 
 /**
  * A layer-specific display configuration for rendered data objects
@@ -244,20 +258,6 @@ export interface RawLayerConfig extends RawModel {
    * - A table column holding the layer ID values for each item
    */
   layer: string | { table: string; column: string };
-
-  /**
-   * Horizontal reflection, applied before transformation
-   *
-   * @defaultValue {@link layerConfigDefaults.flip}
-   */
-  flip?: boolean;
-
-  /**
-   * Transformation from data object space to layer space
-   *
-   * @defaultValue {@link layerConfigDefaults.transform}
-   */
-  transform?: SimilarityTransform;
 }
 
 /**
@@ -268,7 +268,9 @@ export type LayerConfig = Model &
   Omit<
     RawLayerConfig,
     // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    keyof Model | keyof typeof layerConfigDefaults
+    | keyof Model
+    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents,@typescript-eslint/no-duplicate-type-constituents
+    | keyof typeof layerConfigDefaults
   >;
 
 /**
