@@ -13,7 +13,7 @@ import { type TissUUmapsStateCreator } from "../index";
 type LoadedPointsData = {
   dataSource: PointsDataSource;
   data: PointsData;
-  loadedCoordinates: Map<string, Float32Array>;
+  loadedCoordinates?: [Float32Array, Float32Array];
 };
 
 export type PointsSlice = PointsSliceState & PointsSliceActions;
@@ -41,13 +41,12 @@ export type PointsSliceActions = {
   ) => Promise<PointsData>;
   loadPointsCoordinates: (
     pointsId: string,
-    dimension: string,
     options?: {
       signal?: AbortSignal;
       reload?: boolean;
       onProgress?: ProgressCallback;
     },
-  ) => Promise<Float32Array>;
+  ) => Promise<[Float32Array, Float32Array]>;
   unloadPoints: (pointsId: string) => boolean;
 };
 
@@ -216,7 +215,6 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
         draft.loadedPointsData.set(loadedDataKey, {
           dataSource,
           data,
-          loadedCoordinates: new Map(),
         });
         draft.loadedPoints.set(pointsId, loadedDataKey);
         if (newDataSource !== undefined) {
@@ -239,7 +237,7 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
     (_pointsId, options) => options?.signal,
   ),
   loadPointsCoordinates: deduplicate(
-    async (pointsId, dimension, options) => {
+    async (pointsId, options) => {
       const { signal, reload = false, onProgress } = options ?? {};
       signal?.throwIfAborted();
       // Check if the points, the corresponding data source, and the requested coordinates are already loaded
@@ -254,12 +252,11 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
           `Data source for points with ID ${pointsId} not loaded.`,
         );
       }
-      const oldCoordinates = loadedData.loadedCoordinates.get(dimension);
-      if (oldCoordinates !== undefined && !reload) {
-        return oldCoordinates;
+      if (loadedData.loadedCoordinates !== undefined && !reload) {
+        return loadedData.loadedCoordinates;
       }
       // Load the requested coordinates
-      const coordinates = await loadedData.data.loadCoordinates(dimension, {
+      const coordinates = await loadedData.data.loadCoordinates({
         signal,
         onProgress,
       });
@@ -291,11 +288,11 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
       set((draft) => {
         const loadedDataDraft =
           draft.loadedPointsData.get(currentLoadedDataKey)!;
-        loadedDataDraft.loadedCoordinates.set(dimension, coordinates);
+        loadedDataDraft.loadedCoordinates = coordinates;
       });
       return coordinates;
     },
-    (_pointsId, _dimension, options) => options?.signal,
+    (_pointsId, options) => options?.signal,
   ),
   unloadPoints: (pointsId) => {
     const state = get();

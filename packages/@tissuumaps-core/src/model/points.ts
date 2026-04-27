@@ -176,21 +176,8 @@ export const pointsLayerConfigDefaults =
 /**
  * A layer-specific display configuration for two-dimensional point clouds
  */
-export interface RawPointsLayerConfig extends RawLayerConfig {
-  /**
-   * Dimension containing point-wise X coordinates
-   *
-   * @see {@link "../storage".PointsData.getDimensions}
-   */
-  x: string;
-
-  /**
-   * Dimension containing point-wise Y coordinates
-   *
-   * @see {@link "../storage".PointsData.getDimensions}
-   */
-  y: string;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface RawPointsLayerConfig extends RawLayerConfig {}
 
 /**
  * A {@link RawPointsLayerConfig} with {@link pointsLayerConfigDefaults} applied

@@ -6,11 +6,13 @@ import {
 
 export class TablePointsData implements PointsData {
   private readonly _tableData: TableData;
-  private readonly _dimensionColumns?: string[];
+  private readonly _xColumn: string;
+  private readonly _yColumn: string;
 
-  constructor(tableData: TableData, dimensionColumns?: string[]) {
+  constructor(tableData: TableData, xColumn: string, yColumn: string) {
     this._tableData = tableData;
-    this._dimensionColumns = dimensionColumns;
+    this._xColumn = xColumn;
+    this._yColumn = yColumn;
   }
 
   getIds(): number[] {
@@ -25,41 +27,29 @@ export class TablePointsData implements PointsData {
     return this._tableData.getNames();
   }
 
-  async suggestDimensionQueries(
-    currentQuery: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string[]> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    if (this._dimensionColumns !== undefined) {
-      return this._dimensionColumns.filter((column) =>
-        column.includes(currentQuery),
-      );
-    }
-    return await this._tableData.suggestColumnQueries(currentQuery, { signal });
-  }
-
-  async resolveDimensionQuery(
-    query: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string | null> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    return await this._tableData.resolveColumnQuery(query, { signal });
-  }
-
-  async loadCoordinates(
-    dimension: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<Float32Array> {
+  async loadCoordinates(options?: {
+    signal?: AbortSignal;
+    onProgress?: ProgressCallback;
+  }): Promise<[Float32Array, Float32Array]> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
-    const values = await this._tableData.loadValues<number>(dimension, {
+    const xPromise = this._tableData.loadValues<number>(this._xColumn, {
       signal,
       onProgress,
     });
+    const yPromise = this._tableData.loadValues<number>(this._yColumn, {
+      signal,
+      onProgress,
+    });
+    let [xData, yData] = await Promise.all([xPromise, yPromise]);
     signal?.throwIfAborted();
-    return values instanceof Float32Array ? values : Float32Array.from(values);
+    if (!(xData instanceof Float32Array)) {
+      xData = Float32Array.from(xData);
+    }
+    if (!(yData instanceof Float32Array)) {
+      yData = Float32Array.from(yData);
+    }
+    return [xData, yData];
   }
 
   close(): void {}

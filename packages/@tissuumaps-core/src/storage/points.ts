@@ -18,38 +18,13 @@ export interface PointsDataProvider<
  */
 export interface PointsData extends ItemsData {
   /**
-   * Returns dimension name suggestions matching the current query
+   * Loads the coordinates for all points
    *
-   * @param currentQuery - The partial dimension name to autocomplete
-   * @param options - Optional abort signal
-   * @returns A list of suggested dimension names matching the query
-   */
-  suggestDimensionQueries(
-    currentQuery: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string[]>;
-
-  /**
-   * Resolves a query to an exact dimension name
-   *
-   * @param query - The dimension query
-   * @param options - Optional abort signal
-   * @returns The resolved dimension name, or `null` if no match is found
-   */
-  resolveDimensionQuery(
-    query: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string | null>;
-
-  /**
-   * Loads the coordinate values for a dimension as a float array
-   *
-   * @param dimension - The dimension name (e.g. an X or Y coordinate column)
    * @param options - Optional abort signal and progress callback
-   * @returns The coordinate values for the dimension
+   * @returns The x and y coordinates as separate arrays, in index order
    */
-  loadCoordinates(
-    dimension: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<Float32Array>;
+  loadCoordinates(options?: {
+    signal?: AbortSignal;
+    onProgress?: ProgressCallback;
+  }): Promise<[Float32Array, Float32Array]>;
 }

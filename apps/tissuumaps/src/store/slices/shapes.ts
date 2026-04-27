@@ -249,9 +249,8 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
           `Data source for shapes with ID ${shapesId} not loaded.`,
         );
       }
-      const oldMultiPolygons = loadedData.loadedMultiPolygons;
-      if (oldMultiPolygons !== undefined && !reload) {
-        return oldMultiPolygons;
+      if (loadedData.loadedMultiPolygons !== undefined && !reload) {
+        return loadedData.loadedMultiPolygons;
       }
       // Load the requested multi-polygons
       const multiPolygons = await loadedData.data.loadMultiPolygons({

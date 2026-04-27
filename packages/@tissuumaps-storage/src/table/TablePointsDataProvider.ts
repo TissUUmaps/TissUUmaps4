@@ -8,6 +8,7 @@ import { TablePointsData } from "./TablePointsData";
 import {
   type TablePointsDataSource,
   createDefaultTablePointsDataSource,
+  tablePointsDataSourceDefaults,
 } from "./TablePointsDataSource";
 
 export type LoadTableFunction = (
@@ -30,6 +31,14 @@ export class TablePointsDataProvider implements PointsDataProvider<
       table: {
         type: "string",
       },
+      x: {
+        type: "string",
+        default: tablePointsDataSourceDefaults.x,
+      },
+      y: {
+        type: "string",
+        default: tablePointsDataSourceDefaults.y,
+      },
     },
     required: ["table"],
   };
@@ -41,6 +50,16 @@ export class TablePointsDataProvider implements PointsDataProvider<
         type: "Control",
         scope: "#/properties/table",
         label: "Table",
+      },
+      {
+        type: "Control",
+        scope: "#/properties/x",
+        label: "X column",
+      },
+      {
+        type: "Control",
+        scope: "#/properties/y",
+        label: "Y column",
       },
     ],
   };
@@ -70,6 +89,10 @@ export class TablePointsDataProvider implements PointsDataProvider<
     });
     signal?.throwIfAborted();
 
-    return new TablePointsData(tableData, defaultDataSource.dimensionColumns);
+    return new TablePointsData(
+      tableData,
+      defaultDataSource.x,
+      defaultDataSource.y,
+    );
   }
 }

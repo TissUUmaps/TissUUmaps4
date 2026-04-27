@@ -72,10 +72,7 @@ export function PointsPanel({ className }: PointsPanelProps) {
             id: crypto.randomUUID(),
             name,
             dataSource,
-            layerConfigs:
-              layers.length > 0
-                ? [{ layer: layers[0]!.id, x: "x", y: "y" }]
-                : [],
+            layerConfigs: layers.length > 0 ? [{ layer: layers[0]!.id }] : [],
           });
           addPoints(newPoints);
         }}
