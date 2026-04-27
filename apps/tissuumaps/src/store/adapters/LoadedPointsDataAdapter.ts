@@ -24,32 +24,14 @@ export class LoadedPointsDataAdapter implements PointsData {
     return this._getData().getNames();
   }
 
-  async suggestDimensionQueries(
-    currentQuery: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string[]> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    return await this._getData().suggestDimensionQueries(currentQuery, options);
-  }
-
-  async resolveDimensionQuery(
-    query: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string | null> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    return await this._getData().resolveDimensionQuery(query, options);
-  }
-
-  async loadCoordinates(
-    dimension: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<Float32Array> {
+  async loadCoordinates(options?: {
+    signal?: AbortSignal;
+    onProgress?: ProgressCallback;
+  }): Promise<[Float32Array, Float32Array]> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const state = useTissUUmaps.getState();
-    return await state.loadPointsCoordinates(this._pointsId, dimension, {
+    return await state.loadPointsCoordinates(this._pointsId, {
       signal,
       onProgress,
     });

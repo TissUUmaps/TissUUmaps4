@@ -563,19 +563,8 @@ export class WebGLPointsController extends WebGLControllerBase {
         bufferSliceState.ref.data !== ref.data;
       let dataBounds = bufferSliceState?.dataBounds;
       // x/y
-      if (
-        bufferSliceChanged ||
-        dataBounds === undefined ||
-        bufferSliceState.current.layerConfig.x !== ref.layerConfig.x ||
-        bufferSliceState.current.layerConfig.y !== ref.layerConfig.y
-      ) {
-        const xData = await ref.data.loadCoordinates(ref.layerConfig.x, {
-          signal,
-        });
-        signal?.throwIfAborted();
-        const yData = await ref.data.loadCoordinates(ref.layerConfig.y, {
-          signal,
-        });
+      if (bufferSliceChanged || dataBounds === undefined) {
+        const [xData, yData] = await ref.data.loadCoordinates({ signal });
         signal?.throwIfAborted();
         dataBounds = WebGLPointsController._getDataBounds(xData, yData);
         WebGLUtils.loadBuffer(
@@ -777,8 +766,6 @@ export class WebGLPointsController extends WebGLControllerBase {
             pointSizeFactor: ref.points.pointSizeFactor,
           },
           layerConfig: {
-            x: ref.layerConfig.x,
-            y: ref.layerConfig.y,
             transform: structuredClone(ref.layerConfig.transform),
           },
         },
@@ -879,6 +866,6 @@ type PointsBufferSliceState = {
       | "pointOpacity"
       | "pointSizeFactor"
     >;
-    layerConfig: Pick<PointsLayerConfig, "x" | "y" | "transform">;
+    layerConfig: Pick<PointsLayerConfig, "transform">;
   };
 };
