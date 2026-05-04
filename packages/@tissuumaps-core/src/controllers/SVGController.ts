@@ -18,6 +18,7 @@ type PolygonDrawingState = {
 };
 
 type FreehandDrawingState = {
+  pointerId: number;
   points: Vertex[];
   currentPolyline: SVGPolylineElement;
   startHandle: SVGCircleElement;
@@ -275,10 +276,15 @@ export class SVGController {
 
     document.addEventListener("pointermove", this._handleFreehandPointerMove);
     document.addEventListener("pointerup", this._handleFreehandPointerUp);
+    document.addEventListener(
+      "pointercancel",
+      this._handleFreehandPointerCancel,
+    );
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
 
     this._freehandDrawingState = {
+      pointerId: event.pointerId,
       points: [worldPoint],
       currentPolyline: this._createPreviewPolyline(worldPoint),
       startHandle: this._createVertexMarker(worldPoint),
@@ -288,7 +294,12 @@ export class SVGController {
   };
 
   private _handleFreehandPointerMove = (event: PointerEvent): void => {
-    if (!this._freehandDrawingState) return;
+    if (
+      !this._freehandDrawingState ||
+      event.pointerId !== this._freehandDrawingState.pointerId
+    ) {
+      return;
+    }
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
     this._freehandDrawingState.points.push(worldPoint);
@@ -319,7 +330,13 @@ export class SVGController {
   };
 
   private _handleFreehandPointerUp = (event: PointerEvent): void => {
-    if (!this._freehandDrawingState || event.button !== 0) return;
+    if (
+      !this._freehandDrawingState ||
+      event.button !== 0 ||
+      event.pointerId !== this._freehandDrawingState.pointerId
+    ) {
+      return;
+    }
 
     const releasePoint = this._screenToWorld(event.clientX, event.clientY);
     this._freehandDrawingState.points.push(releasePoint);
@@ -345,6 +362,17 @@ export class SVGController {
     this._cancelFreehand();
   };
 
+  private _handleFreehandPointerCancel = (event: PointerEvent): void => {
+    if (
+      !this._freehandDrawingState ||
+      event.pointerId !== this._freehandDrawingState.pointerId
+    ) {
+      return;
+    }
+    console.debug("Freehand shape discarded (pointercancel)");
+    this._cancelFreehand();
+  };
+
   private _cancelFreehand(): void {
     if (!this._freehandDrawingState) return;
 
@@ -357,6 +385,10 @@ export class SVGController {
       this._handleFreehandPointerMove,
     );
     document.removeEventListener("pointerup", this._handleFreehandPointerUp);
+    document.removeEventListener(
+      "pointercancel",
+      this._handleFreehandPointerCancel,
+    );
   }
 
   // ─────────────────────────────────────────────────────────────
