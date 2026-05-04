@@ -17,9 +17,12 @@ type PolygonDrawingState = {
   // TODO extend for polygon drawing
 };
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 type FreehandDrawingState = {
-  // TODO extend for freehand drawing
+  points: Vertex[];
+  currentPolyline: SVGPolylineElement;
+  startHandle: SVGCircleElement;
+  hasLeftStart: boolean;
+  isNearStart: boolean;
 };
 
 /**
@@ -33,6 +36,8 @@ export class SVGController {
   private static readonly _previewStrokeColor = "#FF0000";
   private static readonly _previewStrokeWidthFactor = 0.0005;
   private static readonly _minShapeSizeFactor = 0.001;
+  private static readonly _closeShapeThresholdFactor = 0.01;
+  private static readonly _vertexMarkerRadiusFactor = 0.0015;
   private _containerSize: { width: number; height: number };
   private _viewport: Rect;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -44,7 +49,6 @@ export class SVGController {
   // @ts-expect-error currently not used
   private _polygonDrawingState: PolygonDrawingState | null = null;
 
-  // @ts-expect-error currently not used
   private _freehandDrawingState: FreehandDrawingState | null = null;
 
   /** Creates a positioned, full-size `<svg>` element for the SVG overlay */
@@ -105,6 +109,9 @@ export class SVGController {
    * @param newInteractionMode - New interaction mode
    */
   setInteractionMode(newInteractionMode: InteractionMode) {
+    if (this._freehandDrawingState && newInteractionMode !== "drawFreehand") {
+      this._cancelFreehand();
+    }
     this._interactionMode = newInteractionMode;
   }
 
@@ -259,25 +266,90 @@ export class SVGController {
   // Freehand Drawing
   // ─────────────────────────────────────────────────────────────
 
-  // @ts-expect-error currently not used
   private _handleFreehandPointerDown = (event: PointerEvent): void => {
-    // TODO: Register freehand-specific move/up handlers
-    // document.addEventListener("pointermove", this._handleFreehandPointerMove);
-    // document.addEventListener("pointerup", this._handleFreehandPointerUp);
+    event.preventDefault();
+    event.stopPropagation();
+
+    document.addEventListener("pointermove", this._handleFreehandPointerMove);
+    document.addEventListener("pointerup", this._handleFreehandPointerUp);
+
+    const worldPoint = this._screenToWorld(event.clientX, event.clientY);
+
+    this._freehandDrawingState = {
+      points: [worldPoint],
+      currentPolyline: this._createPreviewPolyline(worldPoint),
+      startHandle: this._createVertexMarker(worldPoint),
+      hasLeftStart: false,
+      isNearStart: false,
+    };
   };
 
-  // @ts-expect-error currently not used
   private _handleFreehandPointerMove = (event: PointerEvent): void => {
-    // TODO
+    if (!this._freehandDrawingState) return;
+
+    const worldPoint = this._screenToWorld(event.clientX, event.clientY);
+    this._freehandDrawingState.points.push(worldPoint);
+
+    const firstPoint = this._freehandDrawingState.points[0]!;
+    const nearStart = this._isNearPoint(worldPoint, firstPoint);
+
+    if (!this._freehandDrawingState.hasLeftStart && !nearStart) {
+      this._freehandDrawingState.hasLeftStart = true;
+    }
+
+    const isNearStart = this._freehandDrawingState.hasLeftStart && nearStart;
+    if (isNearStart !== this._freehandDrawingState.isNearStart) {
+      this._freehandDrawingState.isNearStart = isNearStart;
+      this._setMarkerHighlighted(
+        this._freehandDrawingState.startHandle,
+        isNearStart,
+      );
+    }
+
+    const pointsString = this._freehandDrawingState.points
+      .map((v) => `${v.x},${v.y}`)
+      .join(" ");
+    this._freehandDrawingState.currentPolyline.setAttribute(
+      "points",
+      pointsString,
+    );
   };
 
-  // @ts-expect-error currently not used
   private _handleFreehandPointerUp = (event: PointerEvent): void => {
-    // TODO
+    if (!this._freehandDrawingState || event.button !== 0) return;
+
+    const points = this._freehandDrawingState.points;
+    const firstPoint = points[0]!;
+    const lastPoint = points[points.length - 1]!;
+
+    if (
+      points.length >= 2 &&
+      this._freehandDrawingState.hasLeftStart &&
+      this._isNearPoint(lastPoint, firstPoint)
+    ) {
+      const multiPolygon = this._createMultiPolygon([...points, firstPoint]);
+      this.shapeCompleteHandler?.(multiPolygon);
+    }
+
+    this._cancelFreehand();
   };
+
+  private _cancelFreehand(): void {
+    if (!this._freehandDrawingState) return;
+
+    this._freehandDrawingState.currentPolyline.remove();
+    this._freehandDrawingState.startHandle.remove();
+    this._freehandDrawingState = null;
+
+    document.removeEventListener(
+      "pointermove",
+      this._handleFreehandPointerMove,
+    );
+    document.removeEventListener("pointerup", this._handleFreehandPointerUp);
+  }
 
   // ─────────────────────────────────────────────────────────────
-  // Drawing Helpers
+  // Rectangle Drawing Helpers
   // ─────────────────────────────────────────────────────────────
 
   private _createPreviewRect(startPoint: Vertex): SVGRectElement {
@@ -344,6 +416,84 @@ export class SVGController {
     return (
       Math.abs(end.x - start.x) > minSize && Math.abs(end.y - start.y) > minSize
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Freehand Drawing Helpers
+  // ─────────────────────────────────────────────────────────────
+
+  private _createPreviewPolyline(startPoint: Vertex): SVGPolylineElement {
+    const polyline = document.createElementNS(SVG_NAMESPACE, "polyline");
+    polyline.setAttribute("points", `${startPoint.x},${startPoint.y}`);
+    polyline.setAttribute("fill", "none");
+    polyline.setAttribute("stroke", SVGController._previewStrokeColor);
+    polyline.setAttribute(
+      "stroke-width",
+      (
+        this._viewport.width * SVGController._previewStrokeWidthFactor
+      ).toString(),
+    );
+
+    this.transformNode.appendChild(polyline);
+    return polyline;
+  }
+
+  private _createVertexMarker(point: Vertex): SVGCircleElement {
+    const circle = document.createElementNS(SVG_NAMESPACE, "circle");
+    const radius =
+      this._viewport.width * SVGController._vertexMarkerRadiusFactor;
+    circle.setAttribute("cx", point.x.toString());
+    circle.setAttribute("cy", point.y.toString());
+    circle.setAttribute("r", radius.toString());
+    circle.setAttribute("fill", SVGController._previewStrokeColor);
+
+    this.transformNode.appendChild(circle);
+    return circle;
+  }
+
+  private _setMarkerHighlighted(
+    marker: SVGCircleElement,
+    isHighlighted: boolean,
+  ): void {
+    const radius =
+      this._viewport.width * SVGController._vertexMarkerRadiusFactor;
+
+    if (isHighlighted) {
+      marker.setAttribute("fill", "none");
+      marker.setAttribute("stroke", SVGController._previewStrokeColor);
+      marker.setAttribute(
+        "stroke-width",
+        (
+          this._viewport.width *
+          SVGController._previewStrokeWidthFactor *
+          2
+        ).toString(),
+      );
+      marker.setAttribute("r", (radius * 1.5).toString());
+    } else {
+      marker.setAttribute("fill", SVGController._previewStrokeColor);
+      marker.setAttribute("stroke", "none");
+      marker.setAttribute("r", radius.toString());
+    }
+  }
+
+  private _createMultiPolygon(vertices: Vertex[]): MultiPolygon {
+    return {
+      polygons: [
+        {
+          shell: vertices.map((v) => ({ x: v.x, y: v.y })),
+          holes: [],
+        },
+      ],
+    };
+  }
+
+  private _isNearPoint(p1: Vertex, p2: Vertex): boolean {
+    const threshold =
+      this._viewport.width * SVGController._closeShapeThresholdFactor;
+    const dx = p1.x - p2.x;
+    const dy = p1.y - p2.y;
+    return dx * dx + dy * dy < threshold * threshold;
   }
 
   // ─────────────────────────────────────────────────────────────
