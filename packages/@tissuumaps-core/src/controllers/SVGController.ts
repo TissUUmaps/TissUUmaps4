@@ -147,6 +147,7 @@ export class SVGController {
   }
 
   destroy(): void {
+    this._cancelFreehand();
     this._unregisterEventHandlers();
   }
 
@@ -267,6 +268,8 @@ export class SVGController {
   // ─────────────────────────────────────────────────────────────
 
   private _handleFreehandPointerDown = (event: PointerEvent): void => {
+    if (this._freehandDrawingState) return;
+
     event.preventDefault();
     event.stopPropagation();
 
@@ -318,14 +321,16 @@ export class SVGController {
   private _handleFreehandPointerUp = (event: PointerEvent): void => {
     if (!this._freehandDrawingState || event.button !== 0) return;
 
+    const releasePoint = this._screenToWorld(event.clientX, event.clientY);
+    this._freehandDrawingState.points.push(releasePoint);
+
     const points = this._freehandDrawingState.points;
     const firstPoint = points[0]!;
-    const lastPoint = points[points.length - 1]!;
 
     if (
       points.length >= 2 &&
       this._freehandDrawingState.hasLeftStart &&
-      this._isNearPoint(lastPoint, firstPoint)
+      this._isNearPoint(releasePoint, firstPoint)
     ) {
       console.debug("Freehand shape committed", { points: points.length });
       const multiPolygon = this._createMultiPolygon([...points, firstPoint]);
