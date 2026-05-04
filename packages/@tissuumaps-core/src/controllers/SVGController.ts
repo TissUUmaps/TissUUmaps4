@@ -327,8 +327,14 @@ export class SVGController {
       this._freehandDrawingState.hasLeftStart &&
       this._isNearPoint(lastPoint, firstPoint)
     ) {
+      console.debug("Freehand shape committed", { points: points.length });
       const multiPolygon = this._createMultiPolygon([...points, firstPoint]);
       this.shapeCompleteHandler?.(multiPolygon);
+    } else {
+      console.debug("Freehand shape discarded", {
+        points: points.length,
+        hasLeftStart: this._freehandDrawingState.hasLeftStart,
+      });
     }
 
     this._cancelFreehand();
