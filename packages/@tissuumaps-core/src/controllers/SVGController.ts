@@ -308,15 +308,14 @@ export class SVGController {
   private _handlePolygonKeyDown = (event: KeyboardEvent): void => {
     if (!this._polygonDrawingState) return;
 
+    if (event.key !== "Escape" && event.key !== "Enter") return;
+
     event.preventDefault();
     event.stopPropagation();
 
     if (event.key === "Escape") {
       this._cancelPolygon();
-    } else if (
-      event.key === "Enter" &&
-      this._polygonDrawingState.vertices.length >= 3
-    ) {
+    } else if (this._polygonDrawingState.vertices.length >= 3) {
       this._completePolygon();
     }
   };
