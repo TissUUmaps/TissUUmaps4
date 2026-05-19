@@ -6,7 +6,7 @@ sidebar_position: 3
 
 A single **_Project_** can hold multiple rendered data objects (**_Images_**, **_Labels_**, **_Points_**, **_Shapes_**).
 
-Each rendered data object can be shown on zero or more **_Layers_**, as configured by corresponding layer configurations.
+Each rendered data object can be shown on one or more **_Layers_**; a single item (e.g. point, shape) is never shown on more than one layer.
 
 Rendered data objects representing multi-item data (_Labels_, _Points_, _Shapes_) can link to **_Table_** columns for item configuration.
 
@@ -41,7 +41,7 @@ classDiagram
     Image : data source
     Image : visibility, opacity
     Image : data-to-layer transform
-    Image "0..*" --> "0..*" Layer : layer configurations
+    Image "0..*" --> "1..*" Layer
 
     class Labels
     Labels : id
@@ -50,7 +50,7 @@ classDiagram
     Labels : visibility, opacity
     Labels : data-to-layer transform
     Labels : label color/visibility/opacity
-    Labels "0..*" --> "0..*" Layer : layer configurations
+    Labels "0..*" --> "1..*" Layer
     Labels "0..*" ..> "1" Table
 
     class Points
@@ -60,7 +60,7 @@ classDiagram
     Points : visibility, opacity
     Points : data-to-layer transform
     Points : point marker/size/color/visibility/opacity
-    Points "0..*" --> "0..*" Layer : layer configurations
+    Points "0..*" --> "1..*" Layer
     Points "0..*" ..> "1" Table
 
     class Shapes
@@ -71,7 +71,7 @@ classDiagram
     Shapes : data-to-layer transform
     Shapes : shape fill color/visibility/opacity
     Shapes : shape stroke color/visibility/opacity
-    Shapes "0..*" --> "0..*" Layer : layer configurations
+    Shapes "0..*" --> "1..*" Layer
     Shapes "0..*" ..> "1" Table
 
     class Table
