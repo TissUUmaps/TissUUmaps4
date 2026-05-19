@@ -302,7 +302,7 @@ export class WebGLShapesController extends WebGLControllerBase {
   }
 
   /**
-   * Loads shapes data for every layer configuration matching the given layers
+   * Loads shapes data for every layer
    *
    * Objects that fail to load are logged and skipped.
    *
@@ -1010,7 +1010,7 @@ export class WebGLShapesController extends WebGLControllerBase {
   }
 }
 
-/** Binding of a shapes data object to a specific layer and layer configuration */
+/** Binding of a shapes data object to a specific layer */
 type ShapesRef = {
   layer: Layer;
   shapes: Shapes;
