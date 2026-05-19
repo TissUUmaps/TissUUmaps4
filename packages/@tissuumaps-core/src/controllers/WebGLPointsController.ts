@@ -18,7 +18,7 @@ import {
   defaultPointVisibility,
 } from "../model/constants";
 import { type Layer } from "../model/layer";
-import { type Points, type PointsLayerConfig } from "../model/points";
+import { type Points } from "../model/points";
 import {
   type Color,
   type CoordinateSpace,
@@ -267,7 +267,9 @@ export class WebGLPointsController extends WebGLControllerBase {
   ): Promise<void> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const refs = await this._loadPoints(layers, points, loadPoints, { signal });
+    const refs = await this._loadPoints(layers, points, loadPoints, loadTable, {
+      signal,
+    });
     signal?.throwIfAborted();
     if (refs.length > WebGLPointsController._maxNumObjects) {
       console.warn(
@@ -276,7 +278,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       refs.length = WebGLPointsController._maxNumObjects;
     }
     let buffersResized = false;
-    const n = refs.reduce((accum, ref) => accum + ref.data.getSize(), 0);
+    const n = refs.reduce((accum, ref) => accum + ref.numPoints, 0);
     if (this._currentBufferSize !== n) {
       this._resizePointBuffers(n);
       buffersResized = true;
@@ -466,7 +468,7 @@ export class WebGLPointsController extends WebGLControllerBase {
   }
 
   /**
-   * Loads points data for every layer configuration matching the given layers
+   * Loads points for every layer
    *
    * Objects that fail to load are logged and skipped.
    *
@@ -479,6 +481,10 @@ export class WebGLPointsController extends WebGLControllerBase {
       pointsId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<PointsData>,
+    loadTable: (
+      tableId: string,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal },
   ): Promise<PointsRef[]> {
     const { signal } = options ?? {};
@@ -486,11 +492,10 @@ export class WebGLPointsController extends WebGLControllerBase {
     const refs: PointsRef[] = [];
     for (const layer of layers) {
       for (const currentPoints of points) {
-        for (let i = 0; i < currentPoints.layerConfigs.length; i++) {
-          const layerConfig = currentPoints.layerConfigs[i]!;
-          if (layerConfig.layer !== layer.id) {
-            continue;
-          }
+        if (
+          currentPoints.layer === layer.id ||
+          typeof currentPoints.layer !== "string"
+        ) {
           let data;
           try {
             data = await loadPoints(currentPoints.id, { signal });
@@ -503,14 +508,41 @@ export class WebGLPointsController extends WebGLControllerBase {
             }
           }
           signal?.throwIfAborted();
-          if (data !== undefined && data.getSize() > 0) {
-            refs.push({
-              layer,
-              points: currentPoints,
-              layerConfig,
-              layerConfigIndex: i,
-              data,
-            });
+          if (data !== undefined) {
+            let numPoints = data.getSize();
+            let pointMask: boolean[] | undefined;
+            if (numPoints > 0 && typeof currentPoints.layer !== "string") {
+              const tableData = await loadTable(currentPoints.layer.table, {
+                signal,
+              });
+              signal?.throwIfAborted();
+              const tableIds = tableData.getIds();
+              signal?.throwIfAborted();
+              const tableLayers = await tableData.loadValues<string>(
+                currentPoints.layer.column,
+                { signal },
+              );
+              signal?.throwIfAborted();
+              const pointLayers = new Map(
+                tableIds.map((id, i) => [id, tableLayers[i]!]),
+              );
+              pointMask = data
+                .getIds()
+                .map((pointId) => pointLayers.get(pointId) === layer.id);
+              numPoints = pointMask.reduce(
+                (accum, include) => accum + (include ? 1 : 0),
+                0,
+              );
+            }
+            if (numPoints > 0) {
+              refs.push({
+                layer,
+                points: currentPoints,
+                pointMask,
+                numPoints,
+                data,
+              });
+            }
           }
         }
       }
@@ -550,7 +582,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     const newBufferSliceStates: PointsBufferSliceState[] = [];
     for (let i = 0; i < refs.length; i++) {
       const ref = refs[i]!;
-      const numPoints = ref.data.getSize();
+      const { pointMask, numPoints } = ref;
       const bufferSliceState = this._bufferSliceStates[i];
       const bufferSliceChanged =
         buffersResized ||
@@ -559,13 +591,20 @@ export class WebGLPointsController extends WebGLControllerBase {
         bufferSliceState.offset !== offset ||
         bufferSliceState.ref.layer.id !== ref.layer.id ||
         bufferSliceState.ref.points.id !== ref.points.id ||
-        bufferSliceState.ref.layerConfigIndex !== ref.layerConfigIndex ||
         bufferSliceState.ref.data !== ref.data;
+      let pointIds = ref.data.getIds();
+      if (pointMask !== undefined) {
+        pointIds = pointIds.filter((_, j) => pointMask[j]);
+      }
       let dataBounds = bufferSliceState?.dataBounds;
       // x/y
       if (bufferSliceChanged || dataBounds === undefined) {
-        const [xData, yData] = await ref.data.loadCoordinates({ signal });
+        let [xData, yData] = await ref.data.loadCoordinates({ signal });
         signal?.throwIfAborted();
+        if (pointMask !== undefined) {
+          xData = xData.filter((_, j) => pointMask[j]);
+          yData = yData.filter((_, j) => pointMask[j]);
+        }
         dataBounds = WebGLPointsController._getDataBounds(xData, yData);
         WebGLUtils.loadBuffer(
           this.gl,
@@ -591,7 +630,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         )
       ) {
         const markerData = await MarkerDataUtils.loadMarkerData(
-          ref.data.getIds(),
+          pointIds,
           ref.points.pointMarker,
           markerMaps,
           defaultPointMarker,
@@ -653,7 +692,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           sizeFactor *= ref.layer.transform.scale;
         }
         const sizeData = await SizeDataUtils.loadSizeData(
-          ref.data.getIds(),
+          pointIds,
           ref.points.pointSize,
           sizeMaps,
           defaultPointSize,
@@ -699,7 +738,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           colorData = new Uint32Array(numPoints).fill(0);
         } else {
           const visibilityData = await VisibilityDataUtils.loadVisibilityData(
-            ref.data.getIds(),
+            pointIds,
             ref.points.pointVisibility,
             visibilityMaps,
             defaultPointVisibility,
@@ -708,7 +747,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           );
           signal?.throwIfAborted();
           const opacityData = await OpacityDataUtils.loadOpacityData(
-            ref.data.getIds(),
+            pointIds,
             ref.points.pointOpacity,
             opacityMaps,
             defaultPointOpacity,
@@ -717,7 +756,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           );
           signal?.throwIfAborted();
           colorData = await ColorDataUtils.loadColorData(
-            ref.data.getIds(),
+            pointIds,
             ref.points.pointColor,
             colorMaps,
             defaultPointColor,
@@ -819,12 +858,12 @@ export class WebGLPointsController extends WebGLControllerBase {
   }
 }
 
-/** Binding of a points data object to a specific layer and layer configuration */
+/** Binding of a points data object to a specific layer */
 type PointsRef = {
   layer: Layer;
   points: Points;
-  layerConfig: PointsLayerConfig;
-  layerConfigIndex: number;
+  pointMask: boolean[] | undefined;
+  numPoints: number;
   data: PointsData;
 };
 

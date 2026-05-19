@@ -38,9 +38,9 @@ export function createModel(rawModel: RawModel): Model {
 /**
  * Default values for {@link RawDataObject}
  */
-export const dataObjectDefaults = {} as const satisfies Partial<
-  RawDataObject<RawDataSource<string>>
->;
+export const dataObjectDefaults = {
+  ...modelDefaults,
+} as const satisfies Partial<RawDataObject<RawDataSource<string>>>;
 
 /**
  * A named, identifiable data object backed by a data source
@@ -93,22 +93,28 @@ export function createDataObject<
  * Default values for {@link RawRenderedDataObject}
  */
 export const renderedDataObjectDefaults = {
+  ...dataObjectDefaults,
   visibility: true,
   opacity: 1,
   flip: false,
   transform: identityTransform,
-  layerConfigs: [],
-} as const satisfies Partial<
-  RawRenderedDataObject<RawDataSource<string>, RawLayerConfig>
->;
+} as const satisfies Partial<RawRenderedDataObject<RawDataSource<string>>>;
 
 /**
  * A data object that can be rendered on one or more layers
  */
 export interface RawRenderedDataObject<
   TRawDataSource extends RawDataSource<string>,
-  TRawLayerConfig extends RawLayerConfig,
 > extends RawDataObject<TRawDataSource> {
+  /**
+   * Layer ID
+   *
+   * Can be specified as:
+   * - An ID of an existing Layer
+   * - A table column holding the layer ID values for each item
+   */
+  layer: string | { table: string; column: string };
+
   /**
    * Data object visibility
    *
@@ -136,32 +142,23 @@ export interface RawRenderedDataObject<
    * @defaultValue {@link renderedDataObjectDefaults.transform}
    */
   transform?: SimilarityTransform;
-
-  /**
-   * Layer configurations specifying how this data object is displayed on each layer
-   *
-   * @defaultValue {@link renderedDataObjectDefaults.layerConfigs}
-   */
-  layerConfigs?: TRawLayerConfig[];
 }
 
 /**
  * A {@link RawRenderedDataObject} with {@link renderedDataObjectDefaults} applied
  */
-export type RenderedDataObject<
-  TDataSource extends DataSource<string>,
-  TLayerConfig extends LayerConfig,
-> = DataObject<TDataSource> &
-  Required<
-    Pick<
-      RawRenderedDataObject<TDataSource, TLayerConfig>,
-      keyof typeof renderedDataObjectDefaults
-    >
-  > &
-  Omit<
-    RawRenderedDataObject<TDataSource, TLayerConfig>,
-    keyof DataObject<TDataSource> | keyof typeof renderedDataObjectDefaults
-  >;
+export type RenderedDataObject<TDataSource extends DataSource<string>> =
+  DataObject<TDataSource> &
+    Required<
+      Pick<
+        RawRenderedDataObject<TDataSource>,
+        keyof typeof renderedDataObjectDefaults
+      >
+    > &
+    Omit<
+      RawRenderedDataObject<TDataSource>,
+      keyof DataObject<TDataSource> | keyof typeof renderedDataObjectDefaults
+    >;
 
 /**
  * Creates a {@link RenderedDataObject} from a {@link RawRenderedDataObject} by applying {@link renderedDataObjectDefaults}
@@ -172,25 +169,75 @@ export type RenderedDataObject<
 export function createRenderedDataObject<
   TType extends string,
   TRawDataSource extends RawDataSource<TType>,
-  TRawLayerConfig extends RawLayerConfig,
 >(
-  rawRenderedDataObject: RawRenderedDataObject<TRawDataSource, TRawLayerConfig>,
-): RenderedDataObject<DataSource<TType>, LayerConfig> {
+  rawRenderedDataObject: RawRenderedDataObject<TRawDataSource>,
+): RenderedDataObject<DataSource<TType>> {
   return {
     ...createDataObject(rawRenderedDataObject),
     ...structuredClone(renderedDataObjectDefaults),
     ...structuredClone(rawRenderedDataObject),
-    layerConfigs:
-      rawRenderedDataObject.layerConfigs?.map(createLayerConfig) ?? [],
+  };
+}
+
+/**
+ * Default values for {@link RawSingleLayerDataObject}
+ */
+export const singleLayerDataObjectDefaults = {
+  ...renderedDataObjectDefaults,
+} as const satisfies Partial<RawSingleLayerDataObject<RawDataSource<string>>>;
+
+/**
+ * A data object that can be rendered on a single layer
+ */
+export interface RawSingleLayerDataObject<
+  TRawDataSource extends RawDataSource<string>,
+> extends RawRenderedDataObject<TRawDataSource> {
+  /** Layer ID */
+  layer: string;
+}
+
+/**
+ * A {@link RawSingleLayerDataObject} with {@link singleLayerDataObjectDefaults} applied
+ */
+export type SingleLayerDataObject<TDataSource extends DataSource<string>> =
+  RenderedDataObject<TDataSource> &
+    Required<
+      Pick<
+        RawSingleLayerDataObject<TDataSource>,
+        keyof typeof singleLayerDataObjectDefaults
+      >
+    > &
+    Omit<
+      RawSingleLayerDataObject<TDataSource>,
+      | keyof RenderedDataObject<TDataSource>
+      | keyof typeof singleLayerDataObjectDefaults
+    >;
+
+/**
+ * Creates a {@link SingleLayerDataObject} from a {@link RawSingleLayerDataObject} by applying {@link singleLayerDataObjectDefaults}
+ *
+ * @param rawSingleLayerDataObject - The raw single-layer data object
+ * @returns The complete single-layer data object with default values applied
+ */
+export function createSingleLayerDataObject<
+  TType extends string,
+  TRawDataSource extends RawDataSource<TType>,
+>(
+  rawSingleLayerDataObject: RawSingleLayerDataObject<TRawDataSource>,
+): SingleLayerDataObject<DataSource<TType>> {
+  return {
+    ...createRenderedDataObject(rawSingleLayerDataObject),
+    ...structuredClone(singleLayerDataObjectDefaults),
+    ...structuredClone(rawSingleLayerDataObject),
   };
 }
 
 /**
  * Default values for {@link RawDataSource}
  */
-export const dataSourceDefaults = {} as const satisfies Partial<
-  RawDataSource<string>
->;
+export const dataSourceDefaults = {
+  ...modelDefaults,
+} as const satisfies Partial<RawDataSource<string>>;
 
 /**
  * A data source for data objects
@@ -238,51 +285,5 @@ export function createDataSource<TType extends string>(
     ...createModel(rawDataSource),
     ...structuredClone(dataSourceDefaults),
     ...structuredClone(rawDataSource),
-  };
-}
-/**
- * Default values for {@link RawLayerConfig}
- */
-export const layerConfigDefaults =
-  {} as const satisfies Partial<RawLayerConfig>;
-
-/**
- * A layer-specific display configuration for rendered data objects
- */
-export interface RawLayerConfig extends RawModel {
-  /**
-   * Layer ID
-   *
-   * Can be specified as:
-   * - An ID of an existing Layer
-   * - A table column holding the layer ID values for each item
-   */
-  layer: string | { table: string; column: string };
-}
-
-/**
- * A {@link RawLayerConfig} with {@link layerConfigDefaults} applied
- */
-export type LayerConfig = Model &
-  Required<Pick<RawLayerConfig, keyof typeof layerConfigDefaults>> &
-  Omit<
-    RawLayerConfig,
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof Model
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents,@typescript-eslint/no-duplicate-type-constituents
-    | keyof typeof layerConfigDefaults
-  >;
-
-/**
- * Creates a {@link LayerConfig} from a {@link RawLayerConfig} by applying {@link layerConfigDefaults}
- *
- * @param rawLayerConfig - The raw layer configuration
- * @returns The complete layer configuration with default values applied
- */
-export function createLayerConfig(rawLayerConfig: RawLayerConfig): LayerConfig {
-  return {
-    ...createModel(rawLayerConfig),
-    ...structuredClone(layerConfigDefaults),
-    ...structuredClone(rawLayerConfig),
   };
 }

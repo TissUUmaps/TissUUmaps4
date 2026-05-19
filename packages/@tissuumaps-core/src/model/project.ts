@@ -1,4 +1,4 @@
-import { type Model, type RawModel, createModel } from "./base";
+import { type Model, type RawModel, createModel, modelDefaults } from "./base";
 import { defaultRenderOptions, defaultViewerOptions } from "./constants";
 import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";
@@ -18,6 +18,7 @@ import {
  * Default values for {@link RawProject}
  */
 export const projectDefaults = {
+  ...modelDefaults,
   markerMaps: [],
   sizeMaps: [],
   colorMaps: [],

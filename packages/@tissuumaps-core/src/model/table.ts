@@ -5,12 +5,16 @@ import {
   type RawDataSource,
   createDataObject,
   createDataSource,
+  dataObjectDefaults,
+  dataSourceDefaults,
 } from "./base";
 
 /**
  * Default values for {@link RawTable}
  */
-export const tableDefaults = {} as const satisfies Partial<RawTable>;
+export const tableDefaults = {
+  ...dataObjectDefaults,
+} as const satisfies Partial<RawTable>;
 
 /**
  * Tabular data
@@ -48,9 +52,9 @@ export function createTable(rawTable: RawTable): Table {
 /**
  * Default values for {@link RawTableDataSource}
  */
-export const tableDataSourceDefaults = {} as const satisfies Partial<
-  RawTableDataSource<string>
->;
+export const tableDataSourceDefaults = {
+  ...dataSourceDefaults,
+} as const satisfies Partial<RawTableDataSource<string>>;
 
 /**
  * A data source for tabular data

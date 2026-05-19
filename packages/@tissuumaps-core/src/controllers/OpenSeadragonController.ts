@@ -2,8 +2,8 @@ import { mat3 } from "gl-matrix";
 import OpenSeadragon from "openseadragon";
 
 import { defaultViewerOptions } from "../model/constants";
-import { type Image, type ImageLayerConfig } from "../model/image";
-import { type Labels, type LabelsLayerConfig } from "../model/labels";
+import { type Image } from "../model/image";
+import { type Labels } from "../model/labels";
 import { type Layer } from "../model/layer";
 import { type ViewerOptions } from "../model/types";
 import { type ImageData } from "../storage/image";
@@ -224,8 +224,7 @@ export class OpenSeadragonController {
   }
 
   /**
-   * Loads image and labels data for every layer configuration that references
-   * one of the given layers, producing a flat list of {@link ObjectRef} entries
+   * Loads image and labels for every layer, producing a flat list of {@link ObjectRef} entries
    *
    * Objects that fail to load are logged and skipped.
    */
@@ -247,30 +246,25 @@ export class OpenSeadragonController {
     signal?.throwIfAborted();
     const refs: ObjectRef[] = [];
     for (const layer of layers) {
-      for (const image of images) {
-        for (let i = 0; i < image.layerConfigs.length; i++) {
-          const layerConfig = image.layerConfigs[i]!;
-          if (layerConfig.layer !== layer.id) {
-            continue;
-          }
+      for (const currentImage of images) {
+        if (currentImage.layer === layer.id) {
           let data;
           try {
-            data = await loadImage(image.id, { signal });
+            data = await loadImage(currentImage.id, { signal });
           } catch (error) {
-            console.error(`Failed to load image with ID '${image.id}'`, error);
+            console.error(
+              `Failed to load image with ID '${currentImage.id}'`,
+              error,
+            );
           }
           signal?.throwIfAborted();
           if (data !== undefined) {
-            refs.push({ layer, image, layerConfig, layerConfigIndex: i, data });
+            refs.push({ layer, image: currentImage, data });
           }
         }
       }
       for (const currentLabels of labels) {
-        for (let i = 0; i < currentLabels.layerConfigs.length; i++) {
-          const layerConfig = currentLabels.layerConfigs[i]!;
-          if (layerConfig.layer !== layer.id) {
-            continue;
-          }
+        if (currentLabels.layer === layer.id) {
           let data;
           try {
             data = await loadLabels(currentLabels.id, { signal });
@@ -282,13 +276,7 @@ export class OpenSeadragonController {
           }
           signal?.throwIfAborted();
           if (data !== undefined) {
-            refs.push({
-              layer,
-              labels: currentLabels,
-              layerConfig,
-              layerConfigIndex: i,
-              data,
-            });
+            refs.push({ layer, labels: currentLabels, data });
           }
         }
       }
@@ -320,8 +308,7 @@ export class OpenSeadragonController {
             ref.image.id === tiledImageState.ref.image.id) ||
             ("labels" in ref &&
               "labels" in tiledImageState.ref &&
-              ref.labels.id === tiledImageState.ref.labels.id)) &&
-          ref.layerConfigIndex === tiledImageState.ref.layerConfigIndex,
+              ref.labels.id === tiledImageState.ref.labels.id)),
       );
       if (ref !== undefined) {
         tiledImageStatesByRef.set(ref, tiledImageState);
@@ -364,8 +351,7 @@ export class OpenSeadragonController {
           ("labels" in ref &&
             "labels" in tiledImageState.ref &&
             ref.labels.id === tiledImageState.ref.labels.id)
-        ) ||
-        tiledImageState.ref.layerConfigIndex !== ref.layerConfigIndex
+        )
       ) {
         tiledImageState = this._createTiledImage(i, ref);
       } else {
@@ -412,7 +398,7 @@ export class OpenSeadragonController {
             })(),
       index: index,
       // https://github.com/openseadragon/openseadragon/issues/2765
-      // flipped: layerConfig.flip,
+      // flipped: image.flip / labels.flip,
       opacity: OpenSeadragonController._calculateOpacity(ref),
       success: (event) => {
         const { item: tiledImage } = event as unknown as {
@@ -569,21 +555,17 @@ export class OpenSeadragonController {
   }
 }
 
-/** Reference binding an image to a specific layer and layer configuration */
+/** Reference binding an image to a specific layer */
 type ImageRef = {
   layer: Layer;
   image: Image;
-  layerConfig: ImageLayerConfig;
-  layerConfigIndex: number;
   data: ImageData;
 };
 
-/** Reference binding a labels object to a specific layer and layer configuration */
+/** Reference binding a labels object to a specific layer */
 type LabelsRef = {
   layer: Layer;
   labels: Labels;
-  layerConfig: LabelsLayerConfig;
-  layerConfigIndex: number;
   data: LabelsData;
 };
 

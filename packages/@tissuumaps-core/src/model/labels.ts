@@ -1,13 +1,12 @@
 import {
   type DataSource,
-  type LayerConfig,
   type RawDataSource,
-  type RawLayerConfig,
-  type RawRenderedDataObject,
-  type RenderedDataObject,
+  type RawSingleLayerDataObject,
+  type SingleLayerDataObject,
   createDataSource,
-  createLayerConfig,
-  createRenderedDataObject,
+  createSingleLayerDataObject,
+  dataSourceDefaults,
+  singleLayerDataObjectDefaults,
 } from "./base";
 import {
   type ColorConfig,
@@ -24,6 +23,7 @@ import {
  * Default values for {@link RawLabels}
  */
 export const labelsDefaults = {
+  ...singleLayerDataObjectDefaults,
   labelColor: { random: { palette: defaultLabelColorPalette } },
   labelVisibility: { constant: { value: defaultLabelVisibility } },
   labelOpacity: { constant: { value: defaultLabelOpacity } },
@@ -32,9 +32,8 @@ export const labelsDefaults = {
 /**
  * A two-dimensional label mask
  */
-export interface RawLabels extends RawRenderedDataObject<
-  RawLabelsDataSource<string>,
-  RawLabelsLayerConfig
+export interface RawLabels extends RawSingleLayerDataObject<
+  RawLabelsDataSource<string>
 > {
   /**
    * Label color
@@ -61,14 +60,11 @@ export interface RawLabels extends RawRenderedDataObject<
 /**
  * A {@link RawLabels} with {@link labelsDefaults} applied
  */
-export type Labels = RenderedDataObject<
-  LabelsDataSource<string>,
-  LabelsLayerConfig
-> &
+export type Labels = SingleLayerDataObject<LabelsDataSource<string>> &
   Required<Pick<RawLabels, keyof typeof labelsDefaults>> &
   Omit<
     RawLabels,
-    | keyof RenderedDataObject<LabelsDataSource<string>, LabelsLayerConfig>
+    | keyof SingleLayerDataObject<LabelsDataSource<string>>
     | keyof typeof labelsDefaults
   >;
 
@@ -80,20 +76,19 @@ export type Labels = RenderedDataObject<
  */
 export function createLabels(rawLabels: RawLabels): Labels {
   return {
-    ...createRenderedDataObject(rawLabels),
+    ...createSingleLayerDataObject(rawLabels),
     ...structuredClone(labelsDefaults),
     ...structuredClone(rawLabels),
     dataSource: createLabelsDataSource(rawLabels.dataSource),
-    layerConfigs: rawLabels.layerConfigs?.map(createLabelsLayerConfig) ?? [],
   };
 }
 
 /**
  * Default values for {@link RawLabelsDataSource}
  */
-export const labelsDataSourceDefaults = {} as const satisfies Partial<
-  RawLabelsDataSource<string>
->;
+export const labelsDataSourceDefaults = {
+  ...dataSourceDefaults,
+} as const satisfies Partial<RawLabelsDataSource<string>>;
 
 /**
  * A data source for two-dimensional label masks
@@ -131,49 +126,5 @@ export function createLabelsDataSource<TType extends string>(
     ...createDataSource(rawLabelsDataSource),
     ...structuredClone(labelsDataSourceDefaults),
     ...structuredClone(rawLabelsDataSource),
-  };
-}
-
-/**
- * Default values for {@link RawLabelsLayerConfig}
- */
-export const labelsLayerConfigDefaults =
-  {} as const satisfies Partial<RawLabelsLayerConfig>;
-
-/**
- * A layer-specific display configuration for two-dimensional label masks
- */
-export interface RawLabelsLayerConfig extends RawLayerConfig {
-  /**
-   * Layer ID
-   */
-  layer: string;
-}
-
-/**
- * A {@link RawLabelsLayerConfig} with {@link labelsLayerConfigDefaults} applied
- */
-export type LabelsLayerConfig = LayerConfig &
-  Required<Pick<RawLabelsLayerConfig, keyof typeof labelsLayerConfigDefaults>> &
-  Omit<
-    RawLabelsLayerConfig,
-    | keyof LayerConfig
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof labelsLayerConfigDefaults
-  >;
-
-/**
- * Creates a {@link LabelsLayerConfig} from a {@link RawLabelsLayerConfig} by applying {@link labelsLayerConfigDefaults}
- *
- * @param rawLabelsLayerConfig - The raw labels layer configuration
- * @returns The complete labels layer configuration with default values applied
- */
-export function createLabelsLayerConfig(
-  rawLabelsLayerConfig: RawLabelsLayerConfig,
-): LabelsLayerConfig {
-  return {
-    ...createLayerConfig(rawLabelsLayerConfig),
-    ...structuredClone(labelsLayerConfigDefaults),
-    ...structuredClone(rawLabelsLayerConfig),
   };
 }

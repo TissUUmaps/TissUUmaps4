@@ -1,13 +1,12 @@
 import {
   type DataSource,
-  type LayerConfig,
   type RawDataSource,
-  type RawLayerConfig,
   type RawRenderedDataObject,
   type RenderedDataObject,
   createDataSource,
-  createLayerConfig,
   createRenderedDataObject,
+  dataSourceDefaults,
+  renderedDataObjectDefaults,
 } from "./base";
 import {
   type ColorConfig,
@@ -27,6 +26,7 @@ import {
  * Default values for {@link RawShapes}
  */
 export const shapesDefaults = {
+  ...renderedDataObjectDefaults,
   shapeFillColor: { constant: { value: defaultShapeFillColor } },
   shapeFillVisibility: { constant: { value: defaultShapeFillVisibility } },
   shapeFillOpacity: { constant: { value: defaultShapeFillOpacity } },
@@ -39,8 +39,7 @@ export const shapesDefaults = {
  * A two-dimensional shape cloud
  */
 export interface RawShapes extends RawRenderedDataObject<
-  RawShapesDataSource<string>,
-  RawShapesLayerConfig
+  RawShapesDataSource<string>
 > {
   /**
    * Shape fill color
@@ -88,14 +87,11 @@ export interface RawShapes extends RawRenderedDataObject<
 /**
  * A {@link RawShapes} object with {@link shapesDefaults} applied
  */
-export type Shapes = RenderedDataObject<
-  ShapesDataSource<string>,
-  ShapesLayerConfig
-> &
+export type Shapes = RenderedDataObject<ShapesDataSource<string>> &
   Required<Pick<RawShapes, keyof typeof shapesDefaults>> &
   Omit<
     RawShapes,
-    | keyof RenderedDataObject<ShapesDataSource<string>, ShapesLayerConfig>
+    | keyof RenderedDataObject<ShapesDataSource<string>>
     | keyof typeof shapesDefaults
   >;
 
@@ -111,16 +107,15 @@ export function createShapes(rawShapes: RawShapes): Shapes {
     ...structuredClone(shapesDefaults),
     ...structuredClone(rawShapes),
     dataSource: createShapesDataSource(rawShapes.dataSource),
-    layerConfigs: rawShapes.layerConfigs?.map(createShapesLayerConfig) ?? [],
   };
 }
 
 /**
  * Default values for {@link RawShapesDataSource}
  */
-export const shapesDataSourceDefaults = {} as const satisfies Partial<
-  RawShapesDataSource<string>
->;
+export const shapesDataSourceDefaults = {
+  ...dataSourceDefaults,
+} as const satisfies Partial<RawShapesDataSource<string>>;
 
 /**
  * A data source for two-dimensional shape clouds
@@ -158,45 +153,5 @@ export function createShapesDataSource<TType extends string>(
     ...createDataSource(rawShapesDataSource),
     ...structuredClone(shapesDataSourceDefaults),
     ...structuredClone(rawShapesDataSource),
-  };
-}
-
-/**
- * Default values for {@link RawShapesLayerConfig}
- */
-export const shapesLayerConfigDefaults =
-  {} as const satisfies Partial<RawShapesLayerConfig>;
-
-/**
- * A layer-specific display configuration for two-dimensional shape clouds
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawShapesLayerConfig extends RawLayerConfig {}
-
-/**
- * A {@link RawShapesLayerConfig} with {@link shapesLayerConfigDefaults} applied
- */
-export type ShapesLayerConfig = LayerConfig &
-  Required<Pick<RawShapesLayerConfig, keyof typeof shapesLayerConfigDefaults>> &
-  Omit<
-    RawShapesLayerConfig,
-    | keyof LayerConfig
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof shapesLayerConfigDefaults
-  >;
-
-/**
- * Creates a {@link ShapesLayerConfig} from a {@link RawShapesLayerConfig} by applying {@link shapesLayerConfigDefaults}
- *
- * @param rawShapesLayerConfig - The raw shapes layer configuration
- * @returns The complete shapes layer configuration with default values applied
- */
-export function createShapesLayerConfig(
-  rawShapesLayerConfig: RawShapesLayerConfig,
-): ShapesLayerConfig {
-  return {
-    ...createLayerConfig(rawShapesLayerConfig),
-    ...structuredClone(shapesLayerConfigDefaults),
-    ...structuredClone(rawShapesLayerConfig),
   };
 }
