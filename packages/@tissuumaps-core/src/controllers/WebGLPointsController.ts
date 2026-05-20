@@ -547,10 +547,12 @@ export class WebGLPointsController extends WebGLControllerBase {
               tableIds.map((id, i) => [id, tableLayers[i]]),
             );
           } catch (error) {
-            console.error(
-              `Failed to load point layers for points with ID '${currentPoints.id}'`,
-              error,
-            );
+            if (!signal?.aborted) {
+              console.error(
+                `Failed to load point layers for points with ID '${currentPoints.id}'`,
+                error,
+              );
+            }
             failedPoints.add(currentPoints.id);
             continue;
           } finally {
