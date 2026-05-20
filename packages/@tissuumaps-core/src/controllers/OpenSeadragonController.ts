@@ -279,8 +279,9 @@ export class OpenSeadragonController {
             );
           }
           continue;
+        } finally {
+          signal?.throwIfAborted();
         }
-        signal?.throwIfAborted();
         refs.push({ layer, labels: currentLabels, data });
       }
     }
