@@ -41,7 +41,7 @@ classDiagram
     Image : data source
     Image : visibility, opacity
     Image : data-to-layer transform
-    Image "0..*" --> "1..*" Layer
+    Image "0..*" --> "1" Layer
 
     class Labels
     Labels : id
@@ -50,7 +50,7 @@ classDiagram
     Labels : visibility, opacity
     Labels : data-to-layer transform
     Labels : label color/visibility/opacity
-    Labels "0..*" --> "1..*" Layer
+    Labels "0..*" --> "1" Layer
     Labels "0..*" ..> "1" Table
 
     class Points
@@ -60,7 +60,7 @@ classDiagram
     Points : visibility, opacity
     Points : data-to-layer transform
     Points : point marker/size/color/visibility/opacity
-    Points "0..*" --> "1..*" Layer
+    Points "0..*" --> "0..*" Layer
     Points "0..*" ..> "1" Table
 
     class Shapes
@@ -71,7 +71,7 @@ classDiagram
     Shapes : data-to-layer transform
     Shapes : shape fill color/visibility/opacity
     Shapes : shape stroke color/visibility/opacity
-    Shapes "0..*" --> "1..*" Layer
+    Shapes "0..*" --> "0..*" Layer
     Shapes "0..*" ..> "1" Table
 
     class Table
