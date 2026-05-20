@@ -490,61 +490,69 @@ export class WebGLPointsController extends WebGLControllerBase {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs: PointsRef[] = [];
+    const dataCache = new Map<string, PointsData>();
+    const pointLayersCache = new Map<
+      string,
+      Map<number, string | undefined> | undefined
+    >();
     for (const layer of layers) {
-      for (const currentPoints of points) {
-        if (
-          currentPoints.layer === layer.id ||
-          typeof currentPoints.layer !== "string"
-        ) {
-          let data;
+      for (const currentPoints of points.filter(
+        (x) => x.layer === layer.id || typeof x.layer !== "string",
+      )) {
+        let data = dataCache.get(currentPoints.id);
+        if (data === undefined) {
           try {
             data = await loadPoints(currentPoints.id, { signal });
           } catch (error) {
-            if (!signal?.aborted) {
-              console.error(
-                `Failed to load points with ID '${currentPoints.id}'`,
-                error,
-              );
-            }
+            console.error(
+              `Failed to load points with ID '${currentPoints.id}'`,
+              error,
+            );
+            continue;
+          } finally {
+            signal?.throwIfAborted();
           }
-          signal?.throwIfAborted();
-          if (data !== undefined) {
-            let numPoints = data.getSize();
-            let pointMask: boolean[] | undefined;
-            if (numPoints > 0 && typeof currentPoints.layer !== "string") {
-              const tableData = await loadTable(currentPoints.layer.table, {
-                signal,
-              });
-              signal?.throwIfAborted();
-              const tableIds = tableData.getIds();
-              signal?.throwIfAborted();
-              const tableLayers = await tableData.loadValues<string>(
-                currentPoints.layer.column,
-                { signal },
-              );
-              signal?.throwIfAborted();
-              const pointLayers = new Map(
-                tableIds.map((id, i) => [id, tableLayers[i]!]),
-              );
-              pointMask = data
-                .getIds()
-                .map((pointId) => pointLayers.get(pointId) === layer.id);
-              numPoints = pointMask.reduce(
-                (accum, include) => accum + (include ? 1 : 0),
-                0,
-              );
-            }
-            if (numPoints > 0) {
-              refs.push({
-                layer,
-                points: currentPoints,
-                pointMask,
-                numPoints,
-                data,
-              });
-            }
-          }
+          dataCache.set(currentPoints.id, data);
         }
+        let numPoints = data.getSize();
+        if (numPoints === 0) {
+          continue;
+        }
+        let pointLayers = pointLayersCache.get(currentPoints.id);
+        if (
+          pointLayers === undefined &&
+          !pointLayersCache.has(currentPoints.id) &&
+          typeof currentPoints.layer !== "string"
+        ) {
+          const tableData = await loadTable(currentPoints.layer.table, {
+            signal,
+          });
+          signal?.throwIfAborted();
+          const tableIds = tableData.getIds();
+          signal?.throwIfAborted();
+          const tableLayers = await tableData.loadValues<string>(
+            currentPoints.layer.column,
+            { signal },
+          );
+          signal?.throwIfAborted();
+          pointLayers = new Map(tableIds.map((id, i) => [id, tableLayers[i]]));
+          pointLayersCache.set(currentPoints.id, pointLayers);
+        }
+        let pointMask: boolean[] | undefined;
+        if (numPoints > 0 && pointLayers !== undefined) {
+          pointMask = data.getIds().map((x) => pointLayers.get(x) === layer.id);
+          numPoints = pointMask.reduce((accum, x) => accum + (x ? 1 : 0), 0);
+        }
+        if (numPoints === 0) {
+          continue;
+        }
+        refs.push({
+          layer,
+          points: currentPoints,
+          pointMask,
+          numPoints,
+          data,
+        });
       }
     }
     return refs;

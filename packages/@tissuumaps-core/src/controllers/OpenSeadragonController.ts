@@ -246,39 +246,36 @@ export class OpenSeadragonController {
     signal?.throwIfAborted();
     const refs: ObjectRef[] = [];
     for (const layer of layers) {
-      for (const currentImage of images) {
-        if (currentImage.layer === layer.id) {
-          let data;
-          try {
-            data = await loadImage(currentImage.id, { signal });
-          } catch (error) {
-            console.error(
-              `Failed to load image with ID '${currentImage.id}'`,
-              error,
-            );
-          }
+      for (const currentImage of images.filter((x) => x.layer === layer.id)) {
+        // images can only be shown on one layer, so we don't need to cache them here
+        let data;
+        try {
+          data = await loadImage(currentImage.id, { signal });
+        } catch (error) {
+          console.error(
+            `Failed to load image with ID '${currentImage.id}'`,
+            error,
+          );
+          continue;
+        } finally {
           signal?.throwIfAborted();
-          if (data !== undefined) {
-            refs.push({ layer, image: currentImage, data });
-          }
         }
+        refs.push({ layer, image: currentImage, data });
       }
-      for (const currentLabels of labels) {
-        if (currentLabels.layer === layer.id) {
-          let data;
-          try {
-            data = await loadLabels(currentLabels.id, { signal });
-          } catch (error) {
-            console.error(
-              `Failed to load labels with ID '${currentLabels.id}'`,
-              error,
-            );
-          }
-          signal?.throwIfAborted();
-          if (data !== undefined) {
-            refs.push({ layer, labels: currentLabels, data });
-          }
+      for (const currentLabels of labels.filter((x) => x.layer === layer.id)) {
+        // labels can only be shown on one layer, so we don't need to cache them here
+        let data;
+        try {
+          data = await loadLabels(currentLabels.id, { signal });
+        } catch (error) {
+          console.error(
+            `Failed to load labels with ID '${currentLabels.id}'`,
+            error,
+          );
+          continue;
         }
+        signal?.throwIfAborted();
+        refs.push({ layer, labels: currentLabels, data });
       }
     }
     return refs;

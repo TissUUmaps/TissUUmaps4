@@ -324,13 +324,17 @@ export class WebGLShapesController extends WebGLControllerBase {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs: ShapesRef[] = [];
+    const dataCache = new Map<string, ShapesData>();
+    const shapeLayersCache = new Map<
+      string,
+      Map<number, string | undefined> | undefined
+    >();
     for (const layer of layers) {
-      for (const currentShapes of shapes) {
-        if (
-          currentShapes.layer === layer.id ||
-          typeof currentShapes.layer !== "string"
-        ) {
-          let data;
+      for (const currentShapes of shapes.filter(
+        (x) => x.layer === layer.id || typeof x.layer !== "string",
+      )) {
+        let data = dataCache.get(currentShapes.id);
+        if (data === undefined) {
           try {
             data = await loadShapes(currentShapes.id, { signal });
           } catch (error) {
@@ -338,45 +342,51 @@ export class WebGLShapesController extends WebGLControllerBase {
               `Failed to load shapes with ID '${currentShapes.id}'`,
               error,
             );
+            continue;
+          } finally {
+            signal?.throwIfAborted();
           }
-          signal?.throwIfAborted();
-          if (data !== undefined) {
-            let numShapes = data.getSize();
-            let shapeMask: boolean[] | undefined;
-            if (numShapes > 0 && typeof currentShapes.layer !== "string") {
-              const tableData = await loadTable(currentShapes.layer.table, {
-                signal,
-              });
-              signal?.throwIfAborted();
-              const tableIds = tableData.getIds();
-              signal?.throwIfAborted();
-              const tableLayers = await tableData.loadValues<string>(
-                currentShapes.layer.column,
-                { signal },
-              );
-              signal?.throwIfAborted();
-              const shapeLayers = new Map(
-                tableIds.map((id, i) => [id, tableLayers[i]!]),
-              );
-              shapeMask = data
-                .getIds()
-                .map((shapeId) => shapeLayers.get(shapeId) === layer.id);
-              numShapes = shapeMask.reduce(
-                (accum, include) => accum + (include ? 1 : 0),
-                0,
-              );
-            }
-            if (numShapes > 0) {
-              refs.push({
-                layer,
-                shapes: currentShapes,
-                shapeMask,
-                numShapes,
-                data,
-              });
-            }
-          }
+          dataCache.set(currentShapes.id, data);
         }
+        let numShapes = data.getSize();
+        if (numShapes === 0) {
+          continue;
+        }
+        let shapeLayers = shapeLayersCache.get(currentShapes.id);
+        if (
+          shapeLayers === undefined &&
+          !shapeLayersCache.has(currentShapes.id) &&
+          typeof currentShapes.layer !== "string"
+        ) {
+          const tableData = await loadTable(currentShapes.layer.table, {
+            signal,
+          });
+          signal?.throwIfAborted();
+          const tableIds = tableData.getIds();
+          signal?.throwIfAborted();
+          const tableLayers = await tableData.loadValues<string>(
+            currentShapes.layer.column,
+            { signal },
+          );
+          signal?.throwIfAborted();
+          shapeLayers = new Map(tableIds.map((id, i) => [id, tableLayers[i]]));
+          shapeLayersCache.set(currentShapes.id, shapeLayers);
+        }
+        let shapeMask: boolean[] | undefined;
+        if (numShapes > 0 && shapeLayers !== undefined) {
+          shapeMask = data.getIds().map((x) => shapeLayers.get(x) === layer.id);
+          numShapes = shapeMask.reduce((accum, x) => accum + (x ? 1 : 0), 0);
+        }
+        if (numShapes === 0) {
+          continue;
+        }
+        refs.push({
+          layer,
+          shapes: currentShapes,
+          shapeMask,
+          numShapes,
+          data,
+        });
       }
     }
     return refs;
