@@ -503,11 +503,14 @@ export class WebGLPointsController extends WebGLControllerBase {
         if (data === undefined) {
           try {
             data = await loadPoints(currentPoints.id, { signal });
+            signal?.throwIfAborted();
           } catch (error) {
-            console.error(
-              `Failed to load points with ID '${currentPoints.id}'`,
-              error,
-            );
+            if (!signal?.aborted) {
+              console.error(
+                `Failed to load points with ID '${currentPoints.id}'`,
+                error,
+              );
+            }
             continue;
           } finally {
             signal?.throwIfAborted();
@@ -524,17 +527,28 @@ export class WebGLPointsController extends WebGLControllerBase {
           !pointLayersCache.has(currentPoints.id) &&
           typeof currentPoints.layer !== "string"
         ) {
-          const tableData = await loadTable(currentPoints.layer.table, {
-            signal,
-          });
-          signal?.throwIfAborted();
-          const tableIds = tableData.getIds();
-          signal?.throwIfAborted();
-          const tableLayers = await tableData.loadValues<string>(
-            currentPoints.layer.column,
-            { signal },
-          );
-          signal?.throwIfAborted();
+          let tableIds, tableLayers;
+          try {
+            const tableData = await loadTable(currentPoints.layer.table, {
+              signal,
+            });
+            signal?.throwIfAborted();
+            tableIds = tableData.getIds();
+            signal?.throwIfAborted();
+            tableLayers = await tableData.loadValues<string>(
+              currentPoints.layer.column,
+              { signal },
+            );
+            signal?.throwIfAborted();
+          } catch (error) {
+            console.error(
+              `Failed to load point layers for points with ID '${currentPoints.id}'`,
+              error,
+            );
+            continue;
+          } finally {
+            signal?.throwIfAborted();
+          }
           pointLayers = new Map(tableIds.map((id, i) => [id, tableLayers[i]]));
           pointLayersCache.set(currentPoints.id, pointLayers);
         }

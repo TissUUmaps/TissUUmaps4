@@ -337,11 +337,14 @@ export class WebGLShapesController extends WebGLControllerBase {
         if (data === undefined) {
           try {
             data = await loadShapes(currentShapes.id, { signal });
+            signal?.throwIfAborted();
           } catch (error) {
-            console.error(
-              `Failed to load shapes with ID '${currentShapes.id}'`,
-              error,
-            );
+            if (!signal?.aborted) {
+              console.error(
+                `Failed to load shapes with ID '${currentShapes.id}'`,
+                error,
+              );
+            }
             continue;
           } finally {
             signal?.throwIfAborted();
@@ -358,17 +361,30 @@ export class WebGLShapesController extends WebGLControllerBase {
           !shapeLayersCache.has(currentShapes.id) &&
           typeof currentShapes.layer !== "string"
         ) {
-          const tableData = await loadTable(currentShapes.layer.table, {
-            signal,
-          });
-          signal?.throwIfAborted();
-          const tableIds = tableData.getIds();
-          signal?.throwIfAborted();
-          const tableLayers = await tableData.loadValues<string>(
-            currentShapes.layer.column,
-            { signal },
-          );
-          signal?.throwIfAborted();
+          let tableIds, tableLayers;
+          try {
+            const tableData = await loadTable(currentShapes.layer.table, {
+              signal,
+            });
+            signal?.throwIfAborted();
+            tableIds = tableData.getIds();
+            signal?.throwIfAborted();
+            tableLayers = await tableData.loadValues<string>(
+              currentShapes.layer.column,
+              { signal },
+            );
+            signal?.throwIfAborted();
+          } catch (error) {
+            if (!signal?.aborted) {
+              console.error(
+                `Failed to load shape layers for shapes with ID '${currentShapes.id}'`,
+                error,
+              );
+            }
+            continue;
+          } finally {
+            signal?.throwIfAborted();
+          }
           shapeLayers = new Map(tableIds.map((id, i) => [id, tableLayers[i]]));
           shapeLayersCache.set(currentShapes.id, shapeLayers);
         }

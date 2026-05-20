@@ -251,11 +251,14 @@ export class OpenSeadragonController {
         let data;
         try {
           data = await loadImage(currentImage.id, { signal });
+          signal?.throwIfAborted();
         } catch (error) {
-          console.error(
-            `Failed to load image with ID '${currentImage.id}'`,
-            error,
-          );
+          if (!signal?.aborted) {
+            console.error(
+              `Failed to load image with ID '${currentImage.id}'`,
+              error,
+            );
+          }
           continue;
         } finally {
           signal?.throwIfAborted();
@@ -267,11 +270,14 @@ export class OpenSeadragonController {
         let data;
         try {
           data = await loadLabels(currentLabels.id, { signal });
+          signal?.throwIfAborted();
         } catch (error) {
-          console.error(
-            `Failed to load labels with ID '${currentLabels.id}'`,
-            error,
-          );
+          if (!signal?.aborted) {
+            console.error(
+              `Failed to load labels with ID '${currentLabels.id}'`,
+              error,
+            );
+          }
           continue;
         }
         signal?.throwIfAborted();
