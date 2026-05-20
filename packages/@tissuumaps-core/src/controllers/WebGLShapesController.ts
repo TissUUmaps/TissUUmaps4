@@ -329,9 +329,12 @@ export class WebGLShapesController extends WebGLControllerBase {
       string,
       Map<number, string | undefined> | undefined
     >();
+    const failedShapes = new Set<string>();
     for (const layer of layers) {
       for (const currentShapes of shapes.filter(
-        (x) => x.layer === layer.id || typeof x.layer !== "string",
+        (shapes) =>
+          !failedShapes.has(shapes.id) &&
+          (shapes.layer === layer.id || typeof shapes.layer !== "string"),
       )) {
         let data = dataCache.get(currentShapes.id);
         if (data === undefined) {
@@ -345,6 +348,7 @@ export class WebGLShapesController extends WebGLControllerBase {
                 error,
               );
             }
+            failedShapes.add(currentShapes.id);
             continue;
           } finally {
             signal?.throwIfAborted();
@@ -361,19 +365,21 @@ export class WebGLShapesController extends WebGLControllerBase {
           !shapeLayersCache.has(currentShapes.id) &&
           typeof currentShapes.layer !== "string"
         ) {
-          let tableIds, tableLayers;
           try {
             const tableData = await loadTable(currentShapes.layer.table, {
               signal,
             });
             signal?.throwIfAborted();
-            tableIds = tableData.getIds();
+            const tableIds = tableData.getIds();
             signal?.throwIfAborted();
-            tableLayers = await tableData.loadValues<string>(
+            const tableLayers = await tableData.loadValues<string>(
               currentShapes.layer.column,
               { signal },
             );
             signal?.throwIfAborted();
+            shapeLayers = new Map(
+              tableIds.map((id, i) => [id, tableLayers[i]]),
+            );
           } catch (error) {
             if (!signal?.aborted) {
               console.error(
@@ -381,11 +387,11 @@ export class WebGLShapesController extends WebGLControllerBase {
                 error,
               );
             }
+            failedShapes.add(currentShapes.id);
             continue;
           } finally {
             signal?.throwIfAborted();
           }
-          shapeLayers = new Map(tableIds.map((id, i) => [id, tableLayers[i]]));
           shapeLayersCache.set(currentShapes.id, shapeLayers);
         }
         let shapeMask: boolean[] | undefined;

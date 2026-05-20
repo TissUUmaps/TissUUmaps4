@@ -495,9 +495,12 @@ export class WebGLPointsController extends WebGLControllerBase {
       string,
       Map<number, string | undefined> | undefined
     >();
+    const failedPoints = new Set<string>();
     for (const layer of layers) {
       for (const currentPoints of points.filter(
-        (x) => x.layer === layer.id || typeof x.layer !== "string",
+        (points) =>
+          !failedPoints.has(points.id) &&
+          (points.layer === layer.id || typeof points.layer !== "string"),
       )) {
         let data = dataCache.get(currentPoints.id);
         if (data === undefined) {
@@ -511,6 +514,7 @@ export class WebGLPointsController extends WebGLControllerBase {
                 error,
               );
             }
+            failedPoints.add(currentPoints.id);
             continue;
           } finally {
             signal?.throwIfAborted();
@@ -527,29 +531,31 @@ export class WebGLPointsController extends WebGLControllerBase {
           !pointLayersCache.has(currentPoints.id) &&
           typeof currentPoints.layer !== "string"
         ) {
-          let tableIds, tableLayers;
           try {
             const tableData = await loadTable(currentPoints.layer.table, {
               signal,
             });
             signal?.throwIfAborted();
-            tableIds = tableData.getIds();
+            const tableIds = tableData.getIds();
             signal?.throwIfAborted();
-            tableLayers = await tableData.loadValues<string>(
+            const tableLayers = await tableData.loadValues<string>(
               currentPoints.layer.column,
               { signal },
             );
             signal?.throwIfAborted();
+            pointLayers = new Map(
+              tableIds.map((id, i) => [id, tableLayers[i]]),
+            );
           } catch (error) {
             console.error(
               `Failed to load point layers for points with ID '${currentPoints.id}'`,
               error,
             );
+            failedPoints.add(currentPoints.id);
             continue;
           } finally {
             signal?.throwIfAborted();
           }
-          pointLayers = new Map(tableIds.map((id, i) => [id, tableLayers[i]]));
           pointLayersCache.set(currentPoints.id, pointLayers);
         }
         let pointMask: boolean[] | undefined;
