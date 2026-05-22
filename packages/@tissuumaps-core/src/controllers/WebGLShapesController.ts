@@ -1055,7 +1055,7 @@ type ShapesRef = {
   layer: Layer;
   shapes: Shapes;
   numShapes: number;
-  shapeLayers: Map<number, string | undefined> | undefined;
+  shapeLayers: Map<number, string> | undefined;
   data: ShapesData;
 };
 
