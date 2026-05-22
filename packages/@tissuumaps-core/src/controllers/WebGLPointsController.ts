@@ -663,6 +663,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       // marker
       if (
         bufferSliceChanged ||
+        bufferSliceState === undefined ||
         !deepEqual(
           bufferSliceState.config.points.pointMarker,
           ref.points.pointMarker,
@@ -688,6 +689,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       // size
       if (
         bufferSliceChanged ||
+        bufferSliceState === undefined ||
         bufferSliceState.config.layer.pointSizeFactor !==
           ref.layer.pointSizeFactor ||
         bufferSliceState.config.layer.transform.scale !==
@@ -750,6 +752,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       // color, visibility, opacity
       if (
         bufferSliceChanged ||
+        bufferSliceState === undefined ||
         bufferSliceState.config.layer.visibility !== ref.layer.visibility ||
         bufferSliceState.config.layer.opacity !== ref.layer.opacity ||
         bufferSliceState.config.points.visibility !== ref.points.visibility ||
