@@ -72,7 +72,7 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
             id: crypto.randomUUID(),
             name,
             dataSource,
-            layerConfigs: layers.length > 0 ? [{ layer: layers[0]!.id }] : [],
+            layer: layers[0]!.id, // FIXME
           });
           addLabels(newLabels);
         }}

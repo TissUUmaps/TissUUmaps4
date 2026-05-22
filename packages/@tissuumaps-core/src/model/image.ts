@@ -1,13 +1,10 @@
 import {
   type DataSource,
-  type LayerConfig,
   type RawDataSource,
-  type RawLayerConfig,
-  type RawRenderedDataObject,
-  type RenderedDataObject,
+  type RawSingleLayerDataObject,
+  type SingleLayerDataObject,
   createDataSource,
-  createLayerConfig,
-  createRenderedDataObject,
+  createSingleLayerDataObject,
 } from "./base";
 
 /**
@@ -19,25 +16,16 @@ export const imageDefaults = {} as const satisfies Partial<RawImage>;
  * A two-dimensional raster image
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawImage extends RawRenderedDataObject<
-  RawImageDataSource<string>,
-  RawImageLayerConfig
+export interface RawImage extends RawSingleLayerDataObject<
+  RawImageDataSource<string>
 > {}
 
 /**
  * A {@link RawImage} with {@link imageDefaults} applied
  */
-export type Image = RenderedDataObject<
-  ImageDataSource<string>,
-  ImageLayerConfig
-> &
+export type Image = SingleLayerDataObject<ImageDataSource<string>> &
   Required<Pick<RawImage, keyof typeof imageDefaults>> &
-  Omit<
-    RawImage,
-    | keyof RenderedDataObject<ImageDataSource<string>, ImageLayerConfig>
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof imageDefaults
-  >;
+  Omit<RawImage, keyof typeof imageDefaults>;
 
 /**
  * Creates a {@link Image} from a {@link RawImage} by applying {@link imageDefaults}
@@ -47,11 +35,10 @@ export type Image = RenderedDataObject<
  */
 export function createImage(rawImage: RawImage): Image {
   return {
-    ...createRenderedDataObject(rawImage),
+    ...createSingleLayerDataObject(rawImage),
     ...structuredClone(imageDefaults),
     ...structuredClone(rawImage),
     dataSource: createImageDataSource(rawImage.dataSource),
-    layerConfigs: rawImage.layerConfigs?.map(createImageLayerConfig) ?? [],
   };
 }
 
@@ -77,12 +64,7 @@ export type ImageDataSource<TType extends string = string> = DataSource<TType> &
   Required<
     Pick<RawImageDataSource<TType>, keyof typeof imageDataSourceDefaults>
   > &
-  Omit<
-    RawImageDataSource<TType>,
-    | keyof DataSource<TType>
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof imageDataSourceDefaults
-  >;
+  Omit<RawImageDataSource<TType>, keyof typeof imageDataSourceDefaults>;
 
 /**
  * Creates a {@link ImageDataSource} from a {@link RawImageDataSource} by applying {@link imageDataSourceDefaults}
@@ -97,49 +79,5 @@ export function createImageDataSource<TType extends string>(
     ...createDataSource(rawImageDataSource),
     ...structuredClone(imageDataSourceDefaults),
     ...structuredClone(rawImageDataSource),
-  };
-}
-
-/**
- * Default values for {@link RawImageLayerConfig}
- */
-export const imageLayerConfigDefaults =
-  {} as const satisfies Partial<RawImageLayerConfig>;
-
-/**
- * A layer-specific display configuration for two-dimensional raster images
- */
-export interface RawImageLayerConfig extends RawLayerConfig {
-  /**
-   * Layer ID
-   */
-  layer: string;
-}
-
-/**
- * A {@link RawImageLayerConfig} with {@link imageLayerConfigDefaults} applied
- */
-export type ImageLayerConfig = LayerConfig &
-  Required<Pick<RawImageLayerConfig, keyof typeof imageLayerConfigDefaults>> &
-  Omit<
-    RawImageLayerConfig,
-    | keyof LayerConfig
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof imageLayerConfigDefaults
-  >;
-
-/**
- * Creates a {@link ImageLayerConfig} from a {@link RawImageLayerConfig} by applying {@link imageLayerConfigDefaults}
- *
- * @param rawImageLayerConfig - The raw image layer configuration
- * @returns The complete image layer configuration with default values applied
- */
-export function createImageLayerConfig(
-  rawImageLayerConfig: RawImageLayerConfig,
-): ImageLayerConfig {
-  return {
-    ...createLayerConfig(rawImageLayerConfig),
-    ...structuredClone(imageLayerConfigDefaults),
-    ...structuredClone(rawImageLayerConfig),
   };
 }

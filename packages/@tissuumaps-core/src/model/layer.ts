@@ -65,11 +65,7 @@ export interface RawLayer extends RawModel {
  */
 export type Layer = Model &
   Required<Pick<RawLayer, keyof typeof layerDefaults>> &
-  Omit<
-    RawLayer,
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    keyof Model | keyof typeof layerDefaults
-  >;
+  Omit<RawLayer, keyof typeof layerDefaults>;
 
 /**
  * Creates a {@link Layer} from a {@link RawLayer} by applying {@link layerDefaults}

@@ -16,8 +16,8 @@ export function useOpenSeadragon(
     viewerOptions,
     viewerAnimationStartOptions,
     viewerAnimationFinishOptions,
-    loadImage,
-    loadLabels,
+    getImage,
+    getLabels,
   } = adapter;
 
   const controllerRef = useRef<OpenSeadragonController | null>(null);
@@ -71,7 +71,7 @@ export function useOpenSeadragon(
     if (controller !== null) {
       console.debug("Synchronizing OpenSeadragon viewer");
       controller
-        .synchronize(layers, images, labels, loadImage, loadLabels, {
+        .synchronize(layers, images, labels, getImage, getLabels, {
           signal: abortController.signal,
           dummyBounds: fallbackBounds(),
         })
@@ -84,15 +84,7 @@ export function useOpenSeadragon(
     return () => {
       abortController.abort();
     };
-  }, [
-    workspace,
-    layers,
-    images,
-    labels,
-    loadImage,
-    loadLabels,
-    fallbackBounds,
-  ]);
+  }, [workspace, layers, images, labels, getImage, getLabels, fallbackBounds]);
 
   return { setViewerElementRef, controllerRef, controllerReady };
 }

@@ -23,12 +23,7 @@ export interface RawTable extends RawDataObject<RawTableDataSource<string>> {}
  */
 export type Table = DataObject<TableDataSource<string>> &
   Required<Pick<RawTable, keyof typeof tableDefaults>> &
-  Omit<
-    RawTable,
-    | keyof DataObject<TableDataSource<string>>
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof tableDefaults
-  >;
+  Omit<RawTable, keyof typeof tableDefaults>;
 
 /**
  * Creates a {@link Table} from a {@link RawTable} by applying {@link tableDefaults}
@@ -67,12 +62,7 @@ export type TableDataSource<TType extends string = string> = DataSource<TType> &
   Required<
     Pick<RawTableDataSource<TType>, keyof typeof tableDataSourceDefaults>
   > &
-  Omit<
-    RawTableDataSource<TType>,
-    | keyof DataSource<TType>
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof tableDataSourceDefaults
-  >;
+  Omit<RawTableDataSource<TType>, keyof typeof tableDataSourceDefaults>;
 
 /**
  * Creates a {@link TableDataSource} from a {@link RawTableDataSource} by applying {@link tableDataSourceDefaults}

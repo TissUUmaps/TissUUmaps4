@@ -62,7 +62,7 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
             id: crypto.randomUUID(),
             name,
             dataSource,
-            layerConfigs: layers.length > 0 ? [{ layer: layers[0]!.id }] : [],
+            layer: layers[0]!.id, // FIXME
           });
           addImage(image);
         }}

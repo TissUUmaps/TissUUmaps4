@@ -1,9 +1,10 @@
+import { deepEqual } from "fast-equals";
 import { mat3 } from "gl-matrix";
 import OpenSeadragon from "openseadragon";
 
 import { defaultViewerOptions } from "../model/constants";
-import { type Image, type ImageLayerConfig } from "../model/image";
-import { type Labels, type LabelsLayerConfig } from "../model/labels";
+import { type Image } from "../model/image";
+import { type Labels } from "../model/labels";
 import { type Layer } from "../model/layer";
 import { type ViewerOptions } from "../model/types";
 import { type ImageData } from "../storage/image";
@@ -180,19 +181,19 @@ export class OpenSeadragonController {
    * @param layers - Layers to render
    * @param images - Image data objects to display
    * @param labels - Labels data objects to display
-   * @param loadImage - Async loader for image data
-   * @param loadLabels - Async loader for labels data
+   * @param getImage - Async getter for image data
+   * @param getLabels - Async getter for labels data
    * @param options - Optional abort signal
    */
   async synchronize(
     layers: Layer[],
     images: Image[],
     labels: Labels[],
-    loadImage: (
+    getImage: (
       imageId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<ImageData>,
-    loadLabels: (
+    getLabels: (
       labelsId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
@@ -204,8 +205,8 @@ export class OpenSeadragonController {
       layers,
       images,
       labels,
-      loadImage,
-      loadLabels,
+      getImage,
+      getLabels,
       { signal },
     );
     signal?.throwIfAborted();
@@ -224,8 +225,7 @@ export class OpenSeadragonController {
   }
 
   /**
-   * Loads image and labels data for every layer configuration that references
-   * one of the given layers, producing a flat list of {@link ObjectRef} entries
+   * Loads image and labels for every layer, producing a flat list of {@link ObjectRef} entries
    *
    * Objects that fail to load are logged and skipped.
    */
@@ -233,11 +233,11 @@ export class OpenSeadragonController {
     layers: Layer[],
     images: Image[],
     labels: Labels[],
-    loadImage: (
+    getImage: (
       imageId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<ImageData>,
-    loadLabels: (
+    getLabels: (
       labelsId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
@@ -247,50 +247,39 @@ export class OpenSeadragonController {
     signal?.throwIfAborted();
     const refs: ObjectRef[] = [];
     for (const layer of layers) {
-      for (const image of images) {
-        for (let i = 0; i < image.layerConfigs.length; i++) {
-          const layerConfig = image.layerConfigs[i]!;
-          if (layerConfig.layer !== layer.id) {
-            continue;
+      for (const currentImage of images.filter((x) => x.layer === layer.id)) {
+        let data;
+        try {
+          data = await getImage(currentImage.id, { signal });
+        } catch (error) {
+          if (!signal?.aborted) {
+            console.error(
+              `Failed to load image with ID '${currentImage.id}'`,
+              error,
+            );
           }
-          let data;
-          try {
-            data = await loadImage(image.id, { signal });
-          } catch (error) {
-            console.error(`Failed to load image with ID '${image.id}'`, error);
-          }
+          continue;
+        } finally {
           signal?.throwIfAborted();
-          if (data !== undefined) {
-            refs.push({ layer, image, layerConfig, layerConfigIndex: i, data });
-          }
         }
+        refs.push({ layer, image: currentImage, data: data });
       }
-      for (const currentLabels of labels) {
-        for (let i = 0; i < currentLabels.layerConfigs.length; i++) {
-          const layerConfig = currentLabels.layerConfigs[i]!;
-          if (layerConfig.layer !== layer.id) {
-            continue;
-          }
-          let data;
-          try {
-            data = await loadLabels(currentLabels.id, { signal });
-          } catch (error) {
+      for (const currentLabels of labels.filter((x) => x.layer === layer.id)) {
+        let data;
+        try {
+          data = await getLabels(currentLabels.id, { signal });
+        } catch (error) {
+          if (!signal?.aborted) {
             console.error(
               `Failed to load labels with ID '${currentLabels.id}'`,
               error,
             );
           }
+          continue;
+        } finally {
           signal?.throwIfAborted();
-          if (data !== undefined) {
-            refs.push({
-              layer,
-              labels: currentLabels,
-              layerConfig,
-              layerConfigIndex: i,
-              data,
-            });
-          }
         }
+        refs.push({ layer, labels: currentLabels, data: data });
       }
     }
     return refs;
@@ -317,11 +306,18 @@ export class OpenSeadragonController {
           ref.layer.id === tiledImageState.ref.layer.id &&
           (("image" in ref &&
             "image" in tiledImageState.ref &&
-            ref.image.id === tiledImageState.ref.image.id) ||
+            ref.image.id === tiledImageState.ref.image.id &&
+            deepEqual(
+              ref.image.dataSource,
+              tiledImageState.ref.image.dataSource,
+            )) ||
             ("labels" in ref &&
               "labels" in tiledImageState.ref &&
-              ref.labels.id === tiledImageState.ref.labels.id)) &&
-          ref.layerConfigIndex === tiledImageState.ref.layerConfigIndex,
+              ref.labels.id === tiledImageState.ref.labels.id &&
+              deepEqual(
+                ref.labels.dataSource,
+                tiledImageState.ref.labels.dataSource,
+              ))),
       );
       if (ref !== undefined) {
         tiledImageStatesByRef.set(ref, tiledImageState);
@@ -360,12 +356,19 @@ export class OpenSeadragonController {
         !(
           ("image" in ref &&
             "image" in tiledImageState.ref &&
-            ref.image.id === tiledImageState.ref.image.id) ||
+            tiledImageState.ref.image.id === ref.image.id &&
+            deepEqual(
+              tiledImageState.ref.image.dataSource,
+              ref.image.dataSource,
+            )) ||
           ("labels" in ref &&
             "labels" in tiledImageState.ref &&
-            ref.labels.id === tiledImageState.ref.labels.id)
-        ) ||
-        tiledImageState.ref.layerConfigIndex !== ref.layerConfigIndex
+            tiledImageState.ref.labels.id === ref.labels.id &&
+            deepEqual(
+              tiledImageState.ref.labels.dataSource,
+              ref.labels.dataSource,
+            ))
+        )
       ) {
         tiledImageState = this._createTiledImage(i, ref);
       } else {
@@ -412,7 +415,7 @@ export class OpenSeadragonController {
             })(),
       index: index,
       // https://github.com/openseadragon/openseadragon/issues/2765
-      // flipped: layerConfig.flip,
+      // flipped: image.flip / labels.flip,
       opacity: OpenSeadragonController._calculateOpacity(ref),
       success: (event) => {
         const { item: tiledImage } = event as unknown as {
@@ -569,21 +572,17 @@ export class OpenSeadragonController {
   }
 }
 
-/** Reference binding an image to a specific layer and layer configuration */
+/** Reference binding an image to a specific layer */
 type ImageRef = {
   layer: Layer;
   image: Image;
-  layerConfig: ImageLayerConfig;
-  layerConfigIndex: number;
   data: ImageData;
 };
 
-/** Reference binding a labels object to a specific layer and layer configuration */
+/** Reference binding a labels object to a specific layer */
 type LabelsRef = {
   layer: Layer;
   labels: Labels;
-  layerConfig: LabelsLayerConfig;
-  layerConfigIndex: number;
   data: LabelsData;
 };
 

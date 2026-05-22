@@ -1,12 +1,9 @@
 import {
   type DataSource,
-  type LayerConfig,
   type RawDataSource,
-  type RawLayerConfig,
   type RawRenderedDataObject,
   type RenderedDataObject,
   createDataSource,
-  createLayerConfig,
   createRenderedDataObject,
 } from "./base";
 import {
@@ -40,8 +37,7 @@ export const pointsDefaults = {
  * A two-dimensional point cloud
  */
 export interface RawPoints extends RawRenderedDataObject<
-  RawPointsDataSource<string>,
-  RawPointsLayerConfig
+  RawPointsDataSource<string>
 > {
   /**
    * Point marker
@@ -94,16 +90,9 @@ export interface RawPoints extends RawRenderedDataObject<
 /**
  * A {@link RawPoints} object with {@link pointsDefaults} applied
  */
-export type Points = RenderedDataObject<
-  PointsDataSource<string>,
-  PointsLayerConfig
-> &
+export type Points = RenderedDataObject<PointsDataSource<string>> &
   Required<Pick<RawPoints, keyof typeof pointsDefaults>> &
-  Omit<
-    RawPoints,
-    | keyof RenderedDataObject<PointsDataSource<string>, PointsLayerConfig>
-    | keyof typeof pointsDefaults
-  >;
+  Omit<RawPoints, keyof typeof pointsDefaults>;
 
 /**
  * Creates a {@link Points} from a {@link RawPoints} by applying {@link pointsDefaults}
@@ -117,7 +106,6 @@ export function createPoints(rawPoints: RawPoints): Points {
     ...structuredClone(pointsDefaults),
     ...structuredClone(rawPoints),
     dataSource: createPointsDataSource(rawPoints.dataSource),
-    layerConfigs: rawPoints.layerConfigs?.map(createPointsLayerConfig) ?? [],
   };
 }
 
@@ -144,12 +132,7 @@ export type PointsDataSource<TType extends string = string> =
     Required<
       Pick<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>
     > &
-    Omit<
-      RawPointsDataSource<TType>,
-      | keyof DataSource<TType>
-      // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-      | keyof typeof pointsDataSourceDefaults
-    >;
+    Omit<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>;
 
 /**
  * Creates a {@link PointsDataSource} from a {@link RawPointsDataSource} by applying {@link pointsDataSourceDefaults}
@@ -164,45 +147,5 @@ export function createPointsDataSource<TType extends string>(
     ...createDataSource(rawPointsDataSource),
     ...structuredClone(pointsDataSourceDefaults),
     ...structuredClone(rawPointsDataSource),
-  };
-}
-
-/**
- * Default values for {@link RawPointsLayerConfig}
- */
-export const pointsLayerConfigDefaults =
-  {} as const satisfies Partial<RawPointsLayerConfig>;
-
-/**
- * A layer-specific display configuration for two-dimensional point clouds
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawPointsLayerConfig extends RawLayerConfig {}
-
-/**
- * A {@link RawPointsLayerConfig} with {@link pointsLayerConfigDefaults} applied
- */
-export type PointsLayerConfig = LayerConfig &
-  Required<Pick<RawPointsLayerConfig, keyof typeof pointsLayerConfigDefaults>> &
-  Omit<
-    RawPointsLayerConfig,
-    | keyof LayerConfig
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof pointsLayerConfigDefaults
-  >;
-
-/**
- * Creates a {@link PointsLayerConfig} from a {@link RawPointsLayerConfig} by applying {@link pointsLayerConfigDefaults}
- *
- * @param rawPointsLayerConfig - The raw points layer configuration
- * @returns The complete points layer configuration with default values applied
- */
-export function createPointsLayerConfig(
-  rawPointsLayerConfig: RawPointsLayerConfig,
-): PointsLayerConfig {
-  return {
-    ...createLayerConfig(rawPointsLayerConfig),
-    ...structuredClone(pointsLayerConfigDefaults),
-    ...structuredClone(rawPointsLayerConfig),
   };
 }

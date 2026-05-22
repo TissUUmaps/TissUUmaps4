@@ -154,8 +154,6 @@ export type Project = Model &
   Required<Pick<RawProject, keyof typeof projectDefaults>> &
   Omit<
     RawProject,
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof Model
     | keyof typeof projectDefaults
     | ("layers" | "images" | "labels" | "points" | "shapes" | "tables")
   > & {

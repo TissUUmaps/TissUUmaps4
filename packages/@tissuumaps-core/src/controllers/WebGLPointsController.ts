@@ -18,7 +18,7 @@ import {
   defaultPointVisibility,
 } from "../model/constants";
 import { type Layer } from "../model/layer";
-import { type Points, type PointsLayerConfig } from "../model/points";
+import { type Points } from "../model/points";
 import {
   type Color,
   type CoordinateSpace,
@@ -243,8 +243,8 @@ export class WebGLPointsController extends WebGLControllerBase {
    * @param colorMaps - Project-global color maps
    * @param visibilityMaps - Project-global visibility maps
    * @param opacityMaps - Project-global opacity maps
-   * @param loadPoints - Async loader for points data
-   * @param loadTable - Async loader for table data
+   * @param getPoints - Async getter for points data
+   * @param getTable - Async getter for table data
    * @param options - Optional abort signal
    */
   async synchronize(
@@ -255,11 +255,11 @@ export class WebGLPointsController extends WebGLControllerBase {
     colorMaps: DefaultMap<Color>[],
     visibilityMaps: DefaultMap<boolean>[],
     opacityMaps: DefaultMap<number>[],
-    loadPoints: (
+    getPoints: (
       pointsId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<PointsData>,
-    loadTable: (
+    getTable: (
       tableId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -267,7 +267,10 @@ export class WebGLPointsController extends WebGLControllerBase {
   ): Promise<void> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const refs = await this._loadPoints(layers, points, loadPoints, { signal });
+
+    const refs = await this._loadPoints(layers, points, getPoints, getTable, {
+      signal,
+    });
     signal?.throwIfAborted();
     if (refs.length > WebGLPointsController._maxNumObjects) {
       console.warn(
@@ -275,12 +278,14 @@ export class WebGLPointsController extends WebGLControllerBase {
       );
       refs.length = WebGLPointsController._maxNumObjects;
     }
+
     let buffersResized = false;
-    const n = refs.reduce((accum, ref) => accum + ref.data.getSize(), 0);
+    const n = refs.reduce((accum, ref) => accum + ref.numPoints, 0);
     if (this._currentBufferSize !== n) {
       this._resizePointBuffers(n);
       buffersResized = true;
     }
+
     this._bufferSliceStates = await this._loadPointBuffers(
       refs,
       markerMaps,
@@ -289,7 +294,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       visibilityMaps,
       opacityMaps,
       buffersResized,
-      loadTable,
+      getTable,
       { signal },
     );
     signal?.throwIfAborted();
@@ -466,7 +471,7 @@ export class WebGLPointsController extends WebGLControllerBase {
   }
 
   /**
-   * Loads points data for every layer configuration matching the given layers
+   * Loads points for every layer
    *
    * Objects that fail to load are logged and skipped.
    *
@@ -475,25 +480,31 @@ export class WebGLPointsController extends WebGLControllerBase {
   private async _loadPoints(
     layers: Layer[],
     points: Points[],
-    loadPoints: (
+    getPoints: (
       pointsId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<PointsData>,
+    getTable: (
+      tableId: string,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal },
   ): Promise<PointsRef[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs: PointsRef[] = [];
+    const dataCache = new Map<string, PointsData | undefined>();
+    const pointLayersCache = new Map<string, Map<number, string> | undefined>();
     for (const layer of layers) {
-      for (const currentPoints of points) {
-        for (let i = 0; i < currentPoints.layerConfigs.length; i++) {
-          const layerConfig = currentPoints.layerConfigs[i]!;
-          if (layerConfig.layer !== layer.id) {
-            continue;
-          }
-          let data;
+      for (const currentPoints of points.filter(
+        (x) => x.layer === layer.id || typeof x.layer !== "string",
+      )) {
+        let data;
+        if (dataCache.has(currentPoints.id)) {
+          data = dataCache.get(currentPoints.id);
+        } else {
           try {
-            data = await loadPoints(currentPoints.id, { signal });
+            data = await getPoints(currentPoints.id, { signal });
           } catch (error) {
             if (!signal?.aborted) {
               console.error(
@@ -501,18 +512,74 @@ export class WebGLPointsController extends WebGLControllerBase {
                 error,
               );
             }
+          } finally {
+            signal?.throwIfAborted();
           }
-          signal?.throwIfAborted();
-          if (data !== undefined && data.getSize() > 0) {
-            refs.push({
-              layer,
-              points: currentPoints,
-              layerConfig,
-              layerConfigIndex: i,
-              data,
-            });
+          dataCache.set(currentPoints.id, data);
+        }
+        if (data === undefined) {
+          continue;
+        }
+
+        let numPoints = data.getSize();
+        if (numPoints === 0) {
+          continue;
+        }
+
+        let pointLayers: Map<number, string> | undefined;
+        if (typeof currentPoints.layer !== "string") {
+          const pointLayersCacheKey = `${currentPoints.layer.table}:${currentPoints.layer.column}`;
+          if (pointLayersCache.has(pointLayersCacheKey)) {
+            pointLayers = pointLayersCache.get(pointLayersCacheKey);
+          } else {
+            try {
+              const tableData = await getTable(currentPoints.layer.table, {
+                signal,
+              });
+              signal?.throwIfAborted();
+              const tableIds = tableData.getIds();
+              signal?.throwIfAborted();
+              const tableLayers = await tableData.loadValues<string>(
+                currentPoints.layer.column,
+                { signal },
+              );
+              signal?.throwIfAborted();
+              pointLayers = new Map(
+                tableIds.map((id, i) => [id, tableLayers[i]!]),
+              );
+            } catch (error) {
+              if (!signal?.aborted) {
+                console.error(
+                  `Failed to load layers from table ${currentPoints.layer.table}`,
+                  error,
+                );
+              }
+            } finally {
+              signal?.throwIfAborted();
+            }
+            pointLayersCache.set(pointLayersCacheKey, pointLayers);
+          }
+          if (pointLayers === undefined) {
+            continue;
           }
         }
+
+        if (pointLayers !== undefined) {
+          numPoints = data
+            .getIds()
+            .filter((id) => pointLayers.get(id) === layer.id).length;
+          if (numPoints === 0) {
+            continue;
+          }
+        }
+
+        refs.push({
+          data,
+          layer,
+          points: currentPoints,
+          numPoints,
+          pointLayers,
+        });
       }
     }
     return refs;
@@ -550,22 +617,41 @@ export class WebGLPointsController extends WebGLControllerBase {
     const newBufferSliceStates: PointsBufferSliceState[] = [];
     for (let i = 0; i < refs.length; i++) {
       const ref = refs[i]!;
-      const numPoints = ref.data.getSize();
+      const pointIds = ref.data.getIds();
+      const pointMask =
+        ref.pointLayers !== undefined
+          ? pointIds.map((id) => ref.pointLayers!.get(id) === ref.layer.id)
+          : undefined;
+      const filteredPointIds =
+        pointMask !== undefined
+          ? pointIds.filter((_, j) => pointMask[j])
+          : pointIds;
       const bufferSliceState = this._bufferSliceStates[i];
       const bufferSliceChanged =
         buffersResized ||
         bufferSliceState === undefined ||
-        bufferSliceState.numPoints !== numPoints ||
         bufferSliceState.offset !== offset ||
         bufferSliceState.ref.layer.id !== ref.layer.id ||
         bufferSliceState.ref.points.id !== ref.points.id ||
-        bufferSliceState.ref.layerConfigIndex !== ref.layerConfigIndex ||
-        bufferSliceState.ref.data !== ref.data;
-      let dataBounds = bufferSliceState?.dataBounds;
+        bufferSliceState.ref.numPoints !== ref.numPoints ||
+        // check config.points.layer instead of ref.pointLayers
+        !deepEqual(bufferSliceState.config.points.layer, ref.points.layer) ||
+        !deepEqual(
+          bufferSliceState.ref.points.dataSource,
+          ref.points.dataSource,
+        );
+      let dataBounds =
+        bufferSliceState !== undefined && !bufferSliceChanged
+          ? bufferSliceState.dataBounds
+          : undefined;
       // x/y
       if (bufferSliceChanged || dataBounds === undefined) {
-        const [xData, yData] = await ref.data.loadCoordinates({ signal });
+        let [xData, yData] = await ref.data.loadCoordinates({ signal });
         signal?.throwIfAborted();
+        if (pointMask !== undefined) {
+          xData = xData.filter((_, j) => pointMask[j]);
+          yData = yData.filter((_, j) => pointMask[j]);
+        }
         dataBounds = WebGLPointsController._getDataBounds(xData, yData);
         WebGLUtils.loadBuffer(
           this.gl,
@@ -585,13 +671,14 @@ export class WebGLPointsController extends WebGLControllerBase {
       // marker
       if (
         bufferSliceChanged ||
+        bufferSliceState === undefined ||
         !deepEqual(
-          bufferSliceState.current.points.pointMarker,
+          bufferSliceState.config.points.pointMarker,
           ref.points.pointMarker,
         )
       ) {
         const markerData = await MarkerDataUtils.loadMarkerData(
-          ref.data.getIds(),
+          filteredPointIds,
           ref.points.pointMarker,
           markerMaps,
           defaultPointMarker,
@@ -610,16 +697,17 @@ export class WebGLPointsController extends WebGLControllerBase {
       // size
       if (
         bufferSliceChanged ||
-        bufferSliceState.current.layer.pointSizeFactor !==
+        bufferSliceState === undefined ||
+        bufferSliceState.config.layer.pointSizeFactor !==
           ref.layer.pointSizeFactor ||
-        bufferSliceState.current.points.pointSizeFactor !==
-          ref.points.pointSizeFactor ||
-        bufferSliceState.current.layer.transform.scale !==
+        bufferSliceState.config.layer.transform.scale !==
           ref.layer.transform.scale ||
-        bufferSliceState.current.points.transform.scale !==
+        bufferSliceState.config.points.pointSizeFactor !==
+          ref.points.pointSizeFactor ||
+        bufferSliceState.config.points.transform.scale !==
           ref.points.transform.scale ||
         !deepEqual(
-          bufferSliceState.current.points.pointSize,
+          bufferSliceState.config.points.pointSize,
           ref.points.pointSize,
         )
       ) {
@@ -653,7 +741,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           sizeFactor *= ref.layer.transform.scale;
         }
         const sizeData = await SizeDataUtils.loadSizeData(
-          ref.data.getIds(),
+          filteredPointIds,
           ref.points.pointSize,
           sizeMaps,
           defaultPointSize,
@@ -672,20 +760,21 @@ export class WebGLPointsController extends WebGLControllerBase {
       // color, visibility, opacity
       if (
         bufferSliceChanged ||
-        bufferSliceState.current.layer.visibility !== ref.layer.visibility ||
-        bufferSliceState.current.layer.opacity !== ref.layer.opacity ||
-        bufferSliceState.current.points.visibility !== ref.points.visibility ||
-        bufferSliceState.current.points.opacity !== ref.points.opacity ||
+        bufferSliceState === undefined ||
+        bufferSliceState.config.layer.visibility !== ref.layer.visibility ||
+        bufferSliceState.config.layer.opacity !== ref.layer.opacity ||
+        bufferSliceState.config.points.visibility !== ref.points.visibility ||
+        bufferSliceState.config.points.opacity !== ref.points.opacity ||
         !deepEqual(
-          bufferSliceState.current.points.pointVisibility,
+          bufferSliceState.config.points.pointVisibility,
           ref.points.pointVisibility,
         ) ||
         !deepEqual(
-          bufferSliceState.current.points.pointOpacity,
+          bufferSliceState.config.points.pointOpacity,
           ref.points.pointOpacity,
         ) ||
         !deepEqual(
-          bufferSliceState.current.points.pointColor,
+          bufferSliceState.config.points.pointColor,
           ref.points.pointColor,
         )
       ) {
@@ -696,10 +785,10 @@ export class WebGLPointsController extends WebGLControllerBase {
           ref.points.visibility === false ||
           ref.points.opacity === 0
         ) {
-          colorData = new Uint32Array(numPoints).fill(0);
+          colorData = new Uint32Array(ref.numPoints).fill(0);
         } else {
           const visibilityData = await VisibilityDataUtils.loadVisibilityData(
-            ref.data.getIds(),
+            filteredPointIds,
             ref.points.pointVisibility,
             visibilityMaps,
             defaultPointVisibility,
@@ -708,7 +797,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           );
           signal?.throwIfAborted();
           const opacityData = await OpacityDataUtils.loadOpacityData(
-            ref.data.getIds(),
+            filteredPointIds,
             ref.points.pointOpacity,
             opacityMaps,
             defaultPointOpacity,
@@ -717,7 +806,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           );
           signal?.throwIfAborted();
           colorData = await ColorDataUtils.loadColorData(
-            ref.data.getIds(),
+            filteredPointIds,
             ref.points.pointColor,
             colorMaps,
             defaultPointColor,
@@ -739,16 +828,14 @@ export class WebGLPointsController extends WebGLControllerBase {
           this.gl,
           this.gl.ARRAY_BUFFER,
           this._buffers.object,
-          new Uint16Array(numPoints).fill(i),
+          new Uint16Array(ref.numPoints).fill(i),
           { offset },
         );
       }
       newBufferSliceStates.push({
-        ref,
         offset,
-        numPoints,
-        dataBounds,
-        current: {
+        ref,
+        config: {
           layer: {
             visibility: ref.layer.visibility,
             opacity: ref.layer.opacity,
@@ -756,6 +843,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             transform: structuredClone(ref.layer.transform),
           },
           points: {
+            layer: structuredClone(ref.points.layer),
             visibility: ref.points.visibility,
             opacity: ref.points.opacity,
             pointMarker: structuredClone(ref.points.pointMarker),
@@ -767,6 +855,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             transform: structuredClone(ref.points.transform),
           },
         },
+        dataBounds,
       });
       objectsUBOData.set(
         TransformUtils.transposeAsGLMat2x4(
@@ -774,7 +863,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         ),
         i * 8,
       );
-      offset += numPoints;
+      offset += ref.numPoints;
     }
     WebGLUtils.loadBuffer(
       this.gl,
@@ -819,39 +908,35 @@ export class WebGLPointsController extends WebGLControllerBase {
   }
 }
 
-/** Binding of a points data object to a specific layer and layer configuration */
 type PointsRef = {
+  data: PointsData;
   layer: Layer;
   points: Points;
-  layerConfig: PointsLayerConfig;
-  layerConfigIndex: number;
-  data: PointsData;
+  numPoints: number;
+  pointLayers: Map<number, string> | undefined;
 };
 
 /**
  * Tracks the current GPU buffer state for a single points object's
  * slice within the shared vertex buffers
  *
- * Used for incremental updates: by comparing `current` against the new
+ * Used for incremental updates: by comparing `config` against the new
  * model values, only changed attributes are re-uploaded to the GPU.
  */
 type PointsBufferSliceState = {
-  /** Reference to the points object this slice represents */
-  ref: PointsRef;
   /** Element offset (point count) within each shared vertex buffer */
   offset: number;
-  /** Number of points in this slice */
-  numPoints: number;
-  /** Axis-aligned bounding box of all points in data-space coordinates */
-  dataBounds: Rect;
+  /** Reference to the points object this slice represents */
+  ref: PointsRef;
   /** Snapshot of model values at the time of the last buffer upload */
-  current: {
+  config: {
     layer: Pick<
       Layer,
       "visibility" | "opacity" | "pointSizeFactor" | "transform"
     >;
     points: Pick<
       Points,
+      | "layer"
       | "visibility"
       | "opacity"
       | "pointMarker"
@@ -863,4 +948,5 @@ type PointsBufferSliceState = {
       | "transform"
     >;
   };
+  dataBounds: Rect;
 };

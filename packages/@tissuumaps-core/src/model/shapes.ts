@@ -1,12 +1,9 @@
 import {
   type DataSource,
-  type LayerConfig,
   type RawDataSource,
-  type RawLayerConfig,
   type RawRenderedDataObject,
   type RenderedDataObject,
   createDataSource,
-  createLayerConfig,
   createRenderedDataObject,
 } from "./base";
 import {
@@ -39,8 +36,7 @@ export const shapesDefaults = {
  * A two-dimensional shape cloud
  */
 export interface RawShapes extends RawRenderedDataObject<
-  RawShapesDataSource<string>,
-  RawShapesLayerConfig
+  RawShapesDataSource<string>
 > {
   /**
    * Shape fill color
@@ -88,16 +84,9 @@ export interface RawShapes extends RawRenderedDataObject<
 /**
  * A {@link RawShapes} object with {@link shapesDefaults} applied
  */
-export type Shapes = RenderedDataObject<
-  ShapesDataSource<string>,
-  ShapesLayerConfig
-> &
+export type Shapes = RenderedDataObject<ShapesDataSource<string>> &
   Required<Pick<RawShapes, keyof typeof shapesDefaults>> &
-  Omit<
-    RawShapes,
-    | keyof RenderedDataObject<ShapesDataSource<string>, ShapesLayerConfig>
-    | keyof typeof shapesDefaults
-  >;
+  Omit<RawShapes, keyof typeof shapesDefaults>;
 
 /**
  * Creates a {@link Shapes} from a {@link RawShapes} by applying {@link shapesDefaults}
@@ -111,7 +100,6 @@ export function createShapes(rawShapes: RawShapes): Shapes {
     ...structuredClone(shapesDefaults),
     ...structuredClone(rawShapes),
     dataSource: createShapesDataSource(rawShapes.dataSource),
-    layerConfigs: rawShapes.layerConfigs?.map(createShapesLayerConfig) ?? [],
   };
 }
 
@@ -138,12 +126,7 @@ export type ShapesDataSource<TType extends string = string> =
     Required<
       Pick<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>
     > &
-    Omit<
-      RawShapesDataSource<TType>,
-      | keyof DataSource<TType>
-      // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-      | keyof typeof shapesDataSourceDefaults
-    >;
+    Omit<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>;
 
 /**
  * Creates a {@link ShapesDataSource} from a {@link RawShapesDataSource} by applying {@link shapesDataSourceDefaults}
@@ -158,45 +141,5 @@ export function createShapesDataSource<TType extends string>(
     ...createDataSource(rawShapesDataSource),
     ...structuredClone(shapesDataSourceDefaults),
     ...structuredClone(rawShapesDataSource),
-  };
-}
-
-/**
- * Default values for {@link RawShapesLayerConfig}
- */
-export const shapesLayerConfigDefaults =
-  {} as const satisfies Partial<RawShapesLayerConfig>;
-
-/**
- * A layer-specific display configuration for two-dimensional shape clouds
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RawShapesLayerConfig extends RawLayerConfig {}
-
-/**
- * A {@link RawShapesLayerConfig} with {@link shapesLayerConfigDefaults} applied
- */
-export type ShapesLayerConfig = LayerConfig &
-  Required<Pick<RawShapesLayerConfig, keyof typeof shapesLayerConfigDefaults>> &
-  Omit<
-    RawShapesLayerConfig,
-    | keyof LayerConfig
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof shapesLayerConfigDefaults
-  >;
-
-/**
- * Creates a {@link ShapesLayerConfig} from a {@link RawShapesLayerConfig} by applying {@link shapesLayerConfigDefaults}
- *
- * @param rawShapesLayerConfig - The raw shapes layer configuration
- * @returns The complete shapes layer configuration with default values applied
- */
-export function createShapesLayerConfig(
-  rawShapesLayerConfig: RawShapesLayerConfig,
-): ShapesLayerConfig {
-  return {
-    ...createLayerConfig(rawShapesLayerConfig),
-    ...structuredClone(shapesLayerConfigDefaults),
-    ...structuredClone(rawShapesLayerConfig),
   };
 }

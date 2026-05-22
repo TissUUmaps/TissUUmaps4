@@ -58,7 +58,7 @@ export class LoadedShapesDataAdapter implements ShapesData {
   }
 }
 
-export function useLoadedShapesDataAdapter(): ViewerAdapter["loadShapes"] {
+export function useLoadedShapesDataAdapter(): ViewerAdapter["getShapes"] {
   const loadShapes = useTissUUmaps((state) => state.loadShapes);
   return useCallback(
     async (shapesId, options) => {
