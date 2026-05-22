@@ -916,7 +916,7 @@ type PointsRef = {
  * Tracks the current GPU buffer state for a single points object's
  * slice within the shared vertex buffers
  *
- * Used for incremental updates: by comparing `current` against the new
+ * Used for incremental updates: by comparing `config` against the new
  * model values, only changed attributes are re-uploaded to the GPU.
  */
 type PointsBufferSliceState = {
