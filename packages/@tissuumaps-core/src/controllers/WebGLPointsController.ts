@@ -618,12 +618,12 @@ export class WebGLPointsController extends WebGLControllerBase {
         buffersResized ||
         bufferSliceState === undefined ||
         bufferSliceState.offset !== offset ||
-        bufferSliceState.pointMask !== pointMask ||
         bufferSliceState.numPoints !== numPoints ||
         bufferSliceState.ref.layer.id !== ref.layer.id ||
         bufferSliceState.ref.points.id !== ref.points.id ||
         bufferSliceState.ref.numPoints !== ref.numPoints ||
-        bufferSliceState.ref.data !== ref.data;
+        bufferSliceState.ref.data !== ref.data ||
+        !deepEqual(bufferSliceState.pointMask, pointMask); // check this last, to reduce complexity
       let pointIds = ref.data.getIds();
       if (pointMask !== undefined) {
         pointIds = pointIds.filter((_, j) => pointMask[j]);

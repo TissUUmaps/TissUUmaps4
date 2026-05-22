@@ -481,8 +481,8 @@ export class WebGLShapesController extends WebGLControllerBase {
         glShapes === undefined ||
         dataBounds === undefined ||
         scanlineDataTexture === undefined ||
-        glShapes.shapeMask !== shapeMask ||
-        glShapes.numShapes !== numShapes
+        glShapes.numShapes !== numShapes ||
+        !deepEqual(glShapes.shapeMask, shapeMask) // check this last, to reduce complexity
       ) {
         let multiPolygons = await ref.data.loadMultiPolygons({ signal });
         signal?.throwIfAborted();
