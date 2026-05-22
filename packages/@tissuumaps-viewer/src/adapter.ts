@@ -35,23 +35,23 @@ export interface ViewerAdapter {
   viewerAnimationStartOptions: ViewerOptions;
   viewerAnimationFinishOptions: ViewerOptions;
   renderOptions: RenderOptions;
-  loadImage: (
+  getImage: (
     imageId: string,
     options?: { signal?: AbortSignal },
   ) => Promise<ImageData>;
-  loadLabels: (
+  getLabels: (
     labelsId: string,
     options?: { signal?: AbortSignal },
   ) => Promise<LabelsData>;
-  loadPoints: (
+  getPoints: (
     pointsId: string,
     options?: { signal?: AbortSignal },
   ) => Promise<PointsData>;
-  loadShapes: (
+  getShapes: (
     shapesId: string,
     options?: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
-  loadTable: (
+  getTable: (
     tableId: string,
     options?: { signal?: AbortSignal },
   ) => Promise<TableData>;

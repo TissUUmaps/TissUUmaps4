@@ -44,22 +44,22 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     })),
   );
 
-  const loadImage = useLoadedImageDataAdapter();
-  const loadLabels = useLoadedLabelsDataAdapter();
-  const loadPoints = useLoadedPointsDataAdapter();
-  const loadShapes = useLoadedShapesDataAdapter();
-  const loadTable = useLoadedTableDataAdapter();
+  const getImage = useLoadedImageDataAdapter();
+  const getLabels = useLoadedLabelsDataAdapter();
+  const getPoints = useLoadedPointsDataAdapter();
+  const getShapes = useLoadedShapesDataAdapter();
+  const getTable = useLoadedTableDataAdapter();
 
   const viewerAdapter = useMemo(
     () => ({
       ...viewerState,
-      loadImage,
-      loadLabels,
-      loadPoints,
-      loadShapes,
-      loadTable,
+      getImage,
+      getLabels,
+      getPoints,
+      getShapes,
+      getTable,
     }),
-    [viewerState, loadImage, loadLabels, loadPoints, loadShapes, loadTable],
+    [viewerState, getImage, getLabels, getPoints, getShapes, getTable],
   );
 
   return (

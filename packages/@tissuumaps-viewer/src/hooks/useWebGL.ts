@@ -20,9 +20,9 @@ export function useWebGL(
     visibilityMaps,
     opacityMaps,
     renderOptions,
-    loadPoints,
-    loadShapes,
-    loadTable,
+    getPoints,
+    getShapes,
+    getTable,
   } = adapter;
 
   const controllerRef = useRef<WebGLController | null>(null);
@@ -97,8 +97,8 @@ export function useWebGL(
           colorMaps,
           visibilityMaps,
           opacityMaps,
-          loadPoints,
-          loadTable,
+          getPoints,
+          getTable,
           { signal: abortController.signal },
         )
         .then(
@@ -128,8 +128,8 @@ export function useWebGL(
     visibilityMaps,
     opacityMaps,
     workspace,
-    loadPoints,
-    loadTable,
+    getPoints,
+    getTable,
   ]);
 
   useEffect(() => {
@@ -144,8 +144,8 @@ export function useWebGL(
           colorMaps,
           visibilityMaps,
           opacityMaps,
-          loadShapes,
-          loadTable,
+          getShapes,
+          getTable,
           { signal: abortController.signal },
         )
         .then(
@@ -173,8 +173,8 @@ export function useWebGL(
     visibilityMaps,
     opacityMaps,
     workspace,
-    loadShapes,
-    loadTable,
+    getShapes,
+    getTable,
   ]);
 
   return { controllerRef, controllerReady };

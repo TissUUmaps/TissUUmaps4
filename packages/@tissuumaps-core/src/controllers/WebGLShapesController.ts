@@ -149,8 +149,8 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @param colorMaps - Project-global color maps for {@link GroupByConfig} resolution
    * @param visibilityMaps - Project-global visibility maps
    * @param opacityMaps - Project-global opacity maps
-   * @param loadShapes - Async loader for shapes data
-   * @param loadTable - Async loader for table data
+   * @param getShapes - Async getter for shapes data
+   * @param getTable - Async getter for table data
    * @param options - Optional abort signal
    */
   async synchronize(
@@ -159,11 +159,11 @@ export class WebGLShapesController extends WebGLControllerBase {
     colorMaps: DefaultMap<Color>[],
     visibilityMaps: DefaultMap<boolean>[],
     opacityMaps: DefaultMap<number>[],
-    loadShapes: (
+    getShapes: (
       shapesId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<ShapesData>,
-    loadTable: (
+    getTable: (
       tableId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -171,18 +171,21 @@ export class WebGLShapesController extends WebGLControllerBase {
   ): Promise<void> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const refs = await this._loadShapes(layers, shapes, loadShapes, loadTable, {
+
+    const refs = await this._loadShapes(layers, shapes, getShapes, getTable, {
       signal,
     });
     signal?.throwIfAborted();
+
     const glShapesByRef = this._cleanGLShapes(refs);
+
     this._glShapes = await this._createOrUpdateGLShapes(
       refs,
       glShapesByRef,
       colorMaps,
       visibilityMaps,
       opacityMaps,
-      loadTable,
+      getTable,
       { signal },
     );
     signal?.throwIfAborted();
@@ -311,11 +314,11 @@ export class WebGLShapesController extends WebGLControllerBase {
   private async _loadShapes(
     layers: Layer[],
     shapes: Shapes[],
-    loadShapes: (
+    getShapes: (
       shapesId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<ShapesData>,
-    loadTable: (
+    getTable: (
       tableId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
@@ -324,38 +327,28 @@ export class WebGLShapesController extends WebGLControllerBase {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs: ShapesRef[] = [];
-    const dataCache = new Map<string, ShapesData>();
-    const shapeLayersCache = new Map<
-      string, // JSON-serialized layer config
-      Map<number, string | undefined> | undefined
-    >();
     const failedShapes = new Set<string>();
+    const shapeLayersCache = new Map<string, Map<number, string> | undefined>();
     for (const layer of layers) {
       for (const currentShapes of shapes.filter(
         (shapes) =>
           !failedShapes.has(shapes.id) &&
           (shapes.layer === layer.id || typeof shapes.layer !== "string"),
       )) {
-        let data: ShapesData | undefined;
-        if (dataCache.has(currentShapes.id)) {
-          data = dataCache.get(currentShapes.id)!;
-        } else {
-          try {
-            data = await loadShapes(currentShapes.id, { signal });
-            signal?.throwIfAborted();
-          } catch (error) {
-            if (!signal?.aborted) {
-              console.error(
-                `Failed to load shapes with ID '${currentShapes.id}'`,
-                error,
-              );
-            }
-            failedShapes.add(currentShapes.id);
-            continue;
-          } finally {
-            signal?.throwIfAborted();
+        let data;
+        try {
+          data = await getShapes(currentShapes.id, { signal });
+        } catch (error) {
+          if (!signal?.aborted) {
+            console.error(
+              `Failed to load shapes with ID '${currentShapes.id}'`,
+              error,
+            );
           }
-          dataCache.set(currentShapes.id, data);
+          failedShapes.add(currentShapes.id);
+          continue;
+        } finally {
+          signal?.throwIfAborted();
         }
 
         let numShapes = data.getSize();
@@ -363,14 +356,14 @@ export class WebGLShapesController extends WebGLControllerBase {
           continue;
         }
 
-        let shapeLayers: Map<number, string | undefined> | undefined;
+        let shapeLayers: Map<number, string> | undefined;
         if (typeof currentShapes.layer !== "string") {
-          const shapeLayersCacheKey = JSON.stringify(currentShapes.layer);
+          const shapeLayersCacheKey = `${currentShapes.layer.table}:${currentShapes.layer.column}`;
           if (shapeLayersCache.has(shapeLayersCacheKey)) {
             shapeLayers = shapeLayersCache.get(shapeLayersCacheKey);
           } else {
             try {
-              const tableData = await loadTable(currentShapes.layer.table, {
+              const tableData = await getTable(currentShapes.layer.table, {
                 signal,
               });
               signal?.throwIfAborted();
@@ -382,21 +375,22 @@ export class WebGLShapesController extends WebGLControllerBase {
               );
               signal?.throwIfAborted();
               shapeLayers = new Map(
-                tableIds.map((id, i) => [id, tableLayers[i]]),
+                tableIds.map((id, i) => [id, tableLayers[i]!]),
               );
             } catch (error) {
               if (!signal?.aborted) {
                 console.error(
-                  `Failed to load shape layers for shapes with ID '${currentShapes.id}'`,
+                  `Failed to load layers from table ${currentShapes.layer.table}`,
                   error,
                 );
               }
-              failedShapes.add(currentShapes.id);
-              continue;
             } finally {
               signal?.throwIfAborted();
             }
             shapeLayersCache.set(shapeLayersCacheKey, shapeLayers);
+          }
+          if (shapeLayers === undefined) {
+            continue;
           }
         }
 
@@ -410,11 +404,11 @@ export class WebGLShapesController extends WebGLControllerBase {
         }
 
         refs.push({
+          data,
           layer,
           shapes: currentShapes,
           numShapes,
           shapeLayers,
-          data,
         });
       }
     }
@@ -437,7 +431,10 @@ export class WebGLShapesController extends WebGLControllerBase {
       const ref = refs.find(
         (ref) =>
           ref.layer.id === glShapes.ref.layer.id &&
-          ref.shapes.id === glShapes.ref.shapes.id,
+          ref.shapes.id === glShapes.ref.shapes.id &&
+          ref.numShapes === glShapes.ref.numShapes &&
+          // check config.shapes.layer instead of ref.shapeLayers
+          deepEqual(ref.shapes.layer, glShapes.config.shapes.layer),
       );
       if (ref !== undefined) {
         glShapesByRef.set(ref, glShapes);
@@ -490,10 +487,10 @@ export class WebGLShapesController extends WebGLControllerBase {
       let scanlineDataTexture = glShapes?.scanlineDataTexture;
       if (
         glShapes === undefined ||
-        glShapes.numShapes !== ref.numShapes ||
-        glShapes.shapeLayers !== ref.shapeLayers ||
         dataBounds === undefined ||
-        scanlineDataTexture === undefined
+        scanlineDataTexture === undefined ||
+        glShapes.config.layer.transform !== ref.layer.transform ||
+        glShapes.config.shapes.transform !== ref.shapes.transform
       ) {
         let multiPolygons = await ref.data.loadMultiPolygons({ signal });
         signal?.throwIfAborted();
@@ -510,23 +507,21 @@ export class WebGLShapesController extends WebGLControllerBase {
       let shapeFillColorsTexture = glShapes?.shapeFillColorsTexture;
       if (
         glShapes === undefined ||
-        glShapes.numShapes !== ref.numShapes ||
-        glShapes.shapeLayers !== ref.shapeLayers ||
         shapeFillColorsTexture === undefined ||
-        glShapes.current.layer.visibility !== ref.layer.visibility ||
-        glShapes.current.layer.opacity !== ref.layer.opacity ||
-        glShapes.current.shapes.visibility !== ref.shapes.visibility ||
-        glShapes.current.shapes.opacity !== ref.shapes.opacity ||
+        glShapes.config.layer.visibility !== ref.layer.visibility ||
+        glShapes.config.layer.opacity !== ref.layer.opacity ||
+        glShapes.config.shapes.visibility !== ref.shapes.visibility ||
+        glShapes.config.shapes.opacity !== ref.shapes.opacity ||
         !deepEqual(
-          glShapes.current.shapes.shapeFillVisibility,
+          glShapes.config.shapes.shapeFillVisibility,
           ref.shapes.shapeFillVisibility,
         ) ||
         !deepEqual(
-          glShapes.current.shapes.shapeFillOpacity,
+          glShapes.config.shapes.shapeFillOpacity,
           ref.shapes.shapeFillOpacity,
         ) ||
         !deepEqual(
-          glShapes.current.shapes.shapeFillColor,
+          glShapes.config.shapes.shapeFillColor,
           ref.shapes.shapeFillColor,
         )
       ) {
@@ -544,23 +539,21 @@ export class WebGLShapesController extends WebGLControllerBase {
       let shapeStrokeColorsTexture = glShapes?.shapeStrokeColorsTexture;
       if (
         glShapes === undefined ||
-        glShapes.numShapes !== ref.numShapes ||
-        glShapes.shapeLayers !== ref.shapeLayers ||
         shapeStrokeColorsTexture === undefined ||
-        glShapes.current.layer.visibility !== ref.layer.visibility ||
-        glShapes.current.layer.opacity !== ref.layer.opacity ||
-        glShapes.current.shapes.visibility !== ref.shapes.visibility ||
-        glShapes.current.shapes.opacity !== ref.shapes.opacity ||
+        glShapes.config.layer.visibility !== ref.layer.visibility ||
+        glShapes.config.layer.opacity !== ref.layer.opacity ||
+        glShapes.config.shapes.visibility !== ref.shapes.visibility ||
+        glShapes.config.shapes.opacity !== ref.shapes.opacity ||
         !deepEqual(
-          glShapes.current.shapes.shapeStrokeVisibility,
+          glShapes.config.shapes.shapeStrokeVisibility,
           ref.shapes.shapeStrokeVisibility,
         ) ||
         !deepEqual(
-          glShapes.current.shapes.shapeStrokeOpacity,
+          glShapes.config.shapes.shapeStrokeOpacity,
           ref.shapes.shapeStrokeOpacity,
         ) ||
         !deepEqual(
-          glShapes.current.shapes.shapeStrokeColor,
+          glShapes.config.shapes.shapeStrokeColor,
           ref.shapes.shapeStrokeColor,
         )
       ) {
@@ -577,18 +570,14 @@ export class WebGLShapesController extends WebGLControllerBase {
       }
       newGLShapes.push({
         ref,
-        numShapes: ref.numShapes,
-        shapeLayers: ref.shapeLayers,
-        dataBounds,
-        scanlineDataTexture,
-        shapeFillColorsTexture,
-        shapeStrokeColorsTexture,
-        current: {
+        config: {
           layer: {
             visibility: ref.layer.visibility,
             opacity: ref.layer.opacity,
+            transform: structuredClone(ref.layer.transform),
           },
           shapes: {
+            layer: structuredClone(ref.shapes.layer),
             visibility: ref.shapes.visibility,
             opacity: ref.shapes.opacity,
             shapeFillColor: structuredClone(ref.shapes.shapeFillColor),
@@ -601,8 +590,13 @@ export class WebGLShapesController extends WebGLControllerBase {
               ref.shapes.shapeStrokeVisibility,
             ),
             shapeStrokeOpacity: structuredClone(ref.shapes.shapeStrokeOpacity),
+            transform: structuredClone(ref.shapes.transform),
           },
         },
+        dataBounds,
+        scanlineDataTexture,
+        shapeFillColorsTexture,
+        shapeStrokeColorsTexture,
       });
     }
     return newGLShapes;
@@ -1078,23 +1072,12 @@ type ShapesRef = {
 type GLShapes = {
   /** Reference to the shapes object this GPU state represents */
   ref: ShapesRef;
-  /** Number of shapes in the object at the time the textures were built */
-  numShapes: number;
-  /** Map of shape IDs to their corresponding layer IDs */
-  shapeLayers: Map<number, string | undefined> | undefined;
-  /** Axis-aligned bounding box of all shapes in data-space coordinates */
-  dataBounds: Rect;
-  /** Scanline data texture (RGBA32F); `undefined` while being regenerated */
-  scanlineDataTexture?: WebGLTexture;
-  /** Per-shape fill color texture (R32UI) */
-  shapeFillColorsTexture: WebGLTexture;
-  /** Per-shape stroke color texture (R32UI) */
-  shapeStrokeColorsTexture: WebGLTexture;
   /** Snapshot of model values at the time of the last texture upload */
-  current: {
-    layer: Pick<Layer, "visibility" | "opacity">;
+  config: {
+    layer: Pick<Layer, "visibility" | "opacity" | "transform">;
     shapes: Pick<
       Shapes,
+      | "layer"
       | "visibility"
       | "opacity"
       | "shapeFillColor"
@@ -1103,8 +1086,17 @@ type GLShapes = {
       | "shapeStrokeColor"
       | "shapeStrokeVisibility"
       | "shapeStrokeOpacity"
+      | "transform"
     >;
   };
+  /** Axis-aligned bounding box of all shapes in data-space coordinates */
+  dataBounds: Rect;
+  /** Scanline data texture (RGBA32F); `undefined` while being regenerated */
+  scanlineDataTexture?: WebGLTexture;
+  /** Per-shape fill color texture (R32UI) */
+  shapeFillColorsTexture: WebGLTexture;
+  /** Per-shape stroke color texture (R32UI) */
+  shapeStrokeColorsTexture: WebGLTexture;
 };
 
 /** A single horizontal scanline containing shape intersection data */

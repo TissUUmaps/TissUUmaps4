@@ -180,19 +180,19 @@ export class OpenSeadragonController {
    * @param layers - Layers to render
    * @param images - Image data objects to display
    * @param labels - Labels data objects to display
-   * @param loadImage - Async loader for image data
-   * @param loadLabels - Async loader for labels data
+   * @param getImage - Async getter for image data
+   * @param getLabels - Async getter for labels data
    * @param options - Optional abort signal
    */
   async synchronize(
     layers: Layer[],
     images: Image[],
     labels: Labels[],
-    loadImage: (
+    getImage: (
       imageId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<ImageData>,
-    loadLabels: (
+    getLabels: (
       labelsId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
@@ -204,8 +204,8 @@ export class OpenSeadragonController {
       layers,
       images,
       labels,
-      loadImage,
-      loadLabels,
+      getImage,
+      getLabels,
       { signal },
     );
     signal?.throwIfAborted();
@@ -232,11 +232,11 @@ export class OpenSeadragonController {
     layers: Layer[],
     images: Image[],
     labels: Labels[],
-    loadImage: (
+    getImage: (
       imageId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<ImageData>,
-    loadLabels: (
+    getLabels: (
       labelsId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
@@ -247,11 +247,9 @@ export class OpenSeadragonController {
     const refs: ObjectRef[] = [];
     for (const layer of layers) {
       for (const currentImage of images.filter((x) => x.layer === layer.id)) {
-        // images can only be shown on one layer, so we don't need to cache them here
         let data;
         try {
-          data = await loadImage(currentImage.id, { signal });
-          signal?.throwIfAborted();
+          data = await getImage(currentImage.id, { signal });
         } catch (error) {
           if (!signal?.aborted) {
             console.error(
@@ -263,14 +261,12 @@ export class OpenSeadragonController {
         } finally {
           signal?.throwIfAborted();
         }
-        refs.push({ layer, image: currentImage, data });
+        refs.push({ layer, image: currentImage, data: data });
       }
       for (const currentLabels of labels.filter((x) => x.layer === layer.id)) {
-        // labels can only be shown on one layer, so we don't need to cache them here
         let data;
         try {
-          data = await loadLabels(currentLabels.id, { signal });
-          signal?.throwIfAborted();
+          data = await getLabels(currentLabels.id, { signal });
         } catch (error) {
           if (!signal?.aborted) {
             console.error(
@@ -282,7 +278,7 @@ export class OpenSeadragonController {
         } finally {
           signal?.throwIfAborted();
         }
-        refs.push({ layer, labels: currentLabels, data });
+        refs.push({ layer, labels: currentLabels, data: data });
       }
     }
     return refs;
