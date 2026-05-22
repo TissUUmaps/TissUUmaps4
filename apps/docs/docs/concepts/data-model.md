@@ -6,7 +6,7 @@ sidebar_position: 3
 
 A single **_Project_** can hold multiple rendered data objects (**_Images_**, **_Labels_**, **_Points_**, **_Shapes_**).
 
-Each rendered data object can be shown on one or more **_Layers_**; a single item (e.g. point, shape) is never shown on more than one layer.
+Each rendered data object is shown on a single **_Layer_**; multi-item data (e.g. points, shapes) can be distributed across multiple layers.
 
 Rendered data objects representing multi-item data (_Labels_, _Points_, _Shapes_) can link to **_Table_** columns for item configuration.
 
