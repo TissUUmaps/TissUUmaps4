@@ -481,6 +481,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         glShapes === undefined ||
         dataBounds === undefined ||
         scanlineDataTexture === undefined ||
+        glShapes.shapeMask !== shapeMask ||
         glShapes.numShapes !== numShapes
       ) {
         let multiPolygons = await ref.data.loadMultiPolygons({ signal });
@@ -561,6 +562,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       }
       newGLShapes.push({
         ref,
+        shapeMask,
         numShapes,
         dataBounds,
         scanlineDataTexture,
@@ -1061,6 +1063,8 @@ type ShapesRef = {
 type GLShapes = {
   /** Reference to the shapes object this GPU state represents */
   ref: ShapesRef;
+  /** Mask indicating which shapes belong to the current texture */
+  shapeMask: boolean[] | undefined;
   /** Number of shapes in the object at the time the textures were built */
   numShapes: number;
   /** Axis-aligned bounding box of all shapes in data-space coordinates */

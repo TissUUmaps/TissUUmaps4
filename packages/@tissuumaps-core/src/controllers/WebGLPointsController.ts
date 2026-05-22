@@ -617,8 +617,9 @@ export class WebGLPointsController extends WebGLControllerBase {
       const bufferSliceChanged =
         buffersResized ||
         bufferSliceState === undefined ||
-        bufferSliceState.numPoints !== numPoints ||
         bufferSliceState.offset !== offset ||
+        bufferSliceState.pointMask !== pointMask ||
+        bufferSliceState.numPoints !== numPoints ||
         bufferSliceState.ref.layer.id !== ref.layer.id ||
         bufferSliceState.ref.points.id !== ref.points.id ||
         bufferSliceState.ref.numPoints !== ref.numPoints ||
@@ -816,6 +817,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       newBufferSliceStates.push({
         ref,
         offset,
+        pointMask,
         numPoints,
         dataBounds,
         current: {
@@ -910,6 +912,8 @@ type PointsBufferSliceState = {
   ref: PointsRef;
   /** Element offset (point count) within each shared vertex buffer */
   offset: number;
+  /** Mask indicating which points belong to the current buffer slice */
+  pointMask: boolean[] | undefined;
   /** Number of points in this slice */
   numPoints: number;
   /** Axis-aligned bounding box of all points in data-space coordinates */
