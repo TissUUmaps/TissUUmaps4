@@ -493,28 +493,32 @@ export class WebGLPointsController extends WebGLControllerBase {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs: PointsRef[] = [];
-    const failedPoints = new Set<string>();
+    const dataCache = new Map<string, PointsData | undefined>();
     const pointLayersCache = new Map<string, Map<number, string> | undefined>();
     for (const layer of layers) {
       for (const currentPoints of points.filter(
-        (points) =>
-          !failedPoints.has(points.id) &&
-          (points.layer === layer.id || typeof points.layer !== "string"),
+        (x) => x.layer === layer.id || typeof x.layer !== "string",
       )) {
         let data;
-        try {
-          data = await getPoints(currentPoints.id, { signal });
-        } catch (error) {
-          if (!signal?.aborted) {
-            console.error(
-              `Failed to load points with ID '${currentPoints.id}'`,
-              error,
-            );
+        if (dataCache.has(currentPoints.id)) {
+          data = dataCache.get(currentPoints.id);
+        } else {
+          try {
+            data = await getPoints(currentPoints.id, { signal });
+          } catch (error) {
+            if (!signal?.aborted) {
+              console.error(
+                `Failed to load points with ID '${currentPoints.id}'`,
+                error,
+              );
+            }
+          } finally {
+            signal?.throwIfAborted();
           }
-          failedPoints.add(currentPoints.id);
+          dataCache.set(currentPoints.id, data);
+        }
+        if (data === undefined) {
           continue;
-        } finally {
-          signal?.throwIfAborted();
         }
 
         let numPoints = data.getSize();

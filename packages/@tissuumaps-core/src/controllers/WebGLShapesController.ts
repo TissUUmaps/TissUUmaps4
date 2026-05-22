@@ -327,28 +327,32 @@ export class WebGLShapesController extends WebGLControllerBase {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const refs: ShapesRef[] = [];
-    const failedShapes = new Set<string>();
+    const dataCache = new Map<string, ShapesData | undefined>();
     const shapeLayersCache = new Map<string, Map<number, string> | undefined>();
     for (const layer of layers) {
       for (const currentShapes of shapes.filter(
-        (shapes) =>
-          !failedShapes.has(shapes.id) &&
-          (shapes.layer === layer.id || typeof shapes.layer !== "string"),
+        (x) => x.layer === layer.id || typeof x.layer !== "string",
       )) {
         let data;
-        try {
-          data = await getShapes(currentShapes.id, { signal });
-        } catch (error) {
-          if (!signal?.aborted) {
-            console.error(
-              `Failed to load shapes with ID '${currentShapes.id}'`,
-              error,
-            );
+        if (dataCache.has(currentShapes.id)) {
+          data = dataCache.get(currentShapes.id);
+        } else {
+          try {
+            data = await getShapes(currentShapes.id, { signal });
+          } catch (error) {
+            if (!signal?.aborted) {
+              console.error(
+                `Failed to load shapes with ID '${currentShapes.id}'`,
+                error,
+              );
+            }
+          } finally {
+            signal?.throwIfAborted();
           }
-          failedShapes.add(currentShapes.id);
+          dataCache.set(currentShapes.id, data);
+        }
+        if (data === undefined) {
           continue;
-        } finally {
-          signal?.throwIfAborted();
         }
 
         let numShapes = data.getSize();
