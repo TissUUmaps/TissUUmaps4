@@ -631,7 +631,11 @@ export class WebGLPointsController extends WebGLControllerBase {
         bufferSliceState.ref.points.id !== ref.points.id ||
         bufferSliceState.ref.numPoints !== ref.numPoints ||
         // check config.points.layer instead of ref.pointLayers
-        !deepEqual(bufferSliceState.config.points.layer, ref.points.layer);
+        !deepEqual(bufferSliceState.config.points.layer, ref.points.layer) ||
+        !deepEqual(
+          bufferSliceState.ref.points.dataSource,
+          ref.points.dataSource,
+        );
       let dataBounds =
         bufferSliceState !== undefined && !bufferSliceChanged
           ? bufferSliceState.dataBounds

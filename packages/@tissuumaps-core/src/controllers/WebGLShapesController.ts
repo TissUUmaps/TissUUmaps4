@@ -434,7 +434,8 @@ export class WebGLShapesController extends WebGLControllerBase {
           ref.shapes.id === glShapes.ref.shapes.id &&
           ref.numShapes === glShapes.ref.numShapes &&
           // check config.shapes.layer instead of ref.shapeLayers
-          deepEqual(ref.shapes.layer, glShapes.config.shapes.layer),
+          deepEqual(ref.shapes.layer, glShapes.config.shapes.layer) &&
+          deepEqual(ref.shapes.dataSource, glShapes.ref.shapes.dataSource),
       );
       if (ref !== undefined) {
         glShapesByRef.set(ref, glShapes);

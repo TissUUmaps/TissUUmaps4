@@ -1,3 +1,4 @@
+import { deepEqual } from "fast-equals";
 import { mat3 } from "gl-matrix";
 import OpenSeadragon from "openseadragon";
 
@@ -305,10 +306,18 @@ export class OpenSeadragonController {
           ref.layer.id === tiledImageState.ref.layer.id &&
           (("image" in ref &&
             "image" in tiledImageState.ref &&
-            ref.image.id === tiledImageState.ref.image.id) ||
+            ref.image.id === tiledImageState.ref.image.id &&
+            deepEqual(
+              ref.image.dataSource,
+              tiledImageState.ref.image.dataSource,
+            )) ||
             ("labels" in ref &&
               "labels" in tiledImageState.ref &&
-              ref.labels.id === tiledImageState.ref.labels.id)),
+              ref.labels.id === tiledImageState.ref.labels.id &&
+              deepEqual(
+                ref.labels.dataSource,
+                tiledImageState.ref.labels.dataSource,
+              ))),
       );
       if (ref !== undefined) {
         tiledImageStatesByRef.set(ref, tiledImageState);
@@ -347,10 +356,18 @@ export class OpenSeadragonController {
         !(
           ("image" in ref &&
             "image" in tiledImageState.ref &&
-            ref.image.id === tiledImageState.ref.image.id) ||
+            tiledImageState.ref.image.id === ref.image.id &&
+            deepEqual(
+              tiledImageState.ref.image.dataSource,
+              ref.image.dataSource,
+            )) ||
           ("labels" in ref &&
             "labels" in tiledImageState.ref &&
-            ref.labels.id === tiledImageState.ref.labels.id)
+            tiledImageState.ref.labels.id === ref.labels.id &&
+            deepEqual(
+              tiledImageState.ref.labels.dataSource,
+              ref.labels.dataSource,
+            ))
         )
       ) {
         tiledImageState = this._createTiledImage(i, ref);
