@@ -60,13 +60,12 @@ export interface RawLabels extends RawSingleLayerDataObject<
 /**
  * A {@link RawLabels} with {@link labelsDefaults} applied
  */
-export type Labels = SingleLayerDataObject<LabelsDataSource<string>> &
+export type Labels = Omit<
+  SingleLayerDataObject<LabelsDataSource<string>>,
+  keyof RawLabels
+> &
   Required<Pick<RawLabels, keyof typeof labelsDefaults>> &
-  Omit<
-    RawLabels,
-    | keyof SingleLayerDataObject<LabelsDataSource<string>>
-    | keyof typeof labelsDefaults
-  >;
+  Omit<RawLabels, keyof typeof labelsDefaults>;
 
 /**
  * Creates a {@link Labels} from a {@link RawLabels} by applying {@link labelsDefaults}
@@ -101,17 +100,14 @@ export interface RawLabelsDataSource<
 /**
  * A {@link RawLabelsDataSource} with {@link labelsDataSourceDefaults} applied
  */
-export type LabelsDataSource<TType extends string = string> =
-  DataSource<TType> &
-    Required<
-      Pick<RawLabelsDataSource<TType>, keyof typeof labelsDataSourceDefaults>
-    > &
-    Omit<
-      RawLabelsDataSource<TType>,
-      | keyof DataSource<TType>
-      // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-      | keyof typeof labelsDataSourceDefaults
-    >;
+export type LabelsDataSource<TType extends string = string> = Omit<
+  DataSource<TType>,
+  keyof RawLabelsDataSource<TType>
+> &
+  Required<
+    Pick<RawLabelsDataSource<TType>, keyof typeof labelsDataSourceDefaults>
+  > &
+  Omit<RawLabelsDataSource<TType>, keyof typeof labelsDataSourceDefaults>;
 
 /**
  * Creates a {@link LabelsDataSource} from a {@link RawLabelsDataSource} by applying {@link labelsDataSourceDefaults}

@@ -93,13 +93,12 @@ export interface RawPoints extends RawRenderedDataObject<
 /**
  * A {@link RawPoints} object with {@link pointsDefaults} applied
  */
-export type Points = RenderedDataObject<PointsDataSource<string>> &
+export type Points = Omit<
+  RenderedDataObject<PointsDataSource<string>>,
+  keyof RawPoints
+> &
   Required<Pick<RawPoints, keyof typeof pointsDefaults>> &
-  Omit<
-    RawPoints,
-    | keyof RenderedDataObject<PointsDataSource<string>>
-    | keyof typeof pointsDefaults
-  >;
+  Omit<RawPoints, keyof typeof pointsDefaults>;
 
 /**
  * Creates a {@link Points} from a {@link RawPoints} by applying {@link pointsDefaults}
@@ -134,17 +133,14 @@ export interface RawPointsDataSource<
 /**
  * A {@link RawPointsDataSource} with {@link pointsDataSourceDefaults} applied
  */
-export type PointsDataSource<TType extends string = string> =
-  DataSource<TType> &
-    Required<
-      Pick<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>
-    > &
-    Omit<
-      RawPointsDataSource<TType>,
-      | keyof DataSource<TType>
-      // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-      | keyof typeof pointsDataSourceDefaults
-    >;
+export type PointsDataSource<TType extends string = string> = Omit<
+  DataSource<TType>,
+  keyof RawPointsDataSource<TType>
+> &
+  Required<
+    Pick<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>
+  > &
+  Omit<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>;
 
 /**
  * Creates a {@link PointsDataSource} from a {@link RawPointsDataSource} by applying {@link pointsDataSourceDefaults}

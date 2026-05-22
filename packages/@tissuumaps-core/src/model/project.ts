@@ -151,12 +151,10 @@ export interface RawProject extends RawModel {
 /**
  * A {@link RawProject} with {@link projectDefaults} applied
  */
-export type Project = Model &
+export type Project = Omit<Model, keyof RawProject> &
   Required<Pick<RawProject, keyof typeof projectDefaults>> &
   Omit<
     RawProject,
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof Model
     | keyof typeof projectDefaults
     | ("layers" | "images" | "labels" | "points" | "shapes" | "tables")
   > & {

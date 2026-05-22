@@ -27,13 +27,12 @@ export interface RawImage extends RawSingleLayerDataObject<
 /**
  * A {@link RawImage} with {@link imageDefaults} applied
  */
-export type Image = SingleLayerDataObject<ImageDataSource<string>> &
+export type Image = Omit<
+  SingleLayerDataObject<ImageDataSource<string>>,
+  keyof RawImage
+> &
   Required<Pick<RawImage, keyof typeof imageDefaults>> &
-  Omit<
-    RawImage,
-    | keyof SingleLayerDataObject<ImageDataSource<string>>
-    | keyof typeof imageDefaults
-  >;
+  Omit<RawImage, keyof typeof imageDefaults>;
 
 /**
  * Creates a {@link Image} from a {@link RawImage} by applying {@link imageDefaults}
@@ -68,16 +67,14 @@ export interface RawImageDataSource<
 /**
  * A {@link RawImageDataSource} with {@link imageDataSourceDefaults} applied
  */
-export type ImageDataSource<TType extends string = string> = DataSource<TType> &
+export type ImageDataSource<TType extends string = string> = Omit<
+  DataSource<TType>,
+  keyof RawImageDataSource<TType>
+> &
   Required<
     Pick<RawImageDataSource<TType>, keyof typeof imageDataSourceDefaults>
   > &
-  Omit<
-    RawImageDataSource<TType>,
-    | keyof DataSource<TType>
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof typeof imageDataSourceDefaults
-  >;
+  Omit<RawImageDataSource<TType>, keyof typeof imageDataSourceDefaults>;
 
 /**
  * Creates a {@link ImageDataSource} from a {@link RawImageDataSource} by applying {@link imageDataSourceDefaults}

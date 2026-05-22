@@ -87,13 +87,12 @@ export interface RawShapes extends RawRenderedDataObject<
 /**
  * A {@link RawShapes} object with {@link shapesDefaults} applied
  */
-export type Shapes = RenderedDataObject<ShapesDataSource<string>> &
+export type Shapes = Omit<
+  RenderedDataObject<ShapesDataSource<string>>,
+  keyof RawShapes
+> &
   Required<Pick<RawShapes, keyof typeof shapesDefaults>> &
-  Omit<
-    RawShapes,
-    | keyof RenderedDataObject<ShapesDataSource<string>>
-    | keyof typeof shapesDefaults
-  >;
+  Omit<RawShapes, keyof typeof shapesDefaults>;
 
 /**
  * Creates a {@link Shapes} from a {@link RawShapes} by applying {@link shapesDefaults}
@@ -128,17 +127,14 @@ export interface RawShapesDataSource<
 /**
  * A {@link RawShapesDataSource} with {@link shapesDataSourceDefaults} applied
  */
-export type ShapesDataSource<TType extends string = string> =
-  DataSource<TType> &
-    Required<
-      Pick<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>
-    > &
-    Omit<
-      RawShapesDataSource<TType>,
-      | keyof DataSource<TType>
-      // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-      | keyof typeof shapesDataSourceDefaults
-    >;
+export type ShapesDataSource<TType extends string = string> = Omit<
+  DataSource<TType>,
+  keyof RawShapesDataSource<TType>
+> &
+  Required<
+    Pick<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>
+  > &
+  Omit<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>;
 
 /**
  * Creates a {@link ShapesDataSource} from a {@link RawShapesDataSource} by applying {@link shapesDataSourceDefaults}

@@ -15,15 +15,9 @@ export interface RawModel {}
 /**
  * A {@link RawModel} with {@link modelDefaults} applied
  */
-export type Model = object &
+export type Model = Omit<object, keyof RawModel> &
   Required<Pick<RawModel, keyof typeof modelDefaults>> &
-  Omit<
-    RawModel,
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof object
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents,@typescript-eslint/no-duplicate-type-constituents
-    | keyof typeof modelDefaults
-  >;
+  Omit<RawModel, keyof typeof modelDefaults>;
 
 /**
  * Creates a {@link Model} from a {@link RawModel} by applying {@link modelDefaults}
@@ -61,15 +55,12 @@ export interface RawDataObject<
 /**
  * A {@link RawDataObject} with {@link dataObjectDefaults} applied
  */
-export type DataObject<TDataSource extends DataSource<string>> = Model &
+export type DataObject<TDataSource extends DataSource<string>> = Omit<
+  Model,
+  keyof RawDataObject<TDataSource>
+> &
   Required<Pick<RawDataObject<TDataSource>, keyof typeof dataObjectDefaults>> &
-  Omit<
-    RawDataObject<TDataSource>,
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof Model
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents,@typescript-eslint/no-duplicate-type-constituents
-    | keyof typeof dataObjectDefaults
-  >;
+  Omit<RawDataObject<TDataSource>, keyof typeof dataObjectDefaults>;
 
 /**
  * Creates a {@link DataObject} from a {@link RawDataObject} by applying {@link dataObjectDefaults}
@@ -147,18 +138,20 @@ export interface RawRenderedDataObject<
 /**
  * A {@link RawRenderedDataObject} with {@link renderedDataObjectDefaults} applied
  */
-export type RenderedDataObject<TDataSource extends DataSource<string>> =
-  DataObject<TDataSource> &
-    Required<
-      Pick<
-        RawRenderedDataObject<TDataSource>,
-        keyof typeof renderedDataObjectDefaults
-      >
-    > &
-    Omit<
+export type RenderedDataObject<TDataSource extends DataSource<string>> = Omit<
+  DataObject<TDataSource>,
+  keyof RawRenderedDataObject<TDataSource>
+> &
+  Required<
+    Pick<
       RawRenderedDataObject<TDataSource>,
-      keyof DataObject<TDataSource> | keyof typeof renderedDataObjectDefaults
-    >;
+      keyof typeof renderedDataObjectDefaults
+    >
+  > &
+  Omit<
+    RawRenderedDataObject<TDataSource>,
+    keyof typeof renderedDataObjectDefaults
+  >;
 
 /**
  * Creates a {@link RenderedDataObject} from a {@link RawRenderedDataObject} by applying {@link renderedDataObjectDefaults}
@@ -200,7 +193,10 @@ export interface RawSingleLayerDataObject<
  * A {@link RawSingleLayerDataObject} with {@link singleLayerDataObjectDefaults} applied
  */
 export type SingleLayerDataObject<TDataSource extends DataSource<string>> =
-  RenderedDataObject<TDataSource> &
+  Omit<
+    RenderedDataObject<TDataSource>,
+    keyof RawSingleLayerDataObject<TDataSource>
+  > &
     Required<
       Pick<
         RawSingleLayerDataObject<TDataSource>,
@@ -209,8 +205,7 @@ export type SingleLayerDataObject<TDataSource extends DataSource<string>> =
     > &
     Omit<
       RawSingleLayerDataObject<TDataSource>,
-      | keyof RenderedDataObject<TDataSource>
-      | keyof typeof singleLayerDataObjectDefaults
+      keyof typeof singleLayerDataObjectDefaults
     >;
 
 /**
@@ -262,15 +257,12 @@ export interface RawDataSource<TType extends string = string> extends RawModel {
 /**
  * A {@link RawDataSource} with {@link dataSourceDefaults} applied
  */
-export type DataSource<TType extends string = string> = Model &
+export type DataSource<TType extends string = string> = Omit<
+  Model,
+  keyof RawDataSource<TType>
+> &
   Required<Pick<RawDataSource<TType>, keyof typeof dataSourceDefaults>> &
-  Omit<
-    RawDataSource<TType>,
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    | keyof Model
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents,@typescript-eslint/no-duplicate-type-constituents
-    | keyof typeof dataSourceDefaults
-  >;
+  Omit<RawDataSource<TType>, keyof typeof dataSourceDefaults>;
 
 /**
  * Creates a {@link DataSource} from a {@link RawDataSource} by applying {@link dataSourceDefaults}
