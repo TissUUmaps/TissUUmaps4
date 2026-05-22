@@ -5,8 +5,6 @@ import {
   type SingleLayerDataObject,
   createDataSource,
   createSingleLayerDataObject,
-  dataSourceDefaults,
-  singleLayerDataObjectDefaults,
 } from "./base";
 import {
   type ColorConfig,
@@ -23,7 +21,6 @@ import {
  * Default values for {@link RawLabels}
  */
 export const labelsDefaults = {
-  ...singleLayerDataObjectDefaults,
   labelColor: { random: { palette: defaultLabelColorPalette } },
   labelVisibility: { constant: { value: defaultLabelVisibility } },
   labelOpacity: { constant: { value: defaultLabelOpacity } },
@@ -60,10 +57,7 @@ export interface RawLabels extends RawSingleLayerDataObject<
 /**
  * A {@link RawLabels} with {@link labelsDefaults} applied
  */
-export type Labels = Omit<
-  SingleLayerDataObject<LabelsDataSource<string>>,
-  keyof RawLabels
-> &
+export type Labels = SingleLayerDataObject<LabelsDataSource<string>> &
   Required<Pick<RawLabels, keyof typeof labelsDefaults>> &
   Omit<RawLabels, keyof typeof labelsDefaults>;
 
@@ -85,9 +79,9 @@ export function createLabels(rawLabels: RawLabels): Labels {
 /**
  * Default values for {@link RawLabelsDataSource}
  */
-export const labelsDataSourceDefaults = {
-  ...dataSourceDefaults,
-} as const satisfies Partial<RawLabelsDataSource<string>>;
+export const labelsDataSourceDefaults = {} as const satisfies Partial<
+  RawLabelsDataSource<string>
+>;
 
 /**
  * A data source for two-dimensional label masks
@@ -100,14 +94,12 @@ export interface RawLabelsDataSource<
 /**
  * A {@link RawLabelsDataSource} with {@link labelsDataSourceDefaults} applied
  */
-export type LabelsDataSource<TType extends string = string> = Omit<
-  DataSource<TType>,
-  keyof RawLabelsDataSource<TType>
-> &
-  Required<
-    Pick<RawLabelsDataSource<TType>, keyof typeof labelsDataSourceDefaults>
-  > &
-  Omit<RawLabelsDataSource<TType>, keyof typeof labelsDataSourceDefaults>;
+export type LabelsDataSource<TType extends string = string> =
+  DataSource<TType> &
+    Required<
+      Pick<RawLabelsDataSource<TType>, keyof typeof labelsDataSourceDefaults>
+    > &
+    Omit<RawLabelsDataSource<TType>, keyof typeof labelsDataSourceDefaults>;
 
 /**
  * Creates a {@link LabelsDataSource} from a {@link RawLabelsDataSource} by applying {@link labelsDataSourceDefaults}

@@ -1,4 +1,4 @@
-import { type Model, type RawModel, createModel, modelDefaults } from "./base";
+import { type Model, type RawModel, createModel } from "./base";
 import { identityTransform } from "./constants";
 import { type SimilarityTransform } from "./types";
 
@@ -6,7 +6,6 @@ import { type SimilarityTransform } from "./types";
  * Default values for {@link RawLayer}
  */
 export const layerDefaults = {
-  ...modelDefaults,
   transform: identityTransform,
   visibility: true,
   opacity: 1,
@@ -64,7 +63,7 @@ export interface RawLayer extends RawModel {
 /**
  * A {@link RawLayer} with {@link layerDefaults} applied
  */
-export type Layer = Omit<Model, keyof RawLayer> &
+export type Layer = Model &
   Required<Pick<RawLayer, keyof typeof layerDefaults>> &
   Omit<RawLayer, keyof typeof layerDefaults>;
 

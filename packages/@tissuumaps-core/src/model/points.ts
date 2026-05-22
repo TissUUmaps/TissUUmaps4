@@ -5,8 +5,6 @@ import {
   type RenderedDataObject,
   createDataSource,
   createRenderedDataObject,
-  dataSourceDefaults,
-  renderedDataObjectDefaults,
 } from "./base";
 import {
   type ColorConfig,
@@ -27,7 +25,6 @@ import {
  * Default values for {@link RawPoints}
  */
 export const pointsDefaults = {
-  ...renderedDataObjectDefaults,
   pointMarker: { constant: { value: defaultPointMarker } },
   pointSize: { constant: { value: defaultPointSize } },
   pointColor: { constant: { value: defaultPointColor } },
@@ -93,10 +90,7 @@ export interface RawPoints extends RawRenderedDataObject<
 /**
  * A {@link RawPoints} object with {@link pointsDefaults} applied
  */
-export type Points = Omit<
-  RenderedDataObject<PointsDataSource<string>>,
-  keyof RawPoints
-> &
+export type Points = RenderedDataObject<PointsDataSource<string>> &
   Required<Pick<RawPoints, keyof typeof pointsDefaults>> &
   Omit<RawPoints, keyof typeof pointsDefaults>;
 
@@ -118,9 +112,9 @@ export function createPoints(rawPoints: RawPoints): Points {
 /**
  * Default values for {@link RawPointsDataSource}
  */
-export const pointsDataSourceDefaults = {
-  ...dataSourceDefaults,
-} as const satisfies Partial<RawPointsDataSource<string>>;
+export const pointsDataSourceDefaults = {} as const satisfies Partial<
+  RawPointsDataSource<string>
+>;
 
 /**
  * A data source for two-dimensional point clouds
@@ -133,14 +127,12 @@ export interface RawPointsDataSource<
 /**
  * A {@link RawPointsDataSource} with {@link pointsDataSourceDefaults} applied
  */
-export type PointsDataSource<TType extends string = string> = Omit<
-  DataSource<TType>,
-  keyof RawPointsDataSource<TType>
-> &
-  Required<
-    Pick<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>
-  > &
-  Omit<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>;
+export type PointsDataSource<TType extends string = string> =
+  DataSource<TType> &
+    Required<
+      Pick<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>
+    > &
+    Omit<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>;
 
 /**
  * Creates a {@link PointsDataSource} from a {@link RawPointsDataSource} by applying {@link pointsDataSourceDefaults}

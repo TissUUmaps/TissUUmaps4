@@ -5,16 +5,12 @@ import {
   type SingleLayerDataObject,
   createDataSource,
   createSingleLayerDataObject,
-  dataSourceDefaults,
-  singleLayerDataObjectDefaults,
 } from "./base";
 
 /**
  * Default values for {@link RawImage}
  */
-export const imageDefaults = {
-  ...singleLayerDataObjectDefaults,
-} as const satisfies Partial<RawImage>;
+export const imageDefaults = {} as const satisfies Partial<RawImage>;
 
 /**
  * A two-dimensional raster image
@@ -27,10 +23,7 @@ export interface RawImage extends RawSingleLayerDataObject<
 /**
  * A {@link RawImage} with {@link imageDefaults} applied
  */
-export type Image = Omit<
-  SingleLayerDataObject<ImageDataSource<string>>,
-  keyof RawImage
-> &
+export type Image = SingleLayerDataObject<ImageDataSource<string>> &
   Required<Pick<RawImage, keyof typeof imageDefaults>> &
   Omit<RawImage, keyof typeof imageDefaults>;
 
@@ -52,9 +45,9 @@ export function createImage(rawImage: RawImage): Image {
 /**
  * Default values for {@link RawImageDataSource}
  */
-export const imageDataSourceDefaults = {
-  ...dataSourceDefaults,
-} as const satisfies Partial<RawImageDataSource<string>>;
+export const imageDataSourceDefaults = {} as const satisfies Partial<
+  RawImageDataSource<string>
+>;
 
 /**
  * A data source for two-dimensional raster images
@@ -67,10 +60,7 @@ export interface RawImageDataSource<
 /**
  * A {@link RawImageDataSource} with {@link imageDataSourceDefaults} applied
  */
-export type ImageDataSource<TType extends string = string> = Omit<
-  DataSource<TType>,
-  keyof RawImageDataSource<TType>
-> &
+export type ImageDataSource<TType extends string = string> = DataSource<TType> &
   Required<
     Pick<RawImageDataSource<TType>, keyof typeof imageDataSourceDefaults>
   > &

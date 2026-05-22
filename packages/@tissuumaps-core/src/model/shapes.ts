@@ -5,8 +5,6 @@ import {
   type RenderedDataObject,
   createDataSource,
   createRenderedDataObject,
-  dataSourceDefaults,
-  renderedDataObjectDefaults,
 } from "./base";
 import {
   type ColorConfig,
@@ -26,7 +24,6 @@ import {
  * Default values for {@link RawShapes}
  */
 export const shapesDefaults = {
-  ...renderedDataObjectDefaults,
   shapeFillColor: { constant: { value: defaultShapeFillColor } },
   shapeFillVisibility: { constant: { value: defaultShapeFillVisibility } },
   shapeFillOpacity: { constant: { value: defaultShapeFillOpacity } },
@@ -87,10 +84,7 @@ export interface RawShapes extends RawRenderedDataObject<
 /**
  * A {@link RawShapes} object with {@link shapesDefaults} applied
  */
-export type Shapes = Omit<
-  RenderedDataObject<ShapesDataSource<string>>,
-  keyof RawShapes
-> &
+export type Shapes = RenderedDataObject<ShapesDataSource<string>> &
   Required<Pick<RawShapes, keyof typeof shapesDefaults>> &
   Omit<RawShapes, keyof typeof shapesDefaults>;
 
@@ -112,9 +106,9 @@ export function createShapes(rawShapes: RawShapes): Shapes {
 /**
  * Default values for {@link RawShapesDataSource}
  */
-export const shapesDataSourceDefaults = {
-  ...dataSourceDefaults,
-} as const satisfies Partial<RawShapesDataSource<string>>;
+export const shapesDataSourceDefaults = {} as const satisfies Partial<
+  RawShapesDataSource<string>
+>;
 
 /**
  * A data source for two-dimensional shape clouds
@@ -127,14 +121,12 @@ export interface RawShapesDataSource<
 /**
  * A {@link RawShapesDataSource} with {@link shapesDataSourceDefaults} applied
  */
-export type ShapesDataSource<TType extends string = string> = Omit<
-  DataSource<TType>,
-  keyof RawShapesDataSource<TType>
-> &
-  Required<
-    Pick<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>
-  > &
-  Omit<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>;
+export type ShapesDataSource<TType extends string = string> =
+  DataSource<TType> &
+    Required<
+      Pick<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>
+    > &
+    Omit<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>;
 
 /**
  * Creates a {@link ShapesDataSource} from a {@link RawShapesDataSource} by applying {@link shapesDataSourceDefaults}

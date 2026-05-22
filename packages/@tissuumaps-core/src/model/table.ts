@@ -5,16 +5,12 @@ import {
   type RawDataSource,
   createDataObject,
   createDataSource,
-  dataObjectDefaults,
-  dataSourceDefaults,
 } from "./base";
 
 /**
  * Default values for {@link RawTable}
  */
-export const tableDefaults = {
-  ...dataObjectDefaults,
-} as const satisfies Partial<RawTable>;
+export const tableDefaults = {} as const satisfies Partial<RawTable>;
 
 /**
  * Tabular data
@@ -25,7 +21,7 @@ export interface RawTable extends RawDataObject<RawTableDataSource<string>> {}
 /**
  * A {@link RawTable} with {@link tableDefaults} applied
  */
-export type Table = Omit<DataObject<TableDataSource<string>>, keyof RawTable> &
+export type Table = DataObject<TableDataSource<string>> &
   Required<Pick<RawTable, keyof typeof tableDefaults>> &
   Omit<RawTable, keyof typeof tableDefaults>;
 
@@ -47,9 +43,9 @@ export function createTable(rawTable: RawTable): Table {
 /**
  * Default values for {@link RawTableDataSource}
  */
-export const tableDataSourceDefaults = {
-  ...dataSourceDefaults,
-} as const satisfies Partial<RawTableDataSource<string>>;
+export const tableDataSourceDefaults = {} as const satisfies Partial<
+  RawTableDataSource<string>
+>;
 
 /**
  * A data source for tabular data
@@ -62,10 +58,7 @@ export interface RawTableDataSource<
 /**
  * A {@link RawTableDataSource} with {@link tableDataSourceDefaults} applied
  */
-export type TableDataSource<TType extends string = string> = Omit<
-  DataSource<TType>,
-  keyof RawTableDataSource<TType>
-> &
+export type TableDataSource<TType extends string = string> = DataSource<TType> &
   Required<
     Pick<RawTableDataSource<TType>, keyof typeof tableDataSourceDefaults>
   > &

@@ -15,7 +15,7 @@ export interface RawModel {}
 /**
  * A {@link RawModel} with {@link modelDefaults} applied
  */
-export type Model = Omit<object, keyof RawModel> &
+export type Model = object &
   Required<Pick<RawModel, keyof typeof modelDefaults>> &
   Omit<RawModel, keyof typeof modelDefaults>;
 
@@ -32,9 +32,9 @@ export function createModel(rawModel: RawModel): Model {
 /**
  * Default values for {@link RawDataObject}
  */
-export const dataObjectDefaults = {
-  ...modelDefaults,
-} as const satisfies Partial<RawDataObject<RawDataSource<string>>>;
+export const dataObjectDefaults = {} as const satisfies Partial<
+  RawDataObject<RawDataSource<string>>
+>;
 
 /**
  * A named, identifiable data object backed by a data source
@@ -55,10 +55,7 @@ export interface RawDataObject<
 /**
  * A {@link RawDataObject} with {@link dataObjectDefaults} applied
  */
-export type DataObject<TDataSource extends DataSource<string>> = Omit<
-  Model,
-  keyof RawDataObject<TDataSource>
-> &
+export type DataObject<TDataSource extends DataSource<string>> = Model &
   Required<Pick<RawDataObject<TDataSource>, keyof typeof dataObjectDefaults>> &
   Omit<RawDataObject<TDataSource>, keyof typeof dataObjectDefaults>;
 
@@ -84,7 +81,6 @@ export function createDataObject<
  * Default values for {@link RawRenderedDataObject}
  */
 export const renderedDataObjectDefaults = {
-  ...dataObjectDefaults,
   visibility: true,
   opacity: 1,
   flip: false,
@@ -138,20 +134,18 @@ export interface RawRenderedDataObject<
 /**
  * A {@link RawRenderedDataObject} with {@link renderedDataObjectDefaults} applied
  */
-export type RenderedDataObject<TDataSource extends DataSource<string>> = Omit<
-  DataObject<TDataSource>,
-  keyof RawRenderedDataObject<TDataSource>
-> &
-  Required<
-    Pick<
+export type RenderedDataObject<TDataSource extends DataSource<string>> =
+  DataObject<TDataSource> &
+    Required<
+      Pick<
+        RawRenderedDataObject<TDataSource>,
+        keyof typeof renderedDataObjectDefaults
+      >
+    > &
+    Omit<
       RawRenderedDataObject<TDataSource>,
       keyof typeof renderedDataObjectDefaults
-    >
-  > &
-  Omit<
-    RawRenderedDataObject<TDataSource>,
-    keyof typeof renderedDataObjectDefaults
-  >;
+    >;
 
 /**
  * Creates a {@link RenderedDataObject} from a {@link RawRenderedDataObject} by applying {@link renderedDataObjectDefaults}
@@ -175,9 +169,9 @@ export function createRenderedDataObject<
 /**
  * Default values for {@link RawSingleLayerDataObject}
  */
-export const singleLayerDataObjectDefaults = {
-  ...renderedDataObjectDefaults,
-} as const satisfies Partial<RawSingleLayerDataObject<RawDataSource<string>>>;
+export const singleLayerDataObjectDefaults = {} as const satisfies Partial<
+  RawSingleLayerDataObject<RawDataSource<string>>
+>;
 
 /**
  * A data object that can be rendered on a single layer
@@ -193,10 +187,7 @@ export interface RawSingleLayerDataObject<
  * A {@link RawSingleLayerDataObject} with {@link singleLayerDataObjectDefaults} applied
  */
 export type SingleLayerDataObject<TDataSource extends DataSource<string>> =
-  Omit<
-    RenderedDataObject<TDataSource>,
-    keyof RawSingleLayerDataObject<TDataSource>
-  > &
+  Omit<RenderedDataObject<TDataSource>, "layer"> &
     Required<
       Pick<
         RawSingleLayerDataObject<TDataSource>,
@@ -230,9 +221,9 @@ export function createSingleLayerDataObject<
 /**
  * Default values for {@link RawDataSource}
  */
-export const dataSourceDefaults = {
-  ...modelDefaults,
-} as const satisfies Partial<RawDataSource<string>>;
+export const dataSourceDefaults = {} as const satisfies Partial<
+  RawDataSource<string>
+>;
 
 /**
  * A data source for data objects
@@ -257,10 +248,7 @@ export interface RawDataSource<TType extends string = string> extends RawModel {
 /**
  * A {@link RawDataSource} with {@link dataSourceDefaults} applied
  */
-export type DataSource<TType extends string = string> = Omit<
-  Model,
-  keyof RawDataSource<TType>
-> &
+export type DataSource<TType extends string = string> = Model &
   Required<Pick<RawDataSource<TType>, keyof typeof dataSourceDefaults>> &
   Omit<RawDataSource<TType>, keyof typeof dataSourceDefaults>;
 
