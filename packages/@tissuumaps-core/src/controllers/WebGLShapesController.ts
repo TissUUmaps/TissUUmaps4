@@ -489,9 +489,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       if (
         glShapes === undefined ||
         dataBounds === undefined ||
-        scanlineDataTexture === undefined ||
-        glShapes.config.layer.transform !== ref.layer.transform ||
-        glShapes.config.shapes.transform !== ref.shapes.transform
+        scanlineDataTexture === undefined
       ) {
         let multiPolygons = await ref.data.loadMultiPolygons({ signal });
         signal?.throwIfAborted();
@@ -575,7 +573,6 @@ export class WebGLShapesController extends WebGLControllerBase {
           layer: {
             visibility: ref.layer.visibility,
             opacity: ref.layer.opacity,
-            transform: structuredClone(ref.layer.transform),
           },
           shapes: {
             layer: structuredClone(ref.shapes.layer),
@@ -591,7 +588,6 @@ export class WebGLShapesController extends WebGLControllerBase {
               ref.shapes.shapeStrokeVisibility,
             ),
             shapeStrokeOpacity: structuredClone(ref.shapes.shapeStrokeOpacity),
-            transform: structuredClone(ref.shapes.transform),
           },
         },
         dataBounds,
@@ -1075,7 +1071,7 @@ type GLShapes = {
   ref: ShapesRef;
   /** Snapshot of model values at the time of the last texture upload */
   config: {
-    layer: Pick<Layer, "visibility" | "opacity" | "transform">;
+    layer: Pick<Layer, "visibility" | "opacity">;
     shapes: Pick<
       Shapes,
       | "layer"
@@ -1087,7 +1083,6 @@ type GLShapes = {
       | "shapeStrokeColor"
       | "shapeStrokeVisibility"
       | "shapeStrokeOpacity"
-      | "transform"
     >;
   };
   /** Axis-aligned bounding box of all shapes in data-space coordinates */

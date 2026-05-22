@@ -835,8 +835,8 @@ export class WebGLPointsController extends WebGLControllerBase {
           layer: {
             visibility: ref.layer.visibility,
             opacity: ref.layer.opacity,
-            transform: structuredClone(ref.layer.transform),
             pointSizeFactor: ref.layer.pointSizeFactor,
+            transform: structuredClone(ref.layer.transform),
           },
           points: {
             layer: structuredClone(ref.points.layer),
@@ -847,8 +847,8 @@ export class WebGLPointsController extends WebGLControllerBase {
             pointColor: structuredClone(ref.points.pointColor),
             pointVisibility: structuredClone(ref.points.pointVisibility),
             pointOpacity: structuredClone(ref.points.pointOpacity),
-            transform: structuredClone(ref.points.transform),
             pointSizeFactor: ref.points.pointSizeFactor,
+            transform: structuredClone(ref.points.transform),
           },
         },
         dataBounds,
@@ -928,7 +928,7 @@ type PointsBufferSliceState = {
   config: {
     layer: Pick<
       Layer,
-      "visibility" | "opacity" | "transform" | "pointSizeFactor"
+      "visibility" | "opacity" | "pointSizeFactor" | "transform"
     >;
     points: Pick<
       Points,
@@ -940,8 +940,8 @@ type PointsBufferSliceState = {
       | "pointColor"
       | "pointVisibility"
       | "pointOpacity"
-      | "transform"
       | "pointSizeFactor"
+      | "transform"
     >;
   };
   dataBounds: Rect;
