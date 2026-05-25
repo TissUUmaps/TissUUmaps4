@@ -89,7 +89,7 @@ describe("OpacityDataUtils", () => {
         source: "constant" as const,
         constant: { value: 0.75 },
       };
-      const data = OpacityDataUtils.loadConstantOpacityData([1, 2], config);
+      const data = OpacityDataUtils.loadUniformOpacityData([1, 2], config);
       const expected = OpacityDataUtils.encodeOpacity(0.75);
       expect(data[0]).toBe(expected);
       expect(data[1]).toBe(expected);
@@ -106,7 +106,7 @@ describe("OpacityDataUtils", () => {
         from: { table: "t1", column: "col1" },
       };
 
-      const data = await OpacityDataUtils.loadFromOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableValues(
         ids,
         config,
         1,
@@ -126,7 +126,7 @@ describe("OpacityDataUtils", () => {
         from: { table: "t1", column: "col1" },
       };
 
-      const data = await OpacityDataUtils.loadFromOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableValues(
         ids,
         config,
         0.5,
@@ -155,7 +155,7 @@ describe("OpacityDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "om1" },
       };
 
-      const data = await OpacityDataUtils.loadGroupByOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableGroups(
         ids,
         config,
         [opacityMap],
@@ -182,7 +182,7 @@ describe("OpacityDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "om1" },
       };
 
-      const data = await OpacityDataUtils.loadGroupByOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableGroups(
         ids,
         config,
         [opacityMap],
@@ -200,7 +200,7 @@ describe("OpacityDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "nonexistent" },
       };
 
-      const data = await OpacityDataUtils.loadGroupByOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableGroups(
         ids,
         config,
         [],
@@ -245,6 +245,7 @@ describe("OpacityDataUtils", () => {
         [],
         1,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(OpacityDataUtils.encodeOpacity(0.6));
@@ -270,6 +271,7 @@ describe("OpacityDataUtils", () => {
         [opacityMap],
         1,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(OpacityDataUtils.encodeOpacity(0.7));

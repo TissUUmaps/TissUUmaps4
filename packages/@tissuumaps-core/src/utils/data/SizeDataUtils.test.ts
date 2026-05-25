@@ -69,7 +69,7 @@ describe("SizeDataUtils", () => {
         source: "constant" as const,
         constant: { value: 7 },
       };
-      const data = SizeDataUtils.loadConstantSizeData([1, 2], config);
+      const data = SizeDataUtils.loadUniformSizeData([1, 2], config);
       expect(data[0]).toBe(7);
       expect(data[1]).toBe(7);
     });
@@ -79,7 +79,7 @@ describe("SizeDataUtils", () => {
         source: "constant" as const,
         constant: { value: 5 },
       };
-      const data = SizeDataUtils.loadConstantSizeData([1], config, {
+      const data = SizeDataUtils.loadUniformSizeData([1], config, {
         sizeFactor: 3,
       });
       expect(data[0]).toBe(15);
@@ -96,7 +96,7 @@ describe("SizeDataUtils", () => {
         from: { table: "t1", column: "col1" },
       };
 
-      const data = await SizeDataUtils.loadFromSizeData(
+      const data = await SizeDataUtils.loadSizeDataFromTableValues(
         ids,
         config,
         1,
@@ -116,7 +116,7 @@ describe("SizeDataUtils", () => {
         from: { table: "t1", column: "col1" },
       };
 
-      const data = await SizeDataUtils.loadFromSizeData(
+      const data = await SizeDataUtils.loadSizeDataFromTableValues(
         ids,
         config,
         5,
@@ -135,7 +135,7 @@ describe("SizeDataUtils", () => {
         from: { table: "t1", column: "col1" },
       };
 
-      const data = await SizeDataUtils.loadFromSizeData(
+      const data = await SizeDataUtils.loadSizeDataFromTableValues(
         ids,
         config,
         1,
@@ -165,7 +165,7 @@ describe("SizeDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "sm1" },
       };
 
-      const data = await SizeDataUtils.loadGroupBySizeData(
+      const data = await SizeDataUtils.loadSizeDataFromTableGroups(
         ids,
         config,
         [sizeMap],
@@ -192,7 +192,7 @@ describe("SizeDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "sm1" },
       };
 
-      const data = await SizeDataUtils.loadGroupBySizeData(
+      const data = await SizeDataUtils.loadSizeDataFromTableGroups(
         ids,
         config,
         [sizeMap],
@@ -210,7 +210,7 @@ describe("SizeDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "nonexistent" },
       };
 
-      const data = await SizeDataUtils.loadGroupBySizeData(
+      const data = await SizeDataUtils.loadSizeDataFromTableGroups(
         ids,
         config,
         [],
@@ -235,7 +235,7 @@ describe("SizeDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "sm1" },
       };
 
-      const data = await SizeDataUtils.loadGroupBySizeData(
+      const data = await SizeDataUtils.loadSizeDataFromTableGroups(
         ids,
         config,
         [sizeMap],
@@ -281,6 +281,7 @@ describe("SizeDataUtils", () => {
         [],
         1,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(25);
@@ -306,6 +307,7 @@ describe("SizeDataUtils", () => {
         [sizeMap],
         1,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(15);

@@ -64,7 +64,7 @@ describe("MarkerDataUtils", () => {
         source: "constant" as const,
         constant: { value: Marker.Square },
       };
-      const data = MarkerDataUtils.loadConstantMarkerData([1, 2], config);
+      const data = MarkerDataUtils.loadUniformMarkerData([1, 2], config);
       expect(data[0]).toBe(Marker.Square);
       expect(data[1]).toBe(Marker.Square);
     });
@@ -80,7 +80,7 @@ describe("MarkerDataUtils", () => {
         from: { table: "t1", column: "col1" },
       };
 
-      const data = await MarkerDataUtils.loadFromMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableValues(
         ids,
         config,
         Marker.Cross,
@@ -100,7 +100,7 @@ describe("MarkerDataUtils", () => {
         from: { table: "t1", column: "col1" },
       };
 
-      const data = await MarkerDataUtils.loadFromMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableValues(
         ids,
         config,
         Marker.Diamond,
@@ -129,7 +129,7 @@ describe("MarkerDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "mm1" },
       };
 
-      const data = await MarkerDataUtils.loadGroupByMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
         ids,
         config,
         [markerMap],
@@ -156,7 +156,7 @@ describe("MarkerDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "mm1" },
       };
 
-      const data = await MarkerDataUtils.loadGroupByMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
         ids,
         config,
         [markerMap],
@@ -174,7 +174,7 @@ describe("MarkerDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "nonexistent" },
       };
 
-      const data = await MarkerDataUtils.loadGroupByMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
         ids,
         config,
         [],
@@ -194,7 +194,7 @@ describe("MarkerDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: undefined },
       };
 
-      const data = await MarkerDataUtils.loadGroupByMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
         ids,
         config,
         [],
@@ -250,6 +250,7 @@ describe("MarkerDataUtils", () => {
         [],
         Marker.Cross,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(Marker.Diamond);
@@ -275,6 +276,7 @@ describe("MarkerDataUtils", () => {
         [markerMap],
         Marker.Cross,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(Marker.Arrow);

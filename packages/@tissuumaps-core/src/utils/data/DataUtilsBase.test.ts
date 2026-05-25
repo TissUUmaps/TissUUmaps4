@@ -6,14 +6,14 @@ import { DataUtilsBase } from "./DataUtilsBase";
 // DataUtilsBase methods are protected, so we create a subclass to expose them
 class TestableDataUtils extends DataUtilsBase {
   static fillFrom(
-    ...args: Parameters<typeof DataUtilsBase.fillFromConfigData>
+    ...args: Parameters<typeof DataUtilsBase.fillDataFromTableValues>
   ) {
-    return DataUtilsBase.fillFromConfigData(...args);
+    return DataUtilsBase.fillDataFromTableValues(...args);
   }
   static fillGroupBy(
-    ...args: Parameters<typeof DataUtilsBase.fillGroupByConfigData>
+    ...args: Parameters<typeof DataUtilsBase.fillDataFromTableGroups>
   ) {
-    return DataUtilsBase.fillGroupByConfigData(...args);
+    return DataUtilsBase.fillDataFromTableGroups(...args);
   }
 }
 
@@ -40,20 +40,19 @@ describe("DataUtilsBase", () => {
       const ids = [1, 2, 3];
       const tableData = createMockTableData([1, 2, 3], [10, 20, 30], [10, 30]);
       const loadTable = vi.fn().mockResolvedValue(tableData);
-      const config = { from: { table: "t1", column: "col1" } } as const;
       const data = new Float32Array(3);
 
       await TestableDataUtils.fillFrom(
         data,
         ids,
-        config,
+        "col1",
         0,
         loadTable,
         (value) => (typeof value === "number" ? value : undefined),
         (v) => (v as number) * 2,
       );
 
-      expect(loadTable).toHaveBeenCalledWith("t1", { signal: undefined });
+      expect(loadTable).toHaveBeenCalledWith({ signal: undefined });
       expect(data[0]).toBe(20); // 10 * 2
       expect(data[1]).toBe(40); // 20 * 2
       expect(data[2]).toBe(60); // 30 * 2
@@ -63,13 +62,12 @@ describe("DataUtilsBase", () => {
       const ids = [1, 2];
       const tableData = createMockTableData([1, 2], ["bad", 5]);
       const loadTable = vi.fn().mockResolvedValue(tableData);
-      const config = { from: { table: "t1", column: "col1" } } as const;
       const data = new Float32Array(2);
 
       await TestableDataUtils.fillFrom(
         data,
         ids,
-        config,
+        "col1",
         99,
         loadTable,
         (value) => (typeof value === "number" ? value : undefined),
@@ -84,13 +82,12 @@ describe("DataUtilsBase", () => {
       const ids = [1, 2, 3];
       const tableData = createMockTableData([1, 3], [10, 30]);
       const loadTable = vi.fn().mockResolvedValue(tableData);
-      const config = { from: { table: "t1", column: "col1" } } as const;
       const data = new Float32Array(3);
 
       await TestableDataUtils.fillFrom(
         data,
         ids,
-        config,
+        "col1",
         -1,
         loadTable,
         (value) => (typeof value === "number" ? value : undefined),
@@ -106,7 +103,6 @@ describe("DataUtilsBase", () => {
       const ids = [1];
       const tableData = createMockTableData([1], [50], [0, 100]);
       const loadTable = vi.fn().mockResolvedValue(tableData);
-      const config = { from: { table: "t1", column: "col1" } } as const;
       const data = new Float32Array(1);
       const parseTableValue = vi
         .fn<
@@ -120,7 +116,7 @@ describe("DataUtilsBase", () => {
       await TestableDataUtils.fillFrom(
         data,
         ids,
-        config,
+        "col1",
         0,
         loadTable,
         parseTableValue,
@@ -139,7 +135,7 @@ describe("DataUtilsBase", () => {
         TestableDataUtils.fillFrom(
           data,
           [1],
-          { from: { table: "t1", column: "col1" } },
+          "col1",
           0,
           vi.fn(),
           vi.fn(),
@@ -155,9 +151,6 @@ describe("DataUtilsBase", () => {
       const ids = [1, 2, 3];
       const tableData = createMockTableData([1, 2, 3], ["A", "B", "A"]);
       const loadTable = vi.fn().mockResolvedValue(tableData);
-      const config = {
-        groupBy: { table: "t1", column: "col1", map: "m1" },
-      } as const;
       const data = new Uint8Array(3);
       const mapGroupToValue = vi
         .fn<(group: string) => number | undefined>()
@@ -170,7 +163,7 @@ describe("DataUtilsBase", () => {
       await TestableDataUtils.fillGroupBy(
         data,
         ids,
-        config,
+        "col1",
         0,
         loadTable,
         mapGroupToValue,
@@ -186,15 +179,12 @@ describe("DataUtilsBase", () => {
       const ids = [1];
       const tableData = createMockTableData([1], ["unknown"]);
       const loadTable = vi.fn().mockResolvedValue(tableData);
-      const config = {
-        groupBy: { table: "t1", column: "col1", map: "m1" },
-      } as const;
       const data = new Uint8Array(1);
 
       await TestableDataUtils.fillGroupBy(
         data,
         ids,
-        config,
+        "col1",
         42,
         loadTable,
         () => undefined,
@@ -208,15 +198,12 @@ describe("DataUtilsBase", () => {
       const ids = [1, 2];
       const tableData = createMockTableData([1], ["A"]);
       const loadTable = vi.fn().mockResolvedValue(tableData);
-      const config = {
-        groupBy: { table: "t1", column: "col1", map: "m1" },
-      } as const;
       const data = new Uint8Array(2);
 
       await TestableDataUtils.fillGroupBy(
         data,
         ids,
-        config,
+        "col1",
         99,
         loadTable,
         () => 10,
@@ -231,9 +218,6 @@ describe("DataUtilsBase", () => {
       const ids = [1];
       const tableData = createMockTableData([1], [42]);
       const loadTable = vi.fn().mockResolvedValue(tableData);
-      const config = {
-        groupBy: { table: "t1", column: "col1", map: "m1" },
-      } as const;
       const data = new Uint8Array(1);
       const mapGroupToValue = vi
         .fn<(group: string) => number | undefined>()
@@ -242,7 +226,7 @@ describe("DataUtilsBase", () => {
       await TestableDataUtils.fillGroupBy(
         data,
         ids,
-        config,
+        "col1",
         0,
         loadTable,
         mapGroupToValue,
@@ -262,7 +246,7 @@ describe("DataUtilsBase", () => {
         TestableDataUtils.fillGroupBy(
           data,
           [1],
-          { groupBy: { table: "t1", column: "col1", map: "m1" } },
+          "col1",
           0,
           vi.fn(),
           vi.fn(),

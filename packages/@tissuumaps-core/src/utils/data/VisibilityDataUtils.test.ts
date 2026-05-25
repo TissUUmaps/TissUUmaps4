@@ -73,7 +73,7 @@ describe("VisibilityDataUtils", () => {
         source: "constant" as const,
         constant: { value: true },
       };
-      const data = VisibilityDataUtils.loadConstantVisibilityData(
+      const data = VisibilityDataUtils.loadUniformVisibilityData(
         [1, 2],
         config,
       );
@@ -86,7 +86,7 @@ describe("VisibilityDataUtils", () => {
         source: "constant" as const,
         constant: { value: false },
       };
-      const data = VisibilityDataUtils.loadConstantVisibilityData([1], config);
+      const data = VisibilityDataUtils.loadUniformVisibilityData([1], config);
       expect(data[0]).toBe(0);
     });
   });
@@ -101,7 +101,7 @@ describe("VisibilityDataUtils", () => {
         from: { table: "t1", column: "col1" },
       };
 
-      const data = await VisibilityDataUtils.loadFromVisibilityData(
+      const data = await VisibilityDataUtils.loadVisibilityDataFromTableValues(
         ids,
         config,
         true,
@@ -122,7 +122,7 @@ describe("VisibilityDataUtils", () => {
         from: { table: "t1", column: "col1" },
       };
 
-      const data = await VisibilityDataUtils.loadFromVisibilityData(
+      const data = await VisibilityDataUtils.loadVisibilityDataFromTableValues(
         ids,
         config,
         false,
@@ -151,7 +151,7 @@ describe("VisibilityDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "vm1" },
       };
 
-      const data = await VisibilityDataUtils.loadGroupByVisibilityData(
+      const data = await VisibilityDataUtils.loadVisibilityDataFromTableGroups(
         ids,
         config,
         [visibilityMap],
@@ -178,7 +178,7 @@ describe("VisibilityDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "vm1" },
       };
 
-      const data = await VisibilityDataUtils.loadGroupByVisibilityData(
+      const data = await VisibilityDataUtils.loadVisibilityDataFromTableGroups(
         ids,
         config,
         [visibilityMap],
@@ -196,7 +196,7 @@ describe("VisibilityDataUtils", () => {
         groupBy: { table: "t1", column: "col1", map: "nonexistent" },
       };
 
-      const data = await VisibilityDataUtils.loadGroupByVisibilityData(
+      const data = await VisibilityDataUtils.loadVisibilityDataFromTableGroups(
         ids,
         config,
         [],
@@ -241,6 +241,7 @@ describe("VisibilityDataUtils", () => {
         [],
         false,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(1);
@@ -266,6 +267,7 @@ describe("VisibilityDataUtils", () => {
         [visibilityMap],
         false,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(1);
