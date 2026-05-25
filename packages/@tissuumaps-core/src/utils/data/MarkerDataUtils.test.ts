@@ -77,7 +77,7 @@ describe("MarkerDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
       const data = await MarkerDataUtils.loadMarkerDataFromTableValues(
