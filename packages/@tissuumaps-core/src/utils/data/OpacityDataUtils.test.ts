@@ -152,7 +152,7 @@ describe("OpacityDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "om1" },
+        groupBy: { column: "col1", map: "om1" },
       };
 
       const data = await OpacityDataUtils.loadOpacityDataFromTableGroups(
