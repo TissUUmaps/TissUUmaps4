@@ -142,7 +142,7 @@ export class MarkerDataUtils extends DataUtilsBase {
    * to a marker using either a marker map or the default marker palette.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - GroupBy configuration specifying the source table, column, and optional map
+   * @param config - GroupBy configuration specifying the source column and optional map
    * @param markerMaps - Available marker maps for group-to-marker lookups
    * @param defaultMarker - Fallback marker when the map is not found or a group is unmapped
    * @param loadTable - Async function that loads the {@link TableData}
