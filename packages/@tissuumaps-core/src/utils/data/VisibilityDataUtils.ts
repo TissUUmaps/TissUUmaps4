@@ -144,7 +144,7 @@ export class VisibilityDataUtils extends DataUtilsBase {
    * to a boolean visibility value using a visibility map.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - GroupBy configuration specifying the source table, column, and map
+   * @param config - GroupBy configuration specifying the source column and map
    * @param visibilityMaps - Available visibility maps for group-to-boolean lookups
    * @param defaultVisibility - Fallback visibility when the map is not found or a group is unmapped
    * @param loadTable - Async function that loads the {@link TableData}
