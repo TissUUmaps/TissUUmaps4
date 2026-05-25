@@ -76,9 +76,6 @@ export function isConstantConfig<TValue, TConstantExtra = unknown>(
 export type FromConfig<TFromExtra = unknown> = Config<"from"> & {
   /** Specification of what table column to load */
   from: {
-    /** Table ID */
-    table: string;
-
     /** Name of the table column */
     column: string;
   } & TFromExtra;
@@ -103,9 +100,6 @@ export type GroupByConfig<
 > = Config<"groupBy"> & {
   /** Specification of what categorical table column to load and how to map groups to values */
   groupBy: {
-    /** Table ID */
-    table: string;
-
     /** Name of the categorical table column */
     column: string;
 

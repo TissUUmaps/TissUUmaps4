@@ -1,9 +1,9 @@
 import {
-  type DataSource,
-  type RawDataSource,
+  type ItemsDataSource,
+  type RawItemsDataSource,
   type RawRenderedDataObject,
   type RenderedDataObject,
-  createDataSource,
+  createItemsDataSource,
   createRenderedDataObject,
 } from "./base";
 import {
@@ -116,13 +116,13 @@ export const shapesDataSourceDefaults = {} as const satisfies Partial<
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawShapesDataSource<
   TType extends string = string,
-> extends RawDataSource<TType> {}
+> extends RawItemsDataSource<TType> {}
 
 /**
  * A {@link RawShapesDataSource} with {@link shapesDataSourceDefaults} applied
  */
 export type ShapesDataSource<TType extends string = string> =
-  DataSource<TType> &
+  ItemsDataSource<TType> &
     Required<
       Pick<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>
     > &
@@ -138,7 +138,7 @@ export function createShapesDataSource<TType extends string>(
   rawShapesDataSource: RawShapesDataSource<TType>,
 ): ShapesDataSource<TType> {
   return {
-    ...createDataSource(rawShapesDataSource),
+    ...createItemsDataSource(rawShapesDataSource),
     ...structuredClone(shapesDataSourceDefaults),
     ...structuredClone(rawShapesDataSource),
   };

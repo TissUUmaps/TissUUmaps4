@@ -1,6 +1,6 @@
 import { type LabelsDataSource } from "../model/labels";
 import { type ProgressCallback, type UintArray } from "../types";
-import { type DataProvider, type ItemsData } from "./base";
+import { type ItemsData, type ItemsDataProvider } from "./base";
 
 /**
  * Data provider for label images
@@ -11,7 +11,7 @@ import { type DataProvider, type ItemsData } from "./base";
 export interface LabelsDataProvider<
   TLabelsDataSource extends LabelsDataSource,
   TLabelsData extends LabelsData,
-> extends DataProvider<TLabelsDataSource, TLabelsData> {}
+> extends ItemsDataProvider<TLabelsDataSource, TLabelsData> {}
 
 /**
  * Loaded label image data providing a tiled, multi-resolution integer raster

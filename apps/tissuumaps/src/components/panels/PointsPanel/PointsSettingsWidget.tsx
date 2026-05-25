@@ -85,29 +85,34 @@ export function PointsSettingsWidget({
     (newMarkerConfig) =>
       updatePoints(points.id, { pointMarker: newMarkerConfig }),
     defaultPointMarker,
+    points.dataSource.table ?? null,
   );
   const pointSizeConfigWidgetAdapter = useSizeConfigWidget(
     points.pointSize,
     (newSizeConfig) => updatePoints(points.id, { pointSize: newSizeConfig }),
     defaultPointSize,
     defaultPointSizeUnit,
+    points.dataSource.table ?? null,
   );
   const pointColorConfigWidgetAdapter = useColorConfigWidget(
     points.pointColor,
     (newColorConfig) => updatePoints(points.id, { pointColor: newColorConfig }),
     defaultPointColor,
+    points.dataSource.table ?? null,
   );
   const pointVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
     points.pointVisibility,
     (newVisibilityConfig) =>
       updatePoints(points.id, { pointVisibility: newVisibilityConfig }),
     defaultPointVisibility,
+    points.dataSource.table ?? null,
   );
   const pointOpacityConfigWidgetAdapter = useOpacityConfigWidget(
     points.pointOpacity,
     (newOpacityConfig) =>
       updatePoints(points.id, { pointOpacity: newOpacityConfig }),
     defaultPointOpacity,
+    points.dataSource.table ?? null,
   );
 
   return (

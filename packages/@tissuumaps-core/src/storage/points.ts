@@ -1,6 +1,6 @@
 import { type PointsDataSource } from "../model/points";
 import { type ProgressCallback } from "../types";
-import { type DataProvider, type ItemsData } from "./base";
+import { type ItemsData, type ItemsDataProvider } from "./base";
 
 /**
  * Data provider for point clouds
@@ -11,7 +11,7 @@ import { type DataProvider, type ItemsData } from "./base";
 export interface PointsDataProvider<
   TPointsDataSource extends PointsDataSource,
   TPointsData extends PointsData,
-> extends DataProvider<TPointsDataSource, TPointsData> {}
+> extends ItemsDataProvider<TPointsDataSource, TPointsData> {}
 
 /**
  * Loaded point cloud data providing coordinate access

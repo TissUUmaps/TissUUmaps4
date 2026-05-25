@@ -1,6 +1,6 @@
 import { type JsonSchema, type UISchemaElement } from "@jsonforms/core";
 
-import { type DataSource } from "../model/base";
+import { type DataSource, type ItemsDataSource } from "../model/base";
 import { type ProgressCallback } from "../types";
 
 /**
@@ -35,6 +35,15 @@ export interface DataProvider<
     },
   ): Promise<TData>;
 }
+
+/**
+ * Base interface for items data providers
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ItemsDataProvider<
+  TItemsDataSource extends ItemsDataSource,
+  TItemsData extends ItemsData,
+> extends DataProvider<TItemsDataSource, TItemsData> {}
 
 /**
  * Base interface for loaded data objects

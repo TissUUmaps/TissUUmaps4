@@ -30,7 +30,7 @@ export class ColorDataUtils extends DataUtilsBase {
    * @param colorMaps - Available color maps for groupBy lookups
    * @param defaultColor - Fallback color when no valid config or value is found
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options - Optional abort signal, buffer alignment, visibility data, and opacity data
+   * @param options - Optional abort signal, buffer alignment, table ID, visibility data, and opacity data
    * @returns A `Uint32Array` of packed RGBA color values, one per ID
    */
   static async loadColorData(
@@ -45,33 +45,48 @@ export class ColorDataUtils extends DataUtilsBase {
     options?: {
       signal?: AbortSignal;
       align?: number;
+      table?: string;
       visibilityData?: Uint8Array;
       opacityData?: Uint8Array;
     },
   ): Promise<Uint32Array> {
-    const { signal, align = 1, visibilityData, opacityData } = options ?? {};
+    const {
+      signal,
+      align = 1,
+      table,
+      visibilityData,
+      opacityData,
+    } = options ?? {};
     signal?.throwIfAborted();
     let data: Uint32Array;
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      data = ColorDataUtils.loadConstantColorData(ids, config, { align });
-    } else if (activeConfigSource === "from" && isFromConfig(config)) {
-      data = await ColorDataUtils.loadFromColorData(
+      data = ColorDataUtils.loadUniformColorData(ids, config, { align });
+    } else if (
+      activeConfigSource === "from" &&
+      isFromConfig(config) &&
+      table !== undefined
+    ) {
+      data = await ColorDataUtils.loadColorDataFromTableValues(
         ids,
         config,
         defaultColor,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align },
       );
       signal?.throwIfAborted();
-    } else if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
-      data = await ColorDataUtils.loadGroupByColorData(
+    } else if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(config) &&
+      table !== undefined
+    ) {
+      data = await ColorDataUtils.loadColorDataFromTableGroups(
         ids,
         config,
         colorMaps,
         colorPalettes,
         defaultColor,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align },
       );
       signal?.throwIfAborted();
@@ -103,7 +118,7 @@ export class ColorDataUtils extends DataUtilsBase {
    * @param options - Optional buffer alignment
    * @returns A `Uint32Array` filled with the encoded constant color
    */
-  static loadConstantColorData(
+  static loadUniformColorData(
     ids: number[],
     config: Extract<ColorConfig, ConstantConfig<Color>>,
     options?: { align?: number },
@@ -121,20 +136,18 @@ export class ColorDataUtils extends DataUtilsBase {
    * through a color palette.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - From configuration specifying the source table, column, palette, and range
+   
+   * @param config - From configuration specifying the source column, palette, and range
    * @param defaultColor - Fallback color when the palette is not found or a value is invalid
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint32Array` of encoded color values
    */
-  static async loadFromColorData(
+  static async loadColorDataFromTableValues(
     ids: number[],
     config: Extract<ColorConfig, FromConfig>,
     defaultColor: Color,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
@@ -151,10 +164,10 @@ export class ColorDataUtils extends DataUtilsBase {
       });
     }
     const data = ColorDataUtils._createColorDataBuffer(ids.length, { align });
-    await ColorDataUtils.fillFromConfigData(
+    await ColorDataUtils.fillDataFromTableValues(
       data,
       ids,
-      config,
+      config.from.column,
       defaultColor,
       loadTable,
       (value, valueRange) =>
@@ -176,24 +189,21 @@ export class ColorDataUtils extends DataUtilsBase {
    * to a color using either a color map or a color palette.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - GroupBy configuration specifying the source table, column, and map or palette
+   * @param config - GroupBy configuration specifying the source column and map/palette
    * @param colorMaps - Available color maps for group-to-color lookups
    * @param colorPalettes - Available color palettes for hash-based group coloring
    * @param defaultColor - Fallback color when the map/palette is not found or a group is unmapped
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint32Array` of encoded color values
    */
-  static async loadGroupByColorData(
+  static async loadColorDataFromTableGroups(
     ids: number[],
     config: Extract<ColorConfig, GroupByConfig<false>>,
     colorMaps: DefaultMap<Color>[],
     colorPalettes: ColorPalette[],
     defaultColor: Color,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
@@ -214,10 +224,10 @@ export class ColorDataUtils extends DataUtilsBase {
         align,
       });
       const groupColors = new Map(Object.entries(colorMap.values));
-      await ColorDataUtils.fillGroupByConfigData(
+      await ColorDataUtils.fillDataFromTableGroups(
         data,
         ids,
-        config,
+        config.groupBy.column,
         colorMap.default ?? defaultColor,
         loadTable,
         (group) => groupColors.get(group),
@@ -242,10 +252,10 @@ export class ColorDataUtils extends DataUtilsBase {
       const data = ColorDataUtils._createColorDataBuffer(ids.length, {
         align,
       });
-      await ColorDataUtils.fillGroupByConfigData(
+      await ColorDataUtils.fillDataFromTableGroups(
         data,
         ids,
-        config,
+        config.groupBy.column,
         defaultColor,
         loadTable,
         (group) => HashUtils.djb2Pick(colorPalette.colors, group),

@@ -1,10 +1,10 @@
 import {
   type DataObject,
-  type DataSource,
+  type ItemsDataSource,
   type RawDataObject,
-  type RawDataSource,
+  type RawItemsDataSource,
   createDataObject,
-  createDataSource,
+  createItemsDataSource,
 } from "./base";
 
 /**
@@ -50,19 +50,24 @@ export const tableDataSourceDefaults = {} as const satisfies Partial<
 /**
  * A data source for tabular data
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+
 export interface RawTableDataSource<
   TType extends string = string,
-> extends RawDataSource<TType> {}
+> extends RawItemsDataSource<TType> {
+  table?: never;
+}
 
 /**
  * A {@link RawTableDataSource} with {@link tableDataSourceDefaults} applied
  */
-export type TableDataSource<TType extends string = string> = DataSource<TType> &
-  Required<
-    Pick<RawTableDataSource<TType>, keyof typeof tableDataSourceDefaults>
-  > &
-  Omit<RawTableDataSource<TType>, keyof typeof tableDataSourceDefaults>;
+export type TableDataSource<TType extends string = string> =
+  ItemsDataSource<TType> &
+    Required<
+      Pick<RawTableDataSource<TType>, keyof typeof tableDataSourceDefaults>
+    > &
+    Omit<RawTableDataSource<TType>, keyof typeof tableDataSourceDefaults> & {
+      table?: never;
+    };
 
 /**
  * Creates a {@link TableDataSource} from a {@link RawTableDataSource} by applying {@link tableDataSourceDefaults}
@@ -73,9 +78,15 @@ export type TableDataSource<TType extends string = string> = DataSource<TType> &
 export function createTableDataSource<TType extends string>(
   rawTableDataSource: RawTableDataSource<TType>,
 ): TableDataSource<TType> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { table: itemsDataSourceTable, ...itemsDataSourceWithoutTable } =
+    createItemsDataSource(rawTableDataSource);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { table: rawTableDataSourceTable, ...rawTableDataSourceWithoutTable } =
+    structuredClone(rawTableDataSource);
   return {
-    ...createDataSource(rawTableDataSource),
+    ...itemsDataSourceWithoutTable,
     ...structuredClone(tableDataSourceDefaults),
-    ...structuredClone(rawTableDataSource),
+    ...rawTableDataSourceWithoutTable,
   };
 }

@@ -1,9 +1,9 @@
 import {
-  type DataSource,
-  type RawDataSource,
+  type ItemsDataSource,
+  type RawItemsDataSource,
   type RawRenderedDataObject,
   type RenderedDataObject,
-  createDataSource,
+  createItemsDataSource,
   createRenderedDataObject,
 } from "./base";
 import {
@@ -122,13 +122,13 @@ export const pointsDataSourceDefaults = {} as const satisfies Partial<
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawPointsDataSource<
   TType extends string = string,
-> extends RawDataSource<TType> {}
+> extends RawItemsDataSource<TType> {}
 
 /**
  * A {@link RawPointsDataSource} with {@link pointsDataSourceDefaults} applied
  */
 export type PointsDataSource<TType extends string = string> =
-  DataSource<TType> &
+  ItemsDataSource<TType> &
     Required<
       Pick<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>
     > &
@@ -144,7 +144,7 @@ export function createPointsDataSource<TType extends string>(
   rawPointsDataSource: RawPointsDataSource<TType>,
 ): PointsDataSource<TType> {
   return {
-    ...createDataSource(rawPointsDataSource),
+    ...createItemsDataSource(rawPointsDataSource),
     ...structuredClone(pointsDataSourceDefaults),
     ...structuredClone(rawPointsDataSource),
   };

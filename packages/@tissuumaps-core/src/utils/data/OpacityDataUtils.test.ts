@@ -16,6 +16,7 @@ function createMockTableData(
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
     loadValueRange: vi.fn().mockResolvedValue(valueRange),
+    loadUniqueValues: vi.fn().mockResolvedValue(Array.from(new Set(values))),
     suggestColumnQueries: vi.fn(),
     resolveColumnQuery: vi.fn(),
   };
@@ -89,7 +90,7 @@ describe("OpacityDataUtils", () => {
         source: "constant" as const,
         constant: { value: 0.75 },
       };
-      const data = OpacityDataUtils.loadConstantOpacityData([1, 2], config);
+      const data = OpacityDataUtils.loadUniformOpacityData([1, 2], config);
       const expected = OpacityDataUtils.encodeOpacity(0.75);
       expect(data[0]).toBe(expected);
       expect(data[1]).toBe(expected);
@@ -103,10 +104,10 @@ describe("OpacityDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
-      const data = await OpacityDataUtils.loadFromOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableValues(
         ids,
         config,
         1,
@@ -123,10 +124,10 @@ describe("OpacityDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
-      const data = await OpacityDataUtils.loadFromOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableValues(
         ids,
         config,
         0.5,
@@ -152,10 +153,10 @@ describe("OpacityDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "om1" },
+        groupBy: { column: "col1", map: "om1" },
       };
 
-      const data = await OpacityDataUtils.loadGroupByOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableGroups(
         ids,
         config,
         [opacityMap],
@@ -179,10 +180,10 @@ describe("OpacityDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "om1" },
+        groupBy: { column: "col1", map: "om1" },
       };
 
-      const data = await OpacityDataUtils.loadGroupByOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableGroups(
         ids,
         config,
         [opacityMap],
@@ -197,10 +198,10 @@ describe("OpacityDataUtils", () => {
       const ids = [1];
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "nonexistent" },
+        groupBy: { column: "col1", map: "nonexistent" },
       };
 
-      const data = await OpacityDataUtils.loadGroupByOpacityData(
+      const data = await OpacityDataUtils.loadOpacityDataFromTableGroups(
         ids,
         config,
         [],
@@ -236,7 +237,7 @@ describe("OpacityDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
       const data = await OpacityDataUtils.loadOpacityData(
@@ -245,6 +246,7 @@ describe("OpacityDataUtils", () => {
         [],
         1,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(OpacityDataUtils.encodeOpacity(0.6));
@@ -261,7 +263,7 @@ describe("OpacityDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "om1" },
+        groupBy: { column: "col1", map: "om1" },
       };
 
       const data = await OpacityDataUtils.loadOpacityData(
@@ -270,6 +272,7 @@ describe("OpacityDataUtils", () => {
         [opacityMap],
         1,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(OpacityDataUtils.encodeOpacity(0.7));

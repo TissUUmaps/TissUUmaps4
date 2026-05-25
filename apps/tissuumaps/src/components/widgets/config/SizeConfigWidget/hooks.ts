@@ -16,6 +16,7 @@ export function useSizeConfigWidget(
   onSizeConfigChange: (newSizeConfig: SizeConfig) => void,
   defaultSize: number,
   defaultSizeUnit: CoordinateSpace,
+  tableId: string | null,
 ): SizeConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(sizeConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<SizeConfigSource>(
@@ -32,9 +33,6 @@ export function useSizeConfigWidget(
         : defaultSizeUnit,
     );
 
-  const [currentFromTable, setCurrentFromTable] = useState<string | null>(
-    isFromConfig(sizeConfig) ? sizeConfig.from.table : null,
-  );
   const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
     isFromConfig(sizeConfig) ? sizeConfig.from.column : null,
   );
@@ -44,9 +42,6 @@ export function useSizeConfigWidget(
       : defaultSizeUnit,
   );
 
-  const [currentGroupByTable, setCurrentGroupByTable] = useState<string | null>(
-    isGroupByConfig(sizeConfig) ? sizeConfig.groupBy.table : null,
-  );
   const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
     string | null
   >(isGroupByConfig(sizeConfig) ? sizeConfig.groupBy.column : null);
@@ -82,12 +77,10 @@ export function useSizeConfigWidget(
     } else if (
       // from is complete...
       currentSource === "from" &&
-      currentFromTable !== null &&
       currentFromColumn !== null &&
       // ...and different from active config
       (activeSource !== "from" ||
         !isFromConfig(sizeConfig) ||
-        sizeConfig.from.table !== currentFromTable ||
         sizeConfig.from.column !== currentFromColumn ||
         sizeConfig.from.unit !== currentFromUnit)
     ) {
@@ -95,7 +88,6 @@ export function useSizeConfigWidget(
         ...sizeConfig,
         source: "from",
         from: {
-          table: currentFromTable,
           column: currentFromColumn,
           unit: currentFromUnit,
         },
@@ -103,13 +95,11 @@ export function useSizeConfigWidget(
     } else if (
       // groupBy is complete...
       currentSource === "groupBy" &&
-      currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
       currentGroupByMap !== null &&
       // ...and different from active config
       (activeSource !== "groupBy" ||
         !isGroupByConfig(sizeConfig) ||
-        sizeConfig.groupBy.table !== currentGroupByTable ||
         sizeConfig.groupBy.column !== currentGroupByColumn ||
         sizeConfig.groupBy.map !== currentGroupByMap ||
         sizeConfig.groupBy.unit !== currentGroupByUnit)
@@ -118,7 +108,6 @@ export function useSizeConfigWidget(
         ...sizeConfig,
         source: "groupBy",
         groupBy: {
-          table: currentGroupByTable,
           column: currentGroupByColumn,
           map: currentGroupByMap,
           unit: currentGroupByUnit,
@@ -131,10 +120,8 @@ export function useSizeConfigWidget(
     currentSource,
     currentConstantValue,
     currentConstantUnit,
-    currentFromTable,
     currentFromColumn,
     currentFromUnit,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByMap,
     currentGroupByUnit,
@@ -145,24 +132,21 @@ export function useSizeConfigWidget(
     sizeConfig,
     defaultSize,
     defaultSizeUnit,
+    tableId,
     activeSource,
     currentSource,
     currentConstantValue,
     currentConstantUnit,
-    currentFromTable,
     currentFromColumn,
     currentFromUnit,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByMap,
     currentGroupByUnit,
     setCurrentSource,
     setCurrentConstantValue,
     setCurrentConstantUnit,
-    setCurrentFromTable,
     setCurrentFromColumn,
     setCurrentFromUnit,
-    setCurrentGroupByTable,
     setCurrentGroupByColumn,
     setCurrentGroupByMap,
     setCurrentGroupByUnit,

@@ -100,7 +100,7 @@ export interface RawRenderedDataObject<
    * - An ID of an existing Layer
    * - A table column holding the layer ID values for each item
    */
-  layer: string | { table: string; column: string };
+  layer: string | { column: string };
 
   /**
    * Data object visibility
@@ -265,5 +265,46 @@ export function createDataSource<TType extends string>(
     ...createModel(rawDataSource),
     ...structuredClone(dataSourceDefaults),
     ...structuredClone(rawDataSource),
+  };
+}
+
+/**
+ * Default values for {@link RawItemsDataSource}
+ */
+export const itemsDataSourceDefaults = {} as const satisfies Partial<
+  RawItemsDataSource<string>
+>;
+
+/**
+ * A data source for data objects backed by tabular data
+ */
+export interface RawItemsDataSource<
+  TType extends string = string,
+> extends RawDataSource<TType> {
+  table?: string;
+}
+
+/**
+ * A {@link RawItemsDataSource} with {@link itemsDataSourceDefaults} applied
+ */
+export type ItemsDataSource<TType extends string = string> = DataSource<TType> &
+  Required<
+    Pick<RawItemsDataSource<TType>, keyof typeof itemsDataSourceDefaults>
+  > &
+  Omit<RawItemsDataSource<TType>, keyof typeof itemsDataSourceDefaults>;
+
+/**
+ * Creates an {@link ItemsDataSource} from a {@link RawItemsDataSource} by applying {@link itemsDataSourceDefaults}
+ *
+ * @param rawItemsDataSource - The raw items data source
+ * @returns The complete items data source with default values applied
+ */
+export function createItemsDataSource<TType extends string>(
+  rawItemsDataSource: RawItemsDataSource<TType>,
+): ItemsDataSource<TType> {
+  return {
+    ...createDataSource(rawItemsDataSource),
+    ...structuredClone(itemsDataSourceDefaults),
+    ...structuredClone(rawItemsDataSource),
   };
 }

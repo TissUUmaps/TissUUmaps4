@@ -361,13 +361,16 @@ export class WebGLShapesController extends WebGLControllerBase {
         }
 
         let shapeLayers: Map<number, string> | undefined;
-        if (typeof currentShapes.layer !== "string") {
-          const shapeLayersCacheKey = `${currentShapes.layer.table}:${currentShapes.layer.column}`;
+        if (
+          typeof currentShapes.layer !== "string" &&
+          currentShapes.dataSource.table !== undefined
+        ) {
+          const shapeLayersCacheKey = `${currentShapes.dataSource.table}:${currentShapes.layer.column}`;
           if (shapeLayersCache.has(shapeLayersCacheKey)) {
             shapeLayers = shapeLayersCache.get(shapeLayersCacheKey);
           } else {
             try {
-              const tableData = await getTable(currentShapes.layer.table, {
+              const tableData = await getTable(currentShapes.dataSource.table, {
                 signal,
               });
               signal?.throwIfAborted();
@@ -384,7 +387,7 @@ export class WebGLShapesController extends WebGLControllerBase {
             } catch (error) {
               if (!signal?.aborted) {
                 console.error(
-                  `Failed to load layers from table ${currentShapes.layer.table}`,
+                  `Failed to load layers from table ${currentShapes.dataSource.table}`,
                   error,
                 );
               }
@@ -680,7 +683,11 @@ export class WebGLShapesController extends WebGLControllerBase {
         visibilityMaps,
         defaultShapeFillVisibility,
         loadTable,
-        { signal, align: numValuesPerTextureLine },
+        {
+          signal,
+          align: numValuesPerTextureLine,
+          table: ref.shapes.dataSource.table,
+        },
       );
       signal?.throwIfAborted();
       const opacityData = await OpacityDataUtils.loadOpacityData(
@@ -692,6 +699,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         {
           signal,
           align: numValuesPerTextureLine,
+          table: ref.shapes.dataSource.table,
           opacityFactor: ref.layer.opacity * ref.shapes.opacity,
         },
       );
@@ -702,7 +710,13 @@ export class WebGLShapesController extends WebGLControllerBase {
         colorMaps,
         defaultShapeFillColor,
         loadTable,
-        { signal, align: numValuesPerTextureLine, visibilityData, opacityData },
+        {
+          signal,
+          align: numValuesPerTextureLine,
+          table: ref.shapes.dataSource.table,
+          visibilityData,
+          opacityData,
+        },
       );
       signal?.throwIfAborted();
     }
@@ -755,7 +769,11 @@ export class WebGLShapesController extends WebGLControllerBase {
         visibilityMaps,
         defaultShapeStrokeVisibility,
         loadTable,
-        { signal, align: numValuesPerTextureLine },
+        {
+          signal,
+          align: numValuesPerTextureLine,
+          table: ref.shapes.dataSource.table,
+        },
       );
       signal?.throwIfAborted();
       const opacityData = await OpacityDataUtils.loadOpacityData(
@@ -767,6 +785,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         {
           signal,
           align: numValuesPerTextureLine,
+          table: ref.shapes.dataSource.table,
           opacityFactor: ref.layer.opacity * ref.shapes.opacity,
         },
       );
@@ -777,7 +796,13 @@ export class WebGLShapesController extends WebGLControllerBase {
         colorMaps,
         defaultShapeStrokeColor,
         loadTable,
-        { signal, align: numValuesPerTextureLine, visibilityData, opacityData },
+        {
+          signal,
+          align: numValuesPerTextureLine,
+          table: ref.shapes.dataSource.table,
+          visibilityData,
+          opacityData,
+        },
       );
       signal?.throwIfAborted();
     }
