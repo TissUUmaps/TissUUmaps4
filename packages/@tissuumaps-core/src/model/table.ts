@@ -78,10 +78,12 @@ export type TableDataSource<TType extends string = string> =
 export function createTableDataSource<TType extends string>(
   rawTableDataSource: RawTableDataSource<TType>,
 ): TableDataSource<TType> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { table, ...itemsDataSourceWithoutTable } =
+    createItemsDataSource(rawTableDataSource);
   return {
-    ...createItemsDataSource(rawTableDataSource),
+    ...itemsDataSourceWithoutTable,
     ...structuredClone(tableDataSourceDefaults),
     ...structuredClone(rawTableDataSource),
-    table: undefined,
   };
 }
