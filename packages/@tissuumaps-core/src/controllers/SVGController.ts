@@ -320,12 +320,11 @@ export class SVGController {
       );
     }
 
-    const pointsString = this._freehandDrawingState.points
-      .map((v) => `${v.x},${v.y}`)
-      .join(" ");
+    const existingPoints =
+      this._freehandDrawingState.currentPolyline.getAttribute("points");
     this._freehandDrawingState.currentPolyline.setAttribute(
       "points",
-      pointsString,
+      `${existingPoints} ${worldPoint.x},${worldPoint.y}`,
     );
   };
 
@@ -349,14 +348,8 @@ export class SVGController {
       this._freehandDrawingState.hasLeftStart &&
       this._isNearPoint(releasePoint, firstPoint)
     ) {
-      console.debug("Freehand shape committed", { points: points.length });
       const multiPolygon = this._createMultiPolygon([...points, firstPoint]);
       this.shapeCompleteHandler?.(multiPolygon);
-    } else {
-      console.debug("Freehand shape discarded", {
-        points: points.length,
-        hasLeftStart: this._freehandDrawingState.hasLeftStart,
-      });
     }
 
     this._cancelFreehand();
@@ -369,7 +362,6 @@ export class SVGController {
     ) {
       return;
     }
-    console.debug("Freehand shape discarded (pointercancel)");
     this._cancelFreehand();
   };
 
