@@ -27,7 +27,7 @@ export class MarkerDataUtils extends DataUtilsBase {
    * @param markerMaps - Available marker maps for groupBy lookups
    * @param defaultMarker - Fallback marker when no valid config or value is found
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options - Optional abort signal and buffer alignment
+   * @param options - Optional abort signal, buffer alignment, and table ID
    * @returns A `Uint8Array` of encoded marker values, one per ID
    */
   static async loadMarkerData(
@@ -39,32 +39,40 @@ export class MarkerDataUtils extends DataUtilsBase {
       tableId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options?: { signal?: AbortSignal; align?: number },
+    options?: { signal?: AbortSignal; align?: number; table?: string },
   ): Promise<Uint8Array> {
-    const { signal, align = 1 } = options ?? {};
+    const { signal, align = 1, table } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return MarkerDataUtils.loadConstantMarkerData(ids, config, {
+      return MarkerDataUtils.loadUniformMarkerData(ids, config, {
         align,
       });
     }
-    if (activeConfigSource === "from" && isFromConfig(config)) {
-      return await MarkerDataUtils.loadFromMarkerData(
+    if (
+      activeConfigSource === "from" &&
+      isFromConfig(config) &&
+      table !== undefined
+    ) {
+      return await MarkerDataUtils.loadMarkerDataFromTableValues(
         ids,
         config,
         defaultMarker,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align },
       );
     }
-    if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
-      return await MarkerDataUtils.loadGroupByMarkerData(
+    if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(config) &&
+      table !== undefined
+    ) {
+      return await MarkerDataUtils.loadMarkerDataFromTableGroups(
         ids,
         config,
         markerMaps,
         defaultMarker,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align },
       );
     }
@@ -82,7 +90,7 @@ export class MarkerDataUtils extends DataUtilsBase {
    * @param options - Optional buffer alignment
    * @returns A `Uint8Array` filled with the encoded constant marker
    */
-  static loadConstantMarkerData(
+  static loadUniformMarkerData(
     ids: number[],
     config: Extract<MarkerConfig, ConstantConfig<Marker>>,
     options?: { align?: number },
@@ -101,27 +109,24 @@ export class MarkerDataUtils extends DataUtilsBase {
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source table and column
    * @param defaultMarker - Fallback marker when a value is missing or invalid
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of encoded marker values
    */
-  static async loadFromMarkerData(
+  static async loadMarkerDataFromTableValues(
     ids: number[],
     config: Extract<MarkerConfig, FromConfig>,
     defaultMarker: Marker,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const data = MarkerDataUtils._createMarkerDataBuffer(ids.length, { align });
-    await MarkerDataUtils.fillFromConfigData(
+    await MarkerDataUtils.fillDataFromTableValues(
       data,
       ids,
-      config,
+      config.from.column,
       defaultMarker,
       loadTable,
       (value) => MarkerDataUtils.parseMarkerValue(value),
@@ -140,19 +145,16 @@ export class MarkerDataUtils extends DataUtilsBase {
    * @param config - GroupBy configuration specifying the source table, column, and optional map
    * @param markerMaps - Available marker maps for group-to-marker lookups
    * @param defaultMarker - Fallback marker when the map is not found or a group is unmapped
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of encoded marker values
    */
-  static async loadGroupByMarkerData(
+  static async loadMarkerDataFromTableGroups(
     ids: number[],
     config: Extract<MarkerConfig, GroupByConfig<false>>,
     markerMaps: DefaultMap<Marker>[],
     defaultMarker: Marker,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ) {
     const { signal, align = 1 } = options ?? {};
@@ -175,10 +177,10 @@ export class MarkerDataUtils extends DataUtilsBase {
         align,
       });
       const groupMarkers = new Map(Object.entries(markerMap.values));
-      await MarkerDataUtils.fillGroupByConfigData(
+      await MarkerDataUtils.fillDataFromTableGroups(
         data,
         ids,
-        config,
+        config.groupBy.column,
         markerMap.default ?? defaultMarker,
         loadTable,
         (group) => groupMarkers.get(group),
@@ -189,10 +191,10 @@ export class MarkerDataUtils extends DataUtilsBase {
       return data;
     }
     const data = MarkerDataUtils._createMarkerDataBuffer(ids.length, { align });
-    await MarkerDataUtils.fillGroupByConfigData(
+    await MarkerDataUtils.fillDataFromTableGroups(
       data,
       ids,
-      config,
+      config.groupBy.column,
       defaultMarker,
       loadTable,
       (group) => HashUtils.djb2Pick(markerPalette, group),

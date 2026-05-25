@@ -104,44 +104,28 @@ function FromSizeConfigWidget({
   className,
 }: FromSizeConfigWidgetProps) {
   const {
-    currentFromTable: table,
+    tableId,
     currentFromColumn: column,
     currentFromUnit: unit,
-    setCurrentFromTable: setTable,
     setCurrentFromColumn: setColumn,
     setCurrentFromUnit: setUnit,
   } = adapter;
 
-  const tables = useTissUUmaps((state) => state.tables);
-
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(table);
+    useTableColumnSelector(tableId);
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 gap-x-2">
-        <Field>
-          <FieldLabel>Source table</FieldLabel>
-          <SimpleSelect
-            items={tables}
-            itemLabel={(table) => table.name}
-            itemValue={(table) => table.id}
-            value={table}
-            onValueChange={setTable}
-            nullable
-          />
-        </Field>
-        <Field disabled={table === null}>
-          <FieldLabel>Source column</FieldLabel>
-          <SimpleAsyncCombobox
-            suggestQueries={suggestTableColumnQueries}
-            getItem={resolveTableColumnQuery}
-            itemQuery={(column) => column}
-            selectedItem={column}
-            onSelectedItemChange={setColumn}
-          />
-        </Field>
-      </div>
+      <Field disabled={tableId === null}>
+        <FieldLabel>Table column</FieldLabel>
+        <SimpleAsyncCombobox
+          suggestQueries={suggestTableColumnQueries}
+          getItem={resolveTableColumnQuery}
+          itemQuery={(column) => column}
+          selectedItem={column}
+          onSelectedItemChange={setColumn}
+        />
+      </Field>
       <Field>
         <FieldLabel>Size unit</FieldLabel>
         <RadioGroup
@@ -177,47 +161,32 @@ function GroupBySizeConfigWidget({
   className,
 }: GroupBySizeConfigWidgetProps) {
   const {
-    currentGroupByTable: table,
+    tableId,
     currentGroupByColumn: column,
     currentGroupByMap: map,
     currentGroupByUnit: unit,
-    setCurrentGroupByTable: setTable,
     setCurrentGroupByColumn: setColumn,
     setCurrentGroupByMap: setMap,
     setCurrentGroupByUnit: setUnit,
   } = adapter;
 
-  const tables = useTissUUmaps((state) => state.tables);
   const sizeMaps = useTissUUmaps((state) => state.sizeMaps);
 
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(table);
+    useTableColumnSelector(tableId);
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 gap-x-2">
-        <Field>
-          <FieldLabel>Source table</FieldLabel>
-          <SimpleSelect
-            items={tables}
-            itemLabel={(table) => table.name}
-            itemValue={(table) => table.id}
-            value={table}
-            onValueChange={setTable}
-            nullable
-          />
-        </Field>
-        <Field disabled={table === null}>
-          <FieldLabel>Source column</FieldLabel>
-          <SimpleAsyncCombobox
-            suggestQueries={suggestTableColumnQueries}
-            getItem={resolveTableColumnQuery}
-            itemQuery={(column) => column}
-            selectedItem={column}
-            onSelectedItemChange={setColumn}
-          />
-        </Field>
-      </div>
+      <Field disabled={tableId === null}>
+        <FieldLabel>Table column</FieldLabel>
+        <SimpleAsyncCombobox
+          suggestQueries={suggestTableColumnQueries}
+          getItem={resolveTableColumnQuery}
+          itemQuery={(column) => column}
+          selectedItem={column}
+          onSelectedItemChange={setColumn}
+        />
+      </Field>
       <Field>
         <FieldLabel>Size map</FieldLabel>
         <SimpleSelect

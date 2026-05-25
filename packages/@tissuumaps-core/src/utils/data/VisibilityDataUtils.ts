@@ -25,7 +25,7 @@ export class VisibilityDataUtils extends DataUtilsBase {
    * @param visibilityMaps - Available visibility maps for groupBy lookups
    * @param defaultVisibility - Fallback visibility when no valid config or value is found
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options - Optional abort signal and buffer alignment
+   * @param options - Optional abort signal, buffer alignment, and table ID
    * @returns A `Uint8Array` of encoded visibility values (0 or 1), one per ID
    */
   static async loadVisibilityData(
@@ -37,32 +37,40 @@ export class VisibilityDataUtils extends DataUtilsBase {
       tableId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options?: { signal?: AbortSignal; align?: number },
+    options?: { signal?: AbortSignal; align?: number; table?: string },
   ): Promise<Uint8Array> {
-    const { signal, align = 1 } = options ?? {};
+    const { signal, align = 1, table } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return VisibilityDataUtils.loadConstantVisibilityData(ids, config, {
+      return VisibilityDataUtils.loadUniformVisibilityData(ids, config, {
         align,
       });
     }
-    if (activeConfigSource === "from" && isFromConfig(config)) {
-      return await VisibilityDataUtils.loadFromVisibilityData(
+    if (
+      activeConfigSource === "from" &&
+      isFromConfig(config) &&
+      table !== undefined
+    ) {
+      return await VisibilityDataUtils.loadVisibilityDataFromTableValues(
         ids,
         config,
         defaultVisibility,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align },
       );
     }
-    if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
-      return await VisibilityDataUtils.loadGroupByVisibilityData(
+    if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(config) &&
+      table !== undefined
+    ) {
+      return await VisibilityDataUtils.loadVisibilityDataFromTableGroups(
         ids,
         config,
         visibilityMaps,
         defaultVisibility,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align },
       );
     }
@@ -82,7 +90,7 @@ export class VisibilityDataUtils extends DataUtilsBase {
    * @param options - Optional buffer alignment
    * @returns A `Uint8Array` filled with the encoded constant visibility
    */
-  static loadConstantVisibilityData(
+  static loadUniformVisibilityData(
     ids: number[],
     config: Extract<VisibilityConfig, ConstantConfig<boolean>>,
     options?: { align?: number },
@@ -101,18 +109,15 @@ export class VisibilityDataUtils extends DataUtilsBase {
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source table and column
    * @param defaultVisibility - Fallback visibility when a value is missing or invalid
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of encoded visibility values
    */
-  static async loadFromVisibilityData(
+  static async loadVisibilityDataFromTableValues(
     ids: number[],
     config: Extract<VisibilityConfig, FromConfig>,
     defaultVisibility: boolean,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
@@ -120,10 +125,10 @@ export class VisibilityDataUtils extends DataUtilsBase {
     const data = VisibilityDataUtils._createVisibilityDataBuffer(ids.length, {
       align,
     });
-    await VisibilityDataUtils.fillFromConfigData(
+    await VisibilityDataUtils.fillDataFromTableValues(
       data,
       ids,
-      config,
+      config.from.column,
       defaultVisibility,
       loadTable,
       (value) => VisibilityDataUtils.parseVisibilityValue(value),
@@ -142,19 +147,16 @@ export class VisibilityDataUtils extends DataUtilsBase {
    * @param config - GroupBy configuration specifying the source table, column, and map
    * @param visibilityMaps - Available visibility maps for group-to-boolean lookups
    * @param defaultVisibility - Fallback visibility when the map is not found or a group is unmapped
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of encoded visibility values
    */
-  static async loadGroupByVisibilityData(
+  static async loadVisibilityDataFromTableGroups(
     ids: number[],
     config: Extract<VisibilityConfig, GroupByConfig<true>>,
     visibilityMaps: DefaultMap<boolean>[],
     defaultVisibility: boolean,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
@@ -176,10 +178,10 @@ export class VisibilityDataUtils extends DataUtilsBase {
       align,
     });
     const groupVisibilities = new Map(Object.entries(visibilityMap.values));
-    await VisibilityDataUtils.fillGroupByConfigData(
+    await VisibilityDataUtils.fillDataFromTableGroups(
       data,
       ids,
-      config,
+      config.groupBy.column,
       visibilityMap.default ?? defaultVisibility,
       loadTable,
       (group) => groupVisibilities.get(group),

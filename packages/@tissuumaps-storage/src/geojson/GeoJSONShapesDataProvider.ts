@@ -32,6 +32,9 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       nameProperty: {
         type: "string",
       },
+      table: {
+        type: "string",
+      },
     },
     required: ["url"], // TODO ... or path
   };
@@ -54,6 +57,11 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
         type: "Control",
         scope: "#/properties/nameProperty",
         label: "Name Property",
+      },
+      {
+        type: "Control",
+        scope: "#/properties/table",
+        label: "Table",
       },
     ],
   };

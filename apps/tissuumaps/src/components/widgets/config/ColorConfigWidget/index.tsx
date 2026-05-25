@@ -133,48 +133,32 @@ function FromColorConfigWidget({
   className,
 }: FromColorConfigWidgetProps) {
   const {
-    currentFromTable: table,
+    tableId,
     currentFromColumn: column,
     currentFromRangeMin: rangeMin,
     currentFromRangeMax: rangeMax,
     currentFromPalette: palette,
-    setCurrentFromTable: setTable,
     setCurrentFromColumn: setColumn,
     setCurrentFromRangeMin: setRangeMin,
     setCurrentFromRangeMax: setRangeMax,
     setCurrentFromPalette: setPalette,
   } = adapter;
 
-  const tables = useTissUUmaps((state) => state.tables);
-
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(table);
+    useTableColumnSelector(tableId);
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 gap-x-2">
-        <Field>
-          <FieldLabel>Source table</FieldLabel>
-          <SimpleSelect
-            items={tables}
-            itemLabel={(table) => table.name}
-            itemValue={(table) => table.id}
-            value={table}
-            onValueChange={setTable}
-            nullable
-          />
-        </Field>
-        <Field disabled={table === null}>
-          <FieldLabel>Source column</FieldLabel>
-          <SimpleAsyncCombobox
-            suggestQueries={suggestTableColumnQueries}
-            getItem={resolveTableColumnQuery}
-            itemQuery={(column) => column}
-            selectedItem={column}
-            onSelectedItemChange={setColumn}
-          />
-        </Field>
-      </div>
+      <Field disabled={tableId === null}>
+        <FieldLabel>Table column</FieldLabel>
+        <SimpleAsyncCombobox
+          suggestQueries={suggestTableColumnQueries}
+          getItem={resolveTableColumnQuery}
+          itemQuery={(column) => column}
+          selectedItem={column}
+          onSelectedItemChange={setColumn}
+        />
+      </Field>
       <Field>
         <FieldLabel>Color palette</FieldLabel>
         <SimpleSelect
@@ -238,47 +222,32 @@ function GroupByColorConfigWidget({
   className,
 }: GroupByColorConfigWidgetProps) {
   const {
-    currentGroupByTable: table,
+    tableId,
     currentGroupByColumn: column,
     currentGroupByPalette: palette,
     currentGroupByMap: map,
-    setCurrentGroupByTable: setTable,
     setCurrentGroupByColumn: setColumn,
     setCurrentGroupByPalette: setPalette,
     setCurrentGroupByMap: setMap,
   } = adapter;
 
-  const tables = useTissUUmaps((state) => state.tables);
   const colorMaps = useTissUUmaps((state) => state.colorMaps);
 
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(table);
+    useTableColumnSelector(tableId);
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 gap-x-2">
-        <Field>
-          <FieldLabel>Source table</FieldLabel>
-          <SimpleSelect
-            items={tables}
-            itemLabel={(table) => table.name}
-            itemValue={(table) => table.id}
-            value={table}
-            onValueChange={setTable}
-            nullable
-          />
-        </Field>
-        <Field disabled={table === null}>
-          <FieldLabel>Source column</FieldLabel>
-          <SimpleAsyncCombobox
-            suggestQueries={suggestTableColumnQueries}
-            getItem={resolveTableColumnQuery}
-            itemQuery={(column) => column}
-            selectedItem={column}
-            onSelectedItemChange={setColumn}
-          />
-        </Field>
-      </div>
+      <Field disabled={tableId === null}>
+        <FieldLabel>Table column</FieldLabel>
+        <SimpleAsyncCombobox
+          suggestQueries={suggestTableColumnQueries}
+          getItem={resolveTableColumnQuery}
+          itemQuery={(column) => column}
+          selectedItem={column}
+          onSelectedItemChange={setColumn}
+        />
+      </Field>
       <Field disabled={map !== null}>
         <FieldLabel>Color palette</FieldLabel>
         <SimpleSelect

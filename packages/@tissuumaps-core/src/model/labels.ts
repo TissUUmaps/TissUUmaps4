@@ -1,9 +1,9 @@
 import {
-  type DataSource,
-  type RawDataSource,
+  type ItemsDataSource,
+  type RawItemsDataSource,
   type RawSingleLayerDataObject,
   type SingleLayerDataObject,
-  createDataSource,
+  createItemsDataSource,
   createSingleLayerDataObject,
 } from "./base";
 import {
@@ -89,13 +89,13 @@ export const labelsDataSourceDefaults = {} as const satisfies Partial<
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawLabelsDataSource<
   TType extends string = string,
-> extends RawDataSource<TType> {}
+> extends RawItemsDataSource<TType> {}
 
 /**
  * A {@link RawLabelsDataSource} with {@link labelsDataSourceDefaults} applied
  */
 export type LabelsDataSource<TType extends string = string> =
-  DataSource<TType> &
+  ItemsDataSource<TType> &
     Required<
       Pick<RawLabelsDataSource<TType>, keyof typeof labelsDataSourceDefaults>
     > &
@@ -111,7 +111,7 @@ export function createLabelsDataSource<TType extends string>(
   rawLabelsDataSource: RawLabelsDataSource<TType>,
 ): LabelsDataSource<TType> {
   return {
-    ...createDataSource(rawLabelsDataSource),
+    ...createItemsDataSource(rawLabelsDataSource),
     ...structuredClone(labelsDataSourceDefaults),
     ...structuredClone(rawLabelsDataSource),
   };

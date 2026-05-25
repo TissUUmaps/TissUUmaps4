@@ -25,7 +25,7 @@ export class SizeDataUtils extends DataUtilsBase {
    * @param sizeMaps - Available size maps for groupBy lookups
    * @param defaultSize - Fallback size when no valid config or value is found
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options - Optional abort signal, buffer alignment, and size scaling factor
+   * @param options - Optional abort signal, buffer alignment, table ID, and size scaling factor
    * @returns A `Float32Array` of encoded size values, one per ID
    */
   static async loadSizeData(
@@ -37,33 +37,46 @@ export class SizeDataUtils extends DataUtilsBase {
       tableId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options?: { signal?: AbortSignal; align?: number; sizeFactor?: number },
+    options?: {
+      signal?: AbortSignal;
+      align?: number;
+      table?: string;
+      sizeFactor?: number;
+    },
   ): Promise<Float32Array> {
-    const { signal, align = 1, sizeFactor = 1 } = options ?? {};
+    const { signal, align = 1, table, sizeFactor = 1 } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return SizeDataUtils.loadConstantSizeData(ids, config, {
+      return SizeDataUtils.loadUniformSizeData(ids, config, {
         align,
         sizeFactor,
       });
     }
-    if (activeConfigSource === "from" && isFromConfig(config)) {
-      return await SizeDataUtils.loadFromSizeData(
+    if (
+      activeConfigSource === "from" &&
+      isFromConfig(config) &&
+      table !== undefined
+    ) {
+      return await SizeDataUtils.loadSizeDataFromTableValues(
         ids,
         config,
         defaultSize,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align, sizeFactor },
       );
     }
-    if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
-      return await SizeDataUtils.loadGroupBySizeData(
+    if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(config) &&
+      table !== undefined
+    ) {
+      return await SizeDataUtils.loadSizeDataFromTableGroups(
         ids,
         config,
         sizeMaps,
         defaultSize,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align, sizeFactor },
       );
     }
@@ -82,7 +95,7 @@ export class SizeDataUtils extends DataUtilsBase {
    * @param options - Optional buffer alignment and size scaling factor
    * @returns A `Float32Array` filled with the encoded constant size
    */
-  static loadConstantSizeData(
+  static loadUniformSizeData(
     ids: number[],
     config: Extract<SizeConfig, ConstantConfig<number>>,
     options?: { align?: number; sizeFactor?: number },
@@ -101,27 +114,24 @@ export class SizeDataUtils extends DataUtilsBase {
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source table and column
    * @param defaultSize - Fallback size when a value is missing or invalid
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal, buffer alignment, and size scaling factor
    * @returns A `Float32Array` of encoded size values
    */
-  static async loadFromSizeData(
+  static async loadSizeDataFromTableValues(
     ids: number[],
     config: Extract<SizeConfig, FromConfig>,
     defaultSize: number,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number; sizeFactor?: number },
   ): Promise<Float32Array> {
     const { signal, align = 1, sizeFactor = 1 } = options ?? {};
     signal?.throwIfAborted();
     const data = SizeDataUtils._createSizeDataBuffer(ids.length, { align });
-    await SizeDataUtils.fillFromConfigData(
+    await SizeDataUtils.fillDataFromTableValues(
       data,
       ids,
-      config,
+      config.from.column,
       defaultSize,
       loadTable,
       (value) => SizeDataUtils.parseSizeValue(value),
@@ -140,19 +150,16 @@ export class SizeDataUtils extends DataUtilsBase {
    * @param config - GroupBy configuration specifying the source table, column, and map
    * @param sizeMaps - Available size maps for group-to-size lookups
    * @param defaultSize - Fallback size when the map is not found or a group is unmapped
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal, buffer alignment, and size scaling factor
    * @returns A `Float32Array` of encoded size values
    */
-  static async loadGroupBySizeData(
+  static async loadSizeDataFromTableGroups(
     ids: number[],
     config: Extract<SizeConfig, GroupByConfig<true>>,
     sizeMaps: DefaultMap<number>[],
     defaultSize: number,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number; sizeFactor?: number },
   ): Promise<Float32Array> {
     const { signal, align = 1, sizeFactor = 1 } = options ?? {};
@@ -171,10 +178,10 @@ export class SizeDataUtils extends DataUtilsBase {
     }
     const data = SizeDataUtils._createSizeDataBuffer(ids.length, { align });
     const groupSizes = new Map(Object.entries(sizeMap.values));
-    await SizeDataUtils.fillGroupByConfigData(
+    await SizeDataUtils.fillDataFromTableGroups(
       data,
       ids,
-      config,
+      config.groupBy.column,
       sizeMap.default ?? defaultSize,
       loadTable,
       (group) => groupSizes.get(group),

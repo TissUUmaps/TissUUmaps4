@@ -13,7 +13,7 @@ export function VisibilityConfigSourceToggleGroup({
   adapter,
   ...props
 }: VisibilityConfigSourceToggleGroupProps) {
-  const { activeSource, currentSource, setCurrentSource } = adapter;
+  const { tableId, activeSource, currentSource, setCurrentSource } = adapter;
 
   return (
     <ToggleGroup
@@ -34,12 +34,14 @@ export function VisibilityConfigSourceToggleGroup({
       <ToggleGroupItem
         value={"from" satisfies typeof currentSource}
         className={activeSource === "from" ? "font-medium" : "font-normal"}
+        disabled={tableId === null}
       >
         from
       </ToggleGroupItem>
       <ToggleGroupItem
         value={"groupBy" satisfies typeof currentSource}
         className={activeSource === "groupBy" ? "font-medium" : "font-normal"}
+        disabled={tableId === null}
       >
         group by
       </ToggleGroupItem>

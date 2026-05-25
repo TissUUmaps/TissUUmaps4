@@ -17,6 +17,7 @@ export function useOpacityConfigWidget(
   opacityConfig: OpacityConfig,
   onOpacityConfigChange: (newOpacityConfig: OpacityConfig) => void,
   defaultOpacity: number,
+  tableId: string | null,
 ): OpacityConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(opacityConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<OpacityConfigSource>(
@@ -29,16 +30,10 @@ export function useOpacityConfigWidget(
       : defaultOpacity,
   );
 
-  const [currentFromTable, setCurrentFromTable] = useState<string | null>(
-    isFromConfig(opacityConfig) ? opacityConfig.from.table : null,
-  );
   const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
     isFromConfig(opacityConfig) ? opacityConfig.from.column : null,
   );
 
-  const [currentGroupByTable, setCurrentGroupByTable] = useState<string | null>(
-    isGroupByConfig(opacityConfig) ? opacityConfig.groupBy.table : null,
-  );
   const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
     string | null
   >(isGroupByConfig(opacityConfig) ? opacityConfig.groupBy.column : null);
@@ -67,32 +62,27 @@ export function useOpacityConfigWidget(
     } else if (
       // from is complete...
       currentSource === "from" &&
-      currentFromTable !== null &&
       currentFromColumn !== null &&
       // ...and different from active config
       (activeSource !== "from" ||
         !isFromConfig(opacityConfig) ||
-        opacityConfig.from.table !== currentFromTable ||
         opacityConfig.from.column !== currentFromColumn)
     ) {
       onOpacityConfigChange({
         ...opacityConfig,
         source: "from",
         from: {
-          table: currentFromTable,
           column: currentFromColumn,
         },
       });
     } else if (
       // groupBy is complete...
       currentSource === "groupBy" &&
-      currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
       currentGroupByMap !== null &&
       // ...and different from active config
       (activeSource !== "groupBy" ||
         !isGroupByConfig(opacityConfig) ||
-        opacityConfig.groupBy.table !== currentGroupByTable ||
         opacityConfig.groupBy.column !== currentGroupByColumn ||
         opacityConfig.groupBy.map !== currentGroupByMap)
     ) {
@@ -100,7 +90,6 @@ export function useOpacityConfigWidget(
         ...opacityConfig,
         source: "groupBy",
         groupBy: {
-          table: currentGroupByTable,
           column: currentGroupByColumn,
           map: currentGroupByMap,
         },
@@ -111,9 +100,7 @@ export function useOpacityConfigWidget(
     activeSource,
     currentSource,
     currentConstantValue,
-    currentFromTable,
     currentFromColumn,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByMap,
     onOpacityConfigChange,
@@ -122,19 +109,16 @@ export function useOpacityConfigWidget(
   return {
     opacityConfig,
     defaultOpacity,
+    tableId,
     activeSource,
     currentSource,
     currentConstantValue,
-    currentFromTable,
     currentFromColumn,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByMap,
     setCurrentSource,
     setCurrentConstantValue,
-    setCurrentFromTable,
     setCurrentFromColumn,
-    setCurrentGroupByTable,
     setCurrentGroupByColumn,
     setCurrentGroupByMap,
   };
