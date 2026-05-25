@@ -11,7 +11,6 @@ export class DataUtilsBase {
    * @param data - Output typed array to fill
    * @param ids - Ordered list of item IDs
    * @param column - Name of the table column to load values from
-   * @param config - A `FromConfig` specifying the source table and column
    * @param defaultValue - Value used when the ID is missing or parsing fails
    * @param loadTable - Async function that loads the {@link TableData}
    * @param parseTableValue - Converts a raw cell value to `TValue`, or `undefined` on failure
