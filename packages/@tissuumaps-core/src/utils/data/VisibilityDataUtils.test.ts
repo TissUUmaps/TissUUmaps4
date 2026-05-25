@@ -148,7 +148,7 @@ describe("VisibilityDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "vm1" },
+        groupBy: { column: "col1", map: "vm1" },
       };
 
       const data = await VisibilityDataUtils.loadVisibilityDataFromTableGroups(
