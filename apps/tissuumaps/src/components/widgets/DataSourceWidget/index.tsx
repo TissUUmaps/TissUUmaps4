@@ -1,6 +1,6 @@
 import { JsonForms } from "@jsonforms/react";
 import { EditIcon, SaveIcon } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   type Data,
@@ -9,6 +9,7 @@ import {
 } from "@tissuumaps/core";
 
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,12 @@ export function DataSourceWidget<TDataSource extends DataSource>({
     null,
   );
   const currentDataSource = dataSourceDraft ?? dataSource;
+  const isEditing = dataSourceDraft !== null;
+
+  const providerEntries = useMemo(
+    () => Array.from(dataProviders.entries()),
+    [dataProviders],
+  );
 
   const dataProvider = dataProviders.get(currentDataSource.type);
   if (dataProvider === undefined) {
@@ -44,17 +51,26 @@ export function DataSourceWidget<TDataSource extends DataSource>({
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="flex flex-row items-center font-medium text-foreground">
-        Source: {dataProvider.name}
-        {dataSourceDraft === null ? (
-          <Button
-            variant="ghost"
-            className="ml-auto"
-            onClick={() => setDataSourceDraft(structuredClone(dataSource))}
-          >
-            <EditIcon className=" size-4" />
-          </Button>
+      <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
+        {isEditing ? (
+          <>
+            Source:
+            <SimpleSelect
+              items={providerEntries}
+              itemLabel={([, provider]) => provider.name}
+              itemValue={([type]) => type}
+              value={currentDataSource.type}
+              onValueChange={(value) => {
+                if (value !== null) {
+                  setDataSourceDraft({ type: value } as TDataSource);
+                }
+              }}
+            />
+          </>
         ) : (
+          <>Source: {dataProvider.name}</>
+        )}
+        {isEditing ? (
           <Button
             variant="ghost"
             className="ml-auto"
@@ -65,12 +81,20 @@ export function DataSourceWidget<TDataSource extends DataSource>({
           >
             <SaveIcon className="size-4" />
           </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            className="ml-auto"
+            onClick={() => setDataSourceDraft(structuredClone(dataSource))}
+          >
+            <EditIcon className=" size-4" />
+          </Button>
         )}
       </FieldsetLegend>
       <JsonForms
         data={currentDataSource}
         onChange={({ data }) => {
-          if (dataSourceDraft !== null) {
+          if (isEditing) {
             setDataSourceDraft(data as TDataSource);
           }
         }}
@@ -78,7 +102,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
         uischema={dataProvider.uischema}
         renderers={renderers}
         cells={cells}
-        readonly={dataSourceDraft === null}
+        readonly={!isEditing}
       />
     </Fieldset>
   );
