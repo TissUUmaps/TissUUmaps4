@@ -150,7 +150,7 @@ export class OpacityDataUtils extends DataUtilsBase {
    * to an opacity value using an opacity map.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - GroupBy configuration specifying the source table, column, and map
+   * @param config - GroupBy configuration specifying the source column and map
    * @param opacityMaps - Available opacity maps for group-to-opacity lookups
    * @param defaultOpacity - Fallback opacity when the map is not found or a group is unmapped
    * @param loadTable - Async function that loads the {@link TableData}
