@@ -126,7 +126,7 @@ describe("MarkerDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "mm1" },
+        groupBy: { column: "col1", map: "mm1" },
       };
 
       const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
