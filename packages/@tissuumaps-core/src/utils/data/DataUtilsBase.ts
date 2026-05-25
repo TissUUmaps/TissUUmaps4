@@ -48,7 +48,7 @@ export class DataUtilsBase {
         const parsedValue = parseTableValue(tableValue, tableValueRange);
         data[i] = encodeValue(parsedValue ?? defaultValue);
       } else {
-        console.warn(`ID ${id} is missing in column ${column}`);
+        console.warn(`ID ${id} is missing from loaded table data (column ${column})`);
         data[i] = encodeValue(defaultValue);
       }
     });
