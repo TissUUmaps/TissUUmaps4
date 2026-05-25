@@ -189,7 +189,7 @@ export class ColorDataUtils extends DataUtilsBase {
    * to a color using either a color map or a color palette.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - GroupBy configuration specifying the source table, column, and map or palette
+   * @param config - GroupBy configuration specifying the source column and map/palette
    * @param colorMaps - Available color maps for group-to-color lookups
    * @param colorPalettes - Available color palettes for hash-based group coloring
    * @param defaultColor - Fallback color when the map/palette is not found or a group is unmapped
