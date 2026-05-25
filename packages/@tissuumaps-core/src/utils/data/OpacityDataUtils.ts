@@ -113,7 +113,7 @@ export class OpacityDataUtils extends DataUtilsBase {
    * Loads opacity data by reading numeric values from a table column.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - From configuration specifying the source table and column
+   * @param config - From configuration specifying the source column
    * @param defaultOpacity - Fallback opacity when a value is missing or invalid
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal, buffer alignment, and opacity scaling factor
