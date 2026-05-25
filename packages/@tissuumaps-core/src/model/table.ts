@@ -79,11 +79,14 @@ export function createTableDataSource<TType extends string>(
   rawTableDataSource: RawTableDataSource<TType>,
 ): TableDataSource<TType> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { table, ...itemsDataSourceWithoutTable } =
+  const { table: itemsDataSourceTable, ...itemsDataSourceWithoutTable } =
     createItemsDataSource(rawTableDataSource);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { table: rawTableDataSourceTable, ...rawTableDataSourceWithoutTable } =
+    structuredClone(rawTableDataSource);
   return {
     ...itemsDataSourceWithoutTable,
     ...structuredClone(tableDataSourceDefaults),
-    ...structuredClone(rawTableDataSource),
+    ...rawTableDataSourceWithoutTable,
   };
 }
