@@ -527,13 +527,16 @@ export class WebGLPointsController extends WebGLControllerBase {
         }
 
         let pointLayers: Map<number, string> | undefined;
-        if (typeof currentPoints.layer !== "string") {
-          const pointLayersCacheKey = `${currentPoints.layer.table}:${currentPoints.layer.column}`;
+        if (
+          typeof currentPoints.layer !== "string" &&
+          currentPoints.dataSource.table !== undefined
+        ) {
+          const pointLayersCacheKey = `${currentPoints.dataSource.table}:${currentPoints.layer.column}`;
           if (pointLayersCache.has(pointLayersCacheKey)) {
             pointLayers = pointLayersCache.get(pointLayersCacheKey);
           } else {
             try {
-              const tableData = await getTable(currentPoints.layer.table, {
+              const tableData = await getTable(currentPoints.dataSource.table, {
                 signal,
               });
               signal?.throwIfAborted();
@@ -550,7 +553,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             } catch (error) {
               if (!signal?.aborted) {
                 console.error(
-                  `Failed to load layers from table ${currentPoints.layer.table}`,
+                  `Failed to load layers from table ${currentPoints.dataSource.table}`,
                   error,
                 );
               }
@@ -683,7 +686,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           markerMaps,
           defaultPointMarker,
           loadTable,
-          { signal },
+          { signal, table: ref.points.dataSource.table },
         );
         signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
@@ -746,7 +749,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           sizeMaps,
           defaultPointSize,
           loadTable,
-          { signal, sizeFactor },
+          { signal, sizeFactor, table: ref.points.dataSource.table },
         );
         signal?.throwIfAborted();
         WebGLUtils.loadBuffer(
@@ -793,7 +796,7 @@ export class WebGLPointsController extends WebGLControllerBase {
             visibilityMaps,
             defaultPointVisibility,
             loadTable,
-            { signal },
+            { signal, table: ref.points.dataSource.table },
           );
           signal?.throwIfAborted();
           const opacityData = await OpacityDataUtils.loadOpacityData(
@@ -802,7 +805,11 @@ export class WebGLPointsController extends WebGLControllerBase {
             opacityMaps,
             defaultPointOpacity,
             loadTable,
-            { signal, opacityFactor: ref.layer.opacity * ref.points.opacity },
+            {
+              signal,
+              table: ref.points.dataSource.table,
+              opacityFactor: ref.layer.opacity * ref.points.opacity,
+            },
           );
           signal?.throwIfAborted();
           colorData = await ColorDataUtils.loadColorData(
@@ -811,7 +818,12 @@ export class WebGLPointsController extends WebGLControllerBase {
             colorMaps,
             defaultPointColor,
             loadTable,
-            { signal, visibilityData, opacityData },
+            {
+              signal,
+              table: ref.points.dataSource.table,
+              visibilityData,
+              opacityData,
+            },
           );
           signal?.throwIfAborted();
         }

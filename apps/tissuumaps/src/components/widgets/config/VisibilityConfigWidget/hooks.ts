@@ -17,6 +17,7 @@ export function useVisibilityConfigWidget(
   visibilityConfig: VisibilityConfig,
   onVisibilityConfigChange: (newVisibilityConfig: VisibilityConfig) => void,
   defaultVisibility: boolean,
+  tableId: string | null,
 ): VisibilityConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(visibilityConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<VisibilityConfigSource>(
@@ -29,16 +30,10 @@ export function useVisibilityConfigWidget(
       : defaultVisibility,
   );
 
-  const [currentFromTable, setCurrentFromTable] = useState<string | null>(
-    isFromConfig(visibilityConfig) ? visibilityConfig.from.table : null,
-  );
   const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
     isFromConfig(visibilityConfig) ? visibilityConfig.from.column : null,
   );
 
-  const [currentGroupByTable, setCurrentGroupByTable] = useState<string | null>(
-    isGroupByConfig(visibilityConfig) ? visibilityConfig.groupBy.table : null,
-  );
   const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
     string | null
   >(isGroupByConfig(visibilityConfig) ? visibilityConfig.groupBy.column : null);
@@ -68,32 +63,27 @@ export function useVisibilityConfigWidget(
     } else if (
       // from is complete...
       currentSource === "from" &&
-      currentFromTable !== null &&
       currentFromColumn !== null &&
       // ...and different from active config
       (activeSource !== "from" ||
         !isFromConfig(visibilityConfig) ||
-        visibilityConfig.from.table !== currentFromTable ||
         visibilityConfig.from.column !== currentFromColumn)
     ) {
       onVisibilityConfigChange({
         ...visibilityConfig,
         source: "from",
         from: {
-          table: currentFromTable,
           column: currentFromColumn,
         },
       });
     } else if (
       // groupBy is complete...
       currentSource === "groupBy" &&
-      currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
       currentGroupByMap !== null &&
       // ...and different from active config
       (activeSource !== "groupBy" ||
         !isGroupByConfig(visibilityConfig) ||
-        visibilityConfig.groupBy.table !== currentGroupByTable ||
         visibilityConfig.groupBy.column !== currentGroupByColumn ||
         visibilityConfig.groupBy.map !== currentGroupByMap)
     ) {
@@ -101,7 +91,6 @@ export function useVisibilityConfigWidget(
         ...visibilityConfig,
         source: "groupBy",
         groupBy: {
-          table: currentGroupByTable,
           column: currentGroupByColumn,
           map: currentGroupByMap,
         },
@@ -112,9 +101,7 @@ export function useVisibilityConfigWidget(
     activeSource,
     currentSource,
     currentConstantValue,
-    currentFromTable,
     currentFromColumn,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByMap,
     onVisibilityConfigChange,
@@ -123,19 +110,16 @@ export function useVisibilityConfigWidget(
   return {
     visibilityConfig,
     defaultVisibility,
+    tableId,
     activeSource,
     currentSource,
     currentConstantValue,
-    currentFromTable,
     currentFromColumn,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByMap,
     setCurrentSource,
     setCurrentConstantValue,
-    setCurrentFromTable,
     setCurrentFromColumn,
-    setCurrentGroupByTable,
     setCurrentGroupByColumn,
     setCurrentGroupByMap,
   };

@@ -1,6 +1,6 @@
 import { type TableDataSource } from "../model/table";
 import { type GenericArray, type ProgressCallback } from "../types";
-import { type DataProvider, type ItemsData } from "./base";
+import { type ItemsData, type ItemsDataProvider } from "./base";
 
 /**
  * Data provider for tabular data
@@ -11,7 +11,7 @@ import { type DataProvider, type ItemsData } from "./base";
 export interface TableDataProvider<
   TTableDataSource extends TableDataSource,
   TTableData extends TableData,
-> extends DataProvider<TTableDataSource, TTableData> {}
+> extends ItemsDataProvider<TTableDataSource, TTableData> {}
 
 /**
  * Loaded tabular data providing column-wise access

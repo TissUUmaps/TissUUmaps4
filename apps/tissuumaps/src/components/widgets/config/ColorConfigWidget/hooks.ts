@@ -20,6 +20,7 @@ export function useColorConfigWidget(
   colorConfig: ColorConfig,
   onColorConfigChange: (newColorConfig: ColorConfig) => void,
   defaultColor: Color,
+  tableId: string | null,
 ): ColorConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(colorConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<ColorConfigSource>(
@@ -30,9 +31,6 @@ export function useColorConfigWidget(
     isConstantConfig(colorConfig) ? colorConfig.constant.value : defaultColor,
   );
 
-  const [currentFromTable, setCurrentFromTable] = useState<string | null>(
-    isFromConfig(colorConfig) ? colorConfig.from.table : null,
-  );
   const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
     isFromConfig(colorConfig) ? colorConfig.from.column : null,
   );
@@ -50,9 +48,6 @@ export function useColorConfigWidget(
     isFromConfig(colorConfig) ? colorConfig.from.palette : null,
   );
 
-  const [currentGroupByTable, setCurrentGroupByTable] = useState<string | null>(
-    isGroupByConfig(colorConfig) ? colorConfig.groupBy.table : null,
-  );
   const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
     string | null
   >(isGroupByConfig(colorConfig) ? colorConfig.groupBy.column : null);
@@ -94,13 +89,11 @@ export function useColorConfigWidget(
     } else if (
       // from is complete...
       currentSource === "from" &&
-      currentFromTable !== null &&
       currentFromColumn !== null &&
       currentFromPalette !== null &&
       // ...and different from active config
       (activeSource !== "from" ||
         !isFromConfig(colorConfig) ||
-        colorConfig.from.table !== currentFromTable ||
         colorConfig.from.column !== currentFromColumn ||
         !deepEqual(colorConfig.from.range, currentFromRange ?? undefined) ||
         colorConfig.from.palette !== currentFromPalette)
@@ -109,7 +102,6 @@ export function useColorConfigWidget(
         ...colorConfig,
         source: "from",
         from: {
-          table: currentFromTable,
           column: currentFromColumn,
           range: currentFromRange !== null ? currentFromRange : undefined,
           palette: currentFromPalette,
@@ -118,13 +110,11 @@ export function useColorConfigWidget(
     } else if (
       // groupBy is complete...
       currentSource === "groupBy" &&
-      currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
       (currentGroupByPalette !== null || currentGroupByMap !== null) &&
       // ...and different from active config
       (activeSource !== "groupBy" ||
         !isGroupByConfig(colorConfig) ||
-        colorConfig.groupBy.table !== currentGroupByTable ||
         colorConfig.groupBy.column !== currentGroupByColumn ||
         colorConfig.groupBy.palette !== (currentGroupByPalette ?? undefined) ||
         colorConfig.groupBy.map !== (currentGroupByMap ?? undefined))
@@ -133,7 +123,6 @@ export function useColorConfigWidget(
         ...colorConfig,
         source: "groupBy",
         groupBy: {
-          table: currentGroupByTable,
           column: currentGroupByColumn,
           palette: currentGroupByPalette ?? undefined,
           map: currentGroupByMap ?? undefined,
@@ -161,12 +150,10 @@ export function useColorConfigWidget(
     activeSource,
     currentSource,
     currentConstantValue,
-    currentFromTable,
     currentFromColumn,
     currentFromRangeMin,
     currentFromRangeMax,
     currentFromPalette,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByPalette,
     currentGroupByMap,
@@ -177,27 +164,24 @@ export function useColorConfigWidget(
   return {
     colorConfig,
     defaultColor,
+    tableId,
     activeSource,
     currentSource,
     currentConstantValue,
-    currentFromTable,
     currentFromColumn,
     currentFromRangeMin,
     currentFromRangeMax,
     currentFromPalette,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByPalette,
     currentGroupByMap,
     currentRandomPalette,
     setCurrentSource,
     setCurrentConstantValue,
-    setCurrentFromTable,
     setCurrentFromColumn,
     setCurrentFromRangeMin,
     setCurrentFromRangeMax,
     setCurrentFromPalette,
-    setCurrentGroupByTable,
     setCurrentGroupByColumn,
     setCurrentGroupByPalette,
     setCurrentGroupByMap,

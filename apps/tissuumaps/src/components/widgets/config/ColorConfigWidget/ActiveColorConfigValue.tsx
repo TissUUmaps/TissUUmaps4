@@ -7,8 +7,6 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { useTissUUmaps } from "@/store";
-
 import { type ColorConfigWidgetAdapter } from "./adapter";
 
 export type ActiveColorConfigValueProps = {
@@ -20,9 +18,7 @@ export function ActiveColorConfigValue({
   adapter,
   className,
 }: ActiveColorConfigValueProps) {
-  const { activeSource, colorConfig, defaultColor } = adapter;
-
-  const tables = useTissUUmaps((state) => state.tables);
+  const { activeSource, colorConfig, defaultColor, tableId } = adapter;
 
   if (activeSource === "constant" && isConstantConfig(colorConfig)) {
     const { r, g, b } = colorConfig.constant.value;
@@ -33,25 +29,20 @@ export function ActiveColorConfigValue({
     );
   }
 
-  if (activeSource === "from" && isFromConfig(colorConfig)) {
-    const table = tables.find((t) => t.id === colorConfig.from.table);
-    const tableName = table !== undefined ? table.name : colorConfig.from.table;
-    return (
-      <div className={className}>
-        {tableName} ({colorConfig.from.column})
-      </div>
-    );
+  if (
+    activeSource === "from" &&
+    isFromConfig(colorConfig) &&
+    tableId !== null
+  ) {
+    return <div className={className}>{colorConfig.from.column}</div>;
   }
 
-  if (activeSource === "groupBy" && isGroupByConfig(colorConfig)) {
-    const table = tables.find((t) => t.id === colorConfig.groupBy.table);
-    const tableName =
-      table !== undefined ? table.name : colorConfig.groupBy.table;
-    return (
-      <div className={className}>
-        {tableName} ({colorConfig.groupBy.column})
-      </div>
-    );
+  if (
+    activeSource === "groupBy" &&
+    isGroupByConfig(colorConfig) &&
+    tableId !== null
+  ) {
+    return <div className={className}>{colorConfig.groupBy.column}</div>;
   }
 
   if (activeSource === "random" && isRandomConfig(colorConfig)) {

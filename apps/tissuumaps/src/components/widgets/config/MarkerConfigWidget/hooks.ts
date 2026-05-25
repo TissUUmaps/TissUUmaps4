@@ -18,6 +18,7 @@ export function useMarkerConfigWidget(
   markerConfig: MarkerConfig,
   onMarkerConfigChange: (newMarkerConfig: MarkerConfig) => void,
   defaultMarker: Marker,
+  tableId: string | null,
 ): MarkerConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(markerConfig) ?? "constant";
   const [currentSource, setCurrentSource] = useState<MarkerConfigSource>(
@@ -30,16 +31,10 @@ export function useMarkerConfigWidget(
       : defaultMarker,
   );
 
-  const [currentFromTable, setCurrentFromTable] = useState<string | null>(
-    isFromConfig(markerConfig) ? markerConfig.from.table : null,
-  );
   const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
     isFromConfig(markerConfig) ? markerConfig.from.column : null,
   );
 
-  const [currentGroupByTable, setCurrentGroupByTable] = useState<string | null>(
-    isGroupByConfig(markerConfig) ? markerConfig.groupBy.table : null,
-  );
   const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
     string | null
   >(isGroupByConfig(markerConfig) ? markerConfig.groupBy.column : null);
@@ -66,31 +61,26 @@ export function useMarkerConfigWidget(
     } else if (
       // from is complete...
       currentSource === "from" &&
-      currentFromTable !== null &&
       currentFromColumn !== null &&
       // ...and different from active config
       (activeSource !== "from" ||
         !isFromConfig(markerConfig) ||
-        markerConfig.from.table !== currentFromTable ||
         markerConfig.from.column !== currentFromColumn)
     ) {
       onMarkerConfigChange({
         ...markerConfig,
         source: "from",
         from: {
-          table: currentFromTable,
           column: currentFromColumn,
         },
       });
     } else if (
       // groupBy is complete...
       currentSource === "groupBy" &&
-      currentGroupByTable !== null &&
       currentGroupByColumn !== null &&
       // ...and different from active config
       (activeSource !== "groupBy" ||
         !isGroupByConfig(markerConfig) ||
-        markerConfig.groupBy.table !== currentGroupByTable ||
         markerConfig.groupBy.column !== currentGroupByColumn ||
         markerConfig.groupBy.map !== (currentGroupByMap ?? undefined))
     ) {
@@ -98,7 +88,6 @@ export function useMarkerConfigWidget(
         ...markerConfig,
         source: "groupBy",
         groupBy: {
-          table: currentGroupByTable,
           column: currentGroupByColumn,
           map: currentGroupByMap ?? undefined,
         },
@@ -109,9 +98,7 @@ export function useMarkerConfigWidget(
     activeSource,
     currentSource,
     currentConstantValue,
-    currentFromTable,
     currentFromColumn,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByMap,
     onMarkerConfigChange,
@@ -120,19 +107,16 @@ export function useMarkerConfigWidget(
   return {
     markerConfig,
     defaultMarker,
+    tableId,
     activeSource,
     currentSource,
     currentConstantValue,
-    currentFromTable,
     currentFromColumn,
-    currentGroupByTable,
     currentGroupByColumn,
     currentGroupByMap,
     setCurrentSource,
     setCurrentConstantValue,
-    setCurrentFromTable,
     setCurrentFromColumn,
-    setCurrentGroupByTable,
     setCurrentGroupByColumn,
     setCurrentGroupByMap,
   };

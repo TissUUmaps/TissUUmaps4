@@ -73,24 +73,28 @@ export function ShapesSettingsWidget({
     (newColorConfig) =>
       updateShapes(shapes.id, { shapeFillColor: newColorConfig }),
     defaultShapeFillColor,
+    shapes.dataSource.table ?? null,
   );
   const shapeFillVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
     shapes.shapeFillVisibility,
     (newVisibilityConfig) =>
       updateShapes(shapes.id, { shapeFillVisibility: newVisibilityConfig }),
     defaultShapeFillVisibility,
+    shapes.dataSource.table ?? null,
   );
   const shapeFillOpacityConfigWidgetAdapter = useOpacityConfigWidget(
     shapes.shapeFillOpacity,
     (newOpacityConfig) =>
       updateShapes(shapes.id, { shapeFillOpacity: newOpacityConfig }),
     defaultShapeFillOpacity,
+    shapes.dataSource.table ?? null,
   );
   const shapeStrokeColorConfigWidgetAdapter = useColorConfigWidget(
     shapes.shapeStrokeColor,
     (newColorConfig) =>
       updateShapes(shapes.id, { shapeStrokeColor: newColorConfig }),
     defaultShapeStrokeColor,
+    shapes.dataSource.table ?? null,
   );
   const shapeStrokeVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
     shapes.shapeStrokeVisibility,
@@ -99,12 +103,14 @@ export function ShapesSettingsWidget({
         shapeStrokeVisibility: newVisibilityConfig,
       }),
     defaultShapeStrokeVisibility,
+    shapes.dataSource.table ?? null,
   );
   const shapeStrokeOpacityConfigWidgetAdapter = useOpacityConfigWidget(
     shapes.shapeStrokeOpacity,
     (newOpacityConfig) =>
       updateShapes(shapes.id, { shapeStrokeOpacity: newOpacityConfig }),
     defaultShapeStrokeOpacity,
+    shapes.dataSource.table ?? null,
   );
 
   return (

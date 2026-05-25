@@ -14,6 +14,7 @@ function createMockTableData(ids: number[], values: unknown[]): TableData {
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
     loadValueRange: vi.fn().mockResolvedValue(undefined),
+    loadUniqueValues: vi.fn().mockResolvedValue(Array.from(new Set(values))),
     suggestColumnQueries: vi.fn(),
     resolveColumnQuery: vi.fn(),
   };
@@ -64,7 +65,7 @@ describe("MarkerDataUtils", () => {
         source: "constant" as const,
         constant: { value: Marker.Square },
       };
-      const data = MarkerDataUtils.loadConstantMarkerData([1, 2], config);
+      const data = MarkerDataUtils.loadUniformMarkerData([1, 2], config);
       expect(data[0]).toBe(Marker.Square);
       expect(data[1]).toBe(Marker.Square);
     });
@@ -77,10 +78,10 @@ describe("MarkerDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
-      const data = await MarkerDataUtils.loadFromMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableValues(
         ids,
         config,
         Marker.Cross,
@@ -97,10 +98,10 @@ describe("MarkerDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
-      const data = await MarkerDataUtils.loadFromMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableValues(
         ids,
         config,
         Marker.Diamond,
@@ -126,10 +127,10 @@ describe("MarkerDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "mm1" },
+        groupBy: { column: "col1", map: "mm1" },
       };
 
-      const data = await MarkerDataUtils.loadGroupByMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
         ids,
         config,
         [markerMap],
@@ -153,10 +154,10 @@ describe("MarkerDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "mm1" },
+        groupBy: { column: "col1", map: "mm1" },
       };
 
-      const data = await MarkerDataUtils.loadGroupByMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
         ids,
         config,
         [markerMap],
@@ -171,10 +172,10 @@ describe("MarkerDataUtils", () => {
       const ids = [1];
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "nonexistent" },
+        groupBy: { column: "col1", map: "nonexistent" },
       };
 
-      const data = await MarkerDataUtils.loadGroupByMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
         ids,
         config,
         [],
@@ -191,10 +192,10 @@ describe("MarkerDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: undefined },
+        groupBy: { column: "col1", map: undefined },
       };
 
-      const data = await MarkerDataUtils.loadGroupByMarkerData(
+      const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
         ids,
         config,
         [],
@@ -241,7 +242,7 @@ describe("MarkerDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
       const data = await MarkerDataUtils.loadMarkerData(
@@ -250,6 +251,7 @@ describe("MarkerDataUtils", () => {
         [],
         Marker.Cross,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(Marker.Diamond);
@@ -266,7 +268,7 @@ describe("MarkerDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "mm1" },
+        groupBy: { column: "col1", map: "mm1" },
       };
 
       const data = await MarkerDataUtils.loadMarkerData(
@@ -275,6 +277,7 @@ describe("MarkerDataUtils", () => {
         [markerMap],
         Marker.Cross,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data[0]).toBe(Marker.Arrow);

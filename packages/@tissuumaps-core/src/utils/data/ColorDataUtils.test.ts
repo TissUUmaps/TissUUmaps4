@@ -19,6 +19,7 @@ function createMockTableData(
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
     loadValueRange: vi.fn().mockResolvedValue(valueRange),
+    loadUniqueValues: vi.fn().mockResolvedValue(Array.from(new Set(values))),
     suggestColumnQueries: vi.fn(),
     resolveColumnQuery: vi.fn(),
   };
@@ -166,7 +167,7 @@ describe("ColorDataUtils", () => {
         source: "constant" as const,
         constant: { value: green },
       };
-      const data = ColorDataUtils.loadConstantColorData([1, 2, 3], config);
+      const data = ColorDataUtils.loadUniformColorData([1, 2, 3], config);
       const encoded = ColorDataUtils.encodeColor(green);
       expect(data.length).toBe(3);
       for (let i = 0; i < 3; i++) {
@@ -191,7 +192,7 @@ describe("ColorDataUtils", () => {
         },
       };
 
-      const data = await ColorDataUtils.loadFromColorData(
+      const data = await ColorDataUtils.loadColorDataFromTableValues(
         ids,
         config,
         black,
@@ -219,7 +220,7 @@ describe("ColorDataUtils", () => {
         },
       };
 
-      const data = await ColorDataUtils.loadFromColorData(
+      const data = await ColorDataUtils.loadColorDataFromTableValues(
         ids,
         config,
         red,
@@ -245,10 +246,10 @@ describe("ColorDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "cm1" },
+        groupBy: { column: "col1", map: "cm1" },
       };
 
-      const data = await ColorDataUtils.loadGroupByColorData(
+      const data = await ColorDataUtils.loadColorDataFromTableGroups(
         ids,
         config,
         [colorMap],
@@ -272,7 +273,7 @@ describe("ColorDataUtils", () => {
         },
       };
 
-      const data = await ColorDataUtils.loadGroupByColorData(
+      const data = await ColorDataUtils.loadColorDataFromTableGroups(
         ids,
         config,
         [],
@@ -298,7 +299,7 @@ describe("ColorDataUtils", () => {
         },
       };
 
-      const data = await ColorDataUtils.loadGroupByColorData(
+      const data = await ColorDataUtils.loadColorDataFromTableGroups(
         ids,
         config,
         [],
@@ -324,7 +325,7 @@ describe("ColorDataUtils", () => {
         },
       };
 
-      const data = await ColorDataUtils.loadGroupByColorData(
+      const data = await ColorDataUtils.loadColorDataFromTableGroups(
         ids,
         config,
         [],
@@ -348,7 +349,7 @@ describe("ColorDataUtils", () => {
         },
       };
 
-      const data = await ColorDataUtils.loadGroupByColorData(
+      const data = await ColorDataUtils.loadColorDataFromTableGroups(
         ids,
         config,
         [],
@@ -447,7 +448,7 @@ describe("ColorDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1", palette: palette.id },
+        from: { column: "col1", palette: palette.id },
       };
 
       const data = await ColorDataUtils.loadColorData(
@@ -456,6 +457,7 @@ describe("ColorDataUtils", () => {
         [],
         black,
         loadTable,
+        { table: "t1" },
       );
 
       expect(data.length).toBe(1);
@@ -494,7 +496,7 @@ describe("ColorDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "cm1" },
+        groupBy: { column: "col1", map: "cm1" },
       };
 
       const data = await ColorDataUtils.loadColorData(
@@ -503,6 +505,7 @@ describe("ColorDataUtils", () => {
         [colorMap],
         black,
         loadTable,
+        { table: "t1" },
       );
 
       const encoded = ColorDataUtils.encodeColor(red);

@@ -25,7 +25,7 @@ export class OpacityDataUtils extends DataUtilsBase {
    * @param opacityMaps - Available opacity maps for groupBy lookups
    * @param defaultOpacity - Fallback opacity value (0–1) when no valid config or value is found
    * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options - Optional abort signal, buffer alignment, and opacity scaling factor
+   * @param options - Optional abort signal, buffer alignment, table ID, and opacity scaling factor
    * @returns A `Uint8Array` of encoded opacity values (0–255), one per ID
    */
   static async loadOpacityData(
@@ -37,33 +37,46 @@ export class OpacityDataUtils extends DataUtilsBase {
       tableId: string,
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options?: { signal?: AbortSignal; align?: number; opacityFactor?: number },
+    options?: {
+      signal?: AbortSignal;
+      align?: number;
+      table?: string;
+      opacityFactor?: number;
+    },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, opacityFactor = 1 } = options ?? {};
+    const { signal, align = 1, table, opacityFactor = 1 } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return OpacityDataUtils.loadConstantOpacityData(ids, config, {
+      return OpacityDataUtils.loadUniformOpacityData(ids, config, {
         align,
         opacityFactor,
       });
     }
-    if (activeConfigSource === "from" && isFromConfig(config)) {
-      return OpacityDataUtils.loadFromOpacityData(
+    if (
+      activeConfigSource === "from" &&
+      isFromConfig(config) &&
+      table !== undefined
+    ) {
+      return OpacityDataUtils.loadOpacityDataFromTableValues(
         ids,
         config,
         defaultOpacity,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align, opacityFactor },
       );
     }
-    if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
-      return OpacityDataUtils.loadGroupByOpacityData(
+    if (
+      activeConfigSource === "groupBy" &&
+      isGroupByConfig(config) &&
+      table !== undefined
+    ) {
+      return OpacityDataUtils.loadOpacityDataFromTableGroups(
         ids,
         config,
         opacityMaps,
         defaultOpacity,
-        loadTable,
+        (options) => loadTable(table, options),
         { signal, align, opacityFactor },
       );
     }
@@ -83,7 +96,7 @@ export class OpacityDataUtils extends DataUtilsBase {
    * @param options - Optional buffer alignment and opacity scaling factor
    * @returns A `Uint8Array` filled with the encoded constant opacity
    */
-  static loadConstantOpacityData(
+  static loadUniformOpacityData(
     ids: number[],
     config: Extract<OpacityConfig, ConstantConfig<number>>,
     options?: { align?: number; opacityFactor?: number },
@@ -100,20 +113,17 @@ export class OpacityDataUtils extends DataUtilsBase {
    * Loads opacity data by reading numeric values from a table column.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - From configuration specifying the source table and column
+   * @param config - From configuration specifying the source column
    * @param defaultOpacity - Fallback opacity when a value is missing or invalid
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal, buffer alignment, and opacity scaling factor
    * @returns A `Uint8Array` of encoded opacity values
    */
-  static async loadFromOpacityData(
+  static async loadOpacityDataFromTableValues(
     ids: number[],
     config: Extract<OpacityConfig, FromConfig>,
     defaultOpacity: number,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number; opacityFactor?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1, opacityFactor = 1 } = options ?? {};
@@ -121,10 +131,10 @@ export class OpacityDataUtils extends DataUtilsBase {
     const data = OpacityDataUtils._createOpacityDataBuffer(ids.length, {
       align,
     });
-    await OpacityDataUtils.fillFromConfigData(
+    await OpacityDataUtils.fillDataFromTableValues(
       data,
       ids,
-      config,
+      config.from.column,
       defaultOpacity,
       loadTable,
       (value) => OpacityDataUtils.parseOpacityValue(value),
@@ -140,22 +150,19 @@ export class OpacityDataUtils extends DataUtilsBase {
    * to an opacity value using an opacity map.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - GroupBy configuration specifying the source table, column, and map
+   * @param config - GroupBy configuration specifying the source column and map
    * @param opacityMaps - Available opacity maps for group-to-opacity lookups
    * @param defaultOpacity - Fallback opacity when the map is not found or a group is unmapped
-   * @param loadTable - Async function that loads a {@link TableData} by ID
+   * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal, buffer alignment, and opacity scaling factor
    * @returns A `Uint8Array` of encoded opacity values
    */
-  static async loadGroupByOpacityData(
+  static async loadOpacityDataFromTableGroups(
     ids: number[],
     config: Extract<OpacityConfig, GroupByConfig<true>>,
     opacityMaps: DefaultMap<number>[],
     defaultOpacity: number,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number; opacityFactor?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1, opacityFactor = 1 } = options ?? {};
@@ -177,10 +184,10 @@ export class OpacityDataUtils extends DataUtilsBase {
       align,
     });
     const groupOpacities = new Map(Object.entries(opacityMap.values));
-    await OpacityDataUtils.fillGroupByConfigData(
+    await OpacityDataUtils.fillDataFromTableGroups(
       data,
       ids,
-      config,
+      config.groupBy.column,
       opacityMap.default ?? defaultOpacity,
       loadTable,
       (group) => groupOpacities.get(group),

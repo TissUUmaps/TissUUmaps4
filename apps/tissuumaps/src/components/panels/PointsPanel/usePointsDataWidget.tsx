@@ -17,58 +17,61 @@ export function usePointsDataWidget(points: Points) {
   >(null);
 
   const [activeTable, activeGroupByColumn] = useMemo(() => {
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointMarker &&
-      getActiveConfigSource(points.pointMarker) === "groupBy" &&
-      isGroupByConfig(points.pointMarker)
-    ) {
-      return [
-        points.pointMarker.groupBy.table,
-        points.pointMarker.groupBy.column,
-      ] as const;
-    }
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointSize &&
-      getActiveConfigSource(points.pointSize) === "groupBy" &&
-      isGroupByConfig(points.pointSize)
-    ) {
-      return [
-        points.pointSize.groupBy.table,
-        points.pointSize.groupBy.column,
-      ] as const;
-    }
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointColor &&
-      getActiveConfigSource(points.pointColor) === "groupBy" &&
-      isGroupByConfig(points.pointColor)
-    ) {
-      return [
-        points.pointColor.groupBy.table,
-        points.pointColor.groupBy.column,
-      ] as const;
-    }
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointVisibility &&
-      getActiveConfigSource(points.pointVisibility) === "groupBy" &&
-      isGroupByConfig(points.pointVisibility)
-    ) {
-      return [
-        points.pointVisibility.groupBy.table,
-        points.pointVisibility.groupBy.column,
-      ] as const;
-    }
-    if (
-      activeSettingsCategory === PointsSettingsCategory.pointOpacity &&
-      getActiveConfigSource(points.pointOpacity) === "groupBy" &&
-      isGroupByConfig(points.pointOpacity)
-    ) {
-      return [
-        points.pointOpacity.groupBy.table,
-        points.pointOpacity.groupBy.column,
-      ] as const;
+    if (points.dataSource.table !== undefined) {
+      if (
+        activeSettingsCategory === PointsSettingsCategory.pointMarker &&
+        getActiveConfigSource(points.pointMarker) === "groupBy" &&
+        isGroupByConfig(points.pointMarker)
+      ) {
+        return [
+          points.dataSource.table,
+          points.pointMarker.groupBy.column,
+        ] as const;
+      }
+      if (
+        activeSettingsCategory === PointsSettingsCategory.pointSize &&
+        getActiveConfigSource(points.pointSize) === "groupBy" &&
+        isGroupByConfig(points.pointSize)
+      ) {
+        return [
+          points.dataSource.table,
+          points.pointSize.groupBy.column,
+        ] as const;
+      }
+      if (
+        activeSettingsCategory === PointsSettingsCategory.pointColor &&
+        getActiveConfigSource(points.pointColor) === "groupBy" &&
+        isGroupByConfig(points.pointColor)
+      ) {
+        return [
+          points.dataSource.table,
+          points.pointColor.groupBy.column,
+        ] as const;
+      }
+      if (
+        activeSettingsCategory === PointsSettingsCategory.pointVisibility &&
+        getActiveConfigSource(points.pointVisibility) === "groupBy" &&
+        isGroupByConfig(points.pointVisibility)
+      ) {
+        return [
+          points.dataSource.table,
+          points.pointVisibility.groupBy.column,
+        ] as const;
+      }
+      if (
+        activeSettingsCategory === PointsSettingsCategory.pointOpacity &&
+        getActiveConfigSource(points.pointOpacity) === "groupBy" &&
+        isGroupByConfig(points.pointOpacity)
+      ) {
+        return [
+          points.dataSource.table,
+          points.pointOpacity.groupBy.column,
+        ] as const;
+      }
     }
     return [null, null] as const;
   }, [
+    points.dataSource.table,
     activeSettingsCategory,
     points.pointMarker,
     points.pointSize,

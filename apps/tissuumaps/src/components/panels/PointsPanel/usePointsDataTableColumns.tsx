@@ -42,7 +42,7 @@ export function usePointsDataTableColumns(
       if (
         getActiveConfigSource(points.pointMarker) === "groupBy" &&
         isGroupByConfig(points.pointMarker) &&
-        points.pointMarker.groupBy.table === currentTable &&
+        points.dataSource.table === currentTable &&
         points.pointMarker.groupBy.column === currentGroupByColumn
       ) {
         let groupMarkers: Map<string, Marker> | undefined;
@@ -74,7 +74,7 @@ export function usePointsDataTableColumns(
       if (
         getActiveConfigSource(points.pointSize) === "groupBy" &&
         isGroupByConfig(points.pointSize) &&
-        points.pointSize.groupBy.table === currentTable &&
+        points.dataSource.table === currentTable &&
         points.pointSize.groupBy.column === currentGroupByColumn
       ) {
         let groupSizes: Map<string, number> | undefined;
@@ -106,7 +106,7 @@ export function usePointsDataTableColumns(
       if (
         getActiveConfigSource(points.pointColor) === "groupBy" &&
         isGroupByConfig(points.pointColor) &&
-        points.pointColor.groupBy.table === currentTable &&
+        points.dataSource.table === currentTable &&
         points.pointColor.groupBy.column === currentGroupByColumn
       ) {
         let groupColors: Map<string, Color> | undefined;
@@ -154,7 +154,7 @@ export function usePointsDataTableColumns(
       if (
         getActiveConfigSource(points.pointVisibility) === "groupBy" &&
         isGroupByConfig(points.pointVisibility) &&
-        points.pointVisibility.groupBy.table === currentTable &&
+        points.dataSource.table === currentTable &&
         points.pointVisibility.groupBy.column === currentGroupByColumn
       ) {
         let groupVisibilities: Map<string, boolean> | undefined;
@@ -189,7 +189,7 @@ export function usePointsDataTableColumns(
       if (
         getActiveConfigSource(points.pointOpacity) === "groupBy" &&
         isGroupByConfig(points.pointOpacity) &&
-        points.pointOpacity.groupBy.table === currentTable &&
+        points.dataSource.table === currentTable &&
         points.pointOpacity.groupBy.column === currentGroupByColumn
       ) {
         let groupOpacities: Map<string, number> | undefined;
@@ -233,6 +233,7 @@ export function usePointsDataTableColumns(
       points.pointColor,
       points.pointVisibility,
       points.pointOpacity,
+      points.dataSource.table,
     ]);
 
   return { extraTableGroupColumnDefs };

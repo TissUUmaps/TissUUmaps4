@@ -69,18 +69,21 @@ export function LabelsSettingsWidget({
     labels.labelColor,
     (newColorConfig) => updateLabels(labels.id, { labelColor: newColorConfig }),
     defaultLabelColor,
+    labels.dataSource.table ?? null,
   );
   const labelVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
     labels.labelVisibility,
     (newVisibilityConfig) =>
       updateLabels(labels.id, { labelVisibility: newVisibilityConfig }),
     defaultLabelVisibility,
+    labels.dataSource.table ?? null,
   );
   const labelOpacityConfigWidgetAdapter = useOpacityConfigWidget(
     labels.labelOpacity,
     (newOpacityConfig) =>
       updateLabels(labels.id, { labelOpacity: newOpacityConfig }),
     defaultLabelOpacity,
+    labels.dataSource.table ?? null,
   );
 
   return (

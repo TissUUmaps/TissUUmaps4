@@ -4,8 +4,6 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useTissUUmaps } from "@/store";
-
 import { type OpacityConfigWidgetAdapter } from "./adapter";
 
 export type ActiveOpacityConfigValueProps = {
@@ -17,9 +15,7 @@ export function ActiveOpacityConfigValue({
   adapter,
   className,
 }: ActiveOpacityConfigValueProps) {
-  const { activeSource, opacityConfig, defaultOpacity } = adapter;
-
-  const tables = useTissUUmaps((state) => state.tables);
+  const { activeSource, opacityConfig, defaultOpacity, tableId } = adapter;
 
   if (activeSource === "constant" && isConstantConfig(opacityConfig)) {
     return (
@@ -27,26 +23,20 @@ export function ActiveOpacityConfigValue({
     );
   }
 
-  if (activeSource === "from" && isFromConfig(opacityConfig)) {
-    const table = tables.find((t) => t.id === opacityConfig.from.table);
-    const tableName =
-      table !== undefined ? table.name : opacityConfig.from.table;
-    return (
-      <div className={className}>
-        {tableName} ({opacityConfig.from.column})
-      </div>
-    );
+  if (
+    activeSource === "from" &&
+    isFromConfig(opacityConfig) &&
+    tableId !== null
+  ) {
+    return <div className={className}>{opacityConfig.from.column}</div>;
   }
 
-  if (activeSource === "groupBy" && isGroupByConfig(opacityConfig)) {
-    const table = tables.find((t) => t.id === opacityConfig.groupBy.table);
-    const tableName =
-      table !== undefined ? table.name : opacityConfig.groupBy.table;
-    return (
-      <div className={className}>
-        {tableName} ({opacityConfig.groupBy.column})
-      </div>
-    );
+  if (
+    activeSource === "groupBy" &&
+    isGroupByConfig(opacityConfig) &&
+    tableId !== null
+  ) {
+    return <div className={className}>{opacityConfig.groupBy.column}</div>;
   }
 
   return <div className={className}>{defaultOpacity.toFixed(2)}</div>;

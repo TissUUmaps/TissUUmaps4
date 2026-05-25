@@ -79,42 +79,26 @@ function FromMarkerConfigWidget({
   className,
 }: FromMarkerConfigWidgetProps) {
   const {
-    currentFromTable: table,
+    tableId,
     currentFromColumn: column,
-    setCurrentFromTable: setTable,
     setCurrentFromColumn: setColumn,
   } = adapter;
 
-  const tables = useTissUUmaps((state) => state.tables);
-
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(table);
+    useTableColumnSelector(tableId);
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 gap-x-2">
-        <Field>
-          <FieldLabel>Source table</FieldLabel>
-          <SimpleSelect
-            items={tables}
-            itemLabel={(table) => table.name}
-            itemValue={(table) => table.id}
-            value={table}
-            onValueChange={setTable}
-            nullable
-          />
-        </Field>
-        <Field disabled={table === null}>
-          <FieldLabel>Source column</FieldLabel>
-          <SimpleAsyncCombobox
-            suggestQueries={suggestTableColumnQueries}
-            getItem={resolveTableColumnQuery}
-            itemQuery={(column) => column}
-            selectedItem={column}
-            onSelectedItemChange={setColumn}
-          />
-        </Field>
-      </div>
+      <Field disabled={tableId === null}>
+        <FieldLabel>Table column</FieldLabel>
+        <SimpleAsyncCombobox
+          suggestQueries={suggestTableColumnQueries}
+          getItem={resolveTableColumnQuery}
+          itemQuery={(column) => column}
+          selectedItem={column}
+          onSelectedItemChange={setColumn}
+        />
+      </Field>
     </div>
   );
 }
@@ -129,45 +113,30 @@ function GroupByMarkerConfigWidget({
   className,
 }: GroupByMarkerConfigWidgetProps) {
   const {
-    currentGroupByTable: table,
+    tableId,
     currentGroupByColumn: column,
     currentGroupByMap: map,
-    setCurrentGroupByTable: setTable,
     setCurrentGroupByColumn: setColumn,
     setCurrentGroupByMap: setMap,
   } = adapter;
 
-  const tables = useTissUUmaps((state) => state.tables);
   const markerMaps = useTissUUmaps((state) => state.markerMaps);
 
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(table);
+    useTableColumnSelector(tableId);
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 gap-x-2">
-        <Field>
-          <FieldLabel>Source table</FieldLabel>
-          <SimpleSelect
-            items={tables}
-            itemLabel={(table) => table.name}
-            itemValue={(table) => table.id}
-            value={table}
-            onValueChange={setTable}
-            nullable
-          />
-        </Field>
-        <Field disabled={table === null}>
-          <FieldLabel>Source column</FieldLabel>
-          <SimpleAsyncCombobox
-            suggestQueries={suggestTableColumnQueries}
-            getItem={resolveTableColumnQuery}
-            itemQuery={(column) => column}
-            selectedItem={column}
-            onSelectedItemChange={setColumn}
-          />
-        </Field>
-      </div>
+      <Field disabled={tableId === null}>
+        <FieldLabel>Table column</FieldLabel>
+        <SimpleAsyncCombobox
+          suggestQueries={suggestTableColumnQueries}
+          getItem={resolveTableColumnQuery}
+          itemQuery={(column) => column}
+          selectedItem={column}
+          onSelectedItemChange={setColumn}
+        />
+      </Field>
       <Field>
         <FieldLabel>Marker map</FieldLabel>
         <SimpleSelect

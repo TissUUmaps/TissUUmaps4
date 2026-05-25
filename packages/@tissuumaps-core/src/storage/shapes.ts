@@ -1,6 +1,6 @@
 import { type ShapesDataSource } from "../model/shapes";
 import { type MultiPolygon, type ProgressCallback } from "../types";
-import { type DataProvider, type ItemsData } from "./base";
+import { type ItemsData, type ItemsDataProvider } from "./base";
 
 /**
  * Data provider for shape (polygon) collections
@@ -11,7 +11,7 @@ import { type DataProvider, type ItemsData } from "./base";
 export interface ShapesDataProvider<
   TShapesDataSource extends ShapesDataSource,
   TShapesData extends ShapesData,
-> extends DataProvider<TShapesDataSource, TShapesData> {}
+> extends ItemsDataProvider<TShapesDataSource, TShapesData> {}
 
 /**
  * Loaded shape collection data providing multi-polygon geometry access
