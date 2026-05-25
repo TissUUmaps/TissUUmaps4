@@ -137,7 +137,7 @@ export class ColorDataUtils extends DataUtilsBase {
    *
    * @param ids - Ordered list of item IDs
    
-   * @param config - From configuration specifying the source table, column, palette, and range
+   * @param config - From configuration specifying the source column, palette, and range
    * @param defaultColor - Fallback color when the palette is not found or a value is invalid
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
