@@ -24,13 +24,13 @@ A modern web browser with WebGL 2 and File System API support is required.
 
 Download the [latest release](https://github.com/TissUUmaps/TissUUmaps4/releases/latest).
 
-Alternatively, use [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps4/live/) ([development version](https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart/project_heart_cropped.json)).
+Alternatively, use [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps4/live/) ([development version](https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json)).
 
 ## Usage
 
 Simply open the downloaded `index.html` file in your favorite browser.
 
-Alternatively, open [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps4/live/) ([development version](https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart/project_heart_cropped.json)).
+Alternatively, open [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps4/live/) ([development version](https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json)).
 
 ## Documentation
 
