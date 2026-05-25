@@ -97,7 +97,7 @@ export class DataUtilsBase {
         const value = mapGroupToValue(group);
         data[i] = encodeValue(value ?? defaultValue);
       } else {
-        console.warn(`ID ${id} is missing in column ${column}`);
+        console.warn(`ID ${id} is missing from loaded table data (column ${column})`);
         data[i] = encodeValue(defaultValue);
       }
     });
