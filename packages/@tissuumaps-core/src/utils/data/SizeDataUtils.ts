@@ -147,7 +147,7 @@ export class SizeDataUtils extends DataUtilsBase {
    * to a size value using a size map.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - GroupBy configuration specifying the source table, column, and map
+   * @param config - GroupBy configuration specifying the source column and map
    * @param sizeMaps - Available size maps for group-to-size lookups
    * @param defaultSize - Fallback size when the map is not found or a group is unmapped
    * @param loadTable - Async function that loads the {@link TableData}
