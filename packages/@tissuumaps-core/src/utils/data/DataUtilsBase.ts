@@ -48,7 +48,7 @@ export class DataUtilsBase {
         const parsedValue = parseTableValue(tableValue, tableValueRange);
         data[i] = encodeValue(parsedValue ?? defaultValue);
       } else {
-        console.warn(`ID ${id} missing in the table`);
+        console.warn(`ID ${id} is missing in column ${column}`);
         data[i] = encodeValue(defaultValue);
       }
     });
@@ -97,7 +97,7 @@ export class DataUtilsBase {
         const value = mapGroupToValue(group);
         data[i] = encodeValue(value ?? defaultValue);
       } else {
-        console.warn(`ID ${id} missing in the table`);
+        console.warn(`ID ${id} is missing in column ${column}`);
         data[i] = encodeValue(defaultValue);
       }
     });
