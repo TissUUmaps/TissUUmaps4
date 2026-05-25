@@ -50,11 +50,11 @@ export const tableDataSourceDefaults = {} as const satisfies Partial<
 /**
  * A data source for tabular data
  */
- 
+
 export interface RawTableDataSource<
   TType extends string = string,
 > extends RawItemsDataSource<TType> {
-  table: never;
+  table?: never;
 }
 
 /**
@@ -66,7 +66,7 @@ export type TableDataSource<TType extends string = string> =
       Pick<RawTableDataSource<TType>, keyof typeof tableDataSourceDefaults>
     > &
     Omit<RawTableDataSource<TType>, keyof typeof tableDataSourceDefaults> & {
-      table: never;
+      table?: never;
     };
 
 /**
@@ -82,5 +82,6 @@ export function createTableDataSource<TType extends string>(
     ...createItemsDataSource(rawTableDataSource),
     ...structuredClone(tableDataSourceDefaults),
     ...structuredClone(rawTableDataSource),
+    table: undefined,
   };
 }
