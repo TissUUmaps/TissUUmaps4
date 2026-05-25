@@ -244,9 +244,8 @@ export class SVGController {
   // Polygon drawing
   // ─────────────────────────────────────────────────────────────
 
-  /* eslint-disable @typescript-eslint/no-unused-vars */
-
   // @ts-expect-error currently not used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private _handlePolygonPointerDown = (event: PointerEvent): void => {
     // TODO implement polygon drawing logic
     // TODO: Register polygon-specific move/up handlers
@@ -255,11 +254,13 @@ export class SVGController {
   };
 
   // @ts-expect-error currently not used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private _handlePolygonPointerMove = (event: PointerEvent): void => {
     // TODO
   };
 
   // @ts-expect-error currently not used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private _handlePolygonPointerUp = (event: PointerEvent): void => {
     // TODO
   };
