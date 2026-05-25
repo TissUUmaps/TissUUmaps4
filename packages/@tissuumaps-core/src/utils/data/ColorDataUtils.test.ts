@@ -245,7 +245,7 @@ describe("ColorDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "cm1" },
+        groupBy: { column: "col1", map: "cm1" },
       };
 
       const data = await ColorDataUtils.loadColorDataFromTableGroups(
@@ -447,7 +447,7 @@ describe("ColorDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1", palette: palette.id },
+        from: { column: "col1", palette: palette.id },
       };
 
       const data = await ColorDataUtils.loadColorData(
@@ -495,7 +495,7 @@ describe("ColorDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "cm1" },
+        groupBy: { column: "col1", map: "cm1" },
       };
 
       const data = await ColorDataUtils.loadColorData(

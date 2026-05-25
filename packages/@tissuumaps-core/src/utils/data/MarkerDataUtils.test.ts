@@ -97,7 +97,7 @@ describe("MarkerDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
       const data = await MarkerDataUtils.loadMarkerDataFromTableValues(
@@ -153,7 +153,7 @@ describe("MarkerDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "mm1" },
+        groupBy: { column: "col1", map: "mm1" },
       };
 
       const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
@@ -171,7 +171,7 @@ describe("MarkerDataUtils", () => {
       const ids = [1];
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "nonexistent" },
+        groupBy: { column: "col1", map: "nonexistent" },
       };
 
       const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
@@ -191,7 +191,7 @@ describe("MarkerDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: undefined },
+        groupBy: { column: "col1", map: undefined },
       };
 
       const data = await MarkerDataUtils.loadMarkerDataFromTableGroups(
@@ -241,7 +241,7 @@ describe("MarkerDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
       const data = await MarkerDataUtils.loadMarkerData(
@@ -267,7 +267,7 @@ describe("MarkerDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "mm1" },
+        groupBy: { column: "col1", map: "mm1" },
       };
 
       const data = await MarkerDataUtils.loadMarkerData(

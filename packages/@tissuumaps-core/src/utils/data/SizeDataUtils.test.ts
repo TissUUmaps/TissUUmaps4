@@ -113,7 +113,7 @@ describe("SizeDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
       const data = await SizeDataUtils.loadSizeDataFromTableValues(
@@ -132,7 +132,7 @@ describe("SizeDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
       const data = await SizeDataUtils.loadSizeDataFromTableValues(
@@ -189,7 +189,7 @@ describe("SizeDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "sm1" },
+        groupBy: { column: "col1", map: "sm1" },
       };
 
       const data = await SizeDataUtils.loadSizeDataFromTableGroups(
@@ -207,7 +207,7 @@ describe("SizeDataUtils", () => {
       const ids = [1];
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "nonexistent" },
+        groupBy: { column: "col1", map: "nonexistent" },
       };
 
       const data = await SizeDataUtils.loadSizeDataFromTableGroups(
@@ -232,7 +232,7 @@ describe("SizeDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "sm1" },
+        groupBy: { column: "col1", map: "sm1" },
       };
 
       const data = await SizeDataUtils.loadSizeDataFromTableGroups(
@@ -272,7 +272,7 @@ describe("SizeDataUtils", () => {
       const loadTable = vi.fn().mockResolvedValue(tableData);
       const config = {
         source: "from" as const,
-        from: { table: "t1", column: "col1" },
+        from: { column: "col1" },
       };
 
       const data = await SizeDataUtils.loadSizeData(
@@ -298,7 +298,7 @@ describe("SizeDataUtils", () => {
       };
       const config = {
         source: "groupBy" as const,
-        groupBy: { table: "t1", column: "col1", map: "sm1" },
+        groupBy: { column: "col1", map: "sm1" },
       };
 
       const data = await SizeDataUtils.loadSizeData(
