@@ -107,7 +107,7 @@ export class MarkerDataUtils extends DataUtilsBase {
    * Loads marker data by reading values from a table column and parsing them as markers.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - From configuration specifying the source table and column
+   * @param config - From configuration specifying the source column
    * @param defaultMarker - Fallback marker when a value is missing or invalid
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
