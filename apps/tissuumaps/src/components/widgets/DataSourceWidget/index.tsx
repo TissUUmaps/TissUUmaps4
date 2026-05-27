@@ -1,5 +1,5 @@
 import { JsonForms } from "@jsonforms/react";
-import { EditIcon, SaveIcon } from "lucide-react";
+import { EditIcon, SaveIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -32,6 +32,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
   const [dataSourceDraft, setDataSourceDraft] = useState<TDataSource | null>(
     null,
   );
+  const [hasErrors, setHasErrors] = useState(false);
   const currentDataSource = dataSourceDraft ?? dataSource;
   const isEditing = dataSourceDraft !== null;
 
@@ -62,7 +63,10 @@ export function DataSourceWidget<TDataSource extends DataSource>({
               value={currentDataSource.type}
               onValueChange={(value) => {
                 if (value !== null) {
-                  setDataSourceDraft({ type: value } as TDataSource);
+                  setDataSourceDraft({
+                    ...dataSourceDraft,
+                    type: value,
+                  } as TDataSource);
                 }
               }}
             />
@@ -71,31 +75,37 @@ export function DataSourceWidget<TDataSource extends DataSource>({
           <>Source: {dataProvider.name}</>
         )}
         {isEditing ? (
-          <Button
-            variant="ghost"
-            className="ml-auto"
-            onClick={() => {
-              onDataSourceChange(dataSourceDraft);
-              setDataSourceDraft(null);
-            }}
-          >
-            <SaveIcon className="size-4" />
-          </Button>
+          <span className="ml-auto flex flex-row">
+            <Button
+              variant="ghost"
+              disabled={hasErrors}
+              onClick={() => {
+                onDataSourceChange(dataSourceDraft);
+                setDataSourceDraft(null);
+              }}
+            >
+              <SaveIcon className="size-4" />
+            </Button>
+            <Button variant="ghost" onClick={() => setDataSourceDraft(null)}>
+              <XIcon className="size-4" />
+            </Button>
+          </span>
         ) : (
           <Button
             variant="ghost"
             className="ml-auto"
             onClick={() => setDataSourceDraft(structuredClone(dataSource))}
           >
-            <EditIcon className=" size-4" />
+            <EditIcon className="size-4" />
           </Button>
         )}
       </FieldsetLegend>
       <JsonForms
         data={currentDataSource}
-        onChange={({ data }) => {
+        onChange={({ data, errors }) => {
           if (isEditing) {
             setDataSourceDraft(data as TDataSource);
+            setHasErrors((errors ?? []).length > 0);
           }
         }}
         schema={dataProvider.schema}
