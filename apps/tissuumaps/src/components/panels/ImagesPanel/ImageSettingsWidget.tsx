@@ -13,18 +13,33 @@ import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
+import { ImageSettingsCategory } from "./category";
+
 export type ImageSettingsWidgetProps = {
   image: Image;
+  activeCategory?: ImageSettingsCategory | null;
+  onActiveCategoryChange?: (
+    newActiveCategory: ImageSettingsCategory | null,
+  ) => void;
   className?: string;
 };
 
 export function ImageSettingsWidget({
   image,
+  activeCategory: controlledActiveCategory,
+  onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: ImageSettingsWidgetProps) {
+  const [activeCategory, setActiveCategory] = useControlled(
+    controlledActiveCategory,
+    setControlledActiveCategory,
+    null,
+  );
+
   return (
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
@@ -32,8 +47,15 @@ export function ImageSettingsWidget({
       <FieldsetLegend className="font-medium text-foreground">
         Settings
       </FieldsetLegend>
-      <Accordion>
-        <AccordionItem value="general">
+      <Accordion
+        value={activeCategory !== null ? [activeCategory] : []}
+        onValueChange={(value) =>
+          setActiveCategory(
+            value.length > 0 ? (value[0] as ImageSettingsCategory) : null,
+          )
+        }
+      >
+        <AccordionItem value={ImageSettingsCategory.general}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>General</AccordionTrigger>
@@ -42,7 +64,7 @@ export function ImageSettingsWidget({
             <GeneralImageSettingsWidget image={image} />
           </AccordionPanel>
         </AccordionItem>
-        <AccordionItem value="transform">
+        <AccordionItem value={ImageSettingsCategory.transform}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Transform</AccordionTrigger>
