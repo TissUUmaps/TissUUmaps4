@@ -220,12 +220,12 @@ importers:
         specifier: ^3.4.4
         version: 3.4.4
       openseadragon:
-        specifier: ^5.0.1
-        version: 5.0.1
+        specifier: ^6.0.2
+        version: 6.0.2
     devDependencies:
       "@types/openseadragon":
-        specifier: ^5.0.2
-        version: 5.0.2
+        specifier: ^6.0.0
+        version: 6.0.0
 
   packages/@tissuumaps-plugins:
     devDependencies:
@@ -249,7 +249,7 @@ importers:
         version: 1.1.1
       omezarr-tilesource:
         specifier: ^0.1.1
-        version: 0.1.1(openseadragon@5.0.1)
+        version: 0.1.1(openseadragon@6.0.2)
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
@@ -4550,11 +4550,12 @@ packages:
         integrity: sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==,
       }
 
-  "@types/openseadragon@5.0.2":
+  "@types/openseadragon@6.0.0":
     resolution:
       {
-        integrity: sha512-c5x6YsT3GA6kyBOcesdwuZYn3blw7hucSoSG0scGKeyu82UgRahRuVL8+Yw4WKpEOlMvXnb7CrI8HleDIPnfuw==,
+        integrity: sha512-tmwZFanLT8NNyiDiQhkVCPdTFhSvMcDVOFLYdzyZAEnjxGgeTMu8pvV2CFRXddAAUKLo16Q45AW58IpLur8kpQ==,
       }
+    deprecated: This is a stub types definition. openseadragon provides its own type definitions, so you do not need this installed.
 
   "@types/papaparse@5.5.2":
     resolution:
@@ -9768,10 +9769,10 @@ packages:
       }
     hasBin: true
 
-  openseadragon@5.0.1:
+  openseadragon@6.0.2:
     resolution:
       {
-        integrity: sha512-a/hjouW9i3UfWxRADVYN2MyRhXMGnE7x9VVL7/4jXCcDLFyO4UM5o4RStYtqa5BfaHw/wMNAaD2WbxQF8f1pJg==,
+        integrity: sha512-WNPPQWp9sHunyzkV9J2yhfxnSfDF9CfBsE6unmkdxh1uTWzFcueMvBPhmuZdY7M1v/ffJ3NdaF3Qq3jogphIbA==,
       }
 
   optionator@0.9.4:
@@ -16473,7 +16474,9 @@ snapshots:
     dependencies:
       undici-types: 7.19.2
 
-  "@types/openseadragon@5.0.2": {}
+  "@types/openseadragon@6.0.0":
+    dependencies:
+      openseadragon: 6.0.2
 
   "@types/papaparse@5.5.2":
     dependencies:
@@ -19892,11 +19895,11 @@ snapshots:
     dependencies:
       zarrita: 0.5.4
 
-  omezarr-tilesource@0.1.1(openseadragon@5.0.1):
+  omezarr-tilesource@0.1.1(openseadragon@6.0.2):
     dependencies:
       "@zarrita/storage": 0.1.4
       ome-zarr.js: 0.0.17
-      openseadragon: 5.0.1
+      openseadragon: 6.0.2
       zarrita: 0.5.4
 
   on-finished@2.4.1:
@@ -19932,7 +19935,7 @@ snapshots:
 
   opener@1.5.2: {}
 
-  openseadragon@5.0.1: {}
+  openseadragon@6.0.2: {}
 
   optionator@0.9.4:
     dependencies:
