@@ -516,8 +516,9 @@ export class OpenSeadragonController {
     mat3.multiply(m, layerToWorldMatrix, m);
     const dataToWorldTransform = TransformUtils.fromSimilarityMatrix(m);
     const bounds = tiledImageState.tiledImage.getBoundsNoRotate();
-    if (tiledImageState.tiledImage.getFlip() !== flip) {
-      tiledImageState.tiledImage.setFlip(flip);
+    const effectiveFlip = flip !== tiledImageState.ref.layer.flip;
+    if (tiledImageState.tiledImage.getFlip() !== effectiveFlip) {
+      tiledImageState.tiledImage.setFlip(effectiveFlip);
     }
     const width =
       tiledImageState.tiledImage.getContentSize().x *
@@ -529,7 +530,15 @@ export class OpenSeadragonController {
     if (tiledImageState.tiledImage.getRotation() !== rotation) {
       tiledImageState.tiledImage.setRotation(rotation, true);
     }
-    const { x, y } = dataToWorldTransform.translation;
+    let { x, y } = dataToWorldTransform.translation;
+    if (effectiveFlip) {
+      // OSD's setFlip mirrors tile content around the image center.
+      // Shift position so the net effect is a flip around the left edge,
+      // consistent with the WebGL path (points/shapes).
+      const rad = (rotation * Math.PI) / 180;
+      x -= width * Math.cos(rad);
+      y -= width * Math.sin(rad);
+    }
     if (bounds.x !== x || bounds.y !== y) {
       tiledImageState.tiledImage.setPosition(
         new OpenSeadragon.Point(x, y),
