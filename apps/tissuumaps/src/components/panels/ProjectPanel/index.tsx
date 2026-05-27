@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { useProjectDownload } from "@/hooks/useProjectDownload";
 import { useTissUUmaps } from "@/store";
 
+import { LayersWidget } from "./LayersWidget";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
 export type ProjectPanelProps = {
@@ -123,6 +124,8 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
           />
         </Field>
       </div>
+      <h3 className="mt-4 mb-2 font-medium text-foreground">Project Layers</h3>
+      <LayersWidget />
     </div>
   );
 }
