@@ -191,7 +191,6 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             }}
             className="bg-card"
           />
-          {/* TODO layer configs */}
           <ShapesSettingsWidget
             shapes={shapes}
             activeCategory={activeSettingsCategory}

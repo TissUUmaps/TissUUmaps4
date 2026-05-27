@@ -19,6 +19,7 @@ import {
 } from "@/components/common/accordion";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -136,6 +137,16 @@ export function ShapesSettingsWidget({
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <GeneralShapesSettingsWidget shapes={shapes} />
+          </AccordionPanel>
+        </AccordionItem>
+        {/* Transform */}
+        <AccordionItem value={ShapesSettingsCategory.transform}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Transform</AccordionTrigger>
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <TransformShapesSettingsWidget shapes={shapes} />
           </AccordionPanel>
         </AccordionItem>
         {/* Shape fill color */}
@@ -268,6 +279,7 @@ function GeneralShapesSettingsWidget({
   shapes,
   className,
 }: GeneralShapesSettingsWidgetProps) {
+  const layers = useTissUUmaps((state) => state.layers);
   const updateShapes = useTissUUmaps((state) => state.updateShapes);
 
   return (
@@ -280,6 +292,24 @@ function GeneralShapesSettingsWidget({
             updateShapes(shapes.id, { name: event.target.value })
           }
         />
+      </Field>
+      <Field>
+        <FieldLabel>Layer</FieldLabel>
+        {typeof shapes.layer === "string" ? (
+          <SimpleSelect
+            items={layers}
+            itemLabel={(l) => l.name}
+            itemValue={(l) => l.id}
+            value={shapes.layer}
+            onValueChange={(value) => {
+              if (value !== null) {
+                updateShapes(shapes.id, { layer: value });
+              }
+            }}
+          />
+        ) : (
+          <Input disabled value={`column: ${shapes.layer.column}`} readOnly />
+        )}
       </Field>
       <Field>
         <FieldLabel>Visibility</FieldLabel>
@@ -312,6 +342,119 @@ function GeneralShapesSettingsWidget({
           }}
         />
       </Field>
+    </div>
+  );
+}
+
+type TransformShapesSettingsWidgetProps = {
+  shapes: Shapes;
+  className?: string;
+};
+
+function TransformShapesSettingsWidget({
+  shapes,
+  className,
+}: TransformShapesSettingsWidgetProps) {
+  const updateShapes = useTissUUmaps((state) => state.updateShapes);
+
+  return (
+    <div className={className}>
+      <Field>
+        <FieldLabel>Flip</FieldLabel>
+        <div className="flex flex-row items-center gap-x-2">
+          <Switch
+            checked={shapes.flip}
+            onCheckedChange={(checked) =>
+              updateShapes(shapes.id, { flip: checked })
+            }
+          />
+          {shapes.flip ? "Yes" : "No"}
+        </div>
+      </Field>
+      <div className="grid grid-cols-2 gap-x-2 gap-y-2">
+        <Field>
+          <FieldLabel>Scale</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step={0.1}
+            value={shapes.transform.scale}
+            onChange={(e) => {
+              if (e.target.value !== "") {
+                updateShapes(shapes.id, {
+                  transform: {
+                    ...shapes.transform,
+                    scale: parseFloat(e.target.value),
+                  },
+                });
+              }
+            }}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Rotation (&deg;)</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step={1}
+            value={shapes.transform.rotation}
+            onChange={(e) => {
+              if (e.target.value !== "") {
+                updateShapes(shapes.id, {
+                  transform: {
+                    ...shapes.transform,
+                    rotation: parseFloat(e.target.value),
+                  },
+                });
+              }
+            }}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Translate X</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step={1}
+            value={shapes.transform.translation.x}
+            onChange={(e) => {
+              if (e.target.value !== "") {
+                updateShapes(shapes.id, {
+                  transform: {
+                    ...shapes.transform,
+                    translation: {
+                      ...shapes.transform.translation,
+                      x: parseFloat(e.target.value),
+                    },
+                  },
+                });
+              }
+            }}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Translate Y</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step={1}
+            value={shapes.transform.translation.y}
+            onChange={(e) => {
+              if (e.target.value !== "") {
+                updateShapes(shapes.id, {
+                  transform: {
+                    ...shapes.transform,
+                    translation: {
+                      ...shapes.transform.translation,
+                      y: parseFloat(e.target.value),
+                    },
+                  },
+                });
+              }
+            }}
+          />
+        </Field>
+      </div>
     </div>
   );
 }

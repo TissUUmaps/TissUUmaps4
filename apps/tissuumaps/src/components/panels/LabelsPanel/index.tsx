@@ -191,7 +191,6 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             }}
             className="bg-card"
           />
-          {/* TODO layer configs */}
           <LabelsSettingsWidget
             labels={labels}
             activeCategory={activeSettingsCategory}

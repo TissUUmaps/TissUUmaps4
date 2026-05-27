@@ -1,5 +1,6 @@
 export const ShapesSettingsCategory = {
   general: "general",
+  transform: "transform",
   shapeFillColor: "shapeFillColor",
   shapeFillVisibility: "shapeFillVisibility",
   shapeFillOpacity: "shapeFillOpacity",

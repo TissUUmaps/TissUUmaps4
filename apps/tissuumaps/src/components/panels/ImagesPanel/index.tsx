@@ -150,7 +150,6 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             className="bg-card"
           />
           <ImageSettingsWidget image={image} className="bg-card" />
-          {/* TODO layer configs */}
         </AccordionPanel>
       </AccordionItem>
     </div>

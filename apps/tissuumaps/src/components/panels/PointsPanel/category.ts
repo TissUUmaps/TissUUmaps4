@@ -1,5 +1,6 @@
 export const PointsSettingsCategory = {
   general: "general",
+  transform: "transform",
   pointMarker: "pointMarker",
   pointSize: "pointSize",
   pointColor: "pointColor",

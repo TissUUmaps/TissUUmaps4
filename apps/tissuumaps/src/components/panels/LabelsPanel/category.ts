@@ -1,5 +1,6 @@
 export const LabelsSettingsCategory = {
   general: "general",
+  transform: "transform",
   labelColor: "labelColor",
   labelVisibility: "labelVisibility",
   labelOpacity: "labelOpacity",

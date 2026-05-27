@@ -16,6 +16,7 @@ import {
 } from "@/components/common/accordion";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -111,6 +112,16 @@ export function LabelsSettingsWidget({
             <GeneralLabelsSettingsWidget labels={labels} />
           </AccordionPanel>
         </AccordionItem>
+        {/* Transform */}
+        <AccordionItem value={LabelsSettingsCategory.transform}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Transform</AccordionTrigger>
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <TransformLabelsSettingsWidget labels={labels} />
+          </AccordionPanel>
+        </AccordionItem>
         {/* Label color */}
         <AccordionItem value={LabelsSettingsCategory.labelColor}>
           <AccordionHeader>
@@ -181,6 +192,7 @@ function GeneralLabelsSettingsWidget({
   labels,
   className,
 }: GeneralLabelsSettingsWidgetProps) {
+  const layers = useTissUUmaps((state) => state.layers);
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
 
   return (
@@ -192,6 +204,20 @@ function GeneralLabelsSettingsWidget({
           onChange={(event) =>
             updateLabels(labels.id, { name: event.target.value })
           }
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Layer</FieldLabel>
+        <SimpleSelect
+          items={layers}
+          itemLabel={(l) => l.name}
+          itemValue={(l) => l.id}
+          value={labels.layer}
+          onValueChange={(value) => {
+            if (value !== null) {
+              updateLabels(labels.id, { layer: value });
+            }
+          }}
         />
       </Field>
       <Field>
@@ -225,6 +251,119 @@ function GeneralLabelsSettingsWidget({
           }}
         />
       </Field>
+    </div>
+  );
+}
+
+type TransformLabelsSettingsWidgetProps = {
+  labels: Labels;
+  className?: string;
+};
+
+function TransformLabelsSettingsWidget({
+  labels,
+  className,
+}: TransformLabelsSettingsWidgetProps) {
+  const updateLabels = useTissUUmaps((state) => state.updateLabels);
+
+  return (
+    <div className={className}>
+      <Field>
+        <FieldLabel>Flip</FieldLabel>
+        <div className="flex flex-row items-center gap-x-2">
+          <Switch
+            checked={labels.flip}
+            onCheckedChange={(checked) =>
+              updateLabels(labels.id, { flip: checked })
+            }
+          />
+          {labels.flip ? "Yes" : "No"}
+        </div>
+      </Field>
+      <div className="grid grid-cols-2 gap-x-2 gap-y-2">
+        <Field>
+          <FieldLabel>Scale</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step={0.1}
+            value={labels.transform.scale}
+            onChange={(e) => {
+              if (e.target.value !== "") {
+                updateLabels(labels.id, {
+                  transform: {
+                    ...labels.transform,
+                    scale: parseFloat(e.target.value),
+                  },
+                });
+              }
+            }}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Rotation (&deg;)</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step={1}
+            value={labels.transform.rotation}
+            onChange={(e) => {
+              if (e.target.value !== "") {
+                updateLabels(labels.id, {
+                  transform: {
+                    ...labels.transform,
+                    rotation: parseFloat(e.target.value),
+                  },
+                });
+              }
+            }}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Translate X</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step={1}
+            value={labels.transform.translation.x}
+            onChange={(e) => {
+              if (e.target.value !== "") {
+                updateLabels(labels.id, {
+                  transform: {
+                    ...labels.transform,
+                    translation: {
+                      ...labels.transform.translation,
+                      x: parseFloat(e.target.value),
+                    },
+                  },
+                });
+              }
+            }}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Translate Y</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step={1}
+            value={labels.transform.translation.y}
+            onChange={(e) => {
+              if (e.target.value !== "") {
+                updateLabels(labels.id, {
+                  transform: {
+                    ...labels.transform,
+                    translation: {
+                      ...labels.transform.translation,
+                      y: parseFloat(e.target.value),
+                    },
+                  },
+                });
+              }
+            }}
+          />
+        </Field>
+      </div>
     </div>
   );
 }
