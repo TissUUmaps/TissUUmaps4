@@ -113,7 +113,10 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
 
   return (
     <div ref={ref}>
-      <AccordionItem className="border rounded-md bg-sidebar p-2">
+      <AccordionItem
+        value={layer.id}
+        className="border rounded-md bg-sidebar p-2"
+      >
         <AccordionHeader>
           <GripVertical ref={handleRef} />
           <div className="flex-1 w-full">
