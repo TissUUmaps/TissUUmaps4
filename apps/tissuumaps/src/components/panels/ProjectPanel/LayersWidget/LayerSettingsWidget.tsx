@@ -12,6 +12,7 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
@@ -33,6 +34,8 @@ export function LayerSettingsWidget({
   onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: LayerSettingsWidgetProps) {
+  const updateLayer = useTissUUmaps((state) => state.updateLayer);
+
   const [activeCategory, setActiveCategory] = useControlled(
     controlledActiveCategory,
     setControlledActiveCategory,
@@ -69,7 +72,12 @@ export function LayerSettingsWidget({
             <AccordionTrigger>Transform</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <TransformLayerSettingsWidget layer={layer} />
+            <TransformSettingsWidget
+              transform={layer.transform}
+              onTransformChange={(transform) =>
+                updateLayer(layer.id, { transform })
+              }
+            />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>
@@ -148,107 +156,6 @@ function GeneralLayerSettingsWidget({
           }}
         />
       </Field>
-    </div>
-  );
-}
-
-type TransformLayerSettingsWidgetProps = {
-  layer: Layer;
-  className?: string;
-};
-
-function TransformLayerSettingsWidget({
-  layer,
-  className,
-}: TransformLayerSettingsWidgetProps) {
-  const updateLayer = useTissUUmaps((state) => state.updateLayer);
-
-  return (
-    <div className={className}>
-      <div className="grid grid-cols-2 gap-x-2 gap-y-2">
-        <Field>
-          <FieldLabel>Scale</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={0.1}
-            value={layer.transform.scale}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updateLayer(layer.id, {
-                  transform: {
-                    ...layer.transform,
-                    scale: parseFloat(e.target.value),
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Rotation (&deg;)</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={1}
-            value={layer.transform.rotation}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updateLayer(layer.id, {
-                  transform: {
-                    ...layer.transform,
-                    rotation: parseFloat(e.target.value),
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Translate X</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={1}
-            value={layer.transform.translation.x}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updateLayer(layer.id, {
-                  transform: {
-                    ...layer.transform,
-                    translation: {
-                      ...layer.transform.translation,
-                      x: parseFloat(e.target.value),
-                    },
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Translate Y</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={1}
-            value={layer.transform.translation.y}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updateLayer(layer.id, {
-                  transform: {
-                    ...layer.transform,
-                    translation: {
-                      ...layer.transform.translation,
-                      y: parseFloat(e.target.value),
-                    },
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-      </div>
     </div>
   );
 }

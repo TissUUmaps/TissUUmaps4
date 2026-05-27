@@ -13,6 +13,7 @@ import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
@@ -34,6 +35,8 @@ export function ImageSettingsWidget({
   onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: ImageSettingsWidgetProps) {
+  const updateImage = useTissUUmaps((state) => state.updateImage);
+
   const [activeCategory, setActiveCategory] = useControlled(
     controlledActiveCategory,
     setControlledActiveCategory,
@@ -70,7 +73,14 @@ export function ImageSettingsWidget({
             <AccordionTrigger>Transform</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <TransformImageSettingsWidget image={image} />
+            <TransformSettingsWidget
+              transform={image.transform}
+              onTransformChange={(transform) =>
+                updateImage(image.id, { transform })
+              }
+              flip={image.flip}
+              onFlipChange={(flip) => updateImage(image.id, { flip })}
+            />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>
@@ -146,119 +156,6 @@ function GeneralImageSettingsWidget({
           }}
         />
       </Field>
-    </div>
-  );
-}
-
-type TransformImageSettingsWidgetProps = {
-  image: Image;
-  className?: string;
-};
-
-function TransformImageSettingsWidget({
-  image,
-  className,
-}: TransformImageSettingsWidgetProps) {
-  const updateImage = useTissUUmaps((state) => state.updateImage);
-
-  return (
-    <div className={className}>
-      <Field>
-        <FieldLabel>Flip</FieldLabel>
-        <div className="flex flex-row items-center gap-x-2">
-          <Switch
-            checked={image.flip}
-            onCheckedChange={(checked) =>
-              updateImage(image.id, { flip: checked })
-            }
-          />
-          {image.flip ? "Yes" : "No"}
-        </div>
-      </Field>
-      <div className="grid grid-cols-2 gap-x-2 gap-y-2">
-        <Field>
-          <FieldLabel>Scale</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={0.1}
-            value={image.transform.scale}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updateImage(image.id, {
-                  transform: {
-                    ...image.transform,
-                    scale: parseFloat(e.target.value),
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Rotation (&deg;)</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={1}
-            value={image.transform.rotation}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updateImage(image.id, {
-                  transform: {
-                    ...image.transform,
-                    rotation: parseFloat(e.target.value),
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Translate X</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={1}
-            value={image.transform.translation.x}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updateImage(image.id, {
-                  transform: {
-                    ...image.transform,
-                    translation: {
-                      ...image.transform.translation,
-                      x: parseFloat(e.target.value),
-                    },
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Translate Y</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={1}
-            value={image.transform.translation.y}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updateImage(image.id, {
-                  transform: {
-                    ...image.transform,
-                    translation: {
-                      ...image.transform.translation,
-                      y: parseFloat(e.target.value),
-                    },
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-      </div>
     </div>
   );
 }

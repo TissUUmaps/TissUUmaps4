@@ -22,6 +22,7 @@ import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
@@ -148,7 +149,14 @@ export function PointsSettingsWidget({
             <AccordionTrigger>Transform</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <TransformPointsSettingsWidget points={points} />
+            <TransformSettingsWidget
+              transform={points.transform}
+              onTransformChange={(transform) =>
+                updatePoints(points.id, { transform })
+              }
+              flip={points.flip}
+              onFlipChange={(flip) => updatePoints(points.id, { flip })}
+            />
           </AccordionPanel>
         </AccordionItem>
         {/* Point marker */}
@@ -338,119 +346,6 @@ function GeneralPointsSettingsWidget({
           }}
         />
       </Field>
-    </div>
-  );
-}
-
-type TransformPointsSettingsWidgetProps = {
-  points: Points;
-  className?: string;
-};
-
-function TransformPointsSettingsWidget({
-  points,
-  className,
-}: TransformPointsSettingsWidgetProps) {
-  const updatePoints = useTissUUmaps((state) => state.updatePoints);
-
-  return (
-    <div className={className}>
-      <Field>
-        <FieldLabel>Flip</FieldLabel>
-        <div className="flex flex-row items-center gap-x-2">
-          <Switch
-            checked={points.flip}
-            onCheckedChange={(checked) =>
-              updatePoints(points.id, { flip: checked })
-            }
-          />
-          {points.flip ? "Yes" : "No"}
-        </div>
-      </Field>
-      <div className="grid grid-cols-2 gap-x-2 gap-y-2">
-        <Field>
-          <FieldLabel>Scale</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={0.1}
-            value={points.transform.scale}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updatePoints(points.id, {
-                  transform: {
-                    ...points.transform,
-                    scale: parseFloat(e.target.value),
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Rotation (&deg;)</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={1}
-            value={points.transform.rotation}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updatePoints(points.id, {
-                  transform: {
-                    ...points.transform,
-                    rotation: parseFloat(e.target.value),
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Translate X</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={1}
-            value={points.transform.translation.x}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updatePoints(points.id, {
-                  transform: {
-                    ...points.transform,
-                    translation: {
-                      ...points.transform.translation,
-                      x: parseFloat(e.target.value),
-                    },
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Translate Y</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={1}
-            value={points.transform.translation.y}
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                updatePoints(points.id, {
-                  transform: {
-                    ...points.transform,
-                    translation: {
-                      ...points.transform.translation,
-                      y: parseFloat(e.target.value),
-                    },
-                  },
-                });
-              }
-            }}
-          />
-        </Field>
-      </div>
     </div>
   );
 }
