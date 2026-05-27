@@ -489,6 +489,9 @@ export class OpenSeadragonController {
         ? tiledImageState.ref.image
         : tiledImageState.ref.labels;
     const m = mat3.create();
+    // OSD's setRotation rotates around image center, so we pre-rotate
+    // around the negative center to cancel it out, giving net rotation
+    // around origin, consistent with points and shapes.
     const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform, {
       center: {
         x: -tiledImageState.tiledImage.getContentSize().x / 2,
