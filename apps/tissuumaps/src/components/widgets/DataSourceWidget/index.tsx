@@ -1,5 +1,5 @@
 import { JsonForms } from "@jsonforms/react";
-import { EditIcon, SaveIcon, XIcon } from "lucide-react";
+import { EditIcon, RotateCcwIcon, SaveIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -78,6 +78,14 @@ export function DataSourceWidget<TDataSource extends DataSource>({
           <span className="ml-auto flex flex-row">
             <Button
               variant="ghost"
+              title="Reset"
+              onClick={() => setDataSourceDraft(structuredClone(dataSource))}
+            >
+              <RotateCcwIcon className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              title="Save"
               disabled={hasErrors}
               onClick={() => {
                 const knownKeys = new Set([
@@ -94,9 +102,6 @@ export function DataSourceWidget<TDataSource extends DataSource>({
               }}
             >
               <SaveIcon className="size-4" />
-            </Button>
-            <Button variant="ghost" onClick={() => setDataSourceDraft(null)}>
-              <XIcon className="size-4" />
             </Button>
           </span>
         ) : (
