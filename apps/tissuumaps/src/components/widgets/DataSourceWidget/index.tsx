@@ -80,7 +80,16 @@ export function DataSourceWidget<TDataSource extends DataSource>({
               variant="ghost"
               disabled={hasErrors}
               onClick={() => {
-                onDataSourceChange(dataSourceDraft);
+                const knownKeys = new Set([
+                  "type",
+                  ...Object.keys(dataProvider.schema.properties ?? {}),
+                ]);
+                const cleaned = Object.fromEntries(
+                  Object.entries(dataSourceDraft).filter(([k]) =>
+                    knownKeys.has(k),
+                  ),
+                ) as TDataSource;
+                onDataSourceChange(cleaned);
                 setDataSourceDraft(null);
               }}
             >
@@ -94,7 +103,10 @@ export function DataSourceWidget<TDataSource extends DataSource>({
           <Button
             variant="ghost"
             className="ml-auto"
-            onClick={() => setDataSourceDraft(structuredClone(dataSource))}
+            onClick={() => {
+              setHasErrors(false);
+              setDataSourceDraft(structuredClone(dataSource));
+            }}
           >
             <EditIcon className="size-4" />
           </Button>
