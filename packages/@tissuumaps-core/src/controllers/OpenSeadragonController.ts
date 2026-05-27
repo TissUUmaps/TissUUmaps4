@@ -494,19 +494,22 @@ export class OpenSeadragonController {
     // around origin, consistent with points and shapes.
     const contentSize = tiledImageState.tiledImage.getContentSize();
     const dataCenter = {
-      x: -contentSize.x / 2,
-      y: -contentSize.y / 2,
+      x: contentSize.x / 2,
+      y: contentSize.y / 2,
     };
     const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform, {
-      center: dataCenter,
+      center: {
+        x: -dataCenter.x,
+        y: -dataCenter.y,
+      },
     });
     mat3.multiply(m, dataToLayerMatrix, m);
     const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
       tiledImageState.ref.layer.transform,
       {
         center: {
-          x: dataCenter.x * transform.scale,
-          y: dataCenter.y * transform.scale,
+          x: -dataCenter.x * transform.scale,
+          y: -dataCenter.y * transform.scale,
         },
       },
     );
