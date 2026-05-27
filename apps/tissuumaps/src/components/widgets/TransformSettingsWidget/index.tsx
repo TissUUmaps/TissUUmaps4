@@ -39,10 +39,11 @@ export function TransformSettingsWidget({
             step={0.1}
             value={transform.scale}
             onChange={(e) => {
-              if (e.target.value !== "") {
+              const newValue = e.target.valueAsNumber;
+              if (!isNaN(newValue)) {
                 onTransformChange({
                   ...transform,
-                  scale: parseFloat(e.target.value),
+                  scale: newValue,
                 });
               }
             }}
@@ -56,10 +57,11 @@ export function TransformSettingsWidget({
             step={1}
             value={transform.rotation}
             onChange={(e) => {
-              if (e.target.value !== "") {
+              const newValue = e.target.valueAsNumber;
+              if (!isNaN(newValue)) {
                 onTransformChange({
                   ...transform,
-                  rotation: parseFloat(e.target.value),
+                  rotation: newValue,
                 });
               }
             }}
@@ -73,12 +75,13 @@ export function TransformSettingsWidget({
             step={1}
             value={transform.translation.x}
             onChange={(e) => {
-              if (e.target.value !== "") {
+              const newValue = e.target.valueAsNumber;
+              if (!isNaN(newValue)) {
                 onTransformChange({
                   ...transform,
                   translation: {
                     ...transform.translation,
-                    x: parseFloat(e.target.value),
+                    x: newValue,
                   },
                 });
               }
@@ -93,12 +96,13 @@ export function TransformSettingsWidget({
             step={1}
             value={transform.translation.y}
             onChange={(e) => {
-              if (e.target.value !== "") {
+              const newValue = e.target.valueAsNumber;
+              if (!isNaN(newValue)) {
                 onTransformChange({
                   ...transform,
                   translation: {
                     ...transform.translation,
-                    y: parseFloat(e.target.value),
+                    y: newValue,
                   },
                 });
               }
