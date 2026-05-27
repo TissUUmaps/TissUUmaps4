@@ -222,10 +222,6 @@ importers:
       openseadragon:
         specifier: ^6.0.2
         version: 6.0.2
-    devDependencies:
-      "@types/openseadragon":
-        specifier: ^6.0.0
-        version: 6.0.0
 
   packages/@tissuumaps-plugins:
     devDependencies:
@@ -4549,13 +4545,6 @@ packages:
       {
         integrity: sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==,
       }
-
-  "@types/openseadragon@6.0.0":
-    resolution:
-      {
-        integrity: sha512-tmwZFanLT8NNyiDiQhkVCPdTFhSvMcDVOFLYdzyZAEnjxGgeTMu8pvV2CFRXddAAUKLo16Q45AW58IpLur8kpQ==,
-      }
-    deprecated: This is a stub types definition. openseadragon provides its own type definitions, so you do not need this installed.
 
   "@types/papaparse@5.5.2":
     resolution:
@@ -16486,10 +16475,6 @@ snapshots:
   "@types/node@25.6.0":
     dependencies:
       undici-types: 7.19.2
-
-  "@types/openseadragon@6.0.0":
-    dependencies:
-      openseadragon: 6.0.2
 
   "@types/papaparse@5.5.2":
     dependencies:

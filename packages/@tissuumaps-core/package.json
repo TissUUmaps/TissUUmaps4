@@ -28,9 +28,7 @@
     "gl-matrix": "^3.4.4",
     "openseadragon": "^6.0.2"
   },
-  "devDependencies": {
-    "@types/openseadragon": "^6.0.0"
-  },
+  "devDependencies": {},
   "engines": {
     "node": ">=20.19.0"
   }
