@@ -492,23 +492,21 @@ export class OpenSeadragonController {
     // OSD's setRotation rotates around image center, so we pre-rotate
     // around the negative center to cancel it out, giving net rotation
     // around origin, consistent with points and shapes.
+    const contentSize = tiledImageState.tiledImage.getContentSize();
+    const dataCenter = {
+      x: -contentSize.x / 2,
+      y: -contentSize.y / 2,
+    };
     const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform, {
-      center: {
-        x: -tiledImageState.tiledImage.getContentSize().x / 2,
-        y: -tiledImageState.tiledImage.getContentSize().y / 2,
-      },
+      center: dataCenter,
     });
     mat3.multiply(m, dataToLayerMatrix, m);
     const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
       tiledImageState.ref.layer.transform,
       {
         center: {
-          x:
-            (-transform.scale * tiledImageState.tiledImage.getContentSize().x) /
-            2,
-          y:
-            (-transform.scale * tiledImageState.tiledImage.getContentSize().y) /
-            2,
+          x: dataCenter.x * transform.scale,
+          y: dataCenter.y * transform.scale,
         },
       },
     );
