@@ -491,13 +491,23 @@ export class OpenSeadragonController {
     const m = mat3.create();
     const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform, {
       center: {
-        x: tiledImageState.tiledImage.getContentSize().x / 2,
-        y: tiledImageState.tiledImage.getContentSize().y / 2,
+        x: -tiledImageState.tiledImage.getContentSize().x / 2,
+        y: -tiledImageState.tiledImage.getContentSize().y / 2,
       },
     });
     mat3.multiply(m, dataToLayerMatrix, m);
     const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
       tiledImageState.ref.layer.transform,
+      {
+        center: {
+          x:
+            (-transform.scale * tiledImageState.tiledImage.getContentSize().x) /
+            2,
+          y:
+            (-transform.scale * tiledImageState.tiledImage.getContentSize().y) /
+            2,
+        },
+      },
     );
     mat3.multiply(m, layerToWorldMatrix, m);
     const dataToWorldTransform = TransformUtils.fromSimilarityMatrix(m);
