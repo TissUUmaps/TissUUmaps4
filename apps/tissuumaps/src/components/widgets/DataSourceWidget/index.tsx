@@ -67,6 +67,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
                     ...dataSourceDraft,
                     type: value,
                   } as TDataSource);
+                  setHasErrors(false);
                 }
               }}
             />
