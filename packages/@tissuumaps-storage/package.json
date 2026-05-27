@@ -63,7 +63,7 @@
     "geojson": "^0.5.0",
     "hyparquet": "^1.25.6",
     "hyparquet-compressors": "^1.1.1",
-    "omezarr-tilesource": "^0.1.1",
+    "omezarr-tilesource": "^0.2.0",
     "papaparse": "^5.5.3"
   },
   "devDependencies": {
@@ -75,6 +75,6 @@
     "@tissuumaps/core": ">=0.1.0"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.22.1"
   }
 }

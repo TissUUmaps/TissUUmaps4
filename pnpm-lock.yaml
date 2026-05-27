@@ -220,12 +220,8 @@ importers:
         specifier: ^3.4.4
         version: 3.4.4
       openseadragon:
-        specifier: ^5.0.1
-        version: 5.0.1
-    devDependencies:
-      "@types/openseadragon":
-        specifier: ^5.0.2
-        version: 5.0.2
+        specifier: ^6.0.2
+        version: 6.0.2
 
   packages/@tissuumaps-plugins:
     devDependencies:
@@ -248,8 +244,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
       omezarr-tilesource:
-        specifier: ^0.1.1
-        version: 0.1.1(openseadragon@5.0.1)
+        specifier: ^0.2.0
+        version: 0.2.0(openseadragon@6.0.2)
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
@@ -4550,12 +4546,6 @@ packages:
         integrity: sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==,
       }
 
-  "@types/openseadragon@5.0.2":
-    resolution:
-      {
-        integrity: sha512-c5x6YsT3GA6kyBOcesdwuZYn3blw7hucSoSG0scGKeyu82UgRahRuVL8+Yw4WKpEOlMvXnb7CrI8HleDIPnfuw==,
-      }
-
   "@types/papaparse@5.5.2":
     resolution:
       {
@@ -4993,6 +4983,12 @@ packages:
     resolution:
       {
         integrity: sha512-qURfJAQcQGRfDQ4J9HaCjGaj3jlJKc66bnRk6G/IeLUsM7WKyG7Bzsuf1EZurSXyc0I4LVcu6HaeQQ4d3kZ16g==,
+      }
+
+  "@zarrita/storage@0.2.0":
+    resolution:
+      {
+        integrity: sha512-855ZXqtnds7spnT8vNvD+MXa3QExP1m2GqShe8yt7uZXHnQLgJHgkpVwFjE1B0KDDRO0ki09hmk6OboTaIfPsQ==,
       }
 
   accepts@1.3.8:
@@ -9698,20 +9694,20 @@ packages:
         integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==,
       }
 
-  ome-zarr.js@0.0.17:
+  ome-zarr.js@0.0.19:
     resolution:
       {
-        integrity: sha512-5t10obZtLX1Lwgo7kpqGdkPYJOAmRmTojCjhEiOlyDJ66zyyj7PCFN5CkUWsCQSvpWomZ9JwLsjEhv9rhJS4fQ==,
+        integrity: sha512-z+pP9AlUMvkfHBQ24F9KsjRgIDq9taeC23///ZQA/gzWOjlgbkcJlraJhjljESQC9fYYs+FiWkPsp7TAcS77ag==,
       }
 
-  omezarr-tilesource@0.1.1:
+  omezarr-tilesource@0.2.0:
     resolution:
       {
-        integrity: sha512-ud1RLS1G7lsxGUmL5qKCEnEpWvn1bcVzwpIs3ds7ZaErp19LWZOTJXsydz3HQIRhDThl/MHCet0mHPyMLBU9lg==,
+        integrity: sha512-I9tDoACd5I9DgM+fjoIhIyJrDgqwmAApMcOK0bIlKho6NushANfVY2+WPKOToYWj95rtLBZSCfP1oCrQpA3rtQ==,
       }
-    engines: { node: ">=20.19.0" }
+    engines: { node: ">=22.22.1" }
     peerDependencies:
-      openseadragon: ^5.0.1
+      openseadragon: ">=5.0.1 <7.0.0"
 
   on-finished@2.4.1:
     resolution:
@@ -9768,10 +9764,10 @@ packages:
       }
     hasBin: true
 
-  openseadragon@5.0.1:
+  openseadragon@6.0.2:
     resolution:
       {
-        integrity: sha512-a/hjouW9i3UfWxRADVYN2MyRhXMGnE7x9VVL7/4jXCcDLFyO4UM5o4RStYtqa5BfaHw/wMNAaD2WbxQF8f1pJg==,
+        integrity: sha512-WNPPQWp9sHunyzkV9J2yhfxnSfDF9CfBsE6unmkdxh1uTWzFcueMvBPhmuZdY7M1v/ffJ3NdaF3Qq3jogphIbA==,
       }
 
   optionator@0.9.4:
@@ -12357,6 +12353,13 @@ packages:
         integrity: sha512-gsq2PdJIWWGhx5kcdWStvNWit9FVdTewm4SEG7gFskWs+XCVaULt9+BwuoBtJiRE8eo3L1IPAOrbByNLtLtIlg==,
       }
     engines: { node: ">=12" }
+
+  unzipit@2.0.0:
+    resolution:
+      {
+        integrity: sha512-DVeVIWUZCAQPNzm5sB0hpsG1GygTTdBnzNtYYEpInkttx5evkyqRgZi6rTczoySqp8hO5jHVKzrH0f23X8FZLg==,
+      }
+    engines: { node: ">=18" }
 
   update-browserslist-db@1.2.3:
     resolution:
@@ -16473,8 +16476,6 @@ snapshots:
     dependencies:
       undici-types: 7.19.2
 
-  "@types/openseadragon@5.0.2": {}
-
   "@types/papaparse@5.5.2":
     dependencies:
       "@types/node": 25.6.0
@@ -16810,6 +16811,11 @@ snapshots:
     dependencies:
       reference-spec-reader: 0.2.0
       unzipit: 1.4.3
+
+  "@zarrita/storage@0.2.0":
+    dependencies:
+      reference-spec-reader: 0.2.0
+      unzipit: 2.0.0
 
   accepts@1.3.8:
     dependencies:
@@ -19888,15 +19894,15 @@ snapshots:
 
   obug@2.1.1: {}
 
-  ome-zarr.js@0.0.17:
+  ome-zarr.js@0.0.19:
     dependencies:
       zarrita: 0.5.4
 
-  omezarr-tilesource@0.1.1(openseadragon@5.0.1):
+  omezarr-tilesource@0.2.0(openseadragon@6.0.2):
     dependencies:
-      "@zarrita/storage": 0.1.4
-      ome-zarr.js: 0.0.17
-      openseadragon: 5.0.1
+      "@zarrita/storage": 0.2.0
+      ome-zarr.js: 0.0.19
+      openseadragon: 6.0.2
       zarrita: 0.5.4
 
   on-finished@2.4.1:
@@ -19932,7 +19938,7 @@ snapshots:
 
   opener@1.5.2: {}
 
-  openseadragon@5.0.1: {}
+  openseadragon@6.0.2: {}
 
   optionator@0.9.4:
     dependencies:
@@ -21642,6 +21648,8 @@ snapshots:
   unzipit@1.4.3:
     dependencies:
       uzip-module: 1.0.3
+
+  unzipit@2.0.0: {}
 
   update-browserslist-db@1.2.3(browserslist@4.28.2):
     dependencies:

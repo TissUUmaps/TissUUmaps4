@@ -26,12 +26,10 @@
     "@jsonforms/core": "^3.7.0",
     "fast-equals": "^6.0.0",
     "gl-matrix": "^3.4.4",
-    "openseadragon": "^5.0.1"
+    "openseadragon": "^6.0.2"
   },
-  "devDependencies": {
-    "@types/openseadragon": "^5.0.2"
-  },
+  "devDependencies": {},
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.22.1"
   }
 }
