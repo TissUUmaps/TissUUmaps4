@@ -41,8 +41,6 @@ export class SVGController {
   private static readonly _minShapeSizeFactor = 0.001;
   private static readonly _closeShapeThresholdFactor = 0.01;
   private static readonly _vertexMarkerRadiusFactor = 0.0015;
-  private static readonly _closePolygonThresholdFactor = 0.01;
-  private static readonly _vertexMarkerRadiusFactor = 0.0015;
   private _containerSize: { width: number; height: number };
   private _viewport: Rect;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -115,6 +113,7 @@ export class SVGController {
   setInteractionMode(newInteractionMode: InteractionMode) {
     if (this._freehandDrawingState && newInteractionMode !== "drawFreehand") {
       this._cancelFreehand();
+    }
     if (this._polygonDrawingState && newInteractionMode !== "drawPolygon") {
       this._cancelPolygon();
     }
@@ -154,6 +153,7 @@ export class SVGController {
 
   destroy(): void {
     this._cancelFreehand();
+    this._cancelPolygon();
     this._unregisterEventHandlers();
   }
 
@@ -324,9 +324,6 @@ export class SVGController {
   // Freehand Drawing
   // ─────────────────────────────────────────────────────────────
 
-  /* eslint-disable @typescript-eslint/no-unused-vars */
-
-  // @ts-expect-error currently not used
   private _handleFreehandPointerDown = (event: PointerEvent): void => {
     if (this._freehandDrawingState) return;
 
@@ -380,7 +377,7 @@ export class SVGController {
     }
 
     const existingPoints =
-    this._freehandDrawingState.currentPolyline.getAttribute("points");
+      this._freehandDrawingState.currentPolyline.getAttribute("points");
     this._freehandDrawingState.currentPolyline.setAttribute(
       "points",
       `${existingPoints} ${worldPoint.x},${worldPoint.y}`,
@@ -588,6 +585,53 @@ export class SVGController {
     const dx = p1.x - p2.x;
     const dy = p1.y - p2.y;
     return dx * dx + dy * dy < threshold * threshold;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Polygon Drawing Helpers
+  // ─────────────────────────────────────────────────────────────
+
+  private _updatePreviewPolyline(points: Vertex[]): void {
+    if (!this._polygonDrawingState) return;
+
+    const pointsString = points.map((v) => `${v.x},${v.y}`).join(" ");
+    this._polygonDrawingState.currentPolyline.setAttribute(
+      "points",
+      pointsString,
+    );
+  }
+
+  private _updateFirstVertexMarker(isActive: boolean): void {
+    if (!this._polygonDrawingState) return;
+
+    const firstMarker = this._polygonDrawingState.vertexMarkers[0];
+    if (!firstMarker) return;
+
+    this._setMarkerHighlighted(firstMarker, isActive);
+  }
+
+  private _completePolygon(): void {
+    if (!this._polygonDrawingState) return;
+
+    const multiPolygon = this._createMultiPolygon(
+      this._polygonDrawingState.vertices,
+    );
+    this.shapeCompleteHandler?.(multiPolygon);
+
+    this._cancelPolygon();
+  }
+
+  private _cancelPolygon(): void {
+    if (!this._polygonDrawingState) return;
+
+    this._polygonDrawingState.currentPolyline.remove();
+    for (const marker of this._polygonDrawingState.vertexMarkers) {
+      marker.remove();
+    }
+    this._polygonDrawingState = null;
+
+    document.removeEventListener("pointermove", this._handlePolygonPointerMove);
+    document.removeEventListener("keydown", this._handlePolygonKeyDown);
   }
 
   // ─────────────────────────────────────────────────────────────
