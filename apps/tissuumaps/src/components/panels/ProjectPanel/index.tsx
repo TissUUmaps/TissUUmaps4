@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 
 import { Field, FieldControl, FieldLabel } from "@/components/common/field";
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useProjectDownload } from "@/hooks/useProjectDownload";
 import { useTissUUmaps } from "@/store";
 
+import { LayersWidget } from "./LayersWidget";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
 export type ProjectPanelProps = {
@@ -123,6 +125,12 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
           />
         </Field>
       </div>
+      <Fieldset className="mt-4 flex flex-col gap-y-2">
+        <FieldsetLegend className="font-medium text-foreground">
+          Project Layers
+        </FieldsetLegend>
+        <LayersWidget />
+      </Fieldset>
     </div>
   );
 }

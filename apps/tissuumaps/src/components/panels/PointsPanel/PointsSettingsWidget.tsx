@@ -19,8 +19,10 @@ import {
 } from "@/components/common/accordion";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
@@ -140,6 +142,23 @@ export function PointsSettingsWidget({
             <GeneralPointsSettingsWidget points={points} />
           </AccordionPanel>
         </AccordionItem>
+        {/* Transform */}
+        <AccordionItem value={PointsSettingsCategory.transform}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Transform</AccordionTrigger>
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <TransformSettingsWidget
+              transform={points.transform}
+              onTransformChange={(transform) =>
+                updatePoints(points.id, { transform })
+              }
+              flip={points.flip}
+              onFlipChange={(flip) => updatePoints(points.id, { flip })}
+            />
+          </AccordionPanel>
+        </AccordionItem>
         {/* Point marker */}
         <AccordionItem value={PointsSettingsCategory.pointMarker}>
           <AccordionHeader>
@@ -246,6 +265,7 @@ function GeneralPointsSettingsWidget({
   points,
   className,
 }: GeneralPointsSettingsWidgetProps) {
+  const layers = useTissUUmaps((state) => state.layers);
   const updatePoints = useTissUUmaps((state) => state.updatePoints);
 
   return (
@@ -258,6 +278,24 @@ function GeneralPointsSettingsWidget({
             updatePoints(points.id, { name: event.target.value })
           }
         />
+      </Field>
+      <Field>
+        <FieldLabel>Layer</FieldLabel>
+        {typeof points.layer === "string" ? (
+          <SimpleSelect
+            items={layers}
+            itemLabel={(l) => l.name}
+            itemValue={(l) => l.id}
+            value={points.layer}
+            onValueChange={(value) => {
+              if (value !== null) {
+                updatePoints(points.id, { layer: value });
+              }
+            }}
+          />
+        ) : (
+          <Input disabled value={`column: ${points.layer.column}`} readOnly />
+        )}
       </Field>
       <Field>
         <FieldLabel>Visibility</FieldLabel>

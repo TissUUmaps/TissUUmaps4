@@ -16,8 +16,10 @@ import {
 } from "@/components/common/accordion";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
@@ -111,6 +113,23 @@ export function LabelsSettingsWidget({
             <GeneralLabelsSettingsWidget labels={labels} />
           </AccordionPanel>
         </AccordionItem>
+        {/* Transform */}
+        <AccordionItem value={LabelsSettingsCategory.transform}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Transform</AccordionTrigger>
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <TransformSettingsWidget
+              transform={labels.transform}
+              onTransformChange={(transform) =>
+                updateLabels(labels.id, { transform })
+              }
+              flip={labels.flip}
+              onFlipChange={(flip) => updateLabels(labels.id, { flip })}
+            />
+          </AccordionPanel>
+        </AccordionItem>
         {/* Label color */}
         <AccordionItem value={LabelsSettingsCategory.labelColor}>
           <AccordionHeader>
@@ -181,6 +200,7 @@ function GeneralLabelsSettingsWidget({
   labels,
   className,
 }: GeneralLabelsSettingsWidgetProps) {
+  const layers = useTissUUmaps((state) => state.layers);
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
 
   return (
@@ -192,6 +212,20 @@ function GeneralLabelsSettingsWidget({
           onChange={(event) =>
             updateLabels(labels.id, { name: event.target.value })
           }
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Layer</FieldLabel>
+        <SimpleSelect
+          items={layers}
+          itemLabel={(l) => l.name}
+          itemValue={(l) => l.id}
+          value={labels.layer}
+          onValueChange={(value) => {
+            if (value !== null) {
+              updateLabels(labels.id, { layer: value });
+            }
+          }}
         />
       </Field>
       <Field>
