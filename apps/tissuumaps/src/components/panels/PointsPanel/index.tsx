@@ -209,7 +209,6 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             }}
             className="bg-card"
           />
-          {/* TODO layer configs */}
           <PointsSettingsWidget
             points={points}
             activeCategory={activeSettingsCategory}

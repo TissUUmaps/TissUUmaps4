@@ -1,4 +1,4 @@
-import { type Image, MathUtils } from "@tissuumaps/core";
+import { type Layer, MathUtils } from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -10,7 +10,6 @@ import {
 } from "@/components/common/accordion";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
-import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
@@ -18,24 +17,24 @@ import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useTissUUmaps } from "@/store";
 
-import { ImageSettingsCategory } from "./category";
+import { LayerSettingsCategory } from "./category";
 
-export type ImageSettingsWidgetProps = {
-  image: Image;
-  activeCategory?: ImageSettingsCategory | null;
+export type LayerSettingsWidgetProps = {
+  layer: Layer;
+  activeCategory?: LayerSettingsCategory | null;
   onActiveCategoryChange?: (
-    newActiveCategory: ImageSettingsCategory | null,
+    newActiveCategory: LayerSettingsCategory | null,
   ) => void;
   className?: string;
 };
 
-export function ImageSettingsWidget({
-  image,
+export function LayerSettingsWidget({
+  layer,
   activeCategory: controlledActiveCategory,
   onActiveCategoryChange: setControlledActiveCategory,
   className,
-}: ImageSettingsWidgetProps) {
-  const updateImage = useTissUUmaps((state) => state.updateImage);
+}: LayerSettingsWidgetProps) {
+  const updateLayer = useTissUUmaps((state) => state.updateLayer);
 
   const [activeCategory, setActiveCategory] = useControlled(
     controlledActiveCategory,
@@ -54,32 +53,30 @@ export function ImageSettingsWidget({
         value={activeCategory !== null ? [activeCategory] : []}
         onValueChange={(value) =>
           setActiveCategory(
-            value.length > 0 ? (value[0] as ImageSettingsCategory) : null,
+            value.length > 0 ? (value[0] as LayerSettingsCategory) : null,
           )
         }
       >
-        <AccordionItem value={ImageSettingsCategory.general}>
+        <AccordionItem value={LayerSettingsCategory.general}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>General</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <GeneralImageSettingsWidget image={image} />
+            <GeneralLayerSettingsWidget layer={layer} />
           </AccordionPanel>
         </AccordionItem>
-        <AccordionItem value={ImageSettingsCategory.transform}>
+        <AccordionItem value={LayerSettingsCategory.transform}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
             <AccordionTrigger>Transform</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <TransformSettingsWidget
-              transform={image.transform}
+              transform={layer.transform}
               onTransformChange={(transform) =>
-                updateImage(image.id, { transform })
+                updateLayer(layer.id, { transform })
               }
-              flip={image.flip}
-              onFlipChange={(flip) => updateImage(image.id, { flip })}
             />
           </AccordionPanel>
         </AccordionItem>
@@ -88,53 +85,38 @@ export function ImageSettingsWidget({
   );
 }
 
-type GeneralImageSettingsWidgetProps = {
-  image: Image;
+type GeneralLayerSettingsWidgetProps = {
+  layer: Layer;
   className?: string;
 };
 
-function GeneralImageSettingsWidget({
-  image,
+function GeneralLayerSettingsWidget({
+  layer,
   className,
-}: GeneralImageSettingsWidgetProps) {
-  const layers = useTissUUmaps((state) => state.layers);
-  const updateImage = useTissUUmaps((state) => state.updateImage);
+}: GeneralLayerSettingsWidgetProps) {
+  const updateLayer = useTissUUmaps((state) => state.updateLayer);
 
   return (
     <div className={className}>
       <Field>
         <FieldLabel>Name</FieldLabel>
         <Input
-          value={image.name}
+          value={layer.name}
           onChange={(event) =>
-            updateImage(image.id, { name: event.target.value })
+            updateLayer(layer.id, { name: event.target.value })
           }
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Layer</FieldLabel>
-        <SimpleSelect
-          items={layers}
-          itemLabel={(l) => l.name}
-          itemValue={(l) => l.id}
-          value={image.layer}
-          onValueChange={(value) => {
-            if (value !== null) {
-              updateImage(image.id, { layer: value });
-            }
-          }}
         />
       </Field>
       <Field>
         <FieldLabel>Visibility</FieldLabel>
         <div className="flex flex-row items-center gap-x-2">
           <Switch
-            checked={image.visibility}
+            checked={layer.visibility}
             onCheckedChange={(checked) =>
-              updateImage(image.id, { visibility: checked })
+              updateLayer(layer.id, { visibility: checked })
             }
           />
-          {image.visibility ? "Visible" : "Hidden"}
+          {layer.visibility ? "Visible" : "Hidden"}
         </div>
       </Field>
       <Field>
@@ -145,12 +127,30 @@ function GeneralImageSettingsWidget({
           step={0.05}
           min={0}
           max={1}
-          value={image.opacity}
+          value={layer.opacity}
           onChange={(event) => {
             const newValue = event.target.valueAsNumber;
             if (!isNaN(newValue)) {
-              updateImage(image.id, {
+              updateLayer(layer.id, {
                 opacity: MathUtils.clamp(newValue, 0, 1),
+              });
+            }
+          }}
+        />
+      </Field>
+      <Field>
+        <FieldLabel>Point size factor</FieldLabel>
+        <Input
+          type="number"
+          inputMode="decimal"
+          step={0.1}
+          min={0}
+          value={layer.pointSizeFactor}
+          onChange={(event) => {
+            const newValue = event.target.valueAsNumber;
+            if (!isNaN(newValue)) {
+              updateLayer(layer.id, {
+                pointSizeFactor: Math.max(0, newValue),
               });
             }
           }}

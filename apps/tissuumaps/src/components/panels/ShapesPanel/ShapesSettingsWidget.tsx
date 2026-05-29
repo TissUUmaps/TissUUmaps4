@@ -19,8 +19,10 @@ import {
 } from "@/components/common/accordion";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
@@ -136,6 +138,23 @@ export function ShapesSettingsWidget({
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
             <GeneralShapesSettingsWidget shapes={shapes} />
+          </AccordionPanel>
+        </AccordionItem>
+        {/* Transform */}
+        <AccordionItem value={ShapesSettingsCategory.transform}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Transform</AccordionTrigger>
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <TransformSettingsWidget
+              transform={shapes.transform}
+              onTransformChange={(transform) =>
+                updateShapes(shapes.id, { transform })
+              }
+              flip={shapes.flip}
+              onFlipChange={(flip) => updateShapes(shapes.id, { flip })}
+            />
           </AccordionPanel>
         </AccordionItem>
         {/* Shape fill color */}
@@ -268,6 +287,7 @@ function GeneralShapesSettingsWidget({
   shapes,
   className,
 }: GeneralShapesSettingsWidgetProps) {
+  const layers = useTissUUmaps((state) => state.layers);
   const updateShapes = useTissUUmaps((state) => state.updateShapes);
 
   return (
@@ -280,6 +300,24 @@ function GeneralShapesSettingsWidget({
             updateShapes(shapes.id, { name: event.target.value })
           }
         />
+      </Field>
+      <Field>
+        <FieldLabel>Layer</FieldLabel>
+        {typeof shapes.layer === "string" ? (
+          <SimpleSelect
+            items={layers}
+            itemLabel={(l) => l.name}
+            itemValue={(l) => l.id}
+            value={shapes.layer}
+            onValueChange={(value) => {
+              if (value !== null) {
+                updateShapes(shapes.id, { layer: value });
+              }
+            }}
+          />
+        ) : (
+          <Input disabled value={`column: ${shapes.layer.column}`} readOnly />
+        )}
       </Field>
       <Field>
         <FieldLabel>Visibility</FieldLabel>
