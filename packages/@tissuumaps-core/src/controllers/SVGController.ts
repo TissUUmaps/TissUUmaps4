@@ -258,6 +258,10 @@ export class SVGController {
     if (!this._polygonDrawingState) {
       document.addEventListener("pointermove", this._handlePolygonPointerMove);
       document.addEventListener("keydown", this._handlePolygonKeyDown);
+      document.addEventListener(
+        "pointercancel",
+        this._handlePolygonPointerCancel,
+      );
 
       this._polygonDrawingState = {
         vertices: [worldPoint],
@@ -280,7 +284,7 @@ export class SVGController {
         this._createVertexMarker(worldPoint),
       );
 
-      this._updatePreviewPolyline(this._polygonDrawingState.vertices);
+      this._updatePolygonPreviewPolyline(this._polygonDrawingState.vertices);
     }
   };
 
@@ -299,7 +303,7 @@ export class SVGController {
       this._updateFirstVertexMarker(isNearStart);
     }
 
-    this._updatePreviewPolyline([
+    this._updatePolygonPreviewPolyline([
       ...this._polygonDrawingState.vertices,
       worldPoint,
     ]);
@@ -318,6 +322,11 @@ export class SVGController {
     } else if (this._polygonDrawingState.vertices.length >= 3) {
       this._completePolygon();
     }
+  };
+
+  private _handlePolygonPointerCancel = (): void => {
+    if (!this._polygonDrawingState) return;
+    this._cancelPolygon();
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -510,6 +519,53 @@ export class SVGController {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // Polygon Drawing Helpers
+  // ─────────────────────────────────────────────────────────────
+
+  private _updatePolygonPreviewPolyline(points: Vertex[]): void {
+    if (!this._polygonDrawingState) return;
+
+    const pointsString = points.map((v) => `${v.x},${v.y}`).join(" ");
+    this._polygonDrawingState.currentPolyline.setAttribute(
+      "points",
+      pointsString,
+    );
+  }
+
+  private _updateFirstVertexMarker(isActive: boolean): void {
+    if (!this._polygonDrawingState) return;
+
+    const firstMarker = this._polygonDrawingState.vertexMarkers[0];
+    if (!firstMarker) return;
+
+    this._setMarkerHighlighted(firstMarker, isActive);
+  }
+
+  private _completePolygon(): void {
+    if (!this._polygonDrawingState) return;
+
+    const multiPolygon = this._createMultiPolygon(
+      this._polygonDrawingState.vertices,
+    );
+    this.shapeCompleteHandler?.(multiPolygon);
+
+    this._cancelPolygon();
+  }
+
+  private _cancelPolygon(): void {
+    if (!this._polygonDrawingState) return;
+
+    this._polygonDrawingState.currentPolyline.remove();
+    for (const marker of this._polygonDrawingState.vertexMarkers) {
+      marker.remove();
+    }
+    this._polygonDrawingState = null;
+
+    document.removeEventListener("pointermove", this._handlePolygonPointerMove);
+    document.removeEventListener("keydown", this._handlePolygonKeyDown);
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // Freehand Drawing Helpers
   // ─────────────────────────────────────────────────────────────
 
@@ -585,53 +641,6 @@ export class SVGController {
     const dx = p1.x - p2.x;
     const dy = p1.y - p2.y;
     return dx * dx + dy * dy < threshold * threshold;
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Polygon Drawing Helpers
-  // ─────────────────────────────────────────────────────────────
-
-  private _updatePreviewPolyline(points: Vertex[]): void {
-    if (!this._polygonDrawingState) return;
-
-    const pointsString = points.map((v) => `${v.x},${v.y}`).join(" ");
-    this._polygonDrawingState.currentPolyline.setAttribute(
-      "points",
-      pointsString,
-    );
-  }
-
-  private _updateFirstVertexMarker(isActive: boolean): void {
-    if (!this._polygonDrawingState) return;
-
-    const firstMarker = this._polygonDrawingState.vertexMarkers[0];
-    if (!firstMarker) return;
-
-    this._setMarkerHighlighted(firstMarker, isActive);
-  }
-
-  private _completePolygon(): void {
-    if (!this._polygonDrawingState) return;
-
-    const multiPolygon = this._createMultiPolygon(
-      this._polygonDrawingState.vertices,
-    );
-    this.shapeCompleteHandler?.(multiPolygon);
-
-    this._cancelPolygon();
-  }
-
-  private _cancelPolygon(): void {
-    if (!this._polygonDrawingState) return;
-
-    this._polygonDrawingState.currentPolyline.remove();
-    for (const marker of this._polygonDrawingState.vertexMarkers) {
-      marker.remove();
-    }
-    this._polygonDrawingState = null;
-
-    document.removeEventListener("pointermove", this._handlePolygonPointerMove);
-    document.removeEventListener("keydown", this._handlePolygonKeyDown);
   }
 
   // ─────────────────────────────────────────────────────────────
