@@ -1,12 +1,11 @@
 import { type Model, type RawModel, createModel } from "./base";
 import { identityTransform } from "./constants";
-import { type SimilarityTransform } from "./types";
+import { type Transform } from "./types";
 
 /**
  * Default values for {@link RawLayer}
  */
 export const layerDefaults = {
-  flip: false,
   transform: identityTransform,
   visibility: true,
   opacity: 1,
@@ -28,18 +27,11 @@ export interface RawLayer extends RawModel {
   name: string;
 
   /**
-   * Whether to flip the layer horizontally around the left edge (x = 0)
-   *
-   * @defaultValue {@link layerDefaults.flip}
-   */
-  flip?: boolean;
-
-  /**
    * Transformation from layer space to world space
    *
    * @defaultValue {@link layerDefaults.transform}
    */
-  transform?: SimilarityTransform;
+  transform?: Transform;
 
   /**
    * Layer visibility

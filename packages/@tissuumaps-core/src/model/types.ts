@@ -58,8 +58,11 @@ export type CoordinateSpace =
   /** World (i.e. global) space */
   | "world";
 
-/** Similarity transform (uniform scale, rotation, and translation) */
-export type SimilarityTransform = {
+/** Similarity transform (uniform scale, rotation, translation, and optional flip) */
+export type Transform = {
+  /** Horizontal reflection, applied before scaling, rotation, and translation */
+  flip: boolean;
+
   /** Uniform scale factor (1 = no scaling) */
   scale: number;
 

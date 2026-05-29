@@ -1,7 +1,7 @@
 import { mat3 } from "gl-matrix";
 
 import { type Layer } from "../model/layer";
-import { type SimilarityTransform } from "../model/types";
+import { type Transform } from "../model/types";
 import { type Rect } from "../types";
 import { TransformUtils } from "../utils/TransformUtils";
 
@@ -29,11 +29,11 @@ export class WebGLControllerBase {
    * @param layer - Layer providing the layer → world transform
    */
   protected static createDataToWorldMatrix(
-    obj: { flip: boolean; transform: SimilarityTransform },
+    obj: { transform: Transform },
     layer: Layer,
   ): mat3 {
     const dataToWorldMatrix = mat3.create();
-    const effectiveFlip = obj.flip !== layer.flip;
+    const effectiveFlip = !!obj.transform.flip !== !!layer.transform.flip;
     if (effectiveFlip) {
       const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
       mat3.multiply(dataToWorldMatrix, flipMatrix, dataToWorldMatrix);
@@ -90,7 +90,7 @@ export class WebGLControllerBase {
    * @param layer - Layer providing the layer → world transform (inverted)
    */
   protected static createWorldToDataMatrix(
-    obj: { flip: boolean; transform: SimilarityTransform },
+    obj: { transform: Transform },
     layer: Layer,
   ): mat3 {
     const worldToDataMatrix = mat3.create();
@@ -102,7 +102,7 @@ export class WebGLControllerBase {
     const layerToDataMatrix = TransformUtils.toSimilarityMatrix(obj.transform);
     mat3.invert(layerToDataMatrix, layerToDataMatrix);
     mat3.multiply(worldToDataMatrix, layerToDataMatrix, worldToDataMatrix);
-    const effectiveFlip = obj.flip !== layer.flip;
+    const effectiveFlip = !!obj.transform.flip !== !!layer.transform.flip;
     if (effectiveFlip) {
       const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
       mat3.multiply(worldToDataMatrix, flipMatrix, worldToDataMatrix);

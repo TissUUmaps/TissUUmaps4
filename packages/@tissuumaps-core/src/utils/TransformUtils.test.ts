@@ -1,7 +1,7 @@
 import { mat3 } from "gl-matrix";
 import { describe, expect, it } from "vitest";
 
-import { type SimilarityTransform } from "../model/types";
+import { type Transform } from "../model/types";
 import { TransformUtils } from "./TransformUtils";
 
 describe("TransformUtils", () => {
@@ -55,7 +55,8 @@ describe("TransformUtils", () => {
 
   describe("toMatrix", () => {
     it("creates a matrix from scale, rotation, and translation", () => {
-      const tf: SimilarityTransform = {
+      const tf: Transform = {
+        flip: false,
         scale: 2,
         rotation: 30,
         translation: { x: 5, y: 7 },
@@ -148,9 +149,19 @@ describe("TransformUtils", () => {
 
   describe("fromMatrix / toMatrix roundtrip", () => {
     it.each([
-      { scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
-      { scale: 2.5, rotation: 60, translation: { x: -10, y: 20 } },
-      { scale: 0.5, rotation: -45, translation: { x: 100, y: 100 } },
+      { flip: false, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
+      {
+        flip: false,
+        scale: 2.5,
+        rotation: 60,
+        translation: { x: -10, y: 20 },
+      },
+      {
+        flip: false,
+        scale: 0.5,
+        rotation: -45,
+        translation: { x: 100, y: 100 },
+      },
     ])("roundtrips %j", (tf) => {
       const m = TransformUtils.toSimilarityMatrix(tf);
       const result = TransformUtils.fromSimilarityMatrix(m);

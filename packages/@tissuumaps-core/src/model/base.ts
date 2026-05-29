@@ -1,5 +1,5 @@
 import { identityTransform } from "./constants";
-import { type SimilarityTransform } from "./types";
+import { type Transform } from "./types";
 
 /**
  * Default values for {@link RawModel}
@@ -83,7 +83,6 @@ export function createDataObject<
 export const renderedDataObjectDefaults = {
   visibility: true,
   opacity: 1,
-  flip: false,
   transform: identityTransform,
 } as const satisfies Partial<RawRenderedDataObject<RawDataSource<string>>>;
 
@@ -117,18 +116,11 @@ export interface RawRenderedDataObject<
   opacity?: number;
 
   /**
-   * Horizontal reflection, applied before transformation
-   *
-   * @defaultValue {@link renderedDataObjectDefaults.flip}
-   */
-  flip?: boolean;
-
-  /**
    * Transformation from data object space to layer space
    *
    * @defaultValue {@link renderedDataObjectDefaults.transform}
    */
-  transform?: SimilarityTransform;
+  transform?: Transform;
 }
 
 /**

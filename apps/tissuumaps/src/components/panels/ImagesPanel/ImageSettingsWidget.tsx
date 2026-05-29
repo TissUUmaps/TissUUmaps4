@@ -78,8 +78,6 @@ export function ImageSettingsWidget({
               onTransformChange={(transform) =>
                 updateImage(image.id, { transform })
               }
-              flip={image.flip}
-              onFlipChange={(flip) => updateImage(image.id, { flip })}
             />
           </AccordionPanel>
         </AccordionItem>

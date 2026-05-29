@@ -3,16 +3,17 @@ import {
   type CoordinateSpace,
   Marker,
   type RenderOptions,
-  type SimilarityTransform,
+  type Transform,
   type ViewerOptions,
 } from "./types";
 
 /** Identity similarity transform */
 export const identityTransform = {
+  flip: false,
   scale: 1,
   rotation: 0,
   translation: { x: 0, y: 0 },
-} as const satisfies SimilarityTransform;
+} as const satisfies Transform;
 
 /** Default OpenSeadragon viewer options */
 export const defaultViewerOptions = {

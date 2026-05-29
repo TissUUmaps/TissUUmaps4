@@ -484,7 +484,7 @@ export class OpenSeadragonController {
     if (tiledImageState.tiledImage === undefined) {
       throw new Error("Cannot update tiled image before it is created");
     }
-    const { flip, transform } =
+    const { transform } =
       "image" in tiledImageState.ref
         ? tiledImageState.ref.image
         : tiledImageState.ref.labels;
@@ -516,7 +516,8 @@ export class OpenSeadragonController {
     mat3.multiply(m, layerToWorldMatrix, m);
     const dataToWorldTransform = TransformUtils.fromSimilarityMatrix(m);
     const bounds = tiledImageState.tiledImage.getBoundsNoRotate();
-    const effectiveFlip = flip !== tiledImageState.ref.layer.flip;
+    const effectiveFlip =
+      !!transform.flip !== !!tiledImageState.ref.layer.transform.flip;
     if (tiledImageState.tiledImage.getFlip() !== effectiveFlip) {
       tiledImageState.tiledImage.setFlip(effectiveFlip);
     }

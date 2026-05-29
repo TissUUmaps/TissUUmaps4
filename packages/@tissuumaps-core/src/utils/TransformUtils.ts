@@ -1,24 +1,25 @@
 import { mat3, vec2 } from "gl-matrix";
 
-import { type SimilarityTransform } from "../model/types";
+import { type Transform } from "../model/types";
 import { type Rect } from "../types";
 
 /**
- * Utility methods for converting between {@link SimilarityTransform}
+ * Utility methods for converting between {@link Transform}
  * objects and `gl-matrix` {@link mat3} matrices
  */
 export class TransformUtils {
   /**
-   * Decomposes a 3×3 similarity matrix into a {@link SimilarityTransform}
+   * Decomposes a 3×3 similarity matrix into a {@link Transform}
    *
    * Extracts uniform scale, rotation (in degrees), and translation
    * from a column-major `gl-matrix` {@link mat3}.
    *
    * @param m - The source matrix
    */
-  static fromSimilarityMatrix(m: mat3): SimilarityTransform {
+  static fromSimilarityMatrix(m: mat3): Transform {
     // gl-matrix, like OpenGL, uses column-major order.
     return {
+      flip: false,
       scale: Math.sqrt(m[0] * m[0] + m[1] * m[1]),
       rotation: (Math.atan2(m[1], m[0]) * 180) / Math.PI,
       translation: { x: m[6], y: m[7] },
@@ -26,7 +27,7 @@ export class TransformUtils {
   }
 
   /**
-   * Builds a 3×3 similarity matrix from a (partial) {@link SimilarityTransform}
+   * Builds a 3×3 similarity matrix from a (partial) {@link Transform}
    *
    * Applies, in order: scale, rotation (around `center` if provided),
    * and translation.
@@ -35,7 +36,7 @@ export class TransformUtils {
    * @param options - Optional rotation center in pre-scaled coordinates
    */
   static toSimilarityMatrix(
-    tf: Partial<SimilarityTransform>,
+    tf: Partial<Transform>,
     options?: { center?: { x: number; y: number } },
   ): mat3 {
     const { center } = options ?? {};
