@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 
 import { Field, FieldControl, FieldLabel } from "@/components/common/field";
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -124,8 +125,12 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
           />
         </Field>
       </div>
-      <h3 className="mt-4 mb-2 font-medium text-foreground">Project Layers</h3>
-      <LayersWidget />
+      <Fieldset className="mt-4 flex flex-col gap-y-2">
+        <FieldsetLegend className="font-medium text-foreground">
+          Project Layers
+        </FieldsetLegend>
+        <LayersWidget />
+      </Fieldset>
     </div>
   );
 }
