@@ -414,7 +414,7 @@ export class OpenSeadragonController {
               throw new Error("Method not implemented");
             })(),
       index: index,
-      flipped: !!obj.transform.flip !== !!ref.layer.transform.flip,
+      flipped: obj.transform.flip !== ref.layer.transform.flip,
       opacity: OpenSeadragonController._calculateOpacity(ref),
       success: (event) => {
         const { item: tiledImage } = event as unknown as {
