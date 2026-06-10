@@ -1,6 +1,7 @@
-import { mat3 } from "gl-matrix";
+import { mat3, vec2 } from "gl-matrix";
 import { describe, expect, it } from "vitest";
 
+import { identityTransform } from "../model/constants";
 import { type Transform } from "../model/types";
 import { TransformUtils } from "./TransformUtils";
 
@@ -50,6 +51,37 @@ describe("TransformUtils", () => {
       expect(tf.rotation).toBeCloseTo(0);
       expect(tf.translation.x).toBeCloseTo(0);
       expect(tf.translation.y).toBeCloseTo(0);
+    });
+
+    it("detects flip from negative determinant", () => {
+      const m = mat3.create();
+      mat3.scale(m, m, [-1, 1]);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
+      expect(tf.flip).toBe(true);
+      expect(tf.scale).toBeCloseTo(1);
+      expect(tf.rotation).toBeCloseTo(0);
+    });
+
+    it("detects flip with scale and rotation", () => {
+      const m = mat3.create();
+      mat3.translate(m, m, [5, 7]);
+      mat3.rotate(m, m, (Math.PI * 30) / 180);
+      mat3.scale(m, m, [2, 2]);
+      mat3.scale(m, m, [-1, 1]);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
+      expect(tf.flip).toBe(true);
+      expect(tf.scale).toBeCloseTo(2);
+      expect(tf.rotation).toBeCloseTo(30);
+      expect(tf.translation.x).toBeCloseTo(5);
+      expect(tf.translation.y).toBeCloseTo(7);
+    });
+
+    it("returns flip: false for non-flipped matrix", () => {
+      const m = mat3.create();
+      mat3.rotate(m, m, Math.PI / 4);
+      mat3.scale(m, m, [3, 3]);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
+      expect(tf.flip).toBe(false);
     });
   });
 
@@ -138,6 +170,24 @@ describe("TransformUtils", () => {
       expect(m[7]).toBeCloseTo(4);
     });
 
+    it("creates a flipped matrix", () => {
+      const tf: Transform = {
+        flip: true,
+        scale: 2,
+        rotation: 30,
+        translation: { x: 5, y: 7 },
+      };
+      const m = TransformUtils.toSimilarityMatrix(tf);
+      const det = m[0] * m[4] - m[3] * m[1];
+      expect(det).toBeLessThan(0);
+      const result = TransformUtils.fromSimilarityMatrix(m);
+      expect(result.flip).toBe(true);
+      expect(result.scale).toBeCloseTo(tf.scale);
+      expect(result.rotation).toBeCloseTo(tf.rotation);
+      expect(result.translation.x).toBeCloseTo(tf.translation.x);
+      expect(result.translation.y).toBeCloseTo(tf.translation.y);
+    });
+
     it("returns identity for empty partial transform", () => {
       const m = TransformUtils.toSimilarityMatrix({});
       const identity = mat3.create();
@@ -162,9 +212,23 @@ describe("TransformUtils", () => {
         rotation: -45,
         translation: { x: 100, y: 100 },
       },
+      { flip: true, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
+      {
+        flip: true,
+        scale: 2.5,
+        rotation: 60,
+        translation: { x: -10, y: 20 },
+      },
+      {
+        flip: true,
+        scale: 0.5,
+        rotation: -45,
+        translation: { x: 100, y: 100 },
+      },
     ])("roundtrips %j", (tf) => {
       const m = TransformUtils.toSimilarityMatrix(tf);
       const result = TransformUtils.fromSimilarityMatrix(m);
+      expect(result.flip).toBe(tf.flip);
       expect(result.scale).toBeCloseTo(tf.scale);
       expect(result.rotation).toBeCloseTo(tf.rotation);
       expect(result.translation.x).toBeCloseTo(tf.translation.x);
@@ -277,5 +341,244 @@ describe("TransformUtils", () => {
       expect(result.width).toBeCloseTo(6);
       expect(result.height).toBeCloseTo(6);
     });
+  });
+
+  describe("toTiledImageGeometry", () => {
+    const contentSize = { x: 100, y: 80 };
+
+    /**
+     * Simulate where OSD places the four image corners given the returned
+     * geometry parameters (flip, width, rotation, x, y).
+     *
+     * OSD renders a tiled image as:
+     *   1. Place at (x, y) with the given width (height = width * aspect)
+     *   2. Rotate around image center by `rotation` degrees
+     *   3. If flipped, mirror tile content horizontally around image center
+     *
+     * We reverse-engineer corner positions from those parameters.
+     */
+    function osdCorners(
+      geom: {
+        flip: boolean;
+        width: number;
+        rotation: number;
+        x: number;
+        y: number;
+      },
+      contentSize: { x: number; y: number },
+    ): vec2[] {
+      const aspect = contentSize.y / contentSize.x;
+      const w = geom.width;
+      const h = w * aspect;
+      // Corners before rotation, relative to position
+      let corners: vec2[] = [
+        vec2.fromValues(0, 0),
+        vec2.fromValues(w, 0),
+        vec2.fromValues(w, h),
+        vec2.fromValues(0, h),
+      ];
+      if (geom.flip) {
+        // OSD flips around center: x' = w - x
+        corners = corners.map((c) => vec2.fromValues(w - c[0], c[1]));
+      }
+      const cx = w / 2;
+      const cy = h / 2;
+      const rad = (geom.rotation * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      return corners.map((c) => {
+        const dx = c[0] - cx;
+        const dy = c[1] - cy;
+        return vec2.fromValues(
+          geom.x + cx + dx * cos - dy * sin,
+          geom.y + cy + dx * sin + dy * cos,
+        );
+      });
+    }
+
+    /**
+     * Compute where the WebGL path places the same four corners using
+     * the data → world matrix (same logic as WebGLControllerBase).
+     */
+    function webglCorners(
+      transform: Transform,
+      layerTransform: Transform,
+      contentSize: { x: number; y: number },
+    ): vec2[] {
+      const m = mat3.create();
+      const effectiveFlip = !!transform.flip !== !!layerTransform.flip;
+      if (effectiveFlip) {
+        mat3.scale(m, m, [-1, 1]);
+      }
+      const dataToLayer = TransformUtils.toSimilarityMatrix({
+        ...transform,
+        flip: false,
+      });
+      mat3.multiply(m, dataToLayer, m);
+      const layerToWorld = TransformUtils.toSimilarityMatrix({
+        ...layerTransform,
+        flip: false,
+      });
+      mat3.multiply(m, layerToWorld, m);
+      const corners = [
+        vec2.fromValues(0, 0),
+        vec2.fromValues(contentSize.x, 0),
+        vec2.fromValues(contentSize.x, contentSize.y),
+        vec2.fromValues(0, contentSize.y),
+      ];
+      return corners.map((c) => {
+        const out = vec2.create();
+        vec2.transformMat3(out, c, m);
+        return out;
+      });
+    }
+
+    it("identity transforms produce correct geometry", () => {
+      const geom = TransformUtils.toTiledImageGeometry(
+        identityTransform,
+        identityTransform,
+        contentSize,
+      );
+      expect(geom.flip).toBe(false);
+      expect(geom.width).toBeCloseTo(contentSize.x);
+      expect(geom.rotation).toBeCloseTo(0);
+      expect(geom.x).toBeCloseTo(0);
+      expect(geom.y).toBeCloseTo(0);
+    });
+
+    it("applies data scale", () => {
+      const transform: Transform = {
+        flip: false,
+        scale: 2,
+        rotation: 0,
+        translation: { x: 0, y: 0 },
+      };
+      const geom = TransformUtils.toTiledImageGeometry(
+        transform,
+        identityTransform,
+        contentSize,
+      );
+      expect(geom.width).toBeCloseTo(200);
+      expect(geom.rotation).toBeCloseTo(0);
+    });
+
+    it("flip-only produces correct position shift", () => {
+      const transform: Transform = {
+        flip: true,
+        scale: 1,
+        rotation: 0,
+        translation: { x: 0, y: 0 },
+      };
+      const geom = TransformUtils.toTiledImageGeometry(
+        transform,
+        identityTransform,
+        contentSize,
+      );
+      expect(geom.flip).toBe(true);
+      expect(geom.width).toBeCloseTo(100);
+      // Position must shift left by width to flip around left edge
+      expect(geom.x).toBeCloseTo(-100);
+      expect(geom.y).toBeCloseTo(0);
+    });
+
+    it("layer-level flip XORs with data flip", () => {
+      const transform: Transform = {
+        flip: true,
+        scale: 1,
+        rotation: 0,
+        translation: { x: 0, y: 0 },
+      };
+      const layerTransform: Transform = {
+        flip: true,
+        scale: 1,
+        rotation: 0,
+        translation: { x: 0, y: 0 },
+      };
+      const geom = TransformUtils.toTiledImageGeometry(
+        transform,
+        layerTransform,
+        contentSize,
+      );
+      // flip XOR flip = no flip
+      expect(geom.flip).toBe(false);
+    });
+
+    it.each([
+      {
+        name: "scale + rotation, no flip",
+        transform: {
+          flip: false,
+          scale: 2,
+          rotation: 45,
+          translation: { x: 10, y: 5 },
+        },
+        layerTransform: identityTransform,
+      },
+      {
+        name: "flip + rotation",
+        transform: {
+          flip: true,
+          scale: 1,
+          rotation: 30,
+          translation: { x: 0, y: 0 },
+        },
+        layerTransform: identityTransform,
+      },
+      {
+        name: "flip + scale + rotation + translation",
+        transform: {
+          flip: true,
+          scale: 2,
+          rotation: 60,
+          translation: { x: -5, y: 10 },
+        },
+        layerTransform: identityTransform,
+      },
+      {
+        name: "layer flip + data no-flip",
+        transform: {
+          flip: false,
+          scale: 1.5,
+          rotation: 0,
+          translation: { x: 3, y: 7 },
+        },
+        layerTransform: {
+          flip: true,
+          scale: 1,
+          rotation: 0,
+          translation: { x: 0, y: 0 },
+        },
+      },
+      {
+        name: "both flip + layer rotation",
+        transform: {
+          flip: true,
+          scale: 1,
+          rotation: 0,
+          translation: { x: 0, y: 0 },
+        },
+        layerTransform: {
+          flip: true,
+          scale: 1,
+          rotation: 90,
+          translation: { x: 0, y: 0 },
+        },
+      },
+    ] as { name: string; transform: Transform; layerTransform: Transform }[])(
+      "OSD corners match WebGL corners: $name",
+      ({ transform, layerTransform }) => {
+        const geom = TransformUtils.toTiledImageGeometry(
+          transform,
+          layerTransform,
+          contentSize,
+        );
+        const osd = osdCorners(geom, contentSize);
+        const webgl = webglCorners(transform, layerTransform, contentSize);
+        for (let i = 0; i < 4; i++) {
+          expect(osd[i]![0]).toBeCloseTo(webgl[i]![0], 3);
+          expect(osd[i]![1]).toBeCloseTo(webgl[i]![1], 3);
+        }
+      },
+    );
   });
 });
