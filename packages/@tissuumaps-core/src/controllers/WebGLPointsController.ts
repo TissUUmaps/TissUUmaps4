@@ -29,6 +29,7 @@ import {
 import { type PointsData } from "../storage/points";
 import { type TableData } from "../storage/table";
 import { type Rect } from "../types";
+import { AsyncUtils } from "../utils/AsyncUtils";
 import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
 import { ColorDataUtils } from "../utils/data/ColorDataUtils";
@@ -517,12 +518,7 @@ export class WebGLPointsController extends WebGLControllerBase {
           }
           dataCache.set(currentPoints.id, data);
         }
-        if (data === undefined) {
-          continue;
-        }
-
-        let numPoints = data.getSize();
-        if (numPoints === 0) {
+        if (data === undefined || data.getSize() === 0) {
           continue;
         }
 
@@ -567,21 +563,41 @@ export class WebGLPointsController extends WebGLControllerBase {
           }
         }
 
+        const pointIds = data.getIds();
+        let pointMask: boolean[] | undefined;
+        let filteredPointIds: number[];
         if (pointLayers !== undefined) {
-          numPoints = data
-            .getIds()
-            .filter((id) => pointLayers.get(id) === layer.id).length;
-          if (numPoints === 0) {
+          const newPointMask = new Array<boolean>(pointIds.length);
+          const newFilteredPointIds: number[] = [];
+          await AsyncUtils.forEach(
+            pointIds,
+            (id, i) => {
+              const include = pointLayers.get(id) === layer.id;
+              newPointMask[i] = include;
+              if (include) {
+                newFilteredPointIds.push(id);
+              }
+            },
+            { signal },
+          );
+          signal?.throwIfAborted();
+          if (newFilteredPointIds.length === 0) {
             continue;
           }
+          pointMask = newPointMask;
+          filteredPointIds = newFilteredPointIds;
+        } else {
+          pointMask = undefined;
+          filteredPointIds = pointIds;
         }
 
         refs.push({
           data,
           layer,
           points: currentPoints,
-          numPoints,
-          pointLayers,
+          numPoints: filteredPointIds.length,
+          pointMask,
+          filteredPointIds,
         });
       }
     }
@@ -620,15 +636,7 @@ export class WebGLPointsController extends WebGLControllerBase {
     const newBufferSliceStates: PointsBufferSliceState[] = [];
     for (let i = 0; i < refs.length; i++) {
       const ref = refs[i]!;
-      const pointIds = ref.data.getIds();
-      const pointMask =
-        ref.pointLayers !== undefined
-          ? pointIds.map((id) => ref.pointLayers!.get(id) === ref.layer.id)
-          : undefined;
-      const filteredPointIds =
-        pointMask !== undefined
-          ? pointIds.filter((_, j) => pointMask[j])
-          : pointIds;
+      const { pointMask, filteredPointIds } = ref;
       const bufferSliceState = this._bufferSliceStates[i];
       const bufferSliceChanged =
         buffersResized ||
@@ -637,7 +645,7 @@ export class WebGLPointsController extends WebGLControllerBase {
         bufferSliceState.ref.layer.id !== ref.layer.id ||
         bufferSliceState.ref.points.id !== ref.points.id ||
         bufferSliceState.ref.numPoints !== ref.numPoints ||
-        // check config.points.layer instead of ref.pointLayers
+        // check config.points.layer instead of ref.pointMask and ref.filteredPointIds
         !deepEqual(bufferSliceState.config.points.layer, ref.points.layer) ||
         !deepEqual(
           bufferSliceState.ref.points.dataSource,
@@ -925,7 +933,8 @@ type PointsRef = {
   layer: Layer;
   points: Points;
   numPoints: number;
-  pointLayers: Map<number, string> | undefined;
+  pointMask: boolean[] | undefined;
+  filteredPointIds: number[];
 };
 
 /**

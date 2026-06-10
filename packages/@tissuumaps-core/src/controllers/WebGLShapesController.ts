@@ -21,6 +21,7 @@ import {
 import { type ShapesData } from "../storage/shapes";
 import { type TableData } from "../storage/table";
 import { type MultiPolygon, type Rect, type Vertex } from "../types";
+import { AsyncUtils } from "../utils/AsyncUtils";
 import { MathUtils } from "../utils/MathUtils";
 import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";
@@ -351,12 +352,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           }
           dataCache.set(currentShapes.id, data);
         }
-        if (data === undefined) {
-          continue;
-        }
-
-        let numShapes = data.getSize();
-        if (numShapes === 0) {
+        if (data === undefined || data.getSize() === 0) {
           continue;
         }
 
@@ -401,21 +397,41 @@ export class WebGLShapesController extends WebGLControllerBase {
           }
         }
 
+        const shapeIds = data.getIds();
+        let shapeMask: boolean[] | undefined;
+        let filteredShapeIds: number[];
         if (shapeLayers !== undefined) {
-          numShapes = data
-            .getIds()
-            .filter((id) => shapeLayers.get(id) === layer.id).length;
-          if (numShapes === 0) {
+          const newShapeMask = new Array<boolean>(shapeIds.length);
+          const newFilteredShapeIds: number[] = [];
+          await AsyncUtils.forEach(
+            shapeIds,
+            (id, i) => {
+              const include = shapeLayers.get(id) === layer.id;
+              newShapeMask[i] = include;
+              if (include) {
+                newFilteredShapeIds.push(id);
+              }
+            },
+            { signal },
+          );
+          signal?.throwIfAborted();
+          if (newFilteredShapeIds.length === 0) {
             continue;
           }
+          shapeMask = newShapeMask;
+          filteredShapeIds = newFilteredShapeIds;
+        } else {
+          shapeMask = undefined;
+          filteredShapeIds = shapeIds;
         }
 
         refs.push({
           data,
           layer,
           shapes: currentShapes,
-          numShapes,
-          shapeLayers,
+          numShapes: filteredShapeIds.length,
+          shapeMask,
+          filteredShapeIds,
         });
       }
     }
@@ -440,7 +456,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           ref.layer.id === glShapes.ref.layer.id &&
           ref.shapes.id === glShapes.ref.shapes.id &&
           ref.numShapes === glShapes.ref.numShapes &&
-          // check config.shapes.layer instead of ref.shapeLayers
+          // check config.shapes.layer instead of ref.shapeMask and ref.filteredShapeIds
           deepEqual(ref.shapes.layer, glShapes.config.shapes.layer) &&
           deepEqual(ref.shapes.dataSource, glShapes.ref.shapes.dataSource),
       );
@@ -482,15 +498,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     const newGLShapes = [];
     for (const ref of refs) {
       const glShapes = glShapesByRef.get(ref);
-      const shapeIds = ref.data.getIds();
-      const shapeMask =
-        ref.shapeLayers !== undefined
-          ? shapeIds.map((id) => ref.shapeLayers!.get(id) === ref.layer.id)
-          : undefined;
-      const filteredShapeIds =
-        shapeMask !== undefined
-          ? shapeIds.filter((_, j) => shapeMask[j])
-          : shapeIds;
+      const { shapeMask, filteredShapeIds } = ref;
       let dataBounds = glShapes?.dataBounds;
       let scanlineDataTexture = glShapes?.scanlineDataTexture;
       if (
@@ -503,10 +511,14 @@ export class WebGLShapesController extends WebGLControllerBase {
         if (shapeMask !== undefined) {
           multiPolygons = multiPolygons.filter((_, j) => shapeMask[j]);
         }
-        dataBounds = WebGLShapesController._getDataBounds(multiPolygons);
-        scanlineDataTexture = this._createScanlineDataTexture(
+        dataBounds = await WebGLShapesController._getDataBounds(multiPolygons, {
+          signal,
+        });
+        signal?.throwIfAborted();
+        scanlineDataTexture = await this._createScanlineDataTexture(
           multiPolygons,
           dataBounds,
+          { signal },
         );
         signal?.throwIfAborted();
       }
@@ -615,24 +627,30 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @param multiPolygons - Polygon geometry for each shape in the object
    * @param objectBounds - Axis-aligned bounding box of all shapes
    */
-  private _createScanlineDataTexture(
+  private async _createScanlineDataTexture(
     multiPolygons: MultiPolygon[],
     objectBounds: Rect,
-  ): WebGLTexture {
+    options?: { signal?: AbortSignal },
+  ): Promise<WebGLTexture> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
     const numValuesPerTextureLine =
       4 * WebGLShapesController._scanlineDataTextureWidth; // 4 values per RGBA32F texel
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      WebGLShapesController._createScanlines(
+      await WebGLShapesController._createScanlines(
         this._numScanlines,
         multiPolygons,
         objectBounds,
+        { signal },
       );
-    const scanlineBuffer = WebGLShapesController._packScanlines(
+    signal?.throwIfAborted();
+    const scanlineBuffer = await WebGLShapesController._packScanlines(
       scanlines,
       totalNumScanlineShapes,
       totalNumScanlineShapeEdges,
-      { align: numValuesPerTextureLine },
+      { align: numValuesPerTextureLine, signal },
     );
+    signal?.throwIfAborted();
     const scanlineData = new Float32Array(scanlineBuffer);
     const scanlineDataTexture = WebGLUtils.createDataTexture(
       this.gl,
@@ -833,7 +851,12 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @param multiPolygons - Polygon geometry
    * @returns The bounding rectangle in data-space coordinates
    */
-  private static _getDataBounds(multiPolygons: MultiPolygon[]): Rect {
+  private static async _getDataBounds(
+    multiPolygons: MultiPolygon[],
+    options?: { signal?: AbortSignal },
+  ): Promise<Rect> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
     if (multiPolygons.length === 0) {
       throw new Error("Multi-polygons array must not be empty");
     }
@@ -841,6 +864,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       yMin = Infinity,
       xMax = -Infinity,
       yMax = -Infinity;
+    const maybeYield = AsyncUtils.createYielder({ signal });
     for (const multiPolygon of multiPolygons) {
       for (const polygon of multiPolygon.polygons) {
         for (const path of [polygon.shell, ...polygon.holes]) {
@@ -860,6 +884,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           }
         }
       }
+      await maybeYield();
     }
     return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
   }
@@ -876,15 +901,18 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @param objectBounds - Bounding box of all shapes
    * @returns Scanlines with per-shape edges, and total counts for buffer sizing
    */
-  private static _createScanlines(
+  private static async _createScanlines(
     numScanlines: number,
     multiPolygons: MultiPolygon[],
     objectBounds: Rect,
-  ): {
+    options?: { signal?: AbortSignal },
+  ): Promise<{
     scanlines: Scanline[];
     totalNumScanlineShapes: number;
     totalNumScanlineShapeEdges: number;
-  } {
+  }> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
     const scanlines: Scanline[] = Array.from({ length: numScanlines }, () => ({
       xMin: Infinity,
       xMax: -Infinity,
@@ -893,6 +921,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     }));
     let totalNumScanlineShapes = 0;
     let totalNumScanlineShapeEdges = 0;
+    const maybeYield = AsyncUtils.createYielder({ signal });
     for (let shapeIndex = 0; shapeIndex < multiPolygons.length; shapeIndex++) {
       for (const polygon of multiPolygons[shapeIndex]!.polygons) {
         // compute shape xMin/xMax/occupancy mask
@@ -1002,6 +1031,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           }
         }
       }
+      await maybeYield();
     }
     return { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges };
   }
@@ -1017,15 +1047,16 @@ export class WebGLShapesController extends WebGLControllerBase {
    * @param scanlines - Rasterized scanlines from {@link _createScanlines}
    * @param totalNumScanlineShapes - Total shape entries across all scanlines
    * @param totalNumScanlineShapeEdges - Total edge entries across all scanlines
-   * @param options - Optional alignment for the buffer to texture line boundaries
+   * @param options - Optional buffer alignment (to texture line boundaries) and abort signal
    */
-  private static _packScanlines(
+  private static async _packScanlines(
     scanlines: Scanline[],
     totalNumScanlineShapes: number,
     totalNumScanlineShapeEdges: number,
-    options?: { align?: number },
-  ): ArrayBuffer {
-    const { align = 1 } = options ?? {};
+    options?: { align?: number; signal?: AbortSignal },
+  ): Promise<ArrayBuffer> {
+    const { align = 1, signal } = options ?? {};
+    signal?.throwIfAborted();
     const buffer = new ArrayBuffer(
       MathUtils.align(
         4 * scanlines.length + // header -> scanline info S
@@ -1038,6 +1069,7 @@ export class WebGLShapesController extends WebGLControllerBase {
     const float32Data = new Float32Array(buffer);
     const uint32Data = new Uint32Array(buffer);
     let currentScanlineTexelOffset = scanlines.length;
+    const maybeYield = AsyncUtils.createYielder({ signal });
     for (let s = 0; s < scanlines.length; s++) {
       const scanline = scanlines[s]!;
       // header
@@ -1074,6 +1106,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         currentScanlineShapeTexelOffset = currentScanlineShapeEdgeTexelOffset;
       }
       currentScanlineTexelOffset = currentScanlineShapeTexelOffset;
+      await maybeYield();
     }
     return buffer;
   }
@@ -1084,7 +1117,8 @@ type ShapesRef = {
   layer: Layer;
   shapes: Shapes;
   numShapes: number;
-  shapeLayers: Map<number, string> | undefined;
+  shapeMask: boolean[] | undefined;
+  filteredShapeIds: number[];
   data: ShapesData;
 };
 

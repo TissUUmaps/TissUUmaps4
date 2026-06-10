@@ -13,6 +13,7 @@ import {
 import { type Color, type DefaultMap } from "../../model/types";
 import { type ColorPalette, colorPalettes } from "../../palettes";
 import { type TableData } from "../../storage/table";
+import { AsyncUtils } from "../AsyncUtils";
 import { ColorUtils } from "../ColorUtils";
 import { HashUtils } from "../HashUtils";
 import { MathUtils } from "../MathUtils";
@@ -91,22 +92,30 @@ export class ColorDataUtils extends DataUtilsBase {
       );
       signal?.throwIfAborted();
     } else if (activeConfigSource === "random" && isRandomConfig(config)) {
-      data = ColorDataUtils.loadRandomColorData(ids, config, defaultColor, {
-        align,
-      });
+      data = await ColorDataUtils.loadRandomColorData(
+        ids,
+        config,
+        defaultColor,
+        { signal, align },
+      );
+      signal?.throwIfAborted();
     } else {
       console.warn("No valid color config found, using default color");
       data = ColorDataUtils.createUniformColorData(ids.length, defaultColor, {
         align,
       });
     }
-    for (let i = 0; i < ids.length; i++) {
-      let c = MathUtils.safeLeftShift(data[i]!, 8);
-      if (visibilityData === undefined || visibilityData[i]! > 0) {
-        c += opacityData !== undefined ? opacityData[i]! : 255;
-      }
-      data[i] = c;
-    }
+    await AsyncUtils.forEach(
+      ids,
+      (_, i) => {
+        let c = MathUtils.safeLeftShift(data[i]!, 8);
+        if (visibilityData === undefined || visibilityData[i]! > 0) {
+          c += opacityData !== undefined ? opacityData[i]! : 255;
+        }
+        data[i] = c;
+      },
+      { signal },
+    );
     return data;
   }
 
@@ -279,16 +288,17 @@ export class ColorDataUtils extends DataUtilsBase {
    * @param ids - Ordered list of item IDs
    * @param config - Random configuration specifying the palette to sample from
    * @param defaultColor - Fallback color when the palette is not found
-   * @param options - Optional buffer alignment
+   * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint32Array` of encoded random color values
    */
-  static loadRandomColorData(
+  static async loadRandomColorData(
     ids: number[],
     config: Extract<ColorConfig, RandomConfig<unknown>>,
     defaultColor: Color,
-    options?: { align?: number },
-  ): Uint32Array {
-    const { align = 1 } = options ?? {};
+    options?: { signal?: AbortSignal; align?: number },
+  ): Promise<Uint32Array> {
+    const { signal, align = 1 } = options ?? {};
+    signal?.throwIfAborted();
     const colorPalette = colorPalettes.find(
       (colorPalette) => colorPalette.id === config.random.palette,
     );
@@ -301,11 +311,15 @@ export class ColorDataUtils extends DataUtilsBase {
       });
     }
     const data = ColorDataUtils._createColorDataBuffer(ids.length, { align });
-    for (let i = 0; i < ids.length; i++) {
-      const index = Math.floor(Math.random() * colorPalette.colors.length);
-      const color = colorPalette.colors[index]!;
-      data[i] = ColorDataUtils.encodeColor(color);
-    }
+    await AsyncUtils.forEach(
+      ids,
+      (_, i) => {
+        const index = Math.floor(Math.random() * colorPalette.colors.length);
+        const color = colorPalette.colors[index]!;
+        data[i] = ColorDataUtils.encodeColor(color);
+      },
+      { signal },
+    );
     return data;
   }
 
