@@ -21,6 +21,7 @@ export * from "./storage/points";
 export * from "./storage/shapes";
 export * from "./storage/table";
 
+export { AsyncUtils } from "./utils/AsyncUtils";
 export { ColorUtils } from "./utils/ColorUtils";
 export { HashUtils } from "./utils/HashUtils";
 export { MathUtils } from "./utils/MathUtils";

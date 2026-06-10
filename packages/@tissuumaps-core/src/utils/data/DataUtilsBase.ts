@@ -1,5 +1,6 @@
 import { type TableData } from "../../storage/table";
 import { type TypedArray } from "../../types";
+import { AsyncUtils } from "../AsyncUtils";
 
 export class DataUtilsBase {
   /**
@@ -39,21 +40,29 @@ export class DataUtilsBase {
     const tableValueRange = await tableData.loadValueRange(column, { signal });
     signal?.throwIfAborted();
     const tableValuesById = new Map<number, unknown>();
-    tableData.getIds().forEach((id, i) => {
-      tableValuesById.set(id, tableValues[i]);
-    });
-    ids.forEach((id, i) => {
-      if (tableValuesById.has(id)) {
-        const tableValue = tableValuesById.get(id);
-        const parsedValue = parseTableValue(tableValue, tableValueRange);
-        data[i] = encodeValue(parsedValue ?? defaultValue);
-      } else {
-        console.warn(
-          `ID ${id} is missing from loaded table data (column ${column})`,
-        );
-        data[i] = encodeValue(defaultValue);
-      }
-    });
+    await AsyncUtils.forEach(
+      tableData.getIds(),
+      (id, i) => {
+        tableValuesById.set(id, tableValues[i]);
+      },
+      { signal },
+    );
+    await AsyncUtils.forEach(
+      ids,
+      (id, i) => {
+        if (tableValuesById.has(id)) {
+          const tableValue = tableValuesById.get(id);
+          const parsedValue = parseTableValue(tableValue, tableValueRange);
+          data[i] = encodeValue(parsedValue ?? defaultValue);
+        } else {
+          console.warn(
+            `ID ${id} is missing from loaded table data (column ${column})`,
+          );
+          data[i] = encodeValue(defaultValue);
+        }
+      },
+      { signal },
+    );
   }
 
   /**
@@ -89,21 +98,35 @@ export class DataUtilsBase {
     const tableGroups = await tableData.loadValues(column, { signal });
     signal?.throwIfAborted();
     const tableGroupsById = new Map<number, unknown>();
-    tableData.getIds().forEach((id, i) => {
-      tableGroupsById.set(id, tableGroups[i]);
-    });
-    ids.forEach((id, i) => {
-      if (tableGroupsById.has(id)) {
-        const tableGroup = tableGroupsById.get(id);
-        const group = JSON.stringify(tableGroup);
-        const value = mapGroupToValue(group);
-        data[i] = encodeValue(value ?? defaultValue);
-      } else {
-        console.warn(
-          `ID ${id} is missing from loaded table data (column ${column})`,
-        );
-        data[i] = encodeValue(defaultValue);
-      }
-    });
+    await AsyncUtils.forEach(
+      tableData.getIds(),
+      (id, i) => {
+        tableGroupsById.set(id, tableGroups[i]);
+      },
+      { signal },
+    );
+    const encodedValueByTableGroup = new Map<unknown, number>();
+    await AsyncUtils.forEach(
+      ids,
+      (id, i) => {
+        if (tableGroupsById.has(id)) {
+          const tableGroup = tableGroupsById.get(id);
+          let encodedValue = encodedValueByTableGroup.get(tableGroup);
+          if (encodedValue === undefined) {
+            const group = JSON.stringify(tableGroup);
+            const value = mapGroupToValue(group);
+            encodedValue = encodeValue(value ?? defaultValue);
+            encodedValueByTableGroup.set(tableGroup, encodedValue);
+          }
+          data[i] = encodedValue;
+        } else {
+          console.warn(
+            `ID ${id} is missing from loaded table data (column ${column})`,
+          );
+          data[i] = encodeValue(defaultValue);
+        }
+      },
+      { signal },
+    );
   }
 }

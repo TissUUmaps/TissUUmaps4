@@ -363,7 +363,7 @@ describe("ColorDataUtils", () => {
   });
 
   describe("loadRandomColorData", () => {
-    it("returns buffer with colors from the palette", () => {
+    it("returns buffer with colors from the palette", async () => {
       const palette = colorPalettes[0]!;
       const ids = [1, 2, 3];
       const config = {
@@ -371,7 +371,7 @@ describe("ColorDataUtils", () => {
         random: { palette: palette.id },
       };
 
-      const data = ColorDataUtils.loadRandomColorData(ids, config, black);
+      const data = await ColorDataUtils.loadRandomColorData(ids, config, black);
 
       expect(data.length).toBe(3);
       const validEncodings = palette.colors.map((c) =>
@@ -382,14 +382,14 @@ describe("ColorDataUtils", () => {
       }
     });
 
-    it("returns uniform default color when palette is not found", () => {
+    it("returns uniform default color when palette is not found", async () => {
       const ids = [1, 2];
       const config = {
         source: "random" as const,
         random: { palette: "nonexistent" },
       };
 
-      const data = ColorDataUtils.loadRandomColorData(ids, config, red);
+      const data = await ColorDataUtils.loadRandomColorData(ids, config, red);
 
       expect(data[0]).toBe(ColorDataUtils.encodeColor(red));
       expect(data[1]).toBe(ColorDataUtils.encodeColor(red));
