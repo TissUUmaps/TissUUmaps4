@@ -15,57 +15,65 @@ export class TransformUtils {
    * from a column-major `gl-matrix` {@link mat3}. A negative 2D determinant
    * indicates a horizontal reflection.
    *
+   * When `center` is provided the returned translation is adjusted so that
+   * flip and rotation are expressed around that center (matching OSD's
+   * convention) rather than around the origin.
+   *
    * @param m - The source matrix
+   * @param options - Optional center in pre-scaled coordinates
    */
-  static fromSimilarityMatrix(m: mat3): Transform {
+  static fromSimilarityMatrix(
+    m: mat3,
+    options?: { center?: { x: number; y: number } },
+  ): Transform {
     // gl-matrix, like OpenGL, uses column-major order.
     // Detect reflection via the sign of the 2D determinant.
     const det = m[0] * m[4] - m[3] * m[1];
     const flipped = det < 0;
     const c0 = flipped ? -m[0] : m[0];
     const c1 = flipped ? -m[1] : m[1];
+    const scale = Math.sqrt(c0 * c0 + c1 * c1);
+    const rotation = (Math.atan2(c1, c0) * 180) / Math.PI;
+    let tx = m[6];
+    let ty = m[7];
+    const { center } = options ?? {};
+    if (center !== undefined) {
+      const cx = center.x * scale;
+      const cy = center.y * scale;
+      const rad = (rotation * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      tx -= cy * sin + cx * (1 - cos);
+      ty -= cy * (1 - cos) - cx * sin;
+      if (flipped) {
+        tx -= 2 * cx * cos;
+        ty -= 2 * cx * sin;
+      }
+    }
     return {
       flip: flipped,
-      scale: Math.sqrt(c0 * c0 + c1 * c1),
-      rotation: (Math.atan2(c1, c0) * 180) / Math.PI,
-      translation: { x: m[6], y: m[7] },
+      scale,
+      rotation,
+      translation: { x: tx, y: ty },
     };
   }
 
   /**
    * Builds a 3×3 similarity matrix from a (partial) {@link Transform}
    *
-   * Applies, in order: optional horizontal flip, scale,
-   * rotation (around `center` if provided), and translation.
+   * Applies, in order: flip, scale, rotation, and translation.
    *
    * @param tf - The transform components (all optional)
-   * @param options - Optional rotation center in pre-scaled coordinates
    */
-  static toSimilarityMatrix(
-    tf: Partial<Transform>,
-    options?: { center?: { x: number; y: number } },
-  ): mat3 {
-    const { center } = options ?? {};
+  static toSimilarityMatrix(tf: Partial<Transform>): mat3 {
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,
     // so we need to apply transformations in reverse order.
     const m = mat3.create();
     if (tf.translation !== undefined) {
       mat3.translate(m, m, [tf.translation.x, tf.translation.y]);
     }
-    if (center !== undefined) {
-      mat3.translate(m, m, [
-        center.x * (tf.scale ?? 1),
-        center.y * (tf.scale ?? 1),
-      ]);
-    }
     if (tf.rotation !== undefined) {
       mat3.rotate(m, m, (Math.PI * tf.rotation) / 180);
-    }
-    if (center !== undefined) {
-      mat3.translate(m, m, [
-        -center.x * (tf.scale ?? 1),
-        -center.y * (tf.scale ?? 1),
-      ]);
     }
     if (tf.scale !== undefined) {
       mat3.scale(m, m, [tf.scale, tf.scale]);
@@ -80,10 +88,9 @@ export class TransformUtils {
    * Computes the OSD tiled-image parameters (flip, width, rotation, position)
    * for a data → layer → world transform chain.
    *
-   * OSD applies rotation around the image center and flip around the image
-   * center, so this method compensates for both to produce a net transform
-   * equivalent to the WebGL path (rotation around origin, flip around left
-   * edge).
+   * Composes full similarity matrices (including flip) and decomposes the
+   * result with a center matching OSD's flip/rotation-around-image-center
+   * convention, so the returned translation is the OSD position directly.
    *
    * @param transform - Data → layer transform
    * @param layerTransform - Layer → world transform
@@ -100,37 +107,22 @@ export class TransformUtils {
     x: number;
     y: number;
   } {
-    const dataCenter = {
-      x: contentSize.x / 2,
-      y: contentSize.y / 2,
-    };
+    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform);
+    const layerToWorldMatrix =
+      TransformUtils.toSimilarityMatrix(layerTransform);
     const m = mat3.create();
-    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(
-      { ...transform, flip: false },
-      { center: { x: -dataCenter.x, y: -dataCenter.y } },
-    );
-    mat3.multiply(m, dataToLayerMatrix, m);
-    const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
-      { ...layerTransform, flip: false },
-      {
-        center: {
-          x: -dataCenter.x * transform.scale,
-          y: -dataCenter.y * transform.scale,
-        },
-      },
-    );
-    mat3.multiply(m, layerToWorldMatrix, m);
-    const composed = TransformUtils.fromSimilarityMatrix(m);
-    const flip = !!transform.flip !== !!layerTransform.flip;
-    const width = contentSize.x * composed.scale;
-    const rotation = composed.rotation;
-    let { x, y } = composed.translation;
-    if (flip) {
-      const rad = (rotation * Math.PI) / 180;
-      x -= width * Math.cos(rad);
-      y -= width * Math.sin(rad);
-    }
-    return { flip, width, rotation, x, y };
+    mat3.multiply(m, layerToWorldMatrix, dataToLayerMatrix);
+    const imageCenter = { x: contentSize.x / 2, y: contentSize.y / 2 };
+    const composed = TransformUtils.fromSimilarityMatrix(m, {
+      center: imageCenter,
+    });
+    return {
+      flip: composed.flip,
+      width: contentSize.x * composed.scale,
+      rotation: composed.rotation,
+      x: composed.translation.x,
+      y: composed.translation.y,
+    };
   }
 
   /**

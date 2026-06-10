@@ -126,50 +126,6 @@ describe("TransformUtils", () => {
       expect(m[7]).toBeCloseTo(5);
     });
 
-    it("applies rotation around a center", () => {
-      const center = { x: 2, y: 3 };
-      const m = TransformUtils.toSimilarityMatrix(
-        { rotation: 90, scale: 1 },
-        { center },
-      );
-      const tf = TransformUtils.fromSimilarityMatrix(m);
-      expect(tf.rotation).toBeCloseTo(90);
-      expect(tf.scale).toBeCloseTo(1);
-      // The origin maps to (m[6], m[7]) which should be (5, 1)
-      expect(m[6]).toBeCloseTo(5);
-      expect(m[7]).toBeCloseTo(1);
-    });
-
-    it("applies rotation around a center without explicit scale (defaults to 1)", () => {
-      const center = { x: 2, y: 3 };
-      const withDefault = TransformUtils.toSimilarityMatrix(
-        { rotation: 90 },
-        { center },
-      );
-      const withExplicit = TransformUtils.toSimilarityMatrix(
-        { rotation: 90, scale: 1 },
-        { center },
-      );
-      // Omitting scale should behave identically to scale: 1
-      for (let i = 0; i < 9; i++) {
-        expect(withDefault[i]).toBeCloseTo(withExplicit[i]!);
-      }
-    });
-
-    it("applies rotation around a center with scale", () => {
-      const center = { x: 1, y: 1 };
-      const m = TransformUtils.toSimilarityMatrix(
-        { rotation: 180, scale: 2 },
-        { center },
-      );
-      const tf = TransformUtils.fromSimilarityMatrix(m);
-      expect(tf.rotation).toBeCloseTo(180);
-      expect(tf.scale).toBeCloseTo(2);
-      // At 180° rotation around scaled center (2,2): translation = (4,4)
-      expect(m[6]).toBeCloseTo(4);
-      expect(m[7]).toBeCloseTo(4);
-    });
-
     it("creates a flipped matrix", () => {
       const tf: Transform = {
         flip: true,
@@ -405,21 +361,10 @@ describe("TransformUtils", () => {
       layerTransform: Transform,
       contentSize: { x: number; y: number },
     ): vec2[] {
+      const dataToLayer = TransformUtils.toSimilarityMatrix(transform);
+      const layerToWorld = TransformUtils.toSimilarityMatrix(layerTransform);
       const m = mat3.create();
-      const effectiveFlip = !!transform.flip !== !!layerTransform.flip;
-      if (effectiveFlip) {
-        mat3.scale(m, m, [-1, 1]);
-      }
-      const dataToLayer = TransformUtils.toSimilarityMatrix({
-        ...transform,
-        flip: false,
-      });
-      mat3.multiply(m, dataToLayer, m);
-      const layerToWorld = TransformUtils.toSimilarityMatrix({
-        ...layerTransform,
-        flip: false,
-      });
-      mat3.multiply(m, layerToWorld, m);
+      mat3.multiply(m, layerToWorld, dataToLayer);
       const corners = [
         vec2.fromValues(0, 0),
         vec2.fromValues(contentSize.x, 0),

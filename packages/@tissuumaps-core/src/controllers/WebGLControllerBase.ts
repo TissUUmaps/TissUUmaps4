@@ -20,12 +20,11 @@ export class WebGLControllerBase {
   }
 
   /**
-   * Computes the data → world transformation matrix
+   * Composes data → layer and layer → world similarity matrices
    *
-   * Applies, in order: optional horizontal flip, data → layer transform,
-   * then layer → world transform. Flip is applied once in data space
-   * (XOR of object and layer flips) so rotation direction is preserved
-   * in flipped layers.
+   * Flip is encoded in each matrix (negative determinant) so that a layer
+   * flip mirrors the entire coordinate system — all objects move to
+   * mirrored positions as a group.
    *
    * @param obj - Object providing the data → layer transform
    * @param layer - Layer providing the layer → world transform
@@ -34,22 +33,12 @@ export class WebGLControllerBase {
     obj: { transform: Transform },
     layer: Layer,
   ): mat3 {
+    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(obj.transform);
+    const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
+      layer.transform,
+    );
     const dataToWorldMatrix = mat3.create();
-    const effectiveFlip = !!obj.transform.flip !== !!layer.transform.flip;
-    if (effectiveFlip) {
-      const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
-      mat3.multiply(dataToWorldMatrix, flipMatrix, dataToWorldMatrix);
-    }
-    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix({
-      ...obj.transform,
-      flip: false,
-    });
-    mat3.multiply(dataToWorldMatrix, dataToLayerMatrix, dataToWorldMatrix);
-    const layerToWorldMatrix = TransformUtils.toSimilarityMatrix({
-      ...layer.transform,
-      flip: false,
-    });
-    mat3.multiply(dataToWorldMatrix, layerToWorldMatrix, dataToWorldMatrix);
+    mat3.multiply(dataToWorldMatrix, layerToWorldMatrix, dataToLayerMatrix);
     return dataToWorldMatrix;
   }
 
@@ -87,10 +76,7 @@ export class WebGLControllerBase {
   }
 
   /**
-   * Computes the world → data transformation matrix
-   *
-   * Inverse of {@link createDataToWorldMatrix}: applies world → layer,
-   * layer → data, then optional horizontal un-flip.
+   * Inverse of {@link createDataToWorldMatrix}
    *
    * @param obj - Object providing the data → layer transform (inverted)
    * @param layer - Layer providing the layer → world transform (inverted)
@@ -100,23 +86,13 @@ export class WebGLControllerBase {
     layer: Layer,
   ): mat3 {
     const worldToDataMatrix = mat3.create();
-    const worldToLayerMatrix = TransformUtils.toSimilarityMatrix({
-      ...layer.transform,
-      flip: false,
-    });
+    const worldToLayerMatrix = TransformUtils.toSimilarityMatrix(
+      layer.transform,
+    );
     mat3.invert(worldToLayerMatrix, worldToLayerMatrix);
-    mat3.multiply(worldToDataMatrix, worldToLayerMatrix, worldToDataMatrix);
-    const layerToDataMatrix = TransformUtils.toSimilarityMatrix({
-      ...obj.transform,
-      flip: false,
-    });
+    const layerToDataMatrix = TransformUtils.toSimilarityMatrix(obj.transform);
     mat3.invert(layerToDataMatrix, layerToDataMatrix);
-    mat3.multiply(worldToDataMatrix, layerToDataMatrix, worldToDataMatrix);
-    const effectiveFlip = !!obj.transform.flip !== !!layer.transform.flip;
-    if (effectiveFlip) {
-      const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
-      mat3.multiply(worldToDataMatrix, flipMatrix, worldToDataMatrix);
-    }
+    mat3.multiply(worldToDataMatrix, layerToDataMatrix, worldToLayerMatrix);
     return worldToDataMatrix;
   }
 }
