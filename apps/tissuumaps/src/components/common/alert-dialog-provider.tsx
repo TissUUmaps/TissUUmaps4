@@ -174,9 +174,9 @@ export function AlertDialogProvider({
             </AlertDialogHeader>
             {state.type === "prompt" && (
               <Input
+                {...state.inputProps}
                 name="prompt"
                 defaultValue={state.defaultValue}
-                {...state.inputProps}
               />
             )}
             <AlertDialogFooter>
