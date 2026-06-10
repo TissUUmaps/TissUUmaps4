@@ -11,14 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-// eslint-disable-next-line react-refresh/only-export-components
-export const AlertDialogContext = React.createContext<
-  <T extends AlertAction>(
-    params: T,
-  ) => Promise<T["type"] extends "alert" | "confirm" ? boolean : null | string>
->(() => null!);
-
-export type AlertAction =
+export type AlertDialogAction =
   | { type: "alert"; title: string; body?: string; cancelButton?: string }
   | {
       type: "confirm";
@@ -38,8 +31,17 @@ export type AlertAction =
         React.InputHTMLAttributes<HTMLInputElement>,
         HTMLInputElement
       >;
-    }
-  | { type: "close" };
+    };
+
+type AlertAction = AlertDialogAction | { type: "close" };
+
+type AlertDialogContextType = <T extends AlertDialogAction>(
+  params: T,
+) => Promise<T["type"] extends "alert" | "confirm" ? boolean : null | string>;
+
+const AlertDialogContext = React.createContext<AlertDialogContextType | null>(
+  null,
+);
 
 interface AlertDialogState {
   open: boolean;
@@ -71,6 +73,9 @@ export function alertDialogReducer(
       return {
         ...state,
         open: true,
+        body: "",
+        defaultValue: undefined,
+        inputProps: undefined,
         ...action,
         cancelButton:
           action.cancelButton || (action.type === "alert" ? "Okay" : "Cancel"),
@@ -103,10 +108,23 @@ export function AlertDialogProvider({
       ) => void
     >(null);
 
+  const typeRef = React.useRef<"alert" | "confirm" | "prompt">("alert");
+
+  function resolveByType() {
+    const type = typeRef.current;
+    if (type === "alert") {
+      resolveRef.current?.(true);
+    } else if (type === "prompt") {
+      resolveRef.current?.(null);
+    } else {
+      resolveRef.current?.(false);
+    }
+    resolveRef.current = null;
+  }
+
   function close() {
     dispatch({ type: "close" });
-    resolveRef.current?.(false);
-    resolveRef.current = null;
+    resolveByType();
   }
 
   function confirm(value?: string) {
@@ -115,19 +133,22 @@ export function AlertDialogProvider({
     resolveRef.current = null;
   }
 
-  const dialog = React.useCallback(async <T extends AlertAction>(params: T) => {
-    resolveRef.current?.(false);
-    resolveRef.current = null;
-    dispatch(params);
+  const dialog: AlertDialogContextType = React.useCallback(
+    async <T extends AlertDialogAction>(params: T) => {
+      resolveByType();
+      typeRef.current = params.type;
+      dispatch(params);
 
-    return new Promise<
-      T["type"] extends "alert" | "confirm" ? boolean : null | string
-    >((resolve) => {
-      resolveRef.current = resolve as (
-        tf: boolean | string | null | PromiseLike<boolean | string | null>,
-      ) => void;
-    });
-  }, []);
+      return new Promise<
+        T["type"] extends "alert" | "confirm" ? boolean : null | string
+      >((resolve) => {
+        resolveRef.current = resolve as (
+          tf: boolean | string | null | PromiseLike<boolean | string | null>,
+        ) => void;
+      });
+    },
+    [],
+  );
 
   return (
     <AlertDialogContext.Provider value={dialog}>
@@ -159,7 +180,7 @@ export function AlertDialogProvider({
               />
             )}
             <AlertDialogFooter>
-              <Button type="button" onClick={close}>
+              <Button type="button" variant="outline" onClick={close}>
                 {state.cancelButton}
               </Button>
               {state.type === "alert" ? null : (
@@ -172,13 +193,24 @@ export function AlertDialogProvider({
     </AlertDialogContext.Provider>
   );
 }
+
+function useAlertDialogContext() {
+  const context = React.useContext(AlertDialogContext);
+  if (context === null) {
+    throw new Error(
+      "useAlertDialogContext must be used within AlertDialogProvider",
+    );
+  }
+  return context;
+}
+
 type Params<T extends "alert" | "confirm" | "prompt"> =
-  | Omit<Extract<AlertAction, { type: T }>, "type">
+  | Omit<Extract<AlertDialogAction, { type: T }>, "type">
   | string;
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useConfirm() {
-  const dialog = React.useContext(AlertDialogContext);
+  const dialog = useAlertDialogContext();
 
   return React.useCallback(
     (params: Params<"confirm">) => {
@@ -192,7 +224,7 @@ export function useConfirm() {
 }
 // eslint-disable-next-line react-refresh/only-export-components
 export function usePrompt() {
-  const dialog = React.useContext(AlertDialogContext);
+  const dialog = useAlertDialogContext();
 
   return React.useCallback(
     (params: Params<"prompt">) =>
@@ -205,7 +237,7 @@ export function usePrompt() {
 }
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAlert() {
-  const dialog = React.useContext(AlertDialogContext);
+  const dialog = useAlertDialogContext();
 
   return React.useCallback(
     (params: Params<"alert">) =>
