@@ -564,6 +564,51 @@ describe("TransformUtils", () => {
           translation: { x: 0, y: 0 },
         },
       },
+      {
+        name: "layer scale+rotation + data translation",
+        transform: {
+          flip: false,
+          scale: 1.5,
+          rotation: 0,
+          translation: { x: 20, y: 10 },
+        },
+        layerTransform: {
+          flip: false,
+          scale: 2,
+          rotation: 30,
+          translation: { x: 5, y: 3 },
+        },
+      },
+      {
+        name: "layer scale+rotation + data scale+rotation+translation",
+        transform: {
+          flip: false,
+          scale: 2,
+          rotation: 15,
+          translation: { x: -5, y: 10 },
+        },
+        layerTransform: {
+          flip: false,
+          scale: 3,
+          rotation: 45,
+          translation: { x: 10, y: -7 },
+        },
+      },
+      {
+        name: "flip + layer scale+rotation+translation + data translation",
+        transform: {
+          flip: true,
+          scale: 1.5,
+          rotation: 20,
+          translation: { x: 8, y: -3 },
+        },
+        layerTransform: {
+          flip: false,
+          scale: 2,
+          rotation: 60,
+          translation: { x: -4, y: 12 },
+        },
+      },
     ] as { name: string; transform: Transform; layerTransform: Transform }[])(
       "OSD corners match WebGL corners: $name",
       ({ transform, layerTransform }) => {
