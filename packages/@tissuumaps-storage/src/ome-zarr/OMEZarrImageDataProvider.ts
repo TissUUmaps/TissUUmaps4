@@ -25,13 +25,13 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
       },
       // TODO path
       c: {
-        type: "number",
+        type: "integer",
       },
       z: {
-        type: "number",
+        type: "integer",
       },
       t: {
-        type: "number",
+        type: "integer",
       },
     },
     required: ["url"], // TODO ... or path
