@@ -11,17 +11,23 @@ export class TransformUtils {
   /**
    * Decomposes a 3×3 similarity matrix into a {@link Transform}
    *
-   * Extracts uniform scale, rotation (in degrees), and translation
-   * from a column-major `gl-matrix` {@link mat3}.
+   * Extracts flip, uniform scale, rotation (in degrees), and translation
+   * from a column-major `gl-matrix` {@link mat3}. A negative 2D determinant
+   * indicates a horizontal reflection.
    *
    * @param m - The source matrix
    */
   static fromSimilarityMatrix(m: mat3): Transform {
     // gl-matrix, like OpenGL, uses column-major order.
+    // Detect reflection via the sign of the 2D determinant.
+    const det = m[0] * m[4] - m[3] * m[1];
+    const flipped = det < 0;
+    const c0 = flipped ? -m[0] : m[0];
+    const c1 = flipped ? -m[1] : m[1];
     return {
-      flip: false,
-      scale: Math.sqrt(m[0] * m[0] + m[1] * m[1]),
-      rotation: (Math.atan2(m[1], m[0]) * 180) / Math.PI,
+      flip: flipped,
+      scale: Math.sqrt(c0 * c0 + c1 * c1),
+      rotation: (Math.atan2(c1, c0) * 180) / Math.PI,
       translation: { x: m[6], y: m[7] },
     };
   }
@@ -29,8 +35,8 @@ export class TransformUtils {
   /**
    * Builds a 3×3 similarity matrix from a (partial) {@link Transform}
    *
-   * Applies, in order: scale, rotation (around `center` if provided),
-   * and translation.
+   * Applies, in order: optional horizontal flip, scale,
+   * rotation (around `center` if provided), and translation.
    *
    * @param tf - The transform components (all optional)
    * @param options - Optional rotation center in pre-scaled coordinates
@@ -64,7 +70,67 @@ export class TransformUtils {
     if (tf.scale !== undefined) {
       mat3.scale(m, m, [tf.scale, tf.scale]);
     }
+    if (tf.flip) {
+      mat3.scale(m, m, [-1, 1]);
+    }
     return m;
+  }
+
+  /**
+   * Computes the OSD tiled-image parameters (flip, width, rotation, position)
+   * for a data → layer → world transform chain.
+   *
+   * OSD applies rotation around the image center and flip around the image
+   * center, so this method compensates for both to produce a net transform
+   * equivalent to the WebGL path (rotation around origin, flip around left
+   * edge).
+   *
+   * @param transform - Data → layer transform
+   * @param layerTransform - Layer → world transform
+   * @param contentSize - Pixel dimensions of the tiled image
+   */
+  static toTiledImageGeometry(
+    transform: Transform,
+    layerTransform: Transform,
+    contentSize: { x: number; y: number },
+  ): {
+    flip: boolean;
+    width: number;
+    rotation: number;
+    x: number;
+    y: number;
+  } {
+    const dataCenter = {
+      x: contentSize.x / 2,
+      y: contentSize.y / 2,
+    };
+    const m = mat3.create();
+    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(
+      { ...transform, flip: false },
+      { center: { x: -dataCenter.x, y: -dataCenter.y } },
+    );
+    mat3.multiply(m, dataToLayerMatrix, m);
+    const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
+      { ...layerTransform, flip: false },
+      {
+        center: {
+          x: -dataCenter.x * transform.scale,
+          y: -dataCenter.y * transform.scale,
+        },
+      },
+    );
+    mat3.multiply(m, layerToWorldMatrix, m);
+    const composed = TransformUtils.fromSimilarityMatrix(m);
+    const flip = !!transform.flip !== !!layerTransform.flip;
+    const width = contentSize.x * composed.scale;
+    const rotation = composed.rotation;
+    let { x, y } = composed.translation;
+    if (flip) {
+      const rad = (rotation * Math.PI) / 180;
+      x -= width * Math.cos(rad);
+      y -= width * Math.sin(rad);
+    }
+    return { flip, width, rotation, x, y };
   }
 
   /**

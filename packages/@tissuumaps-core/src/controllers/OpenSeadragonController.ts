@@ -1,5 +1,4 @@
 import { deepEqual } from "fast-equals";
-import { mat3 } from "gl-matrix";
 import OpenSeadragon from "openseadragon";
 
 import { defaultViewerOptions } from "../model/constants";
@@ -405,6 +404,7 @@ export class OpenSeadragonController {
    */
   private _createTiledImage(index: number, ref: ObjectRef): TiledImageState {
     const tiledImageState: TiledImageState = { ref };
+    const obj = "image" in ref ? ref.image : ref.labels;
     this.viewer.addTiledImage({
       tileSource:
         "image" in ref
@@ -414,8 +414,7 @@ export class OpenSeadragonController {
               throw new Error("Method not implemented");
             })(),
       index: index,
-      // https://github.com/openseadragon/openseadragon/issues/2765
-      // flipped: image.flip / labels.flip,
+      flipped: !!obj.transform.flip !== !!ref.layer.transform.flip,
       opacity: OpenSeadragonController._calculateOpacity(ref),
       success: (event) => {
         const { item: tiledImage } = event as unknown as {
@@ -484,61 +483,25 @@ export class OpenSeadragonController {
     if (tiledImageState.tiledImage === undefined) {
       throw new Error("Cannot update tiled image before it is created");
     }
-    const { transform } =
+    const obj =
       "image" in tiledImageState.ref
         ? tiledImageState.ref.image
         : tiledImageState.ref.labels;
-    const m = mat3.create();
-    // OSD's setRotation rotates around image center, so we pre-rotate
-    // around the negative center to cancel it out, giving net rotation
-    // around origin, consistent with points and shapes.
     const contentSize = tiledImageState.tiledImage.getContentSize();
-    const dataCenter = {
-      x: contentSize.x / 2,
-      y: contentSize.y / 2,
-    };
-    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform, {
-      center: {
-        x: -dataCenter.x,
-        y: -dataCenter.y,
-      },
-    });
-    mat3.multiply(m, dataToLayerMatrix, m);
-    const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
+    const { flip, width, rotation, x, y } = TransformUtils.toTiledImageGeometry(
+      obj.transform,
       tiledImageState.ref.layer.transform,
-      {
-        center: {
-          x: -dataCenter.x * transform.scale,
-          y: -dataCenter.y * transform.scale,
-        },
-      },
+      contentSize,
     );
-    mat3.multiply(m, layerToWorldMatrix, m);
-    const dataToWorldTransform = TransformUtils.fromSimilarityMatrix(m);
     const bounds = tiledImageState.tiledImage.getBoundsNoRotate();
-    const effectiveFlip =
-      !!transform.flip !== !!tiledImageState.ref.layer.transform.flip;
-    if (tiledImageState.tiledImage.getFlip() !== effectiveFlip) {
-      tiledImageState.tiledImage.setFlip(effectiveFlip);
+    if (tiledImageState.tiledImage.getFlip() !== flip) {
+      tiledImageState.tiledImage.setFlip(flip);
     }
-    const width =
-      tiledImageState.tiledImage.getContentSize().x *
-      dataToWorldTransform.scale;
     if (bounds.width !== width) {
-      tiledImageState.tiledImage.setWidth(width, true); // implicitly updates height to maintain aspect ratio
+      tiledImageState.tiledImage.setWidth(width, true);
     }
-    const rotation = dataToWorldTransform.rotation;
     if (tiledImageState.tiledImage.getRotation() !== rotation) {
       tiledImageState.tiledImage.setRotation(rotation, true);
-    }
-    let { x, y } = dataToWorldTransform.translation;
-    if (effectiveFlip) {
-      // OSD's setFlip mirrors tile content around the image center.
-      // Shift position so the net effect is a flip around the left edge,
-      // consistent with the WebGL path (points/shapes).
-      const rad = (rotation * Math.PI) / 180;
-      x -= width * Math.cos(rad);
-      y -= width * Math.sin(rad);
     }
     if (bounds.x !== x || bounds.y !== y) {
       tiledImageState.tiledImage.setPosition(
