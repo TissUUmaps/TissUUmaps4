@@ -1,5 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
-"use client";
 import * as React from "react";
 
 import {
@@ -9,10 +7,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../ui/alert-dialog";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
+/* eslint-disable react-refresh/only-export-components */
 export const AlertDialogContext = React.createContext<
   <T extends AlertAction>(
     params: T,
@@ -106,14 +105,18 @@ export function AlertDialogProvider({
   function close() {
     dispatch({ type: "close" });
     resolveRef.current?.(false);
+    resolveRef.current = null;
   }
 
   function confirm(value?: string) {
     dispatch({ type: "close" });
     resolveRef.current?.(value ?? true);
+    resolveRef.current = null;
   }
 
   const dialog = React.useCallback(async <T extends AlertAction>(params: T) => {
+    resolveRef.current?.(false);
+    resolveRef.current = null;
     dispatch(params);
 
     return new Promise<
@@ -132,7 +135,6 @@ export function AlertDialogProvider({
         open={state.open}
         onOpenChange={(open) => {
           if (!open) close();
-          return;
         }}
       >
         <AlertDialogContent>
@@ -189,17 +191,24 @@ export function useConfirm() {
 export function usePrompt() {
   const dialog = React.useContext(AlertDialogContext);
 
-  return (params: Params<"prompt">) =>
-    dialog({
-      ...(typeof params === "string" ? { title: params } : params),
-      type: "prompt",
-    });
+  return React.useCallback(
+    (params: Params<"prompt">) =>
+      dialog({
+        ...(typeof params === "string" ? { title: params } : params),
+        type: "prompt",
+      }),
+    [dialog],
+  );
 }
 export function useAlert() {
   const dialog = React.useContext(AlertDialogContext);
-  return (params: Params<"alert">) =>
-    dialog({
-      ...(typeof params === "string" ? { title: params } : params),
-      type: "alert",
-    });
+
+  return React.useCallback(
+    (params: Params<"alert">) =>
+      dialog({
+        ...(typeof params === "string" ? { title: params } : params),
+        type: "alert",
+      }),
+    [dialog],
+  );
 }

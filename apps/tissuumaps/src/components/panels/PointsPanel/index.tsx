@@ -190,8 +190,8 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
                   body: "Are you sure you want to delete this point cloud? This action cannot be undone.",
                   cancelButton: "No",
                   actionButton: "Yes",
-                }).then((confirmAnswer) => {
-                  if (confirmAnswer) {
+                }).then((confirmed) => {
+                  if (confirmed) {
                     deletePoints(points.id);
                   }
                 });
