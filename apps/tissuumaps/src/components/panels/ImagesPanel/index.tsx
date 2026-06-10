@@ -56,13 +56,15 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
       </DragDropProvider>
       <AddDataObjectDialog
         title="Add image"
+        layers={layers}
         dataProviders={imageDataProviders}
-        onAdd={(name, _type, dataSource) => {
+        onAdd={(name, layerId, _type, dataSource) => {
+          if (!layerId) return;
           const image = createImage({
             id: crypto.randomUUID(),
             name,
             dataSource,
-            layer: layers[0]!.id, // FIXME
+            layer: layerId,
           });
           addImage(image);
         }}

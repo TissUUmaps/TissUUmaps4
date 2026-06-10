@@ -66,13 +66,15 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
       </DragDropProvider>
       <AddDataObjectDialog
         title="Add shapes"
+        layers={layers}
         dataProviders={shapesDataProviders}
-        onAdd={(name, _type, dataSource) => {
+        onAdd={(name, layerId, _type, dataSource) => {
+          if (!layerId) return;
           const newShapes = createShapes({
             id: crypto.randomUUID(),
             name,
             dataSource,
-            layer: layers[0]!.id, // FIXME
+            layer: layerId,
           });
           addShapes(newShapes);
         }}

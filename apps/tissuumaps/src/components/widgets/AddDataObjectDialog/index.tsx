@@ -6,6 +6,7 @@ import {
   type Data,
   type DataProvider,
   type DataSource,
+  type Layer,
 } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
@@ -30,9 +31,11 @@ export type AddDataObjectDialogProps<
   TDataSource extends DataSource = DataSource,
 > = {
   title: string;
+  layers?: Layer[];
   dataProviders: Map<string, DataProvider<TDataSource, Data>>;
   onAdd: (
     name: string,
+    layerId: string | undefined,
     dataSourceType: string,
     dataSource: TDataSource,
   ) => void;
@@ -40,13 +43,16 @@ export type AddDataObjectDialogProps<
 
 export function AddDataObjectDialog<TDataSource extends DataSource>({
   title,
+  layers,
   dataProviders,
   onAdd,
 }: AddDataObjectDialogProps<TDataSource>) {
   const providerEntries = Array.from(dataProviders.entries());
+  const requiresLayer = layers !== undefined;
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [selectedLayerId, setSelectedLayerId] = useState(layers?.[0]?.id ?? "");
   const [selectedType, setSelectedType] = useState(
     providerEntries[0]?.[0] ?? "",
   );
@@ -57,9 +63,10 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
   const resetForm = useCallback(() => {
     const defaultType = providerEntries[0]?.[0] ?? "";
     setName("");
+    setSelectedLayerId(layers?.[0]?.id ?? "");
     setSelectedType(defaultType);
     setDataSourceDraft({ type: defaultType } as TDataSource);
-  }, [providerEntries]);
+  }, [providerEntries, layers]);
 
   const handleTypeChange = useCallback((value: string | null) => {
     if (value == null) return;
@@ -68,25 +75,51 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
   }, []);
 
   const handleAdd = useCallback(() => {
-    onAdd(name.trim() || "Untitled", selectedType, dataSourceDraft);
+    if (requiresLayer && !selectedLayerId) return;
+    onAdd(
+      name.trim() || "Untitled",
+      selectedLayerId || undefined,
+      selectedType,
+      dataSourceDraft,
+    );
     setOpen(false);
     resetForm();
-  }, [name, selectedType, dataSourceDraft, onAdd, resetForm]);
+  }, [
+    name,
+    requiresLayer,
+    selectedLayerId,
+    selectedType,
+    dataSourceDraft,
+    onAdd,
+    resetForm,
+  ]);
 
   const selectedProvider = dataProviders.get(selectedType);
 
   if (providerEntries.length === 0) {
     return null;
   }
+
+  const addDisabled = requiresLayer && !selectedLayerId;
+  const triggerDisabled = requiresLayer && layers.length === 0;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={<Button variant="outline" className="w-full" />}
-        onClick={() => resetForm()}
-      >
-        <PlusIcon className="size-4" />
-        Add
-      </DialogTrigger>
+      <span title={triggerDisabled ? "Add a layer first" : undefined}>
+        <DialogTrigger
+          render={
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={triggerDisabled}
+            />
+          }
+          onClick={() => resetForm()}
+        >
+          <PlusIcon className="size-4" />
+          Add
+        </DialogTrigger>
+      </span>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -102,6 +135,23 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
               onChange={(e) => setName(e.target.value)}
             />
           </Field>
+
+          {layers !== undefined && layers.length > 0 && (
+            <Field className="flex flex-col gap-2">
+              <FieldLabel>Layer</FieldLabel>
+              <SimpleSelect
+                items={layers}
+                itemLabel={(layer) => layer.name}
+                itemValue={(layer) => layer.id}
+                value={selectedLayerId}
+                onValueChange={(value) => {
+                  if (value !== null) {
+                    setSelectedLayerId(value);
+                  }
+                }}
+              />
+            </Field>
+          )}
 
           {providerEntries.length >= 1 && (
             <Field className="flex flex-col gap-2">
@@ -135,7 +185,9 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
           <DialogClose render={<Button variant="outline" />}>
             Cancel
           </DialogClose>
-          <Button onClick={handleAdd}>Add</Button>
+          <Button onClick={handleAdd} disabled={addDisabled}>
+            Add
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
