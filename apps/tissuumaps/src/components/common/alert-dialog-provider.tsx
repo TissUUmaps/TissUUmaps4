@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-/* eslint-disable react-refresh/only-export-components */
+// eslint-disable-next-line react-refresh/only-export-components
 export const AlertDialogContext = React.createContext<
   <T extends AlertAction>(
     params: T,
@@ -57,6 +57,7 @@ interface AlertDialogState {
   >;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function alertDialogReducer(
   state: AlertDialogState,
   action: AlertAction,
@@ -175,6 +176,7 @@ type Params<T extends "alert" | "confirm" | "prompt"> =
   | Omit<Extract<AlertAction, { type: T }>, "type">
   | string;
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConfirm() {
   const dialog = React.useContext(AlertDialogContext);
 
@@ -188,6 +190,7 @@ export function useConfirm() {
     [dialog],
   );
 }
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePrompt() {
   const dialog = React.useContext(AlertDialogContext);
 
@@ -200,6 +203,7 @@ export function usePrompt() {
     [dialog],
   );
 }
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAlert() {
   const dialog = React.useContext(AlertDialogContext);
 
