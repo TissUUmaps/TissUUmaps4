@@ -1,33 +1,30 @@
-import * as hyparquet from "hyparquet";
-import { compressors } from "hyparquet-compressors";
-import { parquetReadColumn } from "hyparquet/src/read.js";
-
 import {
   type GenericArray,
   type ProgressCallback,
   type TableData,
 } from "@tissuumaps/core";
 
-export class ParquetTableData implements TableData {
-  private _ids: number[] | undefined;
-  private _names: string[] | undefined;
-  private readonly _buffer: hyparquet.AsyncBuffer;
-  private readonly _metadata: hyparquet.FileMetaData;
-  private readonly _columns: string[];
+import { type ParquetWorkerClient } from "./ParquetWorkerClient";
+import { type ParquetOpenResult } from "./parquetProtocol";
 
-  constructor(
-    ids: number[] | undefined,
-    names: string[] | undefined,
-    buffer: hyparquet.AsyncBuffer,
-    metadata: hyparquet.FileMetaData,
-  ) {
-    this._ids = ids;
-    this._names = names;
-    this._buffer = buffer;
-    this._metadata = metadata;
-    this._columns = hyparquet
-      .parquetSchema(metadata)
-      .children.map((c) => c.element.name);
+/**
+ * Thin RPC client over a {@link ParquetWorkerClient}. Synchronous metadata
+ * (size, ids, names, column names) is captured at open; column values are
+ * decoded lazily in the worker on each `loadValues` call.
+ */
+export class ParquetTableData implements TableData {
+  private readonly _client: ParquetWorkerClient;
+  private readonly _numRows: number;
+  private readonly _columns: string[];
+  private _ids: number[] | undefined;
+  private readonly _names: string[] | undefined;
+
+  constructor(client: ParquetWorkerClient, open: ParquetOpenResult) {
+    this._client = client;
+    this._numRows = open.numRows;
+    this._columns = open.columns;
+    this._ids = open.ids;
+    this._names = open.names;
   }
 
   getIds(): number[] {
@@ -39,7 +36,7 @@ export class ParquetTableData implements TableData {
   }
 
   getSize(): number {
-    return Number(this._metadata.num_rows);
+    return this._numRows;
   }
 
   getNames(): string[] | undefined {
@@ -74,14 +71,9 @@ export class ParquetTableData implements TableData {
   ): Promise<GenericArray<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const rawColumnData = await parquetReadColumn({
-      file: this._buffer,
-      columns: [column],
-      metadata: this._metadata,
-      compressors: compressors,
-    });
+    const values = await this._client.loadColumn(column, { signal });
     signal?.throwIfAborted();
-    return Array.from(rawColumnData) as GenericArray<T>;
+    return values as unknown as GenericArray<T>;
   }
 
   async loadUniqueValues<T>(
@@ -124,5 +116,7 @@ export class ParquetTableData implements TableData {
     return undefined;
   }
 
-  close(): void {}
+  close(): void {
+    this._client.close();
+  }
 }
