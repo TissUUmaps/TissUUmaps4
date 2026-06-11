@@ -74,3 +74,28 @@ export type Vertex = {
   /** Y coordinate of the vertex */
   y: number;
 };
+
+/**
+ * Flat, transfer-friendly representation of many shapes' geometry.
+ *
+ * A struct-of-arrays with CSR-style (offset) nesting shape → polygons → rings →
+ * vertices. All arrays are `ArrayBuffer`-backed so the whole geometry transfers
+ * zero-copy across a worker boundary. Coordinates are `Float32Array` to match
+ * the GPU representation (the scanline texture is `RGBA32F`).
+ *
+ * - Shape `s` owns polygons `[shapePolygonOffsets[s], shapePolygonOffsets[s + 1])`.
+ * - Polygon `p` owns rings `[polygonRingOffsets[p], polygonRingOffsets[p + 1])`;
+ *   the first ring of each polygon is its shell, the rest are holes.
+ * - Ring `r` owns vertices `[ringVertexOffsets[r], ringVertexOffsets[r + 1])`,
+ *   each vertex being `(coords[2 * v], coords[2 * v + 1])`.
+ */
+export type ShapesGeometry = {
+  /** Interleaved x, y per vertex; length `2 * vertexCount`. */
+  coords: Float32Array;
+  /** CSR ring → vertex offsets; length `ringCount + 1`. */
+  ringVertexOffsets: Uint32Array;
+  /** CSR polygon → ring offsets (first ring = shell); length `polygonCount + 1`. */
+  polygonRingOffsets: Uint32Array;
+  /** CSR shape → polygon offsets; length `shapeCount + 1`. */
+  shapePolygonOffsets: Uint32Array;
+};

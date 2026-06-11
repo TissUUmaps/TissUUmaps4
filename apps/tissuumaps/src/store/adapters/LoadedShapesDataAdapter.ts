@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 
 import {
-  type MultiPolygon,
   type ProgressCallback,
   type ShapesData,
+  type ShapesGeometry,
 } from "@tissuumaps/core";
 import { type ViewerAdapter } from "@tissuumaps/viewer";
 
@@ -28,14 +28,14 @@ export class LoadedShapesDataAdapter implements ShapesData {
     return this._getData().getNames();
   }
 
-  async loadMultiPolygons(options?: {
+  async loadGeometry(options?: {
     signal?: AbortSignal;
     onProgress?: ProgressCallback;
-  }): Promise<MultiPolygon[]> {
+  }): Promise<ShapesGeometry> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const state = useTissUUmaps.getState();
-    return await state.loadShapesMultiPolygons(this._shapesId, {
+    return await state.loadShapesGeometry(this._shapesId, {
       signal,
       onProgress,
     });

@@ -20,7 +20,7 @@ import {
 } from "../model/types";
 import { type ShapesData } from "../storage/shapes";
 import { type TableData } from "../storage/table";
-import { type MultiPolygon, type Rect, type Vertex } from "../types";
+import { type Rect, type ShapesGeometry, type Vertex } from "../types";
 import { AsyncUtils } from "../utils/AsyncUtils";
 import { MathUtils } from "../utils/MathUtils";
 import { TransformUtils } from "../utils/TransformUtils";
@@ -506,17 +506,17 @@ export class WebGLShapesController extends WebGLControllerBase {
         dataBounds === undefined ||
         scanlineDataTexture === undefined
       ) {
-        let multiPolygons = await ref.data.loadMultiPolygons({ signal });
+        const geometry = await ref.data.loadGeometry({ signal });
         signal?.throwIfAborted();
-        if (shapeMask !== undefined) {
-          multiPolygons = multiPolygons.filter((_, j) => shapeMask[j]);
-        }
-        dataBounds = await WebGLShapesController._getDataBounds(multiPolygons, {
-          signal,
-        });
+        dataBounds = await WebGLShapesController._getDataBounds(
+          geometry,
+          shapeMask,
+          { signal },
+        );
         signal?.throwIfAborted();
         scanlineDataTexture = await this._createScanlineDataTexture(
-          multiPolygons,
+          geometry,
+          shapeMask,
           dataBounds,
           { signal },
         );
@@ -621,14 +621,16 @@ export class WebGLShapesController extends WebGLControllerBase {
   /**
    * Builds the scanline data texture for a shapes object
    *
-   * Rasterizes all multi-polygons into horizontal scanlines, packs the
-   * result into a float buffer, and uploads it as an RGBA32F texture.
+   * Rasterizes all shapes into horizontal scanlines, packs the result into a
+   * float buffer, and uploads it as an RGBA32F texture.
    *
-   * @param multiPolygons - Polygon geometry for each shape in the object
-   * @param objectBounds - Axis-aligned bounding box of all shapes
+   * @param geometry - Flat geometry for all shapes in the object
+   * @param shapeMask - Per-shape inclusion mask for this layer, or `undefined` if all shapes are included
+   * @param objectBounds - Axis-aligned bounding box of the included shapes
    */
   private async _createScanlineDataTexture(
-    multiPolygons: MultiPolygon[],
+    geometry: ShapesGeometry,
+    shapeMask: boolean[] | undefined,
     objectBounds: Rect,
     options?: { signal?: AbortSignal },
   ): Promise<WebGLTexture> {
@@ -639,7 +641,8 @@ export class WebGLShapesController extends WebGLControllerBase {
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
       await WebGLShapesController._createScanlines(
         this._numScanlines,
-        multiPolygons,
+        geometry,
+        shapeMask,
         objectBounds,
         { signal },
       );
@@ -846,64 +849,88 @@ export class WebGLShapesController extends WebGLControllerBase {
   }
 
   /**
-   * Computes the axis-aligned bounding box of all multi-polygons
+   * Computes the axis-aligned bounding box of the included shapes' geometry
    *
-   * @param multiPolygons - Polygon geometry
+   * @param geometry - Flat geometry for all shapes
+   * @param shapeMask - Per-shape inclusion mask, or `undefined` if all shapes are included
    * @returns The bounding rectangle in data-space coordinates
    */
   private static async _getDataBounds(
-    multiPolygons: MultiPolygon[],
+    geometry: ShapesGeometry,
+    shapeMask: boolean[] | undefined,
     options?: { signal?: AbortSignal },
   ): Promise<Rect> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    if (multiPolygons.length === 0) {
-      throw new Error("Multi-polygons array must not be empty");
-    }
+    const {
+      coords,
+      shapePolygonOffsets,
+      polygonRingOffsets,
+      ringVertexOffsets,
+    } = geometry;
+    const numShapes = shapePolygonOffsets.length - 1;
     let xMin = Infinity,
       yMin = Infinity,
       xMax = -Infinity,
       yMax = -Infinity;
     const maybeYield = AsyncUtils.createYielder({ signal });
-    for (const multiPolygon of multiPolygons) {
-      for (const polygon of multiPolygon.polygons) {
-        for (const path of [polygon.shell, ...polygon.holes]) {
-          for (const vertex of path) {
-            if (vertex.x < xMin) {
-              xMin = vertex.x;
-            }
-            if (vertex.y < yMin) {
-              yMin = vertex.y;
-            }
-            if (vertex.x > xMax) {
-              xMax = vertex.x;
-            }
-            if (vertex.y > yMax) {
-              yMax = vertex.y;
-            }
-          }
+    for (let s = 0; s < numShapes; s++) {
+      if (shapeMask !== undefined && !shapeMask[s]) {
+        continue;
+      }
+      // A shape's vertices are contiguous in `coords`. Via the CSR offsets, the
+      // shape's polygon range [s, s + 1) maps to a ring range [ringStart,
+      // ringEnd) and in turn to the half-open vertex range [vertexStart,
+      // vertexEnd) — where ringEnd is the first ring of the next shape (the
+      // exclusive end).
+      const ringStart = polygonRingOffsets[shapePolygonOffsets[s]!]!;
+      const ringEnd = polygonRingOffsets[shapePolygonOffsets[s + 1]!]!;
+      const vertexStart = ringVertexOffsets[ringStart]!;
+      const vertexEnd = ringVertexOffsets[ringEnd]!;
+      for (let v = vertexStart; v < vertexEnd; v++) {
+        const x = coords[2 * v]!;
+        const y = coords[2 * v + 1]!;
+        if (x < xMin) {
+          xMin = x;
+        }
+        if (y < yMin) {
+          yMin = y;
+        }
+        if (x > xMax) {
+          xMax = x;
+        }
+        if (y > yMax) {
+          yMax = y;
         }
       }
       await maybeYield();
+    }
+    if (xMin > xMax) {
+      throw new Error("Shapes geometry must not be empty");
     }
     return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
   }
 
   /**
-   * Rasterizes multi-polygons into horizontal scanlines
+   * Rasterizes the included shapes into horizontal scanlines
    *
    * For each scanline, determines which shapes and edges intersect it,
    * computes per-scanline/per-shape bounding boxes, and builds a 128-bit
    * occupancy mask for fast skip-testing in the fragment shader.
    *
+   * Excluded shapes (per `shapeMask`) are skipped; included shapes are keyed by
+   * their compacted index (matching the order of the color textures).
+   *
    * @param numScanlines - Number of horizontal scanlines
-   * @param multiPolygons - Polygon geometry for all shapes
-   * @param objectBounds - Bounding box of all shapes
+   * @param geometry - Flat geometry for all shapes
+   * @param shapeMask - Per-shape inclusion mask, or `undefined` if all shapes are included
+   * @param objectBounds - Bounding box of the included shapes
    * @returns Scanlines with per-shape edges, and total counts for buffer sizing
    */
   private static async _createScanlines(
     numScanlines: number,
-    multiPolygons: MultiPolygon[],
+    geometry: ShapesGeometry,
+    shapeMask: boolean[] | undefined,
     objectBounds: Rect,
     options?: { signal?: AbortSignal },
   ): Promise<{
@@ -913,6 +940,13 @@ export class WebGLShapesController extends WebGLControllerBase {
   }> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
+    const {
+      coords,
+      shapePolygonOffsets,
+      polygonRingOffsets,
+      ringVertexOffsets,
+    } = geometry;
+    const numShapes = shapePolygonOffsets.length - 1;
     const scanlines: Scanline[] = Array.from({ length: numScanlines }, () => ({
       xMin: Infinity,
       xMax: -Infinity,
@@ -922,18 +956,31 @@ export class WebGLShapesController extends WebGLControllerBase {
     let totalNumScanlineShapes = 0;
     let totalNumScanlineShapeEdges = 0;
     const maybeYield = AsyncUtils.createYielder({ signal });
-    for (let shapeIndex = 0; shapeIndex < multiPolygons.length; shapeIndex++) {
-      for (const polygon of multiPolygons[shapeIndex]!.polygons) {
-        // compute shape xMin/xMax/occupancy mask
+    let shapeIndex = -1; // compacted index over included shapes
+    for (let s = 0; s < numShapes; s++) {
+      if (shapeMask !== undefined && !shapeMask[s]) {
+        continue;
+      }
+      shapeIndex++;
+      const polygonStart = shapePolygonOffsets[s]!;
+      const polygonEnd = shapePolygonOffsets[s + 1]!;
+      for (let p = polygonStart; p < polygonEnd; p++) {
+        const ringStart = polygonRingOffsets[p]!;
+        const ringEnd = polygonRingOffsets[p + 1]!;
+        // compute shape xMin/xMax/occupancy mask from the shell (first ring)
+        const shellStart = ringVertexOffsets[ringStart]!;
+        const shellEnd = ringVertexOffsets[ringStart + 1]!;
         let xMin = Infinity,
           yMin = Infinity,
           xMax = -Infinity,
           yMax = -Infinity;
-        for (const v of polygon.shell) {
-          xMin = Math.min(xMin, v.x);
-          yMin = Math.min(yMin, v.y);
-          xMax = Math.max(xMax, v.x);
-          yMax = Math.max(yMax, v.y);
+        for (let v = shellStart; v < shellEnd; v++) {
+          const x = coords[2 * v]!;
+          const y = coords[2 * v + 1]!;
+          xMin = Math.min(xMin, x);
+          yMin = Math.min(yMin, y);
+          xMax = Math.max(xMax, x);
+          yMax = Math.max(yMax, y);
         }
         const firstScanlineIndex = MathUtils.clamp(
           Math.floor(
@@ -994,11 +1041,16 @@ export class WebGLShapesController extends WebGLControllerBase {
             scanlineShape.xMax = Math.max(scanlineShape.xMax, xMax);
           }
         }
-        // add shape edges to scanlines
-        for (const path of [polygon.shell, ...polygon.holes]) {
-          for (let i = 0; i < path.length; ++i) {
-            const v0 = path[(i + 0) % path.length]!;
-            const v1 = path[(i + 1) % path.length]!;
+        // add shape edges to scanlines (shell and holes)
+        for (let r = ringStart; r < ringEnd; r++) {
+          const vertexStart = ringVertexOffsets[r]!;
+          const vertexEnd = ringVertexOffsets[r + 1]!;
+          const ringLength = vertexEnd - vertexStart;
+          for (let i = 0; i < ringLength; ++i) {
+            const a = vertexStart + ((i + 0) % ringLength);
+            const b = vertexStart + ((i + 1) % ringLength);
+            const v0: Vertex = { x: coords[2 * a]!, y: coords[2 * a + 1]! };
+            const v1: Vertex = { x: coords[2 * b]!, y: coords[2 * b + 1]! };
             if (v0.x === v1.x && v0.y === v1.y) {
               continue; // ignore zero-length edges
             }
