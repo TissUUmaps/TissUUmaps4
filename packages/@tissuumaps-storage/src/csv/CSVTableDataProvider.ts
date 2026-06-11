@@ -100,16 +100,14 @@ export class CSVTableDataProvider implements TableDataProvider<
       }));
     }
 
-    const step = (
-      results: papaparse.ParseStepResult<string[]>,
-      parser: papaparse.Parser,
-    ) => {
+    const processRow = (row: string[]) => {
       if (
         allColumns === undefined ||
         columns === undefined ||
         columnInfos === undefined
       ) {
-        allColumns = results.data;
+        // First row: column header (unless columns were provided up front).
+        allColumns = row;
         columns ??= allColumns;
         columnInfos = columns.map((column) => ({
           name: column,
@@ -118,28 +116,40 @@ export class CSVTableDataProvider implements TableDataProvider<
           currentChunk: [],
           isNaN: false,
         }));
-      } else {
-        if (results.data.length !== allColumns.length) {
-          throw new Error(
-            `Data row ${n} has ${results.data.length} values, expected ${allColumns.length}.`,
-          );
-        }
+        return;
+      }
+      if (row.length !== allColumns.length) {
+        throw new Error(
+          `Data row ${n} has ${row.length} values, expected ${allColumns.length}.`,
+        );
+      }
+      for (const columnInfo of columnInfos) {
+        const value = row[columnInfo.index]!;
+        columnInfo.isNaN = columnInfo.isNaN || value === "" || isNaN(+value);
+        columnInfo.currentChunk.push(columnInfo.isNaN ? value : +value);
+      }
+      n += 1;
+      if (n % defaultDataSource.chunkSize === 0) {
         for (const columnInfo of columnInfos) {
-          const value = results.data[columnInfo.index]!;
-          columnInfo.isNaN = columnInfo.isNaN || value === "" || isNaN(+value);
-          columnInfo.currentChunk.push(columnInfo.isNaN ? value : +value);
+          columnInfo.chunks.push(
+            columnInfo.isNaN
+              ? (columnInfo.currentChunk as string[])
+              : new Float32Array(columnInfo.currentChunk as number[]),
+          );
+          columnInfo.currentChunk = [];
         }
-        n += 1;
-        if (n % defaultDataSource.chunkSize === 0) {
-          for (const columnInfo of columnInfos) {
-            columnInfo.chunks.push(
-              columnInfo.isNaN
-                ? (columnInfo.currentChunk as string[])
-                : new Float32Array(columnInfo.currentChunk as number[]),
-            );
-            columnInfo.currentChunk = [];
-          }
-        }
+      }
+    };
+
+    // Use the batched `chunk` callback (not per-row `step`): with `worker: true`
+    // the parse runs off the main thread and posts back one message per chunk
+    // (per-row `step` would post one message per row).
+    const chunk = (
+      results: papaparse.ParseResult<string[]>,
+      parser: papaparse.Parser,
+    ) => {
+      for (const row of results.data) {
+        processRow(row);
       }
       if (signal?.aborted) {
         parser.abort();
@@ -188,9 +198,10 @@ export class CSVTableDataProvider implements TableDataProvider<
         (resolve, reject) =>
           papaparse.parse(file, {
             ...defaultDataSource.parseConfig,
+            worker: true,
             header: false,
             skipEmptyLines: true,
-            step: step,
+            chunk: chunk,
             complete: () => resolve(complete()),
             error: reject,
           }),
@@ -202,10 +213,11 @@ export class CSVTableDataProvider implements TableDataProvider<
         (resolve, reject) =>
           papaparse.parse(url, {
             ...defaultDataSource.parseConfig,
+            worker: true,
             download: true,
             header: false,
             skipEmptyLines: true,
-            step: step,
+            chunk: chunk,
             complete: () => resolve(complete()),
             error: reject,
           }),
