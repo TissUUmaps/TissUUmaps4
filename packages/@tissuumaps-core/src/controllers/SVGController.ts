@@ -13,6 +13,7 @@ type RectangleDrawingState = {
 };
 
 type PolygonDrawingState = {
+  pointerId: number;
   vertices: Vertex[];
   currentPolyline: SVGPolylineElement;
   vertexMarkers: SVGCircleElement[];
@@ -264,16 +265,17 @@ export class SVGController {
       );
 
       this._polygonDrawingState = {
+        pointerId: event.pointerId,
         vertices: [worldPoint],
         currentPolyline: this._createPreviewPolyline(worldPoint),
         vertexMarkers: [this._createVertexMarker(worldPoint)],
         isNearStart: false,
       };
     } else {
-      const firstVertex = this._polygonDrawingState.vertices[0];
+      const firstVertex = this._polygonDrawingState.vertices[0]!;
       if (
         this._polygonDrawingState.vertices.length >= 3 &&
-        this._isNearPoint(worldPoint, firstVertex!)
+        this._isNearPoint(worldPoint, firstVertex)
       ) {
         this._completePolygon();
         return;
@@ -292,11 +294,11 @@ export class SVGController {
     if (!this._polygonDrawingState) return;
 
     const worldPoint = this._screenToWorld(event.clientX, event.clientY);
-    const firstVertex = this._polygonDrawingState.vertices[0];
+    const firstVertex = this._polygonDrawingState.vertices[0]!;
 
     const isNearStart =
       this._polygonDrawingState.vertices.length >= 3 &&
-      this._isNearPoint(worldPoint, firstVertex!);
+      this._isNearPoint(worldPoint, firstVertex);
 
     if (isNearStart !== this._polygonDrawingState.isNearStart) {
       this._polygonDrawingState.isNearStart = isNearStart;
@@ -324,8 +326,12 @@ export class SVGController {
     }
   };
 
-  private _handlePolygonPointerCancel = (): void => {
-    if (!this._polygonDrawingState) return;
+  private _handlePolygonPointerCancel = (event: PointerEvent): void => {
+    if (
+      !this._polygonDrawingState ||
+      event.pointerId !== this._polygonDrawingState.pointerId
+    )
+      return;
     this._cancelPolygon();
   };
 
@@ -563,6 +569,10 @@ export class SVGController {
 
     document.removeEventListener("pointermove", this._handlePolygonPointerMove);
     document.removeEventListener("keydown", this._handlePolygonKeyDown);
+    document.removeEventListener(
+      "pointercancel",
+      this._handlePolygonPointerCancel,
+    );
   }
 
   // ─────────────────────────────────────────────────────────────
