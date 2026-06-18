@@ -525,11 +525,7 @@ export class OpenSeadragonController {
   }
 
   private _updateDummy(dummyBounds: Rect | null): void {
-    if (
-      this._tiledImageStates.length === 0 &&
-      this._dummyTiledImage === undefined &&
-      dummyBounds !== null
-    ) {
+    if (dummyBounds !== null && this._dummyTiledImage === undefined) {
       const index = this.viewer.world.getItemCount();
       this.viewer.addTiledImage({
         tileSource: {
@@ -542,6 +538,11 @@ export class OpenSeadragonController {
         width: dummyBounds.width,
         height: dummyBounds.height,
         success: (event) => {
+          // Re-check the live state instead of a value captured before this
+          // async callback: only fit to the dummy bounds while no real images
+          // are present, otherwise a real image added in the meantime would
+          // cause an unexpected viewport jump.
+          if (this._tiledImageStates.length > 0) return;
           const { item: tiledImage } = event as unknown as {
             item: OpenSeadragon.TiledImage;
           };
@@ -549,10 +550,13 @@ export class OpenSeadragonController {
         },
       });
       this._dummyTiledImage = this.viewer.world.getItemAt(index);
-    } else if (
-      this._tiledImageStates.length > 0 &&
-      this._dummyTiledImage !== undefined
-    ) {
+    } else if (dummyBounds !== null && this._dummyTiledImage !== undefined) {
+      this._dummyTiledImage.setPosition(
+        new OpenSeadragon.Point(dummyBounds.x, dummyBounds.y),
+        true,
+      );
+      this._dummyTiledImage.setWidth(dummyBounds.width, true);
+    } else if (dummyBounds === null && this._dummyTiledImage !== undefined) {
       this.viewer.world.removeItem(this._dummyTiledImage);
       this._dummyTiledImage = undefined;
     }
