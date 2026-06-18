@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 export interface AlertParams {
   title: string;
   body?: string;
-  cancelButton?: string;
+  actionButton?: string;
 }
 
 interface AlertContentProps extends AlertParams {
@@ -24,7 +24,7 @@ interface AlertContentProps extends AlertParams {
 export function AlertContent({
   title,
   body,
-  cancelButton,
+  actionButton,
   onDismiss,
 }: AlertContentProps) {
   return (
@@ -35,7 +35,7 @@ export function AlertContent({
       </AlertDialogHeader>
       <AlertDialogFooter>
         <Button type="button" variant="outline" onClick={onDismiss}>
-          {cancelButton ?? "Okay"}
+          {actionButton ?? "Okay"}
         </Button>
       </AlertDialogFooter>
     </>

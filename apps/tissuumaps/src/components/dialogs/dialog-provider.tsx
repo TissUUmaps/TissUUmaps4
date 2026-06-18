@@ -120,7 +120,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             <AlertContent
               title={state.title ?? ""}
               body={state.body}
-              cancelButton={state.cancelButton}
+              actionButton={state.actionButton}
               onDismiss={close}
             />
           )}
