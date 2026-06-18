@@ -12,9 +12,12 @@ type RectangleDrawingState = {
   currentRect: SVGRectElement;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 type PolygonDrawingState = {
-  // TODO extend for polygon drawing
+  pointerId: number;
+  vertices: Vertex[];
+  currentPolyline: SVGPolylineElement;
+  vertexMarkers: SVGCircleElement[];
+  isNearStart: boolean;
 };
 
 type FreehandDrawingState = {
@@ -47,7 +50,6 @@ export class SVGController {
 
   private _rectangleDrawingState: RectangleDrawingState | null = null;
 
-  // @ts-expect-error currently not used
   private _polygonDrawingState: PolygonDrawingState | null = null;
 
   private _freehandDrawingState: FreehandDrawingState | null = null;
@@ -113,6 +115,9 @@ export class SVGController {
     if (this._freehandDrawingState && newInteractionMode !== "drawFreehand") {
       this._cancelFreehand();
     }
+    if (this._polygonDrawingState && newInteractionMode !== "drawPolygon") {
+      this._cancelPolygon();
+    }
     this._interactionMode = newInteractionMode;
   }
 
@@ -149,6 +154,7 @@ export class SVGController {
 
   destroy(): void {
     this._cancelFreehand();
+    this._cancelPolygon();
     this._unregisterEventHandlers();
   }
 
@@ -244,25 +250,89 @@ export class SVGController {
   // Polygon drawing
   // ─────────────────────────────────────────────────────────────
 
-  // @ts-expect-error currently not used
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private _handlePolygonPointerDown = (event: PointerEvent): void => {
-    // TODO implement polygon drawing logic
-    // TODO: Register polygon-specific move/up handlers
-    // document.addEventListener("pointermove", this._handlePolygonPointerMove);
-    // document.addEventListener("pointerup", this._handlePolygonPointerUp)
+    event.preventDefault();
+    event.stopPropagation();
+
+    const worldPoint = this._screenToWorld(event.clientX, event.clientY);
+
+    if (!this._polygonDrawingState) {
+      document.addEventListener("pointermove", this._handlePolygonPointerMove);
+      document.addEventListener("keydown", this._handlePolygonKeyDown);
+      document.addEventListener(
+        "pointercancel",
+        this._handlePolygonPointerCancel,
+      );
+
+      this._polygonDrawingState = {
+        pointerId: event.pointerId,
+        vertices: [worldPoint],
+        currentPolyline: this._createPreviewPolyline(worldPoint),
+        vertexMarkers: [this._createVertexMarker(worldPoint)],
+        isNearStart: false,
+      };
+    } else {
+      const firstVertex = this._polygonDrawingState.vertices[0]!;
+      if (
+        this._polygonDrawingState.vertices.length >= 3 &&
+        this._isNearPoint(worldPoint, firstVertex)
+      ) {
+        this._completePolygon();
+        return;
+      }
+
+      this._polygonDrawingState.vertices.push(worldPoint);
+      this._polygonDrawingState.vertexMarkers.push(
+        this._createVertexMarker(worldPoint),
+      );
+
+      this._updatePolygonPreviewPolyline(this._polygonDrawingState.vertices);
+    }
   };
 
-  // @ts-expect-error currently not used
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private _handlePolygonPointerMove = (event: PointerEvent): void => {
-    // TODO
+    if (!this._polygonDrawingState) return;
+
+    const worldPoint = this._screenToWorld(event.clientX, event.clientY);
+    const firstVertex = this._polygonDrawingState.vertices[0]!;
+
+    const isNearStart =
+      this._polygonDrawingState.vertices.length >= 3 &&
+      this._isNearPoint(worldPoint, firstVertex);
+
+    if (isNearStart !== this._polygonDrawingState.isNearStart) {
+      this._polygonDrawingState.isNearStart = isNearStart;
+      this._updateFirstVertexMarker(isNearStart);
+    }
+
+    this._updatePolygonPreviewPolyline([
+      ...this._polygonDrawingState.vertices,
+      worldPoint,
+    ]);
   };
 
-  // @ts-expect-error currently not used
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private _handlePolygonPointerUp = (event: PointerEvent): void => {
-    // TODO
+  private _handlePolygonKeyDown = (event: KeyboardEvent): void => {
+    if (!this._polygonDrawingState) return;
+
+    if (event.key !== "Escape" && event.key !== "Enter") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.key === "Escape") {
+      this._cancelPolygon();
+    } else if (this._polygonDrawingState.vertices.length >= 3) {
+      this._completePolygon();
+    }
+  };
+
+  private _handlePolygonPointerCancel = (event: PointerEvent): void => {
+    if (
+      !this._polygonDrawingState ||
+      event.pointerId !== this._polygonDrawingState.pointerId
+    )
+      return;
+    this._cancelPolygon();
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -451,6 +521,57 @@ export class SVGController {
     const minSize = this._viewport.width * SVGController._minShapeSizeFactor; // Adjust threshold as needed
     return (
       Math.abs(end.x - start.x) > minSize && Math.abs(end.y - start.y) > minSize
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Polygon Drawing Helpers
+  // ─────────────────────────────────────────────────────────────
+
+  private _updatePolygonPreviewPolyline(points: Vertex[]): void {
+    if (!this._polygonDrawingState) return;
+
+    const pointsString = points.map((v) => `${v.x},${v.y}`).join(" ");
+    this._polygonDrawingState.currentPolyline.setAttribute(
+      "points",
+      pointsString,
+    );
+  }
+
+  private _updateFirstVertexMarker(isActive: boolean): void {
+    if (!this._polygonDrawingState) return;
+
+    const firstMarker = this._polygonDrawingState.vertexMarkers[0];
+    if (!firstMarker) return;
+
+    this._setMarkerHighlighted(firstMarker, isActive);
+  }
+
+  private _completePolygon(): void {
+    if (!this._polygonDrawingState) return;
+
+    const multiPolygon = this._createMultiPolygon(
+      this._polygonDrawingState.vertices,
+    );
+    this.shapeCompleteHandler?.(multiPolygon);
+
+    this._cancelPolygon();
+  }
+
+  private _cancelPolygon(): void {
+    if (!this._polygonDrawingState) return;
+
+    this._polygonDrawingState.currentPolyline.remove();
+    for (const marker of this._polygonDrawingState.vertexMarkers) {
+      marker.remove();
+    }
+    this._polygonDrawingState = null;
+
+    document.removeEventListener("pointermove", this._handlePolygonPointerMove);
+    document.removeEventListener("keydown", this._handlePolygonKeyDown);
+    document.removeEventListener(
+      "pointercancel",
+      this._handlePolygonPointerCancel,
     );
   }
 
