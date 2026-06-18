@@ -58,7 +58,7 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
         title="Add image"
         layers={layers}
         dataProviders={imageDataProviders}
-        onAdd={(name, layerId, _type, dataSource) => {
+        onAdd={(name, layerId, dataSource) => {
           if (!layerId) return;
           const image = createImage({
             id: crypto.randomUUID(),

@@ -68,7 +68,7 @@ export function PointsPanel({ className }: PointsPanelProps) {
         title="Add points"
         layers={layers}
         dataProviders={pointsDataProviders}
-        onAdd={(name, layerId, _type, dataSource) => {
+        onAdd={(name, layerId, dataSource) => {
           if (!layerId) return;
           const newPoints = createPoints({
             id: crypto.randomUUID(),

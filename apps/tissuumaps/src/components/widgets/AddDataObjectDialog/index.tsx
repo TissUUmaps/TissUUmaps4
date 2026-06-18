@@ -36,7 +36,6 @@ export type AddDataObjectDialogProps<
   onAdd: (
     name: string,
     layerId: string | undefined,
-    dataSourceType: string,
     dataSource: TDataSource,
   ) => void;
 };
@@ -79,20 +78,11 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
     onAdd(
       name.trim() || "Untitled",
       selectedLayerId || undefined,
-      selectedType,
       dataSourceDraft,
     );
     setOpen(false);
     resetForm();
-  }, [
-    name,
-    requiresLayer,
-    selectedLayerId,
-    selectedType,
-    dataSourceDraft,
-    onAdd,
-    resetForm,
-  ]);
+  }, [name, requiresLayer, selectedLayerId, dataSourceDraft, onAdd, resetForm]);
 
   const selectedProvider = dataProviders.get(selectedType);
 

@@ -68,7 +68,7 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
         title="Add shapes"
         layers={layers}
         dataProviders={shapesDataProviders}
-        onAdd={(name, layerId, _type, dataSource) => {
+        onAdd={(name, layerId, dataSource) => {
           if (!layerId) return;
           const newShapes = createShapes({
             id: crypto.randomUUID(),

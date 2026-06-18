@@ -68,7 +68,7 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
         title="Add labels"
         layers={layers}
         dataProviders={labelsDataProviders}
-        onAdd={(name, layerId, _type, dataSource) => {
+        onAdd={(name, layerId, dataSource) => {
           if (!layerId) return;
           const newLabels = createLabels({
             id: crypto.randomUUID(),
