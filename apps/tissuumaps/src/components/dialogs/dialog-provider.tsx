@@ -12,9 +12,11 @@ import {
 } from "./dialog-context";
 import { PromptContent, type PromptParams } from "./prompt-dialog";
 
-type DialogState = { open: boolean; type: DialogType } & Partial<
-  AlertParams & ConfirmParams & PromptParams
->;
+type DialogState = {
+  open: boolean;
+  openId: number;
+  type: DialogType;
+} & Partial<AlertParams & ConfirmParams & PromptParams>;
 
 type ReducerAction = DialogAction | { type: "close" };
 
@@ -23,8 +25,11 @@ function dialogReducer(state: DialogState, action: ReducerAction): DialogState {
     return { ...state, open: false };
   }
   // Reset per-dialog fields so values don't leak between dialog types.
+  // `openId` increments on every open so uncontrolled content (e.g. the prompt
+  // input) remounts rather than retaining the previous dialog's value.
   return {
     open: true,
+    openId: state.openId + 1,
     body: undefined,
     cancelButton: undefined,
     actionButton: undefined,
@@ -42,6 +47,7 @@ function dialogReducer(state: DialogState, action: ReducerAction): DialogState {
 export function DialogProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(dialogReducer, {
     open: false,
+    openId: 0,
     type: "alert",
     title: "",
   });
@@ -130,6 +136,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           )}
           {state.type === "prompt" && (
             <PromptContent
+              key={state.openId}
               title={state.title ?? ""}
               body={state.body}
               cancelButton={state.cancelButton}
