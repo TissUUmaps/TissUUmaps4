@@ -1,7 +1,8 @@
-import type {
-  DetailedHTMLProps,
-  InputHTMLAttributes,
-  PropsWithoutRef,
+import {
+  type DetailedHTMLProps,
+  type InputHTMLAttributes,
+  type PropsWithoutRef,
+  useRef,
 } from "react";
 
 import {
@@ -45,20 +46,25 @@ export function PromptContent({
   onCancel,
   onConfirm,
 }: PromptContentProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
     <form
       className="grid gap-6"
       onSubmit={(event) => {
         event.preventDefault();
-        const value = new FormData(event.currentTarget).get("prompt");
-        onConfirm(typeof value === "string" ? value : "");
+        onConfirm(inputRef.current?.value ?? "");
       }}
     >
       <AlertDialogHeader>
         <AlertDialogTitle>{title}</AlertDialogTitle>
         {body ? <AlertDialogDescription>{body}</AlertDialogDescription> : null}
       </AlertDialogHeader>
-      <Input {...inputProps} name="prompt" defaultValue={defaultValue} />
+      <Input
+        {...inputProps}
+        ref={inputRef}
+        name="prompt"
+        defaultValue={defaultValue}
+      />
       <AlertDialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
           {cancelButton ?? "Cancel"}
