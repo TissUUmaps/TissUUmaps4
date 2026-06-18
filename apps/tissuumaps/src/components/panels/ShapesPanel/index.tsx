@@ -92,8 +92,6 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
   const {
     activeSettingsCategory,
     setActiveSettingsCategory,
-    selectedTable,
-    setSelectedTable,
     selectedGroupByColumn,
     setSelectedGroupByColumn,
   } = useShapesDataWidget(shapes);
@@ -122,7 +120,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
 
   const { extraTableGroupColumnDefs } = useShapesDataTableColumns(
     shapes,
-    selectedTable,
+    shapes.dataSource.table ?? null,
     selectedGroupByColumn,
   );
 
@@ -203,8 +201,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             <ItemsDataWidget
               data={data}
               tableHeight={200}
-              selectedTable={selectedTable}
-              onSelectedTableChange={setSelectedTable}
+              selectedTable={shapes.dataSource.table ?? null}
               selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
               extraTableGroupColumnDefs={extraTableGroupColumnDefs}

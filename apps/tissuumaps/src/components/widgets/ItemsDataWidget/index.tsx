@@ -20,7 +20,6 @@ export type ItemsDataWidgetProps = {
   tableHeight: number;
   selectedTable?: string | null;
   selectedGroupByColumn?: string | null;
-  onSelectedTableChange?: (table: string | null) => void;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
   extraTableColumnDefs?: ColumnDef<ItemsDataTableRowData>[];
   extraTableGroupColumnDefs?: ColumnDef<ItemsDataTableGroupRowData>[];
@@ -30,20 +29,14 @@ export type ItemsDataWidgetProps = {
 export function ItemsDataWidget({
   data,
   tableHeight,
-  selectedTable: controlledSelectedTable,
+  // The table is determined by the data source, not selected here.
+  selectedTable = null,
   selectedGroupByColumn: controlledSelectedGroupByColumn,
-  onSelectedTableChange: setControlledSelectedTable,
   onSelectedGroupByColumnChange: setControlledSelectedGroupByColumn,
   extraTableColumnDefs,
   extraTableGroupColumnDefs,
   className,
 }: ItemsDataWidgetProps) {
-  // The table is determined by the data source, not selected here.
-  const [selectedTable] = useControlled(
-    controlledSelectedTable,
-    setControlledSelectedTable,
-    null,
-  );
   const [selectedGroupByColumn, setSelectedGroupByColumn] = useControlled(
     controlledSelectedGroupByColumn,
     setControlledSelectedGroupByColumn,
