@@ -526,7 +526,6 @@ export class OpenSeadragonController {
 
   private _updateDummy(dummyBounds: Rect | null): void {
     if (dummyBounds !== null && this._dummyTiledImage === undefined) {
-      const fitBounds = this._tiledImageStates.length === 0;
       const index = this.viewer.world.getItemCount();
       this.viewer.addTiledImage({
         tileSource: {
@@ -539,7 +538,11 @@ export class OpenSeadragonController {
         width: dummyBounds.width,
         height: dummyBounds.height,
         success: (event) => {
-          if (!fitBounds) return;
+          // Re-check the live state instead of a value captured before this
+          // async callback: only fit to the dummy bounds while no real images
+          // are present, otherwise a real image added in the meantime would
+          // cause an unexpected viewport jump.
+          if (this._tiledImageStates.length > 0) return;
           const { item: tiledImage } = event as unknown as {
             item: OpenSeadragon.TiledImage;
           };
