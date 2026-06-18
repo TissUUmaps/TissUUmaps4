@@ -19,6 +19,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
+import { useConfirm } from "@/components/dialogs";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -105,6 +106,7 @@ type LayerAccordionItemProps = {
 function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
   const updateLayer = useTissUUmaps((state) => state.updateLayer);
   const deleteLayer = useTissUUmaps((state) => state.deleteLayer);
+  const confirm = useConfirm();
 
   const objectNames = useLayerObjects(layer.id);
   const hasObjects = objectNames.length > 0;
@@ -161,12 +163,16 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
               variant="ghost"
               disabled={hasObjects}
               onClick={() => {
-                // TODO replace by dialog overlay
-                if (
-                  window.confirm("Are you sure you want to delete this layer?")
-                ) {
-                  deleteLayer(layer.id);
-                }
+                void confirm({
+                  title: "Delete layer",
+                  body: "Are you sure you want to delete this layer? This action cannot be undone.",
+                  cancelButton: "No",
+                  actionButton: "Yes",
+                }).then((confirmed) => {
+                  if (confirmed) {
+                    deleteLayer(layer.id);
+                  }
+                });
               }}
               title={
                 hasObjects

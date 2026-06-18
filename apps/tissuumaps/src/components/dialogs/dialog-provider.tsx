@@ -55,6 +55,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
 
   const typeRef = useRef<DialogType>("alert");
 
+  // `resolveByType`, `close`, and `confirm` read only refs and the stable
+  // `dispatch`, so the `dialog` callback below can capture them once (deps
+  // `[]`) without going stale.
   // Resolves the pending promise with the dismissal value for the active type.
   function resolveByType() {
     const type = typeRef.current;
@@ -80,7 +83,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   }
 
   const dialog: DialogContextType = useCallback(
-    async <T extends DialogAction>(params: T) => {
+    <T extends DialogAction>(params: T) => {
       // Resolve any dialog still open before replacing it.
       resolveByType();
       typeRef.current = params.type;
@@ -112,7 +115,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
               title={state.title ?? ""}
               body={state.body}
               cancelButton={state.cancelButton}
-              onCancel={close}
+              onDismiss={close}
             />
           )}
           {state.type === "confirm" && (

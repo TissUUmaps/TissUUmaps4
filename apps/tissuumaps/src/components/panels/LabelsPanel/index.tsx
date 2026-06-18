@@ -13,6 +13,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
+import { useConfirm } from "@/components/dialogs";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -103,6 +104,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   );
   const updateLabels = useTissUUmaps((state) => state.updateLabels);
   const deleteLabels = useTissUUmaps((state) => state.deleteLabels);
+  const confirm = useConfirm();
   const loadLabels = useTissUUmaps((state) => state.loadLabels);
 
   const { ref, handleRef } = useSortable({ id: labels.id, index });
@@ -165,14 +167,16 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             <Button
               variant="ghost"
               onClick={() => {
-                if (
-                  // TODO replace by dialog overlay
-                  window.confirm(
-                    "Are you sure you want to delete these labels?",
-                  )
-                ) {
-                  deleteLabels(labels.id);
-                }
+                void confirm({
+                  title: "Delete labels",
+                  body: "Are you sure you want to delete these labels? This action cannot be undone.",
+                  cancelButton: "No",
+                  actionButton: "Yes",
+                }).then((confirmed) => {
+                  if (confirmed) {
+                    deleteLabels(labels.id);
+                  }
+                });
               }}
               title="Delete labels"
             >

@@ -14,7 +14,7 @@ export interface AlertParams {
 
 interface AlertContentProps extends AlertParams {
   /** Dismisses the dialog. An alert resolves to `true`. */
-  onCancel: () => void;
+  onDismiss: () => void;
 }
 
 /**
@@ -25,7 +25,7 @@ export function AlertContent({
   title,
   body,
   cancelButton,
-  onCancel,
+  onDismiss,
 }: AlertContentProps) {
   return (
     <>
@@ -34,7 +34,7 @@ export function AlertContent({
         {body ? <AlertDialogDescription>{body}</AlertDialogDescription> : null}
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onDismiss}>
           {cancelButton ?? "Okay"}
         </Button>
       </AlertDialogFooter>

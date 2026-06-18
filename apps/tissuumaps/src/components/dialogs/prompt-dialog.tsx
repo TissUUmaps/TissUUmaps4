@@ -50,7 +50,8 @@ export function PromptContent({
       className="grid gap-6"
       onSubmit={(event) => {
         event.preventDefault();
-        onConfirm((event.currentTarget.prompt as HTMLInputElement)?.value);
+        const value = new FormData(event.currentTarget).get("prompt");
+        onConfirm(typeof value === "string" ? value : "");
       }}
     >
       <AlertDialogHeader>

@@ -2,6 +2,7 @@ import { useCallback, useRef } from "react";
 
 import { Field, FieldControl, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { useConfirm } from "@/components/dialogs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,20 +33,23 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
   const clearProject = useTissUUmaps((state) => state.clearProject);
 
   const { downloadProject } = useProjectDownload();
+  const confirm = useConfirm();
 
   const confirmClearProject = useCallback(() => {
-    if (
-      // TODO replace by dialog overlay
-      window.confirm(
-        "Are you sure you want to clear the project? All unsaved changes will be lost.",
-      )
-    ) {
-      clearProject();
-      const url = new URL(window.location.href);
-      url.searchParams.delete("project");
-      window.history.replaceState({}, "", url);
-    }
-  }, [clearProject]);
+    void confirm({
+      title: "Clear project",
+      body: "Are you sure you want to clear the project? All unsaved changes will be lost.",
+      cancelButton: "No",
+      actionButton: "Yes",
+    }).then((confirmed) => {
+      if (confirmed) {
+        clearProject();
+        const url = new URL(window.location.href);
+        url.searchParams.delete("project");
+        window.history.replaceState({}, "", url);
+      }
+    });
+  }, [clearProject, confirm]);
 
   return (
     <div className={className}>

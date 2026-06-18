@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
+import { useConfirm } from "@/components/dialogs";
 import { Button } from "@/components/ui/button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
@@ -72,6 +73,7 @@ type TableAccordionItemProps = {
 function TableAccordionItem({ table, index }: TableAccordionItemProps) {
   const tableDataProviders = useTissUUmaps((state) => state.tableDataProviders);
   const deleteTable = useTissUUmaps((state) => state.deleteTable);
+  const confirm = useConfirm();
   const loadTable = useTissUUmaps((state) => state.loadTable);
 
   const { ref, handleRef } = useSortable({ id: table.id, index });
@@ -90,12 +92,16 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
             <Button
               variant="ghost"
               onClick={() => {
-                if (
-                  // TODO replace by dialog overlay
-                  window.confirm("Are you sure you want to delete this table?")
-                ) {
-                  deleteTable(table.id);
-                }
+                void confirm({
+                  title: "Delete table",
+                  body: "Are you sure you want to delete this table? This action cannot be undone.",
+                  cancelButton: "No",
+                  actionButton: "Yes",
+                }).then((confirmed) => {
+                  if (confirmed) {
+                    deleteTable(table.id);
+                  }
+                });
               }}
               title="Delete table"
             >
