@@ -5,11 +5,9 @@ import { type ItemsData } from "@tissuumaps/core";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
-import { SimpleSelect } from "@/components/common/simple-select";
 import { useControlled } from "@/hooks/useControlled";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
 
 import {
   ItemsDataTable,
@@ -40,7 +38,8 @@ export function ItemsDataWidget({
   extraTableGroupColumnDefs,
   className,
 }: ItemsDataWidgetProps) {
-  const [selectedTable, setSelectedTable] = useControlled(
+  // The table is determined by the data source, not selected here.
+  const [selectedTable] = useControlled(
     controlledSelectedTable,
     setControlledSelectedTable,
     null,
@@ -51,7 +50,6 @@ export function ItemsDataWidget({
     null,
   );
 
-  const tables = useTissUUmaps((state) => state.tables);
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
     useTableColumnSelector(selectedTable);
 
@@ -62,32 +60,16 @@ export function ItemsDataWidget({
       <FieldsetLegend className="font-medium text-foreground">
         Data
       </FieldsetLegend>
-      <div className="grid grid-cols-2 gap-x-2">
-        <Field>
-          <FieldLabel>Table</FieldLabel>
-          <SimpleSelect
-            items={tables}
-            itemLabel={(table) => table.name}
-            itemValue={(table) => table.id}
-            value={selectedTable}
-            onValueChange={(value) => {
-              setSelectedGroupByColumn(null);
-              setSelectedTable(value);
-            }}
-            nullable
-          />
-        </Field>
-        <Field disabled={selectedTable === null}>
-          <FieldLabel>Group by</FieldLabel>
-          <SimpleAsyncCombobox
-            suggestQueries={suggestTableColumnQueries}
-            getItem={resolveTableColumnQuery}
-            itemQuery={(column) => column}
-            selectedItem={selectedGroupByColumn}
-            onSelectedItemChange={setSelectedGroupByColumn}
-          />
-        </Field>
-      </div>
+      <Field disabled={selectedTable === null}>
+        <FieldLabel>Group by</FieldLabel>
+        <SimpleAsyncCombobox
+          suggestQueries={suggestTableColumnQueries}
+          getItem={resolveTableColumnQuery}
+          itemQuery={(column) => column}
+          selectedItem={selectedGroupByColumn}
+          onSelectedItemChange={setSelectedGroupByColumn}
+        />
+      </Field>
       <ItemsDataTable
         data={data}
         height={tableHeight}
