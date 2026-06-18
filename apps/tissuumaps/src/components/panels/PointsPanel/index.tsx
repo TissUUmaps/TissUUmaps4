@@ -66,13 +66,15 @@ export function PointsPanel({ className }: PointsPanelProps) {
       </DragDropProvider>
       <AddDataObjectDialog
         title="Add points"
+        layers={layers}
         dataProviders={pointsDataProviders}
-        onAdd={(name, _type, dataSource) => {
+        onAdd={(name, layerId, dataSource) => {
+          if (!layerId) return;
           const newPoints = createPoints({
             id: crypto.randomUUID(),
             name,
             dataSource,
-            layer: layers[0]!.id, // FIXME
+            layer: layerId,
           });
           addPoints(newPoints);
         }}

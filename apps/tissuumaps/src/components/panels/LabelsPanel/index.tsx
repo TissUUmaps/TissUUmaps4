@@ -66,13 +66,15 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
       </DragDropProvider>
       <AddDataObjectDialog
         title="Add labels"
+        layers={layers}
         dataProviders={labelsDataProviders}
-        onAdd={(name, _type, dataSource) => {
+        onAdd={(name, layerId, dataSource) => {
+          if (!layerId) return;
           const newLabels = createLabels({
             id: crypto.randomUUID(),
             name,
             dataSource,
-            layer: layers[0]!.id, // FIXME
+            layer: layerId,
           });
           addLabels(newLabels);
         }}

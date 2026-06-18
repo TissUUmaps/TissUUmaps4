@@ -51,7 +51,7 @@ export function TablesPanel({ className }: TablesPanelProps) {
       <AddDataObjectDialog
         title="Add table"
         dataProviders={tableDataProviders}
-        onAdd={(name, _type, dataSource) => {
+        onAdd={(name, _layerId, dataSource) => {
           const table = createTable({
             id: crypto.randomUUID(),
             name,
