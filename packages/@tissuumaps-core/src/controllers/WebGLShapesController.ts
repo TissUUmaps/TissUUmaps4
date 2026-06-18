@@ -224,7 +224,7 @@ export class WebGLShapesController extends WebGLControllerBase {
         continue; // scanline data texture is currently being regenerated
       }
       const worldToDataMatrix = WebGLShapesController.createWorldToDataMatrix(
-        glShapes.ref.shapes,
+        glShapes.ref.shapes.transform,
         glShapes.ref.layer,
       );
       this.gl.uniformMatrix3x2fv(
@@ -269,7 +269,7 @@ export class WebGLShapesController extends WebGLControllerBase {
       yMax = -Infinity;
     for (const glShapes of this._glShapes) {
       const transform = WebGLShapesController.createDataToWorldMatrix(
-        glShapes.ref.shapes,
+        glShapes.ref.shapes.transform,
         glShapes.ref.layer,
       );
       const { x, y, width, height } = TransformUtils.transformBoundingBox(

@@ -26,14 +26,14 @@ export class WebGLControllerBase {
    * flip mirrors the entire coordinate system — all objects move to
    * mirrored positions as a group.
    *
-   * @param obj - Object providing the data → layer transform
+   * @param transform - The data → layer transform
    * @param layer - Layer providing the layer → world transform
    */
   protected static createDataToWorldMatrix(
-    obj: { transform: Transform },
+    transform: Transform,
     layer: Layer,
   ): mat3 {
-    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(obj.transform);
+    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform);
     const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
       layer.transform,
     );
@@ -78,11 +78,11 @@ export class WebGLControllerBase {
   /**
    * Inverse of {@link createDataToWorldMatrix}
    *
-   * @param obj - Object providing the data → layer transform (inverted)
+   * @param transform - The data → layer transform (inverted)
    * @param layer - Layer providing the layer → world transform (inverted)
    */
   protected static createWorldToDataMatrix(
-    obj: { transform: Transform },
+    transform: Transform,
     layer: Layer,
   ): mat3 {
     const worldToDataMatrix = mat3.create();
@@ -90,7 +90,7 @@ export class WebGLControllerBase {
       layer.transform,
     );
     mat3.invert(worldToLayerMatrix, worldToLayerMatrix);
-    const layerToDataMatrix = TransformUtils.toSimilarityMatrix(obj.transform);
+    const layerToDataMatrix = TransformUtils.toSimilarityMatrix(transform);
     mat3.invert(layerToDataMatrix, layerToDataMatrix);
     mat3.multiply(worldToDataMatrix, layerToDataMatrix, worldToLayerMatrix);
     return worldToDataMatrix;

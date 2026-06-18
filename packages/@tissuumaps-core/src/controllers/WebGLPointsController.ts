@@ -379,7 +379,7 @@ export class WebGLPointsController extends WebGLControllerBase {
       yMax = -Infinity;
     for (const bufferSliceState of this._bufferSliceStates) {
       const transform = WebGLPointsController.createDataToWorldMatrix(
-        bufferSliceState.ref.points,
+        bufferSliceState.ref.points.transform,
         bufferSliceState.ref.layer,
       );
       const { x, y, width, height } = TransformUtils.transformBoundingBox(
@@ -871,7 +871,10 @@ export class WebGLPointsController extends WebGLControllerBase {
       });
       objectsUBOData.set(
         TransformUtils.transposeAsGLMat2x4(
-          WebGLPointsController.createDataToWorldMatrix(ref.points, ref.layer),
+          WebGLPointsController.createDataToWorldMatrix(
+            ref.points.transform,
+            ref.layer,
+          ),
         ),
         i * 8,
       );
