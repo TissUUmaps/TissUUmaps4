@@ -498,7 +498,7 @@ export class OpenSeadragonController {
       tiledImageState.tiledImage.setFlip(flip);
     }
     if (bounds.width !== width) {
-      tiledImageState.tiledImage.setWidth(width, true);
+      tiledImageState.tiledImage.setWidth(width, true); // implicitly updates height to maintain aspect ratio
     }
     if (tiledImageState.tiledImage.getRotation() !== rotation) {
       tiledImageState.tiledImage.setRotation(rotation, true);
