@@ -308,8 +308,8 @@ describe("TransformUtils", () => {
      *
      * OSD renders a tiled image as:
      *   1. Place at (x, y) with the given width (height = width * aspect)
-     *   2. Rotate around image center by `rotation` degrees
-     *   3. If flipped, mirror tile content horizontally around image center
+     *   2. If flipped, mirror tile content horizontally around image center
+     *   3. Rotate around image center by `rotation` degrees
      *
      * We reverse-engineer corner positions from those parameters.
      */
