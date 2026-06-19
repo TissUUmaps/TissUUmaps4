@@ -100,9 +100,7 @@ export class CSVTableDataProvider implements TableDataProvider<
             columns = columnNames.map((name) => {
               const index = allColumnNames.indexOf(name);
               if (index === -1) {
-                throw new Error(
-                  `Column "${name}" specified in "columns" does not exist in the table.`,
-                );
+                throw new Error(`Column "${name}" not found in CSV file`);
               }
               return { name, index, isNaN: false, data: [] };
             });
