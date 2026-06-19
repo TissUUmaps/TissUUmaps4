@@ -121,7 +121,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   }
 
   private static _parseGeoJSON(
-    geo: geojson.GeoJSON,
+    geo: geojson.GeoJSON<geojson.Geometry | null>,
     idProperty: string | undefined,
     nameProperty: string | undefined,
   ): {
@@ -129,6 +129,9 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
     names: string[] | undefined;
     geometry: ShapesGeometry;
   } {
+    if (geo === null) {
+      throw new Error("GeoJSON data must not be null.");
+    }
     if (idProperty !== undefined && geo.type !== "FeatureCollection") {
       throw new Error(
         "ID properties can only be used with GeoJSON FeatureCollections.",
@@ -149,9 +152,14 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       coords: [],
     };
 
+    let valid = false;
     switch (geo.type) {
       case "FeatureCollection":
         for (const feature of geo.features) {
+          if (feature.geometry === null) {
+            console.warn("Skipping feature with null geometry.");
+            continue;
+          }
           const shapeAppended = GeoJSONShapesDataProvider._parseGeometry(
             feature.geometry,
             accumulator,
@@ -175,18 +183,30 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
             // eslint-disable-next-line @typescript-eslint/no-base-to-string
             names.push(String(name));
           }
+          valid ||= shapeAppended;
         }
         break;
       case "Feature":
-        GeoJSONShapesDataProvider._parseGeometry(geo.geometry, accumulator);
+        if (geo.geometry !== null) {
+          valid = GeoJSONShapesDataProvider._parseGeometry(
+            geo.geometry,
+            accumulator,
+          );
+        }
         break;
       case "GeometryCollection":
-        for (const g of geo.geometries) {
-          GeoJSONShapesDataProvider._parseGeometry(g, accumulator);
+        for (const geometry of geo.geometries) {
+          valid ||= GeoJSONShapesDataProvider._parseGeometry(
+            geometry,
+            accumulator,
+          );
         }
         break;
       default:
-        GeoJSONShapesDataProvider._parseGeometry(geo, accumulator);
+        valid = GeoJSONShapesDataProvider._parseGeometry(geo, accumulator);
+    }
+    if (!valid) {
+      throw new Error("No valid geometries found in GeoJSON data.");
     }
 
     return {
