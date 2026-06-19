@@ -78,7 +78,7 @@ export class CSVTableDataProvider implements TableDataProvider<
           name: string;
           index: number;
           isNaN: boolean;
-          data: (string | number)[];
+          chunks: (Float32Array | string[])[];
         }[]
       | undefined;
     const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
@@ -93,40 +93,77 @@ export class CSVTableDataProvider implements TableDataProvider<
         results: papaparse.ParseResult<string[]>,
         parser: papaparse.Parser,
       ) => {
+        let columnChunks: (Float32Array | string[])[] | undefined;
+        let numChunkRows = results.data.length;
+        let currentChunkRow = 0;
         for (const rowData of results.data) {
           if (columns === undefined) {
-            const allColumnNames = defaultDataSource.columns ?? rowData;
-            const columnNames = defaultDataSource.loadColumns ?? allColumnNames;
-            columns = columnNames.map((name) => {
-              const index = allColumnNames.indexOf(name);
-              if (index === -1) {
-                throw new Error(`Column "${name}" not found in CSV file`);
-              }
-              return { name, index, isNaN: false, data: [] };
-            });
-            if (allColumnNames === rowData) {
+            let columnNames = defaultDataSource.columns;
+            if (columnNames === undefined) {
+              columnNames = rowData;
+              numChunkRows -= 1;
+            }
+            columns = (defaultDataSource.loadColumns ?? columnNames).map(
+              (columnName) => {
+                const columnIndex = columnNames.indexOf(columnName);
+                if (columnIndex === -1) {
+                  throw new Error(`Column "${columnName}" not found`);
+                }
+                return {
+                  name: columnName,
+                  index: columnIndex,
+                  isNaN: false,
+                  chunks: [],
+                };
+              },
+            );
+            if (columnNames === rowData) {
               continue;
             }
           }
-          for (const column of columns) {
+          if (columnChunks === undefined) {
+            columnChunks = columns.map((column) =>
+              column.isNaN
+                ? new Array<string>(numChunkRows)
+                : new Float32Array(numChunkRows),
+            );
+          }
+          for (let c = 0; c < columns.length; c++) {
+            const column = columns[c]!;
+            const columnChunk = columnChunks[c]!;
             const value = rowData[column.index] ?? "";
-            if (column.isNaN) {
-              column.data.push(value);
+            if (Array.isArray(columnChunk)) {
+              columnChunk[currentChunkRow] = value;
             } else {
               let valueIsNaN = value === "";
               if (!valueIsNaN) {
                 const numericValue = +value;
                 valueIsNaN = isNaN(numericValue);
                 if (!valueIsNaN) {
-                  column.data.push(numericValue);
+                  columnChunk[currentChunkRow] = numericValue;
                 }
               }
               if (valueIsNaN) {
-                column.data = Array.from(column.data, String);
-                column.data.push(value);
                 column.isNaN = true;
+                for (let i = 0; i < column.chunks.length; i++) {
+                  column.chunks[i] = Array.from(column.chunks[i]!, String);
+                }
+                const newColumnChunk = new Array<string>(numChunkRows);
+                for (let i = 0; i < currentChunkRow; i++) {
+                  newColumnChunk[i] = String(columnChunk[i]!);
+                }
+                newColumnChunk[currentChunkRow] = value;
+                columnChunks[c] = newColumnChunk;
               }
             }
+          }
+          currentChunkRow++;
+        }
+        if (columns !== undefined && columnChunks !== undefined) {
+          for (let c = 0; c < columns.length; c++) {
+            const column = columns[c]!;
+            const columnChunk = columnChunks[c]!;
+            column.chunks.push(columnChunk);
           }
         }
         if (signal?.aborted) {
@@ -139,12 +176,22 @@ export class CSVTableDataProvider implements TableDataProvider<
       const columnValues = new Map<string, string[] | Float32Array>();
       if (columns !== undefined) {
         for (const column of columns) {
-          columnValues.set(
-            column.name,
-            column.isNaN
-              ? (column.data as string[])
-              : new Float32Array(column.data as number[]),
-          );
+          let values;
+          if (column.isNaN) {
+            const chunks = column.chunks as string[][];
+            values = chunks.flat();
+          } else {
+            const chunks = column.chunks as Float32Array[];
+            const n = chunks.reduce((n, chunk) => n + chunk.length, 0);
+            let offset = 0;
+            values = new Float32Array(n);
+            for (const chunk of chunks) {
+              values.set(chunk, offset);
+              offset += chunk.length;
+            }
+          }
+          columnValues.set(column.name, values);
+          column.chunks = [];
         }
       }
       return columnValues;
@@ -184,7 +231,7 @@ export class CSVTableDataProvider implements TableDataProvider<
       throw new Error("No columns found in the CSV file.");
     }
 
-    const n = columns[0]!.data.length;
+    const n = columnValues.get(columns[0]!.name)?.length ?? 0;
 
     let ids: number[] | undefined;
     if (defaultDataSource.idColumn !== undefined) {
