@@ -1,11 +1,11 @@
 import { deepEqual } from "fast-equals";
 
 import {
-  type MultiPolygon,
   type ProgressCallback,
   type Shapes,
   type ShapesData,
   type ShapesDataSource,
+  type ShapesGeometry,
 } from "@tissuumaps/core";
 
 import { deduplicate } from "../deduplicate";
@@ -14,7 +14,7 @@ import { type TissUUmapsStateCreator } from "../index";
 type LoadedShapesData = {
   dataSource: ShapesDataSource;
   data: ShapesData;
-  loadedMultiPolygons?: MultiPolygon[];
+  loadedGeometry?: ShapesGeometry;
 };
 
 export type ShapesSlice = ShapesSliceState & ShapesSliceActions;
@@ -40,14 +40,14 @@ export type ShapesSliceActions = {
       newDataSource?: ShapesDataSource;
     },
   ) => Promise<ShapesData>;
-  loadShapesMultiPolygons: (
+  loadShapesGeometry: (
     shapesId: string,
     options?: {
       signal?: AbortSignal;
       reload?: boolean;
       onProgress?: ProgressCallback;
     },
-  ) => Promise<MultiPolygon[]>;
+  ) => Promise<ShapesGeometry>;
   unloadShapes: (shapesId: string) => boolean;
 };
 
@@ -233,11 +233,11 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
     },
     (_shapesId, options) => options?.signal,
   ),
-  loadShapesMultiPolygons: deduplicate(
+  loadShapesGeometry: deduplicate(
     async (shapesId, options) => {
       const { signal, reload = false, onProgress } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the shapes, the corresponding data source, and the requested multi-polygons are already loaded
+      // Check if the shapes, the corresponding data source, and the requested geometry are already loaded
       const state = get();
       const loadedDataKey = state.loadedShapes.get(shapesId);
       if (loadedDataKey === undefined) {
@@ -249,11 +249,11 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
           `Data source for shapes with ID ${shapesId} not loaded.`,
         );
       }
-      if (loadedData.loadedMultiPolygons !== undefined && !reload) {
-        return loadedData.loadedMultiPolygons;
+      if (loadedData.loadedGeometry !== undefined && !reload) {
+        return loadedData.loadedGeometry;
       }
-      // Load the requested multi-polygons
-      const multiPolygons = await loadedData.data.loadMultiPolygons({
+      // Load the requested geometry
+      const geometry = await loadedData.data.loadGeometry({
         signal,
         onProgress,
       });
@@ -281,13 +281,13 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
           "AbortError",
         );
       }
-      // Store the loaded multi-polygons in the state
+      // Store the loaded geometry in the state
       set((draft) => {
         const loadedDataDraft =
           draft.loadedShapesData.get(currentLoadedDataKey)!;
-        loadedDataDraft.loadedMultiPolygons = multiPolygons;
+        loadedDataDraft.loadedGeometry = geometry;
       });
-      return multiPolygons;
+      return geometry;
     },
     (_shapesId, options) => options?.signal,
   ),
