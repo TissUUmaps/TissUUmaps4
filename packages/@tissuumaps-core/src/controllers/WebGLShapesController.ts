@@ -902,8 +902,13 @@ export class WebGLShapesController extends WebGLControllerBase {
       }
       await maybeYield();
     }
-    if (xMin >= xMax || yMin >= yMax) {
+    if (!Number.isFinite(xMin) || !Number.isFinite(yMin)) {
       throw new Error("Shapes geometry must not be empty");
+    }
+    if (xMin >= xMax || yMin >= yMax) {
+      throw new Error(
+        "Shapes geometry bounds must have non-zero width and height",
+      );
     }
     return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
   }
