@@ -73,8 +73,6 @@ export class CSVTableDataProvider implements TableDataProvider<
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
-    const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
-
     let columns:
       | {
           name: string;
@@ -83,17 +81,7 @@ export class CSVTableDataProvider implements TableDataProvider<
           data: (string | number)[];
         }[]
       | undefined;
-    if (defaultDataSource.columns !== undefined) {
-      const allColumnNames = defaultDataSource.columns;
-      const columnNames = defaultDataSource.loadColumns ?? allColumnNames;
-      columns = columnNames.map((columnName) => ({
-        name: columnName,
-        index: allColumnNames.indexOf(columnName),
-        isNaN: false,
-        data: [],
-      }));
-    }
-
+    const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
     const parseConfig: Partial<
       papaparse.ParseLocalConfig & papaparse.ParseRemoteConfig
     > = {
@@ -107,15 +95,20 @@ export class CSVTableDataProvider implements TableDataProvider<
       ) => {
         for (const rowData of results.data) {
           if (columns === undefined) {
-            const allColumnNames = rowData;
+            const allColumnNames = defaultDataSource.columns ?? rowData;
             const columnNames = defaultDataSource.loadColumns ?? allColumnNames;
-            columns = columnNames.map((columnName) => ({
-              name: columnName,
-              index: allColumnNames.indexOf(columnName),
-              isNaN: false,
-              data: [],
-            }));
-            continue;
+            columns = columnNames.map((name) => {
+              const index = allColumnNames.indexOf(name);
+              if (index === -1) {
+                throw new Error(
+                  `Column "${name}" specified in "columns" does not exist in the table.`,
+                );
+              }
+              return { name, index, isNaN: false, data: [] };
+            });
+            if (allColumnNames === rowData) {
+              continue;
+            }
           }
           for (const column of columns) {
             const value = rowData[column.index] ?? "";
