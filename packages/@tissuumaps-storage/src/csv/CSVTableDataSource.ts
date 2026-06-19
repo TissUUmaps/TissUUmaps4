@@ -5,7 +5,6 @@ import { type TableDataSource } from "@tissuumaps/core";
 export const csvTableDataSourceType = "csv";
 
 export const csvTableDataSourceDefaults = {
-  chunkSize: 10000,
   parseConfig: {
     delimiter: ",",
   },
@@ -18,7 +17,6 @@ export interface CSVTableDataSource extends TableDataSource<
   idColumn?: string;
   nameColumn?: string;
   loadColumns?: string[];
-  chunkSize?: number;
   parseConfig?: Pick<
     papaparse.ParseConfig,
     | "delimiter"

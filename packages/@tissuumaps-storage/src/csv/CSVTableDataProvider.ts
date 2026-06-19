@@ -3,7 +3,6 @@ import * as papaparse from "papaparse";
 import {
   type ProgressCallback,
   type TableDataProvider,
-  type TypedArray,
 } from "@tissuumaps/core";
 
 import { CSVTableData } from "./CSVTableData";
@@ -33,7 +32,6 @@ export class CSVTableDataProvider implements TableDataProvider<
         type: "string",
       },
       // TODO loadColumns
-      // TODO chunkSize
       // TODO parseConfig
     },
     required: ["url"], // TODO ... or path
@@ -60,7 +58,6 @@ export class CSVTableDataProvider implements TableDataProvider<
         label: "Name Column",
       },
       // TODO loadColumns
-      // TODO chunkSize
       // TODO parseConfig
     ],
   };
@@ -78,137 +75,112 @@ export class CSVTableDataProvider implements TableDataProvider<
 
     const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
 
-    let n = 0;
-    let allColumns = defaultDataSource.columns;
-    let columns = defaultDataSource.loadColumns ?? allColumns;
-    let columnInfos:
+    let columns:
       | {
           name: string;
           index: number;
-          chunks: (string[] | TypedArray)[];
-          currentChunk: (string | number)[];
           isNaN: boolean;
+          data: (string | number)[];
         }[]
       | undefined;
-    if (allColumns !== undefined && columns !== undefined) {
-      columnInfos = columns.map((column) => ({
-        name: column,
-        index: allColumns!.indexOf(column),
-        chunks: [],
-        currentChunk: [],
+    if (defaultDataSource.columns !== undefined) {
+      const allColumnNames = defaultDataSource.columns;
+      const columnNames = defaultDataSource.loadColumns ?? allColumnNames;
+      columns = columnNames.map((columnName) => ({
+        name: columnName,
+        index: allColumnNames.indexOf(columnName),
         isNaN: false,
+        data: [],
       }));
     }
 
-    const step = (
-      results: papaparse.ParseStepResult<string[]>,
-      parser: papaparse.Parser,
-    ) => {
-      if (
-        allColumns === undefined ||
-        columns === undefined ||
-        columnInfos === undefined
-      ) {
-        allColumns = results.data;
-        columns ??= allColumns;
-        columnInfos = columns.map((column) => ({
-          name: column,
-          index: allColumns!.indexOf(column),
-          chunks: [],
-          currentChunk: [],
-          isNaN: false,
-        }));
-      } else {
-        if (results.data.length !== allColumns.length) {
-          throw new Error(
-            `Data row ${n} has ${results.data.length} values, expected ${allColumns.length}.`,
-          );
-        }
-        for (const columnInfo of columnInfos) {
-          const value = results.data[columnInfo.index]!;
-          columnInfo.isNaN = columnInfo.isNaN || value === "" || isNaN(+value);
-          columnInfo.currentChunk.push(columnInfo.isNaN ? value : +value);
-        }
-        n += 1;
-        if (n % defaultDataSource.chunkSize === 0) {
-          for (const columnInfo of columnInfos) {
-            columnInfo.chunks.push(
-              columnInfo.isNaN
-                ? (columnInfo.currentChunk as string[])
-                : new Float32Array(columnInfo.currentChunk as number[]),
-            );
-            columnInfo.currentChunk = [];
+    const parseConfig: Partial<
+      papaparse.ParseLocalConfig & papaparse.ParseRemoteConfig
+    > = {
+      ...defaultDataSource.parseConfig,
+      worker: true,
+      header: false,
+      skipEmptyLines: true,
+      chunk: (
+        results: papaparse.ParseResult<string[]>,
+        parser: papaparse.Parser,
+      ) => {
+        for (const rowData of results.data) {
+          if (columns === undefined) {
+            const allColumnNames = rowData;
+            const columnNames = defaultDataSource.loadColumns ?? allColumnNames;
+            columns = columnNames.map((columnName) => ({
+              name: columnName,
+              index: allColumnNames.indexOf(columnName),
+              isNaN: false,
+              data: [],
+            }));
+            continue;
+          }
+          for (const column of columns) {
+            const value = rowData[column.index] ?? "";
+            if (column.isNaN) {
+              column.data.push(value);
+            } else {
+              let valueIsNaN = value === "";
+              if (!valueIsNaN) {
+                const numericValue = +value;
+                valueIsNaN = isNaN(numericValue);
+                if (!valueIsNaN) {
+                  column.data.push(numericValue);
+                }
+              }
+              if (valueIsNaN) {
+                column.data = Array.from(column.data, String);
+                column.data.push(value);
+                column.isNaN = true;
+              }
+            }
           }
         }
-      }
-      if (signal?.aborted) {
-        parser.abort();
-      }
+        if (signal?.aborted) {
+          parser.abort();
+        }
+      },
     };
 
-    const complete = () => {
+    const makeColumnValues = () => {
       const columnValues = new Map<string, string[] | Float32Array>();
-      for (const columnInfo of columnInfos!) {
-        if (columnInfo.currentChunk.length > 0) {
-          columnInfo.chunks.push(
-            columnInfo.isNaN
-              ? (columnInfo.currentChunk as string[])
-              : new Float32Array(columnInfo.currentChunk as number[]),
+      if (columns !== undefined) {
+        for (const column of columns) {
+          columnValues.set(
+            column.name,
+            column.isNaN
+              ? (column.data as string[])
+              : new Float32Array(column.data as number[]),
           );
-          columnInfo.currentChunk = [];
         }
-        if (columnInfo.isNaN) {
-          const values = columnInfo.chunks.flatMap((chunkValues) =>
-            Array.isArray(chunkValues)
-              ? chunkValues
-              : Array.from(chunkValues, String),
-          );
-          columnValues.set(columnInfo.name, values);
-        } else {
-          const values = new Float32Array(n);
-          let offset = 0;
-          for (const chunkValues of columnInfo.chunks) {
-            values.set(chunkValues as TypedArray, offset);
-            offset += chunkValues.length;
-          }
-          columnValues.set(columnInfo.name, values);
-        }
-        columnInfo.chunks = [];
       }
       return columnValues;
     };
 
-    let columnValues;
+    let columnValues: Map<string, string[] | Float32Array>;
     if (defaultDataSource.path !== undefined && workspace !== null) {
       const fh = await workspace.getFileHandle(defaultDataSource.path);
       signal?.throwIfAborted();
       const file = await fh.getFile();
-      signal?.throwIfAborted();
-      columnValues = await new Promise<Map<string, string[] | Float32Array>>(
-        (resolve, reject) =>
-          papaparse.parse(file, {
-            ...defaultDataSource.parseConfig,
-            header: false,
-            skipEmptyLines: true,
-            step: step,
-            complete: () => resolve(complete()),
-            error: reject,
-          }),
+      columnValues = await new Promise((resolve, reject) =>
+        papaparse.parse(file, {
+          ...parseConfig,
+          error: reject,
+          complete: () => resolve(makeColumnValues()),
+        }),
       );
       signal?.throwIfAborted();
     } else if (defaultDataSource.url !== undefined) {
       const url = defaultDataSource.url;
-      columnValues = await new Promise<Map<string, string[] | Float32Array>>(
-        (resolve, reject) =>
-          papaparse.parse(url, {
-            ...defaultDataSource.parseConfig,
-            download: true,
-            header: false,
-            skipEmptyLines: true,
-            step: step,
-            complete: () => resolve(complete()),
-            error: reject,
-          }),
+      columnValues = await new Promise((resolve, reject) =>
+        papaparse.parse(url, {
+          ...parseConfig,
+          download: true,
+          error: reject,
+          complete: () => resolve(makeColumnValues()),
+        }),
       );
       signal?.throwIfAborted();
     } else if (defaultDataSource.path !== undefined) {
@@ -216,6 +188,12 @@ export class CSVTableDataProvider implements TableDataProvider<
     } else {
       throw new Error("A URL or workspace path is required to load data.");
     }
+
+    if (columns === undefined || columns.length === 0) {
+      throw new Error("No columns found in the CSV file.");
+    }
+
+    const n = columns[0]!.data.length;
 
     let ids: number[] | undefined;
     if (defaultDataSource.idColumn !== undefined) {
@@ -225,16 +203,13 @@ export class CSVTableDataProvider implements TableDataProvider<
           `ID column "${defaultDataSource.idColumn}" does not exist in the table.`,
         );
       }
-      ids = Array.from(
-        idColumnValues.map((v) => {
-          if (!Number.isInteger(v)) {
-            throw new Error(
-              `ID column "${defaultDataSource.idColumn}" contains non-integer values.`,
-            );
-          }
-          return +v;
-        }),
-      );
+      ids = Array.from<string | number, number>(idColumnValues, (id) => {
+        const numericId = +id;
+        if (id === "" || !Number.isInteger(numericId)) {
+          throw new Error(`ID value "${id}" is not a valid integer.`);
+        }
+        return numericId;
+      });
     }
 
     let names: string[] | undefined;
@@ -245,11 +220,15 @@ export class CSVTableDataProvider implements TableDataProvider<
           `Name column "${defaultDataSource.nameColumn}" does not exist in the table.`,
         );
       }
-      names = Array.isArray(nameColumnValues)
-        ? nameColumnValues.map(String)
-        : Array.from(nameColumnValues, String);
+      names = Array.from<string | number, string>(nameColumnValues, String);
     }
 
-    return new CSVTableData(n, ids, names, columns!, columnValues);
+    return new CSVTableData(
+      n,
+      ids,
+      names,
+      columns.map((c) => c.name),
+      columnValues,
+    );
   }
 }
