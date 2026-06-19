@@ -216,15 +216,25 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
     }
     let polygonsAdded = false;
     for (const rings of polygons) {
-      if (rings.length === 0) {
-        console.warn("Skipping polygon without an outer ring.");
+      if (rings.length === 0 || rings[0]!.length < 3) {
+        console.warn("Skipping polygon without a valid shell.");
         continue;
       }
+      let ringsAdded = false;
       for (const ring of rings) {
+        if (ring.length < 3) {
+          console.warn("Skipping invalid ring with fewer than three vertices.");
+          continue;
+        }
         for (const pos of ring) {
           accumulator.coords.push(pos[0]!, pos[1]!);
         }
         accumulator.ringVertexOffsets.push(accumulator.coords.length / 2);
+        ringsAdded = true;
+      }
+      if (!ringsAdded) {
+        console.warn("Skipping polygon without valid rings.");
+        continue;
       }
       accumulator.polygonRingOffsets.push(
         accumulator.ringVertexOffsets.length - 1,
