@@ -1,6 +1,10 @@
 import { useCallback } from "react";
 
-import { type PointsData, type ProgressCallback } from "@tissuumaps/core";
+import {
+  type PointsData,
+  type PointsGeometry,
+  type ProgressCallback,
+} from "@tissuumaps/core";
 import { type ViewerAdapter } from "@tissuumaps/viewer";
 
 import { useTissUUmaps } from "..";
@@ -24,14 +28,14 @@ export class LoadedPointsDataAdapter implements PointsData {
     return this._getData().getNames();
   }
 
-  async loadCoordinates(options?: {
+  async loadGeometry(options?: {
     signal?: AbortSignal;
     onProgress?: ProgressCallback;
-  }): Promise<[Float32Array, Float32Array]> {
+  }): Promise<PointsGeometry> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const state = useTissUUmaps.getState();
-    return await state.loadPointsCoordinates(this._pointsId, {
+    return await state.loadPointsGeometry(this._pointsId, {
       signal,
       onProgress,
     });

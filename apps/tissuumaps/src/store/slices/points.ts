@@ -4,6 +4,7 @@ import {
   type Points,
   type PointsData,
   type PointsDataSource,
+  type PointsGeometry,
   type ProgressCallback,
 } from "@tissuumaps/core";
 
@@ -13,7 +14,7 @@ import { type TissUUmapsStateCreator } from "../index";
 type LoadedPointsData = {
   dataSource: PointsDataSource;
   data: PointsData;
-  loadedCoordinates?: [Float32Array, Float32Array];
+  loadedGeometry?: PointsGeometry;
 };
 
 export type PointsSlice = PointsSliceState & PointsSliceActions;
@@ -39,14 +40,14 @@ export type PointsSliceActions = {
       newDataSource?: PointsDataSource;
     },
   ) => Promise<PointsData>;
-  loadPointsCoordinates: (
+  loadPointsGeometry: (
     pointsId: string,
     options?: {
       signal?: AbortSignal;
       reload?: boolean;
       onProgress?: ProgressCallback;
     },
-  ) => Promise<[Float32Array, Float32Array]>;
+  ) => Promise<PointsGeometry>;
   unloadPoints: (pointsId: string) => boolean;
 };
 
@@ -236,11 +237,11 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
     },
     (_pointsId, options) => options?.signal,
   ),
-  loadPointsCoordinates: deduplicate(
+  loadPointsGeometry: deduplicate(
     async (pointsId, options) => {
       const { signal, reload = false, onProgress } = options ?? {};
       signal?.throwIfAborted();
-      // Check if the points, the corresponding data source, and the requested coordinates are already loaded
+      // Check if the points, the corresponding data source, and the requested geometry are already loaded
       const state = get();
       const loadedDataKey = state.loadedPoints.get(pointsId);
       if (loadedDataKey === undefined) {
@@ -252,11 +253,11 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
           `Data source for points with ID ${pointsId} not loaded.`,
         );
       }
-      if (loadedData.loadedCoordinates !== undefined && !reload) {
-        return loadedData.loadedCoordinates;
+      if (loadedData.loadedGeometry !== undefined && !reload) {
+        return loadedData.loadedGeometry;
       }
-      // Load the requested coordinates
-      const coordinates = await loadedData.data.loadCoordinates({
+      // Load the requested geometry
+      const geometry = await loadedData.data.loadGeometry({
         signal,
         onProgress,
       });
@@ -284,13 +285,13 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
           "AbortError",
         );
       }
-      // Store the loaded coordinates in the state
+      // Store the loaded geometry in the state
       set((draft) => {
         const loadedDataDraft =
           draft.loadedPointsData.get(currentLoadedDataKey)!;
-        loadedDataDraft.loadedCoordinates = coordinates;
+        loadedDataDraft.loadedGeometry = geometry;
       });
-      return coordinates;
+      return geometry;
     },
     (_pointsId, options) => options?.signal,
   ),

@@ -1,5 +1,5 @@
 import { type PointsDataSource } from "../model/points";
-import { type ProgressCallback } from "../types";
+import { type PointsGeometry, type ProgressCallback } from "../types";
 import { type ItemsData, type ItemsDataProvider } from "./base";
 
 /**
@@ -18,13 +18,13 @@ export interface PointsDataProvider<
  */
 export interface PointsData extends ItemsData {
   /**
-   * Loads the coordinates for all points
+   * Loads the geometry for all points
    *
    * @param options - Optional abort signal and progress callback
-   * @returns The x and y coordinates as separate arrays, in index order
+   * @returns A promise that resolves to the loaded points geometry
    */
-  loadCoordinates(options?: {
+  loadGeometry(options?: {
     signal?: AbortSignal;
     onProgress?: ProgressCallback;
-  }): Promise<[Float32Array, Float32Array]>;
+  }): Promise<PointsGeometry>;
 }

@@ -20,7 +20,7 @@ import {
 } from "../model/types";
 import { type ShapesData } from "../storage/shapes";
 import { type TableData } from "../storage/table";
-import { type MultiPolygon, type Rect, type Vertex } from "../types";
+import { type Rect, type ShapesGeometry } from "../types";
 import { AsyncUtils } from "../utils/AsyncUtils";
 import { MathUtils } from "../utils/MathUtils";
 import { TransformUtils } from "../utils/TransformUtils";
@@ -506,17 +506,17 @@ export class WebGLShapesController extends WebGLControllerBase {
         dataBounds === undefined ||
         scanlineDataTexture === undefined
       ) {
-        let multiPolygons = await ref.data.loadMultiPolygons({ signal });
+        const geometry = await ref.data.loadGeometry({ signal });
         signal?.throwIfAborted();
-        if (shapeMask !== undefined) {
-          multiPolygons = multiPolygons.filter((_, j) => shapeMask[j]);
-        }
-        dataBounds = await WebGLShapesController._getDataBounds(multiPolygons, {
-          signal,
-        });
+        dataBounds = await WebGLShapesController._getDataBounds(
+          geometry,
+          shapeMask,
+          { signal },
+        );
         signal?.throwIfAborted();
         scanlineDataTexture = await this._createScanlineDataTexture(
-          multiPolygons,
+          geometry,
+          shapeMask,
           dataBounds,
           { signal },
         );
@@ -621,14 +621,16 @@ export class WebGLShapesController extends WebGLControllerBase {
   /**
    * Builds the scanline data texture for a shapes object
    *
-   * Rasterizes all multi-polygons into horizontal scanlines, packs the
+   * Rasterizes all shapes into horizontal scanlines, packs the
    * result into a float buffer, and uploads it as an RGBA32F texture.
    *
-   * @param multiPolygons - Polygon geometry for each shape in the object
+   * @param geometry - Geometry for all shapes in the object
+   * @param shapeMask - Per-shape inclusion mask, or `undefined` if all shapes are included
    * @param objectBounds - Axis-aligned bounding box of all shapes
    */
   private async _createScanlineDataTexture(
-    multiPolygons: MultiPolygon[],
+    geometry: ShapesGeometry,
+    shapeMask: boolean[] | undefined,
     objectBounds: Rect,
     options?: { signal?: AbortSignal },
   ): Promise<WebGLTexture> {
@@ -639,7 +641,8 @@ export class WebGLShapesController extends WebGLControllerBase {
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
       await WebGLShapesController._createScanlines(
         this._numScanlines,
-        multiPolygons,
+        geometry,
+        shapeMask,
         objectBounds,
         { signal },
       );
@@ -846,64 +849,87 @@ export class WebGLShapesController extends WebGLControllerBase {
   }
 
   /**
-   * Computes the axis-aligned bounding box of all multi-polygons
+   * Computes the axis-aligned bounding box of all (included) shapes
    *
-   * @param multiPolygons - Polygon geometry
+   * @param geometry - Geometry for all shapes in the object
+   * @param shapeMask - Per-shape inclusion mask, or `undefined` if all shapes are included
    * @returns The bounding rectangle in data-space coordinates
    */
   private static async _getDataBounds(
-    multiPolygons: MultiPolygon[],
+    geometry: ShapesGeometry,
+    shapeMask: boolean[] | undefined,
     options?: { signal?: AbortSignal },
   ): Promise<Rect> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    if (multiPolygons.length === 0) {
-      throw new Error("Multi-polygons array must not be empty");
-    }
+    const {
+      shapePolygonOffsets,
+      polygonRingOffsets,
+      ringVertexOffsets,
+      coords,
+    } = geometry;
     let xMin = Infinity,
       yMin = Infinity,
       xMax = -Infinity,
       yMax = -Infinity;
     const maybeYield = AsyncUtils.createYielder({ signal });
-    for (const multiPolygon of multiPolygons) {
-      for (const polygon of multiPolygon.polygons) {
-        for (const path of [polygon.shell, ...polygon.holes]) {
-          for (const vertex of path) {
-            if (vertex.x < xMin) {
-              xMin = vertex.x;
-            }
-            if (vertex.y < yMin) {
-              yMin = vertex.y;
-            }
-            if (vertex.x > xMax) {
-              xMax = vertex.x;
-            }
-            if (vertex.y > yMax) {
-              yMax = vertex.y;
-            }
+    for (let s = 0; s < shapePolygonOffsets.length - 1; s++) {
+      if (shapeMask !== undefined && !shapeMask[s]) {
+        continue;
+      }
+      const polygonStart = shapePolygonOffsets[s]!;
+      const polygonEnd = shapePolygonOffsets[s + 1]!;
+      for (let p = polygonStart; p < polygonEnd; p++) {
+        const shellRing = polygonRingOffsets[p]!;
+        const shellVertexStart = ringVertexOffsets[shellRing]!;
+        const shellVertexEnd = ringVertexOffsets[shellRing + 1]!;
+        for (let v = shellVertexStart; v < shellVertexEnd; v++) {
+          const x = coords[2 * v]!;
+          const y = coords[2 * v + 1]!;
+          if (x < xMin) {
+            xMin = x;
+          }
+          if (y < yMin) {
+            yMin = y;
+          }
+          if (x > xMax) {
+            xMax = x;
+          }
+          if (y > yMax) {
+            yMax = y;
           }
         }
       }
       await maybeYield();
     }
+    if (!Number.isFinite(xMin) || !Number.isFinite(yMin)) {
+      throw new Error("Shapes geometry must not be empty");
+    }
+    if (xMin >= xMax || yMin >= yMax) {
+      throw new Error(
+        "Shapes geometry bounds must have non-zero width and height",
+      );
+    }
     return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
   }
 
   /**
-   * Rasterizes multi-polygons into horizontal scanlines
+   * Rasterizes shapes into horizontal scanlines
    *
    * For each scanline, determines which shapes and edges intersect it,
    * computes per-scanline/per-shape bounding boxes, and builds a 128-bit
    * occupancy mask for fast skip-testing in the fragment shader.
    *
    * @param numScanlines - Number of horizontal scanlines
-   * @param multiPolygons - Polygon geometry for all shapes
+   * @param geometry - Geometry for all shapes in the object
+   * @param shapeMask - Per-shape inclusion mask, or `undefined` if all shapes are included
    * @param objectBounds - Bounding box of all shapes
    * @returns Scanlines with per-shape edges, and total counts for buffer sizing
    */
   private static async _createScanlines(
     numScanlines: number,
-    multiPolygons: MultiPolygon[],
+    geometry: ShapesGeometry,
+    shapeMask: boolean[] | undefined,
     objectBounds: Rect,
     options?: { signal?: AbortSignal },
   ): Promise<{
@@ -913,6 +939,12 @@ export class WebGLShapesController extends WebGLControllerBase {
   }> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
+    const {
+      shapePolygonOffsets,
+      polygonRingOffsets,
+      ringVertexOffsets,
+      coords,
+    } = geometry;
     const scanlines: Scanline[] = Array.from({ length: numScanlines }, () => ({
       xMin: Infinity,
       xMax: -Infinity,
@@ -922,18 +954,30 @@ export class WebGLShapesController extends WebGLControllerBase {
     let totalNumScanlineShapes = 0;
     let totalNumScanlineShapeEdges = 0;
     const maybeYield = AsyncUtils.createYielder({ signal });
-    for (let shapeIndex = 0; shapeIndex < multiPolygons.length; shapeIndex++) {
-      for (const polygon of multiPolygons[shapeIndex]!.polygons) {
+    let shapeIndex = 0; // compacted index over included shapes
+    for (let s = 0; s < shapePolygonOffsets.length - 1; s++) {
+      if (shapeMask !== undefined && !shapeMask[s]) {
+        continue;
+      }
+      const shapePolygonStart = shapePolygonOffsets[s]!;
+      const shapePolygonEnd = shapePolygonOffsets[s + 1]!;
+      for (let p = shapePolygonStart; p < shapePolygonEnd; p++) {
+        const polygonRingStart = polygonRingOffsets[p]!;
+        const polygonRingEnd = polygonRingOffsets[p + 1]!;
         // compute shape xMin/xMax/occupancy mask
         let xMin = Infinity,
           yMin = Infinity,
           xMax = -Infinity,
           yMax = -Infinity;
-        for (const v of polygon.shell) {
-          xMin = Math.min(xMin, v.x);
-          yMin = Math.min(yMin, v.y);
-          xMax = Math.max(xMax, v.x);
-          yMax = Math.max(yMax, v.y);
+        const shellVertexStart = ringVertexOffsets[polygonRingStart]!;
+        const shellVertexEnd = ringVertexOffsets[polygonRingStart + 1]!;
+        for (let v = shellVertexStart; v < shellVertexEnd; v++) {
+          const x = coords[2 * v]!;
+          const y = coords[2 * v + 1]!;
+          xMin = Math.min(xMin, x);
+          yMin = Math.min(yMin, y);
+          xMax = Math.max(xMax, x);
+          yMax = Math.max(yMax, y);
         }
         const firstScanlineIndex = MathUtils.clamp(
           Math.floor(
@@ -995,16 +1039,23 @@ export class WebGLShapesController extends WebGLControllerBase {
           }
         }
         // add shape edges to scanlines
-        for (const path of [polygon.shell, ...polygon.holes]) {
-          for (let i = 0; i < path.length; ++i) {
-            const v0 = path[(i + 0) % path.length]!;
-            const v1 = path[(i + 1) % path.length]!;
-            if (v0.x === v1.x && v0.y === v1.y) {
+        for (let r = polygonRingStart; r < polygonRingEnd; r++) {
+          const ringVertexStart = ringVertexOffsets[r]!;
+          const ringVertexEnd = ringVertexOffsets[r + 1]!;
+          const nRingVertices = ringVertexEnd - ringVertexStart;
+          for (let i = 0; i < nRingVertices; ++i) {
+            const v0 = ringVertexStart + ((i + 0) % nRingVertices);
+            const v1 = ringVertexStart + ((i + 1) % nRingVertices);
+            const v0x = coords[2 * v0]!;
+            const v0y = coords[2 * v0 + 1]!;
+            const v1x = coords[2 * v1]!;
+            const v1y = coords[2 * v1 + 1]!;
+            if (v0x === v1x && v0y === v1y) {
               continue; // ignore zero-length edges
             }
             const firstEdgeScanlineIndex = MathUtils.clamp(
               Math.floor(
-                (numScanlines * (Math.min(v0.y, v1.y) - objectBounds.y)) /
+                (numScanlines * (Math.min(v0y, v1y) - objectBounds.y)) /
                   objectBounds.height,
               ),
               0,
@@ -1012,7 +1063,7 @@ export class WebGLShapesController extends WebGLControllerBase {
             );
             const lastEdgeScanlineIndex = MathUtils.clamp(
               Math.ceil(
-                (numScanlines * (Math.max(v0.y, v1.y) - objectBounds.y)) /
+                (numScanlines * (Math.max(v0y, v1y) - objectBounds.y)) /
                   objectBounds.height,
               ),
               0,
@@ -1025,13 +1076,14 @@ export class WebGLShapesController extends WebGLControllerBase {
             ) {
               const scanline = scanlines[scanlineIndex]!;
               const scanlineShape = scanline.shapes.get(shapeIndex)!;
-              scanlineShape.edges.push({ v0, v1 });
+              scanlineShape.edges.push({ v0x, v0y, v1x, v1y });
               totalNumScanlineShapeEdges++;
             }
           }
         }
       }
       await maybeYield();
+      shapeIndex++;
     }
     return { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges };
   }
@@ -1094,10 +1146,10 @@ export class WebGLShapesController extends WebGLControllerBase {
           // scanline shape edge
           float32Data.set(
             [
-              scanlineShapeEdge.v0.x,
-              scanlineShapeEdge.v0.y,
-              scanlineShapeEdge.v1.x,
-              scanlineShapeEdge.v1.y,
+              scanlineShapeEdge.v0x,
+              scanlineShapeEdge.v0y,
+              scanlineShapeEdge.v1x,
+              scanlineShapeEdge.v1y,
             ],
             4 * currentScanlineShapeEdgeTexelOffset,
           );
@@ -1182,10 +1234,14 @@ type ScanlineShape = {
 
 /** A polygon edge intersecting a scanline, defined by its two endpoints */
 type ScanlineShapeEdge = {
-  /** First endpoint */
-  v0: Vertex;
-  /** Second endpoint */
-  v1: Vertex;
+  /** X coordinate of the first endpoint */
+  v0x: number;
+  /** Y coordinate of the first endpoint */
+  v0y: number;
+  /** X coordinate of the second endpoint */
+  v1x: number;
+  /** Y coordinate of the second endpoint */
+  v1y: number;
 };
 
 /** A 128-bit occupancy mask stored as four 32-bit integers */
