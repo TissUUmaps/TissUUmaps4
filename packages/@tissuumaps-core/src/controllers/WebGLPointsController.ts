@@ -657,25 +657,25 @@ export class WebGLPointsController extends WebGLControllerBase {
           : undefined;
       // x/y
       if (bufferSliceChanged || dataBounds === undefined) {
-        let [xData, yData] = await ref.data.loadCoordinates({ signal });
+        let { xs, ys } = await ref.data.loadGeometry({ signal });
         signal?.throwIfAborted();
         if (pointMask !== undefined) {
-          xData = xData.filter((_, j) => pointMask[j]);
-          yData = yData.filter((_, j) => pointMask[j]);
+          xs = xs.filter((_, j) => pointMask[j]);
+          ys = ys.filter((_, j) => pointMask[j]);
         }
-        dataBounds = WebGLPointsController._getDataBounds(xData, yData);
+        dataBounds = WebGLPointsController._getDataBounds(xs, ys);
         WebGLUtils.loadBuffer(
           this.gl,
           this.gl.ARRAY_BUFFER,
           this._buffers.x,
-          xData,
+          xs,
           { offset },
         );
         WebGLUtils.loadBuffer(
           this.gl,
           this.gl.ARRAY_BUFFER,
           this._buffers.y,
-          yData,
+          ys,
           { offset },
         );
       }

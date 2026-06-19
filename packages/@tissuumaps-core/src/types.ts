@@ -74,3 +74,12 @@ export type Vertex = {
   /** Y coordinate of the vertex */
   y: number;
 };
+
+/** Point cloud geometry consisting of separate arrays for x and y coordinates */
+export type PointsGeometry = {
+  /** X coordinates of the points */
+  xs: Float32Array;
+
+  /** Y coordinates of the points */
+  ys: Float32Array;
+};
