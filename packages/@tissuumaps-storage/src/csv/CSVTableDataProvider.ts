@@ -3,6 +3,7 @@ import * as papaparse from "papaparse";
 import {
   type ProgressCallback,
   type TableDataProvider,
+  type TypedArray,
 } from "@tissuumaps/core";
 
 import { CSVTableData } from "./CSVTableData";
@@ -78,7 +79,7 @@ export class CSVTableDataProvider implements TableDataProvider<
           name: string;
           index: number;
           isNaN: boolean;
-          chunks: (Float32Array | string[])[];
+          chunks: (string[] | TypedArray)[];
         }[]
       | undefined;
     const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
@@ -93,7 +94,7 @@ export class CSVTableDataProvider implements TableDataProvider<
         results: papaparse.ParseResult<string[]>,
         parser: papaparse.Parser,
       ) => {
-        let columnChunks: (Float32Array | string[])[] | undefined;
+        let columnChunks: (string[] | TypedArray)[] | undefined;
         let numChunkRows = results.data.length;
         let currentChunkRow = 0;
         for (const rowData of results.data) {
@@ -173,7 +174,7 @@ export class CSVTableDataProvider implements TableDataProvider<
     };
 
     const makeColumnValues = () => {
-      const columnValues = new Map<string, string[] | Float32Array>();
+      const columnValues = new Map<string, string[] | TypedArray>();
       if (columns !== undefined) {
         for (const column of columns) {
           let values;
@@ -181,10 +182,10 @@ export class CSVTableDataProvider implements TableDataProvider<
             const chunks = column.chunks as string[][];
             values = chunks.flat();
           } else {
-            const chunks = column.chunks as Float32Array[];
+            const chunks = column.chunks as TypedArray[];
             const n = chunks.reduce((n, chunk) => n + chunk.length, 0);
-            let offset = 0;
             values = new Float32Array(n);
+            let offset = 0;
             for (const chunk of chunks) {
               values.set(chunk, offset);
               offset += chunk.length;
@@ -197,7 +198,7 @@ export class CSVTableDataProvider implements TableDataProvider<
       return columnValues;
     };
 
-    let columnValues: Map<string, string[] | Float32Array>;
+    let columnValues: Map<string, string[] | TypedArray>;
     if (defaultDataSource.path !== undefined && workspace !== null) {
       const fh = await workspace.getFileHandle(defaultDataSource.path);
       signal?.throwIfAborted();
