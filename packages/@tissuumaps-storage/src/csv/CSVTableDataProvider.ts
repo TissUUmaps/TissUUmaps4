@@ -127,14 +127,12 @@ export class CSVTableDataProvider implements TableDataProvider<
             const column = columns[c]!;
             const columnChunk = columnChunks[c]!;
             if (column.index < 0) {
-              console.warn(`Column "${column.name}" not found`);
               parser.abort();
-              return;
+              throw new Error(`Column "${column.name}" not found`);
             }
             if (column.index >= rowData.length) {
-              console.warn(`Missing value for column "${column.name}"`);
               parser.abort();
-              return;
+              throw new Error(`Missing value for column "${column.name}"`);
             }
             const value = rowData[column.index]!;
             if (Array.isArray(columnChunk)) {
