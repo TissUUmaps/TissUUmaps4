@@ -105,18 +105,12 @@ export class CSVTableDataProvider implements TableDataProvider<
               numChunkRows -= 1;
             }
             columns = (defaultDataSource.loadColumns ?? columnNames).map(
-              (columnName) => {
-                const columnIndex = columnNames.indexOf(columnName);
-                if (columnIndex === -1) {
-                  throw new Error(`Column "${columnName}" not found`);
-                }
-                return {
-                  name: columnName,
-                  index: columnIndex,
-                  isNaN: false,
-                  chunks: [],
-                };
-              },
+              (columnName) => ({
+                name: columnName,
+                index: columnNames.indexOf(columnName),
+                isNaN: false,
+                chunks: [],
+              }),
             );
             if (columnNames === rowData) {
               continue;
@@ -132,7 +126,17 @@ export class CSVTableDataProvider implements TableDataProvider<
           for (let c = 0; c < columns.length; c++) {
             const column = columns[c]!;
             const columnChunk = columnChunks[c]!;
-            const value = rowData[column.index] ?? "";
+            if (column.index < 0) {
+              console.warn(`Column "${column.name}" not found`);
+              parser.abort();
+              return;
+            }
+            if (column.index >= rowData.length) {
+              console.warn(`Missing value for column "${column.name}"`);
+              parser.abort();
+              return;
+            }
+            const value = rowData[column.index]!;
             if (Array.isArray(columnChunk)) {
               columnChunk[currentChunkRow] = value;
             } else {
