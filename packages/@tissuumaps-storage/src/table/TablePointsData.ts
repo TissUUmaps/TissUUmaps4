@@ -45,10 +45,10 @@ export class TablePointsData implements PointsData {
     let [xs, ys] = await Promise.all([xPromise, yPromise]);
     signal?.throwIfAborted();
     if (!(xs instanceof Float32Array)) {
-      xs = Float32Array.from(xs);
+      xs = new Float32Array(xs);
     }
     if (!(ys instanceof Float32Array)) {
-      ys = Float32Array.from(ys);
+      ys = new Float32Array(ys);
     }
     return { xs, ys };
   }

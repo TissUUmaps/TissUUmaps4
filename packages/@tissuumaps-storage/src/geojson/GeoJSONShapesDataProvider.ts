@@ -213,10 +213,10 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       ids: idProperty !== undefined ? ids : undefined,
       names: nameProperty !== undefined ? names : undefined,
       geometry: {
-        shapePolygonOffsets: Uint32Array.from(accumulator.shapePolygonOffsets),
-        polygonRingOffsets: Uint32Array.from(accumulator.polygonRingOffsets),
-        ringVertexOffsets: Uint32Array.from(accumulator.ringVertexOffsets),
-        coords: Float32Array.from(accumulator.coords),
+        shapePolygonOffsets: new Uint32Array(accumulator.shapePolygonOffsets),
+        polygonRingOffsets: new Uint32Array(accumulator.polygonRingOffsets),
+        ringVertexOffsets: new Uint32Array(accumulator.ringVertexOffsets),
+        coords: new Float32Array(accumulator.coords),
       },
     };
   }
