@@ -110,8 +110,12 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
         promises.push(get().loadTable(table.id, { signal, onProgress }));
       }
       const results = await Promise.allSettled(promises);
+      signal?.throwIfAborted();
       const errors = results
-        .filter((result) => result.status === "rejected")
+        .filter(
+          (result): result is PromiseRejectedResult =>
+            result.status === "rejected",
+        )
         .map((result) => result.reason as unknown);
       if (errors.length > 0) {
         throw new AggregateError(errors, "Failed to load project");
