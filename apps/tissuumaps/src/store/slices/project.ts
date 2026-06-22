@@ -71,12 +71,6 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       get().clearProject();
       set({
         projectName: project.name,
-        layers: structuredClone(project.layers),
-        images: structuredClone(project.images),
-        labels: structuredClone(project.labels),
-        points: structuredClone(project.points),
-        shapes: structuredClone(project.shapes),
-        tables: structuredClone(project.tables),
         markerMaps: structuredClone(project.markerMaps),
         sizeMaps: structuredClone(project.sizeMaps),
         colorMaps: structuredClone(project.colorMaps),
@@ -91,21 +85,29 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
           project.viewerAnimationFinishOptions,
         ),
       });
+      for (const layer of project.layers) {
+        get().addLayer(layer);
+      }
       const loadPromises = [];
+      for (const table of project.tables) {
+        get().addTable(table);
+        loadPromises.push(get().loadTable(table.id, { signal, onProgress }));
+      }
       for (const image of project.images) {
+        get().addImage(image);
         loadPromises.push(get().loadImage(image.id, { signal, onProgress }));
       }
       for (const labels of project.labels) {
+        get().addLabels(labels);
         loadPromises.push(get().loadLabels(labels.id, { signal, onProgress }));
       }
       for (const points of project.points) {
+        get().addPoints(points);
         loadPromises.push(get().loadPoints(points.id, { signal, onProgress }));
       }
       for (const shapes of project.shapes) {
+        get().addShapes(shapes);
         loadPromises.push(get().loadShapes(shapes.id, { signal, onProgress }));
-      }
-      for (const table of project.tables) {
-        loadPromises.push(get().loadTable(table.id, { signal, onProgress }));
       }
       await Promise.all(loadPromises);
     },
