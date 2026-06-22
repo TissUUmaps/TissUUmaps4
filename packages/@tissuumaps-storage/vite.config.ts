@@ -11,6 +11,9 @@ export default defineConfig({
       tsconfigPath: resolve(__dirname, "tsconfig.dts.json"),
     }),
   ],
+  worker: {
+    format: "es",
+  },
   build: {
     lib: {
       entry: {
