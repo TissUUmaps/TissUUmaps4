@@ -2,7 +2,7 @@ import { mat3, vec2 } from "gl-matrix";
 import { describe, expect, it } from "vitest";
 
 import { identityTransform } from "../model/constants";
-import { type Transform } from "../model/types";
+import { type SimilarityTransform } from "../model/types";
 import { TransformUtils } from "./TransformUtils";
 
 describe("TransformUtils", () => {
@@ -87,7 +87,7 @@ describe("TransformUtils", () => {
 
   describe("toMatrix", () => {
     it("creates a matrix from scale, rotation, and translation", () => {
-      const tf: Transform = {
+      const tf: SimilarityTransform = {
         flip: false,
         scale: 2,
         rotation: 30,
@@ -127,7 +127,7 @@ describe("TransformUtils", () => {
     });
 
     it("creates a flipped matrix", () => {
-      const tf: Transform = {
+      const tf: SimilarityTransform = {
         flip: true,
         scale: 2,
         rotation: 30,
@@ -310,8 +310,8 @@ describe("TransformUtils", () => {
      * flip/rotation-around-image-center convention.
      */
     function computeGeometry(
-      transform: Transform,
-      layerTransform: Transform,
+      transform: SimilarityTransform,
+      layerTransform: SimilarityTransform,
       contentSize: { x: number; y: number },
     ): {
       flip: boolean;
@@ -394,8 +394,8 @@ describe("TransformUtils", () => {
      * the data → world matrix (same logic as WebGLControllerBase).
      */
     function webglCorners(
-      transform: Transform,
-      layerTransform: Transform,
+      transform: SimilarityTransform,
+      layerTransform: SimilarityTransform,
       contentSize: { x: number; y: number },
     ): vec2[] {
       const dataToLayer = TransformUtils.toSimilarityMatrix(transform);
@@ -429,7 +429,7 @@ describe("TransformUtils", () => {
     });
 
     it("applies data scale", () => {
-      const transform: Transform = {
+      const transform: SimilarityTransform = {
         flip: false,
         scale: 2,
         rotation: 0,
@@ -441,7 +441,7 @@ describe("TransformUtils", () => {
     });
 
     it("flip-only produces correct position shift", () => {
-      const transform: Transform = {
+      const transform: SimilarityTransform = {
         flip: true,
         scale: 1,
         rotation: 0,
@@ -456,13 +456,13 @@ describe("TransformUtils", () => {
     });
 
     it("layer-level flip XORs with data flip", () => {
-      const transform: Transform = {
+      const transform: SimilarityTransform = {
         flip: true,
         scale: 1,
         rotation: 0,
         translation: { x: 0, y: 0 },
       };
-      const layerTransform: Transform = {
+      const layerTransform: SimilarityTransform = {
         flip: true,
         scale: 1,
         rotation: 0,
@@ -579,7 +579,11 @@ describe("TransformUtils", () => {
           translation: { x: -4, y: 12 },
         },
       },
-    ] as { name: string; transform: Transform; layerTransform: Transform }[])(
+    ] as {
+      name: string;
+      transform: SimilarityTransform;
+      layerTransform: SimilarityTransform;
+    }[])(
       "OSD corners match WebGL corners: $name",
       ({ transform, layerTransform }) => {
         const geom = computeGeometry(transform, layerTransform, contentSize);

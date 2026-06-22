@@ -59,7 +59,7 @@ export type CoordinateSpace =
   | "world";
 
 /** Similarity transform (uniform scale, rotation, translation, and flip) */
-export type Transform = {
+export type SimilarityTransform = {
   /** Horizontal reflection, applied before scaling, rotation, and translation */
   flip: boolean;
 

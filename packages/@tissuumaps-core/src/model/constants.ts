@@ -3,7 +3,7 @@ import {
   type CoordinateSpace,
   Marker,
   type RenderOptions,
-  type Transform,
+  type SimilarityTransform,
   type ViewerOptions,
 } from "./types";
 
@@ -13,7 +13,7 @@ export const identityTransform = {
   scale: 1,
   rotation: 0,
   translation: { x: 0, y: 0 },
-} as const satisfies Transform;
+} as const satisfies SimilarityTransform;
 
 /** Default OpenSeadragon viewer options */
 export const defaultViewerOptions = {

@@ -1,7 +1,7 @@
 import { mat3 } from "gl-matrix";
 
 import { type Layer } from "../model/layer";
-import { type Transform } from "../model/types";
+import { type SimilarityTransform } from "../model/types";
 import { type Rect } from "../types";
 import { TransformUtils } from "../utils/TransformUtils";
 
@@ -30,7 +30,7 @@ export class WebGLControllerBase {
    * @param layer - Layer providing the layer → world transform
    */
   protected static createDataToWorldMatrix(
-    transform: Transform,
+    transform: SimilarityTransform,
     layer: Layer,
   ): mat3 {
     const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform);
@@ -82,7 +82,7 @@ export class WebGLControllerBase {
    * @param layer - Layer providing the layer → world transform (inverted)
    */
   protected static createWorldToDataMatrix(
-    transform: Transform,
+    transform: SimilarityTransform,
     layer: Layer,
   ): mat3 {
     const worldToDataMatrix = mat3.create();

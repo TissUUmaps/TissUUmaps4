@@ -1,5 +1,5 @@
 import { identityTransform } from "./constants";
-import { type Transform } from "./types";
+import { type SimilarityTransform } from "./types";
 
 /**
  * Default values for {@link RawModel}
@@ -120,7 +120,7 @@ export interface RawRenderedDataObject<
    *
    * @defaultValue {@link renderedDataObjectDefaults.transform}
    */
-  transform?: Transform;
+  transform?: SimilarityTransform;
 }
 
 /**

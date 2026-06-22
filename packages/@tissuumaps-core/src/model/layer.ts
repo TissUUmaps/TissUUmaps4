@@ -1,6 +1,6 @@
 import { type Model, type RawModel, createModel } from "./base";
 import { identityTransform } from "./constants";
-import { type Transform } from "./types";
+import { type SimilarityTransform } from "./types";
 
 /**
  * Default values for {@link RawLayer}
@@ -31,7 +31,7 @@ export interface RawLayer extends RawModel {
    *
    * @defaultValue {@link layerDefaults.transform}
    */
-  transform?: Transform;
+  transform?: SimilarityTransform;
 
   /**
    * Layer visibility

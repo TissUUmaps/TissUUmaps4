@@ -1,12 +1,12 @@
-import { type Transform } from "@tissuumaps/core";
+import { type SimilarityTransform } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
 export type TransformSettingsWidgetProps = {
-  transform: Transform;
-  onTransformChange: (transform: Transform) => void;
+  transform: SimilarityTransform;
+  onTransformChange: (transform: SimilarityTransform) => void;
   className?: string;
 };
 

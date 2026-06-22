@@ -1,15 +1,15 @@
 import { mat3, vec2 } from "gl-matrix";
 
-import { type Transform } from "../model/types";
+import { type SimilarityTransform } from "../model/types";
 import { type Rect } from "../types";
 
 /**
- * Utility methods for converting between {@link Transform}
+ * Utility methods for converting between {@link SimilarityTransform}
  * objects and `gl-matrix` {@link mat3} matrices
  */
 export class TransformUtils {
   /**
-   * Decomposes a 3×3 similarity matrix into a {@link Transform}
+   * Decomposes a 3×3 similarity matrix into a {@link SimilarityTransform}
    *
    * Extracts flip, uniform scale, rotation (in degrees), and translation
    * from a column-major `gl-matrix` {@link mat3}. A negative 2D determinant
@@ -24,7 +24,7 @@ export class TransformUtils {
   static fromSimilarityMatrix(
     m: mat3,
     options?: { center?: { x: number; y: number } },
-  ): Transform {
+  ): SimilarityTransform {
     // gl-matrix, like OpenGL, uses column-major order.
     // Detect reflection via the sign of the 2D determinant.
     const det = m[0] * m[4] - m[3] * m[1];
@@ -58,13 +58,13 @@ export class TransformUtils {
   }
 
   /**
-   * Builds a 3×3 similarity matrix from a (partial) {@link Transform}
+   * Builds a 3×3 similarity matrix from a (partial) {@link SimilarityTransform}
    *
    * Applies, in order: flip, scale, rotation, and translation.
    *
    * @param tf - The transform components (all optional)
    */
-  static toSimilarityMatrix(tf: Partial<Transform>): mat3 {
+  static toSimilarityMatrix(tf: Partial<SimilarityTransform>): mat3 {
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,
     // so we need to apply transformations in reverse order.
     const m = mat3.create();
