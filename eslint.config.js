@@ -37,10 +37,7 @@ export default defineConfig([
       },
     },
     rules: {
-      "@typescript-eslint/consistent-type-imports": [
-        "error",
-        { fixStyle: "separate-type-imports" },
-      ],
+      "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-import-type-side-effects": "error",
     },
   },
