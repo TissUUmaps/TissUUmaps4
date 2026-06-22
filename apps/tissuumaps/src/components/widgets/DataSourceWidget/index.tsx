@@ -1,3 +1,4 @@
+import { createAjv } from "@jsonforms/core";
 import { JsonForms } from "@jsonforms/react";
 import { EditIcon, RotateCcwIcon, SaveIcon } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -32,7 +33,6 @@ export function DataSourceWidget<TDataSource extends DataSource>({
   const [dataSourceDraft, setDataSourceDraft] = useState<TDataSource | null>(
     null,
   );
-  const [hasErrors, setHasErrors] = useState(false);
   const currentDataSource = dataSourceDraft ?? dataSource;
   const isEditing = dataSourceDraft !== null;
 
@@ -47,6 +47,16 @@ export function DataSourceWidget<TDataSource extends DataSource>({
       `No data provider registered for data source type "${currentDataSource.type}"`,
     );
   }
+
+  // Validate the current draft against the active provider's schema using the
+  // same Ajv config JsonForms uses, so shared fields (e.g. URL) carry over and
+  // validity is re-checked on every edit or type switch instead of being reset.
+  const ajv = useMemo(() => createAjv(), []);
+  const validate = useMemo(
+    () => ajv.compile(dataProvider.schema),
+    [ajv, dataProvider.schema],
+  );
+  const hasErrors = !validate(currentDataSource);
 
   return (
     <Fieldset
@@ -67,7 +77,6 @@ export function DataSourceWidget<TDataSource extends DataSource>({
                     ...dataSourceDraft,
                     type: value,
                   } as TDataSource);
-                  setHasErrors(false);
                 }
               }}
             />
@@ -110,7 +119,6 @@ export function DataSourceWidget<TDataSource extends DataSource>({
             variant="ghost"
             className="ml-auto"
             onClick={() => {
-              setHasErrors(false);
               setDataSourceDraft(structuredClone(dataSource));
             }}
           >
@@ -120,10 +128,9 @@ export function DataSourceWidget<TDataSource extends DataSource>({
       </FieldsetLegend>
       <JsonForms
         data={currentDataSource}
-        onChange={({ data, errors }) => {
+        onChange={({ data }) => {
           if (isEditing) {
             setDataSourceDraft(data as TDataSource);
-            setHasErrors((errors ?? []).length > 0);
           }
         }}
         schema={dataProvider.schema}
