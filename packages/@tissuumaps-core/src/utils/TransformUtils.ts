@@ -16,8 +16,7 @@ export class TransformUtils {
    * indicates a horizontal reflection.
    *
    * When `center` is provided the returned translation is adjusted so that
-   * flip and rotation are expressed around that center (matching OSD's
-   * convention) rather than around the origin.
+   * flip and rotation are expressed around that center instead of the origin.
    *
    * @param m - The source matrix
    * @param options - Optional center in pre-scaled coordinates

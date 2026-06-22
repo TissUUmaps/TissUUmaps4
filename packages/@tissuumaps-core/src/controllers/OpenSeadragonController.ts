@@ -415,6 +415,7 @@ export class OpenSeadragonController {
               throw new Error("Method not implemented");
             })(),
       index: index,
+      // initial flip to avoid first-paint flicker; geometry update sets it authoritatively
       flipped: obj.transform.flip !== ref.layer.transform.flip,
       opacity: OpenSeadragonController._calculateOpacity(ref),
       success: (event) => {
