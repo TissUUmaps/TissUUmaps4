@@ -1,5 +1,6 @@
 import {
   type Color,
+  type Data,
   type DefaultMap,
   type Marker,
   type ProgressCallback,
@@ -85,43 +86,39 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
           project.viewerAnimationFinishOptions,
         ),
       });
-      // first, add layers
-      for (const layer of project.layers) {
-        get().addLayer(layer);
+      const state = get();
+      project.layers.forEach((layer) => state.addLayer(layer));
+      project.tables.forEach((table) => state.addTable(table));
+      project.images.forEach((image) => state.addImage(image));
+      project.labels.forEach((labels) => state.addLabels(labels));
+      project.points.forEach((points) => state.addPoints(points));
+      project.shapes.forEach((shapes) => state.addShapes(shapes));
+      const promises: Promise<Data>[] = [];
+      for (const image of project.images) {
+        promises.push(get().loadImage(image.id, { signal, onProgress }));
       }
-      // then, add and asynchronously load data objects
-      {
-        const tablePromises = project.tables.map((table) => {
-          get().addTable(table);
-          return get().loadTable(table.id, { signal, onProgress });
-        });
-        await Promise.all(tablePromises);
-        signal?.throwIfAborted();
+      for (const labels of project.labels) {
+        promises.push(get().loadLabels(labels.id, { signal, onProgress }));
       }
-      // finally, add and asynchronously load rendered data objects
-      {
-        const imagePromises = project.images.map((image) => {
-          get().addImage(image);
-          return get().loadImage(image.id, { signal, onProgress });
-        });
-        const labelsPromises = project.labels.map((labels) => {
-          get().addLabels(labels);
-          return get().loadLabels(labels.id, { signal, onProgress });
-        });
-        const pointsPromises = project.points.map((points) => {
-          get().addPoints(points);
-          return get().loadPoints(points.id, { signal, onProgress });
-        });
-        const shapesPromises = project.shapes.map((shapes) => {
-          get().addShapes(shapes);
-          return get().loadShapes(shapes.id, { signal, onProgress });
-        });
-        await Promise.all([
-          ...imagePromises,
-          ...labelsPromises,
-          ...pointsPromises,
-          ...shapesPromises,
-        ]);
+      for (const points of project.points) {
+        promises.push(get().loadPoints(points.id, { signal, onProgress }));
+      }
+      for (const shapes of project.shapes) {
+        promises.push(get().loadShapes(shapes.id, { signal, onProgress }));
+      }
+      for (const table of project.tables) {
+        promises.push(get().loadTable(table.id, { signal, onProgress }));
+      }
+      const results = await Promise.allSettled(promises);
+      signal?.throwIfAborted();
+      const errors = results
+        .filter(
+          (result): result is PromiseRejectedResult =>
+            result.status === "rejected",
+        )
+        .map((result) => result.reason as unknown);
+      if (errors.length > 0) {
+        throw new AggregateError(errors, "Failed to load project");
       }
     },
     (_project, options) => options?.signal,
