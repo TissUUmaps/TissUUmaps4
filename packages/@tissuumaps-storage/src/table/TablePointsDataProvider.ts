@@ -1,7 +1,7 @@
-import {
-  type PointsDataProvider,
-  type ProgressCallback,
-  type TableData,
+import type {
+  PointsDataProvider,
+  ProgressCallback,
+  TableData,
 } from "@tissuumaps/core";
 
 import { TablePointsData } from "./TablePointsData";

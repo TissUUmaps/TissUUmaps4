@@ -1,4 +1,4 @@
-import { type Color } from "../model/types";
+import type { Color } from "../model/types";
 
 /** Utility methods for color parsing, packing, and conversion */
 export class ColorUtils {

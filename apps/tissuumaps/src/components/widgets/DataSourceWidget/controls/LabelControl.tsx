@@ -1,4 +1,4 @@
-import { type LabelProps } from "@jsonforms/core";
+import type { LabelProps } from "@jsonforms/core";
 import { withJsonFormsLabelProps } from "@jsonforms/react";
 
 import { Label } from "@/components/ui/label";

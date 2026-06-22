@@ -1,9 +1,9 @@
 import * as papaparse from "papaparse";
 
-import {
-  type ProgressCallback,
-  type TableDataProvider,
-  type TypedArray,
+import type {
+  ProgressCallback,
+  TableDataProvider,
+  TypedArray,
 } from "@tissuumaps/core";
 
 import { CSVTableData } from "./CSVTableData";

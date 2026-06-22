@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
-import { type ColorConfigWidgetAdapter } from "./adapter";
+import type { ColorConfigWidgetAdapter } from "./adapter";
 
 export { ActiveColorConfigValue } from "./ActiveColorConfigValue";
 export { ColorConfigSourceToggleGroup } from "./ColorConfigSourceToggleGroup";

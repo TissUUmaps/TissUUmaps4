@@ -1,6 +1,6 @@
-import { type PointsDataSource } from "../model/points";
-import { type PointsGeometry, type ProgressCallback } from "../types";
-import { type ItemsData, type ItemsDataProvider } from "./base";
+import type { PointsDataSource } from "../model/points";
+import type { PointsGeometry, ProgressCallback } from "../types";
+import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**
  * Data provider for point clouds

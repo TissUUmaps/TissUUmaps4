@@ -1,6 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { type VisibilityConfigWidgetAdapter } from "./adapter";
+import type { VisibilityConfigWidgetAdapter } from "./adapter";
 
 export type VisibilityConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],

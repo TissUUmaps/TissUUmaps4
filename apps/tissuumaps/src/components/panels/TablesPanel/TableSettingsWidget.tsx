@@ -1,4 +1,4 @@
-import { type Table } from "@tissuumaps/core";
+import type { Table } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";

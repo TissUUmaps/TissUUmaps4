@@ -1,4 +1,4 @@
-import { type CoordinateSpace } from "@tissuumaps/core";
+import type { CoordinateSpace } from "@tissuumaps/core";
 
 import { Field, FieldItem, FieldLabel } from "@/components/common/field";
 import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
-import { type SizeConfigWidgetAdapter } from "./adapter";
+import type { SizeConfigWidgetAdapter } from "./adapter";
 
 export { ActiveSizeConfigValue } from "./ActiveSizeConfigValue";
 export { SizeConfigSourceToggleGroup } from "./SizeConfigSourceToggleGroup";

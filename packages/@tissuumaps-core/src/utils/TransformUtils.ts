@@ -1,7 +1,7 @@
 import { mat3, vec2 } from "gl-matrix";
 
-import { type SimilarityTransform } from "../model/types";
-import { type Rect } from "../types";
+import type { SimilarityTransform } from "../model/types";
+import type { Rect } from "../types";
 
 /**
  * Utility methods for converting between {@link SimilarityTransform}

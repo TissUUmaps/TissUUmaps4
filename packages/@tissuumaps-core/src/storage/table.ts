@@ -1,6 +1,6 @@
-import { type TableDataSource } from "../model/table";
-import { type GenericArray, type ProgressCallback } from "../types";
-import { type ItemsData, type ItemsDataProvider } from "./base";
+import type { TableDataSource } from "../model/table";
+import type { GenericArray, ProgressCallback } from "../types";
+import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**
  * Data provider for tabular data

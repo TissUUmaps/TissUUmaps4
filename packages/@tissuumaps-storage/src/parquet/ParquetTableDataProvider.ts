@@ -2,10 +2,7 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import {
-  type ProgressCallback,
-  type TableDataProvider,
-} from "@tissuumaps/core";
+import type { ProgressCallback, TableDataProvider } from "@tissuumaps/core";
 
 import { ParquetTableData } from "./ParquetTableData";
 import {

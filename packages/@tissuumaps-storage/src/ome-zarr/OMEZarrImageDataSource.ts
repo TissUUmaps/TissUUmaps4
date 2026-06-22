@@ -1,4 +1,4 @@
-import { type ImageDataSource } from "@tissuumaps/core";
+import type { ImageDataSource } from "@tissuumaps/core";
 
 export const omeZarrImageDataSourceType = "ome-zarr";
 

@@ -1,8 +1,8 @@
-import {
-  type GenericArray,
-  type ProgressCallback,
-  type TableData,
-  type TypedArray,
+import type {
+  GenericArray,
+  ProgressCallback,
+  TableData,
+  TypedArray,
 } from "@tissuumaps/core";
 
 export class CSVTableData implements TableData {

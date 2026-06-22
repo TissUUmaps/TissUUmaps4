@@ -6,12 +6,12 @@ import { type Layer, type RawLayer, createLayer } from "./layer";
 import { type Points, type RawPoints, createPoints } from "./points";
 import { type RawShapes, type Shapes, createShapes } from "./shapes";
 import { type RawTable, type Table, createTable } from "./table";
-import {
-  type Color,
-  type DefaultMap,
-  type Marker,
-  type RenderOptions,
-  type ViewerOptions,
+import type {
+  Color,
+  DefaultMap,
+  Marker,
+  RenderOptions,
+  ViewerOptions,
 } from "./types";
 
 /**

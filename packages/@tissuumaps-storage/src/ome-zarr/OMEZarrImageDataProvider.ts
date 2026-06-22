@@ -1,9 +1,6 @@
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
-import {
-  type ImageDataProvider,
-  type ProgressCallback,
-} from "@tissuumaps/core";
+import type { ImageDataProvider, ProgressCallback } from "@tissuumaps/core";
 
 import { OMEZarrImageData } from "./OMEZarrImageData";
 import {

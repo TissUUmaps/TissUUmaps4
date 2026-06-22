@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useOpenSeadragonController } from "../../context/OpenSeadragonControllerContext";
-import { type ViewerControlAnchor } from "./types";
+import type { ViewerControlAnchor } from "./types";
 
 export { ViewerControlAnchor } from "./types";
 

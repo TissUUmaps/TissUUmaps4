@@ -1,14 +1,14 @@
 import { deepEqual } from "fast-equals";
 
-import {
-  type Labels,
-  type LabelsData,
-  type LabelsDataSource,
-  type ProgressCallback,
+import type {
+  Labels,
+  LabelsData,
+  LabelsDataSource,
+  ProgressCallback,
 } from "@tissuumaps/core";
 
 import { deduplicate } from "../deduplicate";
-import { type TissUUmapsStateCreator } from "../index";
+import type { TissUUmapsStateCreator } from "../index";
 
 type LoadedLabelsData = {
   dataSource: LabelsDataSource;

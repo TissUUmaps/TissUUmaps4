@@ -2,12 +2,7 @@ import { JsonForms } from "@jsonforms/react";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 
-import {
-  type Data,
-  type DataProvider,
-  type DataSource,
-  type Layer,
-} from "@tissuumaps/core";
+import type { Data, DataProvider, DataSource, Layer } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset } from "@/components/common/fieldset";

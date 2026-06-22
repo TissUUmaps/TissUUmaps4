@@ -1,6 +1,6 @@
-import { type LabelsDataSource } from "../model/labels";
-import { type ProgressCallback, type UintArray } from "../types";
-import { type ItemsData, type ItemsDataProvider } from "./base";
+import type { LabelsDataSource } from "../model/labels";
+import type { ProgressCallback, UintArray } from "../types";
+import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**
  * Data provider for label images

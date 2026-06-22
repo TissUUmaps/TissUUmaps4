@@ -1,9 +1,9 @@
 import type * as geojson from "geojson";
 
-import {
-  type ProgressCallback,
-  type ShapesDataProvider,
-  type ShapesGeometry,
+import type {
+  ProgressCallback,
+  ShapesDataProvider,
+  ShapesGeometry,
 } from "@tissuumaps/core";
 
 import { GeoJSONShapesData } from "./GeoJSONShapesData";

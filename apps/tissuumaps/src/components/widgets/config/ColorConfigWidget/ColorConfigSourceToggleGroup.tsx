@@ -1,6 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { type ColorConfigWidgetAdapter } from "./adapter";
+import type { ColorConfigWidgetAdapter } from "./adapter";
 
 export type ColorConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],

@@ -1,7 +1,4 @@
-import {
-  type ImageDataProvider,
-  type ProgressCallback,
-} from "@tissuumaps/core";
+import type { ImageDataProvider, ProgressCallback } from "@tissuumaps/core";
 
 import { OpenSeadragonImageData } from "./OpenSeadragonImageData";
 import {

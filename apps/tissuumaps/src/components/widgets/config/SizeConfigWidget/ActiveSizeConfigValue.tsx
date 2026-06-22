@@ -4,7 +4,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { type SizeConfigWidgetAdapter } from "./adapter";
+import type { SizeConfigWidgetAdapter } from "./adapter";
 
 export type ActiveSizeConfigValueProps = {
   adapter: SizeConfigWidgetAdapter;

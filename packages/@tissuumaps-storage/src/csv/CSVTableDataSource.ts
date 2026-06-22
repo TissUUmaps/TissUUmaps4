@@ -1,6 +1,6 @@
 import type * as papaparse from "papaparse";
 
-import { type TableDataSource } from "@tissuumaps/core";
+import type { TableDataSource } from "@tissuumaps/core";
 
 export const csvTableDataSourceType = "csv";
 

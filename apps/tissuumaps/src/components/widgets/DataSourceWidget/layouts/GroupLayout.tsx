@@ -1,6 +1,6 @@
-import {
-  type GroupLayout as GroupLayoutSchema,
-  type LayoutProps,
+import type {
+  GroupLayout as GroupLayoutSchema,
+  LayoutProps,
 } from "@jsonforms/core";
 import {
   JsonFormsDispatch,

@@ -1,6 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { type SizeConfigWidgetAdapter } from "./adapter";
+import type { SizeConfigWidgetAdapter } from "./adapter";
 
 export type SizeConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],

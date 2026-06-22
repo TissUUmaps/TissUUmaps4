@@ -3,13 +3,13 @@ import { mat3 } from "gl-matrix";
 import OpenSeadragon from "openseadragon";
 
 import { defaultViewerOptions } from "../model/constants";
-import { type Image } from "../model/image";
-import { type Labels } from "../model/labels";
-import { type Layer } from "../model/layer";
-import { type ViewerOptions } from "../model/types";
-import { type ImageData } from "../storage/image";
-import { type LabelsData } from "../storage/labels";
-import { type Rect } from "../types";
+import type { Image } from "../model/image";
+import type { Labels } from "../model/labels";
+import type { Layer } from "../model/layer";
+import type { ViewerOptions } from "../model/types";
+import type { ImageData } from "../storage/image";
+import type { LabelsData } from "../storage/labels";
+import type { Rect } from "../types";
 import { TransformUtils } from "../utils/TransformUtils";
 
 /**

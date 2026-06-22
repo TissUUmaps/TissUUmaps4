@@ -1,8 +1,8 @@
-import {
-  type PointsData,
-  type PointsGeometry,
-  type ProgressCallback,
-  type TableData,
+import type {
+  PointsData,
+  PointsGeometry,
+  ProgressCallback,
+  TableData,
 } from "@tissuumaps/core";
 
 export class TablePointsData implements PointsData {

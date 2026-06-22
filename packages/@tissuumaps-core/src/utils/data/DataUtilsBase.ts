@@ -1,5 +1,5 @@
-import { type TableData } from "../../storage/table";
-import { type TypedArray } from "../../types";
+import type { TableData } from "../../storage/table";
+import type { TypedArray } from "../../types";
 import { AsyncUtils } from "../AsyncUtils";
 
 export class DataUtilsBase {

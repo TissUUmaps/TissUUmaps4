@@ -1,4 +1,4 @@
-import { type TableDataSource } from "@tissuumaps/core";
+import type { TableDataSource } from "@tissuumaps/core";
 
 export const parquetTableDataSourceType = "parquet";
 

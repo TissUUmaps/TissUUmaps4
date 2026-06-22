@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
-import { type VisibilityConfigWidgetAdapter } from "./adapter";
+import type { VisibilityConfigWidgetAdapter } from "./adapter";
 
 export { ActiveVisibilityConfigValue } from "./ActiveVisibilityConfigValue";
 export { VisibilityConfigSourceToggleGroup } from "./VisibilityConfigSourceToggleGroup";

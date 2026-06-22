@@ -1,8 +1,8 @@
 import { deepEqual } from "fast-equals";
 
 import { defaultRenderOptions } from "../model/constants";
-import { type RenderOptions } from "../model/types";
-import { type Rect } from "../types";
+import type { RenderOptions } from "../model/types";
+import type { Rect } from "../types";
 import { WebGLUtils } from "../utils/WebGLUtils";
 import { WebGLPointsController } from "./WebGLPointsController";
 import { WebGLShapesController } from "./WebGLShapesController";

@@ -10,9 +10,9 @@ import {
   isGroupByConfig,
   isRandomConfig,
 } from "../../model/configs";
-import { type Color, type DefaultMap } from "../../model/types";
+import type { Color, DefaultMap } from "../../model/types";
 import { type ColorPalette, colorPalettes } from "../../palettes";
-import { type TableData } from "../../storage/table";
+import type { TableData } from "../../storage/table";
 import { AsyncUtils } from "../AsyncUtils";
 import { ColorUtils } from "../ColorUtils";
 import { HashUtils } from "../HashUtils";
