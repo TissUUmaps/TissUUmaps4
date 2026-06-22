@@ -86,29 +86,28 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
           project.viewerAnimationFinishOptions,
         ),
       });
-      for (const layer of project.layers) {
-        get().addLayer(layer);
-      }
+      const state = get();
+      project.layers.forEach((layer) => state.addLayer(layer));
+      project.tables.forEach((table) => state.addTable(table));
+      project.images.forEach((image) => state.addImage(image));
+      project.labels.forEach((labels) => state.addLabels(labels));
+      project.points.forEach((points) => state.addPoints(points));
+      project.shapes.forEach((shapes) => state.addShapes(shapes));
       const dataPromises: Promise<Data>[] = [];
-      for (const table of project.tables) {
-        get().addTable(table);
-        dataPromises.push(get().loadTable(table.id, { signal, onProgress }));
-      }
       for (const image of project.images) {
-        get().addImage(image);
         dataPromises.push(get().loadImage(image.id, { signal, onProgress }));
       }
       for (const labels of project.labels) {
-        get().addLabels(labels);
         dataPromises.push(get().loadLabels(labels.id, { signal, onProgress }));
       }
       for (const points of project.points) {
-        get().addPoints(points);
         dataPromises.push(get().loadPoints(points.id, { signal, onProgress }));
       }
       for (const shapes of project.shapes) {
-        get().addShapes(shapes);
         dataPromises.push(get().loadShapes(shapes.id, { signal, onProgress }));
+      }
+      for (const table of project.tables) {
+        dataPromises.push(get().loadTable(table.id, { signal, onProgress }));
       }
       await Promise.all(dataPromises);
     },
