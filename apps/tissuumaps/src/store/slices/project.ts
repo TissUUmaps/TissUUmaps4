@@ -71,6 +71,12 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       get().clearProject();
       set({
         projectName: project.name,
+        layers: structuredClone(project.layers),
+        images: structuredClone(project.images),
+        labels: structuredClone(project.labels),
+        points: structuredClone(project.points),
+        shapes: structuredClone(project.shapes),
+        tables: structuredClone(project.tables),
         markerMaps: structuredClone(project.markerMaps),
         sizeMaps: structuredClone(project.sizeMaps),
         colorMaps: structuredClone(project.colorMaps),
@@ -85,44 +91,23 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
           project.viewerAnimationFinishOptions,
         ),
       });
-      // first, add layers
-      for (const layer of project.layers) {
-        get().addLayer(layer);
+      const loadPromises = [];
+      for (const image of project.images) {
+        loadPromises.push(get().loadImage(image.id, { signal, onProgress }));
       }
-      // then, add and asynchronously load data objects
-      {
-        const tablePromises = project.tables.map((table) => {
-          get().addTable(table);
-          return get().loadTable(table.id, { signal, onProgress });
-        });
-        await Promise.all(tablePromises);
-        signal?.throwIfAborted();
+      for (const labels of project.labels) {
+        loadPromises.push(get().loadLabels(labels.id, { signal, onProgress }));
       }
-      // finally, add and asynchronously load rendered data objects
-      {
-        const imagePromises = project.images.map((image) => {
-          get().addImage(image);
-          return get().loadImage(image.id, { signal, onProgress });
-        });
-        const labelsPromises = project.labels.map((labels) => {
-          get().addLabels(labels);
-          return get().loadLabels(labels.id, { signal, onProgress });
-        });
-        const pointsPromises = project.points.map((points) => {
-          get().addPoints(points);
-          return get().loadPoints(points.id, { signal, onProgress });
-        });
-        const shapesPromises = project.shapes.map((shapes) => {
-          get().addShapes(shapes);
-          return get().loadShapes(shapes.id, { signal, onProgress });
-        });
-        await Promise.all([
-          ...imagePromises,
-          ...labelsPromises,
-          ...pointsPromises,
-          ...shapesPromises,
-        ]);
+      for (const points of project.points) {
+        loadPromises.push(get().loadPoints(points.id, { signal, onProgress }));
       }
+      for (const shapes of project.shapes) {
+        loadPromises.push(get().loadShapes(shapes.id, { signal, onProgress }));
+      }
+      for (const table of project.tables) {
+        loadPromises.push(get().loadTable(table.id, { signal, onProgress }));
+      }
+      await Promise.all(loadPromises);
     },
     (_project, options) => options?.signal,
   ),
