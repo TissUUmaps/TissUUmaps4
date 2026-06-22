@@ -299,8 +299,45 @@ describe("TransformUtils", () => {
     });
   });
 
-  describe("toTiledImageGeometry", () => {
+  describe("tiled image geometry (similarity matrix composition)", () => {
     const contentSize = { x: 100, y: 80 };
+
+    /**
+     * Reproduces the OSD tiled-image geometry computation done in
+     * OpenSeadragonController._updateTiledImageGeometry: compose the
+     * data → layer → world similarity matrices (including flip), then
+     * decompose around the image center to match OSD's
+     * flip/rotation-around-image-center convention.
+     */
+    function computeGeometry(
+      transform: Transform,
+      layerTransform: Transform,
+      contentSize: { x: number; y: number },
+    ): {
+      flip: boolean;
+      width: number;
+      rotation: number;
+      x: number;
+      y: number;
+    } {
+      const m = mat3.create();
+      mat3.multiply(
+        m,
+        TransformUtils.toSimilarityMatrix(layerTransform),
+        TransformUtils.toSimilarityMatrix(transform),
+      );
+      const { flip, scale, rotation, translation } =
+        TransformUtils.fromSimilarityMatrix(m, {
+          center: { x: contentSize.x / 2, y: contentSize.y / 2 },
+        });
+      return {
+        flip,
+        width: contentSize.x * scale,
+        rotation,
+        x: translation.x,
+        y: translation.y,
+      };
+    }
 
     /**
      * Simulate where OSD places the four image corners given the returned
@@ -379,7 +416,7 @@ describe("TransformUtils", () => {
     }
 
     it("identity transforms produce correct geometry", () => {
-      const geom = TransformUtils.toTiledImageGeometry(
+      const geom = computeGeometry(
         identityTransform,
         identityTransform,
         contentSize,
@@ -398,11 +435,7 @@ describe("TransformUtils", () => {
         rotation: 0,
         translation: { x: 0, y: 0 },
       };
-      const geom = TransformUtils.toTiledImageGeometry(
-        transform,
-        identityTransform,
-        contentSize,
-      );
+      const geom = computeGeometry(transform, identityTransform, contentSize);
       expect(geom.width).toBeCloseTo(200);
       expect(geom.rotation).toBeCloseTo(0);
     });
@@ -414,11 +447,7 @@ describe("TransformUtils", () => {
         rotation: 0,
         translation: { x: 0, y: 0 },
       };
-      const geom = TransformUtils.toTiledImageGeometry(
-        transform,
-        identityTransform,
-        contentSize,
-      );
+      const geom = computeGeometry(transform, identityTransform, contentSize);
       expect(geom.flip).toBe(true);
       expect(geom.width).toBeCloseTo(100);
       // Position must shift left by width to flip around left edge
@@ -439,11 +468,7 @@ describe("TransformUtils", () => {
         rotation: 0,
         translation: { x: 0, y: 0 },
       };
-      const geom = TransformUtils.toTiledImageGeometry(
-        transform,
-        layerTransform,
-        contentSize,
-      );
+      const geom = computeGeometry(transform, layerTransform, contentSize);
       // flip XOR flip = no flip
       expect(geom.flip).toBe(false);
     });
@@ -557,11 +582,7 @@ describe("TransformUtils", () => {
     ] as { name: string; transform: Transform; layerTransform: Transform }[])(
       "OSD corners match WebGL corners: $name",
       ({ transform, layerTransform }) => {
-        const geom = TransformUtils.toTiledImageGeometry(
-          transform,
-          layerTransform,
-          contentSize,
-        );
+        const geom = computeGeometry(transform, layerTransform, contentSize);
         const osd = osdCorners(geom, contentSize);
         const webgl = webglCorners(transform, layerTransform, contentSize);
         for (let i = 0; i < 4; i++) {

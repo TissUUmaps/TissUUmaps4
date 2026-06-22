@@ -1,4 +1,5 @@
 import { deepEqual } from "fast-equals";
+import { mat3 } from "gl-matrix";
 import OpenSeadragon from "openseadragon";
 
 import { defaultViewerOptions } from "../model/constants";
@@ -488,11 +489,22 @@ export class OpenSeadragonController {
         ? tiledImageState.ref.image
         : tiledImageState.ref.labels;
     const contentSize = tiledImageState.tiledImage.getContentSize();
-    const { flip, width, rotation, x, y } = TransformUtils.toTiledImageGeometry(
-      obj.transform,
-      tiledImageState.ref.layer.transform,
-      contentSize,
+    // Compose the data → layer → world similarity matrices (including flip),
+    // then decompose the result around the image center to match OSD's
+    // flip/rotation-around-image-center convention. The decomposed translation
+    // is then the OSD position directly.
+    const m = mat3.create();
+    mat3.multiply(
+      m,
+      TransformUtils.toSimilarityMatrix(tiledImageState.ref.layer.transform),
+      TransformUtils.toSimilarityMatrix(obj.transform),
     );
+    const { flip, scale, rotation, translation } =
+      TransformUtils.fromSimilarityMatrix(m, {
+        center: { x: contentSize.x / 2, y: contentSize.y / 2 },
+      });
+    const width = contentSize.x * scale;
+    const { x, y } = translation;
     const bounds = tiledImageState.tiledImage.getBoundsNoRotate();
     if (tiledImageState.tiledImage.getFlip() !== flip) {
       tiledImageState.tiledImage.setFlip(flip);

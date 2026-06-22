@@ -29,9 +29,9 @@ export class TransformUtils {
     // gl-matrix, like OpenGL, uses column-major order.
     // Detect reflection via the sign of the 2D determinant.
     const det = m[0] * m[4] - m[3] * m[1];
-    const flipped = det < 0;
-    const c0 = flipped ? -m[0] : m[0];
-    const c1 = flipped ? -m[1] : m[1];
+    const flip = det < 0;
+    const c0 = flip ? -m[0] : m[0];
+    const c1 = flip ? -m[1] : m[1];
     const scale = Math.sqrt(c0 * c0 + c1 * c1);
     const rotation = (Math.atan2(c1, c0) * 180) / Math.PI;
     let tx = m[6];
@@ -45,13 +45,13 @@ export class TransformUtils {
       const sin = Math.sin(rad);
       tx -= cy * sin + cx * (1 - cos);
       ty -= cy * (1 - cos) - cx * sin;
-      if (flipped) {
+      if (flip) {
         tx -= 2 * cx * cos;
         ty -= 2 * cx * sin;
       }
     }
     return {
-      flip: flipped,
+      flip,
       scale,
       rotation,
       translation: { x: tx, y: ty },
@@ -82,47 +82,6 @@ export class TransformUtils {
       mat3.scale(m, m, [-1, 1]);
     }
     return m;
-  }
-
-  /**
-   * Computes the OSD tiled-image parameters (flip, width, rotation, position)
-   * for a data → layer → world transform chain.
-   *
-   * Composes full similarity matrices (including flip) and decomposes the
-   * result with a center matching OSD's flip/rotation-around-image-center
-   * convention, so the returned translation is the OSD position directly.
-   *
-   * @param transform - Data → layer transform
-   * @param layerTransform - Layer → world transform
-   * @param contentSize - Pixel dimensions of the tiled image
-   */
-  static toTiledImageGeometry(
-    transform: Transform,
-    layerTransform: Transform,
-    contentSize: { x: number; y: number },
-  ): {
-    flip: boolean;
-    width: number;
-    rotation: number;
-    x: number;
-    y: number;
-  } {
-    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform);
-    const layerToWorldMatrix =
-      TransformUtils.toSimilarityMatrix(layerTransform);
-    const m = mat3.create();
-    mat3.multiply(m, layerToWorldMatrix, dataToLayerMatrix);
-    const imageCenter = { x: contentSize.x / 2, y: contentSize.y / 2 };
-    const composed = TransformUtils.fromSimilarityMatrix(m, {
-      center: imageCenter,
-    });
-    return {
-      flip: composed.flip,
-      width: contentSize.x * composed.scale,
-      rotation: composed.rotation,
-      x: composed.translation.x,
-      y: composed.translation.y,
-    };
   }
 
   /**
