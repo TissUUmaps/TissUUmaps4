@@ -1,5 +1,6 @@
 import {
   type Color,
+  type Data,
   type DefaultMap,
   type Marker,
   type ProgressCallback,
@@ -88,28 +89,28 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       for (const layer of project.layers) {
         get().addLayer(layer);
       }
-      const loadPromises = [];
+      const dataPromises: Promise<Data>[] = [];
       for (const table of project.tables) {
         get().addTable(table);
-        loadPromises.push(get().loadTable(table.id, { signal, onProgress }));
+        dataPromises.push(get().loadTable(table.id, { signal, onProgress }));
       }
       for (const image of project.images) {
         get().addImage(image);
-        loadPromises.push(get().loadImage(image.id, { signal, onProgress }));
+        dataPromises.push(get().loadImage(image.id, { signal, onProgress }));
       }
       for (const labels of project.labels) {
         get().addLabels(labels);
-        loadPromises.push(get().loadLabels(labels.id, { signal, onProgress }));
+        dataPromises.push(get().loadLabels(labels.id, { signal, onProgress }));
       }
       for (const points of project.points) {
         get().addPoints(points);
-        loadPromises.push(get().loadPoints(points.id, { signal, onProgress }));
+        dataPromises.push(get().loadPoints(points.id, { signal, onProgress }));
       }
       for (const shapes of project.shapes) {
         get().addShapes(shapes);
-        loadPromises.push(get().loadShapes(shapes.id, { signal, onProgress }));
+        dataPromises.push(get().loadShapes(shapes.id, { signal, onProgress }));
       }
-      await Promise.all(loadPromises);
+      await Promise.all(dataPromises);
     },
     (_project, options) => options?.signal,
   ),
