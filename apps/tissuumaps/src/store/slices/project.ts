@@ -93,23 +93,29 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       project.labels.forEach((labels) => state.addLabels(labels));
       project.points.forEach((points) => state.addPoints(points));
       project.shapes.forEach((shapes) => state.addShapes(shapes));
-      const dataPromises: Promise<Data>[] = [];
+      const promises: Promise<Data>[] = [];
       for (const image of project.images) {
-        dataPromises.push(get().loadImage(image.id, { signal, onProgress }));
+        promises.push(get().loadImage(image.id, { signal, onProgress }));
       }
       for (const labels of project.labels) {
-        dataPromises.push(get().loadLabels(labels.id, { signal, onProgress }));
+        promises.push(get().loadLabels(labels.id, { signal, onProgress }));
       }
       for (const points of project.points) {
-        dataPromises.push(get().loadPoints(points.id, { signal, onProgress }));
+        promises.push(get().loadPoints(points.id, { signal, onProgress }));
       }
       for (const shapes of project.shapes) {
-        dataPromises.push(get().loadShapes(shapes.id, { signal, onProgress }));
+        promises.push(get().loadShapes(shapes.id, { signal, onProgress }));
       }
       for (const table of project.tables) {
-        dataPromises.push(get().loadTable(table.id, { signal, onProgress }));
+        promises.push(get().loadTable(table.id, { signal, onProgress }));
       }
-      await Promise.all(dataPromises);
+      const results = await Promise.allSettled(promises);
+      const errors = results
+        .filter((result) => result.status === "rejected")
+        .map((result) => result.reason as unknown);
+      if (errors.length > 0) {
+        throw new AggregateError(errors, "Failed to load project");
+      }
     },
     (_project, options) => options?.signal,
   ),
