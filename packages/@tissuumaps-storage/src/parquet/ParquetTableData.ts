@@ -1,7 +1,3 @@
-import * as hyparquet from "hyparquet";
-import { compressors } from "hyparquet-compressors";
-import { parquetReadColumn } from "hyparquet/src/read.js";
-
 import {
   type GenericArray,
   ParseUtils,
@@ -9,26 +5,33 @@ import {
   type TableData,
 } from "@tissuumaps/core";
 
+import { runParquetWorker } from "./runParquetWorker";
+
+type ParquetSource = {
+  file?: File;
+  url?: string;
+  headers?: { [header: string]: string };
+};
+
 export class ParquetTableData implements TableData {
+  private readonly _source: ParquetSource;
+  private readonly _numRows: number;
+  private readonly _columnNames: string[];
   private _ids: number[] | undefined;
   private _names: string[] | undefined;
-  private readonly _buffer: hyparquet.AsyncBuffer;
-  private readonly _metadata: hyparquet.FileMetaData;
-  private readonly _columns: string[];
 
   constructor(
+    source: ParquetSource,
+    numRows: number,
+    columnNames: string[],
     ids: number[] | undefined,
     names: string[] | undefined,
-    buffer: hyparquet.AsyncBuffer,
-    metadata: hyparquet.FileMetaData,
   ) {
+    this._source = source;
+    this._numRows = numRows;
+    this._columnNames = columnNames;
     this._ids = ids;
     this._names = names;
-    this._buffer = buffer;
-    this._metadata = metadata;
-    this._columns = hyparquet
-      .parquetSchema(metadata)
-      .children.map((c) => c.element.name);
   }
 
   getIds(): number[] {
@@ -40,7 +43,7 @@ export class ParquetTableData implements TableData {
   }
 
   getSize(): number {
-    return ParseUtils.parseSafeInt(this._metadata.num_rows);
+    return this._numRows;
   }
 
   getNames(): string[] | undefined {
@@ -53,7 +56,7 @@ export class ParquetTableData implements TableData {
   ): Promise<string[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const filteredColumns = this._columns.filter((column) =>
+    const filteredColumns = this._columnNames.filter((column) =>
       column.includes(currentQuery),
     );
     return await Promise.resolve(filteredColumns);
@@ -65,7 +68,7 @@ export class ParquetTableData implements TableData {
   ): Promise<string | null> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const column = this._columns.includes(query) ? query : null;
+    const column = this._columnNames.includes(query) ? query : null;
     return await Promise.resolve(column);
   }
 
@@ -75,14 +78,12 @@ export class ParquetTableData implements TableData {
   ): Promise<GenericArray<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const rawColumnData = await parquetReadColumn({
-      file: this._buffer,
-      columns: [column],
-      metadata: this._metadata,
-      compressors: compressors,
-    });
+    const { values } = await runParquetWorker(
+      { op: "column", ...this._source, column },
+      { signal },
+    );
     signal?.throwIfAborted();
-    return Array.from(rawColumnData) as GenericArray<T>;
+    return Array.from(values) as GenericArray<T>;
   }
 
   async loadUniqueValues<T>(
