@@ -56,7 +56,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
     () => ajv.compile(dataProvider.schema),
     [ajv, dataProvider.schema],
   );
-  const hasErrors = !validate(currentDataSource);
+  const hasErrors = isEditing && !validate(currentDataSource);
 
   return (
     <Fieldset
