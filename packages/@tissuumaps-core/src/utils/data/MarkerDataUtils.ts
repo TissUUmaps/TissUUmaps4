@@ -8,9 +8,9 @@ import {
   isFromConfig,
   isGroupByConfig,
 } from "../../model/configs";
-import { type DefaultMap, type Marker } from "../../model/types";
+import type { DefaultMap, Marker } from "../../model/types";
 import { markerPalette } from "../../palettes";
-import { type TableData } from "../../storage/table";
+import type { TableData } from "../../storage/table";
 import { HashUtils } from "../HashUtils";
 import { MathUtils } from "../MathUtils";
 import { DataUtilsBase } from "./DataUtilsBase";

@@ -1,5 +1,5 @@
-import { type ImageDataSource } from "../model/image";
-import { type Data, type DataProvider } from "./base";
+import type { ImageDataSource } from "../model/image";
+import type { Data, DataProvider } from "./base";
 
 /**
  * Data provider for raster images

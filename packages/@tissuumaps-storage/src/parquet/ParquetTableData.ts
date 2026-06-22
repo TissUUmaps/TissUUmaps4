@@ -2,10 +2,10 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import {
-  type GenericArray,
-  type ProgressCallback,
-  type TableData,
+import type {
+  GenericArray,
+  ProgressCallback,
+  TableData,
 } from "@tissuumaps/core";
 
 export class ParquetTableData implements TableData {

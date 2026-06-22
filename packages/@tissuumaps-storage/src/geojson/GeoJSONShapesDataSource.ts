@@ -1,4 +1,4 @@
-import { type ShapesDataSource } from "@tissuumaps/core";
+import type { ShapesDataSource } from "@tissuumaps/core";
 
 export const geoJSONShapesDataSourceType = "geojson";
 

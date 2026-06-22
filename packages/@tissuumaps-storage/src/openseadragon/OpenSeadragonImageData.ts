@@ -1,7 +1,7 @@
-import {
-  type CustomTileSource,
-  type ImageData,
-  type TileSourceConfig,
+import type {
+  CustomTileSource,
+  ImageData,
+  TileSourceConfig,
 } from "@tissuumaps/core";
 
 export class OpenSeadragonImageData implements ImageData {

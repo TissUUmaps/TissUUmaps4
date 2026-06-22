@@ -6,7 +6,7 @@ import {
 
 import { markers } from "@/components/markers";
 
-import { type MarkerConfigWidgetAdapter } from "./adapter";
+import type { MarkerConfigWidgetAdapter } from "./adapter";
 
 export type ActiveMarkerConfigValueProps = {
   adapter: MarkerConfigWidgetAdapter;

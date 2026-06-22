@@ -8,11 +8,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  type GenericArray,
-  type ItemsData,
-  type TableData,
-} from "@tissuumaps/core";
+import type { GenericArray, ItemsData, TableData } from "@tissuumaps/core";
 
 import {
   Table,

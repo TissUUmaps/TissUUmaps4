@@ -1,15 +1,15 @@
 import { deepEqual } from "fast-equals";
 
-import {
-  type ProgressCallback,
-  type Shapes,
-  type ShapesData,
-  type ShapesDataSource,
-  type ShapesGeometry,
+import type {
+  ProgressCallback,
+  Shapes,
+  ShapesData,
+  ShapesDataSource,
+  ShapesGeometry,
 } from "@tissuumaps/core";
 
 import { deduplicate } from "../deduplicate";
-import { type TissUUmapsStateCreator } from "../index";
+import type { TissUUmapsStateCreator } from "../index";
 
 type LoadedShapesData = {
   dataSource: ShapesDataSource;

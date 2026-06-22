@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { type TableData } from "../../storage/table";
+import type { TableData } from "../../storage/table";
 import { DataUtilsBase } from "./DataUtilsBase";
 
 // DataUtilsBase methods are protected, so we create a subclass to expose them

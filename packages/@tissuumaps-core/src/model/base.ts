@@ -1,5 +1,5 @@
 import { identityTransform } from "./constants";
-import { type SimilarityTransform } from "./types";
+import type { SimilarityTransform } from "./types";
 
 /**
  * Default values for {@link RawModel}

@@ -9,10 +9,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import {
-  type MarkerConfigSource,
-  type MarkerConfigWidgetAdapter,
-} from "./adapter";
+import type { MarkerConfigSource, MarkerConfigWidgetAdapter } from "./adapter";
 
 export function useMarkerConfigWidget(
   markerConfig: MarkerConfig,

@@ -6,9 +6,9 @@ import {
   useState,
 } from "react";
 
-import { type OpenSeadragonController } from "@tissuumaps/core";
+import type { OpenSeadragonController } from "@tissuumaps/core";
 
-import { type ViewerAdapter } from "../../adapter";
+import type { ViewerAdapter } from "../../adapter";
 import { OpenSeadragonControllerProvider } from "../../context/OpenSeadragonControllerProvider";
 import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
 import { useSVG } from "../../hooks/useSVG";

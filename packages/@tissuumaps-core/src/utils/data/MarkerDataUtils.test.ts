@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { type DefaultMap, Marker } from "../../model/types";
 import { markerPalette } from "../../palettes";
-import { type TableData } from "../../storage/table";
+import type { TableData } from "../../storage/table";
 import { HashUtils } from "../HashUtils";
 import { MarkerDataUtils } from "./MarkerDataUtils";
 

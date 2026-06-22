@@ -1,15 +1,15 @@
 import { deepEqual } from "fast-equals";
 
-import {
-  type Points,
-  type PointsData,
-  type PointsDataSource,
-  type PointsGeometry,
-  type ProgressCallback,
+import type {
+  Points,
+  PointsData,
+  PointsDataSource,
+  PointsGeometry,
+  ProgressCallback,
 } from "@tissuumaps/core";
 
 import { deduplicate } from "../deduplicate";
-import { type TissUUmapsStateCreator } from "../index";
+import type { TissUUmapsStateCreator } from "../index";
 
 type LoadedPointsData = {
   dataSource: PointsDataSource;

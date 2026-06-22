@@ -1,6 +1,6 @@
 import { HandIcon, PencilIcon, PentagonIcon, SquareIcon } from "lucide-react";
 
-import { type InteractionMode } from "@tissuumaps/core";
+import type { InteractionMode } from "@tissuumaps/core";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";

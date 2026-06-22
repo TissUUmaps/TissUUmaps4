@@ -1,7 +1,7 @@
-import {
-  type ProgressCallback,
-  type ShapesData,
-  type ShapesGeometry,
+import type {
+  ProgressCallback,
+  ShapesData,
+  ShapesGeometry,
 } from "@tissuumaps/core";
 
 export class GeoJSONShapesData implements ShapesData {

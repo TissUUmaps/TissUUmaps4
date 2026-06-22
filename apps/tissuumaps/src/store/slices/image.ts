@@ -1,14 +1,14 @@
 import { deepEqual } from "fast-equals";
 
-import {
-  type Image,
-  type ImageData,
-  type ImageDataSource,
-  type ProgressCallback,
+import type {
+  Image,
+  ImageData,
+  ImageDataSource,
+  ProgressCallback,
 } from "@tissuumaps/core";
 
 import { deduplicate } from "../deduplicate";
-import { type TissUUmapsStateCreator } from "../index";
+import type { TissUUmapsStateCreator } from "../index";
 
 type LoadedImageData = {
   dataSource: ImageDataSource;

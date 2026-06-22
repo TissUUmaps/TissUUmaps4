@@ -1,4 +1,4 @@
-import { type PointsDataSource } from "@tissuumaps/core";
+import type { PointsDataSource } from "@tissuumaps/core";
 
 export const tablePointsDataSourceType = "table";
 

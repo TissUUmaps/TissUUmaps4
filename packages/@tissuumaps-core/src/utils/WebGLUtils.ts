@@ -1,4 +1,4 @@
-import { type TypedArray } from "../types";
+import type { TypedArray } from "../types";
 
 /** Low-level WebGL 2 helper methods for context, shader, buffer, texture, and blending management */
 export class WebGLUtils {

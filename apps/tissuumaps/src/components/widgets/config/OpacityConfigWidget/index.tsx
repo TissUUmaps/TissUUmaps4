@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
-import { type OpacityConfigWidgetAdapter } from "./adapter";
+import type { OpacityConfigWidgetAdapter } from "./adapter";
 
 export { ActiveOpacityConfigValue } from "./ActiveOpacityConfigValue";
 export { OpacityConfigSourceToggleGroup } from "./OpacityConfigSourceToggleGroup";

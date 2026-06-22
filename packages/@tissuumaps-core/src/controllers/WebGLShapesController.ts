@@ -11,16 +11,12 @@ import {
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
 } from "../model/constants";
-import { type Layer } from "../model/layer";
-import { type Shapes } from "../model/shapes";
-import {
-  type Color,
-  type DefaultMap,
-  type RenderOptions,
-} from "../model/types";
-import { type ShapesData } from "../storage/shapes";
-import { type TableData } from "../storage/table";
-import { type Rect, type ShapesGeometry } from "../types";
+import type { Layer } from "../model/layer";
+import type { Shapes } from "../model/shapes";
+import type { Color, DefaultMap, RenderOptions } from "../model/types";
+import type { ShapesData } from "../storage/shapes";
+import type { TableData } from "../storage/table";
+import type { Rect, ShapesGeometry } from "../types";
 import { AsyncUtils } from "../utils/AsyncUtils";
 import { MathUtils } from "../utils/MathUtils";
 import { TransformUtils } from "../utils/TransformUtils";

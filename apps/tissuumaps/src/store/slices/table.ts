@@ -1,15 +1,15 @@
 import { deepEqual } from "fast-equals";
 
-import {
-  type GenericArray,
-  type ProgressCallback,
-  type Table,
-  type TableData,
-  type TableDataSource,
+import type {
+  GenericArray,
+  ProgressCallback,
+  Table,
+  TableData,
+  TableDataSource,
 } from "@tissuumaps/core";
 
 import { deduplicate } from "../deduplicate";
-import { type TissUUmapsStateCreator } from "../index";
+import type { TissUUmapsStateCreator } from "../index";
 
 type LoadedTableData = {
   dataSource: TableDataSource;

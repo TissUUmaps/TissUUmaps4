@@ -1,6 +1,6 @@
-import { type ShapesDataSource } from "../model/shapes";
-import { type ProgressCallback, type ShapesGeometry } from "../types";
-import { type ItemsData, type ItemsDataProvider } from "./base";
+import type { ShapesDataSource } from "../model/shapes";
+import type { ProgressCallback, ShapesGeometry } from "../types";
+import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**
  * Data provider for shape (polygon) collections

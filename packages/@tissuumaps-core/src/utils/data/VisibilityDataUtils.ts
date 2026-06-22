@@ -8,8 +8,8 @@ import {
   isFromConfig,
   isGroupByConfig,
 } from "../../model/configs";
-import { type DefaultMap } from "../../model/types";
-import { type TableData } from "../../storage/table";
+import type { DefaultMap } from "../../model/types";
+import type { TableData } from "../../storage/table";
 import { MathUtils } from "../MathUtils";
 import { DataUtilsBase } from "./DataUtilsBase";
 

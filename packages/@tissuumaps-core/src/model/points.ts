@@ -6,12 +6,12 @@ import {
   createItemsDataSource,
   createRenderedDataObject,
 } from "./base";
-import {
-  type ColorConfig,
-  type MarkerConfig,
-  type OpacityConfig,
-  type SizeConfig,
-  type VisibilityConfig,
+import type {
+  ColorConfig,
+  MarkerConfig,
+  OpacityConfig,
+  SizeConfig,
+  VisibilityConfig,
 } from "./configs";
 import {
   defaultPointColor,

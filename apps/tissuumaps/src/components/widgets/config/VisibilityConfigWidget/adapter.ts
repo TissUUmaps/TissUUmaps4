@@ -1,4 +1,4 @@
-import { type VisibilityConfig } from "@tissuumaps/core";
+import type { VisibilityConfig } from "@tissuumaps/core";
 
 export type VisibilityConfigSource = Exclude<
   VisibilityConfig["source"],
