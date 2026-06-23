@@ -47,11 +47,12 @@ const ctx = self as unknown as {
 };
 
 ctx.onmessage = (event) => {
+  const request = event.data;
   void (async () => {
     try {
-      switch (event.data.op) {
+      switch (request.op) {
         case "parse":
-          await handleParse(event.data);
+          await handleParse(request);
           break;
       }
     } catch (error) {
