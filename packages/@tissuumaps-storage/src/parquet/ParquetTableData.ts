@@ -5,29 +5,23 @@ import {
   type TableData,
 } from "@tissuumaps/core";
 
-import { runParquetWorker } from "./runParquetWorker";
-
-type ParquetSource = {
-  file?: File;
-  url?: string;
-  headers?: { [header: string]: string };
-};
+import type { ParquetWorkerClient } from "./ParquetWorkerClient";
 
 export class ParquetTableData implements TableData {
-  private readonly _source: ParquetSource;
+  private readonly _worker: ParquetWorkerClient;
   private readonly _numRows: number;
   private readonly _columnNames: string[];
   private _ids: number[] | undefined;
   private _names: string[] | undefined;
 
   constructor(
-    source: ParquetSource,
+    worker: ParquetWorkerClient,
     numRows: number,
     columnNames: string[],
     ids: number[] | undefined,
     names: string[] | undefined,
   ) {
-    this._source = source;
+    this._worker = worker;
     this._numRows = numRows;
     this._columnNames = columnNames;
     this._ids = ids;
@@ -78,12 +72,12 @@ export class ParquetTableData implements TableData {
   ): Promise<GenericArray<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { values } = await runParquetWorker(
-      { op: "column", ...this._source, column },
+    const { data } = await this._worker.run(
+      { op: "readColumn", column },
       { signal },
     );
     signal?.throwIfAborted();
-    return Array.from(values) as GenericArray<T>;
+    return Array.from(data) as GenericArray<T>;
   }
 
   async loadUniqueValues<T>(
@@ -126,5 +120,7 @@ export class ParquetTableData implements TableData {
     return undefined;
   }
 
-  close(): void {}
+  close(): void {
+    this._worker.terminate();
+  }
 }
