@@ -183,7 +183,10 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
           onProgress,
           workspace: state.workspace,
         });
-        signal?.throwIfAborted();
+        if (signal?.aborted) {
+          data.close();
+          signal.throwIfAborted();
+        }
         const currentState = get();
         const currentPoints = currentState.points.find(
           (points) => points.id === pointsId,

@@ -204,7 +204,10 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
           onProgress,
           workspace: state.workspace,
         });
-        signal?.throwIfAborted();
+        if (signal?.aborted) {
+          data.close();
+          signal.throwIfAborted();
+        }
         const currentState = get();
         const currentTable = currentState.tables.find(
           (table) => table.id === tableId,
