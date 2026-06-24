@@ -72,12 +72,12 @@ export class ParquetTableData implements TableData {
   ): Promise<GenericArray<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { columnData } = await runParquetWorker(
+    const { data } = await runParquetWorker(
       { op: "column", source: this._source, column },
       { signal },
     );
     signal?.throwIfAborted();
-    return Array.from(columnData) as GenericArray<T>;
+    return data as GenericArray<T>;
   }
 
   async loadUniqueValues<T>(

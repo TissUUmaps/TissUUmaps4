@@ -2,6 +2,8 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
+import type { GenericArray } from "@tissuumaps/core";
+
 import type { ParquetSource } from "./types";
 
 export type ParquetRequest<TOp extends string = string> = {
@@ -31,7 +33,7 @@ export type ParquetColumnRequest = ParquetRequest<"column"> & {
 };
 
 export type ParquetColumnResponse = ParquetResponse<ParquetColumnRequest> & {
-  columnData: hyparquet.DecodedArray;
+  data: GenericArray<unknown>;
 };
 
 export type ParquetRangeRequest = ParquetRequest<"range"> & {
@@ -121,7 +123,7 @@ async function handleFileRequest(request: ParquetFileRequest): Promise<{
   const columnNames = hyparquet
     .parquetSchema(metadata)
     .children.map((column) => column.element.name);
-  const idColumnDataPromise =
+  const idDataPromise =
     request.idColumn !== undefined
       ? parquetReadColumn({
           file: buffer,
@@ -130,7 +132,7 @@ async function handleFileRequest(request: ParquetFileRequest): Promise<{
           compressors,
         })
       : undefined;
-  const nameColumnDataPromise =
+  const nameDataPromise =
     request.nameColumn !== undefined
       ? parquetReadColumn({
           file: buffer,
@@ -139,13 +141,13 @@ async function handleFileRequest(request: ParquetFileRequest): Promise<{
           compressors,
         })
       : undefined;
-  const [idColumnData, nameColumnData] = await Promise.all([
-    idColumnDataPromise,
-    nameColumnDataPromise,
+  const [idData, nameData] = await Promise.all([
+    idDataPromise,
+    nameDataPromise,
   ]);
   const ids =
-    idColumnData !== undefined
-      ? Array.from(idColumnData, (id) => {
+    idData !== undefined
+      ? Array.from(idData, (id) => {
           const numericId = Number(id);
           if (id === "" || !Number.isInteger(numericId)) {
             throw new Error(`ID value "${id}" is not a valid integer.`);
@@ -154,9 +156,7 @@ async function handleFileRequest(request: ParquetFileRequest): Promise<{
         })
       : undefined;
   const names =
-    nameColumnData !== undefined
-      ? Array.from(nameColumnData, String)
-      : undefined;
+    nameData !== undefined ? Array.from(nameData, String) : undefined;
   return {
     response: {
       op: "file",
@@ -180,8 +180,11 @@ async function handleColumnRequest(request: ParquetColumnRequest): Promise<{
     metadata,
     compressors,
   });
+  if (data instanceof BigInt64Array || data instanceof BigUint64Array) {
+    throw new Error("64-bit integer columns are not supported");
+  }
   return {
-    response: { op: "column", columnData: data },
+    response: { op: "column", data },
     transfer:
       ArrayBuffer.isView(data) && data.buffer instanceof ArrayBuffer
         ? [data.buffer]
@@ -201,22 +204,23 @@ async function handleRangeRequest(request: ParquetRangeRequest): Promise<{
     const columnChunk = rowGroup.columns.find(
       (column) => column.meta_data?.path_in_schema.join(".") === request.column,
     );
-    if (columnChunk?.meta_data?.statistics !== undefined) {
-      const { min_value, max_value } = columnChunk.meta_data.statistics;
-      if (
-        min_value !== undefined &&
-        (typeof min_value === "number" || typeof min_value === "bigint") &&
-        (min === undefined || min_value < min)
-      ) {
-        min = Number(min_value);
-      }
-      if (
-        max_value !== undefined &&
-        (typeof max_value === "number" || typeof max_value === "bigint") &&
-        (max === undefined || max_value > max)
-      ) {
-        max = Number(max_value);
-      }
+    if (columnChunk?.meta_data?.statistics === undefined) {
+      return { response: { op: "range", range: undefined } };
+    }
+    const { min_value, max_value } = columnChunk.meta_data.statistics;
+    if (
+      min_value === undefined ||
+      max_value === undefined ||
+      typeof min_value !== "number" ||
+      typeof max_value !== "number"
+    ) {
+      return { response: { op: "range", range: undefined } };
+    }
+    if (min === undefined || min_value < min) {
+      min = min_value;
+    }
+    if (max === undefined || max_value > max) {
+      max = max_value;
     }
   }
   return {
