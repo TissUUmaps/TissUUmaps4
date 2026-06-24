@@ -204,7 +204,10 @@ async function handleRangeRequest(request: ParquetRangeRequest): Promise<{
     const columnChunk = rowGroup.columns.find(
       (column) => column.meta_data?.path_in_schema.join(".") === request.column,
     );
-    if (columnChunk?.meta_data?.statistics === undefined) {
+    if (columnChunk === undefined) {
+      throw new Error(`Column "${request.column}" not found in Parquet file`);
+    }
+    if (columnChunk.meta_data?.statistics === undefined) {
       return { response: { op: "range", range: undefined } };
     }
     const { min_value, max_value } = columnChunk.meta_data.statistics;
