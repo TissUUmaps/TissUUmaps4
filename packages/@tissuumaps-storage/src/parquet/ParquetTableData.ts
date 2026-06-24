@@ -1,27 +1,27 @@
 import {
   type GenericArray,
-  ParseUtils,
   type ProgressCallback,
   type TableData,
 } from "@tissuumaps/core";
 
-import type { ParquetWorkerClient } from "./ParquetWorkerClient";
+import { runParquetWorker } from "./runParquetWorker";
+import type { ParquetSource } from "./types";
 
 export class ParquetTableData implements TableData {
-  private readonly _worker: ParquetWorkerClient;
+  private readonly _source: ParquetSource;
   private readonly _numRows: number;
   private readonly _columnNames: string[];
   private _ids: number[] | undefined;
-  private _names: string[] | undefined;
+  private readonly _names: string[] | undefined;
 
   constructor(
-    worker: ParquetWorkerClient,
+    source: ParquetSource,
     numRows: number,
     columnNames: string[],
     ids: number[] | undefined,
     names: string[] | undefined,
   ) {
-    this._worker = worker;
+    this._source = source;
     this._numRows = numRows;
     this._columnNames = columnNames;
     this._ids = ids;
@@ -72,12 +72,12 @@ export class ParquetTableData implements TableData {
   ): Promise<GenericArray<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { data } = await this._worker.run(
-      { op: "readColumn", column },
+    const { columnData } = await runParquetWorker(
+      { op: "column", source: this._source, column },
       { signal },
     );
     signal?.throwIfAborted();
-    return Array.from(data) as GenericArray<T>;
+    return Array.from(columnData) as GenericArray<T>;
   }
 
   async loadUniqueValues<T>(
@@ -96,31 +96,15 @@ export class ParquetTableData implements TableData {
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<[number, number] | undefined> {
-    const { signal, onProgress } = options ?? {};
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const values = await this.loadValues(column, { signal, onProgress });
+    const { range } = await runParquetWorker(
+      { op: "range", source: this._source, column },
+      { signal },
+    );
     signal?.throwIfAborted();
-    if (typeof values[0] === "number") {
-      let vmin, vmax;
-      for (let i = 0; i < values.length; i++) {
-        const v = ParseUtils.tryParseFinite(values[i]);
-        if (v !== undefined) {
-          if (vmin === undefined || v < vmin) {
-            vmin = v;
-          }
-          if (vmax === undefined || v > vmax) {
-            vmax = v;
-          }
-        }
-      }
-      if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
-        return [vmin, vmax];
-      }
-    }
-    return undefined;
+    return range;
   }
 
-  close(): void {
-    this._worker.terminate();
-  }
+  close(): void {}
 }

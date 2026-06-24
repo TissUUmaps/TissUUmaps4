@@ -5,7 +5,7 @@ import {
   type ParquetTableDataSource,
   createDefaultParquetTableDataSource,
 } from "./ParquetTableDataSource";
-import { ParquetWorkerClient } from "./ParquetWorkerClient";
+import { runParquetWorker } from "./runParquetWorker";
 
 export class ParquetTableDataProvider implements TableDataProvider<
   ParquetTableDataSource,
@@ -79,51 +79,13 @@ export class ParquetTableDataProvider implements TableDataProvider<
     } else {
       throw new Error("A URL or workspace path is required to load data.");
     }
-
-    const worker = new ParquetWorkerClient();
-    try {
-      const { numRows, columnNames } = await worker.run(
-        { op: "open", file, url, headers },
-        { signal },
-      );
-      signal?.throwIfAborted();
-      const idResponsePromise =
-        defaultDataSource.idColumn !== undefined
-          ? worker.run(
-              { op: "readColumn", column: defaultDataSource.idColumn },
-              { signal },
-            )
-          : Promise.resolve(undefined);
-      const nameResponsePromise =
-        defaultDataSource.nameColumn !== undefined
-          ? worker.run(
-              { op: "readColumn", column: defaultDataSource.nameColumn },
-              { signal },
-            )
-          : Promise.resolve(undefined);
-      const [idResponse, nameResponse] = await Promise.all([
-        idResponsePromise,
-        nameResponsePromise,
-      ]);
-      signal?.throwIfAborted();
-      const ids =
-        idResponse !== undefined
-          ? Array.from(idResponse.data, (id) => {
-              const numericId = Number(id);
-              if (id === "" || !Number.isInteger(numericId)) {
-                throw new Error(`ID value "${id}" is not a valid integer.`);
-              }
-              return numericId;
-            })
-          : undefined;
-      const names =
-        nameResponse !== undefined
-          ? Array.from(nameResponse.data, String)
-          : undefined;
-      return new ParquetTableData(worker, numRows, columnNames, ids, names);
-    } catch (error) {
-      worker.terminate();
-      throw error;
-    }
+    const source = { file, url, headers };
+    const { idColumn, nameColumn } = defaultDataSource;
+    const { numRows, columnNames, ids, names } = await runParquetWorker(
+      { op: "file", source, idColumn, nameColumn },
+      { signal },
+    );
+    signal?.throwIfAborted();
+    return new ParquetTableData(source, numRows, columnNames, ids, names);
   }
 }

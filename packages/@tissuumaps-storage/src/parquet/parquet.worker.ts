@@ -2,6 +2,8 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
+import type { ParquetSource } from "./types";
+
 export type ParquetRequest<TOp extends string = string> = {
   op: TOp;
 };
@@ -10,135 +12,168 @@ export type ParquetResponse<TRequest extends ParquetRequest> = {
   op: TRequest["op"];
 };
 
-export type ParquetOpenRequest = ParquetRequest<"open"> & {
-  file?: File;
-  url?: string;
-  headers?: { [header: string]: string };
+export type ParquetFileRequest = ParquetRequest<"file"> & {
+  source: ParquetSource;
+  idColumn: string | undefined;
+  nameColumn: string | undefined;
 };
 
-export type ParquetOpenResponse = ParquetResponse<ParquetOpenRequest> & {
+export type ParquetFileResponse = ParquetResponse<ParquetFileRequest> & {
   numRows: number;
   columnNames: string[];
+  ids: number[] | undefined;
+  names: string[] | undefined;
 };
 
-export type ParquetReadColumnRequest = ParquetRequest<"readColumn"> & {
+export type ParquetColumnRequest = ParquetRequest<"column"> & {
+  source: ParquetSource;
   column: string;
 };
 
-export type ParquetReadColumnResponse =
-  ParquetResponse<ParquetReadColumnRequest> & {
-    data: hyparquet.DecodedArray;
-  };
+export type ParquetColumnResponse = ParquetResponse<ParquetColumnRequest> & {
+  columnData: hyparquet.DecodedArray;
+};
+
+export type ParquetRangeRequest = ParquetRequest<"range"> & {
+  source: ParquetSource;
+  column: string;
+};
+
+export type ParquetRangeResponse = ParquetResponse<ParquetRangeRequest> & {
+  range: [number, number] | undefined;
+};
 
 export type ParquetWorkerRequest =
-  | ParquetOpenRequest
-  | ParquetReadColumnRequest;
+  | ParquetFileRequest
+  | ParquetColumnRequest
+  | ParquetRangeRequest;
 
 export type ParquetWorkerResponse =
-  | ParquetOpenResponse
-  | ParquetReadColumnResponse
+  | ParquetFileResponse
+  | ParquetColumnResponse
+  | ParquetRangeResponse
   | { error: string };
 
 export type ParquetWorkerResponseFor<
   TWorkerRequest extends ParquetWorkerRequest,
 > = Extract<ParquetWorkerResponse, { op: TWorkerRequest["op"] }>;
 
-export type ParquetWorkerRequestMessage = { id: number } & ParquetWorkerRequest;
-
-export type ParquetWorkerResponseMessage = {
-  id: number;
-} & ParquetWorkerResponse;
-
 const ctx = self as unknown as {
-  onmessage:
-    | ((event: MessageEvent<ParquetWorkerRequestMessage>) => void)
-    | null;
+  onmessage: ((event: MessageEvent<ParquetWorkerRequest>) => void) | null;
   postMessage: (
-    message: ParquetWorkerResponseMessage,
+    message: ParquetWorkerResponse,
     transfer?: Transferable[],
   ) => void;
 };
 
 ctx.onmessage = (event) => {
-  const { id } = event.data;
   void (async () => {
     try {
       let result;
       switch (event.data.op) {
-        case "open":
-          result = await handleOpen(event.data);
+        case "file":
+          result = await handleFileRequest(event.data);
           break;
-        case "readColumn":
-          result = await handleReadColumn(event.data);
+        case "column":
+          result = await handleColumnRequest(event.data);
+          break;
+        case "range":
+          result = await handleRangeRequest(event.data);
           break;
         default:
           throw new Error("Unknown request");
       }
-      const { response, transfer } = result;
-      ctx.postMessage({ id, ...response }, transfer);
+      ctx.postMessage(result.response, result.transfer);
     } catch (error) {
       ctx.postMessage({
-        id,
         error: error instanceof Error ? error.message : String(error),
       });
     }
   })();
 };
 
-type ParquetHandle = {
-  buffer: hyparquet.AsyncBuffer | ArrayBuffer;
-  metadata: Awaited<ReturnType<typeof hyparquet.parquetMetadataAsync>>;
-};
-
-let parquetHandlePromise: Promise<ParquetHandle> | undefined;
-
 async function openParquet(
-  request: ParquetOpenRequest,
-): Promise<ParquetHandle> {
-  let buffer;
-  if (request.file !== undefined) {
-    buffer = await request.file.arrayBuffer();
-  } else if (request.url !== undefined) {
-    buffer = await hyparquet.asyncBufferFromUrl({
-      url: request.url,
-      requestInit: { headers: request.headers },
+  source: ParquetSource,
+): Promise<hyparquet.AsyncBuffer> {
+  if (source.file !== undefined) {
+    return {
+      byteLength: source.file.size,
+      slice: (start: number, end?: number) =>
+        source.file!.slice(start, end).arrayBuffer(),
+    };
+  }
+  if (source.url !== undefined) {
+    return await hyparquet.asyncBufferFromUrl({
+      url: source.url,
+      requestInit: { headers: source.headers },
     });
-  } else {
-    throw new Error("A URL or file is required to load data.");
   }
+  throw new Error("A URL or file is required to load data.");
+}
+
+async function handleFileRequest(request: ParquetFileRequest): Promise<{
+  response: ParquetFileResponse;
+  transfer?: Transferable[];
+}> {
+  const buffer = await openParquet(request.source);
   const metadata = await hyparquet.parquetMetadataAsync(buffer);
-  return { buffer, metadata };
+  const numRows = Number(metadata.num_rows);
+  const columnNames = hyparquet
+    .parquetSchema(metadata)
+    .children.map((column) => column.element.name);
+  const idColumnDataPromise =
+    request.idColumn !== undefined
+      ? parquetReadColumn({
+          file: buffer,
+          columns: [request.idColumn],
+          metadata,
+          compressors,
+        })
+      : undefined;
+  const nameColumnDataPromise =
+    request.nameColumn !== undefined
+      ? parquetReadColumn({
+          file: buffer,
+          columns: [request.nameColumn],
+          metadata,
+          compressors,
+        })
+      : undefined;
+  const [idColumnData, nameColumnData] = await Promise.all([
+    idColumnDataPromise,
+    nameColumnDataPromise,
+  ]);
+  const ids =
+    idColumnData !== undefined
+      ? Array.from(idColumnData, (id) => {
+          const numericId = Number(id);
+          if (id === "" || !Number.isInteger(numericId)) {
+            throw new Error(`ID value "${id}" is not a valid integer.`);
+          }
+          return numericId;
+        })
+      : undefined;
+  const names =
+    nameColumnData !== undefined
+      ? Array.from(nameColumnData, String)
+      : undefined;
+  return {
+    response: {
+      op: "file",
+      numRows,
+      columnNames,
+      ids,
+      names,
+    },
+  };
 }
 
-async function handleOpen(request: ParquetOpenRequest): Promise<{
-  response: ParquetOpenResponse;
+async function handleColumnRequest(request: ParquetColumnRequest): Promise<{
+  response: ParquetColumnResponse;
   transfer?: Transferable[];
 }> {
-  if (parquetHandlePromise !== undefined) {
-    throw new Error("Worker has already been opened");
-  }
-  parquetHandlePromise = openParquet(request);
-  try {
-    const { metadata } = await parquetHandlePromise;
-    const numRows = Number(metadata.num_rows);
-    const columnNames = hyparquet
-      .parquetSchema(metadata)
-      .children.map((column) => column.element.name);
-    return { response: { op: "open", numRows, columnNames } };
-  } catch (error) {
-    parquetHandlePromise = undefined;
-    throw error;
-  }
-}
-
-async function handleReadColumn(request: ParquetReadColumnRequest): Promise<{
-  response: ParquetReadColumnResponse;
-  transfer?: Transferable[];
-}> {
-  if (parquetHandlePromise === undefined) {
-    throw new Error("Worker has not been opened yet");
-  }
-  const { buffer, metadata } = await parquetHandlePromise;
+  const buffer = await openParquet(request.source);
+  const metadata = await hyparquet.parquetMetadataAsync(buffer);
   const data = await parquetReadColumn({
     file: buffer,
     columns: [request.column],
@@ -146,10 +181,48 @@ async function handleReadColumn(request: ParquetReadColumnRequest): Promise<{
     compressors,
   });
   return {
-    response: { op: "readColumn", data },
+    response: { op: "column", columnData: data },
     transfer:
       ArrayBuffer.isView(data) && data.buffer instanceof ArrayBuffer
         ? [data.buffer]
         : undefined,
+  };
+}
+
+async function handleRangeRequest(request: ParquetRangeRequest): Promise<{
+  response: ParquetRangeResponse;
+  transfer?: Transferable[];
+}> {
+  const buffer = await openParquet(request.source);
+  const metadata = await hyparquet.parquetMetadataAsync(buffer);
+  let min: number | undefined;
+  let max: number | undefined;
+  for (const rowGroup of metadata.row_groups) {
+    const columnChunk = rowGroup.columns.find(
+      (column) => column.meta_data?.path_in_schema.join(".") === request.column,
+    );
+    if (columnChunk?.meta_data?.statistics !== undefined) {
+      const { min_value, max_value } = columnChunk.meta_data.statistics;
+      if (
+        min_value !== undefined &&
+        (typeof min_value === "number" || typeof min_value === "bigint") &&
+        (min === undefined || min_value < min)
+      ) {
+        min = Number(min_value);
+      }
+      if (
+        max_value !== undefined &&
+        (typeof max_value === "number" || typeof max_value === "bigint") &&
+        (max === undefined || max_value > max)
+      ) {
+        max = Number(max_value);
+      }
+    }
+  }
+  return {
+    response: {
+      op: "range",
+      range: min !== undefined && max !== undefined ? [min, max] : undefined,
+    },
   };
 }
