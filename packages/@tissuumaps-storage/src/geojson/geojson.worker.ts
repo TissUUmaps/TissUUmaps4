@@ -29,7 +29,7 @@ export type GeoJSONWorkerResponse = GeoJSONFileResponse | { error: string };
 
 export type GeoJSONWorkerResponseFor<
   TWorkerRequest extends GeoJSONWorkerRequest,
-> = Extract<GeoJSONWorkerResponse, { request: { op: TWorkerRequest["op"] } }>;
+> = Extract<GeoJSONWorkerResponse, { op: TWorkerRequest["op"] }>;
 
 type ShapesGeometryAccumulator = {
   shapePolygonOffsets: number[];
@@ -160,7 +160,8 @@ function parseGeoJSON(
       break;
     case "GeometryCollection":
       for (const geometry of geo.geometries) {
-        valid ||= parseGeometry(geometry, accumulator);
+        const shapeAppended = parseGeometry(geometry, accumulator);
+        valid ||= shapeAppended;
       }
       break;
     default:

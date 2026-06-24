@@ -32,6 +32,11 @@ export async function runGeoJSONWorker<TRequest extends GeoJSONWorkerRequest>(
       signal?.removeEventListener("abort", onAbort);
       reject(new Error(event.message));
     };
+    worker.onmessageerror = () => {
+      worker.terminate();
+      signal?.removeEventListener("abort", onAbort);
+      reject(new Error("Failed to deserialize worker response."));
+    };
     worker.postMessage(request);
   });
 }
