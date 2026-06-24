@@ -12,7 +12,6 @@ import {
   type GeoJSONShapesDataSource,
   createDefaultGeoJSONShapesDataSource,
 } from "./GeoJSONShapesDataSource";
-import type { GeoJSONWorkerRequest } from "./geojson.worker";
 import { runGeoJSONWorker } from "./runGeoJSONWorker";
 
 export class GeoJSONShapesDataProvider implements ShapesDataProvider<
@@ -81,27 +80,25 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
 
     const defaultDataSource = createDefaultGeoJSONShapesDataSource(dataSource);
 
-    const request: GeoJSONWorkerRequest = {
-      op: "parse",
-      idProperty: defaultDataSource.idProperty,
-      nameProperty: defaultDataSource.nameProperty,
-    };
+    let file, url;
     if (defaultDataSource.path !== undefined && workspace !== null) {
       const fh = await workspace.getFileHandle(defaultDataSource.path);
       signal?.throwIfAborted();
-      request.file = await fh.getFile();
+      file = await fh.getFile();
       signal?.throwIfAborted();
     } else if (defaultDataSource.url !== undefined) {
-      request.url = defaultDataSource.url;
+      url = defaultDataSource.url;
     } else if (defaultDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     } else {
       throw new Error("A URL or workspace path is required to load data.");
     }
-
-    const { ids, names, geometry } = await runGeoJSONWorker(request, {
-      signal,
-    });
+    const { idProperty, nameProperty } = defaultDataSource;
+    const { ids, names, geometry } = await runGeoJSONWorker(
+      { op: "file", file, url, idProperty, nameProperty },
+      { signal },
+    );
+    signal?.throwIfAborted();
     return new GeoJSONShapesData(ids, names, geometry);
   }
 }

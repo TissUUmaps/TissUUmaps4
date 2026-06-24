@@ -2,30 +2,30 @@ import type * as geojson from "geojson";
 
 import { ParseUtils, type ShapesGeometry } from "@tissuumaps/core";
 
-export type GeoJSONRequest<TOp extends string> = {
+export type GeoJSONRequest<TOp extends string = string> = {
   op: TOp;
 };
 
-export type GeoJSONResponse<TRequest extends GeoJSONRequest<string>> = {
-  request: TRequest;
+export type GeoJSONResponse<TRequest extends GeoJSONRequest> = {
+  op: TRequest["op"];
 };
 
-export type GeoJSONParseRequest = GeoJSONRequest<"parse"> & {
+export type GeoJSONFileRequest = GeoJSONRequest<"file"> & {
   file?: File;
   url?: string;
-  idProperty?: string;
-  nameProperty?: string;
+  idProperty: string | undefined;
+  nameProperty: string | undefined;
 };
 
-export type GeoJSONParseResponse = GeoJSONResponse<GeoJSONParseRequest> & {
+export type GeoJSONFileResponse = GeoJSONResponse<GeoJSONFileRequest> & {
   ids: number[] | undefined;
   names: string[] | undefined;
   geometry: ShapesGeometry;
 };
 
-export type GeoJSONWorkerRequest = GeoJSONParseRequest;
+export type GeoJSONWorkerRequest = GeoJSONFileRequest;
 
-export type GeoJSONWorkerResponse = GeoJSONParseResponse | { error: string };
+export type GeoJSONWorkerResponse = GeoJSONFileResponse | { error: string };
 
 export type GeoJSONWorkerResponseFor<
   TWorkerRequest extends GeoJSONWorkerRequest,
@@ -50,11 +50,15 @@ ctx.onmessage = (event) => {
   const request = event.data;
   void (async () => {
     try {
+      let result;
       switch (request.op) {
-        case "parse":
-          await handleParse(request);
+        case "file":
+          result = await handleFileRequest(request);
           break;
+        default:
+          throw new Error("Unknown request");
       }
+      ctx.postMessage(result.response, result.transfer);
     } catch (error) {
       ctx.postMessage({
         error: error instanceof Error ? error.message : String(error),
@@ -63,18 +67,21 @@ ctx.onmessage = (event) => {
   })();
 };
 
-async function handleParse(request: GeoJSONParseRequest): Promise<void> {
+async function handleFileRequest(request: GeoJSONFileRequest): Promise<{
+  response: GeoJSONFileResponse;
+  transfer?: Transferable[];
+}> {
   let text: string;
   if (request.file !== undefined) {
     text = await request.file.text();
   } else if (request.url !== undefined) {
-    const response = await fetch(request.url);
-    if (!response.ok) {
+    const r = await fetch(request.url);
+    if (!r.ok) {
       throw new Error(
-        `Failed to load GeoJSON from ${request.url}: ${response.status} ${response.statusText}`,
+        `Failed to load GeoJSON from ${request.url}: ${r.status} ${r.statusText}`,
       );
     }
-    text = await response.text();
+    text = await r.text();
   } else {
     throw new Error("A URL or file is required to load data.");
   }
@@ -84,12 +91,7 @@ async function handleParse(request: GeoJSONParseRequest): Promise<void> {
     request.idProperty,
     request.nameProperty,
   );
-  ctx.postMessage({ request, ids, names, geometry }, [
-    geometry.shapePolygonOffsets.buffer,
-    geometry.polygonRingOffsets.buffer,
-    geometry.ringVertexOffsets.buffer,
-    geometry.coords.buffer,
-  ]);
+  return { response: { op: "file", ids, names, geometry } };
 }
 
 function parseGeoJSON(
