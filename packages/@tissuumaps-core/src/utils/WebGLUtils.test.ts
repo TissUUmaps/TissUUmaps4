@@ -270,7 +270,7 @@ describe("WebGLUtils", () => {
       expect(() =>
         WebGLUtils.getUniformLocation(
           asWebGL2(gl),
-          { type: "program" } as WebGLProgram,
+          { type: "program" },
           "uMissing",
         ),
       ).toThrow("Failed to get uniform location for uMissing");
