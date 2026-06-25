@@ -9,10 +9,7 @@ import ParquetWorker from "./parquet.worker?worker&inline";
 
 export async function runParquetWorker<TRequest extends ParquetWorkerRequest>(
   request: TRequest,
-  options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  },
+  options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ): Promise<ParquetWorkerResponseFor<TRequest>> {
   const { signal, onProgress } = options ?? {};
   signal?.throwIfAborted();

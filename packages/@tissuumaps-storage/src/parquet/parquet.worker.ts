@@ -62,13 +62,13 @@ export type ParquetWorkerResponse =
   | ParquetRangeResponse
   | { error: string };
 
-export type ParquetWorkerMessage =
-  | ParquetWorkerResponse
-  | { progress: number; total: number };
-
 export type ParquetWorkerResponseFor<
   TWorkerRequest extends ParquetWorkerRequest,
 > = Extract<ParquetWorkerResponse, { op: TWorkerRequest["op"] }>;
+
+export type ParquetWorkerMessage =
+  | ParquetWorkerResponse
+  | { progress: number; total: number };
 
 const ctx = self as unknown as {
   onmessage: ((event: MessageEvent<ParquetWorkerRequest>) => void) | null;
