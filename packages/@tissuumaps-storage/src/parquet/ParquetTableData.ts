@@ -1,7 +1,7 @@
-import {
-  type GenericArray,
-  type ProgressCallback,
-  type TableData,
+import type {
+  GenericArray,
+  ProgressCallback,
+  TableData,
 } from "@tissuumaps/core";
 
 import { runParquetWorker } from "./runParquetWorker";

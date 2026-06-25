@@ -2,7 +2,7 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import type { GenericArray } from "@tissuumaps/core";
+import { type GenericArray, ParseUtils } from "@tissuumaps/core";
 
 import type { ParquetSource } from "./types";
 
@@ -147,13 +147,7 @@ async function handleFileRequest(request: ParquetFileRequest): Promise<{
   ]);
   const ids =
     idData !== undefined
-      ? Array.from(idData, (id) => {
-          const numericId = Number(id);
-          if (id === "" || !Number.isInteger(numericId)) {
-            throw new Error(`ID value "${id}" is not a valid integer.`);
-          }
-          return numericId;
-        })
+      ? Array.from(idData, (id) => ParseUtils.parseSafeInt(id))
       : undefined;
   const names =
     nameData !== undefined ? Array.from(nameData, String) : undefined;
@@ -198,8 +192,8 @@ async function handleRangeRequest(request: ParquetRangeRequest): Promise<{
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await hyparquet.parquetMetadataAsync(buffer);
-  let min: number | undefined;
-  let max: number | undefined;
+  let vmin = Infinity;
+  let vmax = -Infinity;
   for (const rowGroup of metadata.row_groups) {
     const columnChunk = rowGroup.columns.find(
       (column) => column.meta_data?.path_in_schema.join(".") === request.column,
@@ -211,25 +205,25 @@ async function handleRangeRequest(request: ParquetRangeRequest): Promise<{
       return { response: { op: "range", range: undefined } };
     }
     const { min_value, max_value } = columnChunk.meta_data.statistics;
-    if (
-      min_value === undefined ||
-      max_value === undefined ||
-      typeof min_value !== "number" ||
-      typeof max_value !== "number"
-    ) {
+    const chunkMin = ParseUtils.tryParseFinite(min_value);
+    const chunkMax = ParseUtils.tryParseFinite(max_value);
+    if (chunkMin === undefined || chunkMax === undefined) {
       return { response: { op: "range", range: undefined } };
     }
-    if (min === undefined || min_value < min) {
-      min = min_value;
+    if (chunkMin < vmin) {
+      vmin = chunkMin;
     }
-    if (max === undefined || max_value > max) {
-      max = max_value;
+    if (chunkMax > vmax) {
+      vmax = chunkMax;
     }
   }
   return {
     response: {
       op: "range",
-      range: min !== undefined && max !== undefined ? [min, max] : undefined,
+      range:
+        Number.isFinite(vmin) && Number.isFinite(vmax)
+          ? [vmin, vmax]
+          : undefined,
     },
   };
 }
