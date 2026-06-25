@@ -23,12 +23,11 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@jsonforms/core": "^3.7.0",
+    "@jsonforms/core": "^3.8.0",
     "fast-equals": "^6.0.0",
     "gl-matrix": "^3.4.4",
     "openseadragon": "^6.0.2"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=22.22.1"
   }

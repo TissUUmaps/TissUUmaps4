@@ -246,7 +246,7 @@ export class MarkerDataUtils extends DataUtilsBase {
    * @returns The marker index as a number
    */
   static encodeMarker(marker: Marker): number {
-    return marker as number;
+    return marker;
   }
 
   private static _createMarkerDataBuffer(
