@@ -2,10 +2,11 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import type {
-  GenericArray,
-  ProgressCallback,
-  TableData,
+import {
+  type GenericArray,
+  ParseUtils,
+  type ProgressCallback,
+  type TableData,
 } from "@tissuumaps/core";
 
 export class ParquetTableData implements TableData {
@@ -39,7 +40,7 @@ export class ParquetTableData implements TableData {
   }
 
   getSize(): number {
-    return Number(this._metadata.num_rows);
+    return ParseUtils.parseSafeInt(this._metadata.num_rows);
   }
 
   getNames(): string[] | undefined {
@@ -107,8 +108,8 @@ export class ParquetTableData implements TableData {
     if (typeof values[0] === "number") {
       let vmin, vmax;
       for (let i = 0; i < values.length; i++) {
-        const v = values[i];
-        if (typeof v === "number" && Number.isFinite(v)) {
+        const v = ParseUtils.tryParseFinite(values[i]);
+        if (v !== undefined) {
           if (vmin === undefined || v < vmin) {
             vmin = v;
           }

@@ -1,9 +1,10 @@
 import * as papaparse from "papaparse";
 
-import type {
-  ProgressCallback,
-  TableDataProvider,
-  TypedArray,
+import {
+  ParseUtils,
+  type ProgressCallback,
+  type TableDataProvider,
+  type TypedArray,
 } from "@tissuumaps/core";
 
 import { CSVTableData } from "./CSVTableData";
@@ -138,15 +139,10 @@ export class CSVTableDataProvider implements TableDataProvider<
             if (Array.isArray(columnChunk)) {
               columnChunk[currentChunkRow] = value;
             } else {
-              let valueIsNaN = value === "";
-              if (!valueIsNaN) {
-                const numericValue = +value;
-                valueIsNaN = isNaN(numericValue);
-                if (!valueIsNaN) {
-                  columnChunk[currentChunkRow] = numericValue;
-                }
-              }
-              if (valueIsNaN) {
+              const numericValue = ParseUtils.tryParseFinite(value);
+              if (numericValue !== undefined) {
+                columnChunk[currentChunkRow] = numericValue;
+              } else {
                 column.isNaN = true;
                 for (let i = 0; i < column.chunks.length; i++) {
                   column.chunks[i] = Array.from(column.chunks[i]!, String);
@@ -244,13 +240,9 @@ export class CSVTableDataProvider implements TableDataProvider<
           `ID column "${defaultDataSource.idColumn}" does not exist in the table.`,
         );
       }
-      ids = Array.from<string | number, number>(idColumnValues, (id) => {
-        const numericId = +id;
-        if (id === "" || !Number.isInteger(numericId)) {
-          throw new Error(`ID value "${id}" is not a valid integer.`);
-        }
-        return numericId;
-      });
+      ids = Array.from<string | number, number>(idColumnValues, (id) =>
+        ParseUtils.parseSafeInt(id),
+      );
     }
 
     let names: string[] | undefined;

@@ -2,7 +2,11 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import type { ProgressCallback, TableDataProvider } from "@tissuumaps/core";
+import {
+  ParseUtils,
+  type ProgressCallback,
+  type TableDataProvider,
+} from "@tissuumaps/core";
 
 import { ParquetTableData } from "./ParquetTableData";
 import {
@@ -100,14 +104,7 @@ export class ParquetTableDataProvider implements TableDataProvider<
         compressors: compressors,
       });
       signal?.throwIfAborted();
-      for (let i = 0; i < rawIdColumnData.length; i++) {
-        if (!Number.isInteger(rawIdColumnData[i])) {
-          throw new Error(
-            `ID column "${defaultDataSource.idColumn}" contains non-integer values.`,
-          );
-        }
-      }
-      ids = Array.from(rawIdColumnData);
+      ids = Array.from(rawIdColumnData, (id) => ParseUtils.parseSafeInt(id));
     }
 
     let names;
@@ -119,14 +116,6 @@ export class ParquetTableDataProvider implements TableDataProvider<
         compressors: compressors,
       });
       signal?.throwIfAborted();
-      for (let i = 0; i < rawNameColumnData.length; i++) {
-        const name = rawNameColumnData[i] as unknown;
-        if (name === undefined) {
-          throw new Error(
-            `Name column "${defaultDataSource.nameColumn}" contains undefined values.`,
-          );
-        }
-      }
       names = Array.from(rawNameColumnData, String);
     }
 

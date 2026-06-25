@@ -1,8 +1,9 @@
-import type {
-  GenericArray,
-  ProgressCallback,
-  TableData,
-  TypedArray,
+import {
+  type GenericArray,
+  ParseUtils,
+  type ProgressCallback,
+  type TableData,
+  type TypedArray,
 } from "@tissuumaps/core";
 
 export class CSVTableData implements TableData {
@@ -100,8 +101,8 @@ export class CSVTableData implements TableData {
     if (typeof values[0] === "number") {
       let vmin, vmax;
       for (let i = 0; i < values.length; i++) {
-        const v = values[i];
-        if (typeof v === "number" && Number.isFinite(v)) {
+        const v = ParseUtils.tryParseFinite(values[i]);
+        if (v !== undefined) {
           if (vmin === undefined || v < vmin) {
             vmin = v;
           }

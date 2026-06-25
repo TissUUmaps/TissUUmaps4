@@ -898,7 +898,12 @@ export class WebGLShapesController extends WebGLControllerBase {
       }
       await maybeYield();
     }
-    if (!Number.isFinite(xMin) || !Number.isFinite(yMin)) {
+    if (
+      !Number.isFinite(xMin) ||
+      !Number.isFinite(yMin) ||
+      !Number.isFinite(xMax) ||
+      !Number.isFinite(yMax)
+    ) {
       throw new Error("Shapes geometry must not be empty");
     }
     if (xMin >= xMax || yMin >= yMax) {
@@ -1023,11 +1028,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           }
           const scanlineShape = scanline.shapes.get(shapeIndex);
           if (scanlineShape === undefined) {
-            scanline.shapes.set(shapeIndex, {
-              xMin: xMin,
-              xMax: xMax,
-              edges: [],
-            });
+            scanline.shapes.set(shapeIndex, { xMin, xMax, edges: [] });
             totalNumScanlineShapes++;
           } else {
             scanlineShape.xMin = Math.min(scanlineShape.xMin, xMin);
