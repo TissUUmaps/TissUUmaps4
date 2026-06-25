@@ -371,7 +371,7 @@ export class ColorDataUtils extends DataUtilsBase {
       );
       return colorPalette.colors[index]!;
     }
-    console.warn(`Invalid color value: ${String(v)}`);
+    console.warn(`Invalid color value: ${String(value)}`);
     return undefined;
   }
 
