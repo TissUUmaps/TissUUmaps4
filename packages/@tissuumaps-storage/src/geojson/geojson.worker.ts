@@ -1,4 +1,4 @@
-import type * as geojson from "geojson";
+import type { GeoJSON, Geometry, Position } from "geojson";
 
 import type { ShapesGeometry } from "@tissuumaps/core";
 
@@ -18,9 +18,9 @@ export type GeoJSONFileRequest = GeoJSONRequest<"file"> & {
 };
 
 export type GeoJSONFileResponse = GeoJSONResponse<GeoJSONFileRequest> & {
+  geometry: ShapesGeometry;
   ids: number[] | undefined;
   names: string[] | undefined;
-  geometry: ShapesGeometry;
 };
 
 export type GeoJSONWorkerRequest = GeoJSONFileRequest;
@@ -127,18 +127,18 @@ async function handleFileRequest(
   } else {
     throw new Error("A URL or file is required to load data.");
   }
-  const geo = JSON.parse(text) as geojson.GeoJSON; // TODO Validate GeoJSON
+  const geo = JSON.parse(text) as GeoJSON; // TODO Validate GeoJSON
   const { ids, names, geometry } = parseGeoJSON(
     geo,
     request.idProperty,
     request.nameProperty,
     onProgress,
   );
-  return { response: { op: "file", ids, names, geometry } };
+  return { response: { op: "file", geometry, ids, names } };
 }
 
 function parseGeoJSON(
-  geo: geojson.GeoJSON<geojson.Geometry | null>,
+  geo: GeoJSON<Geometry | null>,
   idProperty: string | undefined,
   nameProperty: string | undefined,
   onProgress: (progress: number, total: number) => void,
@@ -237,10 +237,10 @@ function parseGeoJSON(
 }
 
 function parseGeometry(
-  geometry: geojson.Geometry,
+  geometry: Geometry,
   accumulator: ShapesGeometryAccumulator,
 ): boolean {
-  let polygons: geojson.Position[][][];
+  let polygons: Position[][][];
   if (geometry.type === "Polygon") {
     polygons = [geometry.coordinates];
   } else if (geometry.type === "MultiPolygon") {

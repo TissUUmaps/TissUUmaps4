@@ -1,4 +1,10 @@
-import * as papaparse from "papaparse";
+import {
+  type ParseLocalConfig,
+  type ParseRemoteConfig,
+  type ParseResult,
+  type Parser,
+  parse,
+} from "papaparse";
 
 import {
   ParseUtils,
@@ -84,17 +90,12 @@ export class CSVTableDataProvider implements TableDataProvider<
         }[]
       | undefined;
     const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
-    const parseConfig: Partial<
-      papaparse.ParseLocalConfig & papaparse.ParseRemoteConfig
-    > = {
+    const parseConfig: Partial<ParseLocalConfig & ParseRemoteConfig> = {
       ...defaultDataSource.parseConfig,
       worker: true,
       header: false,
       skipEmptyLines: true,
-      chunk: (
-        results: papaparse.ParseResult<string[]>,
-        parser: papaparse.Parser,
-      ) => {
+      chunk: (results: ParseResult<string[]>, parser: Parser) => {
         let columnChunks: (string[] | TypedArray)[] | undefined;
         let numChunkRows = results.data.length;
         let currentChunkRow = 0;
@@ -202,7 +203,7 @@ export class CSVTableDataProvider implements TableDataProvider<
       signal?.throwIfAborted();
       const file = await fh.getFile();
       columnValues = await new Promise((resolve, reject) =>
-        papaparse.parse(file, {
+        parse(file, {
           ...parseConfig,
           error: reject,
           complete: () => resolve(makeColumnValues()),
@@ -212,7 +213,7 @@ export class CSVTableDataProvider implements TableDataProvider<
     } else if (defaultDataSource.url !== undefined) {
       const url = defaultDataSource.url;
       columnValues = await new Promise((resolve, reject) =>
-        papaparse.parse(url, {
+        parse(url, {
           ...parseConfig,
           download: true,
           error: reject,

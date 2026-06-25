@@ -92,6 +92,6 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       { signal, onProgress },
     );
     signal?.throwIfAborted();
-    return new GeoJSONShapesData(ids, names, geometry);
+    return new GeoJSONShapesData(geometry, ids, names);
   }
 }
