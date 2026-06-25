@@ -31,6 +31,10 @@ export type GeoJSONWorkerResponseFor<
   TWorkerRequest extends GeoJSONWorkerRequest,
 > = Extract<GeoJSONWorkerResponse, { op: TWorkerRequest["op"] }>;
 
+export type GeoJSONWorkerMessage =
+  | GeoJSONWorkerResponse
+  | { progress: number; total: number };
+
 type ShapesGeometryAccumulator = {
   shapePolygonOffsets: number[];
   polygonRingOffsets: number[];
@@ -41,7 +45,7 @@ type ShapesGeometryAccumulator = {
 const ctx = self as unknown as {
   onmessage: ((event: MessageEvent<GeoJSONWorkerRequest>) => void) | null;
   postMessage: (
-    message: GeoJSONWorkerResponse,
+    message: GeoJSONWorkerMessage,
     transfer?: Transferable[],
   ) => void;
 };
@@ -53,7 +57,9 @@ ctx.onmessage = (event) => {
       let result;
       switch (request.op) {
         case "file":
-          result = await handleFileRequest(request);
+          result = await handleFileRequest(request, (progress, total) =>
+            ctx.postMessage({ progress, total }),
+          );
           break;
         default:
           throw new Error("Unknown request");
@@ -67,13 +73,29 @@ ctx.onmessage = (event) => {
   })();
 };
 
-async function handleFileRequest(request: GeoJSONFileRequest): Promise<{
+async function handleFileRequest(
+  request: GeoJSONFileRequest,
+  onProgress: (progress: number, total: number) => void,
+): Promise<{
   response: GeoJSONFileResponse;
   transfer?: Transferable[];
 }> {
   let text: string;
   if (request.file !== undefined) {
-    text = await request.file.text();
+    const file = request.file;
+    text = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          onProgress(event.loaded, event.total);
+        }
+      };
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error!);
+      reader.onabort = () =>
+        reject(new DOMException("File read aborted", "AbortError"));
+      reader.readAsText(file);
+    });
   } else if (request.url !== undefined) {
     const r = await fetch(request.url);
     if (!r.ok) {
@@ -81,7 +103,27 @@ async function handleFileRequest(request: GeoJSONFileRequest): Promise<{
         `Failed to load GeoJSON from ${request.url}: ${r.status} ${r.statusText}`,
       );
     }
-    text = await r.text();
+    if (r.body === null) {
+      throw new Error(`Response for ${request.url} has no body.`);
+    }
+    const contentLength = r.headers.get("Content-Length");
+    const byteLength = contentLength !== null ? Number(contentLength) : null;
+    const reader = r.body.getReader();
+    const blobParts: BlobPart[] = [];
+    let bytesRead = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      blobParts.push(value);
+      bytesRead += value.length;
+      if (byteLength !== null) {
+        onProgress(bytesRead, byteLength);
+      }
+    }
+    const blob = await new Blob(blobParts).arrayBuffer();
+    text = new TextDecoder().decode(blob);
   } else {
     throw new Error("A URL or file is required to load data.");
   }
@@ -90,6 +132,7 @@ async function handleFileRequest(request: GeoJSONFileRequest): Promise<{
     geo,
     request.idProperty,
     request.nameProperty,
+    onProgress,
   );
   return { response: { op: "file", ids, names, geometry } };
 }
@@ -98,6 +141,7 @@ function parseGeoJSON(
   geo: geojson.GeoJSON<geojson.Geometry | null>,
   idProperty: string | undefined,
   nameProperty: string | undefined,
+  onProgress: (progress: number, total: number) => void,
 ): {
   ids: number[] | undefined;
   names: string[] | undefined;
@@ -129,7 +173,8 @@ function parseGeoJSON(
   let valid = false;
   switch (geo.type) {
     case "FeatureCollection":
-      for (const feature of geo.features) {
+      for (let i = 0; i < geo.features.length; i++) {
+        const feature = geo.features[i]!;
         if (feature.geometry === null) {
           console.warn("Skipping feature with null geometry.");
           continue;
@@ -155,6 +200,7 @@ function parseGeoJSON(
           names.push(String(name));
         }
         valid ||= shapeAppended;
+        onProgress(i + 1, geo.features.length);
       }
       break;
     case "Feature":
@@ -163,13 +209,16 @@ function parseGeoJSON(
       }
       break;
     case "GeometryCollection":
-      for (const geometry of geo.geometries) {
+      for (let i = 0; i < geo.geometries.length; i++) {
+        const geometry = geo.geometries[i]!;
         const shapeAppended = parseGeometry(geometry, accumulator);
         valid ||= shapeAppended;
+        onProgress(i + 1, geo.geometries.length);
       }
       break;
     default:
       valid = parseGeometry(geo, accumulator);
+      break;
   }
   if (!valid) {
     throw new Error("No valid geometries found in GeoJSON data.");

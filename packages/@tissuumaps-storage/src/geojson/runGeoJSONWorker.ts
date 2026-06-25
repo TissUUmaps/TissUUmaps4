@@ -1,15 +1,17 @@
+import type { ProgressCallback } from "@tissuumaps/core";
+
 import type {
+  GeoJSONWorkerMessage,
   GeoJSONWorkerRequest,
-  GeoJSONWorkerResponse,
   GeoJSONWorkerResponseFor,
 } from "./geojson.worker";
 import GeoJSONWorker from "./geojson.worker?worker&inline";
 
 export async function runGeoJSONWorker<TRequest extends GeoJSONWorkerRequest>(
   request: TRequest,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ): Promise<GeoJSONWorkerResponseFor<TRequest>> {
-  const { signal } = options ?? {};
+  const { signal, onProgress } = options ?? {};
   signal?.throwIfAborted();
   const worker = new GeoJSONWorker();
   return await new Promise((resolve, reject) => {
@@ -18,13 +20,19 @@ export async function runGeoJSONWorker<TRequest extends GeoJSONWorkerRequest>(
       reject(signal!.reason as Error);
     };
     signal?.addEventListener("abort", onAbort, { once: true });
-    worker.onmessage = (event: MessageEvent<GeoJSONWorkerResponse>) => {
-      worker.terminate();
-      signal?.removeEventListener("abort", onAbort);
-      if ("error" in event.data) {
-        reject(new Error(event.data.error));
+    worker.onmessage = (event: MessageEvent<GeoJSONWorkerMessage>) => {
+      if ("progress" in event.data) {
+        if (onProgress !== undefined) {
+          onProgress(event.data.progress, event.data.total);
+        }
       } else {
-        resolve(event.data as GeoJSONWorkerResponseFor<TRequest>);
+        worker.terminate();
+        signal?.removeEventListener("abort", onAbort);
+        if ("error" in event.data) {
+          reject(new Error(event.data.error));
+        } else {
+          resolve(event.data as GeoJSONWorkerResponseFor<TRequest>);
+        }
       }
     };
     worker.onerror = (event) => {

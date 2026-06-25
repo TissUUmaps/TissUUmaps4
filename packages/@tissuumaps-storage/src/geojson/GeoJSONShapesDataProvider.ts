@@ -68,7 +68,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       workspace?: FileSystemDirectoryHandle | null;
     },
   ): Promise<GeoJSONShapesData> {
-    const { signal, workspace = null } = options ?? {};
+    const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
     const defaultDataSource = createDefaultGeoJSONShapesDataSource(dataSource);
@@ -89,7 +89,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
     const { idProperty, nameProperty } = defaultDataSource;
     const { ids, names, geometry } = await runGeoJSONWorker(
       { op: "file", file, url, idProperty, nameProperty },
-      { signal },
+      { signal, onProgress },
     );
     signal?.throwIfAborted();
     return new GeoJSONShapesData(ids, names, geometry);
