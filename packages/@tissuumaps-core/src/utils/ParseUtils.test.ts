@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ParseUtils } from "./ParseUtils";
 
-describe("ParserUtils", () => {
+describe("ParseUtils", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
