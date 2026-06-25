@@ -1,15 +1,20 @@
+import type { ProgressCallback } from "@tissuumaps/core";
+
 import type {
+  ParquetWorkerMessage,
   ParquetWorkerRequest,
-  ParquetWorkerResponse,
   ParquetWorkerResponseFor,
 } from "./parquet.worker";
 import ParquetWorker from "./parquet.worker?worker&inline";
 
 export async function runParquetWorker<TRequest extends ParquetWorkerRequest>(
   request: TRequest,
-  options?: { signal?: AbortSignal },
+  options?: {
+    signal?: AbortSignal;
+    onProgress?: ProgressCallback;
+  },
 ): Promise<ParquetWorkerResponseFor<TRequest>> {
-  const { signal } = options ?? {};
+  const { signal, onProgress } = options ?? {};
   signal?.throwIfAborted();
   const worker = new ParquetWorker();
   return await new Promise((resolve, reject) => {
@@ -18,13 +23,19 @@ export async function runParquetWorker<TRequest extends ParquetWorkerRequest>(
       reject(signal!.reason as Error);
     };
     signal?.addEventListener("abort", onAbort, { once: true });
-    worker.onmessage = (event: MessageEvent<ParquetWorkerResponse>) => {
-      worker.terminate();
-      signal?.removeEventListener("abort", onAbort);
-      if ("error" in event.data) {
-        reject(new Error(event.data.error));
+    worker.onmessage = (event: MessageEvent<ParquetWorkerMessage>) => {
+      if ("progress" in event.data) {
+        if (onProgress !== undefined) {
+          onProgress(event.data.progress, event.data.total);
+        }
       } else {
-        resolve(event.data as ParquetWorkerResponseFor<TRequest>);
+        worker.terminate();
+        signal?.removeEventListener("abort", onAbort);
+        if ("error" in event.data) {
+          reject(new Error(event.data.error));
+        } else {
+          resolve(event.data as ParquetWorkerResponseFor<TRequest>);
+        }
       }
     };
     worker.onerror = (event) => {

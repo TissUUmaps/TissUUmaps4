@@ -1,8 +1,14 @@
-import * as hyparquet from "hyparquet";
+import {
+  type AsyncBuffer,
+  type FileMetaData,
+  asyncBufferFromUrl,
+  parquetMetadataAsync,
+  parquetRead,
+  parquetSchema,
+} from "hyparquet";
 import { compressors } from "hyparquet-compressors";
-import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import type { GenericArray } from "@tissuumaps/core";
+import type { GenericArray, TypedArray } from "@tissuumaps/core";
 
 import type { ParquetSource } from "./types";
 
@@ -56,6 +62,10 @@ export type ParquetWorkerResponse =
   | ParquetRangeResponse
   | { error: string };
 
+export type ParquetWorkerMessage =
+  | ParquetWorkerResponse
+  | { progress: number; total: number };
+
 export type ParquetWorkerResponseFor<
   TWorkerRequest extends ParquetWorkerRequest,
 > = Extract<ParquetWorkerResponse, { op: TWorkerRequest["op"] }>;
@@ -63,7 +73,7 @@ export type ParquetWorkerResponseFor<
 const ctx = self as unknown as {
   onmessage: ((event: MessageEvent<ParquetWorkerRequest>) => void) | null;
   postMessage: (
-    message: ParquetWorkerResponse,
+    message: ParquetWorkerMessage,
     transfer?: Transferable[],
   ) => void;
 };
@@ -74,13 +84,19 @@ ctx.onmessage = (event) => {
       let result;
       switch (event.data.op) {
         case "file":
-          result = await handleFileRequest(event.data);
+          result = await handleFileRequest(event.data, (progress, total) =>
+            ctx.postMessage({ progress, total }),
+          );
           break;
         case "column":
-          result = await handleColumnRequest(event.data);
+          result = await handleColumnRequest(event.data, (progress, total) =>
+            ctx.postMessage({ progress, total }),
+          );
           break;
         case "range":
-          result = await handleRangeRequest(event.data);
+          result = await handleRangeRequest(event.data, (progress, total) =>
+            ctx.postMessage({ progress, total }),
+          );
           break;
         default:
           throw new Error("Unknown request");
@@ -94,9 +110,7 @@ ctx.onmessage = (event) => {
   })();
 };
 
-async function openParquet(
-  source: ParquetSource,
-): Promise<hyparquet.AsyncBuffer> {
+async function openParquet(source: ParquetSource): Promise<AsyncBuffer> {
   if (source.file !== undefined) {
     return {
       byteLength: source.file.size,
@@ -105,7 +119,7 @@ async function openParquet(
     };
   }
   if (source.url !== undefined) {
-    return await hyparquet.asyncBufferFromUrl({
+    return await asyncBufferFromUrl({
       url: source.url,
       requestInit: { headers: source.headers },
     });
@@ -113,33 +127,107 @@ async function openParquet(
   throw new Error("A URL or file is required to load data.");
 }
 
-async function handleFileRequest(request: ParquetFileRequest): Promise<{
+function getNumRows(metadata: FileMetaData): number {
+  const numRows = Number(metadata.num_rows);
+  if (!Number.isSafeInteger(numRows)) {
+    throw new Error("Parquet file has too many rows");
+  }
+  return numRows;
+}
+
+function getColumnNames(metadata: FileMetaData): string[] {
+  return parquetSchema(metadata).children.map((column) => column.element.name);
+}
+
+async function readParquetColumn(
+  buffer: AsyncBuffer,
+  metadata: FileMetaData,
+  column: string,
+  onProgress: (progress: number, total: number) => void,
+): Promise<GenericArray<unknown>> {
+  let bytesRead = 0;
+  let result: GenericArray<unknown> | undefined;
+  await parquetRead({
+    file: {
+      byteLength: buffer.byteLength,
+      async slice(start, end) {
+        const chunk = await buffer.slice(start, end);
+        if (onProgress !== undefined) {
+          bytesRead += chunk.byteLength;
+          onProgress(bytesRead, buffer.byteLength);
+        }
+        return chunk;
+      },
+    },
+    metadata,
+    compressors,
+    columns: [column],
+    onChunk: ({ columnData, rowStart }) => {
+      if (ArrayBuffer.isView(columnData)) {
+        const chunk = columnData as TypedArray;
+        if (result === undefined) {
+          // @ts-expect-error typedArrayConstructor is a constructor
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          result = new chunk.constructor(getNumRows(metadata)) as TypedArray;
+        }
+        const out = result as TypedArray;
+        out.set(chunk, rowStart);
+      } else {
+        const chunk = columnData as unknown[];
+        if (result === undefined) {
+          result = new Array(getNumRows(metadata)) as unknown[];
+        }
+        const out = result as unknown[];
+        for (let i = 0; i < chunk.length; i++) {
+          out[rowStart + i] = chunk[i];
+        }
+      }
+    },
+  });
+  if (result === undefined) {
+    throw new Error(`Column "${column}" not found in Parquet file`);
+  }
+  return result;
+}
+
+async function handleFileRequest(
+  request: ParquetFileRequest,
+  onProgress: (progress: number, total: number) => void,
+): Promise<{
   response: ParquetFileResponse;
   transfer?: Transferable[];
 }> {
   const buffer = await openParquet(request.source);
-  const metadata = await hyparquet.parquetMetadataAsync(buffer);
-  const numRows = Number(metadata.num_rows);
-  const columnNames = hyparquet
-    .parquetSchema(metadata)
-    .children.map((column) => column.element.name);
+  const metadata = await parquetMetadataAsync(buffer);
+  let idTotal = 0,
+    nameTotal = 0,
+    idProgress = 0,
+    nameProgress = 0;
   const idDataPromise =
     request.idColumn !== undefined
-      ? parquetReadColumn({
-          file: buffer,
-          columns: [request.idColumn],
+      ? readParquetColumn(
+          buffer,
           metadata,
-          compressors,
-        })
+          request.idColumn,
+          (progress, total) => {
+            idTotal = total;
+            idProgress = progress;
+            onProgress(idProgress + nameProgress, idTotal + nameTotal);
+          },
+        )
       : undefined;
   const nameDataPromise =
     request.nameColumn !== undefined
-      ? parquetReadColumn({
-          file: buffer,
-          columns: [request.nameColumn],
+      ? readParquetColumn(
+          buffer,
           metadata,
-          compressors,
-        })
+          request.nameColumn,
+          (progress, total) => {
+            nameTotal = total;
+            nameProgress = progress;
+            onProgress(idProgress + nameProgress, idTotal + nameTotal);
+          },
+        )
       : undefined;
   const [idData, nameData] = await Promise.all([
     idDataPromise,
@@ -163,26 +251,29 @@ async function handleFileRequest(request: ParquetFileRequest): Promise<{
   return {
     response: {
       op: "file",
-      numRows,
-      columnNames,
+      numRows: getNumRows(metadata),
+      columnNames: getColumnNames(metadata),
       ids,
       names,
     },
   };
 }
 
-async function handleColumnRequest(request: ParquetColumnRequest): Promise<{
+async function handleColumnRequest(
+  request: ParquetColumnRequest,
+  onProgress: (progress: number, total: number) => void,
+): Promise<{
   response: ParquetColumnResponse;
   transfer?: Transferable[];
 }> {
   const buffer = await openParquet(request.source);
-  const metadata = await hyparquet.parquetMetadataAsync(buffer);
-  const data = await parquetReadColumn({
-    file: buffer,
-    columns: [request.column],
+  const metadata = await parquetMetadataAsync(buffer);
+  const data = await readParquetColumn(
+    buffer,
     metadata,
-    compressors,
-  });
+    request.column,
+    onProgress,
+  );
   if (data instanceof BigInt64Array || data instanceof BigUint64Array) {
     throw new Error("64-bit integer columns are not supported");
   }
@@ -195,12 +286,16 @@ async function handleColumnRequest(request: ParquetColumnRequest): Promise<{
   };
 }
 
-async function handleRangeRequest(request: ParquetRangeRequest): Promise<{
+async function handleRangeRequest(
+  request: ParquetRangeRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _onProgress: (progress: number, total: number) => void,
+): Promise<{
   response: ParquetRangeResponse;
   transfer?: Transferable[];
 }> {
   const buffer = await openParquet(request.source);
-  const metadata = await hyparquet.parquetMetadataAsync(buffer);
+  const metadata = await parquetMetadataAsync(buffer);
   let vmin = Infinity;
   let vmax = -Infinity;
   for (const rowGroup of metadata.row_groups) {

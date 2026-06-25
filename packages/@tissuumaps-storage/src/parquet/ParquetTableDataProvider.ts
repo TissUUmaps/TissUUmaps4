@@ -60,7 +60,7 @@ export class ParquetTableDataProvider implements TableDataProvider<
       workspace?: FileSystemDirectoryHandle | null;
     },
   ): Promise<ParquetTableData> {
-    const { signal, workspace = null } = options ?? {};
+    const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
     const defaultDataSource = createDefaultParquetTableDataSource(dataSource);
@@ -83,7 +83,7 @@ export class ParquetTableDataProvider implements TableDataProvider<
     const { idColumn, nameColumn } = defaultDataSource;
     const { numRows, columnNames, ids, names } = await runParquetWorker(
       { op: "file", source, idColumn, nameColumn },
-      { signal },
+      { signal, onProgress },
     );
     signal?.throwIfAborted();
     return new ParquetTableData(source, numRows, columnNames, ids, names);

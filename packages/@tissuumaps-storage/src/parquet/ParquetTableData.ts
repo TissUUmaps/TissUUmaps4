@@ -70,11 +70,11 @@ export class ParquetTableData implements TableData {
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<GenericArray<T>> {
-    const { signal } = options ?? {};
+    const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const { data } = await runParquetWorker(
       { op: "column", source: this._source, column },
-      { signal },
+      { signal, onProgress },
     );
     signal?.throwIfAborted();
     return data as GenericArray<T>;
@@ -96,11 +96,11 @@ export class ParquetTableData implements TableData {
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<[number, number] | undefined> {
-    const { signal } = options ?? {};
+    const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const { range } = await runParquetWorker(
       { op: "range", source: this._source, column },
-      { signal },
+      { signal, onProgress },
     );
     signal?.throwIfAborted();
     return range;
