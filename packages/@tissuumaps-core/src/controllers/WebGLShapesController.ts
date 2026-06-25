@@ -864,10 +864,10 @@ export class WebGLShapesController extends WebGLControllerBase {
       ringVertexOffsets,
       coords,
     } = geometry;
-    let xMin: number | undefined,
-      yMin: number | undefined,
-      xMax: number | undefined,
-      yMax: number | undefined;
+    let xMin = Infinity,
+      yMin = Infinity,
+      xMax = -Infinity,
+      yMax = -Infinity;
     const maybeYield = AsyncUtils.createYielder({ signal });
     for (let s = 0; s < shapePolygonOffsets.length - 1; s++) {
       if (shapeMask !== undefined && !shapeMask[s]) {
@@ -882,16 +882,16 @@ export class WebGLShapesController extends WebGLControllerBase {
         for (let v = shellVertexStart; v < shellVertexEnd; v++) {
           const x = coords[2 * v]!;
           const y = coords[2 * v + 1]!;
-          if (xMin === undefined || x < xMin) {
+          if (x < xMin) {
             xMin = x;
           }
-          if (yMin === undefined || y < yMin) {
+          if (y < yMin) {
             yMin = y;
           }
-          if (xMax === undefined || x > xMax) {
+          if (x > xMax) {
             xMax = x;
           }
-          if (yMax === undefined || y > yMax) {
+          if (y > yMax) {
             yMax = y;
           }
         }
@@ -899,10 +899,10 @@ export class WebGLShapesController extends WebGLControllerBase {
       await maybeYield();
     }
     if (
-      xMin === undefined ||
-      yMin === undefined ||
-      xMax === undefined ||
-      yMax === undefined
+      !Number.isFinite(xMin) ||
+      !Number.isFinite(yMin) ||
+      !Number.isFinite(xMax) ||
+      !Number.isFinite(yMax)
     ) {
       throw new Error("Shapes geometry must not be empty");
     }
