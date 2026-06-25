@@ -1,6 +1,6 @@
 import type * as geojson from "geojson";
 
-import { ParseUtils, type ShapesGeometry } from "@tissuumaps/core";
+import type { ShapesGeometry } from "@tissuumaps/core";
 
 export type GeoJSONRequest<TOp extends string = string> = {
   op: TOp;
@@ -137,10 +137,14 @@ function parseGeoJSON(
         const shapeAppended = parseGeometry(feature.geometry, accumulator);
         if (shapeAppended && idProperty !== undefined) {
           const id = feature.properties?.[idProperty] as unknown;
-          if (id === undefined) {
+          if (id === undefined || id === "") {
             throw new Error(`Feature is missing ID '${idProperty}'`);
           }
-          ids.push(ParseUtils.parseSafeInt(id));
+          const numericId = Number(id);
+          if (!Number.isSafeInteger(numericId)) {
+            throw new Error(`Feature has invalid ID '${idProperty}'`);
+          }
+          ids.push(numericId);
         }
         if (shapeAppended && nameProperty !== undefined) {
           const name = feature.properties?.[nameProperty] as unknown;

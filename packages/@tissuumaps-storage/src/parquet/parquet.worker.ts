@@ -2,7 +2,7 @@ import * as hyparquet from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 
-import { type GenericArray, ParseUtils } from "@tissuumaps/core";
+import type { GenericArray } from "@tissuumaps/core";
 
 import type { ParquetSource } from "./types";
 
@@ -147,7 +147,16 @@ async function handleFileRequest(request: ParquetFileRequest): Promise<{
   ]);
   const ids =
     idData !== undefined
-      ? Array.from(idData, (id) => ParseUtils.parseSafeInt(id))
+      ? Array.from(idData, (id) => {
+          if (id === undefined || id === "") {
+            throw new Error(`Missing ID in column '${request.idColumn}'`);
+          }
+          const numericId = Number(id);
+          if (!Number.isSafeInteger(numericId)) {
+            throw new Error(`Invalid ID in column '${request.idColumn}'`);
+          }
+          return numericId;
+        })
       : undefined;
   const names =
     nameData !== undefined ? Array.from(nameData, String) : undefined;
@@ -205,16 +214,14 @@ async function handleRangeRequest(request: ParquetRangeRequest): Promise<{
       return { response: { op: "range", range: undefined } };
     }
     const { min_value, max_value } = columnChunk.meta_data.statistics;
-    const chunkMin = ParseUtils.tryParseFinite(min_value);
-    const chunkMax = ParseUtils.tryParseFinite(max_value);
-    if (chunkMin === undefined || chunkMax === undefined) {
+    if (typeof min_value !== "number" || typeof max_value !== "number") {
       return { response: { op: "range", range: undefined } };
     }
-    if (chunkMin < vmin) {
-      vmin = chunkMin;
+    if (min_value < vmin) {
+      vmin = min_value;
     }
-    if (chunkMax > vmax) {
-      vmax = chunkMax;
+    if (max_value > vmax) {
+      vmax = max_value;
     }
   }
   return {
