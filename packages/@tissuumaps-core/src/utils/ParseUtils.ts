@@ -23,7 +23,10 @@ export class ParseUtils {
     if (typeof value === "number") {
       v = value;
     } else if (typeof value === "bigint") {
-      if (value < Number.MIN_SAFE_INTEGER || value > Number.MAX_SAFE_INTEGER) {
+      if (
+        value < BigInt(Number.MIN_SAFE_INTEGER) ||
+        value > BigInt(Number.MAX_SAFE_INTEGER)
+      ) {
         if (options?.requireSafeBigInt) {
           return undefined;
         }
