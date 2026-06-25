@@ -1,9 +1,10 @@
 import type * as geojson from "geojson";
 
-import type {
-  ProgressCallback,
-  ShapesDataProvider,
-  ShapesGeometry,
+import {
+  ParseUtils,
+  type ProgressCallback,
+  type ShapesDataProvider,
+  type ShapesGeometry,
 } from "@tissuumaps/core";
 
 import { GeoJSONShapesData } from "./GeoJSONShapesData";
@@ -166,14 +167,10 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
           );
           if (shapeAppended && idProperty !== undefined) {
             const id = feature.properties?.[idProperty] as unknown;
-            if (
-              id === undefined ||
-              typeof id !== "number" ||
-              !Number.isInteger(id)
-            ) {
-              throw new Error(`Feature is missing integer ID '${idProperty}'.`);
+            if (id === undefined) {
+              throw new Error(`Feature is missing ID '${idProperty}'`);
             }
-            ids.push(id);
+            ids.push(ParseUtils.parseSafeInt(id));
           }
           if (shapeAppended && nameProperty !== undefined) {
             const name = feature.properties?.[nameProperty] as unknown;
