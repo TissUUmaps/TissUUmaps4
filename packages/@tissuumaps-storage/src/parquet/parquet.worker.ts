@@ -154,10 +154,8 @@ async function readParquetColumn(
       byteLength: buffer.byteLength,
       async slice(start, end) {
         const chunk = await buffer.slice(start, end);
-        if (onProgress !== undefined) {
-          bytesRead += chunk.byteLength;
-          onProgress(bytesRead, buffer.byteLength);
-        }
+        bytesRead += chunk.byteLength;
+        onProgress(bytesRead, buffer.byteLength);
         return chunk;
       },
     },
@@ -270,6 +268,21 @@ async function handleColumnRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
+  const columnMetadata = parquetSchema(metadata).children.find(
+    (columnElement) => columnElement.element.name === request.column,
+  );
+  if (
+    columnMetadata !== undefined &&
+    columnMetadata.element.type === "INT64" &&
+    (columnMetadata.element.logical_type !== undefined
+      ? columnMetadata.element.logical_type.type === "INTEGER" &&
+        columnMetadata.element.logical_type.bitWidth === 64
+      : columnMetadata.element.converted_type === undefined ||
+        columnMetadata.element.converted_type === "INT_64" ||
+        columnMetadata.element.converted_type === "UINT_64")
+  ) {
+    throw new Error("64-bit integer columns are not supported");
+  }
   const data = await readParquetColumn(
     buffer,
     metadata,
