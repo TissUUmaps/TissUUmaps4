@@ -137,7 +137,7 @@ function getNumRows(metadata: FileMetaData): number {
 
 function getColumns(metadata: FileMetaData): string[] {
   return parquetSchema(metadata).children.map(
-    (columnElement) => columnElement.element.name,
+    (columnMetadata) => columnMetadata.element.name,
   );
 }
 
@@ -269,7 +269,7 @@ async function handleColumnRequest(
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
   const columnMetadata = parquetSchema(metadata).children.find(
-    (columnElement) => columnElement.element.name === request.column,
+    (columnMetadata) => columnMetadata.element.name === request.column,
   );
   if (
     columnMetadata !== undefined &&
