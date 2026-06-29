@@ -1,4 +1,10 @@
-import * as papaparse from "papaparse";
+import {
+  type ParseLocalConfig,
+  type ParseRemoteConfig,
+  type ParseResult,
+  type Parser,
+  parse,
+} from "papaparse";
 
 import {
   ParseUtils,
@@ -72,10 +78,10 @@ export class CSVTableDataProvider implements TableDataProvider<
       workspace?: FileSystemDirectoryHandle | null;
     },
   ): Promise<CSVTableData> {
-    const { signal, workspace = null } = options ?? {};
+    const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
-    let columns:
+    let columnMetas:
       | {
           name: string;
           index: number;
@@ -83,59 +89,57 @@ export class CSVTableDataProvider implements TableDataProvider<
           chunks: (string[] | TypedArray)[];
         }[]
       | undefined;
+    let byteLength: number | undefined;
+
     const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
-    const parseConfig: Partial<
-      papaparse.ParseLocalConfig & papaparse.ParseRemoteConfig
-    > = {
+
+    const parseConfig: Partial<ParseLocalConfig & ParseRemoteConfig> = {
       ...defaultDataSource.parseConfig,
       worker: true,
       header: false,
       skipEmptyLines: true,
-      chunk: (
-        results: papaparse.ParseResult<string[]>,
-        parser: papaparse.Parser,
-      ) => {
+      chunk: (results: ParseResult<string[]>, parser: Parser) => {
         let columnChunks: (string[] | TypedArray)[] | undefined;
         let numChunkRows = results.data.length;
         let currentChunkRow = 0;
         for (const rowData of results.data) {
-          if (columns === undefined) {
-            let columnNames = defaultDataSource.columns;
-            if (columnNames === undefined) {
-              columnNames = rowData;
+          if (columnMetas === undefined) {
+            let columns = defaultDataSource.columns;
+            if (columns === undefined) {
+              columns = rowData;
               numChunkRows -= 1;
             }
-            columns = (defaultDataSource.loadColumns ?? columnNames).map(
-              (columnName) => ({
-                name: columnName,
-                index: columnNames.indexOf(columnName),
+            columnMetas = (defaultDataSource.loadColumns ?? columns).map(
+              (column) => ({
+                name: column,
+                index: columns.indexOf(column),
                 isNaN: false,
                 chunks: [],
               }),
             );
-            if (columnNames === rowData) {
+            if (columns === rowData) {
               continue;
             }
           }
           if (columnChunks === undefined) {
-            columnChunks = columns.map((column) =>
+            columnChunks = columnMetas.map((column) =>
               column.isNaN
                 ? new Array<string>(numChunkRows)
                 : new Float32Array(numChunkRows),
             );
           }
-          for (let c = 0; c < columns.length; c++) {
-            const column = columns[c]!;
+          for (let c = 0; c < columnMetas.length; c++) {
+            const columnMeta = columnMetas[c]!;
             const columnChunk = columnChunks[c]!;
-            if (column.index < 0) {
+            if (columnMeta.index < 0) {
               parser.abort();
-              throw new Error(`Column "${column.name}" not found`);
+              throw new Error(`Column "${columnMeta.name}" not found`);
             }
-            if (column.index >= rowData.length) {
+            if (columnMeta.index >= rowData.length) {
               parser.abort();
-              throw new Error(`Missing value for column "${column.name}"`);
+              throw new Error(`Missing value for column "${columnMeta.name}"`);
             }
-            const value = rowData[column.index]!;
+            const value = rowData[columnMeta.index]!;
             if (Array.isArray(columnChunk)) {
               columnChunk[currentChunkRow] = value;
             } else {
@@ -143,9 +147,12 @@ export class CSVTableDataProvider implements TableDataProvider<
               if (numericValue !== undefined) {
                 columnChunk[currentChunkRow] = numericValue;
               } else {
-                column.isNaN = true;
-                for (let i = 0; i < column.chunks.length; i++) {
-                  column.chunks[i] = Array.from(column.chunks[i]!, String);
+                columnMeta.isNaN = true;
+                for (let i = 0; i < columnMeta.chunks.length; i++) {
+                  columnMeta.chunks[i] = Array.from(
+                    columnMeta.chunks[i]!,
+                    String,
+                  );
                 }
                 const newColumnChunk = new Array<string>(numChunkRows);
                 for (let i = 0; i < currentChunkRow; i++) {
@@ -158,12 +165,18 @@ export class CSVTableDataProvider implements TableDataProvider<
           }
           currentChunkRow++;
         }
-        if (columns !== undefined && columnChunks !== undefined) {
-          for (let c = 0; c < columns.length; c++) {
-            const column = columns[c]!;
+        if (columnMetas !== undefined && columnChunks !== undefined) {
+          for (let c = 0; c < columnMetas.length; c++) {
+            const columnMeta = columnMetas[c]!;
             const columnChunk = columnChunks[c]!;
-            column.chunks.push(columnChunk);
+            columnMeta.chunks.push(columnChunk);
           }
+        }
+        if (onProgress !== undefined && byteLength !== undefined) {
+          onProgress(
+            results.meta.cursor,
+            Math.max(byteLength, results.meta.cursor),
+          );
         }
         if (signal?.aborted) {
           parser.abort();
@@ -173,14 +186,14 @@ export class CSVTableDataProvider implements TableDataProvider<
 
     const makeColumnValues = () => {
       const columnValues = new Map<string, string[] | TypedArray>();
-      if (columns !== undefined) {
-        for (const column of columns) {
+      if (columnMetas !== undefined) {
+        for (const columnMeta of columnMetas) {
           let values;
-          if (column.isNaN) {
-            const chunks = column.chunks as string[][];
+          if (columnMeta.isNaN) {
+            const chunks = columnMeta.chunks as string[][];
             values = chunks.flat();
           } else {
-            const chunks = column.chunks as TypedArray[];
+            const chunks = columnMeta.chunks as TypedArray[];
             const n = chunks.reduce((n, chunk) => n + chunk.length, 0);
             values = new Float32Array(n);
             let offset = 0;
@@ -189,8 +202,8 @@ export class CSVTableDataProvider implements TableDataProvider<
               offset += chunk.length;
             }
           }
-          columnValues.set(column.name, values);
-          column.chunks = [];
+          columnValues.set(columnMeta.name, values);
+          columnMeta.chunks = [];
         }
       }
       return columnValues;
@@ -201,8 +214,10 @@ export class CSVTableDataProvider implements TableDataProvider<
       const fh = await workspace.getFileHandle(defaultDataSource.path);
       signal?.throwIfAborted();
       const file = await fh.getFile();
+      signal?.throwIfAborted();
+      byteLength = file.size;
       columnValues = await new Promise((resolve, reject) =>
-        papaparse.parse(file, {
+        parse(file, {
           ...parseConfig,
           error: reject,
           complete: () => resolve(makeColumnValues()),
@@ -211,8 +226,20 @@ export class CSVTableDataProvider implements TableDataProvider<
       signal?.throwIfAborted();
     } else if (defaultDataSource.url !== undefined) {
       const url = defaultDataSource.url;
+      if (onProgress !== undefined) {
+        try {
+          const headResponse = await fetch(url, { method: "HEAD", signal });
+          const contentLength = headResponse.headers.get("Content-Length");
+          if (contentLength !== null) {
+            byteLength = Number(contentLength);
+          }
+        } catch {
+          // ignored intentionally
+        }
+        signal?.throwIfAborted();
+      }
       columnValues = await new Promise((resolve, reject) =>
-        papaparse.parse(url, {
+        parse(url, {
           ...parseConfig,
           download: true,
           error: reject,
@@ -226,11 +253,11 @@ export class CSVTableDataProvider implements TableDataProvider<
       throw new Error("A URL or workspace path is required to load data.");
     }
 
-    if (columns === undefined || columns.length === 0) {
+    if (columnMetas === undefined || columnMetas.length === 0) {
       throw new Error("No columns found in the CSV file.");
     }
 
-    const n = columnValues.get(columns[0]!.name)?.length ?? 0;
+    const n = columnValues.get(columnMetas[0]!.name)?.length ?? 0;
 
     let ids: number[] | undefined;
     if (defaultDataSource.idColumn !== undefined) {
@@ -260,7 +287,7 @@ export class CSVTableDataProvider implements TableDataProvider<
       n,
       ids,
       names,
-      columns.map((c) => c.name),
+      columnMetas.map((columnMeta) => columnMeta.name),
       columnValues,
     );
   }

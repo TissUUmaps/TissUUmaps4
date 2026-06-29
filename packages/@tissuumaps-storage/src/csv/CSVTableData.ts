@@ -9,7 +9,7 @@ import {
 export class CSVTableData implements TableData {
   private readonly _n: number;
   private _ids: number[] | undefined;
-  private _names: string[] | undefined;
+  private readonly _names: string[] | undefined;
   private readonly _columns: string[];
   private readonly _columnValues: Map<string, string[] | TypedArray>;
 

@@ -1,18 +1,11 @@
-import * as hyparquet from "hyparquet";
-import { compressors } from "hyparquet-compressors";
-import { parquetReadColumn } from "hyparquet/src/read.js";
-
-import {
-  ParseUtils,
-  type ProgressCallback,
-  type TableDataProvider,
-} from "@tissuumaps/core";
+import type { ProgressCallback, TableDataProvider } from "@tissuumaps/core";
 
 import { ParquetTableData } from "./ParquetTableData";
 import {
   type ParquetTableDataSource,
   createDefaultParquetTableDataSource,
 } from "./ParquetTableDataSource";
+import { runParquetWorker } from "./runParquetWorker";
 
 export class ParquetTableDataProvider implements TableDataProvider<
   ParquetTableDataSource,
@@ -67,58 +60,32 @@ export class ParquetTableDataProvider implements TableDataProvider<
       workspace?: FileSystemDirectoryHandle | null;
     },
   ): Promise<ParquetTableData> {
-    const { signal, workspace = null } = options ?? {};
+    const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
     const defaultDataSource = createDefaultParquetTableDataSource(dataSource);
 
-    let buffer;
+    let file, url, headers;
     if (defaultDataSource.path !== undefined && workspace !== null) {
       const fh = await workspace.getFileHandle(defaultDataSource.path);
       signal?.throwIfAborted();
-      const file = await fh.getFile();
-      signal?.throwIfAborted();
-      buffer = await file.arrayBuffer();
+      file = await fh.getFile();
       signal?.throwIfAborted();
     } else if (defaultDataSource.url !== undefined) {
-      buffer = await hyparquet.asyncBufferFromUrl({
-        url: defaultDataSource.url,
-        requestInit: { headers: defaultDataSource.requestHeaders },
-      });
-      signal?.throwIfAborted();
+      url = defaultDataSource.url;
+      headers = defaultDataSource.requestHeaders;
     } else if (defaultDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     } else {
       throw new Error("A URL or workspace path is required to load data.");
     }
-
-    const metadata = await hyparquet.parquetMetadataAsync(buffer);
+    const source = { file, url, headers };
+    const { idColumn, nameColumn } = defaultDataSource;
+    const { numRows, columns, ids, names } = await runParquetWorker(
+      { op: "file", source, idColumn, nameColumn },
+      { signal, onProgress },
+    );
     signal?.throwIfAborted();
-
-    let ids;
-    if (defaultDataSource.idColumn !== undefined) {
-      const rawIdColumnData = await parquetReadColumn({
-        file: buffer,
-        columns: [defaultDataSource.idColumn],
-        metadata: metadata,
-        compressors: compressors,
-      });
-      signal?.throwIfAborted();
-      ids = Array.from(rawIdColumnData, (id) => ParseUtils.parseSafeInt(id));
-    }
-
-    let names;
-    if (defaultDataSource.nameColumn !== undefined) {
-      const rawNameColumnData = await parquetReadColumn({
-        file: buffer,
-        columns: [defaultDataSource.nameColumn],
-        metadata: metadata,
-        compressors: compressors,
-      });
-      signal?.throwIfAborted();
-      names = Array.from(rawNameColumnData, String);
-    }
-
-    return new ParquetTableData(ids, names, buffer, metadata);
+    return new ParquetTableData(source, numRows, columns, ids, names);
   }
 }

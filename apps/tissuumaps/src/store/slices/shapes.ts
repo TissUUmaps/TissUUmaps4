@@ -183,7 +183,10 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
           onProgress,
           workspace: state.workspace,
         });
-        signal?.throwIfAborted();
+        if (signal?.aborted) {
+          data.close();
+          signal.throwIfAborted();
+        }
         const currentState = get();
         const currentShapes = currentState.shapes.find(
           (shapes) => shapes.id === shapesId,

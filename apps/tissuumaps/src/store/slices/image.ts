@@ -173,7 +173,10 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
           onProgress,
           workspace: state.workspace,
         });
-        signal?.throwIfAborted();
+        if (signal?.aborted) {
+          data.close();
+          signal.throwIfAborted();
+        }
         const currentState = get();
         const currentImage = currentState.images.find(
           (image) => image.id === imageId,

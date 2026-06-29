@@ -1,3 +1,10 @@
+// workaround for @microsoft/api-extractor not yet supporting ES2025
+export type Float16Array = typeof globalThis extends {
+  Float16Array: { prototype: infer TFloat16ArrayPrototype };
+}
+  ? TFloat16ArrayPrototype
+  : never;
+
 /** Union of signed integer typed arrays */
 export type IntArray = Int8Array | Int16Array | Int32Array;
 
@@ -5,17 +12,17 @@ export type IntArray = Int8Array | Int16Array | Int32Array;
 export type UintArray = Uint8Array | Uint16Array | Uint32Array;
 
 /** Union of floating-point typed arrays */
-export type FloatArray = Float32Array | Float64Array; // Float16Array will be part of ECMAScript 2025
+export type FloatArray = Float16Array | Float32Array | Float64Array;
 
 /** Union of all numeric typed arrays */
 export type TypedArray = IntArray | UintArray | FloatArray;
 
 /** A union of all array types that can hold numeric values */
-export type NumericArray<T extends number = number> = T[] | TypedArray;
+export type NumericArray = number[] | TypedArray;
 
 /** A union of all array types */
 export type GenericArray<T> = T extends number
-  ? NumericArray<T>
+  ? NumericArray
   : unknown extends T
     ? NumericArray | T[]
     : T[];
@@ -30,11 +37,12 @@ export type InteractionMode =
   | "drawFreehand";
 
 /**
- * A callback function that receives progress updates as a percentage (0-100)
+ * A callback function that receives progress updates
  *
- * @param progress - The current progress as a percentage (0-100)
+ * @param progress - The current progress value in the range [0, total]
+ * @param total - The total amount of work to be done
  */
-export type ProgressCallback = (progress: number) => void;
+export type ProgressCallback = (progress: number, total: number) => void;
 
 /** An axis-aligned rectangle defined by its top-left corner and dimensions */
 export type Rect = {

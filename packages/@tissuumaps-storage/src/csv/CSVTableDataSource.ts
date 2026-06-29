@@ -1,4 +1,8 @@
-import type * as papaparse from "papaparse";
+import type {
+  ParseConfig,
+  ParseLocalConfig,
+  ParseRemoteConfig,
+} from "papaparse";
 
 import type { TableDataSource } from "@tissuumaps/core";
 
@@ -18,7 +22,7 @@ export interface CSVTableDataSource extends TableDataSource<
   nameColumn?: string;
   loadColumns?: string[];
   parseConfig?: Pick<
-    papaparse.ParseConfig,
+    ParseConfig,
     | "delimiter"
     | "newline"
     | "quoteChar"
@@ -28,9 +32,9 @@ export interface CSVTableDataSource extends TableDataSource<
     | "fastMode"
     | "skipFirstNLines"
   > &
-    Pick<papaparse.ParseLocalConfig, "encoding"> &
+    Pick<ParseLocalConfig, "encoding"> &
     Pick<
-      papaparse.ParseRemoteConfig,
+      ParseRemoteConfig,
       "downloadRequestHeaders" | "downloadRequestBody" | "withCredentials"
     >;
 }

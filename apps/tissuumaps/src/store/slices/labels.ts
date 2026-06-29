@@ -173,7 +173,10 @@ export const createLabelsSlice: TissUUmapsStateCreator<LabelsSlice> = (
           onProgress,
           workspace: state.workspace,
         });
-        signal?.throwIfAborted();
+        if (signal?.aborted) {
+          data.close();
+          signal.throwIfAborted();
+        }
         const currentState = get();
         const currentLabels = currentState.labels.find(
           (labels) => labels.id === labelsId,
