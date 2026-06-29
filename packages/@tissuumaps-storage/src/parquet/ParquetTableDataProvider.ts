@@ -81,11 +81,11 @@ export class ParquetTableDataProvider implements TableDataProvider<
     }
     const source = { file, url, headers };
     const { idColumn, nameColumn } = defaultDataSource;
-    const { numRows, columnNames, ids, names } = await runParquetWorker(
+    const { numRows, columns, ids, names } = await runParquetWorker(
       { op: "file", source, idColumn, nameColumn },
       { signal, onProgress },
     );
     signal?.throwIfAborted();
-    return new ParquetTableData(source, numRows, columnNames, ids, names);
+    return new ParquetTableData(source, numRows, columns, ids, names);
   }
 }

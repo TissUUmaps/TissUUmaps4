@@ -28,7 +28,7 @@ export type ParquetFileRequest = ParquetRequest<"file"> & {
 
 export type ParquetFileResponse = ParquetResponse<ParquetFileRequest> & {
   numRows: number;
-  columnNames: string[];
+  columns: string[];
   ids: number[] | undefined;
   names: string[] | undefined;
 };
@@ -135,8 +135,10 @@ function getNumRows(metadata: FileMetaData): number {
   return numRows;
 }
 
-function getColumnNames(metadata: FileMetaData): string[] {
-  return parquetSchema(metadata).children.map((column) => column.element.name);
+function getColumns(metadata: FileMetaData): string[] {
+  return parquetSchema(metadata).children.map(
+    (columnElement) => columnElement.element.name,
+  );
 }
 
 async function readParquetColumn(
@@ -252,7 +254,7 @@ async function handleFileRequest(
     response: {
       op: "file",
       numRows: getNumRows(metadata),
-      columnNames: getColumnNames(metadata),
+      columns: getColumns(metadata),
       ids,
       names,
     },

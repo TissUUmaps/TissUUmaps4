@@ -10,20 +10,20 @@ import type { ParquetSource } from "./types";
 export class ParquetTableData implements TableData {
   private readonly _source: ParquetSource;
   private readonly _numRows: number;
-  private readonly _columnNames: string[];
+  private readonly _columns: string[];
   private _ids: number[] | undefined;
   private readonly _names: string[] | undefined;
 
   constructor(
     source: ParquetSource,
     numRows: number,
-    columnNames: string[],
+    columns: string[],
     ids: number[] | undefined,
     names: string[] | undefined,
   ) {
     this._source = source;
     this._numRows = numRows;
-    this._columnNames = columnNames;
+    this._columns = columns;
     this._ids = ids;
     this._names = names;
   }
@@ -50,7 +50,7 @@ export class ParquetTableData implements TableData {
   ): Promise<string[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const filteredColumns = this._columnNames.filter((column) =>
+    const filteredColumns = this._columns.filter((column) =>
       column.includes(currentQuery),
     );
     return await Promise.resolve(filteredColumns);
@@ -62,7 +62,7 @@ export class ParquetTableData implements TableData {
   ): Promise<string | null> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const column = this._columnNames.includes(query) ? query : null;
+    const column = this._columns.includes(query) ? query : null;
     return await Promise.resolve(column);
   }
 
