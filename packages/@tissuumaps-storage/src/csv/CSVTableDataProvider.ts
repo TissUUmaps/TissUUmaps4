@@ -78,7 +78,7 @@ export class CSVTableDataProvider implements TableDataProvider<
       workspace?: FileSystemDirectoryHandle | null;
     },
   ): Promise<CSVTableData> {
-    const { signal, workspace = null } = options ?? {};
+    const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
     let columns:
@@ -89,7 +89,10 @@ export class CSVTableDataProvider implements TableDataProvider<
           chunks: (string[] | TypedArray)[];
         }[]
       | undefined;
+    let byteLength: number | undefined;
+
     const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
+
     const parseConfig: Partial<ParseLocalConfig & ParseRemoteConfig> = {
       ...defaultDataSource.parseConfig,
       worker: true,
@@ -166,6 +169,12 @@ export class CSVTableDataProvider implements TableDataProvider<
             column.chunks.push(columnChunk);
           }
         }
+        if (onProgress !== undefined && byteLength !== undefined) {
+          onProgress(
+            results.meta.cursor,
+            Math.max(byteLength, results.meta.cursor),
+          );
+        }
         if (signal?.aborted) {
           parser.abort();
         }
@@ -202,6 +211,8 @@ export class CSVTableDataProvider implements TableDataProvider<
       const fh = await workspace.getFileHandle(defaultDataSource.path);
       signal?.throwIfAborted();
       const file = await fh.getFile();
+      signal?.throwIfAborted();
+      byteLength = file.size;
       columnValues = await new Promise((resolve, reject) =>
         parse(file, {
           ...parseConfig,
@@ -212,6 +223,18 @@ export class CSVTableDataProvider implements TableDataProvider<
       signal?.throwIfAborted();
     } else if (defaultDataSource.url !== undefined) {
       const url = defaultDataSource.url;
+      if (onProgress !== undefined) {
+        try {
+          const headResponse = await fetch(url, { method: "HEAD", signal });
+          const contentLength = headResponse.headers.get("Content-Length");
+          if (contentLength !== null) {
+            byteLength = Number(contentLength);
+          }
+        } catch {
+          // ignored intentionally
+        }
+        signal?.throwIfAborted();
+      }
       columnValues = await new Promise((resolve, reject) =>
         parse(url, {
           ...parseConfig,
