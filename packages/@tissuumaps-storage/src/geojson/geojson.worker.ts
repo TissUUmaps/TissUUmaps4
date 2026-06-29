@@ -119,7 +119,7 @@ async function handleFileRequest(
       blobParts.push(value);
       bytesRead += value.length;
       if (byteLength !== null) {
-        onProgress(bytesRead, byteLength);
+        onProgress(bytesRead, Math.max(byteLength, bytesRead));
       }
     }
     const blob = await new Blob(blobParts).arrayBuffer();
