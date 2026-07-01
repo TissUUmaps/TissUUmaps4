@@ -8,9 +8,9 @@ import {
   isFromConfig,
   isGroupByConfig,
 } from "../../model/configs";
-import { type DefaultMap, type Marker } from "../../model/types";
+import type { DefaultMap, Marker } from "../../model/types";
 import { markerPalette } from "../../palettes";
-import { type TableData } from "../../storage/table";
+import type { TableData } from "../../storage/table";
 import { HashUtils } from "../HashUtils";
 import { MathUtils } from "../MathUtils";
 import { DataUtilsBase } from "./DataUtilsBase";
@@ -246,7 +246,7 @@ export class MarkerDataUtils extends DataUtilsBase {
    * @returns The marker index as a number
    */
   static encodeMarker(marker: Marker): number {
-    return marker as number;
+    return marker;
   }
 
   private static _createMarkerDataBuffer(

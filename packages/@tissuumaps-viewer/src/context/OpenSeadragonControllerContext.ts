@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-import { type OpenSeadragonController } from "@tissuumaps/core";
+import type { OpenSeadragonController } from "@tissuumaps/core";
 
 export const OpenSeadragonControllerContext =
   createContext<OpenSeadragonController | null>(null);

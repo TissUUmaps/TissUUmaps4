@@ -1,4 +1,4 @@
-import { type Color, type CoordinateSpace, type Marker } from "./types";
+import type { Color, CoordinateSpace, Marker } from "./types";
 
 /**
  * Base type for property configurations that can be sourced from different providers

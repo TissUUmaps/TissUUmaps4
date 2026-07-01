@@ -5,7 +5,7 @@ import { markers } from "@/components/markers";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useTissUUmaps } from "@/store";
 
-import { type MarkerConfigWidgetAdapter } from "./adapter";
+import type { MarkerConfigWidgetAdapter } from "./adapter";
 
 export { ActiveMarkerConfigValue } from "./ActiveMarkerConfigValue";
 export { MarkerConfigSourceToggleGroup } from "./MarkerConfigSourceToggleGroup";

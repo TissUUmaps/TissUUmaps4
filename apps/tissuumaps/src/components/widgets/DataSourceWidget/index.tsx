@@ -3,11 +3,7 @@ import { JsonForms } from "@jsonforms/react";
 import { EditIcon, RotateCcwIcon, SaveIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import {
-  type Data,
-  type DataProvider,
-  type DataSource,
-} from "@tissuumaps/core";
+import type { Data, DataProvider, DataSource } from "@tissuumaps/core";
 
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
@@ -76,7 +72,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
                   setDataSourceDraft({
                     ...dataSourceDraft,
                     type: value,
-                  } as TDataSource);
+                  });
                 }
               }}
             />

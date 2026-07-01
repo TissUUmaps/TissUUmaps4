@@ -1,9 +1,9 @@
-import { type OMEZarrTileSource } from "omezarr-tilesource";
+import type { OMEZarrTileSource } from "omezarr-tilesource";
 
-import {
-  type CustomTileSource,
-  type ImageData,
-  type TileSourceConfig,
+import type {
+  CustomTileSource,
+  ImageData,
+  TileSourceConfig,
 } from "@tissuumaps/core";
 
 export class OMEZarrImageData implements ImageData {

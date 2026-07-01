@@ -1,11 +1,11 @@
 import { useCallback } from "react";
 
-import {
-  type ProgressCallback,
-  type ShapesData,
-  type ShapesGeometry,
+import type {
+  ProgressCallback,
+  ShapesData,
+  ShapesGeometry,
 } from "@tissuumaps/core";
-import { type ViewerAdapter } from "@tissuumaps/viewer";
+import type { ViewerAdapter } from "@tissuumaps/viewer";
 
 import { useTissUUmaps } from "..";
 

@@ -17,18 +17,18 @@ import {
   defaultPointSizeUnit,
   defaultPointVisibility,
 } from "../model/constants";
-import { type Layer } from "../model/layer";
-import { type Points } from "../model/points";
-import {
-  type Color,
-  type CoordinateSpace,
-  type DefaultMap,
-  type Marker,
-  type RenderOptions,
+import type { Layer } from "../model/layer";
+import type { Points } from "../model/points";
+import type {
+  Color,
+  CoordinateSpace,
+  DefaultMap,
+  Marker,
+  RenderOptions,
 } from "../model/types";
-import { type PointsData } from "../storage/points";
-import { type TableData } from "../storage/table";
-import { type Rect } from "../types";
+import type { PointsData } from "../storage/points";
+import type { TableData } from "../storage/table";
+import type { Rect } from "../types";
 import { AsyncUtils } from "../utils/AsyncUtils";
 import { TransformUtils } from "../utils/TransformUtils";
 import { WebGLUtils } from "../utils/WebGLUtils";

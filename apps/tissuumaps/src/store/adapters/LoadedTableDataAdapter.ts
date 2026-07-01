@@ -1,11 +1,11 @@
 import { useCallback } from "react";
 
-import {
-  type GenericArray,
-  type ProgressCallback,
-  type TableData,
+import type {
+  GenericArray,
+  ProgressCallback,
+  TableData,
 } from "@tissuumaps/core";
-import { type ViewerAdapter } from "@tissuumaps/viewer";
+import type { ViewerAdapter } from "@tissuumaps/viewer";
 
 import { useTissUUmaps } from "..";
 

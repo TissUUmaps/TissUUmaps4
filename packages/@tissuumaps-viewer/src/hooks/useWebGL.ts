@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef } from "react";
 
 import { type Rect, WebGLController } from "@tissuumaps/core";
 
-import { type ViewerAdapter } from "../adapter";
+import type { ViewerAdapter } from "../adapter";
 
 export function useWebGL(
   adapter: ViewerAdapter,

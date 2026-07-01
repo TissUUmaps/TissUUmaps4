@@ -1,6 +1,6 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { type OpenSeadragonController } from "@tissuumaps/core";
+import type { OpenSeadragonController } from "@tissuumaps/core";
 
 import { OpenSeadragonControllerContext } from "./OpenSeadragonControllerContext";
 

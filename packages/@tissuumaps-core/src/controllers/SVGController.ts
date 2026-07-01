@@ -1,9 +1,4 @@
-import {
-  type InteractionMode,
-  type MultiPolygon,
-  type Rect,
-  type Vertex,
-} from "../types";
+import type { InteractionMode, MultiPolygon, Rect, Vertex } from "../types";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 

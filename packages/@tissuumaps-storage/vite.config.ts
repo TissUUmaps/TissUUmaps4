@@ -8,9 +8,12 @@ export default defineConfig({
   plugins: [
     dts({
       bundleTypes: true,
-      tsconfigPath: resolve(__dirname, "tsconfig.json"),
+      tsconfigPath: resolve(__dirname, "tsconfig.dts.json"),
     }),
   ],
+  worker: {
+    format: "es",
+  },
   build: {
     lib: {
       entry: {

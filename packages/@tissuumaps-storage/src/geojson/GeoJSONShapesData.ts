@@ -1,22 +1,22 @@
-import {
-  type ProgressCallback,
-  type ShapesData,
-  type ShapesGeometry,
+import type {
+  ProgressCallback,
+  ShapesData,
+  ShapesGeometry,
 } from "@tissuumaps/core";
 
 export class GeoJSONShapesData implements ShapesData {
-  private _ids: number[] | undefined;
-  private _names: string[] | undefined;
   private readonly _geometry: ShapesGeometry;
+  private _ids: number[] | undefined;
+  private readonly _names: string[] | undefined;
 
   constructor(
+    geometry: ShapesGeometry,
     ids: number[] | undefined,
     names: string[] | undefined,
-    geometry: ShapesGeometry,
   ) {
+    this._geometry = geometry;
     this._ids = ids;
     this._names = names;
-    this._geometry = geometry;
   }
 
   getIds(): number[] {

@@ -1,4 +1,4 @@
-import { type Marker, type MarkerConfig } from "@tissuumaps/core";
+import type { Marker, MarkerConfig } from "@tissuumaps/core";
 
 export type MarkerConfigSource = Exclude<MarkerConfig["source"], undefined>;
 

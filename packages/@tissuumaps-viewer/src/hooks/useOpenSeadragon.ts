@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 
 import { OpenSeadragonController, type Rect } from "@tissuumaps/core";
 
-import { type ViewerAdapter } from "../adapter";
+import type { ViewerAdapter } from "../adapter";
 
 export function useOpenSeadragon(
   adapter: ViewerAdapter,

@@ -1,11 +1,11 @@
 import { useCallback } from "react";
 
-import {
-  type CustomTileSource,
-  type ImageData,
-  type TileSourceConfig,
+import type {
+  CustomTileSource,
+  ImageData,
+  TileSourceConfig,
 } from "@tissuumaps/core";
-import { type ViewerAdapter } from "@tissuumaps/viewer";
+import type { ViewerAdapter } from "@tissuumaps/viewer";
 
 import { useTissUUmaps } from "..";
 

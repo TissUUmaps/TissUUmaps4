@@ -10,13 +10,14 @@ import {
   isGroupByConfig,
   isRandomConfig,
 } from "../../model/configs";
-import { type Color, type DefaultMap } from "../../model/types";
+import type { Color, DefaultMap } from "../../model/types";
 import { type ColorPalette, colorPalettes } from "../../palettes";
-import { type TableData } from "../../storage/table";
+import type { TableData } from "../../storage/table";
 import { AsyncUtils } from "../AsyncUtils";
 import { ColorUtils } from "../ColorUtils";
 import { HashUtils } from "../HashUtils";
 import { MathUtils } from "../MathUtils";
+import { ParseUtils } from "../ParseUtils";
 import { DataUtilsBase } from "./DataUtilsBase";
 
 export class ColorDataUtils extends DataUtilsBase {
@@ -359,9 +360,10 @@ export class ColorDataUtils extends DataUtilsBase {
     configuredValueRange: [number, number] | undefined,
     colorPalette: ColorPalette,
   ): Color | undefined {
-    if (typeof value === "number" && Number.isFinite(value)) {
+    const v = ParseUtils.tryParseFinite(value, { requireSafeBigInt: true });
+    if (v !== undefined) {
       const [vmin, vmax] = configuredValueRange ?? valueRange ?? [0, 1];
-      const vnorm = (value - vmin) / (vmax - vmin);
+      const vnorm = (v - vmin) / (vmax - vmin);
       const index = MathUtils.clamp(
         Math.floor(vnorm * colorPalette.colors.length),
         0,

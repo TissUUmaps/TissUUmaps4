@@ -7,3 +7,4 @@ export {
   type ParquetTableDataSource,
   createDefaultParquetTableDataSource,
 } from "./ParquetTableDataSource";
+export { type ParquetSource } from "./types";

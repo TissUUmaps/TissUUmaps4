@@ -13,7 +13,7 @@ import {
 } from "@tissuumaps/core";
 
 import { deduplicate } from "../deduplicate";
-import { type TissUUmapsStateCreator } from "../index";
+import type { TissUUmapsStateCreator } from "../index";
 
 export type ProjectSlice = ProjectSliceState & ProjectSliceActions;
 

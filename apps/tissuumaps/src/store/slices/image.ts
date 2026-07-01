@@ -1,14 +1,14 @@
 import { deepEqual } from "fast-equals";
 
-import {
-  type Image,
-  type ImageData,
-  type ImageDataSource,
-  type ProgressCallback,
+import type {
+  Image,
+  ImageData,
+  ImageDataSource,
+  ProgressCallback,
 } from "@tissuumaps/core";
 
 import { deduplicate } from "../deduplicate";
-import { type TissUUmapsStateCreator } from "../index";
+import type { TissUUmapsStateCreator } from "../index";
 
 type LoadedImageData = {
   dataSource: ImageDataSource;
@@ -173,7 +173,10 @@ export const createImageSlice: TissUUmapsStateCreator<ImageSlice> = (
           onProgress,
           workspace: state.workspace,
         });
-        signal?.throwIfAborted();
+        if (signal?.aborted) {
+          data.close();
+          signal.throwIfAborted();
+        }
         const currentState = get();
         const currentImage = currentState.images.find(
           (image) => image.id === imageId,

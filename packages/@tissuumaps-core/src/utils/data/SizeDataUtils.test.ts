@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { type DefaultMap } from "../../model/types";
-import { type TableData } from "../../storage/table";
+import type { DefaultMap } from "../../model/types";
+import type { TableData } from "../../storage/table";
 import { SizeDataUtils } from "./SizeDataUtils";
 
 function createMockTableData(ids: number[], values: unknown[]): TableData {

@@ -25,6 +25,7 @@ export { AsyncUtils } from "./utils/AsyncUtils";
 export { ColorUtils } from "./utils/ColorUtils";
 export { HashUtils } from "./utils/HashUtils";
 export { MathUtils } from "./utils/MathUtils";
+export { ParseUtils } from "./utils/ParseUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 export { WebGLUtils } from "./utils/WebGLUtils";
 export { MarkerDataUtils } from "./utils/data/MarkerDataUtils";

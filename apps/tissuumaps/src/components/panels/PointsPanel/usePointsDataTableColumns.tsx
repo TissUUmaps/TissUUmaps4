@@ -1,4 +1,4 @@
-import { type ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { EyeIcon, EyeOffIcon, Square } from "lucide-react";
 import { useMemo } from "react";
 
@@ -20,7 +20,7 @@ import {
 } from "@tissuumaps/core";
 
 import { markers } from "@/components/markers";
-import { type ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
+import type { ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
 import { useTissUUmaps } from "@/store";
 
 export function usePointsDataTableColumns(

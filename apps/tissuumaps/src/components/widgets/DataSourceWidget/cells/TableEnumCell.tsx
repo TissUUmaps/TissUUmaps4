@@ -1,4 +1,4 @@
-import { type CellProps } from "@jsonforms/core";
+import type { CellProps } from "@jsonforms/core";
 import { withJsonFormsCellProps } from "@jsonforms/react";
 
 import { SimpleSelect } from "@/components/common/simple-select";

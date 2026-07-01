@@ -11,16 +11,12 @@ import {
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
 } from "../model/constants";
-import { type Layer } from "../model/layer";
-import { type Shapes } from "../model/shapes";
-import {
-  type Color,
-  type DefaultMap,
-  type RenderOptions,
-} from "../model/types";
-import { type ShapesData } from "../storage/shapes";
-import { type TableData } from "../storage/table";
-import { type Rect, type ShapesGeometry } from "../types";
+import type { Layer } from "../model/layer";
+import type { Shapes } from "../model/shapes";
+import type { Color, DefaultMap, RenderOptions } from "../model/types";
+import type { ShapesData } from "../storage/shapes";
+import type { TableData } from "../storage/table";
+import type { Rect, ShapesGeometry } from "../types";
 import { AsyncUtils } from "../utils/AsyncUtils";
 import { MathUtils } from "../utils/MathUtils";
 import { TransformUtils } from "../utils/TransformUtils";
@@ -902,7 +898,12 @@ export class WebGLShapesController extends WebGLControllerBase {
       }
       await maybeYield();
     }
-    if (!Number.isFinite(xMin) || !Number.isFinite(yMin)) {
+    if (
+      !Number.isFinite(xMin) ||
+      !Number.isFinite(yMin) ||
+      !Number.isFinite(xMax) ||
+      !Number.isFinite(yMax)
+    ) {
       throw new Error("Shapes geometry must not be empty");
     }
     if (xMin >= xMax || yMin >= yMax) {
@@ -1027,11 +1028,7 @@ export class WebGLShapesController extends WebGLControllerBase {
           }
           const scanlineShape = scanline.shapes.get(shapeIndex);
           if (scanlineShape === undefined) {
-            scanline.shapes.set(shapeIndex, {
-              xMin: xMin,
-              xMax: xMax,
-              edges: [],
-            });
+            scanline.shapes.set(shapeIndex, { xMin, xMax, edges: [] });
             totalNumScanlineShapes++;
           } else {
             scanlineShape.xMin = Math.min(scanlineShape.xMin, xMin);

@@ -1,4 +1,4 @@
-import { type Color } from "../model/types";
+import type { Color } from "../model/types";
 
 /** Utility methods for color parsing, packing, and conversion */
 export class ColorUtils {
@@ -25,9 +25,9 @@ export class ColorUtils {
           throw new Error(`Invalid color palette line ${i}: ${line}`);
         }
         return {
-          r: (+values[0]! / maxValue) * 255,
-          g: (+values[1]! / maxValue) * 255,
-          b: (+values[2]! / maxValue) * 255,
+          r: (Number(values[0]) / maxValue) * 255,
+          g: (Number(values[1]) / maxValue) * 255,
+          b: (Number(values[2]) / maxValue) * 255,
         };
       });
   }

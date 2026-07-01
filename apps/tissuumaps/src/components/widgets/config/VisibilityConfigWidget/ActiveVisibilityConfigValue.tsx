@@ -6,7 +6,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { type VisibilityConfigWidgetAdapter } from "./adapter";
+import type { VisibilityConfigWidgetAdapter } from "./adapter";
 
 export type ActiveVisibilityConfigValueProps = {
   adapter: VisibilityConfigWidgetAdapter;
