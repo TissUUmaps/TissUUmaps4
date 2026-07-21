@@ -11,7 +11,8 @@ This project is structured as a pnpm monorepo as follows:
   - docs                 # User and developer documentation
   - tissuumaps           # The TissUUmaps React application
 - packages
-  - @tissuumaps-core     # The TissUUmaps JavaScript library
+  - @tissuumaps-core     # The TissUUmaps JavaScript library (models, storage interfaces, utilities)
+  - @tissuumaps-render   # Rendering backends (OpenSeadragon, WebGL, SVG)
   - @tissuumaps-storage  # Officially supported data providers
   - @tissuumaps-plugins  # Officially supported TissUUmaps plugins
   - @tissuumaps-viewer   # The TissUUmaps viewer (React component)
@@ -23,8 +24,12 @@ The following diagram outlines the dependency structure among packages and the T
 flowchart BT
     core["@tissuumaps/core"]
 
+    render["@tissuumaps/render"]
+    render --> core
+
     viewer["@tissuumaps/viewer"]
     viewer --> core
+    viewer --> render
 
     storage["@tissuumaps/storage"]
     storage --> core
@@ -34,6 +39,7 @@ flowchart BT
 
     tissuumaps["TissUUmaps"]
     tissuumaps --> core
+    tissuumaps --> render
     tissuumaps --> storage
     tissuumaps --> plugins
     tissuumaps --> viewer
@@ -49,22 +55,32 @@ Most data model properties can be either "simple properties" or of a concrete `C
 
 ### Storage
 
-Data providers (e.g. a specific points data provider) offer functionality for creating data accessors (e.g. for a point cloud), which can be used to access parts of the associated data (e.g. point coordinates for a specific dimension). They have a unique `type` and need to be registered in the application state before attempting to access data of that type. All data accessor functions starting with `load...` are asynchronous.
-
-### Controllers
-
-Controllers expose the core TissUUmaps functionality as imperative API. Their main responsibility is to synchronize the OpenSeadragon viewer and WebGL shader states with a given application state.
-
-The `OpenSeadragonController` tracks the state of `OpenSeadragon.TiledImage` instances currently displayed in the viewer and offers functionality for reconciling ("synchronizing") changes in the application state (layers, images, labels) with the viewer.
-
-The `WebGLController` manages the WebGL context and delegates functionality to the `WebGLPointsController` and `WebGLShapesController` instances associated with the current WebGL context:
-
-- The `WebGLPointsController` loads all point clouds into a single flat GPU buffer (one GPU buffer per point attribute) and tracks the state of the GPU buffer slices and their respective point clouds. It further offers functionality for reconciling ("synchronizing") changes in the points-relevant application state with the GPU buffer slices.
-- The `WebGLShapesController` loads individual shape clouds into separate GPU data textures and tracks the state of the GPU data textures and their respective shape clouds. It further offers functionality for reconciling ("synchronizing") changes in the shapes-relevant application state with the GPU data textures.
+The `storage` module defines the abstract data provider interfaces (`DataProvider`, `Data`, and their data type-specific variants). A data provider (e.g. a specific points data provider) offers functionality for creating data accessors (e.g. for a point cloud), which can be used to access parts of the associated data (e.g. point coordinates for a specific dimension). They have a unique `type` and need to be registered in the application state before attempting to access data of that type. All data accessor functions starting with `load...` are asynchronous. Concrete implementations live in `@tissuumaps/storage`.
 
 ### Utilities
 
 Utilities are exclusively implemented as static classes.
+
+## @tissuumaps/render
+
+This package contains the rendering backends and exposes the core TissUUmaps rendering functionality as an imperative API. It does not depend on React and can be used independently of `@tissuumaps/viewer`. There are three backends: OpenSeadragon (images and labels), WebGL 2 (points and shapes), and an SVG overlay (interactive shape drawing).
+
+**Contexts** wrap the underlying rendering technology and manage shared low-level state:
+
+- `OpenSeadragonContext` wraps an `OpenSeadragon.Viewer`, managing viewer options, animation handlers, world bounds, and the (asynchronous, FIFO-ordered) addition/removal of `OpenSeadragon.TiledImage` instances.
+- `WebGLContext` wraps a `WebGL2RenderingContext`, providing helpers for creating programs, buffers, and textures, as well as canvas resizing and context-loss/restoration handling.
+
+**Renderers** track the state of the objects currently displayed and reconcile changes in the application state (layers, objects, attribute maps) with the rendering context via a `synchronize()` method:
+
+- `OpenSeadragonImageRenderer` and `OpenSeadragonLabelsRenderer` extend `OpenSeadragonRendererBase`, managing one `OpenSeadragon.TiledImage` per rendered object, anchored below a dummy tiled image to preserve z-ordering.
+- `WebGLPointsRenderer` loads all point clouds into a single flat GPU buffer (one GPU buffer per point attribute) and tracks the state of the GPU buffer slices and their respective point clouds.
+- `WebGLShapesRenderer` loads individual shape clouds into separate GPU data textures and tracks the state of the GPU data textures and their respective shape clouds.
+
+  Both WebGL renderers extend `WebGLRendererBase` and expose `synchronize()` and `draw()` methods.
+
+**Resolvers** (`ColorResolver`, `SizeResolver`, `MarkerResolver`, `OpacityResolver`, `VisibilityResolver`, all extending `ResolverBase`) translate the model's `Config` types (constant, from-column, group-by, random) into per-item numeric values written into typed arrays for upload to the GPU.
+
+`WebGLShapesRasterizer` constructs scanline data (edge lists and occupancy masks) on the CPU for the shapes fragment shader (see [Rendering](./rendering.md)). `SVGController` manages an SVG overlay for interactive shape drawing (rectangle, polygon, and freehand modes).
 
 ## @tissuumaps/storage
 
@@ -78,7 +94,7 @@ Each plugin has its own dedicated directory and is separately exported in the `p
 
 ## @tissuumaps/viewer
 
-The TissUUmaps `Viewer` component uses an adapter pattern facilitated by `ViewerProvider`. It makes use of custom `useOpenSeadragon` and `useWebGL` hooks that encapsulate the `OpenSeadragonController` and the `WebGLController` from `@tissuumaps/core`, respectively (separation of concerns). The WebGL canvas element is appended as a child to the `viewer.canvas` div element (child of the `viewer.container` div element, parent of the `viewer.drawer.canvas` canvas element) to allow for proper compositioning, where `viewer` is the `OpenSeadragon.Viewer` instance.
+The TissUUmaps `Viewer` component uses an adapter pattern facilitated by the `ViewerAdapter` interface, which decouples rendering from any particular application state management. It makes use of custom hooks that each encapsulate one rendering backend from `@tissuumaps/render` (separation of concerns): `useOpenSeadragon` (image and labels renderers), `useWebGL` (points and shapes renderers), and `useSVG` (interactive drawing overlay). The WebGL canvas element and the SVG overlay element are appended as children to the `viewer.canvas` div element (child of the `viewer.container` div element, parent of the `viewer.drawer.canvas` canvas element) to allow for proper compositioning, where `viewer` is the `OpenSeadragon.Viewer` instance. The active `OpenSeadragonContext` is exposed to descendant components via a React context (`OpenSeadragonContextProvider`).
 
 ## TissUUmaps (tissuumaps)
 
@@ -99,10 +115,9 @@ The user interface is built primarily using TailwindCSS, shadcn/ui, Base UI comp
 Components are structured as follows:
 
 - `common` - custom low-level components that are commonly reused throughout the codebase
-- `jsforms` - JSForms-related components that are used for rendering data source configuration forms
 - `panels` - high-level UI building blocks (layout components) that are used as Dockview panels
 - `ui` - shadcn/ui components, adapted to the application as needed (be careful when updating!)
-- `widgets` - independent high-level components (e.g. configuration widgets) used across panels
+- `widgets` - independent high-level components (e.g. configuration widgets) used across panels; the JSON Forms-based data source configuration forms live under `widgets/DataSourceWidget`
 
 ### State management
 
