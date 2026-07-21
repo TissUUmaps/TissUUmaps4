@@ -43,13 +43,13 @@ jobs:
             development/pnpm-lock.yaml
       - name: Build development
         working-directory: development
-        run: pnpm install && pnpm run build
+        run: pnpm install && pnpm run build && pnpm run build:docs
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/live-dev/
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs-dev/
       - name: Build production
         working-directory: production
-        run: pnpm install && pnpm run build
+        run: pnpm install && pnpm run build && pnpm run build:docs
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/

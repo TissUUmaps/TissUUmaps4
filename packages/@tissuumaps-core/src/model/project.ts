@@ -1,18 +1,11 @@
 import { type Model, type RawModel, createModel } from "./base";
-import { defaultRenderOptions, defaultViewerOptions } from "./constants";
 import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";
 import { type Layer, type RawLayer, createLayer } from "./layer";
 import { type Points, type RawPoints, createPoints } from "./points";
+import type { Color, DefaultMap, Marker } from "./primitives";
 import { type RawShapes, type Shapes, createShapes } from "./shapes";
 import { type RawTable, type Table, createTable } from "./table";
-import type {
-  Color,
-  DefaultMap,
-  Marker,
-  RenderOptions,
-  ViewerOptions,
-} from "./types";
 
 /**
  * Default values for {@link RawProject}
@@ -23,15 +16,49 @@ export const projectDefaults = {
   colorMaps: [],
   visibilityMaps: [],
   opacityMaps: [],
-  viewerOptions: defaultViewerOptions,
-  viewerAnimationStartOptions: {
-    immediateRender: false,
-    imageLoaderLimit: 1,
+  osOptions: {
+    viewerOptions: {
+      minZoomImageRatio: 0,
+      maxZoomPixelRatio: Infinity,
+      preserveImageSizeOnResize: true,
+      visibilityRatio: 0,
+      animationTime: 0,
+      gestureSettingsMouse: {
+        flickEnabled: false,
+      },
+      gestureSettingsTouch: {
+        flickEnabled: false,
+      },
+      gestureSettingsPen: {
+        flickEnabled: false,
+      },
+      gestureSettingsUnknown: {
+        flickEnabled: false,
+      },
+      zoomPerClick: 1,
+      showNavigator: true,
+      navigatorPosition: "BOTTOM_LEFT",
+      maxImageCacheCount: 2000,
+      showNavigationControl: false,
+      imageSmoothingEnabled: false,
+    },
+    viewerAnimationStartOptions: {
+      immediateRender: false,
+      imageLoaderLimit: 1,
+    },
+    viewerAnimationFinishOptions: {
+      immediateRender: true, // set to true, even if initially set to false
+    },
   },
-  viewerAnimationFinishOptions: {
-    immediateRender: true, // set to true, even if initially set to false
+  glOptions: {
+    pointsRenderOptions: {
+      globalPointSizeFactor: 1,
+    },
+    shapesRenderOptions: {
+      strokeWidth: 1,
+      numScanlines: 512,
+    },
   },
-  renderOptions: defaultRenderOptions,
 } as const satisfies Partial<RawProject>;
 
 /**
@@ -115,36 +142,29 @@ export interface RawProject extends RawModel {
   /**
    * OpenSeadragon viewer options for images/labels
    *
-   * @defaultValue {@link projectDefaults.viewerOptions}
+   * @defaultValue {@link projectDefaults.osOptions}
    * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
    */
-  viewerOptions?: ViewerOptions;
-
-  /**
-   * OpenSeadragon viewer options set when an animation starts
-   *
-   * Each option will be reset to the initial value when the animation finishes,
-   * unless overridden by {@link viewerAnimationFinishOptions}.
-   *
-   * @defaultValue {@link projectDefaults.viewerAnimationStartOptions}
-   * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
-   */
-  viewerAnimationStartOptions?: ViewerOptions;
-
-  /**
-   * OpenSeadragon viewer options set when an animation finishes
-   *
-   * @defaultValue {@link projectDefaults.viewerAnimationFinishOptions}
-   * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
-   */
-  viewerAnimationFinishOptions?: ViewerOptions;
+  osOptions?: {
+    viewerOptions: unknown;
+    viewerAnimationStartOptions: unknown;
+    viewerAnimationFinishOptions: unknown;
+  };
 
   /**
    * WebGL render options for points/shapes
    *
-   * @defaultValue {@link projectDefaults.renderOptions}
+   * @defaultValue {@link projectDefaults.glOptions}
    */
-  renderOptions?: RenderOptions;
+  glOptions?: {
+    pointsRenderOptions: {
+      globalPointSizeFactor: number;
+    };
+    shapesRenderOptions: {
+      strokeWidth: number;
+      numScanlines: number;
+    };
+  };
 }
 
 /**

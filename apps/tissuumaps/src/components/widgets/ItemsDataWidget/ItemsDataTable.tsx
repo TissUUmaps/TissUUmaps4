@@ -62,12 +62,16 @@ export function ItemsDataTable({
     const abortController = new AbortController();
     setTableData(null);
     if (table) {
-      // TODO improve error handling
-      loadTable(table, { signal: abortController.signal }).then((tableData) => {
-        if (!abortController.signal.aborted) {
+      loadTable(table, { signal: abortController.signal })
+        .then((tableData) => {
+          abortController.signal.throwIfAborted();
           setTableData(tableData);
-        }
-      }, console.error);
+        })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error loading table data", error);
+          }
+        });
     }
     return () => {
       abortController.abort();
@@ -78,14 +82,18 @@ export function ItemsDataTable({
     const abortController = new AbortController();
     setTableGroups(null);
     if (table && groupByColumn) {
-      // TODO improve error handling
       loadUniqueTableValues<string>(table, groupByColumn, {
         signal: abortController.signal,
-      }).then((tableGroups) => {
-        if (!abortController.signal.aborted) {
+      })
+        .then((tableGroups) => {
+          abortController.signal.throwIfAborted();
           setTableGroups(tableGroups);
-        }
-      }, console.error);
+        })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error loading unique table values", error);
+          }
+        });
     }
     return () => {
       abortController.abort();

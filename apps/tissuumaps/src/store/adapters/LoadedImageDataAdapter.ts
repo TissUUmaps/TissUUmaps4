@@ -37,7 +37,7 @@ export class LoadedImageDataAdapter implements ImageData {
   }
 }
 
-export function useLoadedImageDataAdapter(): ViewerAdapter["getImage"] {
+export function useLoadedImageDataAdapter(): ViewerAdapter["loadImage"] {
   const loadImage = useTissUUmaps((state) => state.loadImage);
   return useCallback(
     async (imageId, options) => {

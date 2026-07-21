@@ -40,9 +40,10 @@ export class AsyncUtils {
    * Creates a time-sliced yielder for loops whose iterations are too coarse or
    * heterogeneous for {@link AsyncUtils.forEach} (e.g. nested loops).
    *
-   * Call the returned function at safe points inside a loop: it yields to the
-   * event loop and re-checks the abort signal once the time budget since the
-   * last yield is exceeded, and is otherwise a cheap no-op.
+   * Call the returned function at safe points inside a loop: it checks the
+   * abort signal on every call for fail-fast cancellation, and additionally
+   * yields to the event loop once the time budget since the last yield is
+   * exceeded. When within budget and not aborted, it is a cheap no-op.
    *
    * @param options - Optional abort signal and time (ms) to run before yielding
    *   (`yieldMs`)
@@ -54,6 +55,7 @@ export class AsyncUtils {
     const { signal, yieldMs = 5 } = options ?? {};
     let start = performance.now();
     return async () => {
+      signal?.throwIfAborted();
       if (performance.now() - start > yieldMs) {
         await AsyncUtils.yield();
         signal?.throwIfAborted();

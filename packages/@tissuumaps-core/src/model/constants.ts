@@ -2,10 +2,8 @@ import {
   type Color,
   type CoordinateSpace,
   Marker,
-  type RenderOptions,
   type SimilarityTransform,
-  type ViewerOptions,
-} from "./types";
+} from "./primitives";
 
 /** Identity similarity transform */
 export const identityTransform = {
@@ -13,40 +11,6 @@ export const identityTransform = {
   rotation: 0,
   translation: { x: 0, y: 0 },
 } as const satisfies SimilarityTransform;
-
-/** Default OpenSeadragon viewer options */
-export const defaultViewerOptions = {
-  minZoomImageRatio: 0,
-  maxZoomPixelRatio: Infinity,
-  preserveImageSizeOnResize: true,
-  visibilityRatio: 0,
-  animationTime: 0,
-  gestureSettingsMouse: {
-    flickEnabled: false,
-  },
-  gestureSettingsTouch: {
-    flickEnabled: false,
-  },
-  gestureSettingsPen: {
-    flickEnabled: false,
-  },
-  gestureSettingsUnknown: {
-    flickEnabled: false,
-  },
-  zoomPerClick: 1,
-  showNavigator: true,
-  navigatorPosition: "BOTTOM_LEFT",
-  maxImageCacheCount: 2000,
-  showNavigationControl: false,
-  imageSmoothingEnabled: false,
-} as const satisfies ViewerOptions;
-
-/** Default WebGL render options */
-export const defaultRenderOptions = {
-  pointSizeFactor: 1,
-  shapeStrokeWidth: 1,
-  numShapesScanlines: 512,
-} as const satisfies RenderOptions;
 
 // TODO always use defaultLabelColorPalette instead
 /** Default label color */

@@ -69,7 +69,7 @@ export class LoadedLabelsDataAdapter implements LabelsData {
   }
 }
 
-export function useLoadedLabelsDataAdapter(): ViewerAdapter["getLabels"] {
+export function useLoadedLabelsDataAdapter(): ViewerAdapter["loadLabels"] {
   const loadLabels = useTissUUmaps((state) => state.loadLabels);
   return useCallback(
     async (labelsId, options) => {

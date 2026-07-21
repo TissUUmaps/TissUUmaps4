@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { useOpenSeadragonController } from "../../context/OpenSeadragonControllerContext";
+import { useOpenSeadragonContext } from "../../context/OpenSeadragonContextContext";
 import type { ViewerControlAnchor } from "./types";
 
 export { ViewerControlAnchor } from "./types";
@@ -21,19 +21,23 @@ export function ViewerControl({
 }: ViewerControlProps) {
   const [container] = useState(() => document.createElement("div"));
 
-  const os = useOpenSeadragonController();
+  const context = useOpenSeadragonContext();
 
   useEffect(() => {
-    if (os !== null) {
-      os.viewer.addControl(container, { anchor, attachToViewer, autoFade });
+    if (context !== null) {
+      context.viewer.addControl(container, {
+        anchor,
+        attachToViewer,
+        autoFade,
+      });
     }
     return () => {
-      if (os !== null) {
+      if (context !== null) {
         // @ts-expect-error OpenSeadragon typings are wrong
-        os.viewer.removeControl(container);
+        context.viewer.removeControl(container);
       }
     };
-  }, [os, container, anchor, attachToViewer, autoFade]);
+  }, [context, container, anchor, attachToViewer, autoFade]);
 
   return createPortal(children, container);
 }

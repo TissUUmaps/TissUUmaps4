@@ -1,5 +1,6 @@
 import type { LabelsDataSource } from "../model/labels";
-import type { ProgressCallback, UintArray } from "../types";
+import type { UintArray } from "../types/arrays";
+import type { ProgressCallback } from "../types/callbacks";
 import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**

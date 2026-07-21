@@ -1,0 +1,36 @@
+{
+  "name": "@tissuumaps/render",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "./dist"
+  ],
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.src.json && vite build",
+    "clean": "rm -rf build dist node_modules",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "fast-equals": "^6.0.0",
+    "gl-matrix": "^3.4.4",
+    "openseadragon": "^6.0.2"
+  },
+  "devDependencies": {
+    "@tissuumaps/core": "workspace:^"
+  },
+  "peerDependencies": {
+    "@tissuumaps/core": "workspace:^"
+  },
+  "engines": {
+    "node": ">=22.22.1"
+  }
+}

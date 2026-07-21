@@ -115,13 +115,13 @@ describe("AsyncUtils.createYielder", () => {
     await expect(yielder()).rejects.toThrow();
   });
 
-  it("does not throw while within budget even if aborted", async () => {
+  it("throws on the abort check even while within budget", async () => {
     const controller = new AbortController();
     const yielder = AsyncUtils.createYielder({
       signal: controller.signal,
       yieldMs: 60_000,
     });
     controller.abort();
-    await expect(yielder()).resolves.toBeUndefined();
+    await expect(yielder()).rejects.toThrow();
   });
 });

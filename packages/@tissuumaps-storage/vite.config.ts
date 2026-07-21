@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     dts({
       bundleTypes: true,
-      tsconfigPath: resolve(__dirname, "tsconfig.dts.json"),
+      tsconfigPath: resolve(__dirname, "tsconfig.ts59.json"),
     }),
   ],
   worker: {
@@ -25,15 +25,13 @@ export default defineConfig({
         parquet: resolve(__dirname, "src/parquet/index.ts"),
         table: resolve(__dirname, "src/table/index.ts"),
       },
-      formats: ["es", "cjs"],
+      formats: ["es"],
     },
+    // Worker-only deps (hyparquet, hyparquet-compressors) are intentionally not
+    // externalized: the workers are imported with `?worker&inline`, so they must
+    // be self-contained and their deps get bundled into the inline worker.
     rollupOptions: {
-      external: ["@tissuumaps/core"],
-      output: {
-        globals: {
-          "@tissuumaps/core": "TissUUmapsCore",
-        },
-      },
+      external: ["@tissuumaps/core", "omezarr-tilesource", "papaparse"],
     },
   },
   test: {

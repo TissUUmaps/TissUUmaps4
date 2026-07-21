@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     dts({
       bundleTypes: true,
-      tsconfigPath: resolve(__dirname, "tsconfig.dts.json"),
+      tsconfigPath: resolve(__dirname, "tsconfig.ts59.json"),
     }),
   ],
   build: {
@@ -17,15 +17,10 @@ export default defineConfig({
         index: resolve(__dirname, "src/index.ts"),
         spatialdata: resolve(__dirname, "src/spatialdata/index.ts"),
       },
-      formats: ["es", "cjs"],
+      formats: ["es"],
     },
     rollupOptions: {
       external: ["@tissuumaps/core"],
-      output: {
-        globals: {
-          "@tissuumaps/core": "TissUUmapsCore",
-        },
-      },
     },
   },
   test: {

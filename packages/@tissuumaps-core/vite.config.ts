@@ -8,15 +8,17 @@ export default defineConfig({
   plugins: [
     dts({
       bundleTypes: true,
-      tsconfigPath: resolve(__dirname, "tsconfig.dts.json"),
+      tsconfigPath: resolve(__dirname, "tsconfig.ts59.json"),
     }),
   ],
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      formats: ["es", "umd"],
+      formats: ["es"],
       fileName: "index",
-      name: "TissUUmapsCore", // UMD global name
+    },
+    rollupOptions: {
+      external: ["gl-matrix"],
     },
   },
   test: {

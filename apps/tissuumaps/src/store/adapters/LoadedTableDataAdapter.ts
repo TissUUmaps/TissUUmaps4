@@ -102,7 +102,7 @@ export class LoadedTableDataAdapter implements TableData {
   }
 }
 
-export function useLoadedTableDataAdapter(): ViewerAdapter["getTable"] {
+export function useLoadedTableDataAdapter(): ViewerAdapter["loadTable"] {
   const loadTable = useTissUUmaps((state) => state.loadTable);
   return useCallback(
     async (tableId, options) => {
