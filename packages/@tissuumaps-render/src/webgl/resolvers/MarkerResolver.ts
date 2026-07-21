@@ -60,7 +60,7 @@ export class MarkerResolver extends ResolverBase {
         ids,
         config,
         defaultMarker,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align },
       );
     }
@@ -74,7 +74,7 @@ export class MarkerResolver extends ResolverBase {
         config,
         markerMaps,
         defaultMarker,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align },
       );
     }

@@ -64,8 +64,9 @@ export function ItemsDataTable({
     if (table) {
       loadTable(table, { signal: abortController.signal })
         .then((tableData) => {
-          abortController.signal.throwIfAborted();
-          setTableData(tableData);
+          if (!abortController.signal.aborted) {
+            setTableData(tableData);
+          }
         })
         .catch((error) => {
           if (!abortController.signal.aborted) {
@@ -86,8 +87,9 @@ export function ItemsDataTable({
         signal: abortController.signal,
       })
         .then((tableGroups) => {
-          abortController.signal.throwIfAborted();
-          setTableGroups(tableGroups);
+          if (!abortController.signal.aborted) {
+            setTableGroups(tableGroups);
+          }
         })
         .catch((error) => {
           if (!abortController.signal.aborted) {

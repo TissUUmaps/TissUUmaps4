@@ -253,9 +253,10 @@ export function useWebGL(
           { signal: abortController.signal },
         )
         .then((renderedBounds) => {
-          abortController.signal.throwIfAborted();
-          setGLPointsBounds(renderedBounds ?? null);
-          draw();
+          if (!abortController.signal.aborted) {
+            setGLPointsBounds(renderedBounds ?? null);
+            draw();
+          }
         })
         .catch((error) => {
           if (!abortController.signal.aborted) {
@@ -296,9 +297,10 @@ export function useWebGL(
           { signal: abortController.signal },
         )
         .then((renderedBounds) => {
-          abortController.signal.throwIfAborted();
-          setGLShapesBounds(renderedBounds ?? null);
-          draw();
+          if (!abortController.signal.aborted) {
+            setGLShapesBounds(renderedBounds ?? null);
+            draw();
+          }
         })
         .catch((error) => {
           if (!abortController.signal.aborted) {

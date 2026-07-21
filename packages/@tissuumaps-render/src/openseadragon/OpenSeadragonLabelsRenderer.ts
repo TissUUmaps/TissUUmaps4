@@ -33,40 +33,32 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    * @param _opacityMaps - Opacity maps for labels
    * @param _loadLabels - Async getter for labels data
    * @param _loadTable - Async getter for table data
-   * @param _options - Optional abort signal
+   * @param options - Optional abort signal
    *
    * @todo Implement the logic to synchronize labels objects with their corresponding tiled images in the viewer.
    */
-  synchronize(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async synchronize(
     _layers: Layer[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _labels: Labels[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _colorMaps: DefaultMap<Color>[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _visibilityMaps: DefaultMap<boolean>[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _opacityMaps: DefaultMap<number>[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _loadLabels: (
       labelsId: string,
       options?: {
         signal?: AbortSignal;
       },
     ) => Promise<LabelsData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _loadTable: (
       tableId: string,
       options?: {
         signal?: AbortSignal;
       },
     ) => Promise<TableData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _options?: {
-      signal?: AbortSignal;
-    },
+    options?: { signal?: AbortSignal },
   ): Promise<void> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
     // TODO implement labels rendering
     return Promise.resolve();
   }

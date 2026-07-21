@@ -39,6 +39,7 @@ export default defineConfig([
       "no-duplicate-imports": "error",
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-import-type-side-effects": "error",
+      "@typescript-eslint/promise-function-async": "error",
     },
   },
   {

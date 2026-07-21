@@ -53,7 +53,7 @@ export class ParquetTableData implements TableData {
     const filteredColumns = this._columns.filter((column) =>
       column.includes(currentQuery),
     );
-    return await Promise.resolve(filteredColumns);
+    return Promise.resolve(filteredColumns);
   }
 
   async resolveColumnQuery(
@@ -63,7 +63,7 @@ export class ParquetTableData implements TableData {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const column = this._columns.includes(query) ? query : null;
-    return await Promise.resolve(column);
+    return Promise.resolve(column);
   }
 
   async loadValues<T>(
@@ -89,7 +89,7 @@ export class ParquetTableData implements TableData {
     const values = await this.loadValues(column, { signal, onProgress });
     signal?.throwIfAborted();
     const uniqueValues = Array.from(new Set(values));
-    return await Promise.resolve(uniqueValues as GenericArray<T>);
+    return uniqueValues as GenericArray<T>;
   }
 
   async loadValueRange(

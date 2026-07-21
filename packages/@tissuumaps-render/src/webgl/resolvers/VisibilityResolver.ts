@@ -57,7 +57,7 @@ export class VisibilityResolver extends ResolverBase {
         ids,
         config,
         defaultVisibility,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align },
       );
     }
@@ -71,7 +71,7 @@ export class VisibilityResolver extends ResolverBase {
         config,
         visibilityMaps,
         defaultVisibility,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align },
       );
     }

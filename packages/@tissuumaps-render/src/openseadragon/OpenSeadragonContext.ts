@@ -172,30 +172,32 @@ export class OpenSeadragonContext {
    * @returns A promise that resolves with the added tiled image or rejects with an error
    * @throws Error if the OpenSeadragon viewer has been destroyed
    */
-  addTiledImage(
+  async addTiledImage(
     tiledImageOptions: Omit<
       OpenSeadragon.TileSourceSpecifier,
       "success" | "error"
     >,
   ): Promise<OpenSeadragon.TiledImage> {
-    return this._enqueueItemsMutation(() =>
+    return this._enqueueItemsMutation(async () =>
       this._addTiledImage(tiledImageOptions),
     );
   }
 
-  removeTiledImage(tiledImage: OpenSeadragon.TiledImage): Promise<void> {
+  async removeTiledImage(tiledImage: OpenSeadragon.TiledImage): Promise<void> {
     return this._enqueueItemsMutation(() =>
       this.viewer.world.removeItem(tiledImage),
     );
   }
 
-  getTiledImageIndex(tiledImage: OpenSeadragon.TiledImage): Promise<number> {
+  async getTiledImageIndex(
+    tiledImage: OpenSeadragon.TiledImage,
+  ): Promise<number> {
     return this._enqueueItemsMutation(() => {
       return this.viewer.world.getIndexOfItem(tiledImage);
     });
   }
 
-  updateBounds(
+  async updateBounds(
     newBounds: Rect,
     options?: {
       dummy?: OpenSeadragon.TiledImage;
@@ -294,7 +296,7 @@ export class OpenSeadragonContext {
     }
   }
 
-  private _addTiledImage(
+  private async _addTiledImage(
     tiledImageOptions: Omit<
       OpenSeadragon.TileSourceSpecifier,
       "success" | "error"
@@ -314,7 +316,9 @@ export class OpenSeadragonContext {
     });
   }
 
-  private _enqueueItemsMutation<T>(task: () => T | Promise<T>): Promise<T> {
+  private async _enqueueItemsMutation<T>(
+    task: () => T | Promise<T>,
+  ): Promise<T> {
     const result = this._itemsMutationPromise.then(task);
     this._itemsMutationPromise = result.catch(() => {});
     return result;

@@ -63,7 +63,7 @@ export class SizeResolver extends ResolverBase {
         ids,
         config,
         defaultSize,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align, sizeFactor },
       );
     }
@@ -77,7 +77,7 @@ export class SizeResolver extends ResolverBase {
         config,
         sizeMaps,
         defaultSize,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align, sizeFactor },
       );
     }

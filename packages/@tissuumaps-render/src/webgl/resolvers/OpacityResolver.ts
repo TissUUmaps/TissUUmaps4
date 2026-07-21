@@ -63,7 +63,7 @@ export class OpacityResolver extends ResolverBase {
         ids,
         config,
         defaultOpacity,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align, opacityFactor },
       );
     }
@@ -77,7 +77,7 @@ export class OpacityResolver extends ResolverBase {
         config,
         opacityMaps,
         defaultOpacity,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align, opacityFactor },
       );
     }

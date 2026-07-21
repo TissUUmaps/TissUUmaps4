@@ -35,7 +35,7 @@ export class GeoJSONShapesData implements ShapesData {
     return this._names;
   }
 
-  loadGeometry(options?: {
+  async loadGeometry(options?: {
     signal?: AbortSignal;
     onProgress?: ProgressCallback;
   }): Promise<ShapesGeometry> {

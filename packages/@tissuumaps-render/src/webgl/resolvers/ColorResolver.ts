@@ -70,7 +70,7 @@ export class ColorResolver extends ResolverBase {
         ids,
         config,
         defaultColor,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align },
       );
       signal?.throwIfAborted();
@@ -85,7 +85,7 @@ export class ColorResolver extends ResolverBase {
         colorMaps,
         colorPalettes,
         defaultColor,
-        (options) => loadTable(table, options),
+        async (options) => loadTable(table, options),
         { signal, align },
       );
       signal?.throwIfAborted();

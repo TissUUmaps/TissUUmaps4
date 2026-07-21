@@ -52,7 +52,7 @@ export class CSVTableData implements TableData {
     const filteredColumns = this._columns.filter((column) =>
       column.includes(currentQuery),
     );
-    return await Promise.resolve(filteredColumns);
+    return Promise.resolve(filteredColumns);
   }
 
   async resolveColumnQuery(
@@ -62,7 +62,7 @@ export class CSVTableData implements TableData {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const column = this._columns.includes(query) ? query : null;
-    return await Promise.resolve(column);
+    return Promise.resolve(column);
   }
 
   async loadValues<T>(
@@ -75,7 +75,7 @@ export class CSVTableData implements TableData {
     if (columnValues === undefined) {
       throw new Error(`Column ${column} does not exist in the table`);
     }
-    return await Promise.resolve(columnValues as GenericArray<T>);
+    return Promise.resolve(columnValues as GenericArray<T>);
   }
 
   async loadUniqueValues<T>(

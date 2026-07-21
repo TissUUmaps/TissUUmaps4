@@ -111,7 +111,7 @@ async function openParquet(source: ParquetSource): Promise<AsyncBuffer> {
   if (source.file !== undefined) {
     return {
       byteLength: source.file.size,
-      slice: (start: number, end?: number) =>
+      slice: async (start: number, end?: number) =>
         source.file!.slice(start, end).arrayBuffer(),
     };
   }

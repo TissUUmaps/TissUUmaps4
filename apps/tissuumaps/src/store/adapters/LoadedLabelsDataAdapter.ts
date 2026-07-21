@@ -48,8 +48,8 @@ export class LoadedLabelsDataAdapter implements LabelsData {
     return this._getData().getTileHeight(level);
   }
 
-  loadTile(): Promise<UintArray> {
-    throw new Error("Method not implemented.");
+  async loadTile(): Promise<UintArray> {
+    return Promise.reject(new Error("Method not implemented."));
   }
 
   close(): void {

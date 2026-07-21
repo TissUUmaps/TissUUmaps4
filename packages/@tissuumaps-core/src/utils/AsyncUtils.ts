@@ -17,7 +17,7 @@ export class AsyncUtils {
    * Uses the native `scheduler.yield()` when available, otherwise falls back to
    * a shared `MessageChannel` (a macrotask without `setTimeout`'s clamping).
    */
-  static yield(): Promise<void> {
+  static async yield(): Promise<void> {
     const scheduler = (
       globalThis as { scheduler?: { yield?: () => Promise<void> } }
     ).scheduler;
