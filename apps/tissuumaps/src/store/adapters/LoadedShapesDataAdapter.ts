@@ -65,7 +65,6 @@ export function useLoadedShapesDataAdapter(): ViewerAdapter["loadShapes"] {
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       await loadShapes(shapesId, { signal });
-      signal?.throwIfAborted();
       return new LoadedShapesDataAdapter(shapesId);
     },
     [loadShapes],

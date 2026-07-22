@@ -76,7 +76,6 @@ export class ParquetTableData implements TableData {
       { op: "column", source: this._source, column },
       { signal, onProgress },
     );
-    signal?.throwIfAborted();
     return data as GenericArray<T>;
   }
 
@@ -87,7 +86,7 @@ export class ParquetTableData implements TableData {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const values = await this.loadValues(column, { signal, onProgress });
-    signal?.throwIfAborted();
+    signal?.throwIfAborted(); // bail out before the O(n) Set construction below
     const uniqueValues = Array.from(new Set(values));
     return uniqueValues as GenericArray<T>;
   }
@@ -102,7 +101,6 @@ export class ParquetTableData implements TableData {
       { op: "range", source: this._source, column },
       { signal, onProgress },
     );
-    signal?.throwIfAborted();
     return range;
   }
 

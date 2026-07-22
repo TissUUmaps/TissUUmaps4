@@ -136,7 +136,6 @@ export class VisibilityResolver extends ResolverBase {
       (visibility) => VisibilityResolver.encodeVisibility(visibility),
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 
@@ -189,7 +188,6 @@ export class VisibilityResolver extends ResolverBase {
       (visibility) => VisibilityResolver.encodeVisibility(visibility),
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 

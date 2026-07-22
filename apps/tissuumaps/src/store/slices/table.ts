@@ -295,7 +295,6 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
         signal,
         onProgress,
       });
-      signal?.throwIfAborted();
       // Check if the table has been unloaded or its data source has changed
       const currentState = get();
       const currentLoadedDataKey = currentState.loadedTables.get(tableId);
@@ -360,7 +359,6 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
         signal,
         onProgress,
       });
-      signal?.throwIfAborted();
       // Check if the table has been unloaded or its data source has changed
       const currentState = get();
       const currentLoadedDataKey = currentState.loadedTables.get(tableId);
@@ -417,7 +415,6 @@ export const createTableSlice: TissUUmapsStateCreator<TableSlice> = (
         signal,
         onProgress,
       });
-      signal?.throwIfAborted();
       // Check if the table has been unloaded or its data source has changed
       const currentState = get();
       const currentLoadedDataKey = currentState.loadedTables.get(tableId);

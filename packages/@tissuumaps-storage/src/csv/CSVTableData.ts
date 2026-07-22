@@ -85,7 +85,7 @@ export class CSVTableData implements TableData {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const values = await this.loadValues(column, { signal, onProgress });
-    signal?.throwIfAborted();
+    signal?.throwIfAborted(); // bail out before the O(n) Set construction below
     const uniqueValues = Array.from(new Set(values));
     return uniqueValues as GenericArray<T>;
   }
@@ -97,7 +97,7 @@ export class CSVTableData implements TableData {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const values = await this.loadValues(column, { signal, onProgress });
-    signal?.throwIfAborted();
+    signal?.throwIfAborted(); // bail out before the O(n) min/max scan below
     if (typeof values[0] === "number") {
       let vmin, vmax;
       for (let i = 0; i < values.length; i++) {

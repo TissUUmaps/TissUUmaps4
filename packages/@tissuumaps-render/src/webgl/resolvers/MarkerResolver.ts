@@ -135,7 +135,6 @@ export class MarkerResolver extends ResolverBase {
       (marker) => MarkerResolver.encodeMarker(marker),
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 
@@ -187,7 +186,6 @@ export class MarkerResolver extends ResolverBase {
         (marker) => MarkerResolver.encodeMarker(marker),
         { signal },
       );
-      signal?.throwIfAborted();
       return data;
     }
     const data = MarkerResolver.createMarkerBuffer(ids.length, { align });
@@ -201,7 +199,6 @@ export class MarkerResolver extends ResolverBase {
       (marker) => MarkerResolver.encodeMarker(marker),
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 

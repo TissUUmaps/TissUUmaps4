@@ -73,7 +73,6 @@ export class ColorResolver extends ResolverBase {
         async (options) => loadTable(table, options),
         { signal, align },
       );
-      signal?.throwIfAborted();
     } else if (
       activeConfigSource === "groupBy" &&
       isGroupByConfig(config) &&
@@ -88,7 +87,6 @@ export class ColorResolver extends ResolverBase {
         async (options) => loadTable(table, options),
         { signal, align },
       );
-      signal?.throwIfAborted();
     } else if (activeConfigSource === "random" && isRandomConfig(config)) {
       data = await ColorResolver.resolveRandomColors(
         ids,
@@ -96,7 +94,6 @@ export class ColorResolver extends ResolverBase {
         defaultColor,
         { signal, align },
       );
-      signal?.throwIfAborted();
     } else {
       console.warn("No valid color config found, using default color");
       data = ColorResolver.createUniformColors(ids.length, defaultColor, {
@@ -114,7 +111,6 @@ export class ColorResolver extends ResolverBase {
       },
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 
@@ -188,7 +184,6 @@ export class ColorResolver extends ResolverBase {
       (color) => ColorResolver.encodeColor(color),
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 
@@ -242,7 +237,6 @@ export class ColorResolver extends ResolverBase {
         (color) => ColorResolver.encodeColor(color),
         { signal },
       );
-      signal?.throwIfAborted();
       return data;
     }
     if (config.groupBy.palette !== undefined) {
@@ -270,7 +264,6 @@ export class ColorResolver extends ResolverBase {
         (color) => ColorResolver.encodeColor(color),
         { signal },
       );
-      signal?.throwIfAborted();
       return data;
     }
     console.warn(
@@ -319,7 +312,6 @@ export class ColorResolver extends ResolverBase {
       },
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 

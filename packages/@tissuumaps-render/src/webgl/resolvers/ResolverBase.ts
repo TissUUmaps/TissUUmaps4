@@ -32,11 +32,8 @@ export abstract class ResolverBase {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const tableData = await loadTable({ signal });
-    signal?.throwIfAborted();
     const tableValues = await tableData.loadValues(column, { signal });
-    signal?.throwIfAborted();
     const tableValueRange = await tableData.loadValueRange(column, { signal });
-    signal?.throwIfAborted();
     const tableValuesById = new Map<number, unknown>();
     await AsyncUtils.forEach(
       tableData.getIds(),
@@ -45,7 +42,6 @@ export abstract class ResolverBase {
       },
       { signal },
     );
-    signal?.throwIfAborted();
     await AsyncUtils.forEach(
       ids,
       (id, i) => {
@@ -62,7 +58,6 @@ export abstract class ResolverBase {
       },
       { signal },
     );
-    signal?.throwIfAborted();
   }
 
   /**
@@ -94,9 +89,7 @@ export abstract class ResolverBase {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const tableData = await loadTable({ signal });
-    signal?.throwIfAborted();
     const tableGroups = await tableData.loadValues(column, { signal });
-    signal?.throwIfAborted();
     const tableGroupsById = new Map<number, unknown>();
     await AsyncUtils.forEach(
       tableData.getIds(),
@@ -105,7 +98,6 @@ export abstract class ResolverBase {
       },
       { signal },
     );
-    signal?.throwIfAborted();
     const encodedValueByTableGroup = new Map<unknown, number>();
     await AsyncUtils.forEach(
       ids,
@@ -129,6 +121,5 @@ export abstract class ResolverBase {
       },
       { signal },
     );
-    signal?.throwIfAborted();
   }
 }

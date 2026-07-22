@@ -260,7 +260,6 @@ export const createShapesSlice: TissUUmapsStateCreator<ShapesSlice> = (
         signal,
         onProgress,
       });
-      signal?.throwIfAborted();
       // Check if the shapes have been unloaded or their data source has changed
       const currentState = get();
       const currentLoadedDataKey = currentState.loadedShapes.get(shapesId);

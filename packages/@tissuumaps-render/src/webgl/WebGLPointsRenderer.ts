@@ -207,7 +207,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         markersUrl,
         { mipmap: true, signal },
       );
-      signal?.throwIfAborted();
     };
     initialize().then(onInitialized, onError);
   }
@@ -275,7 +274,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       loadTable,
       { signal },
     );
-    signal?.throwIfAborted();
     if (newRefs.length > WebGLPointsRenderer._maxNumObjects) {
       console.warn(
         `Only rendering the first ${WebGLPointsRenderer._maxNumObjects} out of ${newRefs.length} objects`,
@@ -302,7 +300,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       loadTable,
       { signal },
     );
-    signal?.throwIfAborted();
     return this.getRenderedBounds();
   }
 
@@ -497,7 +494,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         objectBounds === undefined
       ) {
         let { xs, ys } = await newRef.data.loadGeometry({ signal });
-        signal?.throwIfAborted();
+        signal?.throwIfAborted(); // bail out before the O(n) point filtering/bounds below
         const pointMask = newRef.itemMask;
         if (pointMask !== undefined) {
           xs = xs.filter((_, j) => pointMask[j]);
@@ -534,7 +531,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           loadTable,
           { signal, table: newRef.object.dataSource.table },
         );
-        signal?.throwIfAborted();
         this.context.loadBuffer(
           WebGL2RenderingContext.ARRAY_BUFFER,
           this._buffers.marker,
@@ -598,7 +594,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           loadTable,
           { signal, sizeFactor, table: newRef.object.dataSource.table },
         );
-        signal?.throwIfAborted();
         this.context.loadBuffer(
           WebGL2RenderingContext.ARRAY_BUFFER,
           this._buffers.size,
@@ -644,7 +639,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
             loadTable,
             { signal, table: newRef.object.dataSource.table },
           );
-          signal?.throwIfAborted();
           const opacityData = await OpacityResolver.resolveOpacities(
             newRef.filteredItemIds,
             newRef.object.pointOpacity,
@@ -657,7 +651,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
               opacityFactor: newRef.layer.opacity * newRef.object.opacity,
             },
           );
-          signal?.throwIfAborted();
           colorData = await ColorResolver.resolveColors(
             newRef.filteredItemIds,
             newRef.object.pointColor,
@@ -671,7 +664,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
               opacities: opacityData,
             },
           );
-          signal?.throwIfAborted();
         }
         this.context.loadBuffer(
           WebGL2RenderingContext.ARRAY_BUFFER,

@@ -91,7 +91,6 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       { op: "file", file, url, idProperty, nameProperty },
       { signal, onProgress },
     );
-    signal?.throwIfAborted();
     return new GeoJSONShapesData(geometry, ids, names);
   }
 }

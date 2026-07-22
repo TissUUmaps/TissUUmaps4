@@ -180,7 +180,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       loadTable,
       { signal },
     );
-    signal?.throwIfAborted();
     const renderedShapesByNewRef = this._cleanRenderedShapes(newRefs);
     this.renderedObjects = await this._createOrUpdateRenderedShapes(
       newRefs,
@@ -191,7 +190,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       loadTable,
       { signal },
     );
-    signal?.throwIfAborted();
     return this.getRenderedBounds();
   }
 
@@ -356,13 +354,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         scanlineDataTexture === undefined
       ) {
         const geometry = await newRef.data.loadGeometry({ signal });
-        signal?.throwIfAborted();
         objectBounds = await WebGLShapesRenderer._getObjectBounds(
           geometry,
           newRef.itemMask,
           { signal },
         );
-        signal?.throwIfAborted();
         if (scanlineDataTexture !== undefined) {
           this.context.gl.deleteTexture(scanlineDataTexture);
         }
@@ -372,7 +368,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           objectBounds,
           { signal },
         );
-        signal?.throwIfAborted();
       }
       let shapeFillColorsTexture = renderedShapes?.shapeFillColorsTexture;
       if (
@@ -412,7 +407,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           { signal },
         );
-        signal?.throwIfAborted();
       }
       let shapeStrokeColorsTexture = renderedShapes?.shapeStrokeColorsTexture;
       if (
@@ -452,7 +446,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           { signal },
         );
-        signal?.throwIfAborted();
       }
       newRenderedShapes.push({
         ref: newRef,
@@ -530,14 +523,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         objectBounds,
         { signal },
       );
-    signal?.throwIfAborted();
     const scanlineBuffer = await WebGLShapesRasterizer.packScanlines(
       scanlines,
       totalNumScanlineShapes,
       totalNumScanlineShapeEdges,
       { align: numValuesPerTextureLine, signal },
     );
-    signal?.throwIfAborted();
     const scanlineData = new Float32Array(scanlineBuffer);
     const scanlineDataTexture = this.context.createDataTexture(
       WebGL2RenderingContext.RGBA32F,
@@ -598,7 +589,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           table: newRef.object.dataSource.table,
         },
       );
-      signal?.throwIfAborted();
       const opacityData = await OpacityResolver.resolveOpacities(
         newRef.filteredItemIds,
         shapeOpacity,
@@ -612,7 +602,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           opacityFactor: newRef.layer.opacity * newRef.object.opacity,
         },
       );
-      signal?.throwIfAborted();
       colorData = await ColorResolver.resolveColors(
         newRef.filteredItemIds,
         shapeColor,
@@ -627,7 +616,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           opacities: opacityData,
         },
       );
-      signal?.throwIfAborted();
     }
     const shapeColorsTexture = this.context.createDataTexture(
       WebGL2RenderingContext.R32UI,
@@ -694,7 +682,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         }
       }
       await maybeYield();
-      signal?.throwIfAborted();
     }
     if (
       !Number.isFinite(xMin) ||

@@ -141,7 +141,6 @@ export class OpacityResolver extends ResolverBase {
       (opacity) => OpacityResolver.encodeOpacity(opacity, { opacityFactor }),
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 
@@ -194,7 +193,6 @@ export class OpacityResolver extends ResolverBase {
       (opacity) => OpacityResolver.encodeOpacity(opacity, { opacityFactor }),
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 

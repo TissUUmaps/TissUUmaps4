@@ -138,7 +138,6 @@ export class SizeResolver extends ResolverBase {
       (size) => SizeResolver.encodeSize(size, { sizeFactor }),
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 
@@ -188,7 +187,6 @@ export class SizeResolver extends ResolverBase {
       (size) => SizeResolver.encodeSize(size, { sizeFactor }),
       { signal },
     );
-    signal?.throwIfAborted();
     return data;
   }
 

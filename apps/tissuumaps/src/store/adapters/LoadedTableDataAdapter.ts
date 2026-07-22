@@ -109,7 +109,6 @@ export function useLoadedTableDataAdapter(): ViewerAdapter["loadTable"] {
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       await loadTable(tableId, { signal });
-      signal?.throwIfAborted();
       return new LoadedTableDataAdapter(tableId);
     },
     [loadTable],

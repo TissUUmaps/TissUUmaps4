@@ -264,7 +264,6 @@ export const createPointsSlice: TissUUmapsStateCreator<PointsSlice> = (
         signal,
         onProgress,
       });
-      signal?.throwIfAborted();
       // Check if the points have been unloaded or their data source has changed
       const currentState = get();
       const currentLoadedDataKey = currentState.loadedPoints.get(pointsId);

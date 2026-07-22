@@ -85,7 +85,6 @@ export class ParquetTableDataProvider implements TableDataProvider<
       { op: "file", source, idColumn, nameColumn },
       { signal, onProgress },
     );
-    signal?.throwIfAborted();
     return new ParquetTableData(source, numRows, columns, ids, names);
   }
 }

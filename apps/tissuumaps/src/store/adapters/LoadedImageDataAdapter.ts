@@ -44,7 +44,6 @@ export function useLoadedImageDataAdapter(): ViewerAdapter["loadImage"] {
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       await loadImage(imageId, { signal });
-      signal?.throwIfAborted();
       return new LoadedImageDataAdapter(imageId);
     },
     [loadImage],

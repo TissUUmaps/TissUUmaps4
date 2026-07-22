@@ -119,14 +119,12 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       const { signal, onProgress } = options ?? {};
       signal?.throwIfAborted();
       const response = await fetch(url, { signal });
-      signal?.throwIfAborted();
       if (!response.ok) {
         throw new Error(
           `Failed to load project from ${url}: ${response.status} ${response.statusText}`,
         );
       }
       const rawProjectData: unknown = await response.json();
-      signal?.throwIfAborted();
       // TODO validate project data
       const project = createProject(rawProjectData as RawProject);
       await get().loadProject(project, { signal, onProgress });

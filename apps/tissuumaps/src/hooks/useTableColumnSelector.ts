@@ -11,7 +11,6 @@ export function useTableColumnSelector(tableId: string | null) {
       signal?.throwIfAborted();
       if (tableId !== null) {
         const data = await loadTable(tableId, { signal });
-        signal?.throwIfAborted();
         return await data.suggestColumnQueries(currentQuery, { signal });
       }
       return [];
@@ -25,7 +24,6 @@ export function useTableColumnSelector(tableId: string | null) {
       signal?.throwIfAborted();
       if (tableId !== null) {
         const data = await loadTable(tableId, { signal });
-        signal?.throwIfAborted();
         return await data.resolveColumnQuery(query, { signal });
       }
       return null;

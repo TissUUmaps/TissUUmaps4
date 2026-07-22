@@ -191,7 +191,6 @@ export abstract class OpenSeadragonRendererBase<
     for (const renderedObject of this.renderedObjects) {
       if (!survivors.has(renderedObject)) {
         await this.deleteRenderedObject(renderedObject, { signal });
-        signal?.throwIfAborted();
       }
     }
     this.renderedObjects = [...survivors];
@@ -230,7 +229,6 @@ export abstract class OpenSeadragonRendererBase<
               newRenderedObject.tiledImage = tiledImage;
               this.updateRenderedObject(newRenderedObject);
               await this.updateBounds({ signal });
-              signal?.throwIfAborted();
             }
           }
           return tiledImage;

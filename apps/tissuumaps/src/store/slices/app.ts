@@ -162,7 +162,6 @@ function createInitialAppSliceState(): AppSliceState {
           const state = useTissUUmaps.getState();
           // TODO pass on workspace?
           await state.loadTable(tableId, { signal, onProgress });
-          signal?.throwIfAborted();
           return new LoadedTableDataAdapter(tableId);
         }),
       ],

@@ -76,7 +76,6 @@ export function useLoadedLabelsDataAdapter(): ViewerAdapter["loadLabels"] {
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       await loadLabels(labelsId, { signal });
-      signal?.throwIfAborted();
       return new LoadedLabelsDataAdapter(labelsId);
     },
     [loadLabels],

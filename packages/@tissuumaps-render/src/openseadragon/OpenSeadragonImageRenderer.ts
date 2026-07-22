@@ -49,12 +49,10 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
       loadImage,
       { signal },
     );
-    signal?.throwIfAborted();
     const newRenderedImages: RenderedObject<Image, ImageData>[] = [];
     const renderedImagesByNewRef = await this.cleanRenderedObjects(newRefs, {
       signal,
     });
-    signal?.throwIfAborted();
     for (const newRef of newRefs) {
       const renderedImage = renderedImagesByNewRef.get(newRef);
       if (renderedImage === undefined) {
@@ -67,7 +65,6 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     }
     this.renderedObjects = newRenderedImages;
     await this.updateBounds({ signal });
-    signal?.throwIfAborted();
   }
 
   /**

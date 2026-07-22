@@ -209,7 +209,6 @@ export class WebGLShapesRasterizer {
         }
       }
       await maybeYield();
-      signal?.throwIfAborted();
       shapeIndex++;
     }
     return { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges };
@@ -286,7 +285,6 @@ export class WebGLShapesRasterizer {
       }
       currentScanlineTexelOffset = currentScanlineShapeTexelOffset;
       await maybeYield();
-      signal?.throwIfAborted();
     }
     return buffer;
   }

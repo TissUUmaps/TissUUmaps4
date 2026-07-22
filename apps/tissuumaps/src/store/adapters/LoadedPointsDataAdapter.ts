@@ -65,7 +65,6 @@ export function useLoadedPointsDataAdapter(): ViewerAdapter["loadPoints"] {
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       await loadPoints(pointsId, { signal });
-      signal?.throwIfAborted();
       return new LoadedPointsDataAdapter(pointsId);
     },
     [loadPoints],

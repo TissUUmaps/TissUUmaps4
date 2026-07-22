@@ -134,13 +134,12 @@ export abstract class WebGLRendererBase<
                 currentObject.dataSource.table,
                 { signal },
               );
-              signal?.throwIfAborted();
               const tableIds = tableData.getIds();
               const tableLayers = await tableData.loadValues<string>(
                 currentObject.layer.column,
                 { signal },
               );
-              signal?.throwIfAborted();
+              signal?.throwIfAborted(); // bail out before the O(n) Map construction below
               itemLayers = new Map(
                 tableIds.map((id, i) => [id, tableLayers[i]!]),
               );
@@ -178,7 +177,6 @@ export abstract class WebGLRendererBase<
             },
             { signal },
           );
-          signal?.throwIfAborted();
           if (newFilteredItemIds.length === 0) {
             continue;
           }
