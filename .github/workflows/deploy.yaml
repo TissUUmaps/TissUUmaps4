@@ -49,7 +49,7 @@ jobs:
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs-dev/
       - name: Build production
         working-directory: production
-        run: pnpm install && pnpm run build && pnpm run build:docs
+        run: pnpm install && pnpm run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
