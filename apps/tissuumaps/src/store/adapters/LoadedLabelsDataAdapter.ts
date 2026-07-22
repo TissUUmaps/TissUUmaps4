@@ -48,8 +48,8 @@ export class LoadedLabelsDataAdapter implements LabelsData {
     return this._getData().getTileHeight(level);
   }
 
-  loadTile(): Promise<UintArray> {
-    throw new Error("Method not implemented.");
+  async loadTile(): Promise<UintArray> {
+    return Promise.reject(new Error("Method not implemented."));
   }
 
   close(): void {
@@ -69,14 +69,13 @@ export class LoadedLabelsDataAdapter implements LabelsData {
   }
 }
 
-export function useLoadedLabelsDataAdapter(): ViewerAdapter["getLabels"] {
+export function useLoadedLabelsDataAdapter(): ViewerAdapter["loadLabels"] {
   const loadLabels = useTissUUmaps((state) => state.loadLabels);
   return useCallback(
     async (labelsId, options) => {
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       await loadLabels(labelsId, { signal });
-      signal?.throwIfAborted();
       return new LoadedLabelsDataAdapter(labelsId);
     },
     [loadLabels],

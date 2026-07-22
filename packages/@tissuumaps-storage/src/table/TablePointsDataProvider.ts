@@ -87,7 +87,6 @@ export class TablePointsDataProvider implements PointsDataProvider<
       signal,
       onProgress,
     });
-    signal?.throwIfAborted();
 
     return new TablePointsData(
       tableData,

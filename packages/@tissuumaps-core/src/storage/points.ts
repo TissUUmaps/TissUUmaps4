@@ -1,5 +1,5 @@
 import type { PointsDataSource } from "../model/points";
-import type { PointsGeometry, ProgressCallback } from "../types";
+import type { ProgressCallback } from "../types/callbacks";
 import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**
@@ -28,3 +28,12 @@ export interface PointsData extends ItemsData {
     onProgress?: ProgressCallback;
   }): Promise<PointsGeometry>;
 }
+
+/** Point cloud geometry consisting of separate arrays for x and y coordinates */
+export type PointsGeometry = {
+  /** X coordinates of the points */
+  xs: Float32Array;
+
+  /** Y coordinates of the points */
+  ys: Float32Array;
+};

@@ -9,26 +9,23 @@ export default defineConfig({
   plugins: [
     dts({
       bundleTypes: true,
-      tsconfigPath: resolve(__dirname, "tsconfig.dts.json"),
+      tsconfigPath: resolve(__dirname, "tsconfig.ts59.json"),
     }),
     react(),
   ],
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      formats: ["es", "umd"],
+      formats: ["es"],
       fileName: "index",
-      name: "TissUUmapsViewer", // UMD global name
     },
     rollupOptions: {
-      external: ["react", "react-dom", "@tissuumaps/core"],
-      output: {
-        globals: {
-          react: "React",
-          "react-dom": "ReactDOM",
-          "@tissuumaps/core": "TissUUmapsCore",
-        },
-      },
+      external: [
+        "react",
+        "react-dom",
+        "@tissuumaps/core",
+        "@tissuumaps/render",
+      ],
     },
   },
   test: {

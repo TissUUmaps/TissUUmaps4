@@ -6,11 +6,10 @@ import {
   type ProgressCallback,
   type Project,
   type RawProject,
-  type RenderOptions,
-  type ViewerOptions,
   createProject,
   projectDefaults,
 } from "@tissuumaps/core";
+import type { OpenSeadragonOptions, WebGLOptions } from "@tissuumaps/render";
 
 import { deduplicate } from "../deduplicate";
 import type { TissUUmapsStateCreator } from "../index";
@@ -24,15 +23,13 @@ export type ProjectSliceState = {
   colorMaps: DefaultMap<Color>[];
   visibilityMaps: DefaultMap<boolean>[];
   opacityMaps: DefaultMap<number>[];
-  viewerOptions: ViewerOptions;
-  viewerAnimationStartOptions: ViewerOptions;
-  viewerAnimationFinishOptions: ViewerOptions;
-  renderOptions: RenderOptions;
+  osOptions: OpenSeadragonOptions;
+  glOptions: WebGLOptions;
 };
 
 export type ProjectSliceActions = {
   setProjectName: (name: string) => void;
-  setRenderOptions: (options: Partial<RenderOptions>) => void;
+  setGLOptions: (glOptions: WebGLOptions) => void;
   loadProject: (
     project: Project,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
@@ -60,9 +57,9 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       draft.projectName = name;
     });
   },
-  setRenderOptions: (options) => {
+  setGLOptions: (glOptions) => {
     set((draft) => {
-      draft.renderOptions = { ...draft.renderOptions, ...options };
+      draft.glOptions = glOptions;
     });
   },
   loadProject: deduplicate(
@@ -77,14 +74,8 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
         colorMaps: structuredClone(project.colorMaps),
         visibilityMaps: structuredClone(project.visibilityMaps),
         opacityMaps: structuredClone(project.opacityMaps),
-        renderOptions: structuredClone(project.renderOptions),
-        viewerOptions: structuredClone(project.viewerOptions),
-        viewerAnimationStartOptions: structuredClone(
-          project.viewerAnimationStartOptions,
-        ),
-        viewerAnimationFinishOptions: structuredClone(
-          project.viewerAnimationFinishOptions,
-        ),
+        osOptions: structuredClone(project.osOptions as OpenSeadragonOptions),
+        glOptions: structuredClone(project.glOptions),
       });
       const state = get();
       project.layers.forEach((layer) => state.addLayer(layer));
@@ -128,14 +119,12 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       const { signal, onProgress } = options ?? {};
       signal?.throwIfAborted();
       const response = await fetch(url, { signal });
-      signal?.throwIfAborted();
       if (!response.ok) {
         throw new Error(
           `Failed to load project from ${url}: ${response.status} ${response.statusText}`,
         );
       }
       const rawProjectData: unknown = await response.json();
-      signal?.throwIfAborted();
       // TODO validate project data
       const project = createProject(rawProjectData as RawProject);
       await get().loadProject(project, { signal, onProgress });
@@ -167,14 +156,8 @@ export const createProjectSlice: TissUUmapsStateCreator<ProjectSlice> = (
       colorMaps: structuredClone(state.colorMaps),
       visibilityMaps: structuredClone(state.visibilityMaps),
       opacityMaps: structuredClone(state.opacityMaps),
-      renderOptions: structuredClone(state.renderOptions),
-      viewerOptions: structuredClone(state.viewerOptions),
-      viewerAnimationStartOptions: structuredClone(
-        state.viewerAnimationStartOptions,
-      ),
-      viewerAnimationFinishOptions: structuredClone(
-        state.viewerAnimationFinishOptions,
-      ),
+      osOptions: structuredClone(state.osOptions),
+      glOptions: structuredClone(state.glOptions),
     };
   },
   saveProjectToJSON: () => {
@@ -200,9 +183,9 @@ function createInitialProjectSliceState(): ProjectSliceState {
     colorMaps: [],
     visibilityMaps: [],
     opacityMaps: [],
-    renderOptions: projectDefaults.renderOptions,
-    viewerOptions: projectDefaults.viewerOptions,
-    viewerAnimationStartOptions: projectDefaults.viewerAnimationStartOptions,
-    viewerAnimationFinishOptions: projectDefaults.viewerAnimationFinishOptions,
+    osOptions: structuredClone(
+      projectDefaults.osOptions as OpenSeadragonOptions,
+    ),
+    glOptions: structuredClone(projectDefaults.glOptions as WebGLOptions),
   };
 }

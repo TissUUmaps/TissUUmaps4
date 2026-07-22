@@ -32,8 +32,7 @@ export type GeoJSONWorkerResponseFor<
 > = Extract<GeoJSONWorkerResponse, { op: TWorkerRequest["op"] }>;
 
 export type GeoJSONWorkerMessage =
-  | GeoJSONWorkerResponse
-  | { progress: number; total: number };
+  GeoJSONWorkerResponse | { progress: number; total: number };
 
 type ShapesGeometryAccumulator = {
   shapePolygonOffsets: number[];

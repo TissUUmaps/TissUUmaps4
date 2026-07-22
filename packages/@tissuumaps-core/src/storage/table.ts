@@ -1,5 +1,6 @@
 import type { TableDataSource } from "../model/table";
-import type { GenericArray, ProgressCallback } from "../types";
+import type { GenericArray } from "../types/arrays";
+import type { ProgressCallback } from "../types/callbacks";
 import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**

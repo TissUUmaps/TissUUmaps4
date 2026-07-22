@@ -2,7 +2,7 @@
   "name": "@tissuumaps/root",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@11.15.1",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@microsoft/api-extractor": "^7.58.9",
@@ -36,9 +36,9 @@
     "test": "vitest run --passWithNoTests --coverage",
     "dev": "pnpm run --filter tissuumaps dev",
     "docs": "pnpm run --filter docs start",
-    "build": "pnpm run build:packages && pnpm run build:apps",
-    "build:apps": "pnpm run -r --filter \"./apps/**\" build",
-    "build:packages": "pnpm run -r --filter \"./packages/**\" build",
+    "build": "pnpm run -r --filter !docs build",
+    "build:docs": "pnpm run build:packages && pnpm run --filter docs build",
+    "build:packages": "pnpm run -r --filter \"./packages/*\" build",
     "clean": "rm -rf node_modules && pnpm run -r clean"
   },
   "lint-staged": {

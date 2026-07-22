@@ -1,6 +1,6 @@
 import batlow from "./assets/palettes/batlow.txt?raw";
 import batlowS from "./assets/palettes/batlowS.txt?raw";
-import { type Color, Marker } from "./model/types";
+import { type Color, Marker } from "./model/primitives";
 import { ColorUtils } from "./utils/ColorUtils";
 
 /** Default ordered palette of marker shapes used for categorical distinctions. */

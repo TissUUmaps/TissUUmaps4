@@ -52,9 +52,7 @@ export type ParquetRangeResponse = ParquetResponse<ParquetRangeRequest> & {
 };
 
 export type ParquetWorkerRequest =
-  | ParquetFileRequest
-  | ParquetColumnRequest
-  | ParquetRangeRequest;
+  ParquetFileRequest | ParquetColumnRequest | ParquetRangeRequest;
 
 export type ParquetWorkerResponse =
   | ParquetFileResponse
@@ -67,8 +65,7 @@ export type ParquetWorkerResponseFor<
 > = Extract<ParquetWorkerResponse, { op: TWorkerRequest["op"] }>;
 
 export type ParquetWorkerMessage =
-  | ParquetWorkerResponse
-  | { progress: number; total: number };
+  ParquetWorkerResponse | { progress: number; total: number };
 
 const ctx = self as unknown as {
   onmessage: ((event: MessageEvent<ParquetWorkerRequest>) => void) | null;
@@ -114,7 +111,7 @@ async function openParquet(source: ParquetSource): Promise<AsyncBuffer> {
   if (source.file !== undefined) {
     return {
       byteLength: source.file.size,
-      slice: (start: number, end?: number) =>
+      slice: async (start: number, end?: number) =>
         source.file!.slice(start, end).arrayBuffer(),
     };
   }

@@ -5,7 +5,7 @@ export function deduplicate<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const inFlightPromises = new Map<string, Promise<any>>();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return function (this: any, ...args: any[]): Promise<any> {
+  return async function (this: any, ...args: any[]): Promise<any> {
     // check if there's already a promise for these arguments
     const key = JSON.stringify(args);
     const inFlightPromise = inFlightPromises.get(key);

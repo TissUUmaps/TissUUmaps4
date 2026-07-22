@@ -58,14 +58,13 @@ export class LoadedPointsDataAdapter implements PointsData {
   }
 }
 
-export function useLoadedPointsDataAdapter(): ViewerAdapter["getPoints"] {
+export function useLoadedPointsDataAdapter(): ViewerAdapter["loadPoints"] {
   const loadPoints = useTissUUmaps((state) => state.loadPoints);
   return useCallback(
     async (pointsId, options) => {
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       await loadPoints(pointsId, { signal });
-      signal?.throwIfAborted();
       return new LoadedPointsDataAdapter(pointsId);
     },
     [loadPoints],

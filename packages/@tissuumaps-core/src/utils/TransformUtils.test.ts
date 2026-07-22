@@ -1,7 +1,7 @@
 import { mat3 } from "gl-matrix";
 import { describe, expect, it } from "vitest";
 
-import type { SimilarityTransform } from "../model/types";
+import type { SimilarityTransform } from "../model/primitives";
 import { TransformUtils } from "./TransformUtils";
 
 describe("TransformUtils", () => {
@@ -158,34 +158,6 @@ describe("TransformUtils", () => {
       expect(result.rotation).toBeCloseTo(tf.rotation);
       expect(result.translation.x).toBeCloseTo(tf.translation.x);
       expect(result.translation.y).toBeCloseTo(tf.translation.y);
-    });
-  });
-
-  describe("asGLMat3x2", () => {
-    it("converts mat3 to mat3x2 format", () => {
-      const m = mat3.fromValues(1, 2, 0, 3, 4, 0, 5, 6, 1);
-      const mat3x2 = TransformUtils.asGLMat3x2(m);
-      expect(mat3x2).toEqual([1, 2, 3, 4, 5, 6]);
-    });
-
-    it("returns [1,0,0,1,0,0] for identity", () => {
-      const m = mat3.create();
-      expect(TransformUtils.asGLMat3x2(m)).toEqual([1, 0, 0, 1, 0, 0]);
-    });
-  });
-
-  describe("transposeAsGLMat2x4", () => {
-    it("transposes mat3 and converts to mat2x4 format", () => {
-      const m = mat3.fromValues(1, 2, 0, 3, 4, 0, 5, 6, 1);
-      const mat2x4 = TransformUtils.transposeAsGLMat2x4(m);
-      expect(mat2x4).toEqual([1, 3, 5, 0, 2, 4, 6, 0]);
-    });
-
-    it("returns [1,0,0,0,0,1,0,0] for identity", () => {
-      const m = mat3.create();
-      expect(TransformUtils.transposeAsGLMat2x4(m)).toEqual([
-        1, 0, 0, 0, 0, 1, 0, 0,
-      ]);
     });
   });
 

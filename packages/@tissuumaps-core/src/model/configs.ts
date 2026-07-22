@@ -1,4 +1,4 @@
-import type { Color, CoordinateSpace, Marker } from "./types";
+import type { Color, CoordinateSpace, Marker } from "./primitives";
 
 /**
  * Base type for property configurations that can be sourced from different providers
@@ -148,9 +148,7 @@ export function isRandomConfig<TRandom>(
  * {@link Marker} indices (e.g. `0` = Cross, `6` = Disc).
  */
 export type MarkerConfig =
-  | ConstantConfig<Marker>
-  | FromConfig
-  | GroupByConfig<false>;
+  ConstantConfig<Marker> | FromConfig | GroupByConfig<false>;
 
 /**
  * Size configuration
@@ -221,9 +219,7 @@ export type ColorConfig =
  * Numerical table values are interpreted as booleans, where `0` is `false` and any other value is `true`.
  */
 export type VisibilityConfig =
-  | ConstantConfig<boolean>
-  | FromConfig
-  | GroupByConfig<true>;
+  ConstantConfig<boolean> | FromConfig | GroupByConfig<true>;
 
 /**
  * Opacity configuration
@@ -231,6 +227,4 @@ export type VisibilityConfig =
  * Numerical table values are interpreted as opacities between `0` (fully transparent) and `1` (fully opaque).
  */
 export type OpacityConfig =
-  | ConstantConfig<number>
-  | FromConfig
-  | GroupByConfig<true>;
+  ConstantConfig<number> | FromConfig | GroupByConfig<true>;

@@ -31,10 +31,8 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       colorMaps: state.colorMaps,
       visibilityMaps: state.visibilityMaps,
       opacityMaps: state.opacityMaps,
-      viewerOptions: state.viewerOptions,
-      viewerAnimationStartOptions: state.viewerAnimationStartOptions,
-      viewerAnimationFinishOptions: state.viewerAnimationFinishOptions,
-      renderOptions: state.renderOptions,
+      osOptions: state.osOptions,
+      glOptions: state.glOptions,
       // rerender upon changes to data providers
       _imageDataProviders: state.imageDataProviders,
       _labelsDataProviders: state.labelsDataProviders,
@@ -44,22 +42,22 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     })),
   );
 
-  const getImage = useLoadedImageDataAdapter();
-  const getLabels = useLoadedLabelsDataAdapter();
-  const getPoints = useLoadedPointsDataAdapter();
-  const getShapes = useLoadedShapesDataAdapter();
-  const getTable = useLoadedTableDataAdapter();
+  const loadImage = useLoadedImageDataAdapter();
+  const loadLabels = useLoadedLabelsDataAdapter();
+  const loadPoints = useLoadedPointsDataAdapter();
+  const loadShapes = useLoadedShapesDataAdapter();
+  const loadTable = useLoadedTableDataAdapter();
 
   const viewerAdapter = useMemo(
     () => ({
       ...viewerState,
-      getImage,
-      getLabels,
-      getPoints,
-      getShapes,
-      getTable,
+      loadImage,
+      loadLabels,
+      loadPoints,
+      loadShapes,
+      loadTable,
     }),
-    [viewerState, getImage, getLabels, getPoints, getShapes, getTable],
+    [viewerState, loadImage, loadLabels, loadPoints, loadShapes, loadTable],
   );
 
   return (

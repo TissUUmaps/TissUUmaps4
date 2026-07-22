@@ -1,10 +1,10 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.src.json",
   "compilerOptions": {
     "composite": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
     "types": ["vitest/globals"]
   },
+  "references": [{ "path": "./tsconfig.src.json" }],
   "include": ["./src/**/*.test.js", "./src/**/*.test.ts"],
   "exclude": []
 }

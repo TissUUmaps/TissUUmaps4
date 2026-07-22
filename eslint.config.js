@@ -17,11 +17,10 @@ export default defineConfig([
   ]),
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
-  // General
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
     languageOptions: {
-      ecmaVersion: 2022,
+      ecmaVersion: 2025,
       globals: globals.browser,
       parserOptions: {
         projectService: {
@@ -37,61 +36,12 @@ export default defineConfig([
       },
     },
     rules: {
+      "no-duplicate-imports": "error",
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-import-type-side-effects": "error",
+      "@typescript-eslint/promise-function-async": "error",
     },
   },
-  // Tests - apps/tissuumaps
-  {
-    files: ["apps/tissuumaps/src/**/*.test.{js,jsx,ts,tsx}"],
-    languageOptions: {
-      parserOptions: {
-        projectService: false,
-        project: "./apps/tissuumaps/tsconfig.test.json",
-      },
-    },
-  },
-  // Tests - packages/@tissuumaps-core
-  {
-    files: ["packages/@tissuumaps-core/src/**/*.test.{js,ts}"],
-    languageOptions: {
-      parserOptions: {
-        projectService: false,
-        project: "./packages/@tissuumaps-core/tsconfig.test.json",
-      },
-    },
-  },
-  // Tests - packages/@tissuumaps-storage
-  {
-    files: ["packages/@tissuumaps-storage/src/**/*.test.{js,ts}"],
-    languageOptions: {
-      parserOptions: {
-        projectService: false,
-        project: "./packages/@tissuumaps-storage/tsconfig.test.json",
-      },
-    },
-  },
-  // Tests - packages/@tissuumaps-plugins
-  {
-    files: ["packages/@tissuumaps-plugins/src/**/*.test.{js,ts}"],
-    languageOptions: {
-      parserOptions: {
-        projectService: false,
-        project: "./packages/@tissuumaps-plugins/tsconfig.test.json",
-      },
-    },
-  },
-  // Tests - packages/@tissuumaps-viewer
-  {
-    files: ["packages/@tissuumaps-viewer/src/**/*.test.{js,jsx,ts,tsx}"],
-    languageOptions: {
-      parserOptions: {
-        projectService: false,
-        project: "./packages/@tissuumaps-viewer/tsconfig.test.json",
-      },
-    },
-  },
-  // React
   {
     files: [
       "apps/tissuumaps/**/*.{js,jsx,ts,tsx}",

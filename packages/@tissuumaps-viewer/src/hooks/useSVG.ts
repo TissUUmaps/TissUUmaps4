@@ -1,49 +1,72 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { type Rect, SVGController } from "@tissuumaps/core";
+import type { Rect } from "@tissuumaps/core";
+import { SVGController } from "@tissuumaps/render";
 
 import type { ViewerAdapter } from "../adapter";
 
 export function useSVG(
   adapter: ViewerAdapter,
-  parent: Element | null,
-  initialViewport: Rect | null,
+  viewport: Rect | null,
+  containerSize: { width: number; height: number } | null,
 ) {
   const { interactionMode, addShape } = adapter;
 
-  const controllerRef = useRef<SVGController | null>(null);
-  const [controllerReady, markControllerReady] = useReducer((x) => x + 1, 0);
+  const svgRef = useRef<{ controller: SVGController } | null>(null);
+  const [svgReady, setSVGReady] = useState(false);
 
-  useEffect(() => {
-    let container: SVGSVGElement | undefined;
-    let controller: SVGController | undefined;
-    if (parent !== null && initialViewport !== null) {
-      console.debug("Initializing SVG");
-      container = parent.appendChild(SVGController.createContainer());
-      controller = new SVGController(container, initialViewport, {
+  const interactionModeRef = useRef(interactionMode);
+  const viewportRef = useRef(viewport);
+  const containerSizeRef = useRef(containerSize);
+
+  const initSVG = useCallback(
+    (parent: HTMLElement | null) => {
+      if (parent === null) {
+        return () => {};
+      }
+      const container = SVGController.createContainer();
+      parent.appendChild(container);
+      const controller = new SVGController(container, viewportRef.current, {
         onShapeComplete: addShape,
       });
-      controllerRef.current = controller;
-      markControllerReady();
-    }
-    return () => {
-      if (controller !== undefined) {
-        controllerRef.current = null;
+      if (containerSizeRef.current !== null) {
+        controller.resizeContainer(containerSizeRef.current);
+      }
+      if (interactionModeRef.current !== undefined) {
+        controller.setInteractionMode(interactionModeRef.current);
+      }
+      svgRef.current = { controller };
+      setSVGReady(true);
+      return () => {
+        setSVGReady(false);
+        svgRef.current = null;
         controller.destroy();
-      }
-      if (container !== undefined && parent !== null) {
         parent.removeChild(container);
-      }
-    };
-  }, [parent, initialViewport, addShape]);
+      };
+    },
+    [addShape],
+  );
 
   useEffect(() => {
-    const controller = controllerRef.current;
-    if (controllerReady && controller !== null) {
-      console.debug("Setting interaction mode");
-      controller.setInteractionMode(interactionMode);
+    interactionModeRef.current = interactionMode;
+    if (svgReady && svgRef.current !== null) {
+      svgRef.current.controller.setInteractionMode(interactionMode);
     }
-  }, [controllerReady, interactionMode]);
+  }, [svgReady, interactionMode]);
 
-  return { controllerRef, controllerReady };
+  useEffect(() => {
+    viewportRef.current = viewport;
+    if (svgReady && svgRef.current !== null && viewport !== null) {
+      svgRef.current.controller.setViewport(viewport);
+    }
+  }, [svgReady, viewport]);
+
+  useEffect(() => {
+    containerSizeRef.current = containerSize;
+    if (svgReady && svgRef.current !== null && containerSize !== null) {
+      svgRef.current.controller.resizeContainer(containerSize);
+    }
+  }, [svgReady, containerSize]);
+
+  return { initSVG, svgRef, svgReady };
 }

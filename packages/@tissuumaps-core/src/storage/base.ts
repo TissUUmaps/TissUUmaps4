@@ -1,7 +1,7 @@
 import type { JsonSchema, UISchemaElement } from "@jsonforms/core";
 
 import type { DataSource, ItemsDataSource } from "../model/base";
-import type { ProgressCallback } from "../types";
+import type { ProgressCallback } from "../types/callbacks";
 
 /**
  * Base interface for data providers
