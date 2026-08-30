@@ -19,6 +19,16 @@ import type { OpenSeadragonContext } from "./OpenSeadragonContext";
 
 /**
  * Base class for OpenSeadragon renderers that manage tiled images for objects (images or labels)
+ *
+ * Each renderer owns an anchor, an invisible tiled image spanning everything the
+ * renderer contributes to the world (see
+ * {@link OpenSeadragonContext.updateBounds}). Renderers share a viewer, so the
+ * anchor also marks where the renderer's own tiled images belong: they directly
+ * follow the anchor, in the order of {@link renderedObjects}.
+ *
+ * Tiled images are inserted behind the anchor when they are added, rather than
+ * moved there afterwards, as OpenSeadragon's navigator cannot keep up with
+ * reordering. {@link cleanRenderedObjects} recreates those that are out of place.
  */
 export abstract class OpenSeadragonRendererBase<
   TObject extends Image | Labels,
@@ -30,117 +40,178 @@ export abstract class OpenSeadragonRendererBase<
   protected renderedObjects: RenderedObject<TObject, TObjectData>[] = [];
   private _anchor: OpenSeadragon.TiledImage | undefined;
   private _extraBounds: Rect[] = [];
+  private _anchorTaskPromise: Promise<unknown> = Promise.resolve();
+  private _destroyed: boolean = false;
 
   /**
-   * Creates a new OpenSeadragonRendererBase instance
+   * Creates a new OpenSeadragonRendererBase instance and asynchronously adds its anchor
+   *
+   * The renderer must not be used before `onInitialized` has been called;
+   * `onError` is called instead if adding the anchor failed or was aborted.
    *
    * @param context - The OpenSeadragon context that provides access to the viewer and other shared state
+   * @param onInitialized - Called once the anchor has been added to the world
+   * @param onError - Called if the anchor could not be added
+   * @param options - Optional abort signal and world index at which to insert the anchor
    */
   constructor(
     context: OpenSeadragonContext,
     onInitialized: () => void,
     onError: (error: Error) => void,
-    options?: { anchorIndex?: number; signal?: AbortSignal },
+    options?: { signal?: AbortSignal; anchorIndex?: number },
   ) {
     this.context = context;
-    const { anchorIndex, signal } = options ?? {};
-    const initialize = async () => {
+    this._enqueueAnchorTask(async () => {
+      const { signal, anchorIndex } = options ?? {};
       signal?.throwIfAborted();
       this._anchor = await this.context.updateBounds(
         OpenSeadragonRendererBase._defaultBounds,
-        { dummyIndex: anchorIndex },
+        { signal, dummyIndex: anchorIndex },
       );
-      signal?.throwIfAborted();
-    };
-    initialize().then(onInitialized, onError);
+    }).then(onInitialized, onError);
   }
 
+  /**
+   * Sets additional bounds to be covered by the anchor
+   *
+   * Used to include content that is not rendered by OpenSeadragon (e.g. points
+   * and shapes rendered with WebGL) in the viewer's world bounds. Takes effect on
+   * the next {@link updateBounds} call.
+   *
+   * @param bounds - Additional bounds, in world coordinates
+   */
   setExtraBounds(bounds: Rect[]): void {
     this._extraBounds = bounds;
   }
 
-  async updateBounds(options?: { signal?: AbortSignal }): Promise<void> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const tiledImageBounds = [];
-    for (const renderedObject of this.renderedObjects) {
-      if (renderedObject.tiledImage !== undefined) {
-        tiledImageBounds.push(renderedObject.tiledImage.getBounds());
-      }
+  /**
+   * Resizes the anchor to the bounding box of all tiled images and extra bounds
+   *
+   * Rendered objects whose tiled image has not been added to the world yet are
+   * ignored; they update the anchor themselves upon arrival (see
+   * {@link createRenderedObject}). Does nothing once the renderer has been
+   * destroyed, as there is no anchor to resize anymore.
+   *
+   * @param options - Optional abort signal
+   */
+  updateBounds(options?: { signal?: AbortSignal }): Promise<void> {
+    if (this._destroyed) {
+      return Promise.resolve();
     }
-    const bounds =
-      GeometryUtils.boundingBox(...tiledImageBounds, ...this._extraBounds) ??
-      OpenSeadragonRendererBase._defaultBounds;
-    this._anchor = await this.context.updateBounds(bounds, {
-      dummy: this._anchor,
+    return this._enqueueAnchorTask(async () => {
+      const { signal } = options ?? {};
+      signal?.throwIfAborted();
+      const tiledImageBounds = [];
+      for (const renderedObject of this.renderedObjects) {
+        if (renderedObject.tiledImage !== undefined) {
+          tiledImageBounds.push(renderedObject.tiledImage.getBounds());
+        }
+      }
+      const bounds =
+        GeometryUtils.boundingBox(...tiledImageBounds, ...this._extraBounds) ??
+        OpenSeadragonRendererBase._defaultBounds;
+      this._anchor = await this.context.updateBounds(bounds, {
+        signal,
+        dummy: this._anchor,
+      });
     });
-    signal?.throwIfAborted();
   }
 
   /**
    * Destroys the renderer by removing the anchor tiled image and all rendered objects from the OpenSeadragon viewer
+   *
+   * Rendered objects whose tiled image has not been added to the world yet are
+   * only marked for deletion, and are removed as soon as they arrive.
+   *
+   * The renderer is unusable afterwards: it has no anchor anymore, so
+   * {@link updateBounds} does nothing, {@link cleanRenderedObjects} throws, and
+   * tiled images that still arrive are removed right away.
    */
   async destroy(): Promise<void> {
-    if (this._anchor !== undefined) {
-      await this.context.removeTiledImage(this._anchor);
-      this._anchor = undefined;
-    }
+    this._destroyed = true;
     for (const renderedObject of this.renderedObjects) {
       await this.deleteRenderedObject(renderedObject);
     }
     this.renderedObjects = [];
+    // remove the anchor once all pending anchor tasks have settled, as they
+    // would otherwise re-create it
+    await this._enqueueAnchorTask(async () => {
+      if (this._anchor !== undefined) {
+        const anchor = this._anchor;
+        this._anchor = undefined;
+        await this.context.removeTiledImage(anchor);
+      }
+    });
   }
 
   /**
-   * Loads the data for all objects in the specified layers and returns a list of object references
+   * Concurrently loads the data of all objects assigned to the specified layers
+   *
+   * The returned references are ordered by layer and then by object, which
+   * determines the order of the corresponding tiled images in the world. Objects
+   * whose data failed to load are logged and skipped.
    *
    * @param layers - The layers for which to load objects
-   * @param objects - The objects to load (images or labels)
-   * @param loadObject - A function that retrieves the (cached) data for a given object ID
-   * @param options - Optional parameters, including an AbortSignal to cancel the operation
-   * @returns A promise that resolves to a list of object references containing the loaded data
+   * @param objects - The objects to load (images or labels), filtered by layer membership
+   * @param loadObject - A function that retrieves the (cached) data for a given object
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to one object reference per successfully loaded object
    */
   protected async loadObjects(
     layers: Layer[],
     objects: TObject[],
     loadObject: (
-      objectId: string,
+      object: TObject,
       options?: { signal?: AbortSignal },
     ) => Promise<TObjectData>,
     options?: { signal?: AbortSignal },
-  ) {
+  ): Promise<ObjectRef<TObject, TObjectData>[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const newRefs: ObjectRef<TObject, TObjectData>[] = [];
+    const newRefPromises: Promise<ObjectRef<TObject, TObjectData>>[] = [];
     for (const currentLayer of layers) {
       for (const currentObject of objects.filter(
         (object) => object.layer === currentLayer.id,
       )) {
-        let data;
-        try {
-          data = await loadObject(currentObject.id, { signal });
-        } catch (error) {
+        const dataPromise = loadObject(currentObject, { signal });
+        dataPromise.catch((error) => {
           if (!signal?.aborted) {
             console.error(
               `Failed to load object with ID '${currentObject.id}'`,
               error,
             );
           }
-          continue;
-        } finally {
-          signal?.throwIfAborted();
-        }
-        newRefs.push({ layer: currentLayer, object: currentObject, data });
+        });
+        const newRefPromise = dataPromise.then((data) => ({
+          layer: currentLayer,
+          object: currentObject,
+          data,
+        }));
+        newRefPromises.push(newRefPromise);
       }
     }
-    return newRefs;
+    const results = await Promise.allSettled(newRefPromises);
+    signal?.throwIfAborted();
+    return results
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
   }
 
   /**
-   * Cleans up the rendered objects by removing any that are no longer referenced in the new list of object references.
+   * Retains the rendered objects that can be reused for the new object references, and deletes the rest
    *
-   * @param newRefs - The new list of object references that should be retained
-   * @returns A map of the new object references to their corresponding rendered objects that are still valid
+   * A rendered object is reusable if it references the same object on the same
+   * layer with an unchanged data source, and if its tiled image already sits at
+   * the world index expected for its position among the reusable references,
+   * counted from the anchor. All other rendered objects are deleted, and are
+   * expected to be recreated by the caller via {@link createRenderedObject},
+   * which is also how the world is reordered.
+   *
+   * @param newRefs - The new object references, in the intended world order
+   * @param options - Optional abort signal
+   * @returns A map of new object references to their reusable rendered objects
+   * @throws Error if the renderer has no anchor, i.e. it is not initialized or
+   * already destroyed
    */
   protected async cleanRenderedObjects(
     newRefs: ObjectRef<TObject, TObjectData>[],
@@ -153,8 +224,7 @@ export abstract class OpenSeadragonRendererBase<
     if (this._anchor === undefined) {
       throw new Error("Anchor not initialized");
     }
-    const anchorIndex = await this.context.getTiledImageIndex(this._anchor);
-    signal?.throwIfAborted();
+    const anchorIndex = this.context.getTiledImageIndex(this._anchor);
     if (anchorIndex === -1) {
       throw new Error("Anchor not found");
     }
@@ -163,7 +233,7 @@ export abstract class OpenSeadragonRendererBase<
       RenderedObject<TObject, TObjectData>
     >();
     const survivors = new Set<RenderedObject<TObject, TObjectData>>();
-    let nextIndex = anchorIndex + 1;
+    let nextOffset = 1;
     for (const newRef of newRefs) {
       const renderedObject = this.renderedObjects.find(
         (renderedObject) =>
@@ -175,22 +245,21 @@ export abstract class OpenSeadragonRendererBase<
           ),
       );
       if (renderedObject !== undefined) {
-        if (renderedObject.tiledImage !== undefined) {
-          const index = await this.context.getTiledImageIndex(
-            renderedObject.tiledImage,
-          );
-          signal?.throwIfAborted();
-          if (index === nextIndex) {
-            renderedObjectsByNewRef.set(newRef, renderedObject);
-            survivors.add(renderedObject);
-          }
+        if (
+          renderedObject.tiledImage !== undefined &&
+          this.context.getTiledImageIndex(renderedObject.tiledImage) ===
+            anchorIndex + nextOffset
+        ) {
+          renderedObjectsByNewRef.set(newRef, renderedObject);
+          survivors.add(renderedObject);
         }
-        nextIndex++;
+        nextOffset++;
       }
     }
     for (const renderedObject of this.renderedObjects) {
       if (!survivors.has(renderedObject)) {
-        await this.deleteRenderedObject(renderedObject, { signal });
+        await this.deleteRenderedObject(renderedObject);
+        signal?.throwIfAborted();
       }
     }
     this.renderedObjects = [...survivors];
@@ -198,47 +267,88 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Creates a new rendered object for the given object reference and adds it to the OpenSeadragon viewer.
+   * Creates a new rendered object for the given object reference and adds its TiledImage to the world
    *
-   * The TiledImage is created asynchronously; the rendered object will be updated once the TiledImage is available.
-   * If the rendered object is deleted before the TiledImage is created, it will be removed from the viewer immediately after creation.
-   * Otherwise, the rendered object will be updated with the current state of the object reference and the TiledImage will be added to the viewer.
+   * The TiledImage is inserted `offset` places after the anchor, which
+   * establishes the world layout that {@link cleanRenderedObjects} expects. Its
+   * index is resolved once the addition is executed, as the anchor may have been
+   * replaced, and world indices may have shifted, while it was enqueued.
    *
+   * Returns before the TiledImage exists: it is added asynchronously and only
+   * then assigned to the rendered object, transformed, and included in the
+   * anchor bounds. If the rendered object is deleted or the operation is aborted
+   * in the meantime, the TiledImage is removed again immediately after it was
+   * added; if the context is destroyed, nothing is done at all.
+   *
+   * @param offset - The position after the anchor at which to insert the new TiledImage
    * @param newRef - The object reference for which to create a rendered object
-   * @returns The newly created rendered object, which may not yet have a TiledImage
+   * @param options - Optional abort signal
+   * @returns The newly created rendered object, which does not have a TiledImage yet
    */
   protected createRenderedObject(
+    offset: number,
     newRef: ObjectRef<TObject, TObjectData>,
     options?: { signal?: AbortSignal },
   ): RenderedObject<TObject, TObjectData> {
     const { signal } = options ?? {};
+    const {
+      promise: tiledImagePromise,
+      resolve: resolveTiledImagePromise,
+      reject: rejectTiledImagePromise,
+    } = Promise.withResolvers<OpenSeadragon.TiledImage>();
+    tiledImagePromise.catch(() => {}); // prevent unhandled rejections in console
     const newRenderedObject: RenderedObject<TObject, TObjectData> = {
       ref: newRef,
       state: {
         object: { dataSource: structuredClone(newRef.object.dataSource) },
       },
-      tiledImagePromise: this.context
-        .addTiledImage({ tileSource: this.getTileSource(newRef.data) })
-        .then(async (tiledImage) => {
-          signal?.throwIfAborted();
-          if (!this.context.isDestroyed()) {
-            if (newRenderedObject.pendingDelete) {
-              await this.context.removeTiledImage(tiledImage);
-              signal?.throwIfAborted();
-            } else {
-              newRenderedObject.tiledImage = tiledImage;
-              this.updateRenderedObject(newRenderedObject);
-              await this.updateBounds({ signal });
-            }
-          }
-          return tiledImage;
-        }),
+      tiledImagePromise,
     };
+    this.context
+      .addTiledImage(
+        { tileSource: this.getTileSource(newRef.data) },
+        {
+          signal,
+          getIndex: () => {
+            if (this._anchor !== undefined) {
+              const anchorIndex = this.context.getTiledImageIndex(this._anchor);
+              if (anchorIndex !== -1) {
+                return anchorIndex + 1 + offset;
+              }
+            }
+            return undefined;
+          },
+        },
+      )
+      .then(async (tiledImage) => {
+        signal?.throwIfAborted();
+        if (!this.context.isDestroyed()) {
+          if (
+            newRenderedObject.pendingDelete ||
+            signal?.aborted ||
+            this._destroyed
+          ) {
+            await this.context.removeTiledImage(tiledImage);
+            signal?.throwIfAborted();
+          } else {
+            newRenderedObject.tiledImage = tiledImage;
+            this.updateRenderedObject(newRenderedObject);
+            await this.updateBounds({ signal });
+          }
+        }
+        return tiledImage;
+      })
+      .then(resolveTiledImagePromise, rejectTiledImagePromise);
     return newRenderedObject;
   }
 
   /**
-   * Updates the rendered object with the current state of the object reference and the TiledImage.
+   * Applies the transform, flip, visibility, and opacity of an object reference to the rendered object's TiledImage
+   *
+   * Only properties whose value actually changed are written, as each write
+   * triggers a redraw. The applied data source is recorded in the rendered
+   * object's state, where {@link cleanRenderedObjects} picks it up to detect
+   * TiledImages that have to be recreated.
    *
    * @param renderedObject - The rendered object to update
    * @param newRef - The new object reference to update the rendered object with. If not provided, the existing reference will be used.
@@ -292,33 +402,59 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Deletes the rendered object by removing its TiledImage from the OpenSeadragon viewer, or marking it for deletion if the TiledImage has not yet been created.
+   * Deletes the rendered object by removing its TiledImage from the OpenSeadragon viewer, or marking it for deletion if the TiledImage has not yet been created
+   *
+   * The removal is queued by the context (see
+   * {@link OpenSeadragonContext.removeTiledImage}) and applied before any tiled
+   * image requested after it, so a caller that deletes before it creates still
+   * gets the world indices it expects.
+   *
+   * Deleting a rendered object does not remove it from {@link renderedObjects}.
    *
    * @param renderedObject - The rendered object to delete
+   * @param options - Optional abort signal
    */
-  protected async deleteRenderedObject(
+  protected deleteRenderedObject(
     renderedObject: RenderedObject<TObject, TObjectData>,
-    options?: { signal?: AbortSignal },
   ): Promise<void> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    if (renderedObject.tiledImage !== undefined) {
-      await this.context.removeTiledImage(renderedObject.tiledImage);
-      signal?.throwIfAborted();
-    } else {
+    if (renderedObject.tiledImage === undefined) {
       renderedObject.pendingDelete = true;
+      return Promise.resolve();
     }
+    return this.context.removeTiledImage(renderedObject.tiledImage);
   }
 
   /**
-   * Abstract method to retrieve the tile source for a given object data.
+   * Returns the tile source for the given object data
    *
-   * @param data - The object data (image or labels) for which to retrieve the tile source.
-   * @returns The tile source, which can be a URL string, a TileSourceConfig object, or a CustomTileSource object.
+   * @param data - The object data (image or labels) for which to retrieve the tile source
+   * @returns The tile source, which can be a URL string, a TileSourceConfig object, or a CustomTileSource object
    */
   protected abstract getTileSource(
     data: TObjectData,
   ): string | TileSourceConfig | CustomTileSource;
+
+  /**
+   * Appends a task to the anchor task queue
+   *
+   * Tasks are run one at a time, in call order, and a failing task does not
+   * prevent subsequent tasks from running. Every task that reads or writes
+   * {@link _anchor} has to be enqueued here: concurrent tasks would each replace
+   * the anchor they captured, leaving the anchors created in between orphaned in
+   * the world, which shifts all subsequent world indices and thereby invalidates
+   * the layout expected by {@link cleanRenderedObjects}.
+   *
+   * The queue is per renderer, and separate from the context's addition queue,
+   * which anchor tasks enqueue onto themselves.
+   *
+   * @param task - Task to run once all previously enqueued tasks have settled
+   * @returns A promise that resolves with the task's result
+   */
+  private _enqueueAnchorTask<T>(task: () => T | Promise<T>): Promise<T> {
+    const result = this._anchorTaskPromise.then(task);
+    this._anchorTaskPromise = result.catch(() => {}); // prevent unhandled rejections in console
+    return result;
+  }
 
   /**
    * Computes the effective opacity for a tiled image
@@ -339,9 +475,14 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Computes the effective flip, width, rotation, and position for a tiled image based on the object reference and its content size.
+   * Computes the effective flip, width, rotation, and position for a tiled image based on the object reference and its content size
    *
-   * The transformation is computed by combining the object's transform with the layer's transform, and then applying the content size to determine the final width and position.
+   * Composes the object's data-to-layer transform with the layer's layer-to-world
+   * transform and decomposes the result into the components expected by
+   * OpenSeadragon: a width in world coordinates, a rotation, and the position of
+   * the unrotated top-left corner. The object transform rotates around the
+   * object's center, matching OpenSeadragon, which rotates tiled images around
+   * their center. The flip is passed through, as OpenSeadragon applies it itself.
    *
    * @param ref - The object reference for which to compute the transformation
    * @param contentSize - The size of the content (image or labels) in pixels
@@ -384,9 +525,6 @@ export abstract class OpenSeadragonRendererBase<
 
 /**
  * A reference to either an image or labels object on a specific layer
- *
- * @template TObject - The type of the object (Image or Labels)
- * @template TObjectData - The type of the object data (ImageData or LabelsData)
  */
 export type ObjectRef<
   TObject extends Image | Labels,
@@ -399,10 +537,6 @@ export type ObjectRef<
 
 /**
  * Mutable state for a single tiled image in the viewer
- *
- * Because OpenSeadragon adds tiled images asynchronously, the `tiledImage`
- * field may be `undefined` until the `success` callback fires. During that
- * window, deletions are deferred via `pendingDelete`.
  */
 export type RenderedObject<
   TObject extends Image | Labels,

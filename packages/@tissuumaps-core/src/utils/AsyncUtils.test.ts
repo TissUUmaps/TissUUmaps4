@@ -143,22 +143,20 @@ describe("AsyncUtils.createYielder", () => {
 
   it("throws on the abort check after yielding", async () => {
     const controller = new AbortController();
-    const yielder = AsyncUtils.createYielder({
-      signal: controller.signal,
-      yieldMs: -1,
+    // abort while yielding to reach the abort check after the yield
+    vi.spyOn(AsyncUtils, "yield").mockImplementation(() => {
+      controller.abort();
+      return Promise.resolve();
     });
-    controller.abort();
-    await expect(yielder()).rejects.toThrow();
+    const yielder = AsyncUtils.createYielder({ yieldMs: -1 });
+    await expect(yielder({ signal: controller.signal })).rejects.toThrow();
   });
 
   it("throws on the abort check even while within budget", async () => {
     const controller = new AbortController();
-    const yielder = AsyncUtils.createYielder({
-      signal: controller.signal,
-      yieldMs: 60_000,
-    });
+    const yielder = AsyncUtils.createYielder({ yieldMs: 60_000 });
     controller.abort();
-    await expect(yielder()).rejects.toThrow();
+    await expect(yielder({ signal: controller.signal })).rejects.toThrow();
   });
 });
 

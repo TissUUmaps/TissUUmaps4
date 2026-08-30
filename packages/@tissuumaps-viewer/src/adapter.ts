@@ -9,22 +9,24 @@ import type {
   Layer,
   Marker,
   MultiPolygon,
+  OpenSeadragonOptions,
   Points,
   PointsData,
   Shapes,
   ShapesData,
+  Table,
   TableData,
+  WebGLOptions,
 } from "@tissuumaps/core";
-import type { OpenSeadragonOptions, WebGLOptions } from "@tissuumaps/render";
 
 export interface ViewerAdapter {
   interactionMode: InteractionMode;
-  workspace: FileSystemDirectoryHandle | null;
   layers: Layer[];
   images: Image[];
   labels: Labels[];
   points: Points[];
   shapes: Shapes[];
+  tables: Table[];
   markerMaps: DefaultMap<Marker>[];
   sizeMaps: DefaultMap<number>[];
   colorMaps: DefaultMap<Color>[];
@@ -33,23 +35,23 @@ export interface ViewerAdapter {
   osOptions: OpenSeadragonOptions;
   glOptions: WebGLOptions;
   loadImage: (
-    imageId: string,
+    image: Image,
     options?: { signal?: AbortSignal },
   ) => Promise<ImageData>;
   loadLabels: (
-    labelsId: string,
+    labels: Labels,
     options?: { signal?: AbortSignal },
   ) => Promise<LabelsData>;
   loadPoints: (
-    pointsId: string,
+    points: Points,
     options?: { signal?: AbortSignal },
   ) => Promise<PointsData>;
   loadShapes: (
-    shapesId: string,
+    shapes: Shapes,
     options?: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
   loadTable: (
-    tableId: string,
+    table: Table,
     options?: { signal?: AbortSignal },
   ) => Promise<TableData>;
   addShape?: (shape: MultiPolygon) => void;

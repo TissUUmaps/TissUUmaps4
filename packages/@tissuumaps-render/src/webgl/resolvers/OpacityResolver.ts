@@ -5,6 +5,7 @@ import {
   type GroupByConfig,
   MathUtils,
   type OpacityConfig,
+  ParseUtils,
   type TableData,
   getActiveConfigSource,
   isConstantConfig,
@@ -14,9 +15,12 @@ import {
 
 import { ResolverBase } from "./ResolverBase";
 
+/**
+ * Resolves the opacity of every item, encoded as a byte in `[0, 255]`
+ */
 export class OpacityResolver extends ResolverBase {
   /**
-   * Loads opacity data for a set of IDs based on the active opacity configuration source.
+   * Loads opacity data for a set of IDs based on the active opacity configuration source
    *
    * Dispatches to the appropriate loader (constant, from, or groupBy) depending on which
    * configuration source is active.
@@ -25,8 +29,7 @@ export class OpacityResolver extends ResolverBase {
    * @param config - Opacity configuration specifying the data source
    * @param opacityMaps - Available opacity maps for groupBy lookups
    * @param defaultOpacity - Fallback opacity value (0–1) when no valid config or value is found
-   * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options - Optional abort signal, buffer alignment, table ID, and opacity scaling factor
+   * @param options - Optional abort signal, buffer alignment, opacity scaling factor, and table loader
    * @returns A `Uint8Array` of encoded opacity values (0–255), one per ID
    */
   static async resolveOpacities(
@@ -34,18 +37,14 @@ export class OpacityResolver extends ResolverBase {
     config: OpacityConfig,
     opacityMaps: DefaultMap<number>[],
     defaultOpacity: number,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
     options?: {
       signal?: AbortSignal;
       align?: number;
-      table?: string;
       opacityFactor?: number;
+      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
     },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, table, opacityFactor = 1 } = options ?? {};
+    const { signal, align = 1, opacityFactor = 1, loadTable } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
@@ -57,27 +56,27 @@ export class OpacityResolver extends ResolverBase {
     if (
       activeConfigSource === "from" &&
       isFromConfig(config) &&
-      table !== undefined
+      loadTable !== undefined
     ) {
-      return await OpacityResolver.resolveOpacitiesDataFromTableValues(
+      return OpacityResolver.resolveOpacitiesFromTableValues(
         ids,
         config,
         defaultOpacity,
-        async (options) => loadTable(table, options),
+        (opts) => loadTable(opts),
         { signal, align, opacityFactor },
       );
     }
     if (
       activeConfigSource === "groupBy" &&
       isGroupByConfig(config) &&
-      table !== undefined
+      loadTable !== undefined
     ) {
-      return await OpacityResolver.resolveOpacitiesFromTableGroups(
+      return OpacityResolver.resolveOpacitiesFromTableGroups(
         ids,
         config,
         opacityMaps,
         defaultOpacity,
-        async (options) => loadTable(table, options),
+        (opts) => loadTable(opts),
         { signal, align, opacityFactor },
       );
     }
@@ -89,7 +88,7 @@ export class OpacityResolver extends ResolverBase {
   }
 
   /**
-   * Creates a uniform opacity data buffer filled with the configured constant opacity.
+   * Creates a uniform opacity data buffer filled with the configured constant opacity
    *
    * @param ids - Ordered list of item IDs (only the length is used)
    * @param config - Constant opacity configuration containing the opacity value
@@ -110,7 +109,7 @@ export class OpacityResolver extends ResolverBase {
   }
 
   /**
-   * Loads opacity data by reading numeric values from a table column.
+   * Loads opacity data by reading numeric values from a table column
    *
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source column
@@ -119,7 +118,7 @@ export class OpacityResolver extends ResolverBase {
    * @param options - Optional abort signal, buffer alignment, and opacity scaling factor
    * @returns A `Uint8Array` of encoded opacity values
    */
-  static async resolveOpacitiesDataFromTableValues(
+  static async resolveOpacitiesFromTableValues(
     ids: number[],
     config: Extract<OpacityConfig, FromConfig>,
     defaultOpacity: number,
@@ -128,20 +127,19 @@ export class OpacityResolver extends ResolverBase {
   ): Promise<Uint8Array> {
     const { signal, align = 1, opacityFactor = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const data = OpacityResolver.createOpacityBuffer(ids.length, {
-      align,
-    });
+    const data = await loadTable({ signal });
+    const buffer = OpacityResolver.createOpacityBuffer(ids.length, { align });
     await OpacityResolver.fillFromTableValues(
+      buffer,
       data,
       ids,
       config.from.column,
       defaultOpacity,
-      loadTable,
       (value) => OpacityResolver.parseOpacity(value),
       (opacity) => OpacityResolver.encodeOpacity(opacity, { opacityFactor }),
       { signal },
     );
-    return data;
+    return buffer;
   }
 
   /**
@@ -179,25 +177,24 @@ export class OpacityResolver extends ResolverBase {
         { align, opacityFactor },
       );
     }
-    const data = OpacityResolver.createOpacityBuffer(ids.length, {
-      align,
-    });
+    const data = await loadTable({ signal });
+    const buffer = OpacityResolver.createOpacityBuffer(ids.length, { align });
     const groupOpacities = new Map(Object.entries(opacityMap.values));
     await OpacityResolver.fillFromTableGroups(
+      buffer,
       data,
       ids,
       config.groupBy.column,
       opacityMap.default ?? defaultOpacity,
-      loadTable,
       (group) => groupOpacities.get(group),
       (opacity) => OpacityResolver.encodeOpacity(opacity, { opacityFactor }),
       { signal },
     );
-    return data;
+    return buffer;
   }
 
   /**
-   * Creates an opacity data buffer of the given size filled with a single opacity value.
+   * Creates an opacity data buffer of the given size filled with a single opacity value
    *
    * @param n - Number of elements
    * @param opacity - The opacity value (0–1) to fill with
@@ -210,14 +207,14 @@ export class OpacityResolver extends ResolverBase {
     options?: { align?: number; opacityFactor?: number },
   ): Uint8Array {
     const { align = 1, opacityFactor = 1 } = options ?? {};
-    const data = OpacityResolver.createOpacityBuffer(n, { align });
+    const buffer = OpacityResolver.createOpacityBuffer(n, { align });
     const value = OpacityResolver.encodeOpacity(opacity, { opacityFactor });
-    data.fill(value, 0, n);
-    return data;
+    buffer.fill(value, 0, n);
+    return buffer;
   }
 
   /**
-   * Creates a buffer of the given size for storing encoded opacity values, aligned to the specified byte boundary.
+   * Creates a buffer of the given size for storing encoded opacity values, aligned to the specified byte boundary
    *
    * @param size - The number of elements in the buffer
    * @param options - Optional buffer alignment
@@ -230,17 +227,16 @@ export class OpacityResolver extends ResolverBase {
   }
 
   /**
-   * Parses a raw value as an opacity number, clamped to the range [0, 1].
+   * Parses a raw value as an opacity number, clamped to the range [0, 1]
    *
    * @param value - The raw value to parse (must be a number)
    * @returns The clamped opacity, or `undefined` if `value` is not a number
    */
   static parseOpacity(value: unknown): number | undefined {
-    if (typeof value === "number") {
-      return MathUtils.clamp(value, 0, 1);
-    }
-    console.warn(`Invalid opacity value: ${String(value)}`);
-    return undefined;
+    const opacity = ParseUtils.tryParseFinite(value, {
+      requireSafeBigInt: true,
+    });
+    return opacity !== undefined ? MathUtils.clamp(opacity, 0, 1) : undefined;
   }
 
   /**

@@ -13,19 +13,19 @@ import {
 } from "./OpenSeadragonRendererBase";
 
 /**
- * Renderer for managing tiled images for {@link Image} data objects in an OpenSeadragon viewer.
- *
- * This class extends the {@link OpenSeadragonRendererBase} to provide specific functionality for rendering image objects.
- * It handles the synchronization of tiled images with the current model state, including loading, updating, and removing images as needed.
+ * Renderer for the tiled images of {@link Image} data objects
  */
 export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   Image,
   ImageData
 > {
   /**
-   * Synchronizes the viewer's tiled images with the current model state for image objects.
+   * Synchronizes the viewer's tiled images with the current model state
    *
-   * This method loads all image objects that are assigned to the given layers, removes tiled images that are no longer needed, and creates or updates the remaining ones.
+   * Loads all image objects assigned to the given layers, removes the tiled
+   * images that are no longer needed, and creates or updates the remaining ones.
+   * Resolves once the tiled images have actually been added to the world, i.e.
+   * once the viewer reflects the given model state.
    *
    * @param layers - Layers to render
    * @param images - Image objects to display
@@ -36,7 +36,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     layers: Layer[],
     images: Image[],
     loadImage: (
-      imageId: string,
+      image: Image,
       options?: { signal?: AbortSignal },
     ) => Promise<ImageData>,
     options?: { signal?: AbortSignal },
@@ -53,10 +53,13 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     const renderedImagesByNewRef = await this.cleanRenderedObjects(newRefs, {
       signal,
     });
-    for (const newRef of newRefs) {
+    for (let offset = 0; offset < newRefs.length; offset++) {
+      const newRef = newRefs[offset]!;
       const renderedImage = renderedImagesByNewRef.get(newRef);
       if (renderedImage === undefined) {
-        const newRenderedImage = this.createRenderedObject(newRef, { signal });
+        const newRenderedImage = this.createRenderedObject(offset, newRef, {
+          signal,
+        });
         newRenderedImages.push(newRenderedImage);
       } else {
         this.updateRenderedObject(renderedImage, newRef);
@@ -64,16 +67,15 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
       }
     }
     this.renderedObjects = newRenderedImages;
+    await Promise.allSettled(
+      newRenderedImages.map((renderedImage) => renderedImage.tiledImagePromise),
+    );
+    signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
     await this.updateBounds({ signal });
   }
 
   /**
-   * Retrieves the tile source for a given image data object.
-   *
-   * This method is called by the renderer to obtain the appropriate tile source for each image data object, which can be a URL string, a TileSourceConfig object, or a CustomTileSource object.
-   *
-   * @param data - The image data object for which to retrieve the tile source.
-   * @returns The tile source, which can be a URL string, a TileSourceConfig object, or a CustomTileSource object.
+   * Returns the tile source for the given image data
    */
   protected getTileSource(
     data: ImageData,

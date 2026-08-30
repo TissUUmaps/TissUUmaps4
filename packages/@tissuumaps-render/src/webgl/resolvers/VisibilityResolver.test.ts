@@ -30,9 +30,20 @@ describe("VisibilityResolver", () => {
       expect(VisibilityResolver.parseVisibility(-1)).toBe(false);
     });
 
-    it("returns undefined for non-number values", () => {
-      expect(VisibilityResolver.parseVisibility("1")).toBeUndefined();
-      expect(VisibilityResolver.parseVisibility(true)).toBeUndefined();
+    it("passes booleans through", () => {
+      expect(VisibilityResolver.parseVisibility(true)).toBe(true);
+      expect(VisibilityResolver.parseVisibility(false)).toBe(false);
+    });
+
+    it("parses numeric strings", () => {
+      expect(VisibilityResolver.parseVisibility("1")).toBe(true);
+      expect(VisibilityResolver.parseVisibility("0")).toBe(false);
+    });
+
+    it("returns undefined for values that are not finite numbers", () => {
+      expect(VisibilityResolver.parseVisibility("yes")).toBeUndefined();
+      expect(VisibilityResolver.parseVisibility(NaN)).toBeUndefined();
+      expect(VisibilityResolver.parseVisibility(null)).toBeUndefined();
     });
   });
 
@@ -45,9 +56,9 @@ describe("VisibilityResolver", () => {
 
   describe("createVisibilityBuffer", () => {
     it("creates a zeroed Uint8Array of the requested size", () => {
-      const data = VisibilityResolver.createVisibilityBuffer(3);
-      expect(data).toBeInstanceOf(Uint8Array);
-      expect(Array.from(data)).toEqual([0, 0, 0]);
+      const buffer = VisibilityResolver.createVisibilityBuffer(3);
+      expect(buffer).toBeInstanceOf(Uint8Array);
+      expect(Array.from(buffer)).toEqual([0, 0, 0]);
     });
 
     it("aligns the buffer size to the given boundary", () => {
@@ -71,54 +82,73 @@ describe("VisibilityResolver", () => {
   describe("resolveUniformVisibilities", () => {
     it("fills the buffer with the constant visibility", () => {
       const config = { constant: { value: true } } satisfies VisibilityConfig;
-      const data = VisibilityResolver.resolveUniformVisibilities(
+      const buffer = VisibilityResolver.resolveUniformVisibilities(
         [1, 2],
         config,
       );
-      expect(Array.from(data)).toEqual([1, 1]);
+      expect(Array.from(buffer)).toEqual([1, 1]);
     });
   });
 
   describe("resolveVisibilitiesFromTableValues", () => {
     it("reads visibilities from the table column", async () => {
       const ids = [1, 2, 3];
-      const tableData = createMockTableData(ids, [1, 0, 5]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, [1, 0, 5]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
 
-      const data = await VisibilityResolver.resolveVisibilitiesFromTableValues(
-        ids,
-        config,
-        false,
-        loadTable,
-      );
+      const buffer =
+        await VisibilityResolver.resolveVisibilitiesFromTableValues(
+          ids,
+          config,
+          false,
+          loadTable,
+        );
 
-      expect(Array.from(data)).toEqual([1, 0, 1]);
+      expect(Array.from(buffer)).toEqual([1, 0, 1]);
     });
 
     it("uses the default visibility for invalid values", async () => {
       const ids = [1, 2];
-      const tableData = createMockTableData(ids, ["bad", 0]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, ["bad", 0]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
 
-      const data = await VisibilityResolver.resolveVisibilitiesFromTableValues(
-        ids,
+      const buffer =
+        await VisibilityResolver.resolveVisibilitiesFromTableValues(
+          ids,
+          config,
+          true,
+          loadTable,
+        );
+
+      expect(buffer[0]).toBe(1); // "bad" → default true
+      expect(buffer[1]).toBe(0);
+    });
+
+    it("forwards the signal to loadTable", async () => {
+      const controller = new AbortController();
+      const data = createMockTableData([1], [1]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = { from: { column: "col1" } } satisfies VisibilityConfig;
+
+      await VisibilityResolver.resolveVisibilitiesFromTableValues(
+        [1],
         config,
-        true,
+        false,
         loadTable,
+        { signal: controller.signal },
       );
 
-      expect(data[0]).toBe(1); // "bad" → default true
-      expect(data[1]).toBe(0);
+      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
     });
   });
 
   describe("resolveVisibilitiesFromTableGroups", () => {
     it("maps groups to visibilities using the visibility map", async () => {
       const ids = [1, 2];
-      const tableData = createMockTableData(ids, ["A", "B"]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, ["A", "B"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const visibilityMap: DefaultMap<boolean> = {
         id: "vm1",
         name: "Visibility Map",
@@ -131,67 +161,96 @@ describe("VisibilityResolver", () => {
         groupBy: { column: "col1", map: "vm1" },
       } satisfies VisibilityConfig;
 
-      const data = await VisibilityResolver.resolveVisibilitiesFromTableGroups(
-        ids,
-        config,
-        [visibilityMap],
-        false,
-        loadTable,
-      );
+      const buffer =
+        await VisibilityResolver.resolveVisibilitiesFromTableGroups(
+          ids,
+          config,
+          [visibilityMap],
+          false,
+          loadTable,
+        );
 
-      expect(Array.from(data)).toEqual([1, 0]);
+      expect(Array.from(buffer)).toEqual([1, 0]);
+    });
+
+    it("uses the visibility map default for unmapped groups", async () => {
+      const ids = [1];
+      const data = createMockTableData(ids, ["missing"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const visibilityMap: DefaultMap<boolean> = {
+        id: "vm1",
+        name: "Visibility Map",
+        values: {},
+        default: true,
+      };
+      const config = {
+        groupBy: { column: "col1", map: "vm1" },
+      } satisfies VisibilityConfig;
+
+      const buffer =
+        await VisibilityResolver.resolveVisibilitiesFromTableGroups(
+          ids,
+          config,
+          [visibilityMap],
+          false,
+          loadTable,
+        );
+
+      expect(buffer[0]).toBe(1);
     });
 
     it("returns uniform default visibility when the map is not found", async () => {
+      const loadTable = vi.fn();
       const config = {
         groupBy: { column: "col1", map: "nonexistent" },
       } satisfies VisibilityConfig;
 
-      const data = await VisibilityResolver.resolveVisibilitiesFromTableGroups(
-        [1, 2],
-        config,
-        [],
-        true,
-        vi.fn(),
-      );
+      const buffer =
+        await VisibilityResolver.resolveVisibilitiesFromTableGroups(
+          [1, 2],
+          config,
+          [],
+          true,
+          loadTable,
+        );
 
-      expect(Array.from(data)).toEqual([1, 1]);
+      expect(Array.from(buffer)).toEqual([1, 1]);
+      expect(loadTable).not.toHaveBeenCalled();
     });
   });
 
   describe("resolveVisibilities", () => {
     it("dispatches to constant", async () => {
       const config = { constant: { value: false } } satisfies VisibilityConfig;
-      const data = await VisibilityResolver.resolveVisibilities(
+      const buffer = await VisibilityResolver.resolveVisibilities(
         [1, 2],
         config,
         [],
         true,
-        vi.fn(),
       );
-      expect(Array.from(data)).toEqual([0, 0]);
+      expect(Array.from(buffer)).toEqual([0, 0]);
     });
 
-    it("dispatches to from config when a table is given", async () => {
-      const tableData = createMockTableData([1], [1]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+    it("dispatches to from config when loadTable is given", async () => {
+      const data = createMockTableData([1], [1]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
 
-      const data = await VisibilityResolver.resolveVisibilities(
+      const buffer = await VisibilityResolver.resolveVisibilities(
         [1],
         config,
         [],
         false,
-        loadTable,
-        { table: "t1" },
+        { loadTable },
       );
 
-      expect(data[0]).toBe(1);
+      expect(loadTable).toHaveBeenCalledOnce();
+      expect(buffer[0]).toBe(1);
     });
 
-    it("dispatches to groupBy config when a table is given", async () => {
-      const tableData = createMockTableData([1], ["A"]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+    it("dispatches to groupBy config when loadTable is given", async () => {
+      const data = createMockTableData([1], ["A"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const visibilityMap: DefaultMap<boolean> = {
         id: "vm1",
         name: "Visibility Map",
@@ -201,44 +260,61 @@ describe("VisibilityResolver", () => {
         groupBy: { column: "col1", map: "vm1" },
       } satisfies VisibilityConfig;
 
-      const data = await VisibilityResolver.resolveVisibilities(
+      const buffer = await VisibilityResolver.resolveVisibilities(
         [1],
         config,
         [visibilityMap],
         false,
-        loadTable,
-        { table: "t1" },
+        { loadTable },
       );
 
-      expect(data[0]).toBe(1);
+      expect(loadTable).toHaveBeenCalledOnce();
+      expect(buffer[0]).toBe(1);
     });
 
     it("falls back to the default visibility when the config has no active source", async () => {
       const config = {} as VisibilityConfig;
-      const data = await VisibilityResolver.resolveVisibilities(
+      const buffer = await VisibilityResolver.resolveVisibilities(
         [1, 2],
         config,
         [],
         true,
-        vi.fn(),
       );
-      expect(Array.from(data)).toEqual([1, 1]);
+      expect(Array.from(buffer)).toEqual([1, 1]);
     });
 
-    it("does not load the table for a from config without a table id", async () => {
-      const loadTable = vi.fn();
+    it("falls back to the default visibility for a from config without loadTable", async () => {
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
 
-      const data = await VisibilityResolver.resolveVisibilities(
+      const buffer = await VisibilityResolver.resolveVisibilities(
         [1],
         config,
         [],
         true,
-        loadTable,
       );
 
-      expect(loadTable).not.toHaveBeenCalled();
-      expect(data[0]).toBe(1);
+      expect(buffer[0]).toBe(1);
+    });
+
+    it("falls back to the default visibility for a groupBy config without loadTable", async () => {
+      const visibilityMap: DefaultMap<boolean> = {
+        id: "vm1",
+        name: "Visibility Map",
+        values: { [JSON.stringify("A")]: false },
+      };
+      const config = {
+        groupBy: { column: "col1", map: "vm1" },
+      } satisfies VisibilityConfig;
+
+      const buffer = await VisibilityResolver.resolveVisibilities(
+        [1],
+        config,
+        [visibilityMap],
+        true,
+        {},
+      );
+
+      expect(buffer[0]).toBe(1);
     });
 
     it("throws when the signal is already aborted", async () => {
@@ -247,16 +323,9 @@ describe("VisibilityResolver", () => {
       const config = { constant: { value: true } } satisfies VisibilityConfig;
 
       await expect(
-        VisibilityResolver.resolveVisibilities(
-          [1],
-          config,
-          [],
-          false,
-          vi.fn(),
-          {
-            signal: controller.signal,
-          },
-        ),
+        VisibilityResolver.resolveVisibilities([1], config, [], false, {
+          signal: controller.signal,
+        }),
       ).rejects.toThrow();
     });
   });

@@ -47,20 +47,20 @@ export class AsyncUtils {
    * yields to the event loop once the time budget since the last yield is
    * exceeded. When within budget and not aborted, it is a cheap no-op.
    *
-   * @param options - Optional abort signal and time (ms) to run before yielding
-   *   (`yieldMs`)
+   * @param options - Optional time (ms) to run before yielding
+   * @returns The yielder, which takes an optional abort signal
    */
   static createYielder(options?: {
-    signal?: AbortSignal;
     yieldMs?: number;
-  }): () => Promise<void> {
-    const { signal, yieldMs = 5 } = options ?? {};
+  }): (opts?: { signal?: AbortSignal }) => Promise<void> {
+    const { yieldMs = 5 } = options ?? {};
     let start = performance.now();
-    return async () => {
+    return async (opts) => {
+      const { signal } = opts ?? {};
       signal?.throwIfAborted();
       if (performance.now() - start > yieldMs) {
         await AsyncUtils.yield();
-        signal?.throwIfAborted();
+        signal?.throwIfAborted(); // yield() does not throw on abort
         start = performance.now();
       }
     };
@@ -94,11 +94,11 @@ export class AsyncUtils {
   ): Promise<void> {
     const { signal, yieldMs, checkEvery = 1024 } = options ?? {};
     signal?.throwIfAborted();
-    const maybeYield = AsyncUtils.createYielder({ signal, yieldMs });
+    const maybeYield = AsyncUtils.createYielder({ yieldMs });
     for (let i = 0; i < items.length; i++) {
       callback(items[i]!, i);
       if ((i + 1) % checkEvery === 0 && i + 1 < items.length) {
-        await maybeYield();
+        await maybeYield({ signal });
       }
     }
   }
