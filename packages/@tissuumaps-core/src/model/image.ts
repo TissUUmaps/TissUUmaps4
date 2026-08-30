@@ -28,7 +28,7 @@ export type Image = SingleLayerDataObject<ImageDataSource<string>> &
   Omit<RawImage, keyof typeof imageDefaults>;
 
 /**
- * Creates a {@link Image} from a {@link RawImage} by applying {@link imageDefaults}
+ * Creates an {@link Image} from a {@link RawImage} by applying {@link imageDefaults}
  *
  * @param rawImage - The raw image
  * @returns The complete image with default values applied
@@ -67,7 +67,7 @@ export type ImageDataSource<TType extends string = string> = DataSource<TType> &
   Omit<RawImageDataSource<TType>, keyof typeof imageDataSourceDefaults>;
 
 /**
- * Creates a {@link ImageDataSource} from a {@link RawImageDataSource} by applying {@link imageDataSourceDefaults}
+ * Creates an {@link ImageDataSource} from a {@link RawImageDataSource} by applying {@link imageDataSourceDefaults}
  *
  * @param rawImageDataSource - The raw image data source
  * @returns The complete image data source with default values applied

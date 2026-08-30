@@ -50,10 +50,10 @@ export const tableDataSourceDefaults = {} as const satisfies Partial<
 /**
  * A data source for tabular data
  */
-
 export interface RawTableDataSource<
   TType extends string = string,
 > extends RawItemsDataSource<TType> {
+  /** Unsupported: a table cannot reference another table */
   table?: never;
 }
 

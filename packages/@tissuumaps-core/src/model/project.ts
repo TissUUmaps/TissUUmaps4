@@ -105,35 +105,35 @@ export interface RawProject extends RawModel {
   tables?: RawTable[];
 
   /**
-   * Project-global marker maps, referenced by {@link "./configs".GroupByConfig} marker configurations
+   * Project-global marker maps, referenced by {@link GroupByConfig} marker configurations
    *
    * @defaultValue {@link projectDefaults.markerMaps}
    */
   markerMaps?: DefaultMap<Marker>[];
 
   /**
-   * Project-global size maps, referenced by {@link "./configs".GroupByConfig} size configurations
+   * Project-global size maps, referenced by {@link GroupByConfig} size configurations
    *
    * @defaultValue {@link projectDefaults.sizeMaps}
    */
   sizeMaps?: DefaultMap<number>[];
 
   /**
-   * Project-global color maps, referenced by {@link "./configs".GroupByConfig} color configurations
+   * Project-global color maps, referenced by {@link GroupByConfig} color configurations
    *
    * @defaultValue {@link projectDefaults.colorMaps}
    */
   colorMaps?: DefaultMap<Color>[];
 
   /**
-   * Project-global visibility maps, referenced by {@link "./configs".GroupByConfig} visibility configurations
+   * Project-global visibility maps, referenced by {@link GroupByConfig} visibility configurations
    *
    * @defaultValue {@link projectDefaults.visibilityMaps}
    */
   visibilityMaps?: DefaultMap<boolean>[];
 
   /**
-   * Project-global opacity maps, referenced by {@link "./configs".GroupByConfig} opacity configurations
+   * Project-global opacity maps, referenced by {@link GroupByConfig} opacity configurations
    *
    * @defaultValue {@link projectDefaults.opacityMaps}
    */

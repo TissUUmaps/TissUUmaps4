@@ -4,17 +4,18 @@ import type { SimilarityTransform } from "../model/primitives";
 import type { Rect } from "../types/geometry";
 
 /**
- * Utility methods for converting between {@link SimilarityTransform}
- * objects and `gl-matrix` {@link mat3} matrices
+ * Utility methods for converting between {@link SimilarityTransform} objects
+ * and `gl-matrix` `mat3` matrices
  */
 export class TransformUtils {
   /**
    * Decomposes a 3×3 similarity matrix into a {@link SimilarityTransform}
    *
    * Extracts uniform scale, rotation (in degrees), and translation
-   * from a column-major `gl-matrix` {@link mat3}.
+   * from a column-major `gl-matrix` `mat3`.
    *
    * @param m - The source matrix
+   * @returns The decomposed transform
    */
   static fromSimilarityMatrix(m: mat3): SimilarityTransform {
     // gl-matrix, like OpenGL, uses column-major order.
@@ -33,6 +34,7 @@ export class TransformUtils {
    *
    * @param tf - The transform components (all optional)
    * @param options - Optional rotation center in pre-scaled coordinates
+   * @returns The composed matrix
    */
   static toSimilarityMatrix(
     tf: Partial<SimilarityTransform>,

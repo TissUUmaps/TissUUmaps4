@@ -20,7 +20,7 @@ describe("MathUtils.clamp", () => {
     expect(MathUtils.clamp(0.5, 1.2, 4.5)).toBeCloseTo(1.2);
   });
 
-  it("returns the value when min equals max", () => {
+  it("returns the bound when min equals max", () => {
     expect(MathUtils.clamp(2, 5, 5)).toBe(5);
     expect(MathUtils.clamp(7, 5, 5)).toBe(5);
   });
@@ -107,7 +107,7 @@ describe("MathUtils bitwise safe operations", () => {
   });
 
   it("all safe operations return non-negative values", () => {
-    const ops = [
+    const results = [
       MathUtils.safeAnd(-1, -1),
       MathUtils.safeOr(-1, 0),
       MathUtils.safeXor(-1, 0),
@@ -115,7 +115,7 @@ describe("MathUtils bitwise safe operations", () => {
       MathUtils.safeLeftShift(-1, 1),
       MathUtils.safeRightShift(-1, 1),
     ];
-    for (const result of ops) {
+    for (const result of results) {
       expect(result).toBeGreaterThanOrEqual(0);
     }
   });

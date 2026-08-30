@@ -1,8 +1,24 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AsyncUtils } from "./AsyncUtils";
 
 describe("AsyncUtils.yield", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("delegates to the native scheduler when available", async () => {
+    const schedulerYield = vi.fn(() => Promise.resolve());
+    vi.stubGlobal("scheduler", { yield: schedulerYield });
+    await expect(AsyncUtils.yield()).resolves.toBeUndefined();
+    expect(schedulerYield).toHaveBeenCalledOnce();
+  });
+
+  it("falls back to the message channel when the scheduler has no yield", async () => {
+    vi.stubGlobal("scheduler", {});
+    await expect(AsyncUtils.yield()).resolves.toBeUndefined();
+  });
+
   it("resolves", async () => {
     await expect(AsyncUtils.yield()).resolves.toBeUndefined();
   });
@@ -94,6 +110,26 @@ describe("AsyncUtils.forEach", () => {
 });
 
 describe("AsyncUtils.createYielder", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("yields only past the default 5 ms budget when no options are given", async () => {
+    const yieldSpy = vi.spyOn(AsyncUtils, "yield");
+    const now = vi.spyOn(performance, "now");
+
+    now.mockReturnValueOnce(0);
+    const yielder = AsyncUtils.createYielder();
+
+    now.mockReturnValueOnce(4);
+    await yielder();
+    expect(yieldSpy).not.toHaveBeenCalled();
+
+    now.mockReturnValueOnce(6);
+    await yielder();
+    expect(yieldSpy).toHaveBeenCalledOnce();
+  });
+
   it("yields when the time budget is exceeded", async () => {
     const yielder = AsyncUtils.createYielder({ yieldMs: -1 });
     // yieldMs < 0 means every call exceeds the budget and yields.
@@ -123,5 +159,132 @@ describe("AsyncUtils.createYielder", () => {
     });
     controller.abort();
     await expect(yielder()).rejects.toThrow();
+  });
+});
+
+describe("AsyncUtils.raceSignal", () => {
+  it("resolves with the promise's value when no signal is given", async () => {
+    await expect(AsyncUtils.raceSignal(Promise.resolve("value"))).resolves.toBe(
+      "value",
+    );
+  });
+
+  it("rejects with the promise's error when no signal is given", async () => {
+    const error = new Error("boom");
+    await expect(AsyncUtils.raceSignal(Promise.reject(error))).rejects.toBe(
+      error,
+    );
+  });
+
+  it("resolves with the promise's value when the signal is not aborted", async () => {
+    const controller = new AbortController();
+    await expect(
+      AsyncUtils.raceSignal(Promise.resolve("value"), {
+        signal: controller.signal,
+      }),
+    ).resolves.toBe("value");
+  });
+
+  it("rejects with the promise's error when the signal is not aborted", async () => {
+    const controller = new AbortController();
+    const error = new Error("boom");
+    await expect(
+      AsyncUtils.raceSignal(Promise.reject(error), {
+        signal: controller.signal,
+      }),
+    ).rejects.toBe(error);
+  });
+
+  it("passes a non-Error rejection reason through unchanged", async () => {
+    const controller = new AbortController();
+    // rejecting with a non-Error is exactly what this test exercises
+    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+    const rejected = Promise.reject("boom");
+    await expect(
+      AsyncUtils.raceSignal(rejected, { signal: controller.signal }),
+    ).rejects.toBe("boom");
+  });
+
+  it("throws immediately when the signal is already aborted", async () => {
+    const controller = new AbortController();
+    const error = new Error("cancelled");
+    controller.abort(error);
+    await expect(
+      AsyncUtils.raceSignal(new Promise<never>(() => {}), {
+        signal: controller.signal,
+      }),
+    ).rejects.toBe(error);
+  });
+
+  it("rejects with the abort reason when aborted while pending", async () => {
+    const controller = new AbortController();
+    const error = new Error("cancelled");
+    const promise = AsyncUtils.raceSignal(new Promise<never>(() => {}), {
+      signal: controller.signal,
+    });
+    controller.abort(error);
+    await expect(promise).rejects.toBe(error);
+  });
+
+  it("rejects with an AbortError when aborted without a reason", async () => {
+    const controller = new AbortController();
+    const promise = AsyncUtils.raceSignal(new Promise<never>(() => {}), {
+      signal: controller.signal,
+    });
+    controller.abort();
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("ignores an abort that happens after the promise settled", async () => {
+    const controller = new AbortController();
+    const promise = AsyncUtils.raceSignal(Promise.resolve("value"), {
+      signal: controller.signal,
+    });
+    await expect(promise).resolves.toBe("value");
+    controller.abort();
+    await expect(promise).resolves.toBe("value");
+  });
+
+  it("ignores an abort that happens after the promise rejected", async () => {
+    const controller = new AbortController();
+    const error = new Error("boom");
+    const promise = AsyncUtils.raceSignal(Promise.reject(error), {
+      signal: controller.signal,
+    });
+    await expect(promise).rejects.toBe(error);
+    controller.abort(new Error("cancelled"));
+    await expect(promise).rejects.toBe(error);
+  });
+
+  it("removes the abort listener once the promise resolved", async () => {
+    const controller = new AbortController();
+    const removeEventListener = vi.spyOn(
+      controller.signal,
+      "removeEventListener",
+    );
+    await AsyncUtils.raceSignal(Promise.resolve("value"), {
+      signal: controller.signal,
+    });
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+    );
+  });
+
+  it("removes the abort listener once the promise rejected", async () => {
+    const controller = new AbortController();
+    const removeEventListener = vi.spyOn(
+      controller.signal,
+      "removeEventListener",
+    );
+    await expect(
+      AsyncUtils.raceSignal(Promise.reject(new Error("boom")), {
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow("boom");
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+    );
   });
 });

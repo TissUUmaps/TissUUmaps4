@@ -16,8 +16,10 @@ export class AsyncUtils {
    *
    * Uses the native `scheduler.yield()` when available, otherwise falls back to
    * a shared `MessageChannel` (a macrotask without `setTimeout`'s clamping).
+   *
+   * @returns A promise that resolves once the event loop has been yielded to
    */
-  static async yield(): Promise<void> {
+  static yield(): Promise<void> {
     const scheduler = (
       globalThis as { scheduler?: { yield?: () => Promise<void> } }
     ).scheduler;
@@ -78,6 +80,8 @@ export class AsyncUtils {
    * @param options - Optional abort signal, time (ms) to run before yielding
    *   (`yieldMs`), and the number of iterations between budget checks
    *   (`checkEvery`)
+   * @returns A promise that resolves once every item has been visited, or
+   *   rejects with the signal's reason
    */
   static async forEach<T>(
     items: ArrayLike<T>,
@@ -97,5 +101,38 @@ export class AsyncUtils {
         await maybeYield();
       }
     }
+  }
+
+  /**
+   * Returns a promise that resolves or rejects with the given `promise`, but
+   * rejects early if the given `signal` is aborted.
+   *
+   * @param promise - The promise to race against the abort signal
+   * @param options - Optional abort signal to race against the promise
+   * @returns A promise that resolves or rejects based on the race condition
+   */
+  static async raceSignal<T>(
+    promise: Promise<T>,
+    options?: { signal?: AbortSignal },
+  ): Promise<T> {
+    const { signal } = options ?? {};
+    if (signal === undefined) {
+      return promise;
+    }
+    signal.throwIfAborted(); // fail-fast if already aborted
+    return new Promise((resolve, reject) => {
+      const onAbort = () => reject(signal.reason as DOMException);
+      signal.addEventListener("abort", onAbort, { once: true });
+      promise.then(
+        (value) => {
+          signal.removeEventListener("abort", onAbort);
+          resolve(value);
+        },
+        (error) => {
+          signal.removeEventListener("abort", onAbort);
+          reject(error as Error);
+        },
+      );
+    });
   }
 }

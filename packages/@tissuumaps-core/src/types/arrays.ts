@@ -17,10 +17,15 @@ export type FloatArray = Float16Array | Float32Array | Float64Array;
 /** Union of all numeric typed arrays */
 export type TypedArray = IntArray | UintArray | FloatArray;
 
-/** A union of all array types that can hold numeric values */
+/** Union of all array types that can hold numeric values */
 export type NumericArray = number[] | TypedArray;
 
-/** A union of all array types */
+/**
+ * The array types that can hold values of type `T`
+ *
+ * Numbers may be held by a plain array or by any numeric typed array, anything
+ * else only by a plain array. For an unconstrained `T`, both are possible.
+ */
 export type GenericArray<T> = T extends number
   ? NumericArray
   : unknown extends T

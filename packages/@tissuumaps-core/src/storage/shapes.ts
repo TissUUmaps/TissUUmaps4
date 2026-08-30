@@ -5,7 +5,9 @@ import type { ItemsData, ItemsDataProvider } from "./base";
 /**
  * Data provider for shape (polygon) collections
  *
- * @typeParam TShapesData - The concrete {@link ShapesData} type produced by this data provider
+ * @typeParam TShapesDataSource - The data source type this data provider opens
+ * @typeParam TShapesData - The {@link ShapesData} type produced by this data
+ * provider
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ShapesDataProvider<

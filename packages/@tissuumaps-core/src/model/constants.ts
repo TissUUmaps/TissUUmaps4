@@ -35,7 +35,7 @@ export const defaultPointMarker = Marker.Disc;
 /** Default point size */
 export const defaultPointSize = 1;
 
-/** Default point size unit ({@link CoordinateSpace} — sizes are in data/pixel space by default) */
+/** Default coordinate space in which point sizes are specified */
 export const defaultPointSizeUnit: CoordinateSpace = "data";
 
 /** Default point color */

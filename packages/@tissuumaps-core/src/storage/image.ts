@@ -4,7 +4,9 @@ import type { Data, DataProvider } from "./base";
 /**
  * Data provider for raster images
  *
- * @typeParam TImageData - The concrete {@link ImageData} type produced by this data provider
+ * @typeParam TImageDataSource - The data source type this data provider opens
+ * @typeParam TImageData - The {@link ImageData} type produced by this data
+ * provider
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ImageDataProvider<
