@@ -8,13 +8,7 @@ allowBuilds:
   core-js: true
   omezarr-tilesource: true
 
+minimumReleaseAge: 1440
+
 minimumReleaseAgeExclude:
   - "@types/node@26.0.1"
-
-onlyBuiltDependencies:
-  - "@swc/core"
-  - canvas
-  - core-js
-  - core-js-pure
-  - esbuild
-  - omezarr-tilesource

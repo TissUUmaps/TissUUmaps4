@@ -1,6 +1,7 @@
 {
   "name": "@tissuumaps/plugins",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -8,13 +9,13 @@
   ],
   "exports": {
     ".": {
-      "development": "./src/index.ts",
+      "tissuumaps-development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./spatialdata": {
-      "development": "./src/spatialdata/index.ts",
+      "tissuumaps-development": "./src/spatialdata/index.ts",
       "types": "./dist/spatialdata.d.ts",
       "import": "./dist/spatialdata.js",
       "default": "./dist/spatialdata.js"

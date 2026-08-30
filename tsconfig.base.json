@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2025",
-    "useDefineForClassFields": true,
     "module": "ESNext",
     "skipLibCheck": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
+    "customConditions": ["tissuumaps-development"],
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",

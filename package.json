@@ -39,13 +39,14 @@
     "build": "pnpm run -r --filter !docs build",
     "build:docs": "pnpm run build:packages && pnpm run --filter docs build",
     "build:packages": "pnpm run -r --filter \"./packages/*\" build",
-    "clean": "rm -rf node_modules && pnpm run -r clean"
+    "clean": "pnpm run -r clean && rm -rf node_modules"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx}": "eslint --fix",
     "**/*": "prettier --write --ignore-unknown"
   },
   "engines": {
-    "node": ">=22.22.1"
+    "node": ">=22.22.1",
+    "pnpm": ">=11.15.1"
   }
 }

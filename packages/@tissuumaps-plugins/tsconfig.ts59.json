@@ -5,6 +5,7 @@
   "extends": "./tsconfig.src.json",
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"]
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "outDir": "./build/dts"
   }
 }
