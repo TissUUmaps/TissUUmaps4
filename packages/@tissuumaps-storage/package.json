@@ -1,6 +1,7 @@
 {
   "name": "@tissuumaps/storage",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -8,43 +9,43 @@
   ],
   "exports": {
     ".": {
-      "development": "./src/index.ts",
+      "tissuumaps-development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./csv": {
-      "development": "./src/csv/index.ts",
+      "tissuumaps-development": "./src/csv/index.ts",
       "types": "./dist/csv.d.ts",
       "import": "./dist/csv.js",
       "default": "./dist/csv.js"
     },
     "./geojson": {
-      "development": "./src/geojson/index.ts",
+      "tissuumaps-development": "./src/geojson/index.ts",
       "types": "./dist/geojson.d.ts",
       "import": "./dist/geojson.js",
       "default": "./dist/geojson.js"
     },
     "./ome-zarr": {
-      "development": "./src/ome-zarr/index.ts",
+      "tissuumaps-development": "./src/ome-zarr/index.ts",
       "types": "./dist/ome-zarr.d.ts",
       "import": "./dist/ome-zarr.js",
       "default": "./dist/ome-zarr.js"
     },
     "./openseadragon": {
-      "development": "./src/openseadragon/index.ts",
+      "tissuumaps-development": "./src/openseadragon/index.ts",
       "types": "./dist/openseadragon.d.ts",
       "import": "./dist/openseadragon.js",
       "default": "./dist/openseadragon.js"
     },
     "./parquet": {
-      "development": "./src/parquet/index.ts",
+      "tissuumaps-development": "./src/parquet/index.ts",
       "types": "./dist/parquet.d.ts",
       "import": "./dist/parquet.js",
       "default": "./dist/parquet.js"
     },
     "./table": {
-      "development": "./src/table/index.ts",
+      "tissuumaps-development": "./src/table/index.ts",
       "types": "./dist/table.d.ts",
       "import": "./dist/table.js",
       "default": "./dist/table.js"
@@ -63,12 +64,13 @@
     "@tissuumaps/core": "workspace:^",
     "@types/geojson": "^7946.0.16",
     "@types/papaparse": "^5.5.2",
-    "geojson": "^0.5.0",
     "hyparquet": "^1.26.1",
-    "hyparquet-compressors": "^1.1.1"
+    "hyparquet-compressors": "^1.1.1",
+    "openseadragon": "^6.0.2"
   },
   "peerDependencies": {
-    "@tissuumaps/core": "workspace:^"
+    "@tissuumaps/core": "workspace:^",
+    "openseadragon": ">=5.0.1 <7.0.0"
   },
   "engines": {
     "node": ">=22.22.1"

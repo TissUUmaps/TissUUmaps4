@@ -3,14 +3,11 @@
   "private": true,
   "version": "4.0.0",
   "type": "module",
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b tsconfig.src.json && vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist node_modules *.tsbuildinfo",
+    "clean": "rm -rf build dist node_modules *.tsbuildinfo",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
@@ -21,9 +18,9 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.14.3",
     "@tissuumaps/core": "workspace:^",
+    "@tissuumaps/plugins": "workspace:^",
     "@tissuumaps/render": "workspace:^",
     "@tissuumaps/storage": "workspace:^",
-    "@tissuumaps/plugins": "workspace:^",
     "@tissuumaps/viewer": "workspace:^",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -35,7 +32,7 @@
     "react-colorful": "^5.7.0",
     "react-dom": "^19.2.7",
     "tailwind-merge": "^3.6.0",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.1",
