@@ -164,19 +164,55 @@ export {
   type UintArray,
 } from "./types/arrays";
 export { type ProgressCallback } from "./types/callbacks";
-export { type Dims, type Rect } from "./types/geometry";
 export {
-  type InteractionMode,
+  type Dims,
+  type Rect,
   type MultiPolygon,
   type Path,
   type Polygon,
   type Vertex,
-} from "./types/legacy";
+} from "./types/geometry";
+export { type InteractionMode } from "./types/interaction";
+export { type Plugin, type PluginRegistry } from "./types/plugins";
+export {
+  type OpenSeadragonOptions,
+  type OpenSeadragonViewerOptions,
+  type WebGLOptions,
+  type WebGLPointsRenderOptions,
+  type WebGLShapesRenderOptions,
+} from "./types/render";
+
+export {
+  type AppStoreState,
+  type AppStoreActions,
+  type AppStore,
+  type AppStoreApi,
+} from "./types/stores/app";
+export {
+  type DataRef,
+  type DataStoreState,
+  type DataStoreActions,
+  type DataStore,
+  type DataStoreApi,
+} from "./types/stores/data";
+export {
+  type ProjectStoreState,
+  type ProjectStoreActions,
+  type ProjectStore,
+  type ProjectStoreApi,
+} from "./types/stores/project";
+export {
+  type SettingsStoreState,
+  type SettingsStoreActions,
+  type SettingsStore,
+  type SettingsStoreApi,
+} from "./types/stores/settings";
 
 export { AsyncUtils } from "./utils/AsyncUtils";
 export { ColorUtils } from "./utils/ColorUtils";
 export { GeometryUtils } from "./utils/GeometryUtils";
 export { HashUtils } from "./utils/HashUtils";
+export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { ParseUtils } from "./utils/ParseUtils";
 export { TransformUtils } from "./utils/TransformUtils";

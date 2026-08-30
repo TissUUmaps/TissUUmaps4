@@ -1,5 +1,6 @@
 import type { Dims, Rect } from "../types/geometry";
 
+/** Utility methods for rectangle and dimension geometry */
 export class GeometryUtils {
   /**
    * Computes the union of multiple rectangles and returns the smallest rectangle that contains all of them

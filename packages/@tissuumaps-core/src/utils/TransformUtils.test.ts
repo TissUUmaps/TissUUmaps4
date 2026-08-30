@@ -5,20 +5,20 @@ import type { SimilarityTransform } from "../model/primitives";
 import { TransformUtils } from "./TransformUtils";
 
 describe("TransformUtils", () => {
-  describe("fromMatrix", () => {
+  describe("fromSimilarityMatrix", () => {
     it("extracts scale, rotation, and translation from a matrix", () => {
       const scale = 2;
-      const rotationDeg = 45;
+      const rotation = 45;
       const translation = { x: 10, y: 20 };
       const m = mat3.create();
       mat3.translate(m, m, [translation.x, translation.y]);
-      mat3.rotate(m, m, (Math.PI * rotationDeg) / 180);
+      mat3.rotate(m, m, (Math.PI * rotation) / 180);
       mat3.scale(m, m, [scale, scale]);
 
       const tf = TransformUtils.fromSimilarityMatrix(m);
 
       expect(tf.scale).toBeCloseTo(scale);
-      expect(tf.rotation).toBeCloseTo(rotationDeg);
+      expect(tf.rotation).toBeCloseTo(rotation);
       expect(tf.translation.x).toBeCloseTo(translation.x);
       expect(tf.translation.y).toBeCloseTo(translation.y);
     });
@@ -53,7 +53,7 @@ describe("TransformUtils", () => {
     });
   });
 
-  describe("toMatrix", () => {
+  describe("toSimilarityMatrix", () => {
     it("creates a matrix from scale, rotation, and translation", () => {
       const tf: SimilarityTransform = {
         scale: 2,
@@ -146,7 +146,7 @@ describe("TransformUtils", () => {
     });
   });
 
-  describe("fromMatrix / toMatrix roundtrip", () => {
+  describe("fromSimilarityMatrix / toSimilarityMatrix roundtrip", () => {
     it.each([
       { scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
       { scale: 2.5, rotation: 60, translation: { x: -10, y: 20 } },

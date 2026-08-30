@@ -34,7 +34,7 @@ export type SimilarityTransform = {
   translation: { x: number; y: number };
 };
 
-/** A marker shape (see marker atlas) */
+/** The marker shapes that points can be rendered as */
 export const Marker = {
   Cross: 0,
   Diamond: 1,
@@ -53,7 +53,7 @@ export const Marker = {
   Gaussian: 14,
 } as const;
 
-/** A marker index corresponding to one of the entries in the {@link Marker} object */
+/** One of the marker shapes of the {@link Marker} object, as its index */
 export type Marker = (typeof Marker)[keyof typeof Marker];
 
 /** A color in RGB format */

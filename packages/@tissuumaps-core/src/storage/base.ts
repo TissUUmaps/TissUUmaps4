@@ -58,14 +58,32 @@ export interface Data {
  *
  * Extended by data types whose storage is addressable by item IDs
  * (e.g. points, shapes, labels, tables).
+ *
+ * Implementations have to be immutable: the values returned by their accessors
+ * must not change over the lifetime of the object, and the arrays they return
+ * have to keep their identity across calls (i.e. be memoized rather than built
+ * anew on every call). Consumers rely on that identity to detect change - a
+ * renderer that compares the previous `getIds()` result against the current one
+ * re-uploads its GPU buffers whenever the two differ - so an implementation
+ * returning a fresh array each time is correct but defeats every such cache.
  */
 export interface ItemsData extends Data {
-  /** Returns an array of item IDs */
+  /**
+   * Returns an array of item IDs
+   *
+   * The returned array is owned by this data object: callers must not modify it,
+   * and every call returns the very same array (see {@link ItemsData}).
+   */
   getIds(): number[];
 
   /** Returns the total number of items */
   getSize(): number;
 
-  /** Returns the item names if available, otherwise undefined */
+  /**
+   * Returns the item names if available, otherwise undefined
+   *
+   * The returned array is owned by this data object: callers must not modify it,
+   * and every call returns the very same array (see {@link ItemsData}).
+   */
   getNames(): string[] | undefined;
 }

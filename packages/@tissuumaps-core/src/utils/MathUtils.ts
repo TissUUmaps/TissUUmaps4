@@ -1,6 +1,6 @@
 /**
- * Utility methods for safe 32-bit unsigned integer arithmetic
- * and numeric clamping
+ * Utility methods for numeric clamping and alignment, and for bitwise
+ * operations that yield unsigned 32-bit results
  */
 export class MathUtils {
   /**
@@ -24,6 +24,7 @@ export class MathUtils {
    * @param n - The non-negative number to align
    * @param m - The strictly positive multiple to align to
    * @returns The aligned number
+   * @throws Error if `n` is negative, or if `m` is not strictly positive
    */
   static align(n: number, m: number): number {
     if (n < 0) {
@@ -43,6 +44,7 @@ export class MathUtils {
    *
    * @param a - First operand
    * @param b - Second operand
+   * @returns The result, as an unsigned 32-bit integer
    */
   static safeAnd(a: number, b: number): number {
     // bitwise operators coerce operands to signed 32-bit integers,
@@ -56,6 +58,7 @@ export class MathUtils {
    *
    * @param a - First operand
    * @param b - Second operand
+   * @returns The result, as an unsigned 32-bit integer
    */
   static safeOr(a: number, b: number): number {
     // bitwise operators coerce operands to signed 32-bit integers,
@@ -69,6 +72,7 @@ export class MathUtils {
    *
    * @param a - First operand
    * @param b - Second operand
+   * @returns The result, as an unsigned 32-bit integer
    */
   static safeXor(a: number, b: number): number {
     // bitwise operators coerce operands to signed 32-bit integers,
@@ -81,6 +85,7 @@ export class MathUtils {
    * Performs a bitwise NOT, returning an unsigned 32-bit result
    *
    * @param a - The operand
+   * @returns The result, as an unsigned 32-bit integer
    */
   static safeNot(a: number): number {
     // bitwise operators coerce operands to signed 32-bit integers,
@@ -94,6 +99,7 @@ export class MathUtils {
    *
    * @param value - The value to shift
    * @param shift - Number of bit positions to shift
+   * @returns The result, as an unsigned 32-bit integer
    */
   static safeLeftShift(value: number, shift: number): number {
     // bitwise operators coerce operands to signed 32-bit integers,
@@ -107,6 +113,7 @@ export class MathUtils {
    *
    * @param value - The value to shift
    * @param shift - Number of bit positions to shift
+   * @returns The result, as an unsigned 32-bit integer
    */
   static safeRightShift(value: number, shift: number): number {
     return value >>> shift;

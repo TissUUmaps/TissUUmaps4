@@ -6,7 +6,9 @@ import type { ItemsData, ItemsDataProvider } from "./base";
 /**
  * Data provider for tabular data
  *
- * @typeParam TTableData - The concrete {@link TableData} type produced by this data provider
+ * @typeParam TTableDataSource - The data source type this data provider opens
+ * @typeParam TTableData - The {@link TableData} type produced by this data
+ * provider
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface TableDataProvider<
@@ -56,7 +58,7 @@ export interface TableData extends ItemsData {
   ): Promise<GenericArray<T>>;
 
   /**
-   * Load a column's unique values as a typed array-like
+   * Loads a column's unique values as a typed array-like
    *
    * @typeParam T - Element type of the returned array
    * @param column - The column name
@@ -69,7 +71,7 @@ export interface TableData extends ItemsData {
   ): Promise<GenericArray<T>>;
 
   /**
-   * Load a column's minimum and maximum values
+   * Loads a column's minimum and maximum values
    *
    * @param column - The column name
    * @param options - Optional abort signal and progress callback

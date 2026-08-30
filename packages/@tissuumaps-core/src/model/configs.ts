@@ -64,7 +64,7 @@ export type ConstantConfig<
  * Determines whether the given object is a {@link ConstantConfig}
  *
  * @param obj - The object to check
- * @returns Whether the object is an (active) {@link ConstantConfig}
+ * @returns Whether the object is a {@link ConstantConfig}
  */
 export function isConstantConfig<TValue, TConstantExtra = unknown>(
   obj: unknown,
@@ -179,8 +179,9 @@ export type SizeConfig =
 /**
  * Color configuration
  *
- * When sourced from a numerical table column, values are linearly mapped to
- * colors using the specified palette and optional range (see {@link FromConfig}).
+ * When sourced from a numerical table column, values are clipped to the
+ * configured range - or min-max-scaled, if none is given - and then mapped to
+ * the configured color palette.
  */
 export type ColorConfig =
   | ConstantConfig<Color>

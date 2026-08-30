@@ -77,10 +77,12 @@ export interface RawPoints extends RawRenderedDataObject<
   /**
    * Object-level point size scaling factor
    *
-   * A unitless scaling factor by which all point sizes are multiplied.
+   * A unitless scaling factor by which the size of every point of this object is
+   * multiplied, for adjusting point sizes without touching the individual point
+   * sizes or their unit.
    *
-   * Can be used to adjust the size of points without changing individual point sizes or the size unit.
-   * Note that point sizes are also affected by {@link "./layer".RawLayer.pointSizeFactor} and {@link "./project".RawProject.renderOptions}.
+   * Point sizes are also affected by {@link RawLayer.pointSizeFactor} and by the
+   * project-global {@link WebGLPointsRenderOptions.globalPointSizeFactor}.
    *
    * @defaultValue {@link pointsDefaults.pointSizeFactor}
    */

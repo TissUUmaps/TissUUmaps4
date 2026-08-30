@@ -6,7 +6,9 @@ import type { ItemsData, ItemsDataProvider } from "./base";
 /**
  * Data provider for label images
  *
- * @typeParam TLabelsData - The concrete {@link LabelsData} type produced by this data provider
+ * @typeParam TLabelsDataSource - The data source type this data provider opens
+ * @typeParam TLabelsData - The {@link LabelsData} type produced by this data
+ * provider
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface LabelsDataProvider<

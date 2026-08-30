@@ -5,7 +5,9 @@ import type { ItemsData, ItemsDataProvider } from "./base";
 /**
  * Data provider for point clouds
  *
- * @typeParam TPointsData - The concrete {@link PointsData} type produced by this data provider
+ * @typeParam TPointsDataSource - The data source type this data provider opens
+ * @typeParam TPointsData - The {@link PointsData} type produced by this data
+ * provider
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface PointsDataProvider<
