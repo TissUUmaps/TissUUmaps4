@@ -37,9 +37,9 @@ export default defineConfig([
     },
     rules: {
       "no-duplicate-imports": "error",
+      "object-shorthand": "error",
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-import-type-side-effects": "error",
-      "@typescript-eslint/promise-function-async": "error",
     },
   },
   {
