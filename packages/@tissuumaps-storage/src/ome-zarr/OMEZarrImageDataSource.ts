@@ -16,12 +16,3 @@ export type DefaultOMEZarrImageDataSource = Required<
   Pick<OMEZarrImageDataSource, keyof typeof omeZarrImageDataSourceDefaults>
 > &
   Omit<OMEZarrImageDataSource, keyof typeof omeZarrImageDataSourceDefaults>;
-
-export function createDefaultOMEZarrImageDataSource(
-  omeZarrImageDataSource: OMEZarrImageDataSource,
-): DefaultOMEZarrImageDataSource {
-  return {
-    ...omeZarrImageDataSourceDefaults,
-    ...omeZarrImageDataSource,
-  };
-}

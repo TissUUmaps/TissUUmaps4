@@ -38,21 +38,18 @@ export function DataSourceWidget<TDataSource extends DataSource>({
   );
 
   const dataProvider = dataProviders.get(currentDataSource.type);
-  if (dataProvider === undefined) {
-    throw new Error(
-      `No data provider registered for data source type "${currentDataSource.type}"`,
-    );
-  }
 
   // Validate the current draft against the active provider's schema using the
   // same Ajv config JsonForms uses, so shared fields (e.g. URL) carry over and
   // validity is re-checked on every edit or type switch instead of being reset.
   const ajv = useMemo(() => createAjv(), []);
   const validate = useMemo(
-    () => ajv.compile(dataProvider.schema),
-    [ajv, dataProvider.schema],
+    () =>
+      dataProvider !== undefined ? ajv.compile(dataProvider.schema) : null,
+    [ajv, dataProvider],
   );
-  const hasErrors = isEditing && !validate(currentDataSource);
+  const hasErrors =
+    isEditing && (validate === null || !validate(currentDataSource));
 
   return (
     <Fieldset
@@ -78,7 +75,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
             />
           </>
         ) : (
-          <>Source: {dataProvider.name}</>
+          <>Source: {dataProvider?.name ?? `type=${currentDataSource.type}`}</>
         )}
         {isEditing ? (
           <span className="ml-auto flex flex-row">
@@ -96,7 +93,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
               onClick={() => {
                 const knownKeys = new Set([
                   "type",
-                  ...Object.keys(dataProvider.schema.properties ?? {}),
+                  ...Object.keys(dataProvider?.schema.properties ?? {}),
                 ]);
                 const cleaned = Object.fromEntries(
                   Object.entries(dataSourceDraft).filter(([k]) =>
@@ -122,19 +119,26 @@ export function DataSourceWidget<TDataSource extends DataSource>({
           </Button>
         )}
       </FieldsetLegend>
-      <JsonForms
-        data={currentDataSource}
-        onChange={({ data }) => {
-          if (isEditing) {
-            setDataSourceDraft(data as TDataSource);
-          }
-        }}
-        schema={dataProvider.schema}
-        uischema={dataProvider.uischema}
-        renderers={renderers}
-        cells={cells}
-        readonly={!isEditing}
-      />
+      {dataProvider !== undefined ? (
+        <JsonForms
+          data={currentDataSource}
+          onChange={({ data }) => {
+            if (isEditing) {
+              setDataSourceDraft(data as TDataSource);
+            }
+          }}
+          schema={dataProvider.schema}
+          uischema={dataProvider.uischema}
+          renderers={renderers}
+          cells={cells}
+          readonly={!isEditing}
+        />
+      ) : (
+        <span className="text-xs text-muted-foreground">
+          No data provider is registered for this data source type.
+          {isEditing && " Select another source above."}
+        </span>
+      )}
     </Fieldset>
   );
 }

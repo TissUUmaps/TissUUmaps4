@@ -8,7 +8,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { GenericArray, ItemsData, TableData } from "@tissuumaps/core";
+import type { GenericArray, ItemsData } from "@tissuumaps/core";
 
 import {
   Table,
@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useTissUUmaps } from "@/store";
+import { useTableData } from "@/hooks/useData";
 
 export type ItemsDataTableRowData = {
   id: number;
@@ -32,7 +32,7 @@ export type ItemsDataTableGroupRowData = {
 export type ItemsDataTableProps = {
   data: ItemsData;
   height: number;
-  table?: string | null;
+  table: string | null;
   groupByColumn?: string | null;
   extraColumnDefs?: ColumnDef<ItemsDataTableRowData>[];
   extraGroupColumnDefs?: ColumnDef<ItemsDataTableGroupRowData>[];
@@ -48,44 +48,20 @@ export function ItemsDataTable({
 }: ItemsDataTableProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [tableData, setTableData] = useState<TableData | null>(null);
   const [tableGroups, setTableGroups] = useState<GenericArray<string> | null>(
     null,
   );
 
-  const loadTable = useTissUUmaps((state) => state.loadTable);
-  const loadUniqueTableValues = useTissUUmaps(
-    (state) => state.loadUniqueTableValues,
-  );
-
-  useEffect(() => {
-    const abortController = new AbortController();
-    setTableData(null);
-    if (table) {
-      loadTable(table, { signal: abortController.signal })
-        .then((tableData) => {
-          if (!abortController.signal.aborted) {
-            setTableData(tableData);
-          }
-        })
-        .catch((error) => {
-          if (!abortController.signal.aborted) {
-            console.error("Error loading table data", error);
-          }
-        });
-    }
-    return () => {
-      abortController.abort();
-    };
-  }, [table, loadTable]);
+  const tableData = useTableData(table);
 
   useEffect(() => {
     const abortController = new AbortController();
     setTableGroups(null);
-    if (table && groupByColumn) {
-      loadUniqueTableValues<string>(table, groupByColumn, {
-        signal: abortController.signal,
-      })
+    if (tableData && groupByColumn) {
+      tableData
+        .loadUniqueValues<string>(groupByColumn, {
+          signal: abortController.signal,
+        })
         .then((tableGroups) => {
           if (!abortController.signal.aborted) {
             setTableGroups(tableGroups);
@@ -100,7 +76,7 @@ export function ItemsDataTable({
     return () => {
       abortController.abort();
     };
-  }, [table, groupByColumn, loadUniqueTableValues]);
+  }, [tableData, groupByColumn]);
 
   const { rowData, columnDefs } = useMemo(() => {
     if (table && groupByColumn) {
@@ -125,20 +101,25 @@ export function ItemsDataTable({
     }
     const ids = data.getIds();
     let names: (string | undefined)[] | undefined;
-    if (tableData !== null) {
-      const tableNames = tableData.getNames();
-      if (tableNames !== undefined) {
-        const tableIds = tableData.getIds();
-        const tableNamesById = new Map(
-          tableIds.map((id, i) => [id, tableNames[i]!]),
-        );
-        names = ids.map((id) => tableNamesById.get(id));
+    if (table !== null) {
+      // the selected table governs the names; while it is still loading there
+      // are none yet, rather than the object's own names, which would show a
+      // different column for a moment and then be replaced
+      if (tableData !== null) {
+        const tableNames = tableData.getNames();
+        if (tableNames !== undefined) {
+          const tableIds = tableData.getIds();
+          const tableNamesById = new Map(
+            tableIds.map((id, i) => [id, tableNames[i]!]),
+          );
+          names = ids.map((id) => tableNamesById.get(id));
+        }
       }
     } else {
       names = data.getNames();
     }
     const rowData: ItemsDataTableRowData[] = ids.map((id, i) => ({
-      id: id,
+      id,
       name: names !== undefined ? names[i] : undefined,
     }));
     const columnDefs: ColumnDef<ItemsDataTableRowData>[] = [

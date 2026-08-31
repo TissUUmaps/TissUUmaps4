@@ -1,7 +1,6 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-import { useMemo } from "react";
 
 import { type Labels, MathUtils, createLabels } from "@tissuumaps/core";
 
@@ -22,8 +21,10 @@ import {
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
+import { useLabelsData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useAppStore } from "@/stores/app";
+import { useProjectStore } from "@/stores/project";
 
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
 import { useLabelsDataTableColumns } from "./useLabelsDataTableColumns";
@@ -34,13 +35,12 @@ export type LabelsPanelProps = {
 };
 
 export function LabelsPanel({ className }: LabelsPanelProps) {
-  const labels = useTissUUmaps((state) => state.labels);
-  const layers = useTissUUmaps((state) => state.layers);
-  const labelsDataProviders = useTissUUmaps(
-    (state) => state.labelsDataProviders,
-  );
-  const addLabels = useTissUUmaps((state) => state.addLabels);
-  const moveLabels = useTissUUmaps((state) => state.moveLabels);
+  const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
+
+  const layers = useProjectStore((state) => state.layers);
+  const labels = useProjectStore((state) => state.labels);
+  const addLabels = useProjectStore((state) => state.addLabels);
+  const moveLabels = useProjectStore((state) => state.moveLabels);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
@@ -98,33 +98,20 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
     setSelectedGroupByColumn,
   } = useLabelsDataWidget(labels);
 
-  const loadedLabels = useTissUUmaps((state) => state.loadedLabels);
-  const loadedLabelsData = useTissUUmaps((state) => state.loadedLabelsData);
-  const labelsDataProviders = useTissUUmaps(
-    (state) => state.labelsDataProviders,
-  );
-  const updateLabels = useTissUUmaps((state) => state.updateLabels);
-  const deleteLabels = useTissUUmaps((state) => state.deleteLabels);
-  const loadLabels = useTissUUmaps((state) => state.loadLabels);
+  const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
 
-  const { ref, handleRef } = useSortable({ id: labels.id, index });
+  const updateLabels = useProjectStore((state) => state.updateLabels);
+  const deleteLabels = useProjectStore((state) => state.deleteLabels);
 
-  const data = useMemo(() => {
-    const loadedDataKey = loadedLabels.get(labels.id);
-    if (loadedDataKey !== undefined) {
-      const loadedData = loadedLabelsData.get(loadedDataKey);
-      if (loadedData !== undefined) {
-        return loadedData.data;
-      }
-    }
-    return null;
-  }, [labels.id, loadedLabels, loadedLabelsData]);
+  const labelsData = useLabelsData(labels.id);
 
   const { extraTableGroupColumnDefs } = useLabelsDataTableColumns(
     labels,
     selectedTable,
     selectedGroupByColumn,
   );
+
+  const { ref, handleRef } = useSortable({ id: labels.id, index });
 
   return (
     <div ref={ref}>
@@ -188,8 +175,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             dataSource={labels.dataSource}
             dataProviders={labelsDataProviders}
             onDataSourceChange={(newDataSource) => {
-              // TODO signal, progress callback
-              loadLabels(labels.id, { newDataSource }).catch(console.error);
+              updateLabels(labels.id, { dataSource: newDataSource });
             }}
             className="bg-card"
           />
@@ -199,9 +185,9 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             onActiveCategoryChange={setActiveSettingsCategory}
             className="bg-card"
           />
-          {data !== null && (
+          {labelsData !== null && (
             <ItemsDataWidget
-              data={data}
+              data={labelsData}
               tableHeight={200}
               selectedTable={selectedTable}
               onSelectedTableChange={setSelectedTable}

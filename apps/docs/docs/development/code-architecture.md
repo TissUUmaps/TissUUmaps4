@@ -18,6 +18,20 @@ This project is structured as a pnpm monorepo as follows:
   - @tissuumaps-viewer   # The TissUUmaps viewer (React component)
 ```
 
+Each package's `exports` point at its build output in `dist` only, so that
+published packages contain nothing monorepo-specific. During development,
+packages are resolved to their TypeScript sources instead, via a private
+`tissuumaps-development` export condition: `customConditions` in `tsconfig.base.json`
+for TypeScript (and thus for editor navigation), and `resolve.conditions` /
+`ssr.resolve.conditions` in the Vite configs for Vite and Vitest. Because no
+consumer's bundler declares that condition, it is inert in published packages.
+
+The Vite configs add that condition only when the mode is not `production`, so
+that production builds go through each package's `exports` and `dist` — the very
+graph that is published — instead of silently bypassing it. Production builds of
+the application therefore require the packages to be built first, which the
+topologically ordered `pnpm run build` takes care of.
+
 The following diagram outlines the dependency structure among packages and the TissUUmaps application:
 
 ```mermaid
@@ -84,7 +98,7 @@ This package contains the rendering backends and exposes the core TissUUmaps ren
 
 ## @tissuumaps/storage
 
-A data provider implementation consists of a concrete `DataProvider`, whose `open()` method takes a concrete `DataSource` and returns a concrete `Data` accessor.
+A data provider implementation consists of a concrete `DataProvider`, whose `load()` method takes a concrete `DataSource` and returns a concrete `Data` accessor.
 
 Each data provider has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files.
 
@@ -102,11 +116,11 @@ In the TissUUmaps React app, absolute ("@/") imports are preferred over relative
 
 ### App
 
-Upon startup, all TissUUmaps plugins are initialized and the application state is initialized using a project file loaded from `project.json` (if available) or from the URL given in the `project` GET parameter.
+Upon startup (`bootstrap`), immer's Map/Set support is enabled, the built-in data providers are registered, the data caches are started, the plugin registry is exposed as `window.tissuumaps`, and loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.json` if that parameter is absent or empty. A `tissuumaps-loaded` event is then dispatched on `window`, after which plugins register themselves (see [Plugins](./plugins.md)); there are no plugins known to the application ahead of time. `bootstrap` returns a teardown function, which is invoked on hot module replacement.
 
 ### Hooks
 
-Where possible and useful, React `useEffect` and `useCallback` hooks are enapsulated using custom hooks.
+Where possible and useful, React `useEffect` and `useCallback` hooks are encapsulated using custom hooks.
 
 ### Components
 
@@ -121,7 +135,34 @@ Components are structured as follows:
 
 ### State management
 
-A single Zustand store is being used, which is distributed over several slices. The main slices are `app` (transient application state), `project` (persistent project information) and data type-specific slices that hold project data (transient in-memory data and persistent metadata). Data objects returned by data providers are exposed to the TissUUmaps `Viewer` component using custom data type-specific store adapters. The immer middleware is used to perform immutable updates, with support for Maps and Sets enabled. Asynchronous store actions are deduplicated based on the JSON-stringified function arguments.
+Four separate Zustand stores are used, all typed in `@tissuumaps/core` (`types/stores`) so that plugins can consume them:
+
+- `appStore` - transient application state: workspace, interaction mode, registered data providers and plugins
+- `dataStore` - derived state: a data reference (`DataRef`) per project object, reconciled by the data caches (see below); treat as read-only
+- `projectStore` - the loaded project (layers, images, labels, points, shapes, tables, maps, render options)
+- `settingsStore` - user settings, persisted across sessions
+
+The immer middleware is used to perform immutable updates, with support for Maps and Sets enabled (`enableMapSet()` runs at module scope in `stores/stores.ts`, which every store module imports, as stores are created - and rehydrated, in the case of `settingsStore` - while their module is being evaluated). Because immer rejects a recipe that both returns a value and mutates its draft, store actions must use a block body (`set((draft) => { draft.x = y; })`), never an expression body.
+
+### Data caches
+
+Loading and unloading of data is not driven by imperative actions. Instead, the caches in `data/cache` own every opened `Data` instance and publish their state to `dataStore`: there is one cache per data type, `tableDataCache` and `imageDataCache` (`DataCache`) as well as `labelsDataCache`, `pointsDataCache` and `shapesDataCache` (`ItemsDataCache`, which additionally resolves the table referenced by its data source).
+
+Two separate mechanisms drive the caches:
+
+- **Loading happens on demand**: `DataCache.load()` creates the cache entry for an object if necessary and subscribes to its ongoing load. Renderers call it through the per-type loaders of `useDataLoader` (`useImageDataLoader`, `useTableDataLoader`, ...). Components use the per-type hooks of `useData` instead (`useImageData`, `useTableData`, ...), which claim the data for as long as the component is mounted but read it back from `dataStore` rather than holding on to it themselves — so that a component never keeps using data whose entry the cache has meanwhile discarded. A load that all of its callers have aborted is cancelled again, and its entry discarded (see below).
+- **Unloading is reconciled from state**: `startDataCaches()` (called from `bootstrap`) subscribes to `appStore` and `projectStore`, and every change re-runs `retainOnly()` on those caches whose inputs actually changed. `retainOnly()` keeps entries that are still referenced and whose dependencies are unchanged, destroys all others, and never creates one. An entry that all of its objects have left is destroyed too: objects that resolve to its key but have not loaded it yet do not reference it, so nothing would ever reach it again.
+
+The caches are implemented as follows:
+
+- Objects are grouped by an **entry key**, the deterministic stringification (`JSONUtils.stringify(..., { stable: true })`) of their data source after the data provider has applied its defaults (`DataProvider.normalizeDataSource`). Objects whose data sources normalize to the same value therefore share one cache entry, and its data is loaded only once. Resolution is memoized per data source object in a `WeakMap`, keyed on the responsible data provider.
+- Each entry records the **entry dependencies** it was created with (`makeEntryDependencies`): the data provider, the workspace (only for data sources with a `path`, so remote data sources are unaffected by workspace changes), and for items data the referenced table's load operation. An entry is reused only while those are unchanged, otherwise it is destroyed and recreated - with the objects of the destroyed entry carried over, since they all resolve to the recreated one as well, and would otherwise be left pointing at data that has just been destroyed. Creating an items data entry hence also creates the referenced table's entry, while reconciliation merely _peeks_ at existing table entries (the `peek` option) rather than creating them.
+- Entry state is published per object as a `DataRef`, which is `loading` (with optional progress), `loaded` or `error`, and which also carries the entry's `promise`. The `onObjectDataRefsChanged` callback writes it into `dataStore`, while `onObjectDataRefsRemoved` reports the objects of an entry that was discarded because its load had been abandoned, which removes their data ref again. Entries destroyed by `retainOnly()` are not reported that way, since its caller reconciles the store from its return value instead.
+- Concurrent loads of one entry share a single `SharedOperation`: the underlying operation runs once and progress is fanned out to all of its subscribers. The cache merely _observes_ the operation (`observe()`) to publish its progress and outcome, rather than subscribing to it, so that it does not keep an unwanted load alive. Only `load()` callers subscribe: once the last of them has aborted, the operation is abandoned — it is aborted, and its entry is discarded along with its data refs, so that a later `load()` starts over.
+- A load that _fails_ is treated differently from one that is abandoned: the failure is kept and not retried, until the entry is destroyed or its dependencies change (see above). Only genuine failures are cached this way; an abandoned load leaves nothing behind.
+- Items data entries subscribe to the load operation of their referenced table for the duration of their own load (`makeDataProviderOpenOptions`), and hand that subscription to the data provider as its `tableDataPromise`. A table is therefore kept loading for exactly as long as some items load or some other consumer needs it: the last consumer of a table going away does not cancel a table load that an items load still depends on, and abandoning an items load releases its claim on the table again.
+- Cached data is handed out wrapped (`data/cache/wrappers`): the wrapper makes `close()` a no-op, since the cache owns the lifetime, and exposes `destroy()` instead, which closes the underlying data. After `destroy()`, the wrapper refuses all access to the destroyed data — accessing it throws, and the methods that deduplicate through a `SharedOperation` reject rather than starting a new one — so that a consumer still holding on to it fails loudly instead of reading data whose resources have already been released. Wrappers also deduplicate concurrent `load...` calls per argument via `SharedOperation`, abort them on `destroy()`, and — unlike entries — do retry a failed one on the next call, since here the operation, not the data source, is what failed.
+- The public API of `DataCache` consists of `load()` and `retainOnly()` only. Subclasses adapt its behavior through the protected `makeEntryDependencies()`, `resolveDataProvider()` and `makeDataProviderOpenOptions()` hooks, and reach into another cache's entries through the protected _static_ `DataCache.getEntry()` — static because protected instance members are not accessible through a reference typed as the base class, as is the case for the `tableDataCache` held by an `ItemsDataCache`.
 
 ## Documentation (docs)
 

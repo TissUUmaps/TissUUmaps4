@@ -43,9 +43,3 @@ export type DefaultCSVTableDataSource = Required<
   Pick<CSVTableDataSource, keyof typeof csvTableDataSourceDefaults>
 > &
   Omit<CSVTableDataSource, keyof typeof csvTableDataSourceDefaults>;
-
-export function createDefaultCSVTableDataSource(
-  csvTableDataSource: CSVTableDataSource,
-): DefaultCSVTableDataSource {
-  return { ...csvTableDataSourceDefaults, ...csvTableDataSource };
-}

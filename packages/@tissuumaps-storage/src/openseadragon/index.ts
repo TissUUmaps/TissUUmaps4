@@ -5,5 +5,4 @@ export {
   openSeadragonImageDataSourceType,
   type DefaultOpenSeadragonImageDataSource,
   type OpenSeadragonImageDataSource,
-  createDefaultOpenSeadragonImageDataSource,
 } from "./OpenSeadragonImageDataSource";

@@ -1,9 +1,13 @@
-import type { ProgressCallback, TableDataProvider } from "@tissuumaps/core";
+import type {
+  DataProviderOpenOptions,
+  TableDataProvider,
+} from "@tissuumaps/core";
 
 import { ParquetTableData } from "./ParquetTableData";
 import {
+  type DefaultParquetTableDataSource,
   type ParquetTableDataSource,
-  createDefaultParquetTableDataSource,
+  parquetTableDataSourceDefaults,
 } from "./ParquetTableDataSource";
 import { runParquetWorker } from "./runParquetWorker";
 
@@ -52,35 +56,41 @@ export class ParquetTableDataProvider implements TableDataProvider<
     ],
   };
 
-  async open(
+  normalizeDataSource(
     dataSource: ParquetTableDataSource,
-    options?: {
-      signal?: AbortSignal;
-      onProgress?: ProgressCallback;
-      workspace?: FileSystemDirectoryHandle | null;
-    },
+  ): DefaultParquetTableDataSource {
+    let { url } = dataSource;
+    if (url !== undefined) {
+      url = new URL(url, document.baseURI).href;
+    }
+    return { ...parquetTableDataSourceDefaults, ...dataSource, url };
+  }
+
+  async load(
+    dataSource: ParquetTableDataSource,
+    options?: DataProviderOpenOptions,
   ): Promise<ParquetTableData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
-    const defaultDataSource = createDefaultParquetTableDataSource(dataSource);
+    const normalizedDataSource = this.normalizeDataSource(dataSource);
 
     let file, url, headers;
-    if (defaultDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(defaultDataSource.path);
-      signal?.throwIfAborted();
+    if (normalizedDataSource.path !== undefined && workspace !== null) {
+      const fh = await workspace.getFileHandle(normalizedDataSource.path);
+      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
       file = await fh.getFile();
-      signal?.throwIfAborted();
-    } else if (defaultDataSource.url !== undefined) {
-      url = defaultDataSource.url;
-      headers = defaultDataSource.requestHeaders;
-    } else if (defaultDataSource.path !== undefined) {
+      signal?.throwIfAborted(); // getFile() does not throw on abort
+    } else if (normalizedDataSource.url !== undefined) {
+      url = normalizedDataSource.url;
+      headers = normalizedDataSource.requestHeaders;
+    } else if (normalizedDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     } else {
       throw new Error("A URL or workspace path is required to load data.");
     }
     const source = { file, url, headers };
-    const { idColumn, nameColumn } = defaultDataSource;
+    const { idColumn, nameColumn } = normalizedDataSource;
     const { numRows, columns, ids, names } = await runParquetWorker(
       { op: "file", source, idColumn, nameColumn },
       { signal, onProgress },

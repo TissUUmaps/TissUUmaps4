@@ -5,7 +5,7 @@ import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
 
@@ -123,7 +123,7 @@ function GroupByOpacityConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
-  const opacityMaps = useTissUUmaps((state) => state.opacityMaps);
+  const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
     useTableColumnSelector(tableId);

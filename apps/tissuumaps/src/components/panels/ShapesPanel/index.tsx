@@ -1,7 +1,6 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-import { useMemo } from "react";
 
 import { MathUtils, type Shapes, createShapes } from "@tissuumaps/core";
 
@@ -22,8 +21,10 @@ import {
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
+import { useShapesData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useAppStore } from "@/stores/app";
+import { useProjectStore } from "@/stores/project";
 
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
 import { useShapesDataTableColumns } from "./useShapesDataTableColumns";
@@ -34,13 +35,12 @@ export type ShapesPanelProps = {
 };
 
 export function ShapesPanel({ className }: ShapesPanelProps) {
-  const shapes = useTissUUmaps((state) => state.shapes);
-  const layers = useTissUUmaps((state) => state.layers);
-  const shapesDataProviders = useTissUUmaps(
-    (state) => state.shapesDataProviders,
-  );
-  const addShapes = useTissUUmaps((state) => state.addShapes);
-  const moveShapes = useTissUUmaps((state) => state.moveShapes);
+  const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
+
+  const layers = useProjectStore((state) => state.layers);
+  const shapes = useProjectStore((state) => state.shapes);
+  const addShapes = useProjectStore((state) => state.addShapes);
+  const moveShapes = useProjectStore((state) => state.moveShapes);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
@@ -98,33 +98,20 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
     setSelectedGroupByColumn,
   } = useShapesDataWidget(shapes);
 
-  const loadedShapes = useTissUUmaps((state) => state.loadedShapes);
-  const loadedShapesData = useTissUUmaps((state) => state.loadedShapesData);
-  const shapesDataProviders = useTissUUmaps(
-    (state) => state.shapesDataProviders,
-  );
-  const updateShapes = useTissUUmaps((state) => state.updateShapes);
-  const deleteShapes = useTissUUmaps((state) => state.deleteShapes);
-  const loadShapes = useTissUUmaps((state) => state.loadShapes);
+  const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
 
-  const { ref, handleRef } = useSortable({ id: shapes.id, index });
+  const updateShapes = useProjectStore((state) => state.updateShapes);
+  const deleteShapes = useProjectStore((state) => state.deleteShapes);
 
-  const data = useMemo(() => {
-    const loadedDataKey = loadedShapes.get(shapes.id);
-    if (loadedDataKey !== undefined) {
-      const loadedData = loadedShapesData.get(loadedDataKey);
-      if (loadedData !== undefined) {
-        return loadedData.data;
-      }
-    }
-    return null;
-  }, [shapes.id, loadedShapes, loadedShapesData]);
+  const shapesData = useShapesData(shapes.id);
 
   const { extraTableGroupColumnDefs } = useShapesDataTableColumns(
     shapes,
     selectedTable,
     selectedGroupByColumn,
   );
+
+  const { ref, handleRef } = useSortable({ id: shapes.id, index });
 
   return (
     <div ref={ref}>
@@ -188,8 +175,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             dataSource={shapes.dataSource}
             dataProviders={shapesDataProviders}
             onDataSourceChange={(newDataSource) => {
-              // TODO signal, progress callback
-              loadShapes(shapes.id, { newDataSource }).catch(console.error);
+              updateShapes(shapes.id, { dataSource: newDataSource });
             }}
             className="bg-card"
           />
@@ -199,9 +185,9 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             onActiveCategoryChange={setActiveSettingsCategory}
             className="bg-card"
           />
-          {data !== null && (
+          {shapesData !== null && (
             <ItemsDataWidget
-              data={data}
+              data={shapesData}
               tableHeight={200}
               selectedTable={selectedTable}
               onSelectedTableChange={setSelectedTable}

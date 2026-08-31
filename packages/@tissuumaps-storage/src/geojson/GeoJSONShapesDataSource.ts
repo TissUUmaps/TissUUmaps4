@@ -15,9 +15,3 @@ export type DefaultGeoJSONShapesDataSource = Required<
   Pick<GeoJSONShapesDataSource, keyof typeof geoJSONShapesDataSourceDefaults>
 > &
   Omit<GeoJSONShapesDataSource, keyof typeof geoJSONShapesDataSourceDefaults>;
-
-export function createDefaultGeoJSONShapesDataSource(
-  geoJSONShapesDataSource: GeoJSONShapesDataSource,
-): DefaultGeoJSONShapesDataSource {
-  return { ...geoJSONShapesDataSourceDefaults, ...geoJSONShapesDataSource };
-}

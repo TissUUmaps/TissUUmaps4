@@ -8,7 +8,7 @@ import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import type { ColorConfigWidgetAdapter } from "./adapter";
 
@@ -231,7 +231,7 @@ function GroupByColorConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
-  const colorMaps = useTissUUmaps((state) => state.colorMaps);
+  const colorMaps = useProjectStore((state) => state.colorMaps);
 
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
     useTableColumnSelector(tableId);

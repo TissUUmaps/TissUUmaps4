@@ -133,8 +133,10 @@ export {
 export {
   type Data,
   type DataProvider,
+  type DataProviderOpenOptions,
   type ItemsData,
   type ItemsDataProvider,
+  type ItemsDataProviderOpenOptions,
 } from "./storage/base";
 export {
   type CustomTileSource,

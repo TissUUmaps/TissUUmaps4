@@ -1,11 +1,15 @@
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
-import type { ImageDataProvider, ProgressCallback } from "@tissuumaps/core";
+import type {
+  DataProviderOpenOptions,
+  ImageDataProvider,
+} from "@tissuumaps/core";
 
 import { OMEZarrImageData } from "./OMEZarrImageData";
 import {
+  type DefaultOMEZarrImageDataSource,
   type OMEZarrImageDataSource,
-  createDefaultOMEZarrImageDataSource,
+  omeZarrImageDataSourceDefaults,
 } from "./OMEZarrImageDataSource";
 
 export class OMEZarrImageDataProvider implements ImageDataProvider<
@@ -61,45 +65,51 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     ],
   };
 
-  async open(
+  normalizeDataSource(
     dataSource: OMEZarrImageDataSource,
-    options?: {
-      signal?: AbortSignal;
-      onProgress?: ProgressCallback;
-      workspace?: FileSystemDirectoryHandle | null;
-    },
+  ): DefaultOMEZarrImageDataSource {
+    let { url } = dataSource;
+    if (url !== undefined) {
+      url = new URL(url, document.baseURI).href;
+    }
+    return { ...omeZarrImageDataSourceDefaults, ...dataSource, url };
+  }
+
+  async load(
+    dataSource: OMEZarrImageDataSource,
+    options?: DataProviderOpenOptions,
   ): Promise<OMEZarrImageData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
-    const defaultDataSource = createDefaultOMEZarrImageDataSource(dataSource);
+    const normalizedDataSource = this.normalizeDataSource(dataSource);
 
-    if (defaultDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(defaultDataSource.path);
-      signal?.throwIfAborted();
+    if (normalizedDataSource.path !== undefined && workspace !== null) {
+      const fh = await workspace.getFileHandle(normalizedDataSource.path);
+      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
       const file = await fh.getFile();
-      signal?.throwIfAborted();
+      signal?.throwIfAborted(); // getFile() does not throw on abort
       const objectUrl = URL.createObjectURL(file);
       const tileSource = new OMEZarrTileSource({
         url: objectUrl,
-        c: defaultDataSource.c,
-        z: defaultDataSource.z,
-        t: defaultDataSource.t,
+        c: normalizedDataSource.c,
+        z: normalizedDataSource.z,
+        t: normalizedDataSource.t,
       });
       return new OMEZarrImageData(tileSource, objectUrl);
     }
 
-    if (defaultDataSource.url !== undefined) {
+    if (normalizedDataSource.url !== undefined) {
       const tileSource = new OMEZarrTileSource({
-        url: defaultDataSource.url,
-        c: defaultDataSource.c,
-        z: defaultDataSource.z,
-        t: defaultDataSource.t,
+        url: normalizedDataSource.url,
+        c: normalizedDataSource.c,
+        z: normalizedDataSource.z,
+        t: normalizedDataSource.t,
       });
       return new OMEZarrImageData(tileSource, undefined);
     }
 
-    if (defaultDataSource.path !== undefined) {
+    if (normalizedDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     }
 

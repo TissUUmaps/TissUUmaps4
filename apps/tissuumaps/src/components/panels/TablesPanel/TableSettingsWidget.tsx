@@ -4,7 +4,7 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 export type TableSettingsWidgetProps = {
   table: Table;
@@ -15,7 +15,7 @@ export function TableSettingsWidget({
   table,
   className,
 }: TableSettingsWidgetProps) {
-  const updateTable = useTissUUmaps((state) => state.updateTable);
+  const updateTable = useProjectStore((state) => state.updateTable);
 
   return (
     <Fieldset

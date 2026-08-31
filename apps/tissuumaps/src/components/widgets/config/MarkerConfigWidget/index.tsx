@@ -3,7 +3,7 @@ import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { markers } from "@/components/markers";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import type { MarkerConfigWidgetAdapter } from "./adapter";
 
@@ -120,7 +120,7 @@ function GroupByMarkerConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
-  const markerMaps = useTissUUmaps((state) => state.markerMaps);
+  const markerMaps = useProjectStore((state) => state.markerMaps);
 
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
     useTableColumnSelector(tableId);

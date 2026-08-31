@@ -6,11 +6,11 @@ import {
 } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Input } from "@/components/ui/input";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 export function ProjectSettingsDialog() {
-  const glOptions = useTissUUmaps((state) => state.glOptions);
-  const setGLOptions = useTissUUmaps((state) => state.setGLOptions);
+  const glOptions = useProjectStore((state) => state.glOptions);
+  const setGLOptions = useProjectStore((state) => state.setGLOptions);
 
   return (
     <Fieldset className="border-0 m-0 p-0">
