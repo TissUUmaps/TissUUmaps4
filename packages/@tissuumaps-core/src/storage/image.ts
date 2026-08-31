@@ -18,8 +18,19 @@ export interface ImageDataProvider<
  * Loaded image data providing an OpenSeadragon-compatible tile source
  */
 export interface ImageData extends Data {
-  /** Returns a tile source descriptor for use with OpenSeadragon */
-  getTileSource(): string | TileSourceConfig | CustomTileSource;
+  /** Returns the number of channels in the image, or undefined if not multi-channel */
+  getSizeC(): number | undefined;
+
+  /** Returns the names of the image's channels, or undefined if not multi-channel */
+  getChannelNames(): string[] | undefined;
+
+  /**
+   * Returns the tile source for a specific channel, or undefined if not multi-channel
+   *
+   * @param c - The channel index (0-based)
+   * @returns The tile source for the channel, or undefined if not multi-channel
+   */
+  getTileSource(c?: number): string | TileSourceConfig | CustomTileSource;
 }
 
 /** Configuration object accepted by OpenSeadragon as a tile source */
