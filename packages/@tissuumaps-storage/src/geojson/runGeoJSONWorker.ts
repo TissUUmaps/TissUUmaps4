@@ -7,14 +7,16 @@ import type {
 } from "./geojson.worker";
 import GeoJSONWorker from "./geojson.worker?worker&inline";
 
-export async function runGeoJSONWorker<TRequest extends GeoJSONWorkerRequest>(
+export function runGeoJSONWorker<TRequest extends GeoJSONWorkerRequest>(
   request: TRequest,
   options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ): Promise<GeoJSONWorkerResponseFor<TRequest>> {
   const { signal, onProgress } = options ?? {};
-  signal?.throwIfAborted();
+  if (signal?.aborted) {
+    return Promise.reject(signal.reason as Error);
+  }
   const worker = new GeoJSONWorker();
-  return await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const onAbort = () => {
       worker.terminate();
       reject(signal!.reason as Error);
