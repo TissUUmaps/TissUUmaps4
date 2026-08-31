@@ -82,37 +82,37 @@ export function useWebGL(
       if (containerSizeRef.current !== null) {
         context.resizeCanvas(canvas, containerSizeRef.current);
       }
-      let pointsRenderer: WebGLPointsRenderer | undefined;
+      const {
+        promise: pointsRendererInitPromise,
+        resolve: resolvePointsRendererInitPromise,
+        reject: rejectPointsRendererInitPromise,
+      } = Promise.withResolvers<void>();
+      pointsRendererInitPromise.catch(() => {}); // prevent unhandled rejections in console
+      let pointsRenderer: WebGLPointsRenderer;
       try {
-        pointsRenderer = await new Promise<WebGLPointsRenderer>(
-          (resolve, reject) => {
-            try {
-              const pointsRenderer = new WebGLPointsRenderer(
-                context,
-                () => resolve(pointsRenderer),
-                reject,
-                {
-                  viewport: viewportRef.current ?? undefined,
-                  renderOptions: glOptionsRef.current.pointsRenderOptions,
-                  signal: abortController.signal,
-                },
-              );
-            } catch (error) {
-              reject(
-                new Error("Error creating points renderer", { cause: error }),
-              );
-            }
+        pointsRenderer = new WebGLPointsRenderer(
+          context,
+          resolvePointsRendererInitPromise,
+          rejectPointsRendererInitPromise,
+          {
+            viewport: viewportRef.current ?? undefined,
+            renderOptions: glOptionsRef.current.pointsRenderOptions,
+            signal: abortController.signal,
           },
         );
-        abortController.signal.throwIfAborted();
       } catch (error) {
-        if (pointsRenderer !== undefined) {
-          pointsRenderer.destroy();
-        }
+        context.destroy();
+        throw new Error("Error creating points renderer", { cause: error });
+      }
+      try {
+        await pointsRendererInitPromise;
+        abortController.signal.throwIfAborted(); // points renderer does not throw on abort
+      } catch (error) {
+        pointsRenderer.destroy();
         context.destroy();
         throw error;
       }
-      let shapesRenderer: WebGLShapesRenderer | undefined;
+      let shapesRenderer: WebGLShapesRenderer;
       try {
         shapesRenderer = new WebGLShapesRenderer(context, {
           viewport: viewportRef.current ?? undefined,
