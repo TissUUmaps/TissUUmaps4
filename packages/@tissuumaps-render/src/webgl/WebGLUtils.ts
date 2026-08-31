@@ -7,6 +7,13 @@ import {
   TransformUtils,
 } from "@tissuumaps/core";
 
+/**
+ * Coordinate transformation helpers for the WebGL renderers
+ *
+ * All matrices are column-major `gl-matrix` {@link mat3} instances, converted to
+ * the smaller GLSL matrix types by {@link convertMatrixToGLMat3x2} and
+ * {@link transposeAndConvertMatrixToGLMat2x4} before being passed to a shader.
+ */
 export class WebGLUtils {
   /**
    * Computes the data → world transformation matrix

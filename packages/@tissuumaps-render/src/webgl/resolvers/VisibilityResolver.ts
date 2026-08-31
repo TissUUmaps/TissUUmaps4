@@ -4,6 +4,7 @@ import {
   type FromConfig,
   type GroupByConfig,
   MathUtils,
+  ParseUtils,
   type TableData,
   type VisibilityConfig,
   getActiveConfigSource,
@@ -14,9 +15,12 @@ import {
 
 import { ResolverBase } from "./ResolverBase";
 
+/**
+ * Resolves the visibility of every item, encoded as `0` or `1`
+ */
 export class VisibilityResolver extends ResolverBase {
   /**
-   * Loads visibility data for a set of IDs based on the active visibility configuration source.
+   * Loads visibility data for a set of IDs based on the active visibility configuration source
    *
    * Dispatches to the appropriate loader (constant, from, or groupBy) depending on which
    * configuration source is active.
@@ -25,8 +29,7 @@ export class VisibilityResolver extends ResolverBase {
    * @param config - Visibility configuration specifying the data source
    * @param visibilityMaps - Available visibility maps for groupBy lookups
    * @param defaultVisibility - Fallback visibility when no valid config or value is found
-   * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options - Optional abort signal, buffer alignment, and table ID
+   * @param options - Optional abort signal, buffer alignment, and table loader
    * @returns A `Uint8Array` of encoded visibility values (0 or 1), one per ID
    */
   static async resolveVisibilities(
@@ -34,13 +37,13 @@ export class VisibilityResolver extends ResolverBase {
     config: VisibilityConfig,
     visibilityMaps: DefaultMap<boolean>[],
     defaultVisibility: boolean,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
-    options?: { signal?: AbortSignal; align?: number; table?: string },
+    options?: {
+      signal?: AbortSignal;
+      align?: number;
+      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
+    },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, table } = options ?? {};
+    const { signal, align = 1, loadTable } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
@@ -51,27 +54,27 @@ export class VisibilityResolver extends ResolverBase {
     if (
       activeConfigSource === "from" &&
       isFromConfig(config) &&
-      table !== undefined
+      loadTable !== undefined
     ) {
-      return await VisibilityResolver.resolveVisibilitiesFromTableValues(
+      return VisibilityResolver.resolveVisibilitiesFromTableValues(
         ids,
         config,
         defaultVisibility,
-        async (options) => loadTable(table, options),
+        (opts) => loadTable(opts),
         { signal, align },
       );
     }
     if (
       activeConfigSource === "groupBy" &&
       isGroupByConfig(config) &&
-      table !== undefined
+      loadTable !== undefined
     ) {
-      return await VisibilityResolver.resolveVisibilitiesFromTableGroups(
+      return VisibilityResolver.resolveVisibilitiesFromTableGroups(
         ids,
         config,
         visibilityMaps,
         defaultVisibility,
-        async (options) => loadTable(table, options),
+        (opts) => loadTable(opts),
         { signal, align },
       );
     }
@@ -84,7 +87,7 @@ export class VisibilityResolver extends ResolverBase {
   }
 
   /**
-   * Creates a uniform visibility data buffer filled with the configured constant visibility.
+   * Creates a uniform visibility data buffer filled with the configured constant visibility
    *
    * @param ids - Ordered list of item IDs (only the length is used)
    * @param config - Constant visibility configuration containing the boolean value
@@ -105,7 +108,7 @@ export class VisibilityResolver extends ResolverBase {
   }
 
   /**
-   * Loads visibility data by reading values from a table column and parsing them as booleans.
+   * Loads visibility data by reading values from a table column and parsing them as booleans
    *
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source column
@@ -123,20 +126,21 @@ export class VisibilityResolver extends ResolverBase {
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const data = VisibilityResolver.createVisibilityBuffer(ids.length, {
+    const data = await loadTable({ signal });
+    const buffer = VisibilityResolver.createVisibilityBuffer(ids.length, {
       align,
     });
     await VisibilityResolver.fillFromTableValues(
+      buffer,
       data,
       ids,
       config.from.column,
       defaultVisibility,
-      loadTable,
       (value) => VisibilityResolver.parseVisibility(value),
       (visibility) => VisibilityResolver.encodeVisibility(visibility),
       { signal },
     );
-    return data;
+    return buffer;
   }
 
   /**
@@ -174,25 +178,26 @@ export class VisibilityResolver extends ResolverBase {
         { align },
       );
     }
-    const data = VisibilityResolver.createVisibilityBuffer(ids.length, {
+    const data = await loadTable({ signal });
+    const buffer = VisibilityResolver.createVisibilityBuffer(ids.length, {
       align,
     });
     const groupVisibilities = new Map(Object.entries(visibilityMap.values));
     await VisibilityResolver.fillFromTableGroups(
+      buffer,
       data,
       ids,
       config.groupBy.column,
       visibilityMap.default ?? defaultVisibility,
-      loadTable,
       (group) => groupVisibilities.get(group),
       (visibility) => VisibilityResolver.encodeVisibility(visibility),
       { signal },
     );
-    return data;
+    return buffer;
   }
 
   /**
-   * Creates a visibility data buffer of the given size filled with a single visibility value.
+   * Creates a visibility data buffer of the given size filled with a single visibility value
    *
    * @param n - Number of elements
    * @param visibility - The boolean visibility to fill with
@@ -205,16 +210,14 @@ export class VisibilityResolver extends ResolverBase {
     options?: { align?: number },
   ): Uint8Array {
     const { align = 1 } = options ?? {};
-    const data = VisibilityResolver.createVisibilityBuffer(n, {
-      align,
-    });
+    const buffer = VisibilityResolver.createVisibilityBuffer(n, { align });
     const value = VisibilityResolver.encodeVisibility(visibility);
-    data.fill(value, 0, n);
-    return data;
+    buffer.fill(value, 0, n);
+    return buffer;
   }
 
   /**
-   * Creates a buffer of the given size for storing encoded visibility values, aligned to the specified byte boundary.
+   * Creates a buffer of the given size for storing encoded visibility values, aligned to the specified byte boundary
    *
    * @param size - The number of elements in the buffer
    * @param options - Optional buffer alignment
@@ -230,21 +233,23 @@ export class VisibilityResolver extends ResolverBase {
   }
 
   /**
-   * Parses a raw value as a boolean visibility (truthy if greater than 0).
+   * Parses a raw value as a boolean visibility (truthy if greater than 0)
    *
    * @param value - The raw value to parse (must be a number)
    * @returns `true` if the value is greater than 0, `false` if 0 or negative, or `undefined` if not a number
    */
   static parseVisibility(value: unknown): boolean | undefined {
-    if (typeof value === "number") {
-      return value > 0;
+    if (typeof value === "boolean") {
+      return value;
     }
-    console.warn(`Invalid visibility value: ${String(value)}`);
-    return undefined;
+    const visibility = ParseUtils.tryParseFinite(value, {
+      requireSafeBigInt: true,
+    });
+    return visibility !== undefined ? visibility > 0 : undefined;
   }
 
   /**
-   * Encodes a boolean visibility into a numeric representation.
+   * Encodes a boolean visibility into a numeric representation
    *
    * @param visibility - The boolean visibility to encode
    * @returns `1` if visible, `0` if not

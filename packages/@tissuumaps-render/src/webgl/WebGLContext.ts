@@ -1,9 +1,8 @@
-import type { Dims, TypedArray } from "@tissuumaps/core";
+import { AsyncUtils, type Dims, type TypedArray } from "@tissuumaps/core";
 
 /**
  * A wrapper around a WebGL2RenderingContext that provides utility methods for
- * creating shaders, programs, buffers, and textures, as well as handling context
- * loss and restoration.
+ * creating shaders, programs, buffers, and textures
  */
 export class WebGLContext {
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas#maximum_canvas_size
@@ -12,9 +11,10 @@ export class WebGLContext {
   readonly gl: WebGL2RenderingContext;
 
   /**
-   * Creates a new WebGLContext for the given canvas element.
+   * Creates a new WebGLContext for the given canvas element
    *
    * @param canvas - The HTML canvas element to use for rendering
+   * @throws If the browser does not support WebGL 2.0
    */
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl2", {
@@ -99,31 +99,37 @@ export class WebGLContext {
       if (program === null) {
         throw new Error("Failed to create shader program.");
       }
-      for (const [shader, shaderSource] of [
-        [vertexShader, vertexShaderSource],
-        [fragmentShader, fragmentShaderSource],
-      ] as const) {
-        this.gl.shaderSource(shader, shaderSource);
-        this.gl.compileShader(shader);
-        this.gl.attachShader(program, shader);
+      try {
+        for (const [shader, shaderSource] of [
+          [vertexShader, vertexShaderSource],
+          [fragmentShader, fragmentShaderSource],
+        ] as const) {
+          this.gl.shaderSource(shader, shaderSource);
+          this.gl.compileShader(shader);
+          this.gl.attachShader(program, shader);
+        }
+        this.gl.linkProgram(program);
+        if (
+          !this.gl.getProgramParameter(
+            program,
+            WebGL2RenderingContext.LINK_STATUS,
+          )
+        ) {
+          const programInfoLog = this.gl.getProgramInfoLog(program);
+          const vertexShaderInfoLog = this.gl.getShaderInfoLog(vertexShader);
+          const fragmentShaderInfoLog =
+            this.gl.getShaderInfoLog(fragmentShader);
+          throw new Error(
+            `Shader program linking failed: ${programInfoLog}\n` +
+              `Vertex shader log: ${vertexShaderInfoLog}\n` +
+              `Fragment shader log: ${fragmentShaderInfoLog}`,
+          );
+        }
+        return program;
+      } catch (error) {
+        this.gl.deleteProgram(program);
+        throw error;
       }
-      this.gl.linkProgram(program);
-      if (
-        !this.gl.getProgramParameter(
-          program,
-          WebGL2RenderingContext.LINK_STATUS,
-        )
-      ) {
-        const programInfoLog = this.gl.getProgramInfoLog(program);
-        const vertexShaderInfoLog = this.gl.getShaderInfoLog(vertexShader);
-        const fragmentShaderInfoLog = this.gl.getShaderInfoLog(fragmentShader);
-        throw new Error(
-          `Shader program linking failed: ${programInfoLog}\n` +
-            `Vertex shader log: ${vertexShaderInfoLog}\n` +
-            `Fragment shader log: ${fragmentShaderInfoLog}`,
-        );
-      }
-      return program;
     } finally {
       // flag shader for deletion (i.e., delete them when no longer in use)
       // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glDeleteShader.xhtml
@@ -155,7 +161,7 @@ export class WebGLContext {
    *
    * @param program - The shader program
    * @param uniformBlockName - The name of the uniform block as declared in the shader
-   * @returns The index of the uniform block
+   * @throws If the uniform block is not found
    */
   getUniformBlockIndex(
     program: WebGLProgram,
@@ -258,6 +264,7 @@ export class WebGLContext {
    * @param format - Pixel data format (e.g. `gl.RGBA`)
    * @param type - Pixel data type (e.g. `gl.FLOAT`)
    * @param data - Optional initial pixel data
+   * @throws If texture creation fails
    */
   createDataTexture(
     internalformat: GLenum,
@@ -353,14 +360,19 @@ export class WebGLContext {
   /**
    * Loads an image from a URL and creates a WebGL texture from it
    *
+   * If the image fails to load, or the operation is aborted, the pending image load is
+   * cancelled and the texture is deleted again before rejecting.
+   *
    * @param url - The image URL
    * @param options - Optional mipmap generation flag and abort signal
+   * @throws If texture creation fails, the image fails to load, or the
+   * operation was aborted
    */
   async loadImageTextureFromUrl(
     url: string,
-    options?: { mipmap?: boolean; signal?: AbortSignal },
+    options?: { signal?: AbortSignal; mipmap?: boolean },
   ): Promise<WebGLTexture> {
-    const { mipmap = false, signal } = options ?? {};
+    const { signal, mipmap = false } = options ?? {};
     signal?.throwIfAborted();
     const texture = this.gl.createTexture();
     if (texture === null) {
@@ -390,9 +402,13 @@ export class WebGLContext {
       WebGL2RenderingContext.CLAMP_TO_EDGE,
     );
     this.gl.bindTexture(WebGL2RenderingContext.TEXTURE_2D, null);
-    await new Promise<void>((resolve, reject) => {
-      const img = new Image();
+    const img = new Image();
+    const promise = new Promise<void>((resolve, reject) => {
       img.onload = () => {
+        if (signal?.aborted) {
+          reject(new Error("Image load aborted."));
+          return;
+        }
         this.gl.bindTexture(WebGL2RenderingContext.TEXTURE_2D, texture);
         this.gl.texImage2D(
           WebGL2RenderingContext.TEXTURE_2D,
@@ -409,12 +425,17 @@ export class WebGLContext {
         resolve();
       };
       img.onerror = (...args) => {
-        const error = args[4];
-        reject(error ?? new Error(`Failed to load image: ${url}`));
+        reject(new Error(`Failed to load image: ${url}`, { cause: args[4] }));
       };
       img.src = url;
     });
-    signal?.throwIfAborted();
+    try {
+      await AsyncUtils.raceSignal(promise, { signal });
+    } catch (error) {
+      img.removeAttribute("src"); // cancel a still pending image load
+      this.gl.deleteTexture(texture);
+      throw error;
+    }
     return texture;
   }
 

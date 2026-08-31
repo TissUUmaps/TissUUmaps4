@@ -23,72 +23,71 @@ import {
 
 import { ResolverBase } from "./ResolverBase";
 
+/**
+ * Resolves the color of every item, encoded as a packed RGB value
+ *
+ * The alpha channel is left to the caller, which resolves visibilities and
+ * opacities separately and folds them in afterwards.
+ */
 export class ColorResolver extends ResolverBase {
   /**
-   * Loads color data for a set of IDs based on the active color configuration source.
+   * Loads color data for a set of IDs based on the active color configuration source
    *
-   * Dispatches to the appropriate loader (constant, from, groupBy, or random) and then
-   * applies visibility and opacity by encoding each color as `(color << 8) + alpha`.
+   * Dispatches to the appropriate loader (constant, from, groupBy, or random).
+   * The returned colors carry no alpha; the caller folds the separately
+   * resolved visibilities and opacities into it.
    *
    * @param ids - Ordered list of item IDs
    * @param config - Color configuration specifying the data source
    * @param colorMaps - Available color maps for groupBy lookups
    * @param defaultColor - Fallback color when no valid config or value is found
-   * @param loadTable - Async function that loads a {@link TableData} by ID
-   * @param options - Optional abort signal, buffer alignment, table ID, visibility data, and opacity data
-   * @returns A `Uint32Array` of packed RGBA color values, one per ID
+   * @param options - Optional abort signal, buffer alignment, and table loader
+   * @returns A `Uint32Array` of packed RGB color values, one per ID
    */
   static async resolveColors(
     ids: number[],
     config: ColorConfig,
     colorMaps: DefaultMap<Color>[],
     defaultColor: Color,
-    loadTable: (
-      tableId: string,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
     options?: {
       signal?: AbortSignal;
       align?: number;
-      table?: string;
-      visibilities?: Uint8Array;
-      opacities?: Uint8Array;
+      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
     },
   ): Promise<Uint32Array> {
-    const { signal, align = 1, table, visibilities, opacities } = options ?? {};
+    const { signal, align = 1, loadTable } = options ?? {};
     signal?.throwIfAborted();
-    let data: Uint32Array;
+    let buffer: Uint32Array;
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      data = ColorResolver.resolveUniformColors(ids, config, { align });
+      buffer = ColorResolver.resolveUniformColors(ids, config, { align });
     } else if (
       activeConfigSource === "from" &&
       isFromConfig(config) &&
-      table !== undefined
+      loadTable !== undefined
     ) {
-      data = await ColorResolver.resolveColorsFromTableValues(
+      buffer = await ColorResolver.resolveColorsFromTableValues(
         ids,
         config,
         defaultColor,
-        async (options) => loadTable(table, options),
+        loadTable,
         { signal, align },
       );
     } else if (
       activeConfigSource === "groupBy" &&
       isGroupByConfig(config) &&
-      table !== undefined
+      loadTable !== undefined
     ) {
-      data = await ColorResolver.resolveColorsFromTableGroups(
+      buffer = await ColorResolver.resolveColorsFromTableGroups(
         ids,
         config,
         colorMaps,
-        colorPalettes,
         defaultColor,
-        async (options) => loadTable(table, options),
+        loadTable,
         { signal, align },
       );
     } else if (activeConfigSource === "random" && isRandomConfig(config)) {
-      data = await ColorResolver.resolveRandomColors(
+      buffer = await ColorResolver.resolveRandomColors(
         ids,
         config,
         defaultColor,
@@ -96,31 +95,20 @@ export class ColorResolver extends ResolverBase {
       );
     } else {
       console.warn("No valid color config found, using default color");
-      data = ColorResolver.createUniformColors(ids.length, defaultColor, {
+      buffer = ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
       });
     }
-    await AsyncUtils.forEach(
-      ids,
-      (_, i) => {
-        let c = MathUtils.safeLeftShift(data[i]!, 8);
-        if (visibilities === undefined || visibilities[i]! > 0) {
-          c += opacities !== undefined ? opacities[i]! : 255;
-        }
-        data[i] = c;
-      },
-      { signal },
-    );
-    return data;
+    return buffer;
   }
 
   /**
-   * Creates a uniform color data buffer filled with the configured constant color.
+   * Creates a uniform color data buffer filled with the configured constant color
    *
    * @param ids - Ordered list of item IDs (only the length is used)
    * @param config - Constant color configuration containing the color value
    * @param options - Optional buffer alignment
-   * @returns A `Uint32Array` filled with the encoded constant color
+   * @returns A `Uint32Array` filled with the encoded constant color, without alpha
    */
   static resolveUniformColors(
     ids: number[],
@@ -140,7 +128,6 @@ export class ColorResolver extends ResolverBase {
    * through a color palette.
    *
    * @param ids - Ordered list of item IDs
-   
    * @param config - From configuration specifying the source column, palette, and range
    * @param defaultColor - Fallback color when the palette is not found or a value is invalid
    * @param loadTable - Async function that loads the {@link TableData}
@@ -167,13 +154,14 @@ export class ColorResolver extends ResolverBase {
         align,
       });
     }
-    const data = ColorResolver.createColorBuffer(ids.length, { align });
+    const data = await loadTable({ signal });
+    const buffer = ColorResolver.createColorBuffer(ids.length, { align });
     await ColorResolver.fillFromTableValues(
+      buffer,
       data,
       ids,
       config.from.column,
       defaultColor,
-      loadTable,
       (value, valueRange) =>
         ColorResolver.parseColor(
           value,
@@ -184,7 +172,7 @@ export class ColorResolver extends ResolverBase {
       (color) => ColorResolver.encodeColor(color),
       { signal },
     );
-    return data;
+    return buffer;
   }
 
   /**
@@ -194,7 +182,6 @@ export class ColorResolver extends ResolverBase {
    * @param ids - Ordered list of item IDs
    * @param config - GroupBy configuration specifying the source column and map/palette
    * @param colorMaps - Available color maps for group-to-color lookups
-   * @param colorPalettes - Available color palettes for hash-based group coloring
    * @param defaultColor - Fallback color when the map/palette is not found or a group is unmapped
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
@@ -204,7 +191,6 @@ export class ColorResolver extends ResolverBase {
     ids: number[],
     config: Extract<ColorConfig, GroupByConfig<false>>,
     colorMaps: DefaultMap<Color>[],
-    colorPalettes: ColorPalette[],
     defaultColor: Color,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
@@ -223,21 +209,20 @@ export class ColorResolver extends ResolverBase {
           align,
         });
       }
-      const data = ColorResolver.createColorBuffer(ids.length, {
-        align,
-      });
+      const data = await loadTable({ signal });
+      const buffer = ColorResolver.createColorBuffer(ids.length, { align });
       const groupColors = new Map(Object.entries(colorMap.values));
       await ColorResolver.fillFromTableGroups(
+        buffer,
         data,
         ids,
         config.groupBy.column,
         colorMap.default ?? defaultColor,
-        loadTable,
         (group) => groupColors.get(group),
         (color) => ColorResolver.encodeColor(color),
         { signal },
       );
-      return data;
+      return buffer;
     }
     if (config.groupBy.palette !== undefined) {
       const colorPalette = colorPalettes.find(
@@ -251,20 +236,19 @@ export class ColorResolver extends ResolverBase {
           align,
         });
       }
-      const data = ColorResolver.createColorBuffer(ids.length, {
-        align,
-      });
+      const data = await loadTable({ signal });
+      const buffer = ColorResolver.createColorBuffer(ids.length, { align });
       await ColorResolver.fillFromTableGroups(
+        buffer,
         data,
         ids,
         config.groupBy.column,
         defaultColor,
-        loadTable,
         (group) => HashUtils.djb2Pick(colorPalette.colors, group),
         (color) => ColorResolver.encodeColor(color),
         { signal },
       );
-      return data;
+      return buffer;
     }
     console.warn(
       `No color map or color palette specified, using default color`,
@@ -275,7 +259,9 @@ export class ColorResolver extends ResolverBase {
   }
 
   /**
-   * Loads color data by assigning each ID a random color from the configured palette.
+   * Loads color data by assigning each ID a random color from the configured palette
+   *
+   * The colors are encoded without alpha, which {@link resolveColors} adds.
    *
    * @param ids - Ordered list of item IDs
    * @param config - Random configuration specifying the palette to sample from
@@ -302,21 +288,22 @@ export class ColorResolver extends ResolverBase {
         align,
       });
     }
-    const data = ColorResolver.createColorBuffer(ids.length, { align });
+    const buffer = ColorResolver.createColorBuffer(ids.length, { align });
     await AsyncUtils.forEach(
       ids,
       (_, i) => {
+        // TODO use a seeded RNG to make this deterministic, based on the ID
         const index = Math.floor(Math.random() * colorPalette.colors.length);
         const color = colorPalette.colors[index]!;
-        data[i] = ColorResolver.encodeColor(color);
+        buffer[i] = ColorResolver.encodeColor(color);
       },
       { signal },
     );
-    return data;
+    return buffer;
   }
 
   /**
-   * Creates a color data buffer of the given size filled with a single color.
+   * Creates a color data buffer of the given size filled with a single color
    *
    * @param n - Number of elements
    * @param color - The color to fill with
@@ -329,14 +316,14 @@ export class ColorResolver extends ResolverBase {
     options?: { align?: number },
   ): Uint32Array {
     const { align = 1 } = options ?? {};
-    const data = ColorResolver.createColorBuffer(n, { align });
+    const buffer = ColorResolver.createColorBuffer(n, { align });
     const value = ColorResolver.encodeColor(color);
-    data.fill(value, 0, n);
-    return data;
+    buffer.fill(value, 0, n);
+    return buffer;
   }
 
   /**
-   * Creates a buffer of the given size for storing encoded color values, aligned to the specified byte boundary.
+   * Creates a buffer of the given size for storing encoded color values, aligned to the specified byte boundary
    *
    * @param size - The number of elements in the buffer
    * @param options - Optional buffer alignment
@@ -359,7 +346,8 @@ export class ColorResolver extends ResolverBase {
    * @param valueRange - The data-derived value range `[min, max]`, used when no configured range is provided
    * @param configuredValueRange - An explicit value range `[min, max]` that overrides `valueRange`
    * @param colorPalette - The palette to index into
-   * @returns The corresponding {@link Color}, or `undefined` if `value` is not a finite number
+   * @returns The corresponding {@link Color}, or `undefined` if `value` is not a
+   * finite number, or if the palette is empty
    */
   static parseColor(
     value: unknown,
@@ -370,23 +358,22 @@ export class ColorResolver extends ResolverBase {
     const v = ParseUtils.tryParseFinite(value, { requireSafeBigInt: true });
     if (v !== undefined) {
       const [vmin, vmax] = configuredValueRange ?? valueRange ?? [0, 1];
-      const vnorm = (v - vmin) / (vmax - vmin);
+      const vnorm = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0;
       const index = MathUtils.clamp(
         Math.floor(vnorm * colorPalette.colors.length),
         0,
         colorPalette.colors.length - 1,
       );
-      return colorPalette.colors[index]!;
+      return colorPalette.colors[index];
     }
-    console.warn(`Invalid color value: ${String(value)}`);
     return undefined;
   }
 
   /**
-   * Encodes a {@link Color} into a packed numeric representation.
+   * Encodes a {@link Color} into a packed numeric representation
    *
    * @param color - The color to encode
-   * @returns The packed color as a single number
+   * @returns The color packed into the lower 24 bits, without alpha
    */
   static encodeColor(color: Color): number {
     return ColorUtils.packColor(color);

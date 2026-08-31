@@ -26,8 +26,15 @@ describe("SizeResolver", () => {
       expect(SizeResolver.parseSize(-2.5)).toBe(-2.5);
     });
 
-    it("returns undefined for non-number values", () => {
-      expect(SizeResolver.parseSize("5")).toBeUndefined();
+    it("parses numeric strings", () => {
+      expect(SizeResolver.parseSize("5")).toBe(5);
+      expect(SizeResolver.parseSize("-2.5")).toBe(-2.5);
+    });
+
+    it("returns undefined for values that are not finite numbers", () => {
+      expect(SizeResolver.parseSize("five")).toBeUndefined();
+      expect(SizeResolver.parseSize(NaN)).toBeUndefined();
+      expect(SizeResolver.parseSize(Infinity)).toBeUndefined();
       expect(SizeResolver.parseSize(null)).toBeUndefined();
       expect(SizeResolver.parseSize(undefined)).toBeUndefined();
     });
@@ -46,9 +53,9 @@ describe("SizeResolver", () => {
 
   describe("createSizeBuffer", () => {
     it("creates a zeroed Float32Array of the requested size", () => {
-      const data = SizeResolver.createSizeBuffer(3);
-      expect(data).toBeInstanceOf(Float32Array);
-      expect(Array.from(data)).toEqual([0, 0, 0]);
+      const buffer = SizeResolver.createSizeBuffer(3);
+      expect(buffer).toBeInstanceOf(Float32Array);
+      expect(Array.from(buffer)).toEqual([0, 0, 0]);
     });
 
     it("aligns the buffer size to the given boundary", () => {
@@ -58,40 +65,40 @@ describe("SizeResolver", () => {
 
   describe("createUniformSizes", () => {
     it("fills the buffer with the encoded size", () => {
-      const data = SizeResolver.createUniformSizes(3, 7);
-      expect(Array.from(data)).toEqual([7, 7, 7]);
+      const buffer = SizeResolver.createUniformSizes(3, 7);
+      expect(Array.from(buffer)).toEqual([7, 7, 7]);
     });
 
     it("applies the size factor while filling", () => {
-      const data = SizeResolver.createUniformSizes(2, 4, { sizeFactor: 3 });
-      expect(Array.from(data)).toEqual([12, 12]);
+      const buffer = SizeResolver.createUniformSizes(2, 4, { sizeFactor: 3 });
+      expect(Array.from(buffer)).toEqual([12, 12]);
     });
   });
 
   describe("resolveUniformSizes", () => {
     it("fills the buffer with the constant size", () => {
       const config = { constant: { value: 9 } } satisfies SizeConfig;
-      const data = SizeResolver.resolveUniformSizes([1, 2], config);
-      expect(Array.from(data)).toEqual([9, 9]);
+      const buffer = SizeResolver.resolveUniformSizes([1, 2], config);
+      expect(Array.from(buffer)).toEqual([9, 9]);
     });
 
     it("applies the size factor to the constant size", () => {
       const config = { constant: { value: 9 } } satisfies SizeConfig;
-      const data = SizeResolver.resolveUniformSizes([1], config, {
+      const buffer = SizeResolver.resolveUniformSizes([1], config, {
         sizeFactor: 2,
       });
-      expect(data[0]).toBe(18);
+      expect(buffer[0]).toBe(18);
     });
   });
 
   describe("resolveSizesFromTableValues", () => {
     it("reads sizes from the table column and scales them", async () => {
       const ids = [1, 2];
-      const tableData = createMockTableData(ids, [3, 4]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, [3, 4]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies SizeConfig;
 
-      const data = await SizeResolver.resolveSizesFromTableValues(
+      const buffer = await SizeResolver.resolveSizesFromTableValues(
         ids,
         config,
         1,
@@ -99,33 +106,48 @@ describe("SizeResolver", () => {
         { sizeFactor: 2 },
       );
 
-      expect(data[0]).toBe(6);
-      expect(data[1]).toBe(8);
+      expect(Array.from(buffer)).toEqual([6, 8]);
     });
 
     it("uses the default size for invalid values", async () => {
       const ids = [1, 2];
-      const tableData = createMockTableData(ids, ["bad", 4]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, ["bad", 4]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies SizeConfig;
 
-      const data = await SizeResolver.resolveSizesFromTableValues(
+      const buffer = await SizeResolver.resolveSizesFromTableValues(
         ids,
         config,
         99,
         loadTable,
       );
 
-      expect(data[0]).toBe(99);
-      expect(data[1]).toBe(4);
+      expect(Array.from(buffer)).toEqual([99, 4]);
+    });
+
+    it("forwards the signal to loadTable", async () => {
+      const controller = new AbortController();
+      const data = createMockTableData([1], [3]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = { from: { column: "col1" } } satisfies SizeConfig;
+
+      await SizeResolver.resolveSizesFromTableValues(
+        [1],
+        config,
+        1,
+        loadTable,
+        { signal: controller.signal },
+      );
+
+      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
     });
   });
 
   describe("resolveSizesFromTableGroups", () => {
     it("maps groups to sizes using the size map", async () => {
       const ids = [1, 2];
-      const tableData = createMockTableData(ids, ["A", "B"]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, ["A", "B"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const sizeMap: DefaultMap<number> = {
         id: "sm1",
         name: "Size Map",
@@ -138,7 +160,7 @@ describe("SizeResolver", () => {
         groupBy: { column: "col1", map: "sm1" },
       } satisfies SizeConfig;
 
-      const data = await SizeResolver.resolveSizesFromTableGroups(
+      const buffer = await SizeResolver.resolveSizesFromTableGroups(
         ids,
         config,
         [sizeMap],
@@ -146,14 +168,13 @@ describe("SizeResolver", () => {
         loadTable,
       );
 
-      expect(data[0]).toBe(2);
-      expect(data[1]).toBe(4);
+      expect(Array.from(buffer)).toEqual([2, 4]);
     });
 
     it("uses the size map default for unmapped groups", async () => {
       const ids = [1];
-      const tableData = createMockTableData(ids, ["missing"]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, ["missing"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const sizeMap: DefaultMap<number> = {
         id: "sm1",
         name: "Size Map",
@@ -164,7 +185,7 @@ describe("SizeResolver", () => {
         groupBy: { column: "col1", map: "sm1" },
       } satisfies SizeConfig;
 
-      const data = await SizeResolver.resolveSizesFromTableGroups(
+      const buffer = await SizeResolver.resolveSizesFromTableGroups(
         ids,
         config,
         [sizeMap],
@@ -172,61 +193,76 @@ describe("SizeResolver", () => {
         loadTable,
       );
 
-      expect(data[0]).toBe(7);
+      expect(buffer[0]).toBe(7);
     });
 
     it("returns uniform default size when the map is not found", async () => {
+      const loadTable = vi.fn();
       const config = {
         groupBy: { column: "col1", map: "nonexistent" },
       } satisfies SizeConfig;
 
-      const data = await SizeResolver.resolveSizesFromTableGroups(
+      const buffer = await SizeResolver.resolveSizesFromTableGroups(
         [1, 2],
         config,
         [],
         5,
-        vi.fn(),
+        loadTable,
       );
 
-      expect(Array.from(data)).toEqual([5, 5]);
+      expect(Array.from(buffer)).toEqual([5, 5]);
+      expect(loadTable).not.toHaveBeenCalled();
+    });
+
+    it("applies the size factor to the mapped sizes", async () => {
+      const ids = [1];
+      const data = createMockTableData(ids, ["A"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const sizeMap: DefaultMap<number> = {
+        id: "sm1",
+        name: "Size Map",
+        values: { [JSON.stringify("A")]: 3 },
+      };
+      const config = {
+        groupBy: { column: "col1", map: "sm1" },
+      } satisfies SizeConfig;
+
+      const buffer = await SizeResolver.resolveSizesFromTableGroups(
+        ids,
+        config,
+        [sizeMap],
+        1,
+        loadTable,
+        { sizeFactor: 2 },
+      );
+
+      expect(buffer[0]).toBe(6);
     });
   });
 
   describe("resolveSizes", () => {
     it("dispatches to constant", async () => {
       const config = { constant: { value: 8 } } satisfies SizeConfig;
-      const data = await SizeResolver.resolveSizes(
-        [1, 2],
-        config,
-        [],
-        1,
-        vi.fn(),
-      );
-      expect(Array.from(data)).toEqual([8, 8]);
+      const buffer = await SizeResolver.resolveSizes([1, 2], config, [], 1);
+      expect(Array.from(buffer)).toEqual([8, 8]);
     });
 
-    it("dispatches to from config when a table is given", async () => {
-      const tableData = createMockTableData([1], [3]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+    it("dispatches to from config when loadTable is given", async () => {
+      const data = createMockTableData([1], [3]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies SizeConfig;
 
-      const data = await SizeResolver.resolveSizes(
-        [1],
-        config,
-        [],
-        1,
+      const buffer = await SizeResolver.resolveSizes([1], config, [], 1, {
         loadTable,
-        {
-          table: "t1",
-        },
-      );
+      });
 
-      expect(data[0]).toBe(3);
+      expect(loadTable).toHaveBeenCalledOnce();
+      expect(buffer[0]).toBe(3);
     });
 
-    it("dispatches to groupBy config when a table is given", async () => {
-      const tableData = createMockTableData([1], ["A"]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+    it("dispatches to groupBy config when loadTable is given", async () => {
+      const data = createMockTableData([1], ["A"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const sizeMap: DefaultMap<number> = {
         id: "sm1",
         name: "Size Map",
@@ -236,44 +272,64 @@ describe("SizeResolver", () => {
         groupBy: { column: "col1", map: "sm1" },
       } satisfies SizeConfig;
 
-      const data = await SizeResolver.resolveSizes(
+      const buffer = await SizeResolver.resolveSizes(
         [1],
         config,
         [sizeMap],
         1,
-        loadTable,
-        { table: "t1" },
+        { loadTable },
       );
 
-      expect(data[0]).toBe(5);
+      expect(loadTable).toHaveBeenCalledOnce();
+      expect(buffer[0]).toBe(5);
+    });
+
+    it("passes the size factor on to the table-backed sources", async () => {
+      const data = createMockTableData([1], [3]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = { from: { column: "col1" } } satisfies SizeConfig;
+
+      const buffer = await SizeResolver.resolveSizes([1], config, [], 1, {
+        loadTable,
+        sizeFactor: 2,
+      });
+
+      expect(buffer[0]).toBe(6);
     });
 
     it("falls back to the default size when the config has no active source", async () => {
       const config = {} as SizeConfig;
-      const data = await SizeResolver.resolveSizes(
-        [1, 2],
-        config,
-        [],
-        3,
-        vi.fn(),
-      );
-      expect(Array.from(data)).toEqual([3, 3]);
+      const buffer = await SizeResolver.resolveSizes([1, 2], config, [], 3);
+      expect(Array.from(buffer)).toEqual([3, 3]);
     });
 
-    it("does not load the table for a from config without a table id", async () => {
-      const loadTable = vi.fn();
+    it("falls back to the default size for a from config without loadTable", async () => {
       const config = { from: { column: "col1" } } satisfies SizeConfig;
 
-      const data = await SizeResolver.resolveSizes(
+      const buffer = await SizeResolver.resolveSizes([1], config, [], 3);
+
+      expect(buffer[0]).toBe(3);
+    });
+
+    it("falls back to the default size for a groupBy config without loadTable", async () => {
+      const sizeMap: DefaultMap<number> = {
+        id: "sm1",
+        name: "Size Map",
+        values: { [JSON.stringify("A")]: 5 },
+      };
+      const config = {
+        groupBy: { column: "col1", map: "sm1" },
+      } satisfies SizeConfig;
+
+      const buffer = await SizeResolver.resolveSizes(
         [1],
         config,
-        [],
+        [sizeMap],
         3,
-        loadTable,
+        {},
       );
 
-      expect(loadTable).not.toHaveBeenCalled();
-      expect(data[0]).toBe(3);
+      expect(buffer[0]).toBe(3);
     });
 
     it("throws when the signal is already aborted", async () => {
@@ -282,7 +338,7 @@ describe("SizeResolver", () => {
       const config = { constant: { value: 8 } } satisfies SizeConfig;
 
       await expect(
-        SizeResolver.resolveSizes([1], config, [], 1, vi.fn(), {
+        SizeResolver.resolveSizes([1], config, [], 1, {
           signal: controller.signal,
         }),
       ).rejects.toThrow();

@@ -18,10 +18,10 @@ type OS = {
 
 export function useOpenSeadragon(adapter: ViewerAdapter) {
   const {
-    workspace,
     layers,
     images,
     labels,
+    tables,
     colorMaps,
     visibilityMaps,
     opacityMaps,
@@ -68,7 +68,7 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
             }
           },
         );
-        abortController.signal.throwIfAborted();
+        abortController.signal.throwIfAborted(); // image renderer does not throw on abort
       } catch (error) {
         if (imageRenderer !== undefined) {
           await imageRenderer.destroy();
@@ -94,7 +94,7 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
             }
           },
         );
-        abortController.signal.throwIfAborted();
+        abortController.signal.throwIfAborted(); // labels renderer does not throw on abort
       } catch (error) {
         if (imageRenderer !== undefined) {
           await imageRenderer.destroy();
@@ -170,7 +170,7 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
     return () => {
       abortController.abort();
     };
-  }, [osReady, workspace, layers, images, loadImage]);
+  }, [osReady, layers, images, tables, loadImage]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -179,6 +179,7 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
         .synchronize(
           layers,
           labels,
+          tables,
           colorMaps,
           visibilityMaps,
           opacityMaps,
@@ -197,9 +198,9 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
     };
   }, [
     osReady,
-    workspace,
     layers,
     labels,
+    tables,
     colorMaps,
     visibilityMaps,
     opacityMaps,

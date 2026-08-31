@@ -7,7 +7,6 @@ import {
   ColorUtils,
   type DefaultMap,
   HashUtils,
-  MathUtils,
   type TableData,
   colorPalettes,
 } from "@tissuumaps/core";
@@ -70,6 +69,12 @@ describe("ColorResolver", () => {
       ).toEqual(blue);
     });
 
+    it("maps every value onto the first color for an empty range", () => {
+      expect(
+        ColorResolver.parseColor(5, undefined, [5, 5], testPalette),
+      ).toEqual(red);
+    });
+
     it("prefers the configured value range over the data range", () => {
       // 5/10 = 0.5, floor(0.5*3) = 1 → green
       expect(
@@ -118,10 +123,10 @@ describe("ColorResolver", () => {
 
   describe("createColorBuffer", () => {
     it("creates a zeroed Uint32Array of the requested size", () => {
-      const data = ColorResolver.createColorBuffer(3);
-      expect(data).toBeInstanceOf(Uint32Array);
-      expect(data.length).toBe(3);
-      expect(Array.from(data)).toEqual([0, 0, 0]);
+      const buffer = ColorResolver.createColorBuffer(3);
+      expect(buffer).toBeInstanceOf(Uint32Array);
+      expect(buffer.length).toBe(3);
+      expect(Array.from(buffer)).toEqual([0, 0, 0]);
     });
 
     it("aligns the buffer size to the given boundary", () => {
@@ -131,19 +136,19 @@ describe("ColorResolver", () => {
 
   describe("createUniformColors", () => {
     it("fills the buffer with the encoded color", () => {
-      const data = ColorResolver.createUniformColors(3, red);
+      const buffer = ColorResolver.createUniformColors(3, red);
       const encoded = ColorResolver.encodeColor(red);
-      expect(data.length).toBe(3);
-      expect(Array.from(data)).toEqual([encoded, encoded, encoded]);
+      expect(buffer.length).toBe(3);
+      expect(Array.from(buffer)).toEqual([encoded, encoded, encoded]);
     });
 
     it("respects alignment while filling only the requested count", () => {
-      const data = ColorResolver.createUniformColors(3, red, { align: 4 });
+      const buffer = ColorResolver.createUniformColors(3, red, { align: 4 });
       const encoded = ColorResolver.encodeColor(red);
-      expect(data.length).toBe(4);
-      expect(data[0]).toBe(encoded);
-      expect(data[2]).toBe(encoded);
-      expect(data[3]).toBe(0); // padding element is left zeroed
+      expect(buffer.length).toBe(4);
+      expect(buffer[0]).toBe(encoded);
+      expect(buffer[2]).toBe(encoded);
+      expect(buffer[3]).toBe(0); // padding element is left zeroed
     });
 
     it("returns an empty buffer for size 0", () => {
@@ -154,9 +159,9 @@ describe("ColorResolver", () => {
   describe("resolveUniformColors", () => {
     it("fills the buffer with the constant color", () => {
       const config = { constant: { value: green } } satisfies ColorConfig;
-      const data = ColorResolver.resolveUniformColors([1, 2, 3], config);
+      const buffer = ColorResolver.resolveUniformColors([1, 2, 3], config);
       const encoded = ColorResolver.encodeColor(green);
-      expect(Array.from(data)).toEqual([encoded, encoded, encoded]);
+      expect(Array.from(buffer)).toEqual([encoded, encoded, encoded]);
     });
   });
 
@@ -164,13 +169,13 @@ describe("ColorResolver", () => {
     it("maps table values through the color palette", async () => {
       const palette = colorPalettes[0]!;
       const ids = [1, 2];
-      const tableData = createMockTableData(ids, [0, 1], [0, 1]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, [0, 1], [0, 1]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
         from: { column: "col1", palette: palette.id },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColorsFromTableValues(
+      const buffer = await ColorResolver.resolveColorsFromTableValues(
         ids,
         config,
         black,
@@ -178,35 +183,56 @@ describe("ColorResolver", () => {
       );
 
       // value 0 → normalized 0 → first color; value 1 → clamped to last color
-      expect(data[0]).toBe(ColorResolver.encodeColor(palette.colors[0]!));
-      expect(data[1]).toBe(
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(palette.colors[0]!));
+      expect(buffer[1]).toBe(
         ColorResolver.encodeColor(palette.colors[palette.colors.length - 1]!),
       );
     });
 
     it("returns uniform default color when the palette is not found", async () => {
-      const ids = [1, 2];
+      const loadTable = vi.fn();
       const config = {
         from: { column: "col1", palette: "nonexistent" },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColorsFromTableValues(
-        ids,
+      const buffer = await ColorResolver.resolveColorsFromTableValues(
+        [1, 2],
         config,
         red,
-        vi.fn(),
+        loadTable,
       );
 
       const encoded = ColorResolver.encodeColor(red);
-      expect(Array.from(data)).toEqual([encoded, encoded]);
+      expect(Array.from(buffer)).toEqual([encoded, encoded]);
+      expect(loadTable).not.toHaveBeenCalled();
+    });
+
+    it("forwards the signal to loadTable", async () => {
+      const controller = new AbortController();
+      const palette = colorPalettes[0]!;
+      const data = createMockTableData([1], [0], [0, 1]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = {
+        from: { column: "col1", palette: palette.id },
+      } satisfies ColorConfig;
+
+      await ColorResolver.resolveColorsFromTableValues(
+        [1],
+        config,
+        black,
+        loadTable,
+        { signal: controller.signal },
+      );
+
+      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
     });
   });
 
   describe("resolveColorsFromTableGroups", () => {
     it("uses the color map when a map is specified and found", async () => {
       const ids = [1, 2];
-      const tableData = createMockTableData(ids, ["cat-a", "cat-b"]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, ["cat-a", "cat-b"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const colorMap: DefaultMap<Color> = {
         id: "cm1",
         name: "Color Map 1",
@@ -219,23 +245,22 @@ describe("ColorResolver", () => {
         groupBy: { column: "col1", map: "cm1" },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColorsFromTableGroups(
+      const buffer = await ColorResolver.resolveColorsFromTableGroups(
         ids,
         config,
         [colorMap],
-        [testPalette],
         black,
         loadTable,
       );
 
-      expect(data[0]).toBe(ColorResolver.encodeColor(red));
-      expect(data[1]).toBe(ColorResolver.encodeColor(green));
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(red));
+      expect(buffer[1]).toBe(ColorResolver.encodeColor(green));
     });
 
     it("uses the color map's default for unmapped groups", async () => {
       const ids = [1];
-      const tableData = createMockTableData(ids, ["missing"]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, ["missing"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const colorMap: DefaultMap<Color> = {
         id: "cm1",
         name: "Color Map 1",
@@ -246,97 +271,101 @@ describe("ColorResolver", () => {
         groupBy: { column: "col1", map: "cm1" },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColorsFromTableGroups(
+      const buffer = await ColorResolver.resolveColorsFromTableGroups(
         ids,
         config,
         [colorMap],
-        [testPalette],
         black,
         loadTable,
       );
 
-      expect(data[0]).toBe(ColorResolver.encodeColor(blue));
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(blue));
     });
 
     it("returns uniform default color when a map is specified but not found", async () => {
+      const loadTable = vi.fn();
       const config = {
         groupBy: { column: "col1", map: "nonexistent" },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColorsFromTableGroups(
+      const buffer = await ColorResolver.resolveColorsFromTableGroups(
         [1],
         config,
         [],
-        [],
         red,
-        vi.fn(),
+        loadTable,
       );
 
-      expect(data[0]).toBe(ColorResolver.encodeColor(red));
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(red));
+      expect(loadTable).not.toHaveBeenCalled();
     });
 
     it("hashes group names through the palette when only a palette is given", async () => {
+      // resolveColorsFromTableGroups looks palettes up in the built-in
+      // colorPalettes, rather than in a parameter
+      const builtInPalette = colorPalettes[0]!;
       const ids = [1, 2];
-      const tableData = createMockTableData(ids, ["groupA", "groupB"]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, ["groupA", "groupB"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
-        groupBy: { column: "col1", map: undefined, palette: testPalette.id },
+        groupBy: { column: "col1", map: undefined, palette: builtInPalette.id },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColorsFromTableGroups(
+      const buffer = await ColorResolver.resolveColorsFromTableGroups(
         ids,
         config,
         [],
-        [testPalette],
         black,
         loadTable,
       );
 
       // Colors are deterministically hash-picked from the palette
-      expect(data[0]).toBe(
+      expect(buffer[0]).toBe(
         ColorResolver.encodeColor(
-          HashUtils.djb2Pick(testPalette.colors, JSON.stringify("groupA")),
+          HashUtils.djb2Pick(builtInPalette.colors, JSON.stringify("groupA")),
         ),
       );
-      expect(data[1]).toBe(
+      expect(buffer[1]).toBe(
         ColorResolver.encodeColor(
-          HashUtils.djb2Pick(testPalette.colors, JSON.stringify("groupB")),
+          HashUtils.djb2Pick(builtInPalette.colors, JSON.stringify("groupB")),
         ),
       );
     });
 
     it("returns uniform default color when a palette is specified but not found", async () => {
+      const loadTable = vi.fn();
       const config = {
         groupBy: { column: "col1", map: undefined, palette: "nonexistent" },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColorsFromTableGroups(
+      const buffer = await ColorResolver.resolveColorsFromTableGroups(
         [1],
         config,
         [],
-        [],
         red,
-        vi.fn(),
+        loadTable,
       );
 
-      expect(data[0]).toBe(ColorResolver.encodeColor(red));
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(red));
+      expect(loadTable).not.toHaveBeenCalled();
     });
 
     it("returns uniform default color when neither map nor palette is given", async () => {
+      const loadTable = vi.fn();
       const config = {
         groupBy: { column: "col1", map: undefined },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColorsFromTableGroups(
+      const buffer = await ColorResolver.resolveColorsFromTableGroups(
         [1],
         config,
         [],
-        [],
         green,
-        vi.fn(),
+        loadTable,
       );
 
-      expect(data[0]).toBe(ColorResolver.encodeColor(green));
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(green));
+      expect(loadTable).not.toHaveBeenCalled();
     });
   });
 
@@ -349,41 +378,38 @@ describe("ColorResolver", () => {
         random: { palette: builtInPalette.id },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveRandomColors(
+      const buffer = await ColorResolver.resolveRandomColors(
         [1, 2, 3],
         config,
         black,
-        {
-          signal: undefined,
-          align: 1,
-        },
+        { signal: undefined, align: 1 },
       );
 
-      expect(data.length).toBe(3);
-      const valid = builtInPalette.colors.map((c) =>
-        ColorResolver.encodeColor(c),
+      expect(buffer.length).toBe(3);
+      const valid = builtInPalette.colors.map((color) =>
+        ColorResolver.encodeColor(color),
       );
-      for (const value of data) {
+      for (const value of buffer) {
         expect(valid).toContain(value);
       }
     });
 
     it("draws the sampled color deterministically from Math.random", async () => {
-      const spy = vi.spyOn(Math, "random").mockReturnValue(0); // → index 0
+      const random = vi.spyOn(Math, "random").mockReturnValue(0); // → index 0
       try {
         const config = {
           random: { palette: builtInPalette.id },
         } satisfies ColorConfig;
-        const data = await ColorResolver.resolveRandomColors(
+        const buffer = await ColorResolver.resolveRandomColors(
           [1],
           config,
           black,
         );
-        expect(data[0]).toBe(
+        expect(buffer[0]).toBe(
           ColorResolver.encodeColor(builtInPalette.colors[0]!),
         );
       } finally {
-        spy.mockRestore();
+        random.mockRestore();
       }
     });
 
@@ -392,80 +418,49 @@ describe("ColorResolver", () => {
         random: { palette: "nonexistent" },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveRandomColors([1, 2], config, red);
+      const buffer = await ColorResolver.resolveRandomColors(
+        [1, 2],
+        config,
+        red,
+      );
 
       const encoded = ColorResolver.encodeColor(red);
-      expect(Array.from(data)).toEqual([encoded, encoded]);
+      expect(Array.from(buffer)).toEqual([encoded, encoded]);
     });
   });
 
   describe("resolveColors", () => {
-    it("dispatches to constant and applies visibility and opacity", async () => {
+    it("dispatches to constant, leaving the alpha channel to the caller", async () => {
       const ids = [1, 2];
       const config = { constant: { value: red } } satisfies ColorConfig;
-      const visibilities = new Uint8Array([1, 0]);
-      const opacities = new Uint8Array([200, 150]);
 
-      const data = await ColorResolver.resolveColors(
-        ids,
-        config,
-        [],
-        black,
-        vi.fn(),
-        { visibilities, opacities },
-      );
+      const buffer = await ColorResolver.resolveColors(ids, config, [], black);
 
       const encodedRed = ColorResolver.encodeColor(red);
-      // ID 1: visible → (color << 8) + opacity
-      expect(data[0]).toBe(MathUtils.safeLeftShift(encodedRed, 8) + 200);
-      // ID 2: not visible → (color << 8) + 0
-      expect(data[1]).toBe(MathUtils.safeLeftShift(encodedRed, 8));
+      expect(Array.from(buffer)).toEqual([encodedRed, encodedRed]);
     });
 
-    it("uses full alpha (255) when no opacity data is given", async () => {
-      const config = { constant: { value: green } } satisfies ColorConfig;
-
-      const data = await ColorResolver.resolveColors(
-        [1],
-        config,
-        [],
-        black,
-        vi.fn(),
-      );
-
-      const encoded = ColorResolver.encodeColor(green);
-      expect(data[0]).toBe(MathUtils.safeLeftShift(encoded, 8) + 255);
-    });
-
-    it("dispatches to from config when a table is given", async () => {
+    it("dispatches to from config when loadTable is given", async () => {
       const palette = colorPalettes[0]!;
-      const tableData = createMockTableData([1], [0], [0, 1]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData([1], [0], [0, 1]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
         from: { column: "col1", palette: palette.id },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColors(
-        [1],
-        config,
-        [],
-        black,
+      const buffer = await ColorResolver.resolveColors([1], config, [], black, {
         loadTable,
-        { table: "t1" },
-      );
+      });
 
-      expect(loadTable).toHaveBeenCalled();
+      expect(loadTable).toHaveBeenCalledOnce();
       const expectedColor = palette.colors[0]!;
-      expect(data[0]).toBe(
-        MathUtils.safeLeftShift(ColorResolver.encodeColor(expectedColor), 8) +
-          255,
-      );
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(expectedColor));
     });
 
-    it("dispatches to groupBy config when a table is given", async () => {
+    it("dispatches to groupBy config when loadTable is given", async () => {
       const ids = [1];
-      const tableData = createMockTableData(ids, ["cat-a"]);
-      const loadTable = vi.fn().mockResolvedValue(tableData);
+      const data = createMockTableData(ids, ["cat-a"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
       const colorMap: DefaultMap<Color> = {
         id: "cm1",
         name: "CM",
@@ -475,73 +470,71 @@ describe("ColorResolver", () => {
         groupBy: { column: "col1", map: "cm1" },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColors(
+      const buffer = await ColorResolver.resolveColors(
         ids,
         config,
         [colorMap],
         black,
-        loadTable,
-        { table: "t1" },
+        { loadTable },
       );
 
-      expect(data[0]).toBe(
-        MathUtils.safeLeftShift(ColorResolver.encodeColor(red), 8) + 255,
-      );
+      expect(loadTable).toHaveBeenCalledOnce();
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(red));
     });
 
     it("dispatches to random config", async () => {
+      // resolveRandomColors samples from the built-in colorPalettes, not a
+      // parameter, so a palette that is not among them falls back to the default
+      const builtInPalette = colorPalettes[0]!;
       const config = {
-        random: { palette: testPalette.id },
+        random: { palette: builtInPalette.id },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColors(
-        [1],
-        config,
-        [],
-        black,
-        vi.fn(),
-      );
+      const buffer = await ColorResolver.resolveColors([1], config, [], black);
 
-      expect(data.length).toBe(1);
-      // low byte is the (full) alpha, upper bytes carry a palette color
-      expect(data[0]! & 0xff).toBe(255);
+      expect(buffer.length).toBe(1);
+      expect(
+        builtInPalette.colors.map((color) => ColorResolver.encodeColor(color)),
+      ).toContain(buffer[0]);
     });
 
     it("falls back to the default color when the config has no active source", async () => {
       const config = {} as ColorConfig;
 
-      const data = await ColorResolver.resolveColors(
-        [1],
-        config,
-        [],
-        red,
-        vi.fn(),
-      );
+      const buffer = await ColorResolver.resolveColors([1], config, [], red);
 
-      expect(data[0]).toBe(
-        MathUtils.safeLeftShift(ColorResolver.encodeColor(red), 8) + 255,
-      );
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(red));
     });
 
-    it("does not load the table for a from config without a table id", async () => {
-      const loadTable = vi.fn();
+    it("falls back to the default color for a from config without loadTable", async () => {
       const config = {
         from: { column: "col1", palette: colorPalettes[0]!.id },
       } satisfies ColorConfig;
 
-      const data = await ColorResolver.resolveColors(
+      const buffer = await ColorResolver.resolveColors([1], config, [], red);
+
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(red));
+    });
+
+    it("falls back to the default color for a groupBy config without loadTable", async () => {
+      const colorMap: DefaultMap<Color> = {
+        id: "cm1",
+        name: "CM",
+        values: { [JSON.stringify("cat-a")]: green },
+      };
+      const config = {
+        groupBy: { column: "col1", map: "cm1" },
+      } satisfies ColorConfig;
+
+      const buffer = await ColorResolver.resolveColors(
         [1],
         config,
-        [],
+        [colorMap],
         red,
-        loadTable,
+        {},
       );
 
-      expect(loadTable).not.toHaveBeenCalled();
-      // Falls through to the default color
-      expect(data[0]).toBe(
-        MathUtils.safeLeftShift(ColorResolver.encodeColor(red), 8) + 255,
-      );
+      expect(buffer[0]).toBe(ColorResolver.encodeColor(red));
     });
 
     it("throws when the signal is already aborted", async () => {
@@ -550,7 +543,7 @@ describe("ColorResolver", () => {
       const config = { constant: { value: red } } satisfies ColorConfig;
 
       await expect(
-        ColorResolver.resolveColors([1], config, [], black, vi.fn(), {
+        ColorResolver.resolveColors([1], config, [], black, {
           signal: controller.signal,
         }),
       ).rejects.toThrow();

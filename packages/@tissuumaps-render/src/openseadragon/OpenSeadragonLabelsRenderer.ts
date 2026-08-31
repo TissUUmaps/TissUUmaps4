@@ -5,6 +5,7 @@ import type {
   Labels,
   LabelsData,
   Layer,
+  Table,
   TableData,
   TileSourceConfig,
 } from "@tissuumaps/core";
@@ -12,66 +13,61 @@ import type {
 import { OpenSeadragonRendererBase } from "./OpenSeadragonRendererBase";
 
 /**
- * Renderer for managing tiled images for {@link Labels} data objects in an OpenSeadragon viewer.
- *
- * This class extends the {@link OpenSeadragonRendererBase} to provide specific functionality for rendering label objects.
- * It handles the synchronization of tiled labels with the current model state, including loading, updating, and removing labels as needed.
+ * Renderer for the tiled images of {@link Labels} data objects
  */
 export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   Labels,
   LabelsData
 > {
   /**
-   * Synchronizes the viewer's tiled images with the current model state for labels objects.
-   *
-   * This method is currently a placeholder and does not implement the actual synchronization logic for labels.
+   * Synchronizes the viewer's tiled images with the current model state
    *
    * @param _layers - Layers to render
    * @param _labels - Labels objects to display
+   * @param _tables - Tables backing the labels' color, visibility and opacity
    * @param _colorMaps - Color maps for labels
    * @param _visibilityMaps - Visibility maps for labels
    * @param _opacityMaps - Opacity maps for labels
    * @param _loadLabels - Async getter for labels data
    * @param _loadTable - Async getter for table data
-   * @param options - Optional abort signal
+   * @param _options - Optional abort signal
    *
-   * @todo Implement the logic to synchronize labels objects with their corresponding tiled images in the viewer.
+   * @todo Implement labels rendering; this is a placeholder that renders nothing.
    */
-  async synchronize(
+  synchronize(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _layers: Layer[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _labels: Labels[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _tables: Table[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _colorMaps: DefaultMap<Color>[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _visibilityMaps: DefaultMap<boolean>[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _opacityMaps: DefaultMap<number>[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _loadLabels: (
-      labelsId: string,
-      options?: {
-        signal?: AbortSignal;
-      },
+      labels: Labels,
+      options?: { signal?: AbortSignal },
     ) => Promise<LabelsData>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _loadTable: (
-      tableId: string,
-      options?: {
-        signal?: AbortSignal;
-      },
+      table: Table,
+      options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
-    options?: { signal?: AbortSignal },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options?: { signal?: AbortSignal },
   ): Promise<void> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
     // TODO implement labels rendering
     return Promise.resolve();
   }
 
   /**
-   * Retrieves the tile source for a given labels data object.
+   * Returns the tile source for the given labels data
    *
-   * This method is called by the renderer to obtain the appropriate tile source for each labels data object, which can be a URL string, a TileSourceConfig object, or a CustomTileSource object.
-   *
-   * @param _data - The labels data object for which to retrieve the tile source.
-   * @returns The tile source, which can be a URL string, a TileSourceConfig object, or a CustomTileSource object.
-   *
-   * @todo Implement the logic to retrieve the tile source for labels data objects.
+   * @todo Implement labels rendering; this always throws.
    */
   protected getTileSource(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
