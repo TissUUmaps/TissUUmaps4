@@ -20,7 +20,6 @@ import type {
 } from "@tissuumaps/core";
 
 export interface ViewerAdapter {
-  interactionMode: InteractionMode;
   layers: Layer[];
   images: Image[];
   labels: Labels[];
@@ -54,5 +53,8 @@ export interface ViewerAdapter {
     table: Table,
     options?: { signal?: AbortSignal },
   ) => Promise<TableData>;
+
+  // shapes drawing
+  interactionMode: InteractionMode;
   addShape?: (shape: MultiPolygon) => void;
 }

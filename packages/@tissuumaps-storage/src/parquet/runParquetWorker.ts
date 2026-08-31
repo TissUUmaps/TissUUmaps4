@@ -7,14 +7,16 @@ import type {
 } from "./parquet.worker";
 import ParquetWorker from "./parquet.worker?worker&inline";
 
-export async function runParquetWorker<TRequest extends ParquetWorkerRequest>(
+export function runParquetWorker<TRequest extends ParquetWorkerRequest>(
   request: TRequest,
   options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ): Promise<ParquetWorkerResponseFor<TRequest>> {
   const { signal, onProgress } = options ?? {};
-  signal?.throwIfAborted();
+  if (signal?.aborted) {
+    return Promise.reject(signal.reason as Error);
+  }
   const worker = new ParquetWorker();
-  return await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const onAbort = () => {
       worker.terminate();
       reject(signal!.reason as Error);

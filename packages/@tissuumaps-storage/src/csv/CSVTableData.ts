@@ -1,7 +1,6 @@
 import {
   type GenericArray,
   ParseUtils,
-  type ProgressCallback,
   type TableData,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -43,61 +42,48 @@ export class CSVTableData implements TableData {
     return this._names;
   }
 
-  async suggestColumnQueries(
-    currentQuery: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string[]> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
+  suggestColumnQueries(currentQuery: string): Promise<string[]> {
     const filteredColumns = this._columns.filter((column) =>
       column.includes(currentQuery),
     );
     return Promise.resolve(filteredColumns);
   }
 
-  async resolveColumnQuery(
-    query: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string | null> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
+  resolveColumnQuery(query: string): Promise<string | null> {
     const column = this._columns.includes(query) ? query : null;
     return Promise.resolve(column);
   }
 
-  async loadValues<T>(
-    column: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<GenericArray<T>> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
+  loadValues<T>(column: string): Promise<GenericArray<T>> {
     const columnValues = this._columnValues.get(column);
     if (columnValues === undefined) {
-      throw new Error(`Column ${column} does not exist in the table`);
+      return Promise.reject(
+        new Error(`Column ${column} does not exist in the table`),
+      );
     }
     return Promise.resolve(columnValues as GenericArray<T>);
   }
 
   async loadUniqueValues<T>(
     column: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+    options?: { signal?: AbortSignal },
   ): Promise<GenericArray<T>> {
-    const { signal, onProgress } = options ?? {};
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const values = await this.loadValues(column, { signal, onProgress });
-    signal?.throwIfAborted(); // bail out before the O(n) Set construction below
+    const values = await this.loadValues(column);
+    signal?.throwIfAborted(); // loadValues() does not throw on abort
     const uniqueValues = Array.from(new Set(values));
     return uniqueValues as GenericArray<T>;
   }
 
   async loadValueRange(
     column: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+    options?: { signal?: AbortSignal },
   ): Promise<[number, number] | undefined> {
-    const { signal, onProgress } = options ?? {};
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const values = await this.loadValues(column, { signal, onProgress });
-    signal?.throwIfAborted(); // bail out before the O(n) min/max scan below
+    const values = await this.loadValues(column);
+    signal?.throwIfAborted(); // loadValues() does not throw on abort
     if (typeof values[0] === "number") {
       let vmin, vmax;
       for (let i = 0; i < values.length; i++) {

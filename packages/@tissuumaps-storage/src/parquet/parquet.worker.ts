@@ -107,21 +107,21 @@ ctx.onmessage = (event) => {
   })();
 };
 
-async function openParquet(source: ParquetSource): Promise<AsyncBuffer> {
+function openParquet(source: ParquetSource): Promise<AsyncBuffer> {
   if (source.file !== undefined) {
-    return {
+    return Promise.resolve({
       byteLength: source.file.size,
-      slice: async (start: number, end?: number) =>
+      slice: (start: number, end?: number) =>
         source.file!.slice(start, end).arrayBuffer(),
-    };
+    });
   }
   if (source.url !== undefined) {
-    return await asyncBufferFromUrl({
+    return asyncBufferFromUrl({
       url: source.url,
       requestInit: { headers: source.headers },
     });
   }
-  throw new Error("A URL or file is required to load data.");
+  return Promise.reject(new Error("A URL or file is required to load data."));
 }
 
 function getNumRows(metadata: FileMetaData): number {

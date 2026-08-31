@@ -44,24 +44,14 @@ export class ParquetTableData implements TableData {
     return this._names;
   }
 
-  async suggestColumnQueries(
-    currentQuery: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string[]> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
+  suggestColumnQueries(currentQuery: string): Promise<string[]> {
     const filteredColumns = this._columns.filter((column) =>
       column.includes(currentQuery),
     );
     return Promise.resolve(filteredColumns);
   }
 
-  async resolveColumnQuery(
-    query: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string | null> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
+  resolveColumnQuery(query: string): Promise<string | null> {
     const column = this._columns.includes(query) ? query : null;
     return Promise.resolve(column);
   }
@@ -86,7 +76,6 @@ export class ParquetTableData implements TableData {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const values = await this.loadValues(column, { signal, onProgress });
-    signal?.throwIfAborted(); // bail out before the O(n) Set construction below
     const uniqueValues = Array.from(new Set(values));
     return uniqueValues as GenericArray<T>;
   }

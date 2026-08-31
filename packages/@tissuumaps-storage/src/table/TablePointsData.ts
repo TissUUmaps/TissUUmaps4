@@ -43,7 +43,6 @@ export class TablePointsData implements PointsData {
       onProgress,
     });
     let [xs, ys] = await Promise.all([xPromise, yPromise]);
-    signal?.throwIfAborted(); // bail out before the O(n) Float32Array conversions below
     if (!(xs instanceof Float32Array)) {
       xs = new Float32Array(xs);
     }

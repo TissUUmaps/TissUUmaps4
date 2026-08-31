@@ -1,8 +1,4 @@
-import type {
-  ProgressCallback,
-  ShapesData,
-  ShapesGeometry,
-} from "@tissuumaps/core";
+import type { ShapesData, ShapesGeometry } from "@tissuumaps/core";
 
 export class GeoJSONShapesData implements ShapesData {
   private readonly _geometry: ShapesGeometry;
@@ -35,12 +31,7 @@ export class GeoJSONShapesData implements ShapesData {
     return this._names;
   }
 
-  async loadGeometry(options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  }): Promise<ShapesGeometry> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
+  loadGeometry(): Promise<ShapesGeometry> {
     return Promise.resolve(this._geometry);
   }
 
