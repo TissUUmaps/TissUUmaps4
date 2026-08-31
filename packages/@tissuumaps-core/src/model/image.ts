@@ -14,15 +14,28 @@ export const imageDefaults = {} as const satisfies Partial<RawImage>;
 
 /**
  * A channel of a two-dimensional raster image
+ *
+ * Channels are only applied to multi-channel image data, as reported by the
+ * image's data provider.
  */
 export type Channel = {
-  /** The name of the channel (overrides data provider) */
+  /**
+   * Channel name, overriding the name reported by the data provider
+   */
   name?: string;
 
-  /** The visibility of the channel */
+  /**
+   * Channel visibility
+   *
+   * @defaultValue `true`
+   */
   visibility?: boolean;
 
-  /** The opacity of the channel */
+  /**
+   * Channel opacity, in the range [0, 1], multiplied with the image opacity
+   *
+   * @defaultValue `1`
+   */
   opacity?: number;
 };
 
@@ -32,7 +45,12 @@ export type Channel = {
 export interface RawImage extends RawSingleLayerDataObject<
   RawImageDataSource<string>
 > {
-  /** The channels of the image */
+  /**
+   * The channels of the image, indexed by channel
+   *
+   * Channels beyond the end of the array, and channels of images whose data is
+   * not multi-channel, use the default values of {@link Channel}.
+   */
   channels?: Channel[];
 }
 

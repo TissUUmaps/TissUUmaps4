@@ -15,7 +15,13 @@ export interface ImageDataProvider<
 > extends DataProvider<TImageDataSource, TImageData> {}
 
 /**
- * Loaded image data providing an OpenSeadragon-compatible tile source
+ * Loaded image data providing one or more OpenSeadragon-compatible tile sources
+ *
+ * Image data is either multi-channel, in which case it provides one tile source
+ * per channel, addressed by channel index; or it is not, in which case it
+ * provides a single tile source that is not addressed by channel.
+ * {@link ImageData.getSizeC} and {@link ImageData.getChannelNames} return
+ * `undefined` for image data that is not multi-channel.
  */
 export interface ImageData extends Data {
   /** Returns the number of channels in the image, or undefined if not multi-channel */
@@ -25,10 +31,14 @@ export interface ImageData extends Data {
   getChannelNames(): string[] | undefined;
 
   /**
-   * Returns the tile source for a specific channel, or undefined if not multi-channel
+   * Returns the tile source of a channel, or the only tile source of image data that is not multi-channel
    *
-   * @param c - The channel index (0-based)
-   * @returns The tile source for the channel, or undefined if not multi-channel
+   * @param c - The channel index (0-based), required for multi-channel image
+   * data and to be omitted otherwise
+   * @returns The tile source, which can be a URL string, a TileSourceConfig
+   * object, or a CustomTileSource object
+   * @throws Error if `c` is omitted for multi-channel image data, if `c` is
+   * passed for image data that is not multi-channel, or if `c` is out of bounds
    */
   getTileSource(c?: number): string | TileSourceConfig | CustomTileSource;
 }

@@ -27,6 +27,10 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * Resolves once the tiled images have actually been added to the world, i.e.
    * once the viewer reflects the given model state.
    *
+   * Images whose tiled images cannot be created, e.g. because their data
+   * provides no tile sources, are logged and skipped, just like images whose
+   * data failed to load (see {@link loadObjects}).
+   *
    * @param layers - Layers to render
    * @param images - Image objects to display
    * @param loadImage - Async getter for image data
@@ -49,37 +53,85 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
       loadImage,
       { signal },
     );
+    let offset = 0;
     const newRenderedImages: RenderedObject<Image, ImageData>[] = [];
     const renderedImagesByNewRef = await this.cleanRenderedObjects(newRefs, {
       signal,
     });
-    for (let offset = 0; offset < newRefs.length; offset++) {
-      const newRef = newRefs[offset]!;
-      const renderedImage = renderedImagesByNewRef.get(newRef);
+    for (const newRef of newRefs) {
+      let renderedImage = renderedImagesByNewRef.get(newRef);
       if (renderedImage === undefined) {
-        const newRenderedImage = this.createRenderedObject(offset, newRef, {
-          signal,
-        });
-        newRenderedImages.push(newRenderedImage);
+        try {
+          renderedImage = this.createRenderedObject(offset, newRef, { signal });
+        } catch (error) {
+          console.error(
+            `Failed to create tiled images for object with ID '${newRef.object.id}'`,
+            error,
+          );
+          continue;
+        }
       } else {
         this.updateRenderedObject(renderedImage, newRef);
-        newRenderedImages.push(renderedImage);
       }
+      newRenderedImages.push(renderedImage);
+      offset += renderedImage.tiledImageCount;
     }
     this.renderedObjects = newRenderedImages;
     await Promise.allSettled(
-      newRenderedImages.map((renderedImage) => renderedImage.tiledImagePromise),
+      newRenderedImages.map(
+        (renderedImage) => renderedImage.tiledImagesPromise,
+      ),
     );
     signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
     await this.updateBounds({ signal });
   }
 
   /**
-   * Returns the tile source for the given image data
+   * Returns the tile sources for the given image data
    */
-  protected getTileSource(
+  protected getTileSources(
     data: ImageData,
-  ): string | TileSourceConfig | CustomTileSource {
-    return data.getTileSource();
+  ): (string | TileSourceConfig | CustomTileSource)[] {
+    const tileSources: (string | TileSourceConfig | CustomTileSource)[] = [];
+    const n = data.getSizeC();
+    if (n !== undefined) {
+      for (let c = 0; c < n; c++) {
+        tileSources.push(data.getTileSource(c));
+      }
+    } else {
+      tileSources.push(data.getTileSource());
+    }
+    return tileSources;
+  }
+
+  /**
+   * Computes the effective opacity for one of an image's tiled images
+   *
+   * Multiplies the layer and image opacity computed by the base class with the
+   * visibility and opacity of the channel that the tiled image renders. Channels
+   * are only applied to multi-channel image data, and channels that the image
+   * does not define are visible at full opacity.
+   *
+   * @param ref - The image reference for which to compute the opacity
+   * @param c - The index of the channel rendered by the tiled image
+   * @returns The effective opacity for the channel's tiled image
+   */
+  protected override getOpacity(
+    ref: ObjectRef<Image, ImageData>,
+    c: number,
+  ): number {
+    let opacity = super.getOpacity(ref, c);
+    if (
+      opacity > 0 &&
+      ref.data.getSizeC() !== undefined &&
+      ref.object.channels !== undefined
+    ) {
+      const {
+        visibility: channelVisibility = true,
+        opacity: channelOpacity = 1.0,
+      } = ref.object.channels[c] ?? {};
+      opacity *= channelVisibility ? channelOpacity : 0;
+    }
+    return opacity;
   }
 }

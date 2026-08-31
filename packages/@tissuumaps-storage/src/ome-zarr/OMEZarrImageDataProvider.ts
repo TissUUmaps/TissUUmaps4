@@ -95,17 +95,24 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     } else {
       throw new Error("A URL or workspace path is required to load data.");
     }
-    const tileSources = [];
+    let tileSource: OMEZarrTileSource | undefined;
+    let tileSources: OMEZarrTileSource[] | undefined;
+    let channelNames: string[] | undefined;
     const { sizeC, z, t } = normalizedDataSource;
-    if (sizeC !== undefined) {
-      for (let c = 0; c < sizeC; c++) {
-        const tileSource = new OMEZarrTileSource({ url, c, z, t });
-        tileSources.push(tileSource);
-      }
+    if (sizeC === undefined) {
+      tileSource = new OMEZarrTileSource({ url, z, t });
     } else {
-      const tileSource = new OMEZarrTileSource({ url, z, t });
-      tileSources.push(tileSource);
+      tileSources = [];
+      for (let c = 0; c < sizeC; c++) {
+        tileSources.push(new OMEZarrTileSource({ url, c, z, t }));
+      }
+      channelNames = undefined; // TODO channel names
     }
-    return new OMEZarrImageData(tileSources, objectUrl);
+    return new OMEZarrImageData(
+      tileSource,
+      tileSources,
+      channelNames,
+      objectUrl,
+    );
   }
 }
