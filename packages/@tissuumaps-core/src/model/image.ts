@@ -13,12 +13,28 @@ import {
 export const imageDefaults = {} as const satisfies Partial<RawImage>;
 
 /**
+ * A channel of a two-dimensional raster image
+ */
+export type Channel = {
+  /** The name of the channel (overrides data provider) */
+  name?: string;
+
+  /** The visibility of the channel */
+  visibility?: boolean;
+
+  /** The opacity of the channel */
+  opacity?: number;
+};
+
+/**
  * A two-dimensional raster image
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawImage extends RawSingleLayerDataObject<
   RawImageDataSource<string>
-> {}
+> {
+  /** The channels of the image */
+  channels?: Channel[];
+}
 
 /**
  * A {@link RawImage} with {@link imageDefaults} applied
