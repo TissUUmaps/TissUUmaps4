@@ -13,8 +13,16 @@ export class ImageDataWrapper
   extends DataWrapperBase<ImageData>
   implements ImageData
 {
-  getTileSource(): string | TileSourceConfig | CustomTileSource {
+  getSizeC(): number | undefined {
+    return this.data.getSizeC();
+  }
+
+  getChannelNames(): string[] | undefined {
+    return this.data.getChannelNames();
+  }
+
+  getTileSource(c?: number): string | TileSourceConfig | CustomTileSource {
     // caching is handled by renderers
-    return this.data.getTileSource();
+    return this.data.getTileSource(c);
   }
 }
