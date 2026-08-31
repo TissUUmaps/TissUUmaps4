@@ -13,7 +13,18 @@ export class OpenSeadragonImageData implements ImageData {
     this._objectUrl = objectUrl;
   }
 
-  getTileSource(): string | TileSourceConfig | CustomTileSource {
+  getSizeC(): number | undefined {
+    return undefined;
+  }
+
+  getChannelNames(): string[] | undefined {
+    return undefined;
+  }
+
+  getTileSource(c?: number): string | TileSourceConfig | CustomTileSource {
+    if (c !== undefined) {
+      throw new Error("Multi-channel images are not supported");
+    }
     return this._tileSource;
   }
 
