@@ -20,12 +20,3 @@ export type DefaultOpenSeadragonImageDataSource = Required<
     OpenSeadragonImageDataSource,
     keyof typeof openSeadragonImageDataSourceDefaults
   >;
-
-export function createDefaultOpenSeadragonImageDataSource(
-  openSeadragonImageDataSource: OpenSeadragonImageDataSource,
-): DefaultOpenSeadragonImageDataSource {
-  return {
-    ...openSeadragonImageDataSourceDefaults,
-    ...openSeadragonImageDataSource,
-  };
-}

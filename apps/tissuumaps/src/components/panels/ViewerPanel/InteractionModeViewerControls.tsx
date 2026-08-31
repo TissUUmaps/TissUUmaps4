@@ -4,15 +4,15 @@ import type { InteractionMode } from "@tissuumaps/core";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useAppStore } from "@/stores/app";
 
 export type InteractionModeViewerControlsProps = { className?: string };
 
 export function InteractionModeViewerControls({
   className,
 }: InteractionModeViewerControlsProps) {
-  const interactionMode = useTissUUmaps((state) => state.interactionMode);
-  const setInteractionMode = useTissUUmaps((state) => state.setInteractionMode);
+  const interactionMode = useAppStore((state) => state.interactionMode);
+  const setInteractionMode = useAppStore((state) => state.setInteractionMode);
 
   return (
     <ToggleGroup

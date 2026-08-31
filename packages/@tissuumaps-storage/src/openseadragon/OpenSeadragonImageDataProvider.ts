@@ -1,9 +1,13 @@
-import type { ImageDataProvider, ProgressCallback } from "@tissuumaps/core";
+import type {
+  DataProviderOpenOptions,
+  ImageDataProvider,
+} from "@tissuumaps/core";
 
 import { OpenSeadragonImageData } from "./OpenSeadragonImageData";
 import {
+  type DefaultOpenSeadragonImageDataSource,
   type OpenSeadragonImageDataSource,
-  createDefaultOpenSeadragonImageDataSource,
+  openSeadragonImageDataSourceDefaults,
 } from "./OpenSeadragonImageDataSource";
 
 export class OpenSeadragonImageDataProvider implements ImageDataProvider<
@@ -37,46 +41,55 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     ],
   };
 
-  async open(
+  normalizeDataSource(
     dataSource: OpenSeadragonImageDataSource,
-    options?: {
-      signal?: AbortSignal;
-      onProgress?: ProgressCallback;
-      workspace?: FileSystemDirectoryHandle | null;
-    },
+  ): DefaultOpenSeadragonImageDataSource {
+    let { url } = dataSource;
+    if (url !== undefined) {
+      url = new URL(url, document.baseURI).href;
+    }
+    return {
+      ...openSeadragonImageDataSourceDefaults,
+      ...dataSource,
+      url,
+    };
+  }
+
+  async load(
+    dataSource: OpenSeadragonImageDataSource,
+    options?: DataProviderOpenOptions,
   ): Promise<OpenSeadragonImageData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
-    const defaultDataSource =
-      createDefaultOpenSeadragonImageDataSource(dataSource);
+    const normalizedDataSource = this.normalizeDataSource(dataSource);
 
-    if (defaultDataSource.tileSourceConfig !== undefined) {
+    if (normalizedDataSource.tileSourceConfig !== undefined) {
       if (
-        defaultDataSource.url !== undefined ||
-        defaultDataSource.path !== undefined
+        normalizedDataSource.url !== undefined ||
+        normalizedDataSource.path !== undefined
       ) {
         throw new Error(
           "Specify either a tile source configuration or a URL/workspace path, not both.",
         );
       }
-      return new OpenSeadragonImageData(defaultDataSource.tileSourceConfig);
+      return new OpenSeadragonImageData(normalizedDataSource.tileSourceConfig);
     }
 
-    if (defaultDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(defaultDataSource.path);
-      signal?.throwIfAborted();
+    if (normalizedDataSource.path !== undefined && workspace !== null) {
+      const fh = await workspace.getFileHandle(normalizedDataSource.path);
+      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
       const file = await fh.getFile();
-      signal?.throwIfAborted();
+      signal?.throwIfAborted(); // getFile() does not throw on abort
       const objectUrl = URL.createObjectURL(file);
       return new OpenSeadragonImageData(objectUrl, objectUrl);
     }
 
-    if (defaultDataSource.url !== undefined) {
-      return new OpenSeadragonImageData(defaultDataSource.url);
+    if (normalizedDataSource.url !== undefined) {
+      return new OpenSeadragonImageData(normalizedDataSource.url);
     }
 
-    if (defaultDataSource.path !== undefined) {
+    if (normalizedDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     }
 

@@ -1,9 +1,13 @@
-import type { ProgressCallback, ShapesDataProvider } from "@tissuumaps/core";
+import type {
+  DataProviderOpenOptions,
+  ShapesDataProvider,
+} from "@tissuumaps/core";
 
 import { GeoJSONShapesData } from "./GeoJSONShapesData";
 import {
+  type DefaultGeoJSONShapesDataSource,
   type GeoJSONShapesDataSource,
-  createDefaultGeoJSONShapesDataSource,
+  geoJSONShapesDataSourceDefaults,
 } from "./GeoJSONShapesDataSource";
 import { runGeoJSONWorker } from "./runGeoJSONWorker";
 
@@ -60,33 +64,39 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
     ],
   };
 
-  async open(
+  normalizeDataSource(
     dataSource: GeoJSONShapesDataSource,
-    options?: {
-      signal?: AbortSignal;
-      onProgress?: ProgressCallback;
-      workspace?: FileSystemDirectoryHandle | null;
-    },
+  ): DefaultGeoJSONShapesDataSource {
+    let { url } = dataSource;
+    if (url !== undefined) {
+      url = new URL(url, document.baseURI).href;
+    }
+    return { ...geoJSONShapesDataSourceDefaults, ...dataSource, url };
+  }
+
+  async load(
+    dataSource: GeoJSONShapesDataSource,
+    options?: DataProviderOpenOptions,
   ): Promise<GeoJSONShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
-    const defaultDataSource = createDefaultGeoJSONShapesDataSource(dataSource);
+    const normalizedDataSource = this.normalizeDataSource(dataSource);
 
     let file, url;
-    if (defaultDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(defaultDataSource.path);
-      signal?.throwIfAborted();
+    if (normalizedDataSource.path !== undefined && workspace !== null) {
+      const fh = await workspace.getFileHandle(normalizedDataSource.path);
+      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
       file = await fh.getFile();
-      signal?.throwIfAborted();
-    } else if (defaultDataSource.url !== undefined) {
-      url = defaultDataSource.url;
-    } else if (defaultDataSource.path !== undefined) {
+      signal?.throwIfAborted(); // getFile() does not throw on abort
+    } else if (normalizedDataSource.url !== undefined) {
+      url = normalizedDataSource.url;
+    } else if (normalizedDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     } else {
       throw new Error("A URL or workspace path is required to load data.");
     }
-    const { idProperty, nameProperty } = defaultDataSource;
+    const { idProperty, nameProperty } = normalizedDataSource;
     const { ids, names, geometry } = await runGeoJSONWorker(
       { op: "file", file, url, idProperty, nameProperty },
       { signal, onProgress },

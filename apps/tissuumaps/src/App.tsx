@@ -17,15 +17,15 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
-import { usePlugins } from "./hooks/usePlugins";
-import { useProject } from "./hooks/useProject";
-import { useTissUUmaps } from "./store";
+import { useSettingsStore } from "./stores/settings";
 
+/** The Tailwind CSS-styled dockview theme defined in `dockview.css` */
 const dockviewTheme: DockviewTheme = {
   name: "tailwindcss",
   className: "dockview-theme-tailwindcss",
 };
 
+/** The panels that can be shown in the dockview layout, by component name */
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
   ProjectPanel: () => <ProjectPanel className="m-2" />,
@@ -36,6 +36,10 @@ const dockviewComponents = {
   TablesPanel: () => <TablesPanel className="m-2" />,
 };
 
+/**
+ * The tab headers available to panels, by component name: one that lets the
+ * user close the panel, and one for panels that are always shown
+ */
 const dockviewTabComponents = {
   ClosablePanelHeader: (props: IDockviewPanelHeaderProps) => {
     return <DockviewDefaultTab hideClose={false} {...props} />;
@@ -45,14 +49,26 @@ const dockviewTabComponents = {
   },
 };
 
+/**
+ * The dark mode toggle shown at the right end of the dockview tab bar
+ */
 function DockviewRightHeaderActionsComponent() {
-  const dark = useTissUUmaps((state) => state.dark);
-  const setDark = useTissUUmaps((state) => state.setDark);
+  const dark = useSettingsStore((state) => state.dark);
+  const setDark = useSettingsStore((state) => state.setDark);
   return (
     <Button onClick={() => setDark(!dark)}>{dark ? <Sun /> : <Moon />}</Button>
   );
 }
 
+/**
+ * Creates the application's initial panel layout
+ *
+ * The viewer panel fills the window; its group is locked and its header hidden,
+ * so that it cannot be closed or moved. All other panels share a group to its
+ * right, with the project panel active.
+ *
+ * @param event - The event carrying the API of the ready dockview
+ */
 const onDockviewReady = (event: DockviewReadyEvent) => {
   const viewerPanel = event.api.addPanel({
     id: "viewerPanel",
@@ -110,12 +126,14 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
   projectPanel.api.setActive();
 };
 
+/**
+ * The application's root component
+ *
+ * Renders the dockview layout, and applies Tailwind CSS's `dark` class
+ * according to the settings store.
+ */
 export function App() {
-  usePlugins();
-
-  useProject("project", "project.json");
-
-  const dark = useTissUUmaps((state) => state.dark);
+  const dark = useSettingsStore((state) => state.dark);
 
   return (
     // https://tailwindcss.com/docs/dark-mode

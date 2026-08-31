@@ -7,8 +7,9 @@ import {
 } from "papaparse";
 
 import {
+  AsyncUtils,
+  type DataProviderOpenOptions,
   ParseUtils,
-  type ProgressCallback,
   type TableDataProvider,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -16,7 +17,8 @@ import {
 import { CSVTableData } from "./CSVTableData";
 import {
   type CSVTableDataSource,
-  createDefaultCSVTableDataSource,
+  type DefaultCSVTableDataSource,
+  csvTableDataSourceDefaults,
 } from "./CSVTableDataSource";
 
 export class CSVTableDataProvider implements TableDataProvider<
@@ -70,13 +72,19 @@ export class CSVTableDataProvider implements TableDataProvider<
     ],
   };
 
-  async open(
+  normalizeDataSource(
     dataSource: CSVTableDataSource,
-    options?: {
-      signal?: AbortSignal;
-      onProgress?: ProgressCallback;
-      workspace?: FileSystemDirectoryHandle | null;
-    },
+  ): DefaultCSVTableDataSource {
+    let { url } = dataSource;
+    if (url !== undefined) {
+      url = new URL(url, document.baseURI).href;
+    }
+    return { ...csvTableDataSourceDefaults, ...dataSource, url };
+  }
+
+  async load(
+    dataSource: CSVTableDataSource,
+    options?: DataProviderOpenOptions,
   ): Promise<CSVTableData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
@@ -90,26 +98,31 @@ export class CSVTableDataProvider implements TableDataProvider<
         }[]
       | undefined;
     let byteLength: number | undefined;
+    let parseError: unknown;
 
-    const defaultDataSource = createDefaultCSVTableDataSource(dataSource);
+    const normalizedDataSource = this.normalizeDataSource(dataSource);
 
     const parseConfig: Partial<ParseLocalConfig & ParseRemoteConfig> = {
-      ...defaultDataSource.parseConfig,
+      ...normalizedDataSource.parseConfig,
       worker: true,
       header: false,
       skipEmptyLines: true,
       chunk: (results: ParseResult<string[]>, parser: Parser) => {
+        if (signal?.aborted) {
+          parser.abort();
+          return;
+        }
         let columnChunks: (string[] | TypedArray)[] | undefined;
         let numChunkRows = results.data.length;
         let currentChunkRow = 0;
         for (const rowData of results.data) {
           if (columnMetas === undefined) {
-            let columns = defaultDataSource.columns;
+            let columns = normalizedDataSource.columns;
             if (columns === undefined) {
               columns = rowData;
               numChunkRows -= 1;
             }
-            columnMetas = (defaultDataSource.loadColumns ?? columns).map(
+            columnMetas = (normalizedDataSource.loadColumns ?? columns).map(
               (column) => ({
                 name: column,
                 index: columns.indexOf(column),
@@ -132,12 +145,16 @@ export class CSVTableDataProvider implements TableDataProvider<
             const columnMeta = columnMetas[c]!;
             const columnChunk = columnChunks[c]!;
             if (columnMeta.index < 0) {
+              parseError = new Error(`Column "${columnMeta.name}" not found`);
               parser.abort();
-              throw new Error(`Column "${columnMeta.name}" not found`);
+              return;
             }
             if (columnMeta.index >= rowData.length) {
+              parseError = new Error(
+                `Missing value for column "${columnMeta.name}"`,
+              );
               parser.abort();
-              throw new Error(`Missing value for column "${columnMeta.name}"`);
+              return;
             }
             const value = rowData[columnMeta.index]!;
             if (Array.isArray(columnChunk)) {
@@ -178,13 +195,21 @@ export class CSVTableDataProvider implements TableDataProvider<
             Math.max(byteLength, results.meta.cursor),
           );
         }
-        if (signal?.aborted) {
-          parser.abort();
-        }
       },
     };
 
-    const makeColumnValues = () => {
+    const completeParse = (
+      resolve: (columnValues: Map<string, string[] | TypedArray>) => void,
+      reject: (error: unknown) => void,
+    ) => {
+      if (signal?.aborted) {
+        reject(signal.reason);
+        return;
+      }
+      if (parseError !== undefined) {
+        reject(parseError);
+        return;
+      }
       const columnValues = new Map<string, string[] | TypedArray>();
       if (columnMetas !== undefined) {
         for (const columnMeta of columnMetas) {
@@ -206,26 +231,28 @@ export class CSVTableDataProvider implements TableDataProvider<
           columnMeta.chunks = [];
         }
       }
-      return columnValues;
+      resolve(columnValues);
     };
 
     let columnValues: Map<string, string[] | TypedArray>;
-    if (defaultDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(defaultDataSource.path);
-      signal?.throwIfAborted();
+    if (normalizedDataSource.path !== undefined && workspace !== null) {
+      const fh = await workspace.getFileHandle(normalizedDataSource.path);
+      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
       const file = await fh.getFile();
-      signal?.throwIfAborted();
+      signal?.throwIfAborted(); // getFile() does not throw on abort
       byteLength = file.size;
-      columnValues = await new Promise((resolve, reject) =>
-        parse(file, {
-          ...parseConfig,
-          error: reject,
-          complete: () => resolve(makeColumnValues()),
-        }),
+      columnValues = await AsyncUtils.raceSignal(
+        new Promise<Map<string, string[] | TypedArray>>((resolve, reject) =>
+          parse(file, {
+            ...parseConfig,
+            error: reject,
+            complete: () => completeParse(resolve, reject),
+          }),
+        ),
+        { signal },
       );
-      signal?.throwIfAborted();
-    } else if (defaultDataSource.url !== undefined) {
-      const url = defaultDataSource.url;
+    } else if (normalizedDataSource.url !== undefined) {
+      const url = normalizedDataSource.url;
       if (onProgress !== undefined) {
         try {
           const headResponse = await fetch(url, { method: "HEAD", signal });
@@ -233,21 +260,24 @@ export class CSVTableDataProvider implements TableDataProvider<
           if (contentLength !== null) {
             byteLength = Number(contentLength);
           }
-        } catch {
-          // ignored intentionally
+        } catch (error) {
+          if (signal?.aborted) {
+            throw error;
+          }
         }
-        signal?.throwIfAborted();
       }
-      columnValues = await new Promise((resolve, reject) =>
-        parse(url, {
-          ...parseConfig,
-          download: true,
-          error: reject,
-          complete: () => resolve(makeColumnValues()),
-        }),
+      columnValues = await AsyncUtils.raceSignal(
+        new Promise<Map<string, string[] | TypedArray>>((resolve, reject) =>
+          parse(url, {
+            ...parseConfig,
+            download: true,
+            error: reject,
+            complete: () => completeParse(resolve, reject),
+          }),
+        ),
+        { signal },
       );
-      signal?.throwIfAborted();
-    } else if (defaultDataSource.path !== undefined) {
+    } else if (normalizedDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     } else {
       throw new Error("A URL or workspace path is required to load data.");
@@ -260,11 +290,11 @@ export class CSVTableDataProvider implements TableDataProvider<
     const n = columnValues.get(columnMetas[0]!.name)?.length ?? 0;
 
     let ids: number[] | undefined;
-    if (defaultDataSource.idColumn !== undefined) {
-      const idColumnValues = columnValues.get(defaultDataSource.idColumn);
+    if (normalizedDataSource.idColumn !== undefined) {
+      const idColumnValues = columnValues.get(normalizedDataSource.idColumn);
       if (idColumnValues === undefined) {
         throw new Error(
-          `ID column "${defaultDataSource.idColumn}" does not exist in the table.`,
+          `ID column "${normalizedDataSource.idColumn}" does not exist in the table.`,
         );
       }
       ids = Array.from<string | number, number>(idColumnValues, (id) =>
@@ -273,11 +303,13 @@ export class CSVTableDataProvider implements TableDataProvider<
     }
 
     let names: string[] | undefined;
-    if (defaultDataSource.nameColumn !== undefined) {
-      const nameColumnValues = columnValues.get(defaultDataSource.nameColumn);
+    if (normalizedDataSource.nameColumn !== undefined) {
+      const nameColumnValues = columnValues.get(
+        normalizedDataSource.nameColumn,
+      );
       if (nameColumnValues === undefined) {
         throw new Error(
-          `Name column "${defaultDataSource.nameColumn}" does not exist in the table.`,
+          `Name column "${normalizedDataSource.nameColumn}" does not exist in the table.`,
         );
       }
       names = Array.from<string | number, string>(nameColumnValues, String);

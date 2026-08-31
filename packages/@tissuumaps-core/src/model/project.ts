@@ -1,3 +1,4 @@
+import type { OpenSeadragonOptions, WebGLOptions } from "../types/render";
 import { type Model, type RawModel, createModel } from "./base";
 import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";
@@ -145,26 +146,14 @@ export interface RawProject extends RawModel {
    * @defaultValue {@link projectDefaults.osOptions}
    * @see https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
    */
-  osOptions?: {
-    viewerOptions: unknown;
-    viewerAnimationStartOptions: unknown;
-    viewerAnimationFinishOptions: unknown;
-  };
+  osOptions?: OpenSeadragonOptions;
 
   /**
    * WebGL render options for points/shapes
    *
    * @defaultValue {@link projectDefaults.glOptions}
    */
-  glOptions?: {
-    pointsRenderOptions: {
-      globalPointSizeFactor: number;
-    };
-    shapesRenderOptions: {
-      strokeWidth: number;
-      numScanlines: number;
-    };
-  };
+  glOptions?: WebGLOptions;
 }
 
 /**

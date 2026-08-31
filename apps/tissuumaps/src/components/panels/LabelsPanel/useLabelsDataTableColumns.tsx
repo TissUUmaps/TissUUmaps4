@@ -16,16 +16,16 @@ import {
 } from "@tissuumaps/core";
 
 import type { ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 export function useLabelsDataTableColumns(
   labels: Labels,
   currentTable: string | null,
   currentGroupByColumn: string | null,
 ) {
-  const colorMaps = useTissUUmaps((state) => state.colorMaps);
-  const visibilityMaps = useTissUUmaps((state) => state.visibilityMaps);
-  const opacityMaps = useTissUUmaps((state) => state.opacityMaps);
+  const colorMaps = useProjectStore((state) => state.colorMaps);
+  const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
+  const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
   const extraTableGroupColumnDefs: ColumnDef<ItemsDataTableGroupRowData>[] =
     useMemo(() => {

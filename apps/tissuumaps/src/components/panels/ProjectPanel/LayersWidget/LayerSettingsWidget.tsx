@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import { LayerSettingsCategory } from "./category";
 
@@ -34,7 +34,7 @@ export function LayerSettingsWidget({
   onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: LayerSettingsWidgetProps) {
-  const updateLayer = useTissUUmaps((state) => state.updateLayer);
+  const updateLayer = useProjectStore((state) => state.updateLayer);
 
   const [activeCategory, setActiveCategory] = useControlled(
     controlledActiveCategory,
@@ -94,7 +94,7 @@ function GeneralLayerSettingsWidget({
   layer,
   className,
 }: GeneralLayerSettingsWidgetProps) {
-  const updateLayer = useTissUUmaps((state) => state.updateLayer);
+  const updateLayer = useProjectStore((state) => state.updateLayer);
 
   return (
     <div className={className}>

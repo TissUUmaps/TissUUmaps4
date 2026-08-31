@@ -30,7 +30,6 @@ sidebar_position: 3
 
 ## Data loading
 
-- GeoJSON (GeoJSON shapes)
 - Hyparquet + hyparquet-compressors (Parquet tables)
 - PapaParse (CSV tables)
 - omezarr-tilesource (OME-Zarr images)
