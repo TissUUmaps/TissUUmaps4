@@ -27,11 +27,13 @@ export type OpenSeadragonOptions = {
  * element references. Options taking an element are therefore either narrowed to
  * an element ID or disallowed. In addition, `element` is omitted, as the viewer
  * sets it to its own container element (which takes precedence over
- * OpenSeadragon's `id` option).
+ * OpenSeadragon's `id` option), and `compositeOperation` is omitted, as viewer
+ * options are applied to every tiled image in the world, which would overwrite
+ * the composite operations that the renderers set per tiled image.
  */
 export type OpenSeadragonViewerOptions = Omit<
   OpenSeadragon.Options,
-  "element"
+  "element" | "compositeOperation"
 > & {
   /** Unsupported, use `navigatorId` instead */
   navigatorElement?: never;

@@ -7,8 +7,7 @@ import {
   type Rect,
 } from "@tissuumaps/core";
 
-const transparentPixelUrl =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR4AQEFAPr/AAAAAAAABQABZHiVOAAAAABJRU5ErkJggg==";
+import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
 
 /**
  * A wrapper around an OpenSeadragon viewer
@@ -233,6 +232,11 @@ export class OpenSeadragonContext {
    * another, in the order in which they were requested. The index is resolved in
    * between, when nothing else can shift the world anymore.
    *
+   * The tile source may also be a promise of an already opened tile source,
+   * which is only awaited once the addition is executed. Callers can thus derive
+   * a tile source from another one that is still being opened, without giving up
+   * their place in the queue and thereby their world index.
+   *
    * Rejects right away once the context has been destroyed.
    *
    * Aborting before the addition is executed skips it entirely. Later than that,
@@ -265,7 +269,7 @@ export class OpenSeadragonContext {
       );
     }
     const { signal, getIndex } = options ?? {};
-    const tileSourcePromise = this._openTileSource(tiledImageOptions, {
+    const tileSourcePromise = this.openTileSource(tiledImageOptions, {
       signal,
     });
     tileSourcePromise.catch(() => {}); // prevent unhandled rejections in console
@@ -363,14 +367,10 @@ export class OpenSeadragonContext {
         x: newBounds.x,
         y: newBounds.y,
         width: newBounds.width,
-        tileSource: {
-          width: newBounds.width,
-          height: newBounds.height,
-          tileSize: Math.max(newBounds.width, newBounds.height),
-          minLevel: 0,
-          maxLevel: 0,
-          getTileUrl: () => transparentPixelUrl,
-        },
+        tileSource: OpenSeadragonUtils.createPixelTileSource(
+          { width: newBounds.width, height: newBounds.height },
+          OpenSeadragonUtils.transparentPixelUrl,
+        ),
         opacity: 0,
       },
       { signal, getIndex },
@@ -408,11 +408,16 @@ export class OpenSeadragonContext {
   /**
    * Resolves a tile source specifier to a ready-to-use OpenSeadragon tile source
    *
-   * Fetches the image information if the specifier is a URL, and passes ready
-   * tile sources through. Doing this before the addition keeps the loading
-   * concurrent, while the additions themselves stay serialized.
+   * Fetches the image information if the specifier is a URL, awaits promised
+   * tile sources, and passes ready tile sources through. Doing this before an
+   * addition keeps the loading concurrent, while the additions themselves stay
+   * serialized (see {@link addTiledImage}).
+   *
+   * @param tiledImageOptions - Options containing the tile source to open
+   * @param options - Optional abort signal
+   * @returns A promise that resolves with the opened tile source
    */
-  private async _openTileSource(
+  async openTileSource(
     tiledImageOptions: Omit<
       OpenSeadragon.TileSourceSpecifier,
       "success" | "error"
@@ -421,14 +426,18 @@ export class OpenSeadragonContext {
   ): Promise<OpenSeadragon.TileSource> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
+    // OpenSeadragon types tile sources as `string | object`, which also covers
+    // promises of an already opened tile source; anything else is passed through
+    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
+    signal?.throwIfAborted();
     try {
-      const { source: tileSource } =
+      const { source: openedTileSource } =
         (await this.viewer.instantiateTileSourceClass(
           // this needs to be a shallow copy; OpenSeadragon mutates it!
-          { ...tiledImageOptions },
+          { ...tiledImageOptions, tileSource },
         )) as { source: OpenSeadragon.TileSource };
       signal?.throwIfAborted();
-      return tileSource;
+      return openedTileSource;
     } catch (error) {
       throw new Error("Failed to open tile source", { cause: error });
     }

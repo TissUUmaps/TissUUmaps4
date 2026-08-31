@@ -74,7 +74,8 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
         this.updateRenderedObject(renderedImage, newRef);
       }
       newRenderedImages.push(renderedImage);
-      offset += renderedImage.tiledImageCount;
+      const useBackdrop = this.usesAdditiveBlending(renderedImage.ref.data);
+      offset += (useBackdrop ? 1 : 0) + renderedImage.tileSourceCount;
     }
     this.renderedObjects = newRenderedImages;
     await Promise.allSettled(
@@ -105,24 +106,43 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   }
 
   /**
+   * Returns whether the channels of the given image data are blended additively
+   *
+   * Multi-channel image data blends additively, so that its channels add up
+   * rather than hide one another. Image data that is not multi-channel has a
+   * single tile source, so there is nothing to add up, and it keeps
+   * OpenSeadragon's default compositing, which preserves the transparency of its
+   * tiles.
+   *
+   * @param data - The image data to check
+   * @returns Whether the image's channels are blended additively
+   */
+  protected override usesAdditiveBlending(data: ImageData): boolean {
+    return data.getSizeC() !== undefined;
+  }
+
+  /**
    * Computes the effective opacity for one of an image's tiled images
    *
    * Multiplies the layer and image opacity computed by the base class with the
    * visibility and opacity of the channel that the tiled image renders. Channels
    * are only applied to multi-channel image data, and channels that the image
-   * does not define are visible at full opacity.
+   * does not define are visible at full opacity. Without a channel index, i.e.
+   * for the image's backdrop, the layer and image opacity is returned as is.
    *
    * @param ref - The image reference for which to compute the opacity
-   * @param c - The index of the channel rendered by the tiled image
-   * @returns The effective opacity for the channel's tiled image
+   * @param c - The index of the channel rendered by the tiled image, or
+   * `undefined` for the image's backdrop
+   * @returns The effective opacity for the tiled image
    */
   protected override getOpacity(
     ref: ObjectRef<Image, ImageData>,
-    c: number,
+    c?: number,
   ): number {
     let opacity = super.getOpacity(ref, c);
     if (
       opacity > 0 &&
+      c !== undefined &&
       ref.data.getSizeC() !== undefined &&
       ref.object.channels !== undefined
     ) {

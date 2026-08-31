@@ -16,6 +16,7 @@ import {
 } from "@tissuumaps/core";
 
 import type { OpenSeadragonContext } from "./OpenSeadragonContext";
+import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
 
 /**
  * Base class for OpenSeadragon renderers that manage tiled images for objects (images or labels)
@@ -26,6 +27,9 @@ import type { OpenSeadragonContext } from "./OpenSeadragonContext";
  * anchor also marks where the renderer's own tiled images belong: they directly
  * follow the anchor, in the order of {@link renderedObjects}, with one tiled
  * image per channel of each object.
+ *
+ * The tiled images of an object that uses additive blending are preceded by one
+ * more tiled image, its backdrop (see {@link usesAdditiveBlending}).
  *
  * Tiled images are inserted behind the anchor when they are added, rather than
  * moved there afterwards, as OpenSeadragon's navigator cannot keep up with
@@ -104,6 +108,9 @@ export abstract class OpenSeadragonRendererBase<
       signal?.throwIfAborted();
       const tiledImageBounds = [];
       for (const renderedObject of this.renderedObjects) {
+        if (renderedObject.backdrop !== undefined) {
+          tiledImageBounds.push(renderedObject.backdrop.getBounds());
+        }
         if (renderedObject.tiledImages !== undefined) {
           for (const tiledImage of renderedObject.tiledImages) {
             tiledImageBounds.push(tiledImage.getBounds());
@@ -204,12 +211,12 @@ export abstract class OpenSeadragonRendererBase<
    * Retains the rendered objects that can be reused for the new object references, and deletes the rest
    *
    * A rendered object is reusable if it references the same object on the same
-   * layer with an unchanged data source, and if all of its tiled images already
-   * sit at the consecutive world indices expected for its position among the
-   * reusable references, counted from the anchor. A partially misplaced object
-   * is not reusable. All other rendered objects are deleted, and are expected to
-   * be recreated by the caller via {@link createRenderedObject}, which is also
-   * how the world is reordered.
+   * layer with an unchanged data source, and if its backdrop, if any, and all of
+   * its tiled images already sit at the consecutive world indices expected for
+   * its position among the reusable references, counted from the anchor. A
+   * partially misplaced object is not reusable. All other rendered objects are
+   * deleted, and are expected to be recreated by the caller via
+   * {@link createRenderedObject}, which is also how the world is reordered.
    *
    * @param newRefs - The new object references, in the intended world order
    * @param options - Optional abort signal
@@ -249,18 +256,25 @@ export abstract class OpenSeadragonRendererBase<
           ),
       );
       if (renderedObject !== undefined) {
+        const useBackdrop = this.usesAdditiveBlending(newRef.data);
         if (
+          // not using a backdrop or backdrop exists and is at the expected index
+          (!useBackdrop ||
+            (renderedObject.backdrop !== undefined &&
+              this.context.getTiledImageIndex(renderedObject.backdrop) ===
+                anchorIndex + offset)) &&
+          // tiled images exist and are at the expected indices
           renderedObject.tiledImages !== undefined &&
           renderedObject.tiledImages.every(
             (tiledImage, c) =>
               this.context.getTiledImageIndex(tiledImage) ===
-              anchorIndex + offset + c,
+              anchorIndex + offset + (useBackdrop ? 1 : 0) + c,
           )
         ) {
           renderedObjectsByNewRef.set(newRef, renderedObject);
           survivors.add(renderedObject);
         }
-        offset += renderedObject.tiledImageCount;
+        offset += (useBackdrop ? 1 : 0) + renderedObject.tileSourceCount;
       }
     }
     for (const renderedObject of this.renderedObjects) {
@@ -274,26 +288,34 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Creates a new rendered object for the given object reference and adds one TiledImage per channel to the world
+   * Creates a new rendered object for the given object reference and adds one TiledImage per channel, preceded by a backdrop where required, to the world
    *
    * The TiledImages are inserted at consecutive indices, starting `offset` places
    * after the anchor, which establishes the world layout that
    * {@link cleanRenderedObjects} expects. `offset` therefore counts TiledImages,
    * not objects, and callers have to advance it by
-   * {@link RenderedObject.tiledImageCount}. The indices are resolved once each
-   * addition is executed, as the anchor may have been replaced, and world indices
-   * may have shifted, while it was enqueued.
+   * {@link RenderedObject.tileSourceCount} plus the object's backdrop, if it has
+   * one. The indices are resolved once each addition is executed, as the anchor
+   * may have been replaced, and world indices may have shifted, while it was
+   * enqueued.
+   *
+   * The tile sources are opened here, rather than by the additions themselves,
+   * so that the backdrop can be sized like the object's content, which is only
+   * known once one of them has been opened. The additions are all requested
+   * before this function returns, and in world order, so that the TiledImages of
+   * the object that the caller creates next end up behind them.
    *
    * Returns before the TiledImages exist: they are added asynchronously and only
    * then assigned to the rendered object, transformed, and included in the anchor
    * bounds, which is when {@link RenderedObject.tiledImagesPromise} resolves. The
-   * TiledImages are removed again immediately after they were added if the
-   * rendered object is deleted or the operation is aborted in the meantime, or if
-   * any of them could not be added at all - a partially added object would shift
-   * the world indices of every object after it. If the context is destroyed,
-   * nothing is done at all, as the viewer tears down its world itself.
+   * backdrop and TiledImages are removed again immediately after they were added
+   * if the rendered object is deleted or the operation is aborted in the
+   * meantime, or if any of them could not be added at all - a partially added
+   * object would shift the world indices of every object after it. If the context
+   * is destroyed, nothing is done at all, as the viewer tears down its world
+   * itself.
    *
-   * @param offset - The number of TiledImages between the anchor and the first new TiledImage
+   * @param offset - The number of TiledImages between the anchor and the object's first new TiledImage
    * @param newRef - The object reference for which to create a rendered object
    * @param options - Optional abort signal
    * @returns The newly created rendered object, which does not have TiledImages yet
@@ -311,6 +333,21 @@ export abstract class OpenSeadragonRendererBase<
         `Object with ID '${newRef.object.id}' has no tile sources`,
       );
     }
+    const useBackdrop = this.usesAdditiveBlending(newRef.data);
+    const tileSourcePromises = tileSources.map((tileSource) =>
+      this.context.openTileSource({ tileSource }, { signal }),
+    );
+    const backdropTileSourcePromise = useBackdrop
+      ? tileSourcePromises[0]!.then((firstTileSource) =>
+          OpenSeadragonUtils.createPixelTileSource(
+            {
+              width: firstTileSource.dimensions.x,
+              height: firstTileSource.dimensions.y,
+            },
+            OpenSeadragonUtils.blackPixelUrl,
+          ),
+        )
+      : undefined;
     const {
       promise: tiledImagesPromise,
       resolve: resolveTiledImagesPromise,
@@ -322,32 +359,68 @@ export abstract class OpenSeadragonRendererBase<
       state: {
         object: { dataSource: structuredClone(newRef.object.dataSource) },
       },
-      tiledImageCount: tileSources.length,
+      tileSourceCount: tileSources.length,
       tiledImagesPromise,
     };
-    const tiledImagePromises: Promise<OpenSeadragon.TiledImage>[] = [];
-    for (let c = 0; c < tileSources.length; c++) {
-      const tiledImagePromise = this.context.addTiledImage(
-        { tileSource: tileSources[c]! },
+    let backdropPromise: Promise<OpenSeadragon.TiledImage> | undefined;
+    if (useBackdrop && backdropTileSourcePromise !== undefined) {
+      backdropPromise = this.context.addTiledImage(
+        {
+          tileSource: backdropTileSourcePromise,
+          opacity: 0, // only make visible once transformed
+          // OBS: explicitly setting this would exclude the backdrop from the WebGL drawer's batched path!
+          // compositeOperation: "source-over",
+        },
         {
           signal,
           getIndex: () => {
             if (this._anchor !== undefined) {
               const anchorIndex = this.context.getTiledImageIndex(this._anchor);
               if (anchorIndex !== -1) {
-                return anchorIndex + 1 + offset + c;
+                return anchorIndex + 1 + offset;
               }
             }
             return undefined;
           },
         },
       );
-      tiledImagePromise.catch(() => {}); // prevent unhandled rejections in console
-      tiledImagePromises.push(tiledImagePromise);
+      backdropPromise.catch(() => {}); // prevent unhandled rejections in console
     }
-    Promise.allSettled(tiledImagePromises)
+    const tiledImagePromises = tileSourcePromises.map(
+      (tileSourcePromise, c) => {
+        const tiledImagePromise = this.context.addTiledImage(
+          {
+            tileSource: tileSourcePromise,
+            opacity: 0, // only make visible once transformed
+            ...(useBackdrop && { compositeOperation: "lighter" }),
+          },
+          {
+            signal,
+            getIndex: () => {
+              if (this._anchor !== undefined) {
+                const anchorIndex = this.context.getTiledImageIndex(
+                  this._anchor,
+                );
+                if (anchorIndex !== -1) {
+                  return anchorIndex + 1 + offset + (useBackdrop ? 1 : 0) + c;
+                }
+              }
+              return undefined;
+            },
+          },
+        );
+        tiledImagePromise.catch(() => {}); // prevent unhandled rejections in console
+        return tiledImagePromise;
+      },
+    );
+    Promise.allSettled([backdropPromise, ...tiledImagePromises])
       .then(async (results) => {
-        const tiledImages = results
+        const [backdropResult, ...tiledImageResults] = results;
+        const backdrop =
+          backdropResult?.status === "fulfilled"
+            ? backdropResult.value
+            : undefined;
+        const tiledImages = tiledImageResults
           .filter((result) => result.status === "fulfilled")
           .map((result) => result.value);
         if (this.context.isDestroyed()) {
@@ -360,13 +433,16 @@ export abstract class OpenSeadragonRendererBase<
           newRenderedObject.pendingDelete ||
           this._destroyed
         ) {
+          if (backdrop !== undefined) {
+            await this.context.removeTiledImage(backdrop);
+          }
           for (const tiledImage of tiledImages) {
             await this.context.removeTiledImage(tiledImage);
           }
           signal?.throwIfAborted();
           if (failure !== undefined) {
             console.error(
-              `Failed to add ${results.length - tiledImages.length} of ${results.length} tiled images for object with ID '${newRef.object.id}'`,
+              `Failed to add tiled images for object with ID '${newRef.object.id}'`,
               failure.reason,
             );
             throw new Error("Failed to add tiled images", {
@@ -374,6 +450,7 @@ export abstract class OpenSeadragonRendererBase<
             });
           }
         } else {
+          newRenderedObject.backdrop = backdrop;
           newRenderedObject.tiledImages = tiledImages;
           this.updateRenderedObject(newRenderedObject);
           await this.updateBounds({ signal });
@@ -385,13 +462,13 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Applies the transform, flip, visibility, and opacity of an object reference to each of the rendered object's TiledImages
+   * Applies the transform, flip, visibility, and opacity of an object reference to the rendered object's backdrop and TiledImages
    *
-   * Only properties whose value actually changed are written, as each write
-   * triggers a redraw. The opacity is computed per TiledImage via
-   * {@link getOpacity}, so that subclasses can vary it by channel; all other
-   * properties are shared by all TiledImages of an object. The applied data
-   * source is recorded in the rendered object's state, where
+   * The opacity is computed per TiledImage via {@link getOpacity}, so that
+   * subclasses can vary it by channel; all other properties are shared by all
+   * TiledImages of an object, and by its backdrop. The backdrop is opaque where
+   * the object is, so it gets {@link getOpacity} without a channel index. The
+   * applied data source is recorded in the rendered object's state, where
    * {@link cleanRenderedObjects} picks it up to detect TiledImages that have to
    * be recreated.
    *
@@ -407,40 +484,19 @@ export abstract class OpenSeadragonRendererBase<
       throw new Error("Rendered object not loaded");
     }
     renderedObject.ref = newRef;
-    for (let c = 0; c < renderedObject.tiledImages.length; c++) {
-      const tiledImage = renderedObject.tiledImages[c]!;
-      // transform --> flip, width, rotation, position
-      const bounds = tiledImage.getBounds();
-      const transform = OpenSeadragonRendererBase.getTransform(
+    if (renderedObject.backdrop !== undefined) {
+      this._updateTiledImage(
+        renderedObject.backdrop,
         newRef,
-        tiledImage.getContentSize(),
+        this.getOpacity(newRef),
       );
-      if (tiledImage.getFlip() !== transform.flip) {
-        tiledImage.setFlip(transform.flip);
-      }
-      if (bounds.width !== transform.width) {
-        tiledImage.setWidth(transform.width, true); // implicitly updates height to maintain aspect ratio
-      }
-      if (tiledImage.getRotation() !== transform.rotation) {
-        tiledImage.setRotation(transform.rotation, true);
-      }
-      if (
-        bounds.x !== transform.position.x ||
-        bounds.y !== transform.position.y
-      ) {
-        tiledImage.setPosition(transform.position, true);
-      }
-      // visibility & opacity --> opacity
-      const oldOpacity = tiledImage.getOpacity();
-      const newOpacity = this.getOpacity(newRef, c);
-      if (oldOpacity !== newOpacity) {
-        tiledImage.setOpacity(newOpacity);
-        if (oldOpacity === 0 && newOpacity > 0) {
-          // OpenSeadragon does not load tiles for invisible images,
-          // so we need to trigger a reload when an image becomes visible
-          tiledImage.update(true);
-        }
-      }
+    }
+    for (let c = 0; c < renderedObject.tiledImages.length; c++) {
+      this._updateTiledImage(
+        renderedObject.tiledImages[c]!,
+        newRef,
+        this.getOpacity(newRef, c),
+      );
     }
     renderedObject.state = {
       object: {
@@ -450,7 +506,7 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Deletes the rendered object by removing its TiledImages from the OpenSeadragon viewer, or marking it for deletion if the TiledImages have not yet been created
+   * Deletes the rendered object by removing its backdrop and TiledImages from the OpenSeadragon viewer, or marking it for deletion if the TiledImages have not yet been created
    *
    * The removals are queued by the context (see
    * {@link OpenSeadragonContext.removeTiledImage}) and applied before any tiled
@@ -460,7 +516,7 @@ export abstract class OpenSeadragonRendererBase<
    * Deleting a rendered object does not remove it from {@link renderedObjects}.
    *
    * @param renderedObject - The rendered object to delete
-   * @returns A promise that resolves once all of its TiledImages have been removed
+   * @returns A promise that resolves once its backdrop and all of its TiledImages have been removed
    */
   protected deleteRenderedObject(
     renderedObject: RenderedObject<TObject, TObjectData>,
@@ -469,11 +525,13 @@ export abstract class OpenSeadragonRendererBase<
       renderedObject.pendingDelete = true;
       return Promise.resolve();
     }
-    return Promise.all(
-      renderedObject.tiledImages.map((tiledImage) =>
-        this.context.removeTiledImage(tiledImage),
-      ),
-    ).then(() => {});
+    const promises = renderedObject.tiledImages.map((tiledImage) =>
+      this.context.removeTiledImage(tiledImage),
+    );
+    if (renderedObject.backdrop !== undefined) {
+      promises.push(this.context.removeTiledImage(renderedObject.backdrop));
+    }
+    return Promise.all(promises).then(() => {});
   }
 
   /**
@@ -485,6 +543,73 @@ export abstract class OpenSeadragonRendererBase<
   protected abstract getTileSources(
     data: TObjectData,
   ): (string | TileSourceConfig | CustomTileSource)[];
+
+  /**
+   * Returns whether the channels of the given object data are blended additively
+   *
+   * The channels of an object that blends additively are composited with
+   * OpenSeadragon's "lighter" operation onto an opaque black backdrop below
+   * them, so that they add up among themselves while the backdrop hides
+   * whatever is below the object, thereby compositing the object as a whole over
+   * it. Objects that do not blend additively have no backdrop and keep
+   * OpenSeadragon's default composite operation, i.e. each of their channels is
+   * composited over the one below it.
+   *
+   * @param _data - The object data (image or labels) to check
+   * @returns Whether the object's channels are blended additively. Defaults to `false`.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected usesAdditiveBlending(_data: TObjectData): boolean {
+    return false;
+  }
+
+  /**
+   * Applies the transform of an object reference and the given opacity to a single TiledImage
+   *
+   * Only properties whose value actually changed are written, as each write
+   * triggers a redraw.
+   *
+   * @param tiledImage - The TiledImage to update
+   * @param ref - The object reference whose transform to apply
+   * @param opacity - The effective opacity to apply
+   */
+  private _updateTiledImage(
+    tiledImage: OpenSeadragon.TiledImage,
+    ref: ObjectRef<TObject, TObjectData>,
+    opacity: number,
+  ): void {
+    // transform --> flip, width, rotation, position
+    const bounds = tiledImage.getBounds();
+    const transform = OpenSeadragonRendererBase.getTransform(
+      ref,
+      tiledImage.getContentSize(),
+    );
+    if (tiledImage.getFlip() !== transform.flip) {
+      tiledImage.setFlip(transform.flip);
+    }
+    if (bounds.width !== transform.width) {
+      tiledImage.setWidth(transform.width, true); // implicitly updates height to maintain aspect ratio
+    }
+    if (tiledImage.getRotation() !== transform.rotation) {
+      tiledImage.setRotation(transform.rotation, true);
+    }
+    if (
+      bounds.x !== transform.position.x ||
+      bounds.y !== transform.position.y
+    ) {
+      tiledImage.setPosition(transform.position, true);
+    }
+    // visibility & opacity --> opacity
+    const oldOpacity = tiledImage.getOpacity();
+    if (oldOpacity !== opacity) {
+      tiledImage.setOpacity(opacity);
+      if (oldOpacity === 0 && opacity > 0) {
+        // OpenSeadragon does not load tiles for invisible images,
+        // so we need to trigger a reload when an image becomes visible
+        tiledImage.update(true);
+      }
+    }
+  }
 
   /**
    * Appends a task to the anchor task queue
@@ -514,17 +639,19 @@ export abstract class OpenSeadragonRendererBase<
    * Returns `0` when either the layer or the object is invisible; otherwise
    * multiplies layer and object opacities. The channel index is ignored here,
    * i.e. all tiled images of an object share the same opacity; subclasses
-   * override this to additionally apply per-channel visibility and opacity.
+   * override this to additionally apply per-channel visibility and opacity. The
+   * channel index is omitted for an object's backdrop, which carries the opacity
+   * of the object itself.
    *
    * @param ref - The object reference for which to compute the opacity
-   * @param _c - The index of the tiled image among the object's tiled images,
-   * i.e. the index of the channel it renders
+   * @param _c - The index of the channel rendered by the tiled image, or
+   * `undefined` for the object's backdrop
    * @returns The effective opacity for the tiled image
    */
   protected getOpacity(
     ref: ObjectRef<TObject, TObjectData>,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _c: number,
+    _c?: number,
   ): number {
     const visibility = ref.layer.visibility && ref.object.visibility;
     const opacity = ref.layer.opacity * ref.object.opacity;
@@ -595,11 +722,14 @@ export type ObjectRef<
 /**
  * Mutable state for the tiled images of a single object in the viewer
  *
- * An object occupies `tiledImageCount` consecutive world indices, one tiled
- * image per channel, in the order of its tile sources. The count is known as
- * soon as the rendered object is created, whereas `tiledImages` is assigned only
- * once all of them have been added to the world, which is also when
- * `tiledImagesPromise` resolves.
+ * An object occupies `tileSourceCount` consecutive world indices, one tiled
+ * image per channel, in the order of its tile sources, preceded by that of its
+ * `backdrop`: the opaque black tiled image that the channels of an additively
+ * blended object add up on (see
+ * {@link OpenSeadragonRendererBase.usesAdditiveBlending}). The count is known as
+ * soon as the rendered object is created, whereas `backdrop` and `tiledImages`
+ * are assigned only once all of them have been added to the world, which is also
+ * when `tiledImagesPromise` resolves, with `tiledImages` alone.
  */
 export type RenderedObject<
   TObject extends Image | Labels,
@@ -607,8 +737,9 @@ export type RenderedObject<
 > = {
   ref: ObjectRef<TObject, TObjectData>;
   state: { object: Pick<TObject, "dataSource"> };
-  tiledImageCount: number;
+  tileSourceCount: number;
   tiledImagesPromise: Promise<OpenSeadragon.TiledImage[]>;
   tiledImages?: OpenSeadragon.TiledImage[];
+  backdrop?: OpenSeadragon.TiledImage;
   pendingDelete?: boolean;
 };
