@@ -3,10 +3,9 @@ export class HashUtils {
   /**
    * Computes the djb2 hash of a string
    *
-   * Returns a non-negative 32-bit integer.
-   *
    * @see http://www.cse.yorku.ca/~oz/hash.html
    * @param str - The string to hash
+   * @returns The hash, as a non-negative 32-bit integer
    */
   static djb2(str: string): number {
     let hash = 5381;
@@ -21,7 +20,8 @@ export class HashUtils {
    *
    * @param values - The array of values to select from
    * @param key - The string key to hash and use for selection
-   * @returns A value from the array corresponding to the hashed key
+   * @returns The value corresponding to the hashed key
+   * @throws Error if the array is empty
    */
   static djb2Pick<T>(values: T[], key: string): T {
     if (values.length === 0) {

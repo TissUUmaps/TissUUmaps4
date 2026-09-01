@@ -1,4 +1,4 @@
-import { type CoordinateSpace, type SizeConfig } from "@tissuumaps/core";
+import type { CoordinateSpace, SizeConfig } from "@tissuumaps/core";
 
 export type SizeConfigSource = Exclude<SizeConfig["source"], undefined>;
 

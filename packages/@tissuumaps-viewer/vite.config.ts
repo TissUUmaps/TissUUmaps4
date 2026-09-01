@@ -2,32 +2,36 @@
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import dts from "unplugin-dts/vite";
-import { defineConfig } from "vite";
+import {
+  defaultClientConditions,
+  defaultServerConditions,
+  defineConfig,
+} from "vite";
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     dts({
       bundleTypes: true,
-      tsconfigPath: resolve(__dirname, "tsconfig.json"),
+      tsconfigPath: resolve(import.meta.dirname, "tsconfig.ts59.json"),
     }),
     react(),
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, "src/index.ts"),
-      formats: ["es", "umd"],
+      entry: resolve(import.meta.dirname, "src/index.ts"),
+      formats: ["es"],
       fileName: "index",
-      name: "TissUUmapsViewer", // UMD global name
     },
-    rollupOptions: {
-      external: ["react", "react-dom", "@tissuumaps/core"],
-      output: {
-        globals: {
-          react: "React",
-          "react-dom": "ReactDOM",
-          "@tissuumaps/core": "TissUUmapsCore",
-        },
+    rolldownOptions: {
+      external: [
+        "@tissuumaps/core",
+        "@tissuumaps/render",
+        "react",
+        "react-dom",
+      ],
+      checks: {
+        pluginTimings: false,
       },
     },
   },
@@ -39,8 +43,22 @@ export default defineConfig({
       "./src/**/*.test.tsx",
     ],
     typecheck: {
-      tsconfig: resolve(__dirname, "tsconfig.test.json"),
+      tsconfig: resolve(import.meta.dirname, "tsconfig.test.json"),
     },
     environment: "jsdom",
   },
-});
+  resolve: {
+    conditions:
+      mode === "production"
+        ? [...defaultClientConditions]
+        : ["tissuumaps-development", ...defaultClientConditions],
+  },
+  ssr: {
+    resolve: {
+      conditions:
+        mode === "production"
+          ? [...defaultServerConditions]
+          : ["tissuumaps-development", ...defaultServerConditions],
+    },
+  },
+}));

@@ -11,10 +11,7 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import {
-  type ColorConfigSource,
-  type ColorConfigWidgetAdapter,
-} from "./adapter";
+import type { ColorConfigSource, ColorConfigWidgetAdapter } from "./adapter";
 
 export function useColorConfigWidget(
   colorConfig: ColorConfig,

@@ -5,8 +5,14 @@ import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { useControlled } from "@/hooks/useControlled";
 
 export type SimpleAsyncComboboxProps<TItem> = {
-  suggestQueries: (currentQuery: string) => Promise<string[]>;
-  getItem: (query: string) => Promise<TItem | null>;
+  suggestQueries: (
+    currentQuery: string,
+    options?: { signal?: AbortSignal },
+  ) => Promise<string[]>;
+  getItem: (
+    query: string,
+    options?: { signal?: AbortSignal },
+  ) => Promise<TItem | null>;
   itemQuery: (item: TItem) => string;
   selectedItem?: TItem | null;
   onSelectedItemChange?: (item: TItem | null) => void;
@@ -47,12 +53,20 @@ export function SimpleAsyncCombobox<TItem>({
   const updateSuggestedQueries = useCallback(
     (currentQuery: string) => {
       searchAbortControllerRef.current?.abort();
-      const controller = new AbortController();
-      searchAbortControllerRef.current = controller;
+      const abortController = new AbortController();
+      searchAbortControllerRef.current = abortController;
       startSearchTransition(async () => {
-        const suggestedQueries = await suggestQueries(currentQuery);
-        if (!controller.signal.aborted) {
-          startSearchTransition(() => setSuggestedQueries(suggestedQueries));
+        try {
+          const suggestedQueries = await suggestQueries(currentQuery, {
+            signal: abortController.signal,
+          });
+          if (!abortController.signal.aborted) {
+            startSearchTransition(() => setSuggestedQueries(suggestedQueries));
+          }
+        } catch (error) {
+          if (!abortController.signal.aborted) {
+            console.error("Failed to suggest queries", error);
+          }
         }
       });
     },
@@ -68,12 +82,20 @@ export function SimpleAsyncCombobox<TItem>({
       selectAbortControllerRef.current = null;
       if (selectedQuery !== null) {
         setCurrentQuery(selectedQuery);
-        const controller = new AbortController();
-        selectAbortControllerRef.current = controller;
+        const abortController = new AbortController();
+        selectAbortControllerRef.current = abortController;
         startSelectTransition(async () => {
-          const newSelectedItem = await getItem(selectedQuery);
-          if (!controller.signal.aborted && newSelectedItem !== null) {
-            startSelectTransition(() => setSelectedItem(newSelectedItem));
+          try {
+            const newSelectedItem = await getItem(selectedQuery, {
+              signal: abortController.signal,
+            });
+            if (!abortController.signal.aborted && newSelectedItem !== null) {
+              startSelectTransition(() => setSelectedItem(newSelectedItem));
+            }
+          } catch (error) {
+            if (!abortController.signal.aborted) {
+              console.error("Failed to select item", error);
+            }
           }
         });
       } else {

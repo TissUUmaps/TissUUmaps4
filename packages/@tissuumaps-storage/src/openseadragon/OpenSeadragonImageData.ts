@@ -1,7 +1,7 @@
-import {
-  type CustomTileSource,
-  type ImageData,
-  type TileSourceConfig,
+import type {
+  CustomTileSource,
+  ImageData,
+  TileSourceConfig,
 } from "@tissuumaps/core";
 
 export class OpenSeadragonImageData implements ImageData {
@@ -13,7 +13,14 @@ export class OpenSeadragonImageData implements ImageData {
     this._objectUrl = objectUrl;
   }
 
-  getTileSource(): string | TileSourceConfig | CustomTileSource {
+  getSizeC(): number | undefined {
+    return undefined;
+  }
+
+  getTileSource(c?: number): string | TileSourceConfig | CustomTileSource {
+    if (c !== undefined) {
+      throw new Error("Multi-channel images are not supported");
+    }
     return this._tileSource;
   }
 

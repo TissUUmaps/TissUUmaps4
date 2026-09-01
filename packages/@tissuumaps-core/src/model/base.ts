@@ -1,5 +1,5 @@
 import { identityTransform } from "./constants";
-import { type SimilarityTransform } from "./types";
+import type { SimilarityTransform } from "./primitives";
 
 /**
  * Default values for {@link RawModel}
@@ -281,6 +281,7 @@ export const itemsDataSourceDefaults = {} as const satisfies Partial<
 export interface RawItemsDataSource<
   TType extends string = string,
 > extends RawDataSource<TType> {
+  /** ID of the table holding the per-item values of this data source, if any */
   table?: string;
 }
 

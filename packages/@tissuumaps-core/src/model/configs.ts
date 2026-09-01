@@ -1,4 +1,4 @@
-import { type Color, type CoordinateSpace, type Marker } from "./types";
+import type { Color, CoordinateSpace, Marker } from "./primitives";
 
 /**
  * Base type for property configurations that can be sourced from different providers
@@ -64,7 +64,7 @@ export type ConstantConfig<
  * Determines whether the given object is a {@link ConstantConfig}
  *
  * @param obj - The object to check
- * @returns Whether the object is an (active) {@link ConstantConfig}
+ * @returns Whether the object is a {@link ConstantConfig}
  */
 export function isConstantConfig<TValue, TConstantExtra = unknown>(
   obj: unknown,
@@ -148,9 +148,7 @@ export function isRandomConfig<TRandom>(
  * {@link Marker} indices (e.g. `0` = Cross, `6` = Disc).
  */
 export type MarkerConfig =
-  | ConstantConfig<Marker>
-  | FromConfig
-  | GroupByConfig<false>;
+  ConstantConfig<Marker> | FromConfig | GroupByConfig<false>;
 
 /**
  * Size configuration
@@ -181,8 +179,9 @@ export type SizeConfig =
 /**
  * Color configuration
  *
- * When sourced from a numerical table column, values are linearly mapped to
- * colors using the specified palette and optional range (see {@link FromConfig}).
+ * When sourced from a numerical table column, values are clipped to the
+ * configured range - or min-max-scaled, if none is given - and then mapped to
+ * the configured color palette.
  */
 export type ColorConfig =
   | ConstantConfig<Color>
@@ -221,9 +220,7 @@ export type ColorConfig =
  * Numerical table values are interpreted as booleans, where `0` is `false` and any other value is `true`.
  */
 export type VisibilityConfig =
-  | ConstantConfig<boolean>
-  | FromConfig
-  | GroupByConfig<true>;
+  ConstantConfig<boolean> | FromConfig | GroupByConfig<true>;
 
 /**
  * Opacity configuration
@@ -231,6 +228,4 @@ export type VisibilityConfig =
  * Numerical table values are interpreted as opacities between `0` (fully transparent) and `1` (fully opaque).
  */
 export type OpacityConfig =
-  | ConstantConfig<number>
-  | FromConfig
-  | GroupByConfig<true>;
+  ConstantConfig<number> | FromConfig | GroupByConfig<true>;

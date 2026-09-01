@@ -27,7 +27,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import { LayerSettingsWidget } from "./LayerSettingsWidget";
 
@@ -36,9 +36,9 @@ export type LayersWidgetProps = {
 };
 
 export function LayersWidget({ className }: LayersWidgetProps) {
-  const layers = useTissUUmaps((state) => state.layers);
-  const addLayer = useTissUUmaps((state) => state.addLayer);
-  const moveLayer = useTissUUmaps((state) => state.moveLayer);
+  const layers = useProjectStore((state) => state.layers);
+  const addLayer = useProjectStore((state) => state.addLayer);
+  const moveLayer = useProjectStore((state) => state.moveLayer);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
@@ -75,10 +75,10 @@ export function LayersWidget({ className }: LayersWidgetProps) {
 }
 
 function useLayerObjects(layerId: string) {
-  const images = useTissUUmaps((state) => state.images);
-  const labels = useTissUUmaps((state) => state.labels);
-  const points = useTissUUmaps((state) => state.points);
-  const shapes = useTissUUmaps((state) => state.shapes);
+  const images = useProjectStore((state) => state.images);
+  const labels = useProjectStore((state) => state.labels);
+  const points = useProjectStore((state) => state.points);
+  const shapes = useProjectStore((state) => state.shapes);
 
   return useMemo(() => {
     const names: string[] = [];
@@ -104,8 +104,8 @@ type LayerAccordionItemProps = {
 };
 
 function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
-  const updateLayer = useTissUUmaps((state) => state.updateLayer);
-  const deleteLayer = useTissUUmaps((state) => state.deleteLayer);
+  const updateLayer = useProjectStore((state) => state.updateLayer);
+  const deleteLayer = useProjectStore((state) => state.deleteLayer);
   const confirm = useConfirm();
 
   const objectNames = useLayerObjects(layer.id);

@@ -30,8 +30,7 @@ function useDialogContext() {
 }
 
 type Params<T extends DialogType> =
-  | Omit<Extract<DialogAction, { type: T }>, "type">
-  | string;
+  Omit<Extract<DialogAction, { type: T }>, "type"> | string;
 
 /** Opens an acknowledgement dialog. Resolves to `true` once dismissed. */
 export function useAlert() {

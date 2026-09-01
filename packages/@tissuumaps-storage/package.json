@@ -1,78 +1,76 @@
 {
   "name": "@tissuumaps/storage",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "files": [
     "./dist"
   ],
-  "types": "./dist/index.d.ts",
-  "module": "./dist/index.js",
-  "main": "./dist/index.cjs",
   "exports": {
     ".": {
-      "development": "./src/index.ts",
+      "tissuumaps-development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "default": "./dist/index.js"
     },
     "./csv": {
-      "development": "./src/csv/index.ts",
+      "tissuumaps-development": "./src/csv/index.ts",
       "types": "./dist/csv.d.ts",
       "import": "./dist/csv.js",
-      "require": "./dist/csv.cjs"
+      "default": "./dist/csv.js"
     },
     "./geojson": {
-      "development": "./src/geojson/index.ts",
+      "tissuumaps-development": "./src/geojson/index.ts",
       "types": "./dist/geojson.d.ts",
       "import": "./dist/geojson.js",
-      "require": "./dist/geojson.cjs"
+      "default": "./dist/geojson.js"
     },
     "./ome-zarr": {
-      "development": "./src/ome-zarr/index.ts",
+      "tissuumaps-development": "./src/ome-zarr/index.ts",
       "types": "./dist/ome-zarr.d.ts",
       "import": "./dist/ome-zarr.js",
-      "require": "./dist/ome-zarr.cjs"
+      "default": "./dist/ome-zarr.js"
     },
     "./openseadragon": {
-      "development": "./src/openseadragon/index.ts",
+      "tissuumaps-development": "./src/openseadragon/index.ts",
       "types": "./dist/openseadragon.d.ts",
       "import": "./dist/openseadragon.js",
-      "require": "./dist/openseadragon.cjs"
+      "default": "./dist/openseadragon.js"
     },
     "./parquet": {
-      "development": "./src/parquet/index.ts",
+      "tissuumaps-development": "./src/parquet/index.ts",
       "types": "./dist/parquet.d.ts",
       "import": "./dist/parquet.js",
-      "require": "./dist/parquet.cjs"
+      "default": "./dist/parquet.js"
     },
     "./table": {
-      "development": "./src/table/index.ts",
+      "tissuumaps-development": "./src/table/index.ts",
       "types": "./dist/table.d.ts",
       "import": "./dist/table.js",
-      "require": "./dist/table.cjs"
+      "default": "./dist/table.js"
     }
   },
   "scripts": {
-    "build": "tsc -b && vite build",
+    "build": "tsc -b tsconfig.src.json && vite build",
     "clean": "rm -rf build dist node_modules",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@jsonforms/core": "^3.7.0",
-    "geojson": "^0.5.0",
-    "hyparquet": "^1.25.6",
-    "hyparquet-compressors": "^1.1.1",
     "omezarr-tilesource": "^0.2.0",
-    "papaparse": "^5.5.3"
+    "papaparse": "^5.5.4"
   },
   "devDependencies": {
     "@tissuumaps/core": "workspace:^",
     "@types/geojson": "^7946.0.16",
-    "@types/papaparse": "^5.5.2"
+    "@types/papaparse": "^5.5.2",
+    "hyparquet": "^1.26.1",
+    "hyparquet-compressors": "^1.1.1",
+    "openseadragon": "^6.0.2"
   },
   "peerDependencies": {
-    "@tissuumaps/core": ">=0.1.0"
+    "@tissuumaps/core": "workspace:^",
+    "openseadragon": ">=5.0.1 <7.0.0"
   },
   "engines": {
     "node": ">=22.22.1"

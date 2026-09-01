@@ -5,5 +5,4 @@ export {
   omeZarrImageDataSourceType,
   type DefaultOMEZarrImageDataSource,
   type OMEZarrImageDataSource,
-  createDefaultOMEZarrImageDataSource,
 } from "./OMEZarrImageDataSource";

@@ -6,11 +6,7 @@ import {
   createItemsDataSource,
   createSingleLayerDataObject,
 } from "./base";
-import {
-  type ColorConfig,
-  type OpacityConfig,
-  type VisibilityConfig,
-} from "./configs";
+import type { ColorConfig, OpacityConfig, VisibilityConfig } from "./configs";
 import {
   defaultLabelColorPalette,
   defaultLabelOpacity,

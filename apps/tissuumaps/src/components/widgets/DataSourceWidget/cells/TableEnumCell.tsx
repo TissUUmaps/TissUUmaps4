@@ -1,11 +1,11 @@
-import { type CellProps } from "@jsonforms/core";
+import type { CellProps } from "@jsonforms/core";
 import { withJsonFormsCellProps } from "@jsonforms/react";
 
 import { SimpleSelect } from "@/components/common/simple-select";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 export const TableEnumCell = withJsonFormsCellProps((props: CellProps) => {
-  const tables = useTissUUmaps((state) => state.tables);
+  const tables = useProjectStore((state) => state.tables);
   return (
     <SimpleSelect
       id={props.id}

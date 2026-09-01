@@ -12,8 +12,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useProjectDownload } from "@/hooks/useProjectDownload";
-import { useTissUUmaps } from "@/store";
+import {
+  loadProjectFromFile,
+  saveAndDownloadProjectToJSON,
+} from "@/data/io/project";
+import { useProjectStore } from "@/stores/project";
 
 import { LayersWidget } from "./LayersWidget";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
@@ -25,14 +28,9 @@ export type ProjectPanelProps = {
 export function ProjectPanel({ className }: ProjectPanelProps) {
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const projectName = useTissUUmaps((state) => state.projectName);
-  const setProjectName = useTissUUmaps((state) => state.setProjectName);
-  const loadProjectFromFile = useTissUUmaps(
-    (state) => state.loadProjectFromFile,
-  );
-  const clearProject = useTissUUmaps((state) => state.clearProject);
-
-  const { downloadProject } = useProjectDownload();
+  const name = useProjectStore((state) => state.name);
+  const setName = useProjectStore((state) => state.setName);
+  const clearProject = useProjectStore((state) => state.clear);
   const confirm = useConfirm();
 
   const confirmClearProject = useCallback(() => {
@@ -60,8 +58,8 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
             render={
               <Input
                 type="text"
-                value={projectName}
-                onChange={(event) => setProjectName(event.target.value)}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
               />
             }
           />
@@ -113,7 +111,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
         <Field>
           <FieldControl
             render={
-              <Button onClick={() => downloadProject()}>
+              <Button onClick={() => saveAndDownloadProjectToJSON()}>
                 Download project
               </Button>
             }

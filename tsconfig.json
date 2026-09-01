@@ -1,11 +1,26 @@
 {
   "files": [],
   "references": [
-    { "path": "./apps/docs" },
-    { "path": "./apps/tissuumaps" },
-    { "path": "./packages/@tissuumaps-core" },
-    { "path": "./packages/@tissuumaps-storage" },
-    { "path": "./packages/@tissuumaps-plugins" },
-    { "path": "./packages/@tissuumaps-viewer" }
+    {
+      "path": "./apps/docs"
+    },
+    {
+      "path": "./apps/tissuumaps"
+    },
+    {
+      "path": "./packages/@tissuumaps-core"
+    },
+    {
+      "path": "./packages/@tissuumaps-render"
+    },
+    {
+      "path": "./packages/@tissuumaps-storage"
+    },
+    {
+      "path": "./packages/@tissuumaps-plugins"
+    },
+    {
+      "path": "./packages/@tissuumaps-viewer"
+    }
   ]
 }

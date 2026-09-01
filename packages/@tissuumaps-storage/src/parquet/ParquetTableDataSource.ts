@@ -1,4 +1,4 @@
-import { type TableDataSource } from "@tissuumaps/core";
+import type { TableDataSource } from "@tissuumaps/core";
 
 export const parquetTableDataSourceType = "parquet";
 
@@ -16,9 +16,3 @@ export type DefaultParquetTableDataSource = Required<
   Pick<ParquetTableDataSource, keyof typeof parquetTableDataSourceDefaults>
 > &
   Omit<ParquetTableDataSource, keyof typeof parquetTableDataSourceDefaults>;
-
-export function createDefaultParquetTableDataSource(
-  parquetTableDataSource: ParquetTableDataSource,
-): DefaultParquetTableDataSource {
-  return { ...parquetTableDataSourceDefaults, ...parquetTableDataSource };
-}

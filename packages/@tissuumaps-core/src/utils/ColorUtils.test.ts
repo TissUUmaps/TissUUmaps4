@@ -114,6 +114,46 @@ describe("ColorUtils", () => {
     });
   });
 
+  describe("colorsEqual", () => {
+    it("returns true for identical colors", () => {
+      expect(
+        ColorUtils.colorsEqual({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 3 }),
+      ).toBe(true);
+    });
+
+    it("returns false when a component differs", () => {
+      expect(
+        ColorUtils.colorsEqual({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 4 }),
+      ).toBe(false);
+      expect(
+        ColorUtils.colorsEqual({ r: 1, g: 2, b: 3 }, { r: 1, g: 9, b: 3 }),
+      ).toBe(false);
+      expect(
+        ColorUtils.colorsEqual({ r: 1, g: 2, b: 3 }, { r: 9, g: 2, b: 3 }),
+      ).toBe(false);
+    });
+
+    it("compares fractional components exactly", () => {
+      expect(
+        ColorUtils.colorsEqual(
+          { r: 127.5, g: 0, b: 0 },
+          { r: 127.5, g: 0, b: 0 },
+        ),
+      ).toBe(true);
+      expect(
+        ColorUtils.colorsEqual(
+          { r: 127.5, g: 0, b: 0 },
+          { r: 128, g: 0, b: 0 },
+        ),
+      ).toBe(false);
+    });
+
+    it("returns true for the same object", () => {
+      const color = { r: 10, g: 20, b: 30 };
+      expect(ColorUtils.colorsEqual(color, color)).toBe(true);
+    });
+  });
+
   describe("fromHex / toHex roundtrip", () => {
     it.each(["#000000", "#ffffff", "#1a2b3c", "#ff8800"])(
       "roundtrips %s",

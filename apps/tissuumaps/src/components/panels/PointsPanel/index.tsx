@@ -1,7 +1,6 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-import { useMemo } from "react";
 
 import { MathUtils, type Points, createPoints } from "@tissuumaps/core";
 
@@ -23,8 +22,10 @@ import {
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
+import { usePointsData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useAppStore } from "@/stores/app";
+import { useProjectStore } from "@/stores/project";
 
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
 import { usePointsDataTableColumns } from "./usePointsDataTableColumns";
@@ -35,13 +36,12 @@ export type PointsPanelProps = {
 };
 
 export function PointsPanel({ className }: PointsPanelProps) {
-  const points = useTissUUmaps((state) => state.points);
-  const layers = useTissUUmaps((state) => state.layers);
-  const pointsDataProviders = useTissUUmaps(
-    (state) => state.pointsDataProviders,
-  );
-  const addPoints = useTissUUmaps((state) => state.addPoints);
-  const movePoints = useTissUUmaps((state) => state.movePoints);
+  const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
+
+  const layers = useProjectStore((state) => state.layers);
+  const points = useProjectStore((state) => state.points);
+  const addPoints = useProjectStore((state) => state.addPoints);
+  const movePoints = useProjectStore((state) => state.movePoints);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
@@ -67,13 +67,15 @@ export function PointsPanel({ className }: PointsPanelProps) {
       </DragDropProvider>
       <AddDataObjectDialog
         title="Add points"
+        layers={layers}
         dataProviders={pointsDataProviders}
-        onAdd={(name, _type, dataSource) => {
+        onAdd={(name, layerId, dataSource) => {
+          if (!layerId) return;
           const newPoints = createPoints({
             id: crypto.randomUUID(),
             name,
             dataSource,
-            layer: layers[0]!.id, // FIXME
+            layer: layerId,
           });
           addPoints(newPoints);
         }}
@@ -97,34 +99,21 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
     setSelectedGroupByColumn,
   } = usePointsDataWidget(points);
 
-  const loadedPoints = useTissUUmaps((state) => state.loadedPoints);
-  const loadedPointsData = useTissUUmaps((state) => state.loadedPointsData);
-  const pointsDataProviders = useTissUUmaps(
-    (state) => state.pointsDataProviders,
-  );
-  const updatePoints = useTissUUmaps((state) => state.updatePoints);
-  const deletePoints = useTissUUmaps((state) => state.deletePoints);
-  const loadPoints = useTissUUmaps((state) => state.loadPoints);
+  const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
   const confirm = useConfirm();
 
-  const { ref, handleRef } = useSortable({ id: points.id, index });
+  const updatePoints = useProjectStore((state) => state.updatePoints);
+  const deletePoints = useProjectStore((state) => state.deletePoints);
 
-  const data = useMemo(() => {
-    const loadedDataKey = loadedPoints.get(points.id);
-    if (loadedDataKey !== undefined) {
-      const loadedData = loadedPointsData.get(loadedDataKey);
-      if (loadedData !== undefined) {
-        return loadedData.data;
-      }
-    }
-    return null;
-  }, [points.id, loadedPoints, loadedPointsData]);
+  const pointsData = usePointsData(points.id);
 
   const { extraTableGroupColumnDefs } = usePointsDataTableColumns(
     points,
     selectedTable,
     selectedGroupByColumn,
   );
+
+  const { ref, handleRef } = useSortable({ id: points.id, index });
 
   return (
     <div ref={ref}>
@@ -208,8 +197,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             dataSource={points.dataSource}
             dataProviders={pointsDataProviders}
             onDataSourceChange={(newDataSource) => {
-              // TODO signal, progress callback
-              loadPoints(points.id, { newDataSource }).catch(console.error);
+              updatePoints(points.id, { dataSource: newDataSource });
             }}
             className="bg-card"
           />
@@ -219,9 +207,9 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             onActiveCategoryChange={setActiveSettingsCategory}
             className="bg-card"
           />
-          {data !== null && (
+          {pointsData !== null && (
             <ItemsDataWidget
-              data={data}
+              data={pointsData}
               tableHeight={200}
               selectedTable={selectedTable}
               onSelectedTableChange={setSelectedTable}
