@@ -58,6 +58,7 @@ export {
   createImageDataSource,
   imageDataSourceDefaults,
   imageDefaults,
+  type Channel,
   type Image,
   type ImageDataSource,
   type RawImage,

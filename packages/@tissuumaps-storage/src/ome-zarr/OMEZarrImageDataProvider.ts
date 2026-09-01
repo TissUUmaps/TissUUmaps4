@@ -84,6 +84,12 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
 
     const normalizedDataSource = this.normalizeDataSource(dataSource);
 
+    const { sizeC, z, t } = normalizedDataSource;
+    // validate before any file handling, so that no object URL is leaked
+    if (sizeC !== undefined && sizeC <= 0) {
+      throw new Error("Number of channels must be a positive integer.");
+    }
+
     let url: string;
     let objectUrl: string | undefined = undefined;
     if (normalizedDataSource.path !== undefined && workspace !== null) {
@@ -102,11 +108,8 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     }
     let tileSource: OMEZarrTileSource | undefined;
     let tileSources: OMEZarrTileSource[] | undefined;
-    const { sizeC, z, t } = normalizedDataSource;
     if (sizeC === undefined) {
       tileSource = new OMEZarrTileSource({ url, z, t });
-    } else if (sizeC <= 0) {
-      throw new Error("Number of channels must be a positive integer.");
     } else {
       tileSources = [];
       for (let c = 0; c < sizeC; c++) {
