@@ -12,7 +12,7 @@ export interface OMEZarrImageDataSource extends ImageDataSource<
   sizeC?: number;
 }
 
-export type DefaultOMEZarrImageDataSource = Required<
+export type NormalizedOMEZarrImageDataSource = Required<
   Pick<OMEZarrImageDataSource, keyof typeof omeZarrImageDataSourceDefaults>
 > &
   Omit<OMEZarrImageDataSource, keyof typeof omeZarrImageDataSourceDefaults>;

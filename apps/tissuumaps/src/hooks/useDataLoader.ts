@@ -27,8 +27,9 @@ import { useProjectStore } from "@/stores/project";
 /**
  * Provides a callback for loading an image's data through the image data cache
  *
- * The callback is bound to the current workspace and the registered image data
- * providers, and changes identity whenever either of those changes.
+ * The callback is bound to the current workspace, the project URL and the
+ * registered image data providers, and changes identity whenever any of those
+ * change.
  *
  * @returns A callback that takes an image and an optional abort signal and
  * progress callback, and resolves to the image's data
@@ -38,6 +39,7 @@ export function useImageDataLoader(): (
   options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ) => Promise<ImageData> {
   const workspace = useAppStore((state) => state.workspace);
+  const projectUrl = useProjectStore((state) => state.url);
   const dataProviders = useAppStore((state) => state.imageDataProviders);
   return useCallback(
     async (image, options) => {
@@ -45,20 +47,20 @@ export function useImageDataLoader(): (
       signal?.throwIfAborted();
       return await imageDataCache.load(
         image,
-        { workspace, dataProviders },
+        { workspace, projectUrl, dataProviders },
         { signal, onProgress },
       );
     },
-    [workspace, dataProviders],
+    [workspace, projectUrl, dataProviders],
   );
 }
 
 /**
  * Provides a callback for loading labels' data through the labels data cache
  *
- * The callback is bound to the current workspace, the registered labels data
- * providers, and the project's tables and their data providers, and changes
- * identity whenever any of those change.
+ * The callback is bound to the current workspace, the project URL, the
+ * registered labels data providers, and the project's tables and their data
+ * providers, and changes identity whenever any of those change.
  *
  * @returns A callback that takes labels and an optional abort signal and
  * progress callback, and resolves to the labels' data
@@ -68,6 +70,7 @@ export function useLabelsDataLoader(): (
   options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ) => Promise<LabelsData> {
   const workspace = useAppStore((state) => state.workspace);
+  const projectUrl = useProjectStore((state) => state.url);
   const dataProviders = useAppStore((state) => state.labelsDataProviders);
   const tableDataProviders = useAppStore((state) => state.tableDataProviders);
   const tables = useProjectStore((state) => state.tables);
@@ -77,20 +80,20 @@ export function useLabelsDataLoader(): (
       signal?.throwIfAborted();
       return await labelsDataCache.load(
         labels,
-        { workspace, dataProviders, tables, tableDataProviders },
+        { workspace, projectUrl, dataProviders, tables, tableDataProviders },
         { signal, onProgress },
       );
     },
-    [workspace, dataProviders, tables, tableDataProviders],
+    [workspace, projectUrl, dataProviders, tables, tableDataProviders],
   );
 }
 
 /**
  * Provides a callback for loading points' data through the points data cache
  *
- * The callback is bound to the current workspace, the registered points data
- * providers, and the project's tables and their data providers, and changes
- * identity whenever any of those change.
+ * The callback is bound to the current workspace, the project URL, the
+ * registered points data providers, and the project's tables and their data
+ * providers, and changes identity whenever any of those change.
  *
  * @returns A callback that takes points and an optional abort signal and
  * progress callback, and resolves to the points' data
@@ -100,6 +103,7 @@ export function usePointsDataLoader(): (
   options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ) => Promise<PointsData> {
   const workspace = useAppStore((state) => state.workspace);
+  const projectUrl = useProjectStore((state) => state.url);
   const dataProviders = useAppStore((state) => state.pointsDataProviders);
   const tableDataProviders = useAppStore((state) => state.tableDataProviders);
   const tables = useProjectStore((state) => state.tables);
@@ -109,20 +113,20 @@ export function usePointsDataLoader(): (
       signal?.throwIfAborted();
       return await pointsDataCache.load(
         points,
-        { workspace, dataProviders, tables, tableDataProviders },
+        { workspace, projectUrl, dataProviders, tables, tableDataProviders },
         { signal, onProgress },
       );
     },
-    [workspace, dataProviders, tables, tableDataProviders],
+    [workspace, projectUrl, dataProviders, tables, tableDataProviders],
   );
 }
 
 /**
  * Provides a callback for loading shapes' data through the shapes data cache
  *
- * The callback is bound to the current workspace, the registered shapes data
- * providers, and the project's tables and their data providers, and changes
- * identity whenever any of those change.
+ * The callback is bound to the current workspace, the project URL, the
+ * registered shapes data providers, and the project's tables and their data
+ * providers, and changes identity whenever any of those change.
  *
  * @returns A callback that takes shapes and an optional abort signal and
  * progress callback, and resolves to the shapes' data
@@ -132,6 +136,7 @@ export function useShapesDataLoader(): (
   options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ) => Promise<ShapesData> {
   const workspace = useAppStore((state) => state.workspace);
+  const projectUrl = useProjectStore((state) => state.url);
   const dataProviders = useAppStore((state) => state.shapesDataProviders);
   const tableDataProviders = useAppStore((state) => state.tableDataProviders);
   const tables = useProjectStore((state) => state.tables);
@@ -141,19 +146,20 @@ export function useShapesDataLoader(): (
       signal?.throwIfAborted();
       return await shapesDataCache.load(
         shapes,
-        { workspace, dataProviders, tables, tableDataProviders },
+        { workspace, projectUrl, dataProviders, tables, tableDataProviders },
         { signal, onProgress },
       );
     },
-    [workspace, dataProviders, tables, tableDataProviders],
+    [workspace, projectUrl, dataProviders, tables, tableDataProviders],
   );
 }
 
 /**
  * Provides a callback for loading a table's data through the table data cache
  *
- * The callback is bound to the current workspace and the registered table data
- * providers, and changes identity whenever either of those changes.
+ * The callback is bound to the current workspace, the project URL and the
+ * registered table data providers, and changes identity whenever any of those
+ * change.
  *
  * @returns A callback that takes a table and an optional abort signal and
  * progress callback, and resolves to the table's data
@@ -163,6 +169,7 @@ export function useTableDataLoader(): (
   options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
 ) => Promise<TableData> {
   const workspace = useAppStore((state) => state.workspace);
+  const projectUrl = useProjectStore((state) => state.url);
   const dataProviders = useAppStore((state) => state.tableDataProviders);
   return useCallback(
     async (table, options) => {
@@ -170,10 +177,10 @@ export function useTableDataLoader(): (
       signal?.throwIfAborted();
       return await tableDataCache.load(
         table,
-        { workspace, dataProviders },
+        { workspace, projectUrl, dataProviders },
         { signal, onProgress },
       );
     },
-    [workspace, dataProviders],
+    [workspace, projectUrl, dataProviders],
   );
 }

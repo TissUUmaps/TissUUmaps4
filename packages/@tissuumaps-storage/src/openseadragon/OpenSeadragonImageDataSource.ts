@@ -10,7 +10,7 @@ export interface OpenSeadragonImageDataSource extends ImageDataSource<
   tileSourceConfig?: TileSourceConfig;
 }
 
-export type DefaultOpenSeadragonImageDataSource = Required<
+export type NormalizedOpenSeadragonImageDataSource = Required<
   Pick<
     OpenSeadragonImageDataSource,
     keyof typeof openSeadragonImageDataSourceDefaults

@@ -14,10 +14,11 @@ import {
 import "./zustand";
 
 /**
- * The store holding the currently open project
+ * The store holding the currently open project, and the URL it was loaded from
  *
  * Loading a project into this store, and saving it back out, is handled by
- * `@/data/io/project`.
+ * `@/data/io/project`. The project's URL is only ever set by loading a project,
+ * and is never written back out.
  */
 export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
   devtools(
@@ -145,7 +146,8 @@ export function useProjectStore<T>(selector: (state: ProjectStore) => T): T {
 }
 
 /**
- * Creates the state of a new, empty project with a single default layer
+ * Creates the state of a new, empty project with a single default layer, which
+ * was not loaded from a URL
  */
 function createInitialProjectStoreState(): ProjectStoreState {
   return {
@@ -157,6 +159,7 @@ function createInitialProjectStoreState(): ProjectStoreState {
     points: [],
     shapes: [],
     tables: [],
+    url: null,
   };
 }
 

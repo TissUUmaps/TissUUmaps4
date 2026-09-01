@@ -3,6 +3,6 @@ export { OpenSeadragonImageDataProvider } from "./OpenSeadragonImageDataProvider
 export {
   openSeadragonImageDataSourceDefaults,
   openSeadragonImageDataSourceType,
-  type DefaultOpenSeadragonImageDataSource,
+  type NormalizedOpenSeadragonImageDataSource,
   type OpenSeadragonImageDataSource,
 } from "./OpenSeadragonImageDataSource";

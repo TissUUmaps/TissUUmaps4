@@ -8,12 +8,19 @@ import type { ItemsData, ItemsDataProvider } from "./base";
  * @typeParam TShapesDataSource - The data source type this data provider opens
  * @typeParam TShapesData - The {@link ShapesData} type produced by this data
  * provider
+ * @typeParam TNormalizedShapesDataSource - The normalized data source type
+ * produced by `normalize` and accepted by `load`
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ShapesDataProvider<
   TShapesDataSource extends ShapesDataSource,
   TShapesData extends ShapesData,
-> extends ItemsDataProvider<TShapesDataSource, TShapesData> {}
+  TNormalizedShapesDataSource extends TShapesDataSource = TShapesDataSource,
+> extends ItemsDataProvider<
+  TShapesDataSource,
+  TShapesData,
+  TNormalizedShapesDataSource
+> {}
 
 /**
  * Loaded shape collection data providing geometry access

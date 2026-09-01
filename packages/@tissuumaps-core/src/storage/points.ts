@@ -8,12 +8,19 @@ import type { ItemsData, ItemsDataProvider } from "./base";
  * @typeParam TPointsDataSource - The data source type this data provider opens
  * @typeParam TPointsData - The {@link PointsData} type produced by this data
  * provider
+ * @typeParam TNormalizedPointsDataSource - The normalized data source type
+ * produced by `normalize` and accepted by `load`
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface PointsDataProvider<
   TPointsDataSource extends PointsDataSource,
   TPointsData extends PointsData,
-> extends ItemsDataProvider<TPointsDataSource, TPointsData> {}
+  TNormalizedPointsDataSource extends TPointsDataSource = TPointsDataSource,
+> extends ItemsDataProvider<
+  TPointsDataSource,
+  TPointsData,
+  TNormalizedPointsDataSource
+> {}
 
 /**
  * Loaded point cloud data providing coordinate access

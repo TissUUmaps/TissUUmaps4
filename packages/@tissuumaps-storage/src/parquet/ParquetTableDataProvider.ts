@@ -5,7 +5,7 @@ import type {
 
 import { ParquetTableData } from "./ParquetTableData";
 import {
-  type DefaultParquetTableDataSource,
+  type NormalizedParquetTableDataSource,
   type ParquetTableDataSource,
   parquetTableDataSourceDefaults,
 } from "./ParquetTableDataSource";
@@ -13,7 +13,8 @@ import { runParquetWorker } from "./runParquetWorker";
 
 export class ParquetTableDataProvider implements TableDataProvider<
   ParquetTableDataSource,
-  ParquetTableData
+  ParquetTableData,
+  NormalizedParquetTableDataSource
 > {
   readonly name = "Parquet";
 
@@ -56,25 +57,23 @@ export class ParquetTableDataProvider implements TableDataProvider<
     ],
   };
 
-  normalizeDataSource(
+  normalize(
     dataSource: ParquetTableDataSource,
-  ): DefaultParquetTableDataSource {
+    projectUrl: string | null,
+  ): NormalizedParquetTableDataSource {
     let { url } = dataSource;
     if (url !== undefined) {
-      url = new URL(url, document.baseURI).href;
+      url = new URL(url, projectUrl ?? document.baseURI).href;
     }
     return { ...parquetTableDataSourceDefaults, ...dataSource, url };
   }
 
   async load(
-    dataSource: ParquetTableDataSource,
+    normalizedDataSource: NormalizedParquetTableDataSource,
     options?: DataProviderOpenOptions,
   ): Promise<ParquetTableData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-
-    const normalizedDataSource = this.normalizeDataSource(dataSource);
-
     let file, url, headers;
     if (normalizedDataSource.path !== undefined && workspace !== null) {
       const fh = await workspace.getFileHandle(normalizedDataSource.path);
