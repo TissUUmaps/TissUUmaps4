@@ -102,7 +102,6 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     }
     let tileSource: OMEZarrTileSource | undefined;
     let tileSources: OMEZarrTileSource[] | undefined;
-    let channelNames: string[] | undefined;
     const { sizeC, z, t } = normalizedDataSource;
     if (sizeC === undefined) {
       tileSource = new OMEZarrTileSource({ url, z, t });
@@ -111,13 +110,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
       for (let c = 0; c < sizeC; c++) {
         tileSources.push(new OMEZarrTileSource({ url, c, z, t }));
       }
-      channelNames = undefined; // TODO channel names
     }
-    return new OMEZarrImageData(
-      tileSource,
-      tileSources,
-      channelNames,
-      objectUrl,
-    );
+    return new OMEZarrImageData(tileSource, tileSources, objectUrl);
   }
 }

@@ -17,10 +17,6 @@ export class OpenSeadragonImageData implements ImageData {
     return undefined;
   }
 
-  getChannelNames(): string[] | undefined {
-    return undefined;
-  }
-
   getTileSource(c?: number): string | TileSourceConfig | CustomTileSource {
     if (c !== undefined) {
       throw new Error("Multi-channel images are not supported");

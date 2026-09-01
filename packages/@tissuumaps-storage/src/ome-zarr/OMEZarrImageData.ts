@@ -9,27 +9,20 @@ import type {
 export class OMEZarrImageData implements ImageData {
   private readonly _tileSource: OMEZarrTileSource | undefined;
   private readonly _tileSources: OMEZarrTileSource[] | undefined;
-  private readonly _channelNames: string[] | undefined;
   private readonly _objectUrl?: string;
 
   constructor(
     tileSource: OMEZarrTileSource | undefined,
     tileSources: OMEZarrTileSource[] | undefined,
-    channelNames: string[] | undefined,
     objectUrl?: string,
   ) {
     this._tileSource = tileSource;
     this._tileSources = tileSources;
-    this._channelNames = channelNames;
     this._objectUrl = objectUrl;
   }
 
   getSizeC(): number | undefined {
     return this._tileSources?.length;
-  }
-
-  getChannelNames(): string[] | undefined {
-    return this._tileSources !== undefined ? this._channelNames : undefined;
   }
 
   getTileSource(c?: number): string | TileSourceConfig | CustomTileSource {

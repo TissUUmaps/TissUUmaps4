@@ -21,8 +21,7 @@ export interface ImageDataProvider<
  * Image data is either multi-channel, in which case it provides one tile source
  * per channel, addressed by channel index; or it is not, in which case it
  * provides a single tile source that is not addressed by channel.
- * {@link ImageData.getSizeC} and {@link ImageData.getChannelNames} return
- * `undefined` for image data that is not multi-channel.
+ * {@link ImageData.getSizeC} returns `undefined` for image data that is not multi-channel.
  */
 export interface ImageData extends Data {
   /** Returns the number of channels in the image, or undefined if not multi-channel */
