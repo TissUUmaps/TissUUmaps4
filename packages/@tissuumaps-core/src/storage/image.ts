@@ -48,7 +48,7 @@ export interface ImageData extends Data {
   /** Returns the opacity of a specific channel, or undefined if not multi-channel or not available */
   getChannelOpacity?: (c: number) => number | undefined;
 
-  /** Returns the color of a specific channel, or undefined if not multi-channel or notavailable */
+  /** Returns the color of a specific channel, or undefined if not multi-channel or not available */
   getChannelColor?: (c: number) => Color | undefined;
 }
 
