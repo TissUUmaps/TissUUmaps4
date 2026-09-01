@@ -105,6 +105,8 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     const { sizeC, z, t } = normalizedDataSource;
     if (sizeC === undefined) {
       tileSource = new OMEZarrTileSource({ url, z, t });
+    } else if (sizeC <= 0) {
+      throw new Error("Number of channels must be a positive integer.");
     } else {
       tileSources = [];
       for (let c = 0; c < sizeC; c++) {
