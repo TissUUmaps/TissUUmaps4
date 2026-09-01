@@ -151,11 +151,8 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     ref: ObjectRef<Image, ImageData>,
     c: number,
   ): Color | undefined {
-    if (
-      ref.data.getSizeC() !== undefined &&
-      ref.object.channels !== undefined
-    ) {
-      const channel = ref.object.channels[c];
+    if (ref.data.getSizeC() !== undefined) {
+      const channel = ref.object.channels?.[c];
       const channelColor =
         channel?.color !== undefined
           ? channel.color
@@ -184,13 +181,8 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     c?: number,
   ): number {
     let opacity = super.getTiledImageOpacity(ref, c);
-    if (
-      opacity > 0 &&
-      c !== undefined &&
-      ref.data.getSizeC() !== undefined &&
-      ref.object.channels !== undefined
-    ) {
-      const channel = ref.object.channels[c];
+    if (opacity > 0 && c !== undefined && ref.data.getSizeC() !== undefined) {
+      const channel = ref.object.channels?.[c];
       const channelVisibility =
         channel?.visibility !== undefined
           ? channel.visibility
