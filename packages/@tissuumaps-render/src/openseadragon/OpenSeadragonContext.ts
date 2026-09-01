@@ -90,11 +90,11 @@ export class OpenSeadragonContext {
           ctx.save(); // push context state
           // pre-multiply alpha
           ctx.globalCompositeOperation = "destination-over";
-          ctx.fillStyle = "rgb(0 0 0 / 1)";
+          ctx.fillStyle = "rgba(0, 0, 0, 1)";
           ctx.fillRect(0, 0, width, height);
           // multiply with color
           ctx.globalCompositeOperation = "multiply";
-          ctx.fillStyle = `rgb(${r} ${g} ${b} / 1)`;
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
           ctx.fillRect(0, 0, width, height);
           ctx.restore(); // pop context state
           await event.setData(ctx, "context2d");
