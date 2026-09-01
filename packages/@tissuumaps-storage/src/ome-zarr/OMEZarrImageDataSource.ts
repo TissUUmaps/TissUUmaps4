@@ -8,8 +8,8 @@ export interface OMEZarrImageDataSource extends ImageDataSource<
   typeof omeZarrImageDataSourceType
 > {
   t?: number;
-  c?: number;
   z?: number;
+  sizeC?: number;
 }
 
 export type DefaultOMEZarrImageDataSource = Required<

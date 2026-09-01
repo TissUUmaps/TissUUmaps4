@@ -74,4 +74,17 @@ export class ColorUtils {
     const bHex = Math.round(color.b).toString(16).padStart(2, "0");
     return `#${rHex}${gHex}${bHex}`;
   }
+
+  /**
+   * Checks whether two colors have identical RGB components
+   *
+   * Components are compared exactly, without rounding or tolerance.
+   *
+   * @param a - The first color
+   * @param b - The second color
+   * @returns `true` if all three components are equal, `false` otherwise
+   */
+  static colorsEqual(a: Color, b: Color): boolean {
+    return a.r === b.r && a.g === b.g && a.b === b.b;
+  }
 }

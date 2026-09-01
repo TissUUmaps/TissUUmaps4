@@ -69,10 +69,10 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    *
    * @todo Implement labels rendering; this always throws.
    */
-  protected getTileSource(
+  protected getTileSources(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _data: LabelsData,
-  ): string | TileSourceConfig | CustomTileSource {
+  ): (string | TileSourceConfig | CustomTileSource)[] {
     throw new Error("Method not implemented.");
   }
 }

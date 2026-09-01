@@ -6,6 +6,7 @@ import {
   createDataSource,
   createSingleLayerDataObject,
 } from "./base";
+import type { Color } from "./primitives";
 
 /**
  * Default values for {@link RawImage}
@@ -13,12 +14,53 @@ import {
 export const imageDefaults = {} as const satisfies Partial<RawImage>;
 
 /**
+ * A channel of a two-dimensional raster image
+ *
+ * Channels are only applied to multi-channel image data, as reported by the
+ * image's data provider.
+ */
+export type Channel = {
+  /**
+   * Channel name, overriding the name reported by the data provider
+   */
+  name?: string;
+
+  /**
+   * Channel visibility
+   *
+   * @defaultValue `true`
+   */
+  visibility?: boolean;
+
+  /**
+   * Channel opacity, in the range [0, 1], multiplied with the image opacity
+   *
+   * @defaultValue `1`
+   */
+  opacity?: number;
+
+  /**
+   * Channel color, multiplied with the channel's image data
+   *
+   * Without a color, the channel's image data is rendered in its own colors.
+   */
+  color?: Color;
+};
+
+/**
  * A two-dimensional raster image
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawImage extends RawSingleLayerDataObject<
   RawImageDataSource<string>
-> {}
+> {
+  /**
+   * The channels of the image, indexed by channel
+   *
+   * Channels beyond the end of the array, and channels of images whose data is
+   * not multi-channel, use the default values of {@link Channel}.
+   */
+  channels?: Channel[];
+}
 
 /**
  * A {@link RawImage} with {@link imageDefaults} applied
