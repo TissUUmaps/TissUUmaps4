@@ -8,9 +8,9 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import {
-  type OpacityConfigSource,
-  type OpacityConfigWidgetAdapter,
+import type {
+  OpacityConfigSource,
+  OpacityConfigWidgetAdapter,
 } from "./adapter";
 
 export function useOpacityConfigWidget(

@@ -1,4 +1,4 @@
-import { type Color } from "../model/types";
+import type { Color } from "../model/primitives";
 
 /** Utility methods for color parsing, packing, and conversion */
 export class ColorUtils {
@@ -9,7 +9,10 @@ export class ColorUtils {
    * separated by `sep`, scaled from `[0, maxValue]` to `[0, 255]`.
    *
    * @param str - Multi-line palette string
-   * @param options - Component separator (default `" "`) and maximum input value per component (default `1`)
+   * @param options - Component separator (default `" "`) and maximum input
+   * value per component (default `1`)
+   * @returns The parsed colors, in the order of the palette's lines
+   * @throws Error if a non-empty line does not hold exactly three components
    */
   static parseColorPalette(
     str: string,
@@ -25,9 +28,9 @@ export class ColorUtils {
           throw new Error(`Invalid color palette line ${i}: ${line}`);
         }
         return {
-          r: (+values[0]! / maxValue) * 255,
-          g: (+values[1]! / maxValue) * 255,
-          b: (+values[2]! / maxValue) * 255,
+          r: (Number(values[0]) / maxValue) * 255,
+          g: (Number(values[1]) / maxValue) * 255,
+          b: (Number(values[2]) / maxValue) * 255,
         };
       });
   }
@@ -36,6 +39,7 @@ export class ColorUtils {
    * Packs an RGB color into a single 24-bit integer (`0xRRGGBB`)
    *
    * @param color - The color to pack
+   * @returns The packed color
    */
   static packColor(color: Color): number {
     return (color.r << 16) | (color.g << 8) | color.b;
@@ -45,7 +49,8 @@ export class ColorUtils {
    * Parses a hex color string into a {@link Color}
    *
    * @param hex - A `#RRGGBB` hex string
-   * @throws If the string is not a valid 6-digit hex color
+   * @returns The parsed color
+   * @throws Error if the string is not a valid 6-digit hex color
    */
   static fromHex(hex: string): Color {
     if (!/^#([0-9A-Fa-f]{6})$/.test(hex)) {
@@ -61,11 +66,25 @@ export class ColorUtils {
    * Formats a {@link Color} as a `#RRGGBB` hex string
    *
    * @param color - The color to format
+   * @returns The formatted hex string
    */
   static toHex(color: Color): string {
     const rHex = Math.round(color.r).toString(16).padStart(2, "0");
     const gHex = Math.round(color.g).toString(16).padStart(2, "0");
     const bHex = Math.round(color.b).toString(16).padStart(2, "0");
     return `#${rHex}${gHex}${bHex}`;
+  }
+
+  /**
+   * Checks whether two colors have identical RGB components
+   *
+   * Components are compared exactly, without rounding or tolerance.
+   *
+   * @param a - The first color
+   * @param b - The second color
+   * @returns `true` if all three components are equal, `false` otherwise
+   */
+  static colorsEqual(a: Color, b: Color): boolean {
+    return a.r === b.r && a.g === b.g && a.b === b.b;
   }
 }

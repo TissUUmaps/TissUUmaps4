@@ -1,4 +1,4 @@
-import { type ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { EyeIcon, EyeOffIcon, Square } from "lucide-react";
 import { useMemo } from "react";
 
@@ -20,19 +20,19 @@ import {
 } from "@tissuumaps/core";
 
 import { markers } from "@/components/markers";
-import { type ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
-import { useTissUUmaps } from "@/store";
+import type { ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
+import { useProjectStore } from "@/stores/project";
 
 export function usePointsDataTableColumns(
   points: Points,
   currentTable: string | null,
   currentGroupByColumn: string | null,
 ) {
-  const markerMaps = useTissUUmaps((state) => state.markerMaps);
-  const sizeMaps = useTissUUmaps((state) => state.sizeMaps);
-  const colorMaps = useTissUUmaps((state) => state.colorMaps);
-  const visibilityMaps = useTissUUmaps((state) => state.visibilityMaps);
-  const opacityMaps = useTissUUmaps((state) => state.opacityMaps);
+  const markerMaps = useProjectStore((state) => state.markerMaps);
+  const sizeMaps = useProjectStore((state) => state.sizeMaps);
+  const colorMaps = useProjectStore((state) => state.colorMaps);
+  const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
+  const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
   const extraTableGroupColumnDefs: ColumnDef<ItemsDataTableGroupRowData>[] =
     useMemo(() => {

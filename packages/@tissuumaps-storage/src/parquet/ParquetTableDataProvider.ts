@@ -1,17 +1,15 @@
-import * as hyparquet from "hyparquet";
-import { compressors } from "hyparquet-compressors";
-import { parquetReadColumn } from "hyparquet/src/read.js";
-
-import {
-  type ProgressCallback,
-  type TableDataProvider,
+import type {
+  DataProviderOpenOptions,
+  TableDataProvider,
 } from "@tissuumaps/core";
 
 import { ParquetTableData } from "./ParquetTableData";
 import {
+  type DefaultParquetTableDataSource,
   type ParquetTableDataSource,
-  createDefaultParquetTableDataSource,
+  parquetTableDataSourceDefaults,
 } from "./ParquetTableDataSource";
+import { runParquetWorker } from "./runParquetWorker";
 
 export class ParquetTableDataProvider implements TableDataProvider<
   ParquetTableDataSource,
@@ -58,81 +56,45 @@ export class ParquetTableDataProvider implements TableDataProvider<
     ],
   };
 
-  async open(
+  normalizeDataSource(
     dataSource: ParquetTableDataSource,
-    options?: {
-      signal?: AbortSignal;
-      onProgress?: ProgressCallback;
-      workspace?: FileSystemDirectoryHandle | null;
-    },
+  ): DefaultParquetTableDataSource {
+    let { url } = dataSource;
+    if (url !== undefined) {
+      url = new URL(url, document.baseURI).href;
+    }
+    return { ...parquetTableDataSourceDefaults, ...dataSource, url };
+  }
+
+  async load(
+    dataSource: ParquetTableDataSource,
+    options?: DataProviderOpenOptions,
   ): Promise<ParquetTableData> {
-    const { signal, workspace = null } = options ?? {};
+    const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
-    const defaultDataSource = createDefaultParquetTableDataSource(dataSource);
+    const normalizedDataSource = this.normalizeDataSource(dataSource);
 
-    let buffer;
-    if (defaultDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(defaultDataSource.path);
-      signal?.throwIfAborted();
-      const file = await fh.getFile();
-      signal?.throwIfAborted();
-      buffer = await file.arrayBuffer();
-      signal?.throwIfAborted();
-    } else if (defaultDataSource.url !== undefined) {
-      buffer = await hyparquet.asyncBufferFromUrl({
-        url: defaultDataSource.url,
-        requestInit: { headers: defaultDataSource.requestHeaders },
-      });
-      signal?.throwIfAborted();
-    } else if (defaultDataSource.path !== undefined) {
+    let file, url, headers;
+    if (normalizedDataSource.path !== undefined && workspace !== null) {
+      const fh = await workspace.getFileHandle(normalizedDataSource.path);
+      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
+      file = await fh.getFile();
+      signal?.throwIfAborted(); // getFile() does not throw on abort
+    } else if (normalizedDataSource.url !== undefined) {
+      url = normalizedDataSource.url;
+      headers = normalizedDataSource.requestHeaders;
+    } else if (normalizedDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     } else {
       throw new Error("A URL or workspace path is required to load data.");
     }
-
-    const metadata = await hyparquet.parquetMetadataAsync(buffer);
-    signal?.throwIfAborted();
-
-    let ids;
-    if (defaultDataSource.idColumn !== undefined) {
-      const rawIdColumnData = await parquetReadColumn({
-        file: buffer,
-        columns: [defaultDataSource.idColumn],
-        metadata: metadata,
-        compressors: compressors,
-      });
-      signal?.throwIfAborted();
-      for (let i = 0; i < rawIdColumnData.length; i++) {
-        if (!Number.isInteger(rawIdColumnData[i])) {
-          throw new Error(
-            `ID column "${defaultDataSource.idColumn}" contains non-integer values.`,
-          );
-        }
-      }
-      ids = Array.from(rawIdColumnData);
-    }
-
-    let names;
-    if (defaultDataSource.nameColumn !== undefined) {
-      const rawNameColumnData = await parquetReadColumn({
-        file: buffer,
-        columns: [defaultDataSource.nameColumn],
-        metadata: metadata,
-        compressors: compressors,
-      });
-      signal?.throwIfAborted();
-      for (let i = 0; i < rawNameColumnData.length; i++) {
-        const name = rawNameColumnData[i] as unknown;
-        if (name === undefined) {
-          throw new Error(
-            `Name column "${defaultDataSource.nameColumn}" contains undefined values.`,
-          );
-        }
-      }
-      names = Array.from(rawNameColumnData, String);
-    }
-
-    return new ParquetTableData(ids, names, buffer, metadata);
+    const source = { file, url, headers };
+    const { idColumn, nameColumn } = normalizedDataSource;
+    const { numRows, columns, ids, names } = await runParquetWorker(
+      { op: "file", source, idColumn, nameColumn },
+      { signal, onProgress },
+    );
+    return new ParquetTableData(source, numRows, columns, ids, names);
   }
 }

@@ -1,4 +1,4 @@
-import { type ImageDataSource, type TileSourceConfig } from "@tissuumaps/core";
+import type { ImageDataSource, TileSourceConfig } from "@tissuumaps/core";
 
 export const openSeadragonImageDataSourceType = "openseadragon";
 
@@ -20,12 +20,3 @@ export type DefaultOpenSeadragonImageDataSource = Required<
     OpenSeadragonImageDataSource,
     keyof typeof openSeadragonImageDataSourceDefaults
   >;
-
-export function createDefaultOpenSeadragonImageDataSource(
-  openSeadragonImageDataSource: OpenSeadragonImageDataSource,
-): DefaultOpenSeadragonImageDataSource {
-  return {
-    ...openSeadragonImageDataSourceDefaults,
-    ...openSeadragonImageDataSource,
-  };
-}

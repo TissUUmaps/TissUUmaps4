@@ -1,20 +1,21 @@
 import { mat3, vec2 } from "gl-matrix";
 
-import { type SimilarityTransform } from "../model/types";
-import { type Rect } from "../types";
+import type { SimilarityTransform } from "../model/primitives";
+import type { Rect } from "../types/geometry";
 
 /**
- * Utility methods for converting between {@link SimilarityTransform}
- * objects and `gl-matrix` {@link mat3} matrices
+ * Utility methods for converting between {@link SimilarityTransform} objects
+ * and `gl-matrix` `mat3` matrices
  */
 export class TransformUtils {
   /**
    * Decomposes a 3×3 similarity matrix into a {@link SimilarityTransform}
    *
    * Extracts uniform scale, rotation (in degrees), and translation
-   * from a column-major `gl-matrix` {@link mat3}.
+   * from a column-major `gl-matrix` `mat3`.
    *
    * @param m - The source matrix
+   * @returns The decomposed transform
    */
   static fromSimilarityMatrix(m: mat3): SimilarityTransform {
     // gl-matrix, like OpenGL, uses column-major order.
@@ -33,6 +34,7 @@ export class TransformUtils {
    *
    * @param tf - The transform components (all optional)
    * @param options - Optional rotation center in pre-scaled coordinates
+   * @returns The composed matrix
    */
   static toSimilarityMatrix(
     tf: Partial<SimilarityTransform>,
@@ -64,30 +66,6 @@ export class TransformUtils {
       mat3.scale(m, m, [tf.scale, tf.scale]);
     }
     return m;
-  }
-
-  /**
-   * Extracts a column-major `mat3x2` (3 columns × 2 rows) from a {@link mat3},
-   * discarding the third row
-   *
-   * @param m - The source matrix
-   */
-  static asGLMat3x2(m: mat3): number[] {
-    // gl-matrix, like OpenGL, uses column-major order.
-    // In OpenGL, mat3x2 has three columns and two rows.
-    return [m[0], m[1], m[3], m[4], m[6], m[7]];
-  }
-
-  /**
-   * Transposes a {@link mat3} and extracts a column-major `mat2x4`
-   * (2 columns × 4 rows), zero-padded in the fourth row
-   *
-   * @param m - The source matrix
-   */
-  static transposeAsGLMat2x4(m: mat3): number[] {
-    // gl-matrix, like OpenGL, uses column-major order.
-    // In OpenGL, mat2x4 has two columns and four rows.
-    return [m[0], m[3], m[6], 0, m[1], m[4], m[7], 0];
   }
 
   /**

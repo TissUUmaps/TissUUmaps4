@@ -1,11 +1,14 @@
-import type * as papaparse from "papaparse";
+import type {
+  ParseConfig,
+  ParseLocalConfig,
+  ParseRemoteConfig,
+} from "papaparse";
 
-import { type TableDataSource } from "@tissuumaps/core";
+import type { TableDataSource } from "@tissuumaps/core";
 
 export const csvTableDataSourceType = "csv";
 
 export const csvTableDataSourceDefaults = {
-  chunkSize: 10000,
   parseConfig: {
     delimiter: ",",
   },
@@ -18,9 +21,8 @@ export interface CSVTableDataSource extends TableDataSource<
   idColumn?: string;
   nameColumn?: string;
   loadColumns?: string[];
-  chunkSize?: number;
   parseConfig?: Pick<
-    papaparse.ParseConfig,
+    ParseConfig,
     | "delimiter"
     | "newline"
     | "quoteChar"
@@ -30,9 +32,9 @@ export interface CSVTableDataSource extends TableDataSource<
     | "fastMode"
     | "skipFirstNLines"
   > &
-    Pick<papaparse.ParseLocalConfig, "encoding"> &
+    Pick<ParseLocalConfig, "encoding"> &
     Pick<
-      papaparse.ParseRemoteConfig,
+      ParseRemoteConfig,
       "downloadRequestHeaders" | "downloadRequestBody" | "withCredentials"
     >;
 }
@@ -41,9 +43,3 @@ export type DefaultCSVTableDataSource = Required<
   Pick<CSVTableDataSource, keyof typeof csvTableDataSourceDefaults>
 > &
   Omit<CSVTableDataSource, keyof typeof csvTableDataSourceDefaults>;
-
-export function createDefaultCSVTableDataSource(
-  csvTableDataSource: CSVTableDataSource,
-): DefaultCSVTableDataSource {
-  return { ...csvTableDataSourceDefaults, ...csvTableDataSource };
-}

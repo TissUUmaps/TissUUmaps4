@@ -1,6 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { type MarkerConfigWidgetAdapter } from "./adapter";
+import type { MarkerConfigWidgetAdapter } from "./adapter";
 
 export type MarkerConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],

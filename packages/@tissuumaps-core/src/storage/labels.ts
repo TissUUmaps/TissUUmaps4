@@ -1,11 +1,14 @@
-import { type LabelsDataSource } from "../model/labels";
-import { type ProgressCallback, type UintArray } from "../types";
-import { type ItemsData, type ItemsDataProvider } from "./base";
+import type { LabelsDataSource } from "../model/labels";
+import type { UintArray } from "../types/arrays";
+import type { ProgressCallback } from "../types/callbacks";
+import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**
  * Data provider for label images
  *
- * @typeParam TLabelsData - The concrete {@link LabelsData} type produced by this data provider
+ * @typeParam TLabelsDataSource - The data source type this data provider opens
+ * @typeParam TLabelsData - The {@link LabelsData} type produced by this data
+ * provider
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface LabelsDataProvider<

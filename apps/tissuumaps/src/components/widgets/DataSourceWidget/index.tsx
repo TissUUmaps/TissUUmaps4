@@ -1,12 +1,9 @@
+import { createAjv } from "@jsonforms/core";
 import { JsonForms } from "@jsonforms/react";
 import { EditIcon, RotateCcwIcon, SaveIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import {
-  type Data,
-  type DataProvider,
-  type DataSource,
-} from "@tissuumaps/core";
+import type { Data, DataProvider, DataSource } from "@tissuumaps/core";
 
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
@@ -32,7 +29,6 @@ export function DataSourceWidget<TDataSource extends DataSource>({
   const [dataSourceDraft, setDataSourceDraft] = useState<TDataSource | null>(
     null,
   );
-  const [hasErrors, setHasErrors] = useState(false);
   const currentDataSource = dataSourceDraft ?? dataSource;
   const isEditing = dataSourceDraft !== null;
 
@@ -42,11 +38,18 @@ export function DataSourceWidget<TDataSource extends DataSource>({
   );
 
   const dataProvider = dataProviders.get(currentDataSource.type);
-  if (dataProvider === undefined) {
-    throw new Error(
-      `No data provider registered for data source type "${currentDataSource.type}"`,
-    );
-  }
+
+  // Validate the current draft against the active provider's schema using the
+  // same Ajv config JsonForms uses, so shared fields (e.g. URL) carry over and
+  // validity is re-checked on every edit or type switch instead of being reset.
+  const ajv = useMemo(() => createAjv(), []);
+  const validate = useMemo(
+    () =>
+      dataProvider !== undefined ? ajv.compile(dataProvider.schema) : null,
+    [ajv, dataProvider],
+  );
+  const hasErrors =
+    isEditing && (validate === null || !validate(currentDataSource));
 
   return (
     <Fieldset
@@ -66,14 +69,13 @@ export function DataSourceWidget<TDataSource extends DataSource>({
                   setDataSourceDraft({
                     ...dataSourceDraft,
                     type: value,
-                  } as TDataSource);
-                  setHasErrors(false);
+                  });
                 }
               }}
             />
           </>
         ) : (
-          <>Source: {dataProvider.name}</>
+          <>Source: {dataProvider?.name ?? `type=${currentDataSource.type}`}</>
         )}
         {isEditing ? (
           <span className="ml-auto flex flex-row">
@@ -91,7 +93,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
               onClick={() => {
                 const knownKeys = new Set([
                   "type",
-                  ...Object.keys(dataProvider.schema.properties ?? {}),
+                  ...Object.keys(dataProvider?.schema.properties ?? {}),
                 ]);
                 const cleaned = Object.fromEntries(
                   Object.entries(dataSourceDraft).filter(([k]) =>
@@ -110,7 +112,6 @@ export function DataSourceWidget<TDataSource extends DataSource>({
             variant="ghost"
             className="ml-auto"
             onClick={() => {
-              setHasErrors(false);
               setDataSourceDraft(structuredClone(dataSource));
             }}
           >
@@ -118,20 +119,26 @@ export function DataSourceWidget<TDataSource extends DataSource>({
           </Button>
         )}
       </FieldsetLegend>
-      <JsonForms
-        data={currentDataSource}
-        onChange={({ data, errors }) => {
-          if (isEditing) {
-            setDataSourceDraft(data as TDataSource);
-            setHasErrors((errors ?? []).length > 0);
-          }
-        }}
-        schema={dataProvider.schema}
-        uischema={dataProvider.uischema}
-        renderers={renderers}
-        cells={cells}
-        readonly={!isEditing}
-      />
+      {dataProvider !== undefined ? (
+        <JsonForms
+          data={currentDataSource}
+          onChange={({ data }) => {
+            if (isEditing) {
+              setDataSourceDraft(data as TDataSource);
+            }
+          }}
+          schema={dataProvider.schema}
+          uischema={dataProvider.uischema}
+          renderers={renderers}
+          cells={cells}
+          readonly={!isEditing}
+        />
+      ) : (
+        <span className="text-xs text-muted-foreground">
+          No data provider is registered for this data source type.
+          {isEditing && " Select another source above."}
+        </span>
+      )}
     </Fieldset>
   );
 }

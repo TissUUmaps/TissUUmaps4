@@ -1,4 +1,4 @@
-import { type EnumCellProps } from "@jsonforms/core";
+import type { EnumCellProps } from "@jsonforms/core";
 import { withJsonFormsEnumCellProps } from "@jsonforms/react";
 
 import { SimpleSelect } from "@/components/common/simple-select";

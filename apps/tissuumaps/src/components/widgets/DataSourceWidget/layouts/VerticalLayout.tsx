@@ -1,6 +1,6 @@
-import {
-  type LayoutProps,
-  type VerticalLayout as VerticalLayoutSchema,
+import type {
+  LayoutProps,
+  VerticalLayout as VerticalLayoutSchema,
 } from "@jsonforms/core";
 import {
   JsonFormsDispatch,

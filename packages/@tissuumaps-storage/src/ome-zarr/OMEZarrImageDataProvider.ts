@@ -1,14 +1,15 @@
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
-import {
-  type ImageDataProvider,
-  type ProgressCallback,
+import type {
+  DataProviderOpenOptions,
+  ImageDataProvider,
 } from "@tissuumaps/core";
 
 import { OMEZarrImageData } from "./OMEZarrImageData";
 import {
+  type DefaultOMEZarrImageDataSource,
   type OMEZarrImageDataSource,
-  createDefaultOMEZarrImageDataSource,
+  omeZarrImageDataSourceDefaults,
 } from "./OMEZarrImageDataSource";
 
 export class OMEZarrImageDataProvider implements ImageDataProvider<
@@ -24,7 +25,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         type: "string",
       },
       // TODO path
-      c: {
+      sizeC: {
         type: "integer",
       },
       z: {
@@ -48,8 +49,8 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
       // TODO path
       {
         type: "Control",
-        scope: "#/properties/c",
-        label: "Channel",
+        scope: "#/properties/sizeC",
+        label: "Number of channels",
       },
       {
         type: "Control",
@@ -64,48 +65,57 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     ],
   };
 
-  async open(
+  normalizeDataSource(
     dataSource: OMEZarrImageDataSource,
-    options?: {
-      signal?: AbortSignal;
-      onProgress?: ProgressCallback;
-      workspace?: FileSystemDirectoryHandle | null;
-    },
+  ): DefaultOMEZarrImageDataSource {
+    let { url } = dataSource;
+    if (url !== undefined) {
+      url = new URL(url, document.baseURI).href;
+    }
+    return { ...omeZarrImageDataSourceDefaults, ...dataSource, url };
+  }
+
+  async load(
+    dataSource: OMEZarrImageDataSource,
+    options?: DataProviderOpenOptions,
   ): Promise<OMEZarrImageData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
-    const defaultDataSource = createDefaultOMEZarrImageDataSource(dataSource);
+    const normalizedDataSource = this.normalizeDataSource(dataSource);
 
-    if (defaultDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(defaultDataSource.path);
-      signal?.throwIfAborted();
+    const { sizeC, z, t } = normalizedDataSource;
+    // validate before any file handling, so that no object URL is leaked
+    if (sizeC !== undefined && sizeC <= 0) {
+      throw new Error("Number of channels must be a positive integer.");
+    }
+
+    let url: string;
+    let objectUrl: string | undefined = undefined;
+    if (normalizedDataSource.path !== undefined && workspace !== null) {
+      const fh = await workspace.getFileHandle(normalizedDataSource.path);
+      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
       const file = await fh.getFile();
-      signal?.throwIfAborted();
-      const objectUrl = URL.createObjectURL(file);
-      const tileSource = new OMEZarrTileSource({
-        url: objectUrl,
-        c: defaultDataSource.c,
-        z: defaultDataSource.z,
-        t: defaultDataSource.t,
-      });
-      return new OMEZarrImageData(tileSource, objectUrl);
-    }
-
-    if (defaultDataSource.url !== undefined) {
-      const tileSource = new OMEZarrTileSource({
-        url: defaultDataSource.url,
-        c: defaultDataSource.c,
-        z: defaultDataSource.z,
-        t: defaultDataSource.t,
-      });
-      return new OMEZarrImageData(tileSource, undefined);
-    }
-
-    if (defaultDataSource.path !== undefined) {
+      signal?.throwIfAborted(); // getFile() does not throw on abort
+      objectUrl = URL.createObjectURL(file);
+      url = objectUrl;
+    } else if (normalizedDataSource.url !== undefined) {
+      url = normalizedDataSource.url;
+    } else if (normalizedDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
+    } else {
+      throw new Error("A URL or workspace path is required to load data.");
     }
-
-    throw new Error("A URL or workspace path is required to load data.");
+    let tileSource: OMEZarrTileSource | undefined;
+    let tileSources: OMEZarrTileSource[] | undefined;
+    if (sizeC === undefined) {
+      tileSource = new OMEZarrTileSource({ url, z, t });
+    } else {
+      tileSources = [];
+      for (let c = 0; c < sizeC; c++) {
+        tileSources.push(new OMEZarrTileSource({ url, c, z, t }));
+      }
+    }
+    return new OMEZarrImageData(tileSource, tileSources, objectUrl);
   }
 }

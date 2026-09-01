@@ -1,4 +1,4 @@
-import { type ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { EyeIcon, EyeOffIcon, Square } from "lucide-react";
 import { useMemo } from "react";
 
@@ -15,17 +15,17 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { type ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
-import { useTissUUmaps } from "@/store";
+import type { ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
+import { useProjectStore } from "@/stores/project";
 
 export function useLabelsDataTableColumns(
   labels: Labels,
   currentTable: string | null,
   currentGroupByColumn: string | null,
 ) {
-  const colorMaps = useTissUUmaps((state) => state.colorMaps);
-  const visibilityMaps = useTissUUmaps((state) => state.visibilityMaps);
-  const opacityMaps = useTissUUmaps((state) => state.opacityMaps);
+  const colorMaps = useProjectStore((state) => state.colorMaps);
+  const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
+  const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
   const extraTableGroupColumnDefs: ColumnDef<ItemsDataTableGroupRowData>[] =
     useMemo(() => {

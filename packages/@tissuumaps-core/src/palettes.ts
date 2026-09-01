@@ -1,9 +1,9 @@
 import batlow from "./assets/palettes/batlow.txt?raw";
 import batlowS from "./assets/palettes/batlowS.txt?raw";
-import { type Color, Marker } from "./model/types";
+import { type Color, Marker } from "./model/primitives";
 import { ColorUtils } from "./utils/ColorUtils";
 
-/** Default ordered palette of marker shapes used for categorical distinctions. */
+/** Ordered palette of marker shapes, for distinguishing categorical groups */
 export const markerPalette = [
   Marker.Cross,
   Marker.Diamond,
@@ -22,19 +22,19 @@ export const markerPalette = [
   Marker.Gaussian,
 ];
 
-/** A named color palette with a unique identifier and an ordered list of colors. */
+/** A named, identifiable list of colors */
 export type ColorPalette = {
   /** Color palette ID */
   id: string;
 
-  /** Human-readable display name for the color palette. */
+  /** Human-readable color palette name */
   name: string;
 
-  /** Ordered list of colors that make up the palette. */
+  /** The colors making up the palette, in order */
   colors: Color[];
 };
 
-/** Color palettes suitable for continuous data. */
+/** Color palettes suitable for continuous data */
 export const continuousColorPalettes: ColorPalette[] = [
   {
     id: "batlow",
@@ -43,7 +43,7 @@ export const continuousColorPalettes: ColorPalette[] = [
   },
 ];
 
-/** Color palettes suitable for categorical data. */
+/** Color palettes suitable for categorical data */
 export const categoricalColorPalettes: ColorPalette[] = [
   {
     id: "batlowS",
@@ -52,7 +52,7 @@ export const categoricalColorPalettes: ColorPalette[] = [
   },
 ];
 
-/** All available color palettes (continuous and categorical combined). */
+/** All available color palettes, continuous and categorical */
 export const colorPalettes: ColorPalette[] = [
   ...continuousColorPalettes,
   ...categoricalColorPalettes,

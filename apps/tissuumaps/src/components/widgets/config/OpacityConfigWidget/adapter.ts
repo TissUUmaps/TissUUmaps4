@@ -1,4 +1,4 @@
-import { type OpacityConfig } from "@tissuumaps/core";
+import type { OpacityConfig } from "@tissuumaps/core";
 
 export type OpacityConfigSource = Exclude<OpacityConfig["source"], undefined>;
 

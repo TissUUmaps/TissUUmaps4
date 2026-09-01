@@ -1,4 +1,4 @@
-import { type PointsDataSource } from "@tissuumaps/core";
+import type { PointsDataSource } from "@tissuumaps/core";
 
 export const tablePointsDataSourceType = "table";
 
@@ -21,9 +21,3 @@ export type DefaultTablePointsDataSource = Required<
   Pick<TablePointsDataSource, keyof typeof tablePointsDataSourceDefaults>
 > &
   Omit<TablePointsDataSource, keyof typeof tablePointsDataSourceDefaults>;
-
-export function createDefaultTablePointsDataSource(
-  tablePointsDataSource: TablePointsDataSource,
-): DefaultTablePointsDataSource {
-  return { ...tablePointsDataSourceDefaults, ...tablePointsDataSource };
-}

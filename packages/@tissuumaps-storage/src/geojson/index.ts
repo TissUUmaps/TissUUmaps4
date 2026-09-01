@@ -5,5 +5,4 @@ export {
   geoJSONShapesDataSourceType,
   type DefaultGeoJSONShapesDataSource,
   type GeoJSONShapesDataSource,
-  createDefaultGeoJSONShapesDataSource,
 } from "./GeoJSONShapesDataSource";

@@ -1,4 +1,4 @@
-import { type Color, type ColorConfig } from "@tissuumaps/core";
+import type { Color, ColorConfig } from "@tissuumaps/core";
 
 export type ColorConfigSource = Exclude<ColorConfig["source"], undefined>;
 

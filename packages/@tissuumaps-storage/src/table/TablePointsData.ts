@@ -1,7 +1,8 @@
-import {
-  type PointsData,
-  type ProgressCallback,
-  type TableData,
+import type {
+  PointsData,
+  PointsGeometry,
+  ProgressCallback,
+  TableData,
 } from "@tissuumaps/core";
 
 export class TablePointsData implements PointsData {
@@ -27,10 +28,10 @@ export class TablePointsData implements PointsData {
     return this._tableData.getNames();
   }
 
-  async loadCoordinates(options?: {
+  async loadGeometry(options?: {
     signal?: AbortSignal;
     onProgress?: ProgressCallback;
-  }): Promise<[Float32Array, Float32Array]> {
+  }): Promise<PointsGeometry> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const xPromise = this._tableData.loadValues<number>(this._xColumn, {
@@ -41,15 +42,14 @@ export class TablePointsData implements PointsData {
       signal,
       onProgress,
     });
-    let [xData, yData] = await Promise.all([xPromise, yPromise]);
-    signal?.throwIfAborted();
-    if (!(xData instanceof Float32Array)) {
-      xData = Float32Array.from(xData);
+    let [xs, ys] = await Promise.all([xPromise, yPromise]);
+    if (!(xs instanceof Float32Array)) {
+      xs = new Float32Array(xs);
     }
-    if (!(yData instanceof Float32Array)) {
-      yData = Float32Array.from(yData);
+    if (!(ys instanceof Float32Array)) {
+      ys = new Float32Array(ys);
     }
-    return [xData, yData];
+    return { xs, ys };
   }
 
   close(): void {}

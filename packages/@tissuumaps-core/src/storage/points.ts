@@ -1,11 +1,13 @@
-import { type PointsDataSource } from "../model/points";
-import { type ProgressCallback } from "../types";
-import { type ItemsData, type ItemsDataProvider } from "./base";
+import type { PointsDataSource } from "../model/points";
+import type { ProgressCallback } from "../types/callbacks";
+import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**
  * Data provider for point clouds
  *
- * @typeParam TPointsData - The concrete {@link PointsData} type produced by this data provider
+ * @typeParam TPointsDataSource - The data source type this data provider opens
+ * @typeParam TPointsData - The {@link PointsData} type produced by this data
+ * provider
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface PointsDataProvider<
@@ -18,13 +20,22 @@ export interface PointsDataProvider<
  */
 export interface PointsData extends ItemsData {
   /**
-   * Loads the coordinates for all points
+   * Loads the geometry for all points
    *
    * @param options - Optional abort signal and progress callback
-   * @returns The x and y coordinates as separate arrays, in index order
+   * @returns A promise that resolves to the loaded points geometry
    */
-  loadCoordinates(options?: {
+  loadGeometry(options?: {
     signal?: AbortSignal;
     onProgress?: ProgressCallback;
-  }): Promise<[Float32Array, Float32Array]>;
+  }): Promise<PointsGeometry>;
 }
+
+/** Point cloud geometry consisting of separate arrays for x and y coordinates */
+export type PointsGeometry = {
+  /** X coordinates of the points */
+  xs: Float32Array;
+
+  /** Y coordinates of the points */
+  ys: Float32Array;
+};
