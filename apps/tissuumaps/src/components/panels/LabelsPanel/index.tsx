@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 
 import { type Labels, MathUtils, createLabels } from "@tissuumaps/core";
 
@@ -22,6 +23,7 @@ import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useLabelsData } from "@/hooks/useData";
+import { useFocusObject } from "@/hooks/useFocusObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -42,6 +44,12 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
   const addLabels = useProjectStore((state) => state.addLabels);
   const moveLabels = useProjectStore((state) => state.moveLabels);
 
+  // Controlled accordion so notifications can expand a specific label image.
+  const [openIds, setOpenIds] = useState<string[]>([]);
+  useFocusObject("labels", (id) =>
+    setOpenIds((prev) => (prev.includes(id) ? prev : [...prev, id])),
+  );
+
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
       <DragDropProvider
@@ -54,7 +62,12 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
           }
         }}
       >
-        <Accordion multiple className="gap-y-2">
+        <Accordion
+          multiple
+          value={openIds}
+          onValueChange={setOpenIds}
+          className="gap-y-2"
+        >
           {labels.map((currentLabels, index) => (
             <LabelsAccordionItem
               key={currentLabels.id}
@@ -113,9 +126,28 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
 
   const { ref, handleRef } = useSortable({ id: labels.id, index });
 
+  // Compose the sortable ref with our own so a notification click can scroll
+  // this item into view.
+  const itemElRef = useRef<HTMLDivElement | null>(null);
+  const setItemRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      itemElRef.current = element;
+      ref(element);
+    },
+    [ref],
+  );
+  useFocusObject("labels", (id) => {
+    if (id === labels.id) {
+      itemElRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  });
+
   return (
-    <div ref={ref}>
-      <AccordionItem className="border rounded-md bg-sidebar p-2">
+    <div ref={setItemRef}>
+      <AccordionItem
+        value={labels.id}
+        className="border rounded-md bg-sidebar p-2"
+      >
         <AccordionHeader>
           <GripVertical ref={handleRef} />
           <div className="flex-1 w-full">

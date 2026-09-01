@@ -1,4 +1,5 @@
 import {
+  type DockviewApi,
   DockviewDefaultTab,
   DockviewReact,
   type DockviewReadyEvent,
@@ -6,10 +7,12 @@ import {
   type IDockviewPanelHeaderProps,
 } from "dockview-react";
 import { Moon, Sun } from "lucide-react";
+import { useCallback, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 
 import "./App.css";
+import { NotificationCenter } from "./components/NotificationCenter";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
 import { LabelsPanel } from "./components/panels/LabelsPanel";
 import { PointsPanel } from "./components/panels/PointsPanel";
@@ -17,7 +20,20 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
+import {
+  type DataObjectKind,
+  requestFocusObject,
+} from "./hooks/useFocusObject";
 import { useSettingsStore } from "./stores/settings";
+
+/** Maps a data object kind to its dockview panel ID */
+const panelIdByKind: Record<DataObjectKind, string> = {
+  image: "imagesPanel",
+  labels: "labelsPanel",
+  points: "pointsPanel",
+  shapes: "shapesPanel",
+  table: "tablesPanel",
+};
 
 /** The Tailwind CSS-styled dockview theme defined in `dockview.css` */
 const dockviewTheme: DockviewTheme = {
@@ -69,7 +85,7 @@ function DockviewRightHeaderActionsComponent() {
  *
  * @param event - The event carrying the API of the ready dockview
  */
-const onDockviewReady = (event: DockviewReadyEvent) => {
+const setupDockview = (event: DockviewReadyEvent) => {
   const viewerPanel = event.api.addPanel({
     id: "viewerPanel",
     title: "Viewer",
@@ -135,6 +151,18 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
 export function App() {
   const dark = useSettingsStore((state) => state.dark);
 
+  const dockviewApiRef = useRef<DockviewApi | null>(null);
+
+  const onReady = useCallback((event: DockviewReadyEvent) => {
+    dockviewApiRef.current = event.api;
+    setupDockview(event);
+  }, []);
+
+  const openObject = useCallback((kind: DataObjectKind, objectId: string) => {
+    dockviewApiRef.current?.getPanel(panelIdByKind[kind])?.api.setActive();
+    requestFocusObject(kind, objectId);
+  }, []);
+
   return (
     // https://tailwindcss.com/docs/dark-mode
     <div className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}>
@@ -143,8 +171,9 @@ export function App() {
         components={dockviewComponents}
         tabComponents={dockviewTabComponents}
         rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
-        onReady={onDockviewReady}
+        onReady={onReady}
       />
+      <NotificationCenter onOpenObject={openObject} />
     </div>
   );
 }
