@@ -1,4 +1,5 @@
 import type {
+  Color,
   CustomTileSource,
   Image,
   ImageData,
@@ -89,6 +90,13 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
 
   /**
    * Returns the tile sources for the given image data
+   *
+   * Multi-channel image data provides one tile source per channel, in channel
+   * order; all other image data provides a single tile source.
+   *
+   * @param data - The image data for which to retrieve the tile sources
+   * @returns The tile sources, one per channel for multi-channel image data and
+   * a single one otherwise
    */
   protected getTileSources(
     data: ImageData,
@@ -122,6 +130,38 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   }
 
   /**
+   * Returns the tint color for one of an image's tiled images
+   *
+   * Returns the color of the channel that the tiled image renders. Channels are
+   * only applied to multi-channel image data, and channels that the image does
+   * not define have no color, in which case the channel's tiles are rendered in
+   * their own colors.
+   *
+   * Only multi-channel image data is tinted: its channels are blended additively
+   * onto an opaque backdrop (see {@link usesAdditiveBlending}), where tinting a
+   * tile may drop its transparency. Tiles of image data that is not
+   * multi-channel are composited over whatever is below them, so their
+   * transparency has to be preserved.
+   *
+   * @param ref - The image reference for which to compute the color
+   * @param c - The index of the channel rendered by the tiled image
+   * @returns The channel's color, or `undefined` for no tint
+   */
+  protected override getTiledImageColor(
+    ref: ObjectRef<Image, ImageData>,
+    c: number,
+  ): Color | undefined {
+    if (
+      ref.data.getSizeC() === undefined ||
+      ref.object.channels === undefined
+    ) {
+      return undefined;
+    }
+    const { color: channelColor } = ref.object.channels[c] ?? {};
+    return channelColor;
+  }
+
+  /**
    * Computes the effective opacity for one of an image's tiled images
    *
    * Multiplies the layer and image opacity computed by the base class with the
@@ -135,11 +175,11 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * `undefined` for the image's backdrop
    * @returns The effective opacity for the tiled image
    */
-  protected override getOpacity(
+  protected override getTiledImageOpacity(
     ref: ObjectRef<Image, ImageData>,
     c?: number,
   ): number {
-    let opacity = super.getOpacity(ref, c);
+    let opacity = super.getTiledImageOpacity(ref, c);
     if (
       opacity > 0 &&
       c !== undefined &&

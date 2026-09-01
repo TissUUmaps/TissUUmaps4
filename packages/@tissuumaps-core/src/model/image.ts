@@ -6,6 +6,7 @@ import {
   createDataSource,
   createSingleLayerDataObject,
 } from "./base";
+import type { Color } from "./primitives";
 
 /**
  * Default values for {@link RawImage}
@@ -37,6 +38,13 @@ export type Channel = {
    * @defaultValue `1`
    */
   opacity?: number;
+
+  /**
+   * Channel color, multiplied with the channel's image data
+   *
+   * Without a color, the channel's image data is rendered in its own colors.
+   */
+  color?: Color;
 };
 
 /**

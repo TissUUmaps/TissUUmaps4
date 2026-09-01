@@ -3,6 +3,7 @@ import { mat3 } from "gl-matrix";
 import OpenSeadragon from "openseadragon";
 
 import {
+  type Color,
   type CustomTileSource,
   GeometryUtils,
   type Image,
@@ -464,10 +465,10 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Applies the transform, flip, visibility, and opacity of an object reference to the rendered object's backdrop and TiledImages
    *
-   * The opacity is computed per TiledImage via {@link getOpacity}, so that
+   * The opacity is computed per TiledImage via {@link getTiledImageOpacity}, so that
    * subclasses can vary it by channel; all other properties are shared by all
    * TiledImages of an object, and by its backdrop. The backdrop is opaque where
-   * the object is, so it gets {@link getOpacity} without a channel index. The
+   * the object is, so it gets {@link getTiledImageOpacity} without a channel index. The
    * applied data source is recorded in the rendered object's state, where
    * {@link cleanRenderedObjects} picks it up to detect TiledImages that have to
    * be recreated.
@@ -488,14 +489,16 @@ export abstract class OpenSeadragonRendererBase<
       this._updateTiledImage(
         renderedObject.backdrop,
         newRef,
-        this.getOpacity(newRef),
+        undefined,
+        this.getTiledImageOpacity(newRef),
       );
     }
     for (let c = 0; c < renderedObject.tiledImages.length; c++) {
       this._updateTiledImage(
         renderedObject.tiledImages[c]!,
         newRef,
-        this.getOpacity(newRef, c),
+        this.getTiledImageColor(newRef, c),
+        this.getTiledImageOpacity(newRef, c),
       );
     }
     renderedObject.state = {
@@ -564,23 +567,27 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Applies the transform of an object reference and the given opacity to a single TiledImage
+   * Applies the transform of an object reference and the given color and opacity to a single TiledImage
    *
    * Only properties whose value actually changed are written, as each write
-   * triggers a redraw.
+   * triggers a redraw. The color is applied as a tint on the TiledImage's tiles
+   * (see {@link OpenSeadragonContext.setTiledImageTint}).
    *
    * @param tiledImage - The TiledImage to update
    * @param ref - The object reference whose transform to apply
+   * @param color - The color to tint the TiledImage with, or `undefined` for no
+   * tint
    * @param opacity - The effective opacity to apply
    */
   private _updateTiledImage(
     tiledImage: OpenSeadragon.TiledImage,
     ref: ObjectRef<TObject, TObjectData>,
+    color: Color | undefined,
     opacity: number,
   ): void {
     // transform --> flip, width, rotation, position
     const bounds = tiledImage.getBounds();
-    const transform = OpenSeadragonRendererBase.getTransform(
+    const transform = OpenSeadragonRendererBase.getTiledImageTransform(
       ref,
       tiledImage.getContentSize(),
     );
@@ -606,9 +613,11 @@ export abstract class OpenSeadragonRendererBase<
       if (oldOpacity === 0 && opacity > 0) {
         // OpenSeadragon does not load tiles for invisible images,
         // so we need to trigger a reload when an image becomes visible
-        tiledImage.update(true);
+        tiledImage.update(/* viewportChanged */ false);
       }
     }
+    // color
+    this.context.setTiledImageTint(tiledImage, color);
   }
 
   /**
@@ -634,6 +643,28 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
+   * Returns the tint color for one of an object's tiled images
+   *
+   * Returns `undefined` here, i.e. the tiled images of an object are rendered in
+   * the colors of their own tiles; subclasses override this to tint them per
+   * channel. Only the tiled images of an object's channels are tinted, never its
+   * backdrop, so this is always called with a channel index.
+   *
+   * @param _ref - The object reference for which to compute the color
+   * @param _c - The index of the channel rendered by the tiled image
+   * @returns The color to tint the tiled image with, or `undefined` for no tint.
+   * Defaults to `undefined`.
+   */
+  protected getTiledImageColor(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _ref: ObjectRef<TObject, TObjectData>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _c: number,
+  ): Color | undefined {
+    return undefined;
+  }
+
+  /**
    * Computes the effective opacity for one of an object's tiled images
    *
    * Returns `0` when either the layer or the object is invisible; otherwise
@@ -648,7 +679,7 @@ export abstract class OpenSeadragonRendererBase<
    * `undefined` for the object's backdrop
    * @returns The effective opacity for the tiled image
    */
-  protected getOpacity(
+  protected getTiledImageOpacity(
     ref: ObjectRef<TObject, TObjectData>,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _c?: number,
@@ -672,7 +703,7 @@ export abstract class OpenSeadragonRendererBase<
    * @param contentSize - The size of the content (image or labels) in pixels
    * @returns An object containing the computed flip, width, rotation, and position for the tiled image
    */
-  protected static getTransform<
+  protected static getTiledImageTransform<
     TObject extends Image | Labels,
     TObjectData extends ImageData | LabelsData,
   >(

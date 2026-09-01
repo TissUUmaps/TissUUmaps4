@@ -1,6 +1,8 @@
 import OpenSeadragon from "openseadragon";
 
 import {
+  type Color,
+  ColorUtils,
   type Dims,
   GeometryUtils,
   type OpenSeadragonViewerOptions,
@@ -30,9 +32,19 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  * Queued world mutations are ordered by request, so a caller that removes tiled
  * images before requesting additions still resolves its indices against the
  * world as it is once those removals have been applied.
+ *
+ * Tiled images can also be tinted (see {@link setTiledImageTint}). As
+ * OpenSeadragon has no notion of a per-image color, the tint is applied to the
+ * tiles themselves, in a `tile-invalidated` handler installed on the viewer.
+ * Tints are kept per tile source, rather than per tiled image, which is the
+ * granularity at which OpenSeadragon keys its tile caches, and which also covers
+ * the navigator: it mirrors the world with tiled images of its own, but shares
+ * their tile sources, and its tiles are invalidated through this viewer.
  */
 export class OpenSeadragonContext {
   readonly viewer: OpenSeadragon.Viewer;
+  private readonly _tileSourceTints: WeakMap<OpenSeadragon.TileSource, Color> =
+    new WeakMap();
   private _animationMemory?: {
     viewerOptions: Partial<OpenSeadragonViewerOptions>;
     tiledImageViewerOptions: WeakMap<
@@ -63,6 +75,30 @@ export class OpenSeadragonContext {
       // disable key bindings for rotation and flipping
       if (["r", "R", "f"].includes(event.originalEvent.key)) {
         event.preventDefaultAction = true;
+      }
+    });
+    this.viewer.addHandler("tile-invalidated", async (event) => {
+      const tiledImage = event.tile.tiledImage;
+      if (tiledImage !== null) {
+        const tint = this._tileSourceTints.get(tiledImage.source);
+        if (tint !== undefined) {
+          const { r, g, b } = tint;
+          const ctx = (await event.getData(
+            "context2d",
+          )) as CanvasRenderingContext2D;
+          const { width, height } = ctx.canvas;
+          ctx.save(); // push context state
+          // pre-multiply alpha
+          ctx.globalCompositeOperation = "destination-over";
+          ctx.fillStyle = "rgb(0 0 0 / 1)";
+          ctx.fillRect(0, 0, width, height);
+          // multiply with color
+          ctx.globalCompositeOperation = "multiply";
+          ctx.fillStyle = `rgb(${r} ${g} ${b} / 1)`;
+          ctx.fillRect(0, 0, width, height);
+          ctx.restore(); // pop context state
+          await event.setData(ctx, "context2d");
+        }
       }
     });
   }
@@ -311,6 +347,59 @@ export class OpenSeadragonContext {
    */
   getTiledImageIndex(tiledImage: OpenSeadragon.TiledImage): number {
     return this.viewer.world.getIndexOfItem(tiledImage);
+  }
+
+  /**
+   * Sets the tint color of a tiled image
+   *
+   * The tint is applied per tile: the tile is first composited over opaque
+   * black, which turns its transparency into intensity, and is then multiplied
+   * with `tint`. Passing `undefined` leaves the tiles untinted. It is applied to
+   * every tile of the tiled image, including those loaded later.
+   *
+   * As tinting drops the transparency of a tile, tinted tiled images must be
+   * composited additively onto an opaque backdrop.
+   *
+   * The tint is remembered per tile source, until the tile source is
+   * garbage-collected, because that is what OpenSeadragon keys its tile caches
+   * by: tiles that share their original data share their tinted data, too.
+   * Tiled images that share a tile source therefore also share a tint, with the
+   * last one set winning - including the tiled images of the navigator, which
+   * mirror those of this viewer and are tinted along with them.
+   *
+   * The tint is only written, and its tiles are only invalidated, if it actually
+   * changed: invalidating them re-runs the tinting on every loaded tile of the
+   * tile source, starting over from the original tile data.
+   *
+   * @param tiledImage - The tiled image to update
+   * @param tint - The color to tint the tiled image with, or `undefined` for
+   * no tint
+   */
+  setTiledImageTint(
+    tiledImage: OpenSeadragon.TiledImage,
+    tint: Color | undefined,
+  ): void {
+    const oldTint = this._tileSourceTints.get(tiledImage.source);
+    if (
+      (oldTint === undefined && tint !== undefined) ||
+      (oldTint !== undefined && tint === undefined) ||
+      (oldTint !== undefined &&
+        tint !== undefined &&
+        !ColorUtils.colorsEqual(oldTint, tint))
+    ) {
+      if (tint !== undefined) {
+        this._tileSourceTints.set(tiledImage.source, tint);
+      } else {
+        this._tileSourceTints.delete(tiledImage.source);
+      }
+      tiledImage
+        .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
+        .catch((error) => {
+          console.error(
+            `Failed to invalidate tiles of tinted OpenSeadragon image: ${error}`,
+          );
+        });
+    }
   }
 
   /**
