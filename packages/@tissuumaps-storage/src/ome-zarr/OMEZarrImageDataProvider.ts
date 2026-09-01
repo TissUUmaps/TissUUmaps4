@@ -25,7 +25,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         type: "string",
       },
       // TODO path
-      c: {
+      sizeC: {
         type: "integer",
       },
       z: {
@@ -47,6 +47,11 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         label: "URL",
       },
       // TODO path
+      {
+        type: "Control",
+        scope: "#/properties/sizeC",
+        label: "Number of channels",
+      },
       {
         type: "Control",
         scope: "#/properties/z",
