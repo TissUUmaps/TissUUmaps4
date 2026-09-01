@@ -18,7 +18,7 @@ import {
 export type ItemsDataWidgetProps = {
   data: ItemsData;
   tableHeight: number;
-  selectedTable?: string | null;
+  table: string | null;
   selectedGroupByColumn?: string | null;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
   extraTableColumnDefs?: ColumnDef<ItemsDataTableRowData>[];
@@ -29,8 +29,7 @@ export type ItemsDataWidgetProps = {
 export function ItemsDataWidget({
   data,
   tableHeight,
-  // The table is determined by the data source, not selected here.
-  selectedTable = null,
+  table,
   selectedGroupByColumn: controlledSelectedGroupByColumn,
   onSelectedGroupByColumnChange: setControlledSelectedGroupByColumn,
   extraTableColumnDefs,
@@ -44,7 +43,7 @@ export function ItemsDataWidget({
   );
 
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(selectedTable);
+    useTableColumnSelector(table);
 
   return (
     <Fieldset
@@ -53,7 +52,7 @@ export function ItemsDataWidget({
       <FieldsetLegend className="font-medium text-foreground">
         Data
       </FieldsetLegend>
-      <Field disabled={selectedTable === null}>
+      <Field disabled={table === null}>
         <FieldLabel>Group by</FieldLabel>
         <SimpleAsyncCombobox
           suggestQueries={suggestTableColumnQueries}
@@ -66,7 +65,7 @@ export function ItemsDataWidget({
       <ItemsDataTable
         data={data}
         height={tableHeight}
-        table={selectedTable}
+        table={table}
         groupByColumn={selectedGroupByColumn}
         extraColumnDefs={extraTableColumnDefs}
         extraGroupColumnDefs={extraTableGroupColumnDefs}

@@ -105,7 +105,6 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
 
   const { extraTableGroupColumnDefs } = useLabelsDataTableColumns(
     labels,
-    labels.dataSource.table ?? null,
     selectedGroupByColumn,
   );
 
@@ -187,7 +186,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             <ItemsDataWidget
               data={labelsData}
               tableHeight={200}
-              selectedTable={labels.dataSource.table ?? null}
+              table={labels.dataSource.table ?? null}
               selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
               extraTableGroupColumnDefs={extraTableGroupColumnDefs}
