@@ -8,9 +8,9 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import {
-  type VisibilityConfigSource,
-  type VisibilityConfigWidgetAdapter,
+import type {
+  VisibilityConfigSource,
+  VisibilityConfigWidgetAdapter,
 } from "./adapter";
 
 export function useVisibilityConfigWidget(

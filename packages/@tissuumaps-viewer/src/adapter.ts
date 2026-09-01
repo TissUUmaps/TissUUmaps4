@@ -1,59 +1,60 @@
-import {
-  type Color,
-  type DefaultMap,
-  type Image,
-  type ImageData,
-  type InteractionMode,
-  type Labels,
-  type LabelsData,
-  type Layer,
-  type Marker,
-  type MultiPolygon,
-  type Points,
-  type PointsData,
-  type RenderOptions,
-  type Shapes,
-  type ShapesData,
-  type TableData,
-  type ViewerOptions,
+import type {
+  Color,
+  DefaultMap,
+  Image,
+  ImageData,
+  InteractionMode,
+  Labels,
+  LabelsData,
+  Layer,
+  Marker,
+  MultiPolygon,
+  OpenSeadragonOptions,
+  Points,
+  PointsData,
+  Shapes,
+  ShapesData,
+  Table,
+  TableData,
+  WebGLOptions,
 } from "@tissuumaps/core";
 
 export interface ViewerAdapter {
-  interactionMode: InteractionMode;
-  workspace: FileSystemDirectoryHandle | null;
   layers: Layer[];
   images: Image[];
   labels: Labels[];
   points: Points[];
   shapes: Shapes[];
+  tables: Table[];
   markerMaps: DefaultMap<Marker>[];
   sizeMaps: DefaultMap<number>[];
   colorMaps: DefaultMap<Color>[];
   visibilityMaps: DefaultMap<boolean>[];
   opacityMaps: DefaultMap<number>[];
-  viewerOptions: ViewerOptions;
-  viewerAnimationStartOptions: ViewerOptions;
-  viewerAnimationFinishOptions: ViewerOptions;
-  renderOptions: RenderOptions;
-  getImage: (
-    imageId: string,
+  osOptions: OpenSeadragonOptions;
+  glOptions: WebGLOptions;
+  loadImage: (
+    image: Image,
     options?: { signal?: AbortSignal },
   ) => Promise<ImageData>;
-  getLabels: (
-    labelsId: string,
+  loadLabels: (
+    labels: Labels,
     options?: { signal?: AbortSignal },
   ) => Promise<LabelsData>;
-  getPoints: (
-    pointsId: string,
+  loadPoints: (
+    points: Points,
     options?: { signal?: AbortSignal },
   ) => Promise<PointsData>;
-  getShapes: (
-    shapesId: string,
+  loadShapes: (
+    shapes: Shapes,
     options?: { signal?: AbortSignal },
   ) => Promise<ShapesData>;
-  getTable: (
-    tableId: string,
+  loadTable: (
+    table: Table,
     options?: { signal?: AbortSignal },
   ) => Promise<TableData>;
+
+  // shapes drawing
+  interactionMode: InteractionMode;
   addShape?: (shape: MultiPolygon) => void;
 }

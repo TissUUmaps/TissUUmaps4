@@ -1,15 +1,10 @@
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
-import { type OpenSeadragonController } from "@tissuumaps/core";
+import { GeometryUtils, type Rect } from "@tissuumaps/core";
+import type { OpenSeadragonContext } from "@tissuumaps/render";
 
-import { type ViewerAdapter } from "../../adapter";
-import { OpenSeadragonControllerProvider } from "../../context/OpenSeadragonControllerProvider";
+import type { ViewerAdapter } from "../../adapter";
+import { OpenSeadragonContextProvider } from "../../context/OpenSeadragonContextProvider";
 import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
 import { useSVG } from "../../hooks/useSVG";
 import { useWebGL } from "../../hooks/useWebGL";
@@ -21,93 +16,90 @@ export type ViewerProps = {
 };
 
 export function Viewer({ adapter, children, className }: ViewerProps) {
-  const [os, setOS] = useState<OpenSeadragonController | null>(null);
-  const { parent, initialViewport } = useMemo(() => {
-    if (os !== null) {
-      return {
-        parent: os.viewer.canvas,
-        initialViewport: os.viewer.viewport.getBoundsNoRotate(true),
-      };
-    }
-    return { parent: null, initialViewport: null };
-  }, [os]);
+  const [osContext, setOSContext] = useState<OpenSeadragonContext | null>(null);
 
-  const { controllerRef: glRef, controllerReady: glReady } = useWebGL(
+  const [viewport, setViewport] = useState<Rect | null>(null);
+  const updateViewport = useCallback((newViewport: Rect) => {
+    setViewport((oldViewport) =>
+      oldViewport !== null && GeometryUtils.rectEquals(oldViewport, newViewport)
+        ? oldViewport
+        : newViewport,
+    );
+  }, []);
+
+  const [containerSize, setContainerSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const updateContainerSize = useCallback(
+    (newContainerSize: { width: number; height: number }) => {
+      setContainerSize((oldContainerSize) =>
+        oldContainerSize !== null &&
+        GeometryUtils.dimsEquals(oldContainerSize, newContainerSize)
+          ? oldContainerSize
+          : newContainerSize,
+      );
+    },
+    [],
+  );
+
+  const { initOS, osRef, osReady, updateOSExternalBounds } =
+    useOpenSeadragon(adapter);
+  const { initGL, glPointsBounds, glShapesBounds } = useWebGL(
     adapter,
-    parent,
-    initialViewport,
+    viewport,
+    containerSize,
   );
-
-  const { controllerRef: svgRef, controllerReady: svgReady } = useSVG(
-    adapter,
-    parent,
-    initialViewport,
-  );
-
-  const fallbackBounds = useCallback(
-    () => glRef.current?.getWorldBounds() ?? null,
-    [glRef],
-  );
-  const {
-    setViewerElementRef,
-    controllerRef: osRef,
-    controllerReady: osReady,
-  } = useOpenSeadragon(adapter, fallbackBounds);
+  const { initSVG } = useSVG(adapter, viewport, containerSize);
 
   useEffect(() => {
     const os = osRef.current;
-    const gl = glRef.current;
-    const svg = svgRef.current;
-
-    const resizeHandler = (event: OpenSeadragon.ResizeEvent) => {
-      const containerSize = {
-        width: event.newContainerSize.x,
-        height: event.newContainerSize.y,
-      };
-      if (glReady && gl !== null) {
-        const canvasResized = gl.resizeCanvas(containerSize);
-        if (canvasResized) {
-          gl.draw();
-        }
-      }
-      if (svgReady && svg !== null) {
-        svg.resizeContainer(containerSize);
-      }
-    };
-
-    const viewportChangeHandler = (event: OpenSeadragon.ViewerEvent) => {
-      const viewport = event.eventSource.viewport.getBoundsNoRotate(true);
-      if (glReady && gl !== null) {
-        const viewportChanged = gl.setViewport(viewport);
-        if (viewportChanged) {
-          gl.draw();
-        }
-      }
-      if (svgReady && svg !== null) {
-        svg.setViewport(viewport);
-      }
-    };
-
-    if (osReady && os !== null) {
-      os.viewer.addHandler("resize", resizeHandler);
-      os.viewer.addHandler("viewport-change", viewportChangeHandler);
-      setOS(os);
+    if (!osReady || os === null) {
+      return;
     }
-
-    return () => {
-      if (os !== null) {
-        setOS(null);
-        os.viewer.removeHandler("resize", resizeHandler);
-        os.viewer.removeHandler("viewport-change", viewportChangeHandler);
-      }
+    setOSContext(os.context);
+    updateViewport(os.context.getViewport());
+    updateContainerSize(os.context.getContainerSize());
+    const onViewportChanged = (event: OpenSeadragon.ViewerEvent) => {
+      const { x, y, width, height } =
+        event.eventSource.viewport.getBounds(true);
+      updateViewport({ x, y, width, height });
     };
-  }, [osRef, osReady, glRef, glReady, svgRef, svgReady]);
+    const onContainerResized = (event: OpenSeadragon.ResizeEvent) => {
+      const { x: width, y: height } = event.newContainerSize;
+      updateContainerSize({ width, height });
+    };
+    os.context.viewer.addHandler("resize", onContainerResized);
+    os.context.viewer.addHandler("viewport-change", onViewportChanged);
+    const destroyGL = initGL(os.context.viewer.canvas);
+    const destroySVG = initSVG(os.context.viewer.canvas);
+    return () => {
+      destroyGL();
+      destroySVG();
+      os.context.viewer.removeHandler("resize", onContainerResized);
+      os.context.viewer.removeHandler("viewport-change", onViewportChanged);
+      setViewport(null);
+      setContainerSize(null);
+      setOSContext(null);
+    };
+  }, [osReady, osRef, initGL, initSVG, updateViewport, updateContainerSize]);
+
+  useEffect(() => {
+    const osExternalBounds = [];
+    if (glPointsBounds !== null) {
+      osExternalBounds.push(glPointsBounds);
+    }
+    if (glShapesBounds !== null) {
+      osExternalBounds.push(glShapesBounds);
+    }
+    return updateOSExternalBounds(osExternalBounds);
+  }, [updateOSExternalBounds, glPointsBounds, glShapesBounds]);
 
   return (
-    <div ref={setViewerElementRef} className={className}>
-      <OpenSeadragonControllerProvider controller={os}>
+    <div ref={initOS} className={className}>
+      <OpenSeadragonContextProvider context={osContext}>
         {children}
-      </OpenSeadragonControllerProvider>
+      </OpenSeadragonContextProvider>
     </div>
   );
 }

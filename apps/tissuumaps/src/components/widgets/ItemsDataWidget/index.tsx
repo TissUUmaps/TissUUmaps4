@@ -1,6 +1,6 @@
-import { type ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 
-import { type ItemsData } from "@tissuumaps/core";
+import type { ItemsData } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
@@ -9,7 +9,7 @@ import { SimpleSelect } from "@/components/common/simple-select";
 import { useControlled } from "@/hooks/useControlled";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import {
   ItemsDataTable,
@@ -51,7 +51,7 @@ export function ItemsDataWidget({
     null,
   );
 
-  const tables = useTissUUmaps((state) => state.tables);
+  const tables = useProjectStore((state) => state.tables);
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
     useTableColumnSelector(selectedTable);
 

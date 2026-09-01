@@ -1,23 +1,15 @@
 import {
+  AsyncUtils,
+  type ItemsDataProviderOpenOptions,
   type PointsDataProvider,
-  type ProgressCallback,
-  type TableData,
 } from "@tissuumaps/core";
 
 import { TablePointsData } from "./TablePointsData";
 import {
+  type DefaultTablePointsDataSource,
   type TablePointsDataSource,
-  createDefaultTablePointsDataSource,
   tablePointsDataSourceDefaults,
 } from "./TablePointsDataSource";
-
-export type LoadTableFunction = (
-  tableId: string,
-  options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  },
-) => Promise<TableData>;
 
 export class TablePointsDataProvider implements PointsDataProvider<
   TablePointsDataSource,
@@ -64,35 +56,27 @@ export class TablePointsDataProvider implements PointsDataProvider<
     ],
   };
 
-  private readonly _loadTable: LoadTableFunction;
-
-  constructor(loadTable: LoadTableFunction) {
-    this._loadTable = loadTable;
+  normalizeDataSource(
+    dataSource: TablePointsDataSource,
+  ): DefaultTablePointsDataSource {
+    return { ...tablePointsDataSourceDefaults, ...dataSource };
   }
 
-  async open(
+  async load(
     dataSource: TablePointsDataSource,
-    options?: {
-      signal?: AbortSignal;
-      onProgress?: ProgressCallback;
-      workspace: FileSystemDirectoryHandle | null;
-    },
+    options?: ItemsDataProviderOpenOptions,
   ): Promise<TablePointsData> {
-    const { signal, onProgress } = options ?? {};
+    const { signal, tableDataPromise } = options ?? {};
     signal?.throwIfAborted();
-
-    const defaultDataSource = createDefaultTablePointsDataSource(dataSource);
-
-    const tableData = await this._loadTable(defaultDataSource.table, {
-      signal,
-      onProgress,
-    });
-    signal?.throwIfAborted();
-
+    if (tableDataPromise === undefined) {
+      throw new Error("Table data must be provided");
+    }
+    const normalizedDataSource = this.normalizeDataSource(dataSource);
+    const tableData = await AsyncUtils.raceSignal(tableDataPromise, { signal });
     return new TablePointsData(
       tableData,
-      defaultDataSource.x,
-      defaultDataSource.y,
+      normalizedDataSource.x,
+      normalizedDataSource.y,
     );
   }
 }

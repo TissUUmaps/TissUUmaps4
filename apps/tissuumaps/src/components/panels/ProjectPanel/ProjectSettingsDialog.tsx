@@ -6,11 +6,11 @@ import {
 } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Input } from "@/components/ui/input";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 export function ProjectSettingsDialog() {
-  const renderOptions = useTissUUmaps((state) => state.renderOptions);
-  const setRenderOptions = useTissUUmaps((state) => state.setRenderOptions);
+  const glOptions = useProjectStore((state) => state.glOptions);
+  const setGLOptions = useProjectStore((state) => state.setGLOptions);
 
   return (
     <Fieldset className="border-0 m-0 p-0">
@@ -20,7 +20,7 @@ export function ProjectSettingsDialog() {
 
       <div className="space-y-4">
         <Field>
-          <FieldLabel>Point Size Factor</FieldLabel>
+          <FieldLabel>Global Point Size Factor</FieldLabel>
           <FieldControl
             render={
               <Input
@@ -28,12 +28,16 @@ export function ProjectSettingsDialog() {
                 inputMode="decimal"
                 step={0.1}
                 min={0}
-                value={renderOptions.pointSizeFactor}
+                value={glOptions.pointsRenderOptions.globalPointSizeFactor}
                 onChange={(event) => {
                   const newValue = event.target.valueAsNumber;
                   if (!isNaN(newValue)) {
-                    setRenderOptions({
-                      pointSizeFactor: Math.max(0, newValue),
+                    setGLOptions({
+                      ...glOptions,
+                      pointsRenderOptions: {
+                        ...glOptions.pointsRenderOptions,
+                        globalPointSizeFactor: Math.max(0, newValue),
+                      },
                     });
                   }
                 }}
@@ -52,12 +56,16 @@ export function ProjectSettingsDialog() {
               <Input
                 type="number"
                 min={0}
-                value={renderOptions.shapeStrokeWidth}
+                value={glOptions.shapesRenderOptions.strokeWidth}
                 onChange={(event) => {
                   const newValue = event.target.valueAsNumber;
                   if (!isNaN(newValue)) {
-                    setRenderOptions({
-                      shapeStrokeWidth: Math.max(0, Math.trunc(newValue)),
+                    setGLOptions({
+                      ...glOptions,
+                      shapesRenderOptions: {
+                        ...glOptions.shapesRenderOptions,
+                        strokeWidth: Math.max(0, Math.trunc(newValue)),
+                      },
                     });
                   }
                 }}
@@ -76,12 +84,16 @@ export function ProjectSettingsDialog() {
               <Input
                 type="number"
                 min={1}
-                value={renderOptions.numShapesScanlines}
+                value={glOptions.shapesRenderOptions.numScanlines}
                 onChange={(event) => {
                   const newValue = event.target.valueAsNumber;
                   if (!isNaN(newValue)) {
-                    setRenderOptions({
-                      numShapesScanlines: Math.max(1, Math.trunc(newValue)),
+                    setGLOptions({
+                      ...glOptions,
+                      shapesRenderOptions: {
+                        ...glOptions.shapesRenderOptions,
+                        numScanlines: Math.max(1, Math.trunc(newValue)),
+                      },
                     });
                   }
                 }}

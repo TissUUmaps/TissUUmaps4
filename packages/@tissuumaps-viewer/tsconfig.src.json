@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./build",
+    "lib": ["ES2025", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "jsx": "react-jsx"
+  },
+  "references": [
+    { "path": "../@tissuumaps-core/tsconfig.src.json" },
+    { "path": "../@tissuumaps-render/tsconfig.src.json" }
+  ],
+  "include": ["./src"],
+  "exclude": [
+    "./src/**/*.test.js",
+    "./src/**/*.test.jsx",
+    "./src/**/*.test.ts",
+    "./src/**/*.test.tsx"
+  ]
+}

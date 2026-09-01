@@ -1,181 +1,330 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import { type Rect, WebGLController } from "@tissuumaps/core";
+import type { Rect } from "@tissuumaps/core";
+import {
+  WebGLContext,
+  WebGLPointsRenderer,
+  WebGLShapesRenderer,
+} from "@tissuumaps/render";
 
-import { type ViewerAdapter } from "../adapter";
+import type { ViewerAdapter } from "../adapter";
+
+type GL = {
+  canvas: HTMLCanvasElement;
+  context: WebGLContext;
+  pointsRenderer: WebGLPointsRenderer;
+  shapesRenderer: WebGLShapesRenderer;
+};
 
 export function useWebGL(
   adapter: ViewerAdapter,
-  parent: Element | null,
-  initialViewport: Rect | null,
+  viewport: Rect | null,
+  containerSize: { width: number; height: number } | null,
 ) {
   const {
-    workspace,
     layers,
     points,
     shapes,
+    tables,
     markerMaps,
     sizeMaps,
     colorMaps,
     visibilityMaps,
     opacityMaps,
-    renderOptions,
-    getPoints,
-    getShapes,
-    getTable,
+    glOptions,
+    loadPoints,
+    loadShapes,
+    loadTable,
   } = adapter;
 
-  const controllerRef = useRef<WebGLController | null>(null);
-  const [controllerReady, markControllerReady] = useReducer((x) => x + 1, 0);
-  const [syncPoints, dispatchSyncPoints] = useReducer((pass) => pass + 1, 0);
-  const [syncShapes, dispatchSyncShapes] = useReducer((pass) => pass + 1, 0);
+  const glRef = useRef<GL | null>(null);
+  const glPromiseRef = useRef<Promise<GL | null>>(Promise.resolve(null));
+  const [glReady, setGLReady] = useState(false);
 
-  useEffect(() => {
-    let canvas: HTMLCanvasElement | undefined;
-    let controller: WebGLController | undefined;
-    const abortController = new AbortController();
-    if (parent !== null && initialViewport !== null) {
-      console.debug("Initializing WebGL");
-      canvas = parent.appendChild(WebGLController.createCanvas());
-      controller = new WebGLController(canvas, initialViewport);
-      controller.initialize({ signal: abortController.signal }).then(
-        (controller) => {
-          if (!abortController.signal.aborted) {
-            controllerRef.current = controller;
-            markControllerReady();
-            controller.draw();
-          }
-        },
-        (error) => {
-          if (!abortController.signal.aborted) {
-            console.error("Error initializing WebGL", error);
-          }
-        },
-      );
+  const glOptionsRef = useRef(glOptions);
+  const viewportRef = useRef(viewport);
+  const containerSizeRef = useRef(containerSize);
+
+  const [syncPoints, dispatchSyncPoints] = useReducer((x) => x + 1, 0);
+  const [syncShapes, dispatchSyncShapes] = useReducer((x) => x + 1, 0);
+
+  const [glPointsBounds, setGLPointsBounds] = useState<Rect | null>(null);
+  const [glShapesBounds, setGLShapesBounds] = useState<Rect | null>(null);
+
+  function createCanvas() {
+    const canvas = document.createElement("canvas");
+    canvas.style.position = "absolute";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    return canvas;
+  }
+
+  function draw() {
+    if (glRef.current !== null) {
+      glRef.current.context.clear();
+      glRef.current.pointsRenderer.draw();
+      glRef.current.shapesRenderer.draw();
     }
-    return () => {
-      abortController?.abort();
-      if (controller !== undefined) {
-        controllerRef.current = null;
-        controller.destroy();
+  }
+
+  const initGL = useCallback((parentOrNull: HTMLElement | null) => {
+    if (parentOrNull === null) {
+      return () => {};
+    }
+    const abortController = new AbortController();
+    const canvas = parentOrNull.appendChild(createCanvas());
+
+    async function startGL() {
+      abortController.signal.throwIfAborted();
+      const context = new WebGLContext(canvas);
+      if (containerSizeRef.current !== null) {
+        context.resizeCanvas(canvas, containerSizeRef.current);
       }
-      if (canvas !== undefined && parent !== null) {
-        parent.removeChild(canvas);
+      const {
+        promise: pointsRendererInitPromise,
+        resolve: resolvePointsRendererInitPromise,
+        reject: rejectPointsRendererInitPromise,
+      } = Promise.withResolvers<void>();
+      pointsRendererInitPromise.catch(() => {}); // prevent unhandled rejections in console
+      let pointsRenderer: WebGLPointsRenderer;
+      try {
+        pointsRenderer = new WebGLPointsRenderer(
+          context,
+          resolvePointsRendererInitPromise,
+          rejectPointsRendererInitPromise,
+          {
+            viewport: viewportRef.current ?? undefined,
+            renderOptions: glOptionsRef.current.pointsRenderOptions,
+            signal: abortController.signal,
+          },
+        );
+      } catch (error) {
+        context.destroy();
+        throw new Error("Error creating points renderer", { cause: error });
       }
+      try {
+        await pointsRendererInitPromise;
+        abortController.signal.throwIfAborted(); // points renderer does not throw on abort
+      } catch (error) {
+        pointsRenderer.destroy();
+        context.destroy();
+        throw error;
+      }
+      let shapesRenderer: WebGLShapesRenderer;
+      try {
+        shapesRenderer = new WebGLShapesRenderer(context, {
+          viewport: viewportRef.current ?? undefined,
+          renderOptions: glOptionsRef.current.shapesRenderOptions,
+        });
+      } catch (error) {
+        pointsRenderer.destroy();
+        context.destroy();
+        throw new Error("Error creating shapes renderer", { cause: error });
+      }
+      const gl = { canvas, context, pointsRenderer, shapesRenderer };
+      glRef.current = gl;
+      setGLReady(true);
+      draw();
+      return gl;
+    }
+
+    function stopGL() {
+      const gl = glRef.current;
+      setGLReady(false);
+      glRef.current = null;
+      if (gl !== null) {
+        const { context, pointsRenderer, shapesRenderer } = gl;
+        pointsRenderer.destroy();
+        shapesRenderer.destroy();
+        context.destroy();
+      }
+    }
+
+    glPromiseRef.current = glPromiseRef.current.then(startGL).catch((error) => {
+      if (!abortController.signal.aborted) {
+        console.error("Error starting WebGL", error);
+      }
+      return null;
+    });
+    const onContextLost = (event: Event) => {
+      event.preventDefault(); // allow context to be restored
+      glPromiseRef.current = glPromiseRef.current
+        .then(() => {
+          stopGL();
+          return null;
+        })
+        .catch((error) => {
+          console.error("Error stopping WebGL", error);
+          return null;
+        });
     };
-  }, [parent, initialViewport]);
+    const onContextRestored = () => {
+      glPromiseRef.current = glPromiseRef.current
+        .then(startGL)
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error starting WebGL", error);
+          }
+          return null;
+        });
+    };
+    canvas.addEventListener("webglcontextlost", onContextLost);
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
+    return () => {
+      abortController.abort();
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      canvas.removeEventListener("webglcontextrestored", onContextRestored);
+      glPromiseRef.current = glPromiseRef.current
+        .then(() => {
+          stopGL();
+          return null;
+        })
+        .catch((error) => {
+          console.error("Error stopping WebGL", error);
+          return null;
+        });
+      parentOrNull.removeChild(canvas);
+    };
+  }, []);
 
   useEffect(() => {
-    const controller = controllerRef.current;
-    if (controllerReady && controller !== null) {
-      console.debug("Setting WebGL render options");
-      const { syncPoints, syncShapes, redraw } =
-        controller.setRenderOptions(renderOptions);
-      if (syncPoints) {
+    glOptionsRef.current = glOptions;
+    if (glReady && glRef.current !== null) {
+      const { resync: resyncPoints, redraw: redrawPoints } =
+        glRef.current.pointsRenderer.setRenderOptions(
+          glOptions.pointsRenderOptions,
+        );
+      const { resync: resyncShapes, redraw: redrawShapes } =
+        glRef.current.shapesRenderer.setRenderOptions(
+          glOptions.shapesRenderOptions,
+        );
+      if (redrawPoints || redrawShapes) {
+        draw();
+      }
+      if (resyncPoints) {
         dispatchSyncPoints();
       }
-      if (syncShapes) {
+      if (resyncShapes) {
         dispatchSyncShapes();
       }
-      if (redraw) {
-        controller.draw();
-      }
     }
-  }, [controllerReady, renderOptions]);
+  }, [glReady, glOptions]);
 
   useEffect(() => {
-    const controller = controllerRef.current;
+    viewportRef.current = viewport;
+    if (glReady && glRef.current !== null && viewport !== null) {
+      const redrawPoints = glRef.current.pointsRenderer.setViewport(viewport);
+      const redrawShapes = glRef.current.shapesRenderer.setViewport(viewport);
+      if (redrawPoints || redrawShapes) {
+        draw();
+      }
+    }
+  }, [glReady, viewport]);
+
+  useEffect(() => {
+    containerSizeRef.current = containerSize;
+    if (glReady && glRef.current !== null && containerSize !== null) {
+      const redraw = glRef.current.context.resizeCanvas(
+        glRef.current.canvas,
+        containerSize,
+      );
+      if (redraw) {
+        draw();
+      }
+    }
+  }, [glReady, containerSize]);
+
+  useEffect(() => {
     const abortController = new AbortController();
-    if (controllerReady && controller !== null) {
-      console.debug("Synchronizing WebGL points");
-      controller
-        .synchronizePoints(
+    if (glReady && glRef.current !== null) {
+      glRef.current.pointsRenderer
+        .synchronize(
           layers,
           points,
+          tables,
           markerMaps,
           sizeMaps,
           colorMaps,
           visibilityMaps,
           opacityMaps,
-          getPoints,
-          getTable,
+          loadPoints,
+          loadTable,
           { signal: abortController.signal },
         )
-        .then(
-          () => {
-            if (!abortController.signal.aborted) {
-              controller.draw();
-            }
-          },
-          (error) => {
-            if (!abortController.signal.aborted) {
-              console.error("Error synchronizing WebGL points", error);
-            }
-          },
-        );
+        .then((renderedBounds) => {
+          if (!abortController.signal.aborted) {
+            setGLPointsBounds(renderedBounds ?? null);
+            draw();
+          }
+        })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error synchronizing WebGL points", error);
+          }
+        });
     }
     return () => {
       abortController.abort();
     };
   }, [
-    controllerReady,
-    syncPoints,
+    glReady,
     layers,
     points,
+    tables,
     markerMaps,
     sizeMaps,
     colorMaps,
     visibilityMaps,
     opacityMaps,
-    workspace,
-    getPoints,
-    getTable,
+    loadPoints,
+    loadTable,
+    syncPoints,
   ]);
 
   useEffect(() => {
-    const controller = controllerRef.current;
     const abortController = new AbortController();
-    if (controllerReady && controller !== null) {
-      console.debug("Synchronizing WebGL shapes");
-      controller
-        .synchronizeShapes(
+    if (glReady && glRef.current !== null) {
+      glRef.current.shapesRenderer
+        .synchronize(
           layers,
           shapes,
+          tables,
           colorMaps,
           visibilityMaps,
           opacityMaps,
-          getShapes,
-          getTable,
+          loadShapes,
+          loadTable,
           { signal: abortController.signal },
         )
-        .then(
-          () => {
-            if (!abortController.signal.aborted) {
-              controller.draw();
-            }
-          },
-          (error) => {
-            if (!abortController.signal.aborted) {
-              console.error("Error synchronizing WebGL shapes", error);
-            }
-          },
-        );
+        .then((renderedBounds) => {
+          if (!abortController.signal.aborted) {
+            setGLShapesBounds(renderedBounds ?? null);
+            draw();
+          }
+        })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error synchronizing WebGL shapes", error);
+          }
+        });
     }
     return () => {
       abortController.abort();
     };
   }, [
-    controllerReady,
-    syncShapes,
+    glReady,
     layers,
     shapes,
+    tables,
     colorMaps,
     visibilityMaps,
     opacityMaps,
-    workspace,
-    getShapes,
-    getTable,
+    loadShapes,
+    loadTable,
+    syncShapes,
   ]);
 
-  return { controllerRef, controllerReady };
+  return { initGL, glRef, glReady, glPointsBounds, glShapesBounds };
 }

@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useAppStore } from "@/stores/app";
+import { useProjectStore } from "@/stores/project";
 
 import { TableSettingsWidget } from "./TableSettingsWidget";
 
@@ -25,10 +26,11 @@ export type TablesPanelProps = {
 };
 
 export function TablesPanel({ className }: TablesPanelProps) {
-  const tables = useTissUUmaps((state) => state.tables);
-  const tableDataProviders = useTissUUmaps((state) => state.tableDataProviders);
-  const addTable = useTissUUmaps((state) => state.addTable);
-  const moveTable = useTissUUmaps((state) => state.moveTable);
+  const tableDataProviders = useAppStore((state) => state.tableDataProviders);
+
+  const tables = useProjectStore((state) => state.tables);
+  const addTable = useProjectStore((state) => state.addTable);
+  const moveTable = useProjectStore((state) => state.moveTable);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
@@ -51,7 +53,7 @@ export function TablesPanel({ className }: TablesPanelProps) {
       <AddDataObjectDialog
         title="Add table"
         dataProviders={tableDataProviders}
-        onAdd={(name, _type, dataSource) => {
+        onAdd={(name, _layerId, dataSource) => {
           const table = createTable({
             id: crypto.randomUUID(),
             name,
@@ -70,9 +72,10 @@ type TableAccordionItemProps = {
 };
 
 function TableAccordionItem({ table, index }: TableAccordionItemProps) {
-  const tableDataProviders = useTissUUmaps((state) => state.tableDataProviders);
-  const deleteTable = useTissUUmaps((state) => state.deleteTable);
-  const loadTable = useTissUUmaps((state) => state.loadTable);
+  const tableDataProviders = useAppStore((state) => state.tableDataProviders);
+
+  const updateTable = useProjectStore((state) => state.updateTable);
+  const deleteTable = useProjectStore((state) => state.deleteTable);
 
   const { ref, handleRef } = useSortable({ id: table.id, index });
 
@@ -109,8 +112,7 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
             dataSource={table.dataSource}
             dataProviders={tableDataProviders}
             onDataSourceChange={(newDataSource) => {
-              // TODO signal, progress callback
-              loadTable(table.id, { newDataSource }).catch(console.error);
+              updateTable(table.id, { dataSource: newDataSource });
             }}
             className="bg-card"
           />

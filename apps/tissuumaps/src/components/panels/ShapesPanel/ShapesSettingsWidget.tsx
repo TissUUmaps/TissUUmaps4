@@ -43,7 +43,7 @@ import {
 import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/hooks";
 import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import { ShapesSettingsCategory } from "./category";
 
@@ -68,7 +68,7 @@ export function ShapesSettingsWidget({
     null,
   );
 
-  const updateShapes = useTissUUmaps((state) => state.updateShapes);
+  const updateShapes = useProjectStore((state) => state.updateShapes);
 
   const shapeFillColorConfigWidgetAdapter = useColorConfigWidget(
     shapes.shapeFillColor,
@@ -285,8 +285,8 @@ function GeneralShapesSettingsWidget({
   shapes,
   className,
 }: GeneralShapesSettingsWidgetProps) {
-  const layers = useTissUUmaps((state) => state.layers);
-  const updateShapes = useTissUUmaps((state) => state.updateShapes);
+  const layers = useProjectStore((state) => state.layers);
+  const updateShapes = useProjectStore((state) => state.updateShapes);
 
   return (
     <div className={className}>

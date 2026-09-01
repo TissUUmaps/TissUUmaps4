@@ -25,3 +25,5 @@ build
 *.njsproj
 *.sln
 *.sw?
+
+*.tsbuildinfo

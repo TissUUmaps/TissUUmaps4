@@ -7,7 +7,7 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { type ColorConfigWidgetAdapter } from "./adapter";
+import type { ColorConfigWidgetAdapter } from "./adapter";
 
 export type ActiveColorConfigValueProps = {
   adapter: ColorConfigWidgetAdapter;

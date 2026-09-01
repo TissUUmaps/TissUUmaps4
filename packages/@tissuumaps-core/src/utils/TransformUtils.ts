@@ -1,7 +1,7 @@
 import { mat3, vec2 } from "gl-matrix";
 
-import { type SimilarityTransform } from "../model/types";
-import { type Rect } from "../types";
+import type { SimilarityTransform } from "../model/primitives";
+import type { Rect } from "../types/geometry";
 
 /**
  * Utility methods for converting between {@link SimilarityTransform}
@@ -81,30 +81,6 @@ export class TransformUtils {
       mat3.scale(m, m, [-1, 1]);
     }
     return m;
-  }
-
-  /**
-   * Extracts a column-major `mat3x2` (3 columns × 2 rows) from a {@link mat3},
-   * discarding the third row
-   *
-   * @param m - The source matrix
-   */
-  static asGLMat3x2(m: mat3): number[] {
-    // gl-matrix, like OpenGL, uses column-major order.
-    // In OpenGL, mat3x2 has three columns and two rows.
-    return [m[0], m[1], m[3], m[4], m[6], m[7]];
-  }
-
-  /**
-   * Transposes a {@link mat3} and extracts a column-major `mat2x4`
-   * (2 columns × 4 rows), zero-padded in the fourth row
-   *
-   * @param m - The source matrix
-   */
-  static transposeAsGLMat2x4(m: mat3): number[] {
-    // gl-matrix, like OpenGL, uses column-major order.
-    // In OpenGL, mat2x4 has two columns and four rows.
-    return [m[0], m[3], m[6], 0, m[1], m[4], m[7], 0];
   }
 
   /**

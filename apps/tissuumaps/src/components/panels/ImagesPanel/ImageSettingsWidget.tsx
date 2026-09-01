@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import { ImageSettingsCategory } from "./category";
 
@@ -35,7 +35,7 @@ export function ImageSettingsWidget({
   onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: ImageSettingsWidgetProps) {
-  const updateImage = useTissUUmaps((state) => state.updateImage);
+  const updateImage = useProjectStore((state) => state.updateImage);
 
   const [activeCategory, setActiveCategory] = useControlled(
     controlledActiveCategory,
@@ -95,8 +95,8 @@ function GeneralImageSettingsWidget({
   image,
   className,
 }: GeneralImageSettingsWidgetProps) {
-  const layers = useTissUUmaps((state) => state.layers);
-  const updateImage = useTissUUmaps((state) => state.updateImage);
+  const layers = useProjectStore((state) => state.layers);
+  const updateImage = useProjectStore((state) => state.updateImage);
 
   return (
     <div className={className}>

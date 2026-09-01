@@ -27,7 +27,7 @@ And if you like the project, but just don't have time to contribute, that's fine
 ## Code of Conduct
 
 This project and everyone participating in it is governed by the
-[TissUUmaps Code of Conduct](https://github.com/TissUUmaps/TissUUmaps4/blob/main/CODE_OF_CONDUCT.md).
+[TissUUmaps Code of Conduct](CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
 to any [current member](CONTRIBUTORS.md) of the core team.
 

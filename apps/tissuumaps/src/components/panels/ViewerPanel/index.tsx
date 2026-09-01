@@ -1,14 +1,22 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { Viewer, ViewerControl, ViewerControlAnchor } from "@tissuumaps/viewer";
+import {
+  Viewer,
+  type ViewerAdapter,
+  ViewerControl,
+  ViewerControlAnchor,
+} from "@tissuumaps/viewer";
 
-import { useTissUUmaps } from "@/store";
-import { useLoadedImageDataAdapter } from "@/store/adapters/LoadedImageDataAdapter";
-import { useLoadedLabelsDataAdapter } from "@/store/adapters/LoadedLabelsDataAdapter";
-import { useLoadedPointsDataAdapter } from "@/store/adapters/LoadedPointsDataAdapter";
-import { useLoadedShapesDataAdapter } from "@/store/adapters/LoadedShapesDataAdapter";
-import { useLoadedTableDataAdapter } from "@/store/adapters/LoadedTableDataAdapter";
+import {
+  useImageDataLoader,
+  useLabelsDataLoader,
+  usePointsDataLoader,
+  useShapesDataLoader,
+  useTableDataLoader,
+} from "@/hooks/useDataLoader";
+import { useAppStore } from "@/stores/app";
+import { useProjectStore } from "@/stores/project";
 
 import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
 
@@ -17,49 +25,51 @@ export type ViewerPanelProps = {
 };
 
 export function ViewerPanel({ className }: ViewerPanelProps) {
-  const viewerState = useTissUUmaps(
+  const interactionMode = useAppStore((state) => state.interactionMode);
+
+  const projectState = useProjectStore(
     useShallow((state) => ({
-      interactionMode: state.interactionMode,
-      workspace: state.workspace,
       layers: state.layers,
       images: state.images,
       labels: state.labels,
       points: state.points,
       shapes: state.shapes,
+      tables: state.tables,
       markerMaps: state.markerMaps,
       sizeMaps: state.sizeMaps,
       colorMaps: state.colorMaps,
       visibilityMaps: state.visibilityMaps,
       opacityMaps: state.opacityMaps,
-      viewerOptions: state.viewerOptions,
-      viewerAnimationStartOptions: state.viewerAnimationStartOptions,
-      viewerAnimationFinishOptions: state.viewerAnimationFinishOptions,
-      renderOptions: state.renderOptions,
-      // rerender upon changes to data providers
-      _imageDataProviders: state.imageDataProviders,
-      _labelsDataProviders: state.labelsDataProviders,
-      _pointsDataProviders: state.pointsDataProviders,
-      _shapesDataProviders: state.shapesDataProviders,
-      _tableDataProviders: state.tableDataProviders,
+      osOptions: state.osOptions,
+      glOptions: state.glOptions,
     })),
   );
 
-  const getImage = useLoadedImageDataAdapter();
-  const getLabels = useLoadedLabelsDataAdapter();
-  const getPoints = useLoadedPointsDataAdapter();
-  const getShapes = useLoadedShapesDataAdapter();
-  const getTable = useLoadedTableDataAdapter();
+  const loadImage = useImageDataLoader();
+  const loadLabels = useLabelsDataLoader();
+  const loadPoints = usePointsDataLoader();
+  const loadShapes = useShapesDataLoader();
+  const loadTable = useTableDataLoader();
 
-  const viewerAdapter = useMemo(
+  const viewerAdapter: ViewerAdapter = useMemo(
     () => ({
-      ...viewerState,
-      getImage,
-      getLabels,
-      getPoints,
-      getShapes,
-      getTable,
+      ...projectState,
+      interactionMode,
+      loadImage,
+      loadLabels,
+      loadPoints,
+      loadShapes,
+      loadTable,
     }),
-    [viewerState, getImage, getLabels, getPoints, getShapes, getTable],
+    [
+      projectState,
+      interactionMode,
+      loadImage,
+      loadLabels,
+      loadPoints,
+      loadShapes,
+      loadTable,
+    ],
   );
 
   return (

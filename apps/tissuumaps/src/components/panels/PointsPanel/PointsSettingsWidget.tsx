@@ -55,7 +55,7 @@ import {
 import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/hooks";
 import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import { PointsSettingsCategory } from "./category";
 
@@ -80,7 +80,7 @@ export function PointsSettingsWidget({
     null,
   );
 
-  const updatePoints = useTissUUmaps((state) => state.updatePoints);
+  const updatePoints = useProjectStore((state) => state.updatePoints);
 
   const pointMarkerConfigWidgetAdapter = useMarkerConfigWidget(
     points.pointMarker,
@@ -263,8 +263,8 @@ function GeneralPointsSettingsWidget({
   points,
   className,
 }: GeneralPointsSettingsWidgetProps) {
-  const layers = useTissUUmaps((state) => state.layers);
-  const updatePoints = useTissUUmaps((state) => state.updatePoints);
+  const layers = useProjectStore((state) => state.layers);
+  const updatePoints = useProjectStore((state) => state.updatePoints);
 
   return (
     <div className={className}>

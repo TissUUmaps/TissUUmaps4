@@ -1,6 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { type OpacityConfigWidgetAdapter } from "./adapter";
+import type { OpacityConfigWidgetAdapter } from "./adapter";
 
 export type OpacityConfigSourceToggleGroupProps = Omit<
   Parameters<typeof ToggleGroup>[0],

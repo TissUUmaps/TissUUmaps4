@@ -4,7 +4,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { type OpacityConfigWidgetAdapter } from "./adapter";
+import type { OpacityConfigWidgetAdapter } from "./adapter";
 
 export type ActiveOpacityConfigValueProps = {
   adapter: OpacityConfigWidgetAdapter;

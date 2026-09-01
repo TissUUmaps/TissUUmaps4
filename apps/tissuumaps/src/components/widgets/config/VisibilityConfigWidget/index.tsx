@@ -3,9 +3,9 @@ import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Switch } from "@/components/ui/switch";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
-import { type VisibilityConfigWidgetAdapter } from "./adapter";
+import type { VisibilityConfigWidgetAdapter } from "./adapter";
 
 export { ActiveVisibilityConfigValue } from "./ActiveVisibilityConfigValue";
 export { VisibilityConfigSourceToggleGroup } from "./VisibilityConfigSourceToggleGroup";
@@ -117,7 +117,7 @@ function GroupByVisibilityConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
-  const visibilityMaps = useTissUUmaps((state) => state.visibilityMaps);
+  const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
 
   const { suggestTableColumnQueries, resolveTableColumnQuery } =
     useTableColumnSelector(tableId);

@@ -40,7 +40,7 @@ import {
 import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/hooks";
 import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useProjectStore } from "@/stores/project";
 
 import { LabelsSettingsCategory } from "./category";
 
@@ -65,7 +65,7 @@ export function LabelsSettingsWidget({
     null,
   );
 
-  const updateLabels = useTissUUmaps((state) => state.updateLabels);
+  const updateLabels = useProjectStore((state) => state.updateLabels);
 
   const labelColorConfigWidgetAdapter = useColorConfigWidget(
     labels.labelColor,
@@ -198,8 +198,8 @@ function GeneralLabelsSettingsWidget({
   labels,
   className,
 }: GeneralLabelsSettingsWidgetProps) {
-  const layers = useTissUUmaps((state) => state.layers);
-  const updateLabels = useTissUUmaps((state) => state.updateLabels);
+  const layers = useProjectStore((state) => state.layers);
+  const updateLabels = useProjectStore((state) => state.updateLabels);
 
   return (
     <div className={className}>

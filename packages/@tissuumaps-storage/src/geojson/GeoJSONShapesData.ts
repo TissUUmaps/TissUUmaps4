@@ -1,22 +1,18 @@
-import {
-  type MultiPolygon,
-  type ProgressCallback,
-  type ShapesData,
-} from "@tissuumaps/core";
+import type { ShapesData, ShapesGeometry } from "@tissuumaps/core";
 
 export class GeoJSONShapesData implements ShapesData {
+  private readonly _geometry: ShapesGeometry;
   private _ids: number[] | undefined;
-  private _names: string[] | undefined;
-  private readonly _multiPolygons: MultiPolygon[];
+  private readonly _names: string[] | undefined;
 
   constructor(
+    geometry: ShapesGeometry,
     ids: number[] | undefined,
     names: string[] | undefined,
-    multiPolygons: MultiPolygon[],
   ) {
+    this._geometry = geometry;
     this._ids = ids;
     this._names = names;
-    this._multiPolygons = multiPolygons;
   }
 
   getIds(): number[] {
@@ -28,20 +24,15 @@ export class GeoJSONShapesData implements ShapesData {
   }
 
   getSize(): number {
-    return this._multiPolygons.length;
+    return this._geometry.shapePolygonOffsets.length - 1;
   }
 
   getNames(): string[] | undefined {
     return this._names;
   }
 
-  loadMultiPolygons(options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  }): Promise<MultiPolygon[]> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    return Promise.resolve(this._multiPolygons);
+  loadGeometry(): Promise<ShapesGeometry> {
+    return Promise.resolve(this._geometry);
   }
 
   close(): void {}

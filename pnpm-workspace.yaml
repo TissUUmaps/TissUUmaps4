@@ -2,10 +2,13 @@ packages:
   - apps/*
   - packages/*
 
-onlyBuiltDependencies:
-  - "@swc/core"
-  - canvas
-  - core-js
-  - core-js-pure
-  - esbuild
-  - omezarr-tilesource
+allowBuilds:
+  "@swc/core": true
+  canvas: true
+  core-js: true
+  omezarr-tilesource: true
+
+minimumReleaseAge: 1440
+
+minimumReleaseAgeExclude:
+  - "@types/node@26.0.1"

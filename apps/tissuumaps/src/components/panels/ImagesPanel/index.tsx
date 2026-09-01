@@ -21,7 +21,8 @@ import {
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { cn } from "@/lib/utils";
-import { useTissUUmaps } from "@/store";
+import { useAppStore } from "@/stores/app";
+import { useProjectStore } from "@/stores/project";
 
 import { ImageSettingsWidget } from "./ImageSettingsWidget";
 
@@ -30,11 +31,12 @@ export type ImagesPanelProps = {
 };
 
 export function ImagesPanel({ className }: ImagesPanelProps) {
-  const images = useTissUUmaps((state) => state.images);
-  const layers = useTissUUmaps((state) => state.layers);
-  const imageDataProviders = useTissUUmaps((state) => state.imageDataProviders);
-  const addImage = useTissUUmaps((state) => state.addImage);
-  const moveImage = useTissUUmaps((state) => state.moveImage);
+  const imageDataProviders = useAppStore((state) => state.imageDataProviders);
+
+  const layers = useProjectStore((state) => state.layers);
+  const images = useProjectStore((state) => state.images);
+  const addImage = useProjectStore((state) => state.addImage);
+  const moveImage = useProjectStore((state) => state.moveImage);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
@@ -56,13 +58,15 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
       </DragDropProvider>
       <AddDataObjectDialog
         title="Add image"
+        layers={layers}
         dataProviders={imageDataProviders}
-        onAdd={(name, _type, dataSource) => {
+        onAdd={(name, layerId, dataSource) => {
+          if (!layerId) return;
           const image = createImage({
             id: crypto.randomUUID(),
             name,
             dataSource,
-            layer: layers[0]!.id, // FIXME
+            layer: layerId,
           });
           addImage(image);
         }}
@@ -77,10 +81,10 @@ type ImageAccordionItemProps = {
 };
 
 function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
-  const imageDataProviders = useTissUUmaps((state) => state.imageDataProviders);
-  const updateImage = useTissUUmaps((state) => state.updateImage);
-  const deleteImage = useTissUUmaps((state) => state.deleteImage);
-  const loadImage = useTissUUmaps((state) => state.loadImage);
+  const imageDataProviders = useAppStore((state) => state.imageDataProviders);
+
+  const updateImage = useProjectStore((state) => state.updateImage);
+  const deleteImage = useProjectStore((state) => state.deleteImage);
 
   const { ref, handleRef } = useSortable({ id: image.id, index });
 
@@ -144,8 +148,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             dataSource={image.dataSource}
             dataProviders={imageDataProviders}
             onDataSourceChange={(newDataSource) => {
-              // TODO signal, progress callback
-              loadImage(image.id, { newDataSource }).catch(console.error);
+              updateImage(image.id, { dataSource: newDataSource });
             }}
             className="bg-card"
           />

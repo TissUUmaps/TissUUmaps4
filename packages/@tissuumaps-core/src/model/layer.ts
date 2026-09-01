@@ -1,6 +1,6 @@
 import { type Model, type RawModel, createModel } from "./base";
 import { identityTransform } from "./constants";
-import { type SimilarityTransform } from "./types";
+import type { SimilarityTransform } from "./primitives";
 
 /**
  * Default values for {@link RawLayer}
@@ -50,10 +50,12 @@ export interface RawLayer extends RawModel {
   /**
    * Layer-level point size scaling factor
    *
-   * A unitless scaling factor by which all point sizes are multiplied.
+   * A unitless scaling factor by which the size of every point rendered on this
+   * layer is multiplied, for adjusting point sizes per layer.
    *
-   * Can be used to adjust the size of all points in a layer relative to other layers.
-   * Note that point sizes are also affected by {@link "./project".RawProject.renderOptions} as well as {@link "./points".RawPoints}-specific settings.
+   * Point sizes are also affected by the project-global
+   * {@link WebGLPointsRenderOptions.globalPointSizeFactor} and by the
+   * {@link RawPoints}-specific size settings.
    *
    * @defaultValue {@link layerDefaults.pointSizeFactor}
    */
