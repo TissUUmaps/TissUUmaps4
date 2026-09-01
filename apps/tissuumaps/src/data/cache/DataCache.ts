@@ -19,6 +19,19 @@ import { SharedOperation } from "./SharedOperation";
 import type { DataWrapperBase } from "./wrappers/DataWrapperBase";
 
 /**
+ * Minimum delay between progress-driven data ref publications, in milliseconds
+ *
+ * Data providers can report progress extremely frequently (per chunk or even
+ * per feature — potentially hundreds of thousands of times for large datasets).
+ * Publishing every report would replace the entry's data ref and re-render all
+ * of its subscribers per report, making loading unusably slow, so publications
+ * are coalesced: the first report is published right away, then at most one per
+ * this interval, with a trailing publication so the latest report is never
+ * lost.
+ */
+const PROGRESS_PUBLISH_INTERVAL_MS = 100;
+
+/**
  * Loaded data as handed out by a data cache: the data's own interface, plus the
  * lifetime controls of {@link DataWrapperBase}
  */
@@ -382,27 +395,50 @@ export class DataCache<
         return this._wrapData(data);
       }),
     };
+    let latestProgress = 0;
+    let latestTotal = 0;
+    let lastPublishTime = -Infinity;
+    let trailingPublishTimer: ReturnType<typeof setTimeout> | undefined;
+    const publishLatestProgress = () => {
+      lastPublishTime = performance.now();
+      if (newEntry.dataRef.status === "loading") {
+        newEntry.dataRef = {
+          promise: dataPromise,
+          status: "loading",
+          progress: latestProgress,
+          total: latestTotal,
+        };
+        this._notifyObjectDataRefsChanged(newEntry);
+      }
+    };
     newEntry.loadOp
       .observe({
         onProgress: (progress, total) => {
-          if (newEntry.dataRef.status === "loading") {
-            newEntry.dataRef = {
-              promise: dataPromise,
-              status: "loading",
-              progress,
-              total,
-            };
-            this._notifyObjectDataRefsChanged(newEntry);
+          latestProgress = progress;
+          latestTotal = total;
+          if (trailingPublishTimer !== undefined) {
+            return; // the pending publication picks up the latest report
+          }
+          const elapsed = performance.now() - lastPublishTime;
+          if (elapsed >= PROGRESS_PUBLISH_INTERVAL_MS) {
+            publishLatestProgress();
+          } else {
+            trailingPublishTimer = setTimeout(() => {
+              trailingPublishTimer = undefined;
+              publishLatestProgress();
+            }, PROGRESS_PUBLISH_INTERVAL_MS - elapsed);
           }
         },
       })
       .then(
         (data) => {
+          clearTimeout(trailingPublishTimer);
           newEntry.dataRef = { promise: dataPromise, status: "loaded", data };
           this._notifyObjectDataRefsChanged(newEntry);
           return data;
         },
         (error) => {
+          clearTimeout(trailingPublishTimer);
           newEntry.dataRef = { promise: dataPromise, status: "error", error };
           this._notifyObjectDataRefsChanged(newEntry);
           throw error;

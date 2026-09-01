@@ -619,6 +619,37 @@ describe("DataCache", () => {
       });
     });
 
+    it("coalesces frequent progress reports into throttled publications", () => {
+      vi.useFakeTimers();
+      try {
+        const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
+        const { dataProvider, calls } = createTestDataProvider();
+        const object = createObject("a", { type: "test", url: "a.test" });
+
+        void dataCache.load(object, createContext(dataProvider));
+        onObjectDataRefsChanged.mockClear();
+        const onProgress = calls.at(-1)!.options!.onProgress!;
+
+        // The first report is published right away; the following reports are
+        // coalesced into one trailing publication carrying the latest report.
+        onProgress(1, 5);
+        onProgress(2, 5);
+        onProgress(3, 5);
+        expect(onObjectDataRefsChanged).toHaveBeenCalledOnce();
+        expect(
+          onObjectDataRefsChanged.mock.lastCall![0].get("a"),
+        ).toMatchObject({ status: "loading", progress: 1, total: 5 });
+
+        vi.runAllTimers();
+        expect(onObjectDataRefsChanged).toHaveBeenCalledTimes(2);
+        expect(
+          onObjectDataRefsChanged.mock.lastCall![0].get("a"),
+        ).toMatchObject({ status: "loading", progress: 3, total: 5 });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("ignores progress reported after the load settled", async () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
