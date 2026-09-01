@@ -1,4 +1,5 @@
 import type { ImageDataSource } from "../model/image";
+import type { Color } from "../model/primitives";
 import type { Data, DataProvider } from "./base";
 
 /**
@@ -27,9 +28,6 @@ export interface ImageData extends Data {
   /** Returns the number of channels in the image, or undefined if not multi-channel */
   getSizeC(): number | undefined;
 
-  /** Returns the names of the image's channels, or undefined if not multi-channel */
-  getChannelNames(): string[] | undefined;
-
   /**
    * Returns the tile source of a channel, or the only tile source of image data that is not multi-channel
    *
@@ -41,6 +39,18 @@ export interface ImageData extends Data {
    * passed for image data that is not multi-channel, or if `c` is out of bounds
    */
   getTileSource(c?: number): string | TileSourceConfig | CustomTileSource;
+
+  /** Returns the name of a specific channel, or undefined if not multi-channel */
+  getChannelName?: (c: number) => string | undefined;
+
+  /** Returns the visibility of a specific channel, or undefined if not multi-channel or not available */
+  getChannelVisibility?: (c: number) => boolean | undefined;
+
+  /** Returns the opacity of a specific channel, or undefined if not multi-channel or not available */
+  getChannelOpacity?: (c: number) => number | undefined;
+
+  /** Returns the color of a specific channel, or undefined if not multi-channel or notavailable */
+  getChannelColor?: (c: number) => Color | undefined;
 }
 
 /** Configuration object accepted by OpenSeadragon as a tile source */

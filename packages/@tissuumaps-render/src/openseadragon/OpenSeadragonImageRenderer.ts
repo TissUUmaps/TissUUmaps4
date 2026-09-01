@@ -152,13 +152,17 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     c: number,
   ): Color | undefined {
     if (
-      ref.data.getSizeC() === undefined ||
-      ref.object.channels === undefined
+      ref.data.getSizeC() !== undefined &&
+      ref.object.channels !== undefined
     ) {
-      return undefined;
+      const channel = ref.object.channels[c];
+      const channelColor =
+        channel?.color !== undefined
+          ? channel.color
+          : ref.data.getChannelColor?.(c);
+      return channelColor;
     }
-    const { color: channelColor } = ref.object.channels[c] ?? {};
-    return channelColor;
+    return super.getTiledImageColor(ref, c);
   }
 
   /**
@@ -186,10 +190,16 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
       ref.data.getSizeC() !== undefined &&
       ref.object.channels !== undefined
     ) {
-      const {
-        visibility: channelVisibility = true,
-        opacity: channelOpacity = 1.0,
-      } = ref.object.channels[c] ?? {};
+      const channel = ref.object.channels[c];
+      const channelVisibility =
+        channel?.visibility !== undefined
+          ? channel.visibility
+          : (ref.data.getChannelVisibility?.(c) ?? true);
+      const channelOpacity =
+        channel?.opacity !== undefined
+          ? channel.opacity
+          : (ref.data.getChannelOpacity?.(c) ?? 1.0);
+
       opacity *= channelVisibility ? channelOpacity : 0;
     }
     return opacity;
