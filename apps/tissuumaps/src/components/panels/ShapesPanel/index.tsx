@@ -1,7 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { MathUtils, type Shapes, createShapes } from "@tissuumaps/core";
 
@@ -23,7 +23,7 @@ import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useShapesData } from "@/hooks/useData";
-import { useFocusObject } from "@/hooks/useFocusObject";
+import { useFocusObjectHandler } from "@/hooks/useFocusObjectHandler";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -46,12 +46,16 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
 
   // Controlled accordion so notifications can expand a specific shape layer.
   const [openIds, setOpenIds] = useState<string[]>([]);
-  useFocusObject("shapes", (id) =>
-    setOpenIds((prev) => (prev.includes(id) ? prev : [...prev, id])),
-  );
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusObjectHandler("shapes", (id) => {
+    setOpenIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    containerRef.current
+      ?.querySelector(`[data-object-id="${CSS.escape(id)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  });
 
   return (
-    <div className={cn("flex flex-col gap-y-2", className)}>
+    <div ref={containerRef} className={cn("flex flex-col gap-y-2", className)}>
       <DragDropProvider
         onDragEnd={(event) => {
           const { source, canceled } = event.operation;
@@ -126,24 +130,8 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
 
   const { ref, handleRef } = useSortable({ id: shapes.id, index });
 
-  // Compose the sortable ref with our own so a notification click can scroll
-  // this item into view.
-  const itemElRef = useRef<HTMLDivElement | null>(null);
-  const setItemRef = useCallback(
-    (element: HTMLDivElement | null) => {
-      itemElRef.current = element;
-      ref(element);
-    },
-    [ref],
-  );
-  useFocusObject("shapes", (id) => {
-    if (id === shapes.id) {
-      itemElRef.current?.scrollIntoView({ block: "nearest" });
-    }
-  });
-
   return (
-    <div ref={setItemRef}>
+    <div ref={ref} data-object-id={shapes.id}>
       <AccordionItem
         value={shapes.id}
         className="border rounded-md bg-sidebar p-2"

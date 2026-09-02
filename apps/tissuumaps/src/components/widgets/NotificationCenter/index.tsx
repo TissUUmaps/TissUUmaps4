@@ -17,7 +17,7 @@ import type { Data, DataRef } from "@tissuumaps/core";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Toaster } from "@/components/ui/sonner";
-import type { DataObjectKind } from "@/hooks/useFocusObject";
+import type { DataObjectKind } from "@/hooks/useFocusObjectHandler";
 import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 

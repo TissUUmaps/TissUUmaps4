@@ -22,8 +22,8 @@ import { ViewerPanel } from "./components/panels/ViewerPanel";
 import { NotificationCenter } from "./components/widgets/NotificationCenter";
 import {
   type DataObjectKind,
-  requestFocusObject,
-} from "./hooks/useFocusObject";
+  focusObject,
+} from "./hooks/useFocusObjectHandler";
 import { useSettingsStore } from "./stores/settings";
 
 /** Maps a data object kind to its dockview panel ID */
@@ -160,7 +160,7 @@ export function App() {
 
   const openObject = useCallback((kind: DataObjectKind, objectId: string) => {
     dockviewApiRef.current?.getPanel(panelIdByKind[kind])?.api.setActive();
-    requestFocusObject(kind, objectId);
+    focusObject(kind, objectId);
   }, []);
 
   return (

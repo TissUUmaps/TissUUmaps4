@@ -1,7 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { GripVertical, Trash2Icon } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { type Table, createTable } from "@tissuumaps/core";
 
@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { useFocusObject } from "@/hooks/useFocusObject";
+import { useFocusObjectHandler } from "@/hooks/useFocusObjectHandler";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -36,12 +36,16 @@ export function TablesPanel({ className }: TablesPanelProps) {
 
   // Controlled accordion so notifications can expand a specific table.
   const [openIds, setOpenIds] = useState<string[]>([]);
-  useFocusObject("table", (id) =>
-    setOpenIds((prev) => (prev.includes(id) ? prev : [...prev, id])),
-  );
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusObjectHandler("table", (id) => {
+    setOpenIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    containerRef.current
+      ?.querySelector(`[data-object-id="${CSS.escape(id)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  });
 
   return (
-    <div className={cn("flex flex-col gap-y-2", className)}>
+    <div ref={containerRef} className={cn("flex flex-col gap-y-2", className)}>
       <DragDropProvider
         onDragEnd={(event) => {
           const { source, canceled } = event.operation;
@@ -92,24 +96,8 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
 
   const { ref, handleRef } = useSortable({ id: table.id, index });
 
-  // Compose the sortable ref with our own so a notification click can scroll
-  // this item into view.
-  const itemElRef = useRef<HTMLDivElement | null>(null);
-  const setItemRef = useCallback(
-    (element: HTMLDivElement | null) => {
-      itemElRef.current = element;
-      ref(element);
-    },
-    [ref],
-  );
-  useFocusObject("table", (id) => {
-    if (id === table.id) {
-      itemElRef.current?.scrollIntoView({ block: "nearest" });
-    }
-  });
-
   return (
-    <div ref={setItemRef}>
+    <div ref={ref} data-object-id={table.id}>
       <AccordionItem
         value={table.id}
         className="border rounded-md bg-sidebar p-2"
