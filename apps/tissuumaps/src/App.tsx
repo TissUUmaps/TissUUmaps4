@@ -10,6 +10,7 @@ import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import "./App.css";
+import { DialogProvider } from "./components/dialogs";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
 import { LabelsPanel } from "./components/panels/LabelsPanel";
 import { PointsPanel } from "./components/panels/PointsPanel";
@@ -129,22 +130,26 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
 /**
  * The application's root component
  *
- * Renders the dockview layout, and applies Tailwind CSS's `dark` class
- * according to the settings store.
+ * Renders the dockview layout within the app-level providers, and applies
+ * Tailwind CSS's `dark` class according to the settings store.
  */
 export function App() {
   const dark = useSettingsStore((state) => state.dark);
 
   return (
-    // https://tailwindcss.com/docs/dark-mode
-    <div className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}>
-      <DockviewReact
-        theme={dockviewTheme}
-        components={dockviewComponents}
-        tabComponents={dockviewTabComponents}
-        rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
-        onReady={onDockviewReady}
-      />
-    </div>
+    <DialogProvider>
+      {/* https://tailwindcss.com/docs/dark-mode */}
+      <div
+        className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}
+      >
+        <DockviewReact
+          theme={dockviewTheme}
+          components={dockviewComponents}
+          tabComponents={dockviewTabComponents}
+          rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
+          onReady={onDockviewReady}
+        />
+      </div>
+    </DialogProvider>
   );
 }

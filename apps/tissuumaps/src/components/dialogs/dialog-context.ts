@@ -1,8 +1,20 @@
 import { createContext, useCallback, useContext } from "react";
 
-import type { AlertParams } from "./alert-dialog";
-import type { ConfirmParams } from "./confirm-dialog";
-import type { PromptParams } from "./prompt-dialog";
+import type { AlertDialogProps } from "./alert-dialog";
+import type { ConfirmDialogProps } from "./confirm-dialog";
+import type { PromptDialogProps } from "./prompt-dialog";
+
+// The caller-facing fields of each dialog: everything except the open state
+// and the callbacks, which are owned by the DialogProvider.
+export type AlertParams = Omit<AlertDialogProps, "open" | "onDismiss">;
+export type ConfirmParams = Omit<
+  ConfirmDialogProps,
+  "open" | "onCancel" | "onConfirm"
+>;
+export type PromptParams = Omit<
+  PromptDialogProps,
+  "open" | "onCancel" | "onConfirm"
+>;
 
 export type DialogAction =
   | ({ type: "alert" } & AlertParams)

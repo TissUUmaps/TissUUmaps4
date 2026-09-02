@@ -1,16 +1,17 @@
 import { type ReactNode, useCallback, useReducer, useRef } from "react";
 
-import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog";
-
-import { AlertContent, type AlertParams } from "./alert-dialog";
-import { ConfirmContent, type ConfirmParams } from "./confirm-dialog";
+import { AlertDialog } from "./alert-dialog";
+import { ConfirmDialog } from "./confirm-dialog";
 import {
+  type AlertParams,
+  type ConfirmParams,
   type DialogAction,
   DialogContext,
   type DialogContextType,
   type DialogType,
+  type PromptParams,
 } from "./dialog-context";
-import { PromptContent, type PromptParams } from "./prompt-dialog";
+import { PromptDialog } from "./prompt-dialog";
 
 type DialogState = {
   open: boolean;
@@ -43,6 +44,7 @@ function dialogReducer(state: DialogState, action: ReducerAction): DialogState {
  * Orchestrates the imperative dialog API: it owns the open state and the
  * pending promise, and renders the matching dialog for the active type. The
  * presentation and per-type behavior live in the `*-dialog` components.
+ * Because dialogs open imperatively, `AlertDialogTrigger` is never used.
  */
 export function DialogProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(dialogReducer, {
@@ -109,46 +111,40 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   return (
     <DialogContext.Provider value={dialog}>
       {children}
-      <AlertDialog
-        open={state.open}
-        onOpenChange={(open) => {
-          if (!open) close();
-        }}
-      >
-        <AlertDialogContent>
-          {state.type === "alert" && (
-            <AlertContent
-              title={state.title ?? ""}
-              body={state.body}
-              actionButton={state.actionButton}
-              onDismiss={close}
-            />
-          )}
-          {state.type === "confirm" && (
-            <ConfirmContent
-              title={state.title ?? ""}
-              body={state.body}
-              cancelButton={state.cancelButton}
-              actionButton={state.actionButton}
-              onCancel={close}
-              onConfirm={() => confirm()}
-            />
-          )}
-          {state.type === "prompt" && (
-            <PromptContent
-              key={state.openId}
-              title={state.title ?? ""}
-              body={state.body}
-              cancelButton={state.cancelButton}
-              actionButton={state.actionButton}
-              defaultValue={state.defaultValue}
-              inputProps={state.inputProps}
-              onCancel={close}
-              onConfirm={confirm}
-            />
-          )}
-        </AlertDialogContent>
-      </AlertDialog>
+      {state.type === "alert" && (
+        <AlertDialog
+          open={state.open}
+          title={state.title ?? ""}
+          body={state.body}
+          actionButton={state.actionButton}
+          onDismiss={close}
+        />
+      )}
+      {state.type === "confirm" && (
+        <ConfirmDialog
+          open={state.open}
+          title={state.title ?? ""}
+          body={state.body}
+          cancelButton={state.cancelButton}
+          actionButton={state.actionButton}
+          onCancel={close}
+          onConfirm={() => confirm()}
+        />
+      )}
+      {state.type === "prompt" && (
+        <PromptDialog
+          key={state.openId}
+          open={state.open}
+          title={state.title ?? ""}
+          body={state.body}
+          cancelButton={state.cancelButton}
+          actionButton={state.actionButton}
+          defaultValue={state.defaultValue}
+          inputProps={state.inputProps}
+          onCancel={close}
+          onConfirm={confirm}
+        />
+      )}
     </DialogContext.Provider>
   );
 }

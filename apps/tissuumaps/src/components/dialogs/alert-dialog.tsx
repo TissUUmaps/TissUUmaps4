@@ -1,19 +1,25 @@
+import type { ReactNode } from "react";
+
 import {
+  AlertDialogAction,
+  AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialog as AlertDialogRoot,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 
-export interface AlertParams {
+export interface AlertDialogProps {
   title: string;
-  body?: string;
-  actionButton?: string;
-}
-
-interface AlertContentProps extends AlertParams {
-  /** Dismisses the dialog. An alert resolves to `true`. */
+  body?: ReactNode;
+  actionButton?: ReactNode;
+  /** Whether the dialog is shown. */
+  open: boolean;
+  /**
+   * Dismisses the dialog (action button, escape, or backdrop). An alert
+   * resolves to `true`.
+   */
   onDismiss: () => void;
 }
 
@@ -21,23 +27,33 @@ interface AlertContentProps extends AlertParams {
  * Acknowledgement dialog with a single button. Resolves to `true` once
  * dismissed.
  */
-export function AlertContent({
+export function AlertDialog({
   title,
   body,
   actionButton,
+  open,
   onDismiss,
-}: AlertContentProps) {
+}: AlertDialogProps) {
   return (
-    <>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{title}</AlertDialogTitle>
-        {body ? <AlertDialogDescription>{body}</AlertDialogDescription> : null}
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <Button type="button" variant="outline" onClick={onDismiss}>
-          {actionButton ?? "Okay"}
-        </Button>
-      </AlertDialogFooter>
-    </>
+    <AlertDialogRoot
+      open={open}
+      onOpenChange={(open) => {
+        if (!open) onDismiss();
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          {body ? (
+            <AlertDialogDescription>{body}</AlertDialogDescription>
+          ) : null}
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogAction onClick={onDismiss}>
+            {actionButton ?? "Okay"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialogRoot>
   );
 }

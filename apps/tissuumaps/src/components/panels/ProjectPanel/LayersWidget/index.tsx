@@ -166,8 +166,6 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
                 void confirm({
                   title: "Delete layer",
                   body: "Are you sure you want to delete this layer? This action cannot be undone.",
-                  cancelButton: "No",
-                  actionButton: "Yes",
                 }).then((confirmed) => {
                   if (confirmed) {
                     deleteLayer(layer.id);

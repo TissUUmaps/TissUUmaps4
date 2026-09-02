@@ -100,10 +100,10 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   } = useLabelsDataWidget(labels);
 
   const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
-  const confirm = useConfirm();
 
   const updateLabels = useProjectStore((state) => state.updateLabels);
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
+  const confirm = useConfirm();
 
   const labelsData = useLabelsData(labels.id);
 
@@ -159,8 +159,6 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
                 void confirm({
                   title: "Delete labels",
                   body: "Are you sure you want to delete these labels? This action cannot be undone.",
-                  cancelButton: "No",
-                  actionButton: "Yes",
                 }).then((confirmed) => {
                   if (confirmed) {
                     deleteLabels(labels.id);

@@ -100,10 +100,10 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
   } = useShapesDataWidget(shapes);
 
   const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
-  const confirm = useConfirm();
 
   const updateShapes = useProjectStore((state) => state.updateShapes);
   const deleteShapes = useProjectStore((state) => state.deleteShapes);
+  const confirm = useConfirm();
 
   const shapesData = useShapesData(shapes.id);
 
@@ -159,8 +159,6 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
                 void confirm({
                   title: "Delete shape cloud",
                   body: "Are you sure you want to delete this shape cloud? This action cannot be undone.",
-                  cancelButton: "No",
-                  actionButton: "Yes",
                 }).then((confirmed) => {
                   if (confirmed) {
                     deleteShapes(shapes.id);

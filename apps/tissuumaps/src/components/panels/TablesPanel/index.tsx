@@ -98,8 +98,6 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
                 void confirm({
                   title: "Delete table",
                   body: "Are you sure you want to delete this table? This action cannot be undone.",
-                  cancelButton: "No",
-                  actionButton: "Yes",
                 }).then((confirmed) => {
                   if (confirmed) {
                     deleteTable(table.id);

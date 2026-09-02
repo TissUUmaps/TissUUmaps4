@@ -37,8 +37,6 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
     void confirm({
       title: "Clear project",
       body: "Are you sure you want to clear the project? All unsaved changes will be lost.",
-      cancelButton: "No",
-      actionButton: "Yes",
     }).then((confirmed) => {
       if (confirmed) {
         clearProject();

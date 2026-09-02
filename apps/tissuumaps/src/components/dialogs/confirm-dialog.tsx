@@ -1,20 +1,27 @@
+import type { ReactNode } from "react";
+
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 
-export interface ConfirmParams {
+export interface ConfirmDialogProps {
   title: string;
-  body?: string;
-  cancelButton?: string;
-  actionButton?: string;
-}
-
-interface ConfirmContentProps extends ConfirmParams {
-  /** Rejects the prompt. Resolves to `false`. */
+  body?: ReactNode;
+  cancelButton?: ReactNode;
+  actionButton?: ReactNode;
+  /** Whether the dialog is shown. */
+  open: boolean;
+  /**
+   * Rejects the prompt (cancel button, escape, or backdrop). Resolves to
+   * `false`.
+   */
   onCancel: () => void;
   /** Accepts the prompt. Resolves to `true`. */
   onConfirm: () => void;
@@ -24,28 +31,36 @@ interface ConfirmContentProps extends ConfirmParams {
  * Yes/no dialog. Resolves to `true` when confirmed and `false` when
  * cancelled or dismissed.
  */
-export function ConfirmContent({
+export function ConfirmDialog({
   title,
   body,
   cancelButton,
   actionButton,
+  open,
   onCancel,
   onConfirm,
-}: ConfirmContentProps) {
+}: ConfirmDialogProps) {
   return (
-    <>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{title}</AlertDialogTitle>
-        {body ? <AlertDialogDescription>{body}</AlertDialogDescription> : null}
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          {cancelButton ?? "Cancel"}
-        </Button>
-        <Button type="button" onClick={onConfirm}>
-          {actionButton ?? "Okay"}
-        </Button>
-      </AlertDialogFooter>
-    </>
+    <AlertDialog
+      open={open}
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          {body ? (
+            <AlertDialogDescription>{body}</AlertDialogDescription>
+          ) : null}
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{cancelButton ?? "No"}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>
+            {actionButton ?? "Yes"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

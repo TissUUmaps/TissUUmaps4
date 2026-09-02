@@ -100,10 +100,10 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   } = usePointsDataWidget(points);
 
   const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
-  const confirm = useConfirm();
 
   const updatePoints = useProjectStore((state) => state.updatePoints);
   const deletePoints = useProjectStore((state) => state.deletePoints);
+  const confirm = useConfirm();
 
   const pointsData = usePointsData(points.id);
 
@@ -177,8 +177,6 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
                 void confirm({
                   title: "Delete point cloud",
                   body: "Are you sure you want to delete this point cloud? This action cannot be undone.",
-                  cancelButton: "No",
-                  actionButton: "Yes",
                 }).then((confirmed) => {
                   if (confirmed) {
                     deletePoints(points.id);
