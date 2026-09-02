@@ -1,10 +1,4 @@
-import {
-  type DetailedHTMLProps,
-  type InputHTMLAttributes,
-  type PropsWithoutRef,
-  type ReactNode,
-  useRef,
-} from "react";
+import { type ComponentProps, type ReactNode, useRef } from "react";
 
 import {
   AlertDialog,
@@ -24,8 +18,10 @@ export interface PromptDialogProps {
   cancelButton?: ReactNode;
   actionButton?: ReactNode;
   defaultValue?: string;
-  inputProps?: PropsWithoutRef<
-    DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>
+  /** Extra props for the input, except those owned by the dialog itself. */
+  inputProps?: Omit<
+    ComponentProps<"input">,
+    "ref" | "name" | "defaultValue" | "value" | "onChange"
   >;
   /** Whether the dialog is shown. */
   open: boolean;

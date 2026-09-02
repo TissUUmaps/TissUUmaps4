@@ -25,19 +25,11 @@ function dialogReducer(state: DialogState, action: ReducerAction): DialogState {
   if (action.type === "close") {
     return { ...state, open: false };
   }
-  // Reset per-dialog fields so values don't leak between dialog types.
-  // `openId` increments on every open so uncontrolled content (e.g. the prompt
-  // input) remounts rather than retaining the previous dialog's value.
-  return {
-    open: true,
-    openId: state.openId + 1,
-    body: undefined,
-    cancelButton: undefined,
-    actionButton: undefined,
-    defaultValue: undefined,
-    inputProps: undefined,
-    ...action,
-  };
+  // The previous state is deliberately not spread here, so that fields of the
+  // previous dialog don't leak into the new one. `openId` increments on every
+  // open so uncontrolled content (e.g. the prompt input) remounts rather than
+  // retaining the previous dialog's value.
+  return { open: true, openId: state.openId + 1, ...action };
 }
 
 /**

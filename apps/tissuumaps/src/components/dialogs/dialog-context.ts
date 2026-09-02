@@ -36,7 +36,9 @@ export const DialogContext = createContext<DialogContextType | null>(null);
 function useDialogContext() {
   const context = useContext(DialogContext);
   if (context === null) {
-    throw new Error("useDialogContext must be used within DialogProvider");
+    throw new Error(
+      "useAlert, useConfirm and usePrompt must be used within DialogProvider",
+    );
   }
   return context;
 }
