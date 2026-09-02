@@ -110,7 +110,7 @@ function AlertDialogMedia({
 function AlertDialogTitle({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
+}: AlertDialogPrimitive.Title.Props) {
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
@@ -126,7 +126,7 @@ function AlertDialogTitle({
 function AlertDialogDescription({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Description>) {
+}: AlertDialogPrimitive.Description.Props) {
   return (
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
@@ -139,16 +139,19 @@ function AlertDialogDescription({
   );
 }
 
+/**
+ * The confirming button of an alert dialog.
+ *
+ * Unlike `AlertDialogCancel`, this is a plain button that does not close the
+ * dialog on its own: closing is left to the caller, so that the dialog stays
+ * open until the confirmed action has been handled.
+ */
 function AlertDialogAction({
   className,
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
-    <Button
-      data-slot="alert-dialog-action"
-      className={cn(className)}
-      {...props}
-    />
+    <Button data-slot="alert-dialog-action" className={className} {...props} />
   );
 }
 
@@ -162,7 +165,7 @@ function AlertDialogCancel({
   return (
     <AlertDialogPrimitive.Close
       data-slot="alert-dialog-cancel"
-      className={cn(className)}
+      className={className}
       render={<Button variant={variant} size={size} />}
       {...props}
     />
