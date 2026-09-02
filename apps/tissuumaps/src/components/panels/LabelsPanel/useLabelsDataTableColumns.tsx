@@ -20,7 +20,6 @@ import { useProjectStore } from "@/stores/project";
 
 export function useLabelsDataTableColumns(
   labels: Labels,
-  currentTable: string | null,
   currentGroupByColumn: string | null,
 ) {
   const colorMaps = useProjectStore((state) => state.colorMaps);
@@ -35,7 +34,6 @@ export function useLabelsDataTableColumns(
       if (
         getActiveConfigSource(labels.labelColor) === "groupBy" &&
         isGroupByConfig(labels.labelColor) &&
-        labels.dataSource.table === currentTable &&
         labels.labelColor.groupBy.column === currentGroupByColumn
       ) {
         let groupColors: Map<string, Color> | undefined;
@@ -81,7 +79,6 @@ export function useLabelsDataTableColumns(
       if (
         getActiveConfigSource(labels.labelVisibility) === "groupBy" &&
         isGroupByConfig(labels.labelVisibility) &&
-        labels.dataSource.table === currentTable &&
         labels.labelVisibility.groupBy.column === currentGroupByColumn
       ) {
         let groupVisibilities: Map<string, boolean> | undefined;
@@ -116,7 +113,6 @@ export function useLabelsDataTableColumns(
       if (
         getActiveConfigSource(labels.labelOpacity) === "groupBy" &&
         isGroupByConfig(labels.labelOpacity) &&
-        labels.dataSource.table === currentTable &&
         labels.labelOpacity.groupBy.column === currentGroupByColumn
       ) {
         let groupOpacities: Map<string, number> | undefined;
@@ -148,7 +144,6 @@ export function useLabelsDataTableColumns(
 
       return columnDefs;
     }, [
-      currentTable,
       currentGroupByColumn,
       colorMaps,
       visibilityMaps,
@@ -156,7 +151,6 @@ export function useLabelsDataTableColumns(
       labels.labelColor,
       labels.labelVisibility,
       labels.labelOpacity,
-      labels.dataSource.table,
     ]);
 
   return { extraTableGroupColumnDefs };

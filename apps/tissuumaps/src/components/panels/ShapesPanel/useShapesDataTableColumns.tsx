@@ -23,7 +23,6 @@ import { useProjectStore } from "@/stores/project";
 
 export function useShapesDataTableColumns(
   shapes: Shapes,
-  currentTable: string | null,
   currentGroupByColumn: string | null,
 ) {
   const colorMaps = useProjectStore((state) => state.colorMaps);
@@ -38,7 +37,6 @@ export function useShapesDataTableColumns(
       if (
         getActiveConfigSource(shapes.shapeFillColor) === "groupBy" &&
         isGroupByConfig(shapes.shapeFillColor) &&
-        shapes.dataSource.table === currentTable &&
         shapes.shapeFillColor.groupBy.column === currentGroupByColumn
       ) {
         let groupFillColors: Map<string, Color> | undefined;
@@ -84,7 +82,6 @@ export function useShapesDataTableColumns(
       if (
         getActiveConfigSource(shapes.shapeFillVisibility) === "groupBy" &&
         isGroupByConfig(shapes.shapeFillVisibility) &&
-        shapes.dataSource.table === currentTable &&
         shapes.shapeFillVisibility.groupBy.column === currentGroupByColumn
       ) {
         let groupFillVisibilities: Map<string, boolean> | undefined;
@@ -121,7 +118,6 @@ export function useShapesDataTableColumns(
       if (
         getActiveConfigSource(shapes.shapeFillOpacity) === "groupBy" &&
         isGroupByConfig(shapes.shapeFillOpacity) &&
-        shapes.dataSource.table === currentTable &&
         shapes.shapeFillOpacity.groupBy.column === currentGroupByColumn
       ) {
         let groupFillOpacities: Map<string, number> | undefined;
@@ -156,7 +152,6 @@ export function useShapesDataTableColumns(
       if (
         getActiveConfigSource(shapes.shapeStrokeColor) === "groupBy" &&
         isGroupByConfig(shapes.shapeStrokeColor) &&
-        shapes.dataSource.table === currentTable &&
         shapes.shapeStrokeColor.groupBy.column === currentGroupByColumn
       ) {
         let groupStrokeColors: Map<string, Color> | undefined;
@@ -208,7 +203,6 @@ export function useShapesDataTableColumns(
       if (
         getActiveConfigSource(shapes.shapeStrokeVisibility) === "groupBy" &&
         isGroupByConfig(shapes.shapeStrokeVisibility) &&
-        shapes.dataSource.table === currentTable &&
         shapes.shapeStrokeVisibility.groupBy.column === currentGroupByColumn
       ) {
         let groupStrokeVisibilities: Map<string, boolean> | undefined;
@@ -246,7 +240,6 @@ export function useShapesDataTableColumns(
       if (
         getActiveConfigSource(shapes.shapeStrokeOpacity) === "groupBy" &&
         isGroupByConfig(shapes.shapeStrokeOpacity) &&
-        shapes.dataSource.table === currentTable &&
         shapes.shapeStrokeOpacity.groupBy.column === currentGroupByColumn
       ) {
         let groupStrokeOpacities: Map<string, number> | undefined;
@@ -279,7 +272,6 @@ export function useShapesDataTableColumns(
 
       return columnDefs;
     }, [
-      currentTable,
       currentGroupByColumn,
       colorMaps,
       visibilityMaps,
@@ -290,7 +282,6 @@ export function useShapesDataTableColumns(
       shapes.shapeStrokeColor,
       shapes.shapeStrokeVisibility,
       shapes.shapeStrokeOpacity,
-      shapes.dataSource.table,
     ]);
 
   return { extraTableGroupColumnDefs };
