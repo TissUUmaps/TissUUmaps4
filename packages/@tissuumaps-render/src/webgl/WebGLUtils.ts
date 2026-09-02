@@ -1,7 +1,6 @@
 import { mat3 } from "gl-matrix";
 
 import {
-  type Layer,
   type Rect,
   type SimilarityTransform,
   TransformUtils,
@@ -22,17 +21,18 @@ export class WebGLUtils {
    * flip mirrors the entire coordinate system — all objects move to
    * mirrored positions as a group.
    *
-   * @param transform - The data → layer transform
-   * @param layer - Layer providing the layer → world transform
+   * @param objectTransform - The data → layer transform of the object
+   * @param layerTransform - The layer → world transform of the object's layer
+   * @returns The data → world transformation matrix
    */
   static createDataToWorldMatrix(
-    transform: SimilarityTransform,
-    layer: Layer,
+    objectTransform: SimilarityTransform,
+    layerTransform: SimilarityTransform,
   ): mat3 {
-    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(transform);
-    const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
-      layer.transform,
-    );
+    const dataToLayerMatrix =
+      TransformUtils.toSimilarityMatrix(objectTransform);
+    const layerToWorldMatrix =
+      TransformUtils.toSimilarityMatrix(layerTransform);
     const dataToWorldMatrix = mat3.create();
     mat3.multiply(dataToWorldMatrix, layerToWorldMatrix, dataToLayerMatrix);
     return dataToWorldMatrix;
@@ -43,19 +43,20 @@ export class WebGLUtils {
    *
    * Inverse of {@link createDataToWorldMatrix}.
    *
-   * @param transform - The data → layer transform (inverted)
-   * @param layer - Layer providing the layer → world transform (inverted)
+   * @param objectTransform - The data → layer transform of the object (inverted)
+   * @param layerTransform - The layer → world transform of the object's layer (inverted)
+   * @returns The world → data transformation matrix
    */
   static createWorldToDataMatrix(
-    transform: SimilarityTransform,
-    layer: Layer,
+    objectTransform: SimilarityTransform,
+    layerTransform: SimilarityTransform,
   ): mat3 {
     const worldToDataMatrix = mat3.create();
-    const worldToLayerMatrix = TransformUtils.toSimilarityMatrix(
-      layer.transform,
-    );
+    const worldToLayerMatrix =
+      TransformUtils.toSimilarityMatrix(layerTransform);
     mat3.invert(worldToLayerMatrix, worldToLayerMatrix);
-    const layerToDataMatrix = TransformUtils.toSimilarityMatrix(transform);
+    const layerToDataMatrix =
+      TransformUtils.toSimilarityMatrix(objectTransform);
     mat3.invert(layerToDataMatrix, layerToDataMatrix);
     mat3.multiply(worldToDataMatrix, layerToDataMatrix, worldToLayerMatrix);
     return worldToDataMatrix;

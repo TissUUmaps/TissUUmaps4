@@ -1,21 +1,9 @@
 import { mat3, vec2 } from "gl-matrix";
 import { describe, expect, it } from "vitest";
 
-import {
-  type Layer,
-  type Rect,
-  type SimilarityTransform,
-  createLayer,
-  identityTransform,
-} from "@tissuumaps/core";
+import { type Rect, identityTransform } from "@tissuumaps/core";
 
 import { WebGLUtils } from "./WebGLUtils";
-
-function createTestLayer(
-  transform: SimilarityTransform = identityTransform,
-): Layer {
-  return createLayer({ id: "l1", name: "Layer 1", transform });
-}
 
 function transformPoint(m: mat3, x: number, y: number): [number, number] {
   const out = vec2.create();
@@ -36,7 +24,7 @@ describe("WebGLUtils", () => {
     it("returns the identity mapping for identity transforms and no flip", () => {
       const dataToWorldMatrix = WebGLUtils.createDataToWorldMatrix(
         identityTransform,
-        createTestLayer(),
+        identityTransform,
       );
       expectPointClose(transformPoint(dataToWorldMatrix, 2, 3), [2, 3]);
     });
@@ -44,7 +32,7 @@ describe("WebGLUtils", () => {
     it("applies the object's data → layer scale", () => {
       const dataToWorldMatrix = WebGLUtils.createDataToWorldMatrix(
         { flip: false, scale: 2, rotation: 0, translation: { x: 0, y: 0 } },
-        createTestLayer(),
+        identityTransform,
       );
       expectPointClose(transformPoint(dataToWorldMatrix, 1, 1), [2, 2]);
     });
@@ -52,7 +40,7 @@ describe("WebGLUtils", () => {
     it("applies the object's data → layer translation", () => {
       const dataToWorldMatrix = WebGLUtils.createDataToWorldMatrix(
         { flip: false, scale: 1, rotation: 0, translation: { x: 3, y: 4 } },
-        createTestLayer(),
+        identityTransform,
       );
       expectPointClose(transformPoint(dataToWorldMatrix, 2, 3), [5, 7]);
     });
@@ -60,7 +48,7 @@ describe("WebGLUtils", () => {
     it("horizontally flips the data coordinates when flip is set", () => {
       const dataToWorldMatrix = WebGLUtils.createDataToWorldMatrix(
         { ...identityTransform, flip: true },
-        createTestLayer(),
+        identityTransform,
       );
       expectPointClose(transformPoint(dataToWorldMatrix, 2, 3), [-2, 3]);
     });
@@ -68,7 +56,7 @@ describe("WebGLUtils", () => {
     it("applies a 90° rotation counterclockwise", () => {
       const dataToWorldMatrix = WebGLUtils.createDataToWorldMatrix(
         { flip: false, scale: 1, rotation: 90, translation: { x: 0, y: 0 } },
-        createTestLayer(),
+        identityTransform,
       );
       expectPointClose(transformPoint(dataToWorldMatrix, 1, 0), [0, 1]);
     });
@@ -78,12 +66,12 @@ describe("WebGLUtils", () => {
       // data (1, 1) → layer (2, 2) → world (12, 2)
       const dataToWorldMatrix = WebGLUtils.createDataToWorldMatrix(
         { flip: false, scale: 2, rotation: 0, translation: { x: 0, y: 0 } },
-        createTestLayer({
+        {
           flip: false,
           scale: 1,
           rotation: 0,
           translation: { x: 10, y: 0 },
-        }),
+        },
       );
       expectPointClose(transformPoint(dataToWorldMatrix, 1, 1), [12, 2]);
     });
@@ -97,19 +85,19 @@ describe("WebGLUtils", () => {
         rotation: 30,
         translation: { x: 5, y: -3 },
       };
-      const layer = createTestLayer({
+      const layerTransform = {
         flip: false,
         scale: 1.5,
         rotation: -15,
         translation: { x: -4, y: 8 },
-      });
+      };
       const dataToWorldMatrix = WebGLUtils.createDataToWorldMatrix(
         transform,
-        layer,
+        layerTransform,
       );
       const worldToDataMatrix = WebGLUtils.createWorldToDataMatrix(
         transform,
-        layer,
+        layerTransform,
       );
 
       const worldPoint = transformPoint(dataToWorldMatrix, 7, 11);
@@ -124,7 +112,7 @@ describe("WebGLUtils", () => {
     it("undoes the horizontal flip", () => {
       const worldToDataMatrix = WebGLUtils.createWorldToDataMatrix(
         { ...identityTransform, flip: true },
-        createTestLayer(),
+        identityTransform,
       );
       expectPointClose(transformPoint(worldToDataMatrix, 2, 3), [-2, 3]);
     });

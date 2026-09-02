@@ -253,7 +253,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       }
       const worldToDataMatrix = WebGLUtils.createWorldToDataMatrix(
         renderedShapes.ref.object.transform,
-        renderedShapes.ref.layer,
+        renderedShapes.ref.layer.transform,
       );
       this.context.gl.uniformMatrix3x2fv(
         this._uniformLocations.worldToDataMatrix,

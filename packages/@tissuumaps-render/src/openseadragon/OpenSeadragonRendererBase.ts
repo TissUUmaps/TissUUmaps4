@@ -1,6 +1,5 @@
 import { deepEqual } from "fast-equals";
-import { mat3 } from "gl-matrix";
-import OpenSeadragon from "openseadragon";
+import type OpenSeadragon from "openseadragon";
 
 import {
   type Color,
@@ -13,7 +12,6 @@ import {
   type Layer,
   type Rect,
   type TileSourceConfig,
-  TransformUtils,
 } from "@tissuumaps/core";
 
 import type { OpenSeadragonContext } from "./OpenSeadragonContext";
@@ -586,9 +584,13 @@ export abstract class OpenSeadragonRendererBase<
     opacity: number,
   ): void {
     // transform --> flip, width, rotation, position
-    const bounds = tiledImage.getBounds();
-    const transform = OpenSeadragonRendererBase.getTiledImageTransform(
-      ref,
+    // The bounds are taken without rotation, as OpenSeadragon rotates them
+    // around the image center, which would offset the position of any rotated
+    // tiled image and thus trigger a redundant write on every update.
+    const bounds = tiledImage.getBoundsNoRotate();
+    const transform = OpenSeadragonUtils.getTiledImageTransform(
+      ref.object.transform,
+      ref.layer.transform,
       tiledImage.getContentSize(),
     );
     if (tiledImage.getFlip() !== transform.flip) {
@@ -687,48 +689,6 @@ export abstract class OpenSeadragonRendererBase<
     const visibility = ref.layer.visibility && ref.object.visibility;
     const opacity = ref.layer.opacity * ref.object.opacity;
     return visibility ? opacity : 0;
-  }
-
-  /**
-   * Computes the effective flip, width, rotation, and position for a tiled image based on the object reference and its content size
-   *
-   * Composes the data → layer → world similarity matrices (including flip),
-   * then decomposes the result around the image center to match
-   * OpenSeadragon's flip/rotation-around-image-center convention. The
-   * decomposed translation is then the OpenSeadragon position directly.
-   *
-   * @param ref - The object reference for which to compute the transformation
-   * @param contentSize - The size of the content (image or labels) in pixels
-   * @returns An object containing the computed flip, width, rotation, and position for the tiled image
-   */
-  protected static getTiledImageTransform<
-    TObject extends Image | Labels,
-    TObjectData extends ImageData | LabelsData,
-  >(
-    ref: ObjectRef<TObject, TObjectData>,
-    contentSize: { x: number; y: number },
-  ): {
-    flip: boolean;
-    width: number;
-    rotation: number;
-    position: OpenSeadragon.Point;
-  } {
-    const m = mat3.create();
-    mat3.multiply(
-      m,
-      TransformUtils.toSimilarityMatrix(ref.layer.transform),
-      TransformUtils.toSimilarityMatrix(ref.object.transform),
-    );
-    const { flip, scale, rotation, translation } =
-      TransformUtils.fromSimilarityMatrix(m, {
-        center: { x: contentSize.x / 2, y: contentSize.y / 2 },
-      });
-    return {
-      flip,
-      width: contentSize.x * scale,
-      rotation,
-      position: new OpenSeadragon.Point(translation.x, translation.y),
-    };
   }
 }
 

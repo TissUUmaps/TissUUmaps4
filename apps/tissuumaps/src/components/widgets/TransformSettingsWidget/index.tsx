@@ -22,7 +22,7 @@ export function TransformSettingsWidget({
         <div className="flex flex-row items-center gap-x-2">
           <Switch
             checked={transform.flip}
-            onCheckedChange={(checked: boolean) =>
+            onCheckedChange={(checked) =>
               onTransformChange({ ...transform, flip: checked })
             }
           />

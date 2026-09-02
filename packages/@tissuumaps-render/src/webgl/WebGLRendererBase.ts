@@ -280,7 +280,7 @@ export abstract class WebGLRendererBase<
         renderedObject.objectBounds,
         WebGLUtils.createDataToWorldMatrix(
           renderedObject.ref.object.transform,
-          renderedObject.ref.layer,
+          renderedObject.ref.layer.transform,
         ),
       );
       return union !== null ? GeometryUtils.boundingBox(union, bounds) : bounds;

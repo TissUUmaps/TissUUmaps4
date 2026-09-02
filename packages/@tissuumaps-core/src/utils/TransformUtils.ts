@@ -20,6 +20,7 @@ export class TransformUtils {
    *
    * @param m - The source matrix
    * @param options - Optional center in pre-scaled coordinates
+   * @returns The decomposed transform
    */
   static fromSimilarityMatrix(
     m: mat3,
@@ -63,6 +64,7 @@ export class TransformUtils {
    * Applies, in order: flip, scale, rotation, and translation.
    *
    * @param tf - The transform components (all optional)
+   * @returns The composed matrix
    */
   static toSimilarityMatrix(tf: Partial<SimilarityTransform>): mat3 {
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,

@@ -713,7 +713,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         WebGLUtils.transposeAndConvertMatrixToGLMat2x4(
           WebGLUtils.createDataToWorldMatrix(
             newRef.object.transform,
-            newRef.layer,
+            newRef.layer.transform,
           ),
         ),
         objectIndex * 8,
