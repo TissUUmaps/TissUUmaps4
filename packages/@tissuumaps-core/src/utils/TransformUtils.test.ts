@@ -5,7 +5,7 @@ import type { SimilarityTransform } from "../model/primitives";
 import { TransformUtils } from "./TransformUtils";
 
 describe("TransformUtils", () => {
-  describe("fromMatrix", () => {
+  describe("fromSimilarityMatrix", () => {
     it("extracts scale, rotation, and translation from a matrix", () => {
       const scale = 2;
       const rotationDeg = 45;
@@ -84,7 +84,7 @@ describe("TransformUtils", () => {
     });
   });
 
-  describe("toMatrix", () => {
+  describe("toSimilarityMatrix", () => {
     it("creates a matrix from scale, rotation, and translation", () => {
       const tf: SimilarityTransform = {
         flip: false,
@@ -152,7 +152,7 @@ describe("TransformUtils", () => {
     });
   });
 
-  describe("fromMatrix / toMatrix roundtrip", () => {
+  describe("fromSimilarityMatrix / toSimilarityMatrix roundtrip", () => {
     it.each([
       { flip: false, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
       {

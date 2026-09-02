@@ -33,16 +33,15 @@ export class TransformUtils {
     const c0 = flip ? -m[0] : m[0];
     const c1 = flip ? -m[1] : m[1];
     const scale = Math.sqrt(c0 * c0 + c1 * c1);
-    const rotation = (Math.atan2(c1, c0) * 180) / Math.PI;
+    const angle = Math.atan2(c1, c0);
     let tx = m[6];
     let ty = m[7];
     const { center } = options ?? {};
     if (center !== undefined) {
       const cx = center.x * scale;
       const cy = center.y * scale;
-      const rad = (rotation * Math.PI) / 180;
-      const cos = Math.cos(rad);
-      const sin = Math.sin(rad);
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
       tx -= cy * sin + cx * (1 - cos);
       ty -= cy * (1 - cos) - cx * sin;
       if (flip) {
@@ -53,7 +52,7 @@ export class TransformUtils {
     return {
       flip,
       scale,
-      rotation,
+      rotation: (angle * 180) / Math.PI,
       translation: { x: tx, y: ty },
     };
   }
