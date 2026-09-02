@@ -11,65 +11,49 @@ import { PointsSettingsCategory } from "./category";
 export function usePointsDataWidget(points: Points) {
   const [activeSettingsCategory, setActiveSettingsCategory] =
     useState<PointsSettingsCategory | null>(null);
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<
     string | null
   >(null);
 
-  const [activeTable, activeGroupByColumn] = useMemo(() => {
+  const activeGroupByColumn = useMemo(() => {
     if (points.dataSource.table !== undefined) {
       if (
         activeSettingsCategory === PointsSettingsCategory.pointMarker &&
         getActiveConfigSource(points.pointMarker) === "groupBy" &&
         isGroupByConfig(points.pointMarker)
       ) {
-        return [
-          points.dataSource.table,
-          points.pointMarker.groupBy.column,
-        ] as const;
+        return points.pointMarker.groupBy.column;
       }
       if (
         activeSettingsCategory === PointsSettingsCategory.pointSize &&
         getActiveConfigSource(points.pointSize) === "groupBy" &&
         isGroupByConfig(points.pointSize)
       ) {
-        return [
-          points.dataSource.table,
-          points.pointSize.groupBy.column,
-        ] as const;
+        return points.pointSize.groupBy.column;
       }
       if (
         activeSettingsCategory === PointsSettingsCategory.pointColor &&
         getActiveConfigSource(points.pointColor) === "groupBy" &&
         isGroupByConfig(points.pointColor)
       ) {
-        return [
-          points.dataSource.table,
-          points.pointColor.groupBy.column,
-        ] as const;
+        return points.pointColor.groupBy.column;
       }
       if (
         activeSettingsCategory === PointsSettingsCategory.pointVisibility &&
         getActiveConfigSource(points.pointVisibility) === "groupBy" &&
         isGroupByConfig(points.pointVisibility)
       ) {
-        return [
-          points.dataSource.table,
-          points.pointVisibility.groupBy.column,
-        ] as const;
+        return points.pointVisibility.groupBy.column;
       }
       if (
         activeSettingsCategory === PointsSettingsCategory.pointOpacity &&
         getActiveConfigSource(points.pointOpacity) === "groupBy" &&
         isGroupByConfig(points.pointOpacity)
       ) {
-        return [
-          points.dataSource.table,
-          points.pointOpacity.groupBy.column,
-        ] as const;
+        return points.pointOpacity.groupBy.column;
       }
     }
-    return [null, null] as const;
+    return null;
   }, [
     points.dataSource.table,
     activeSettingsCategory,
@@ -79,15 +63,6 @@ export function usePointsDataWidget(points: Points) {
     points.pointVisibility,
     points.pointOpacity,
   ]);
-
-  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const [prevActiveTable, setPrevActiveTable] = useState(activeTable);
-  if (activeTable !== prevActiveTable) {
-    setPrevActiveTable(activeTable);
-    if (activeTable !== null) {
-      setSelectedTable(activeTable);
-    }
-  }
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
@@ -102,8 +77,6 @@ export function usePointsDataWidget(points: Points) {
   return {
     activeSettingsCategory,
     setActiveSettingsCategory,
-    selectedTable,
-    setSelectedTable,
     selectedGroupByColumn,
     setSelectedGroupByColumn,
   };

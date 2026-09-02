@@ -93,8 +93,6 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const {
     activeSettingsCategory,
     setActiveSettingsCategory,
-    selectedTable,
-    setSelectedTable,
     selectedGroupByColumn,
     setSelectedGroupByColumn,
   } = usePointsDataWidget(points);
@@ -109,7 +107,6 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
 
   const { extraTableGroupColumnDefs } = usePointsDataTableColumns(
     points,
-    selectedTable,
     selectedGroupByColumn,
   );
 
@@ -209,8 +206,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             <ItemsDataWidget
               data={pointsData}
               tableHeight={200}
-              selectedTable={selectedTable}
-              onSelectedTableChange={setSelectedTable}
+              table={points.dataSource.table ?? null}
               selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
               extraTableGroupColumnDefs={extraTableGroupColumnDefs}

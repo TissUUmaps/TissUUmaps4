@@ -93,8 +93,6 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const {
     activeSettingsCategory,
     setActiveSettingsCategory,
-    selectedTable,
-    setSelectedTable,
     selectedGroupByColumn,
     setSelectedGroupByColumn,
   } = useLabelsDataWidget(labels);
@@ -109,7 +107,6 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
 
   const { extraTableGroupColumnDefs } = useLabelsDataTableColumns(
     labels,
-    selectedTable,
     selectedGroupByColumn,
   );
 
@@ -191,8 +188,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             <ItemsDataWidget
               data={labelsData}
               tableHeight={200}
-              selectedTable={selectedTable}
-              onSelectedTableChange={setSelectedTable}
+              table={labels.dataSource.table ?? null}
               selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
               extraTableGroupColumnDefs={extraTableGroupColumnDefs}
