@@ -27,9 +27,6 @@ import { useProjectStore } from "@/stores/project";
  */
 const DONE_LINGER_MS = 1500;
 
-/** How long a failed load's card stays before it is removed, in milliseconds */
-const ERROR_LINGER_MS = 5000;
-
 const kindIcons: Record<
   DataObjectKind,
   ComponentType<{ className?: string }>
@@ -72,9 +69,7 @@ type TrackedToast = {
   phase: "loading" | "settled";
   /** Whether the user dismissed the card (suppresses further updates) */
   dismissed: boolean;
-  /** The entry the card was last rendered with */
-  rendered?: LoadEntry;
-  /** The timer removing a settled card after its linger period */
+  /** The timer removing a finished card after its linger period */
   dismissTimer?: ReturnType<typeof setTimeout>;
 };
 
@@ -89,8 +84,9 @@ export type NotificationCenterProps = {
  * The data store is the single source of truth: the data caches publish a
  * {@link DataRef} per object, whose `"loading"` state carries the latest
  * progress report. Each loading reference is mirrored to a long-lived sonner
- * toast, which lingers briefly once the reference settles (`"loaded"` or
- * `"error"`) and is dismissed when the reference is removed. Sonner handles the
+ * toast. Once the reference settles, a finished load's card lingers briefly at
+ * 100%, while a failed load's card stays until the user dismisses it; cards are
+ * removed when their reference is removed. Sonner handles the
  * stacked layout, hover-to-expand and enter/exit animations; we render the card
  * content ourselves.
  */
@@ -160,8 +156,7 @@ export function NotificationCenter({ onOpenObject }: NotificationCenterProps) {
       toast.dismiss(key);
     };
 
-    const show = (trackedToast: TrackedToast, entry: LoadEntry) => {
-      trackedToast.rendered = entry;
+    const show = (entry: LoadEntry) => {
       toast.custom(
         () => (
           <NotificationCard
@@ -189,11 +184,8 @@ export function NotificationCenter({ onOpenObject }: NotificationCenterProps) {
           clearTimeout(trackedToast.dismissTimer);
           trackedToast.dismissTimer = undefined;
         }
-        if (
-          !trackedToast.dismissed &&
-          !areEntriesEqual(trackedToast.rendered, entry)
-        ) {
-          show(trackedToast, entry);
+        if (!trackedToast.dismissed) {
+          show(entry);
         }
       } else if (
         trackedToast !== undefined &&
@@ -202,11 +194,15 @@ export function NotificationCenter({ onOpenObject }: NotificationCenterProps) {
         // Only loads we saw running get a settle card; data that is already
         // loaded when the center mounts stays silent.
         trackedToast.phase = "settled";
-        if (!trackedToast.dismissed) {
-          show(trackedToast, entry);
+        if (entry.status === "error") {
+          // Errors surface even on a dismissed card and stay until dismissed.
+          trackedToast.dismissed = false;
+          show(entry);
+        } else if (!trackedToast.dismissed) {
+          show(entry);
           trackedToast.dismissTimer = setTimeout(
             () => toast.dismiss(entry.key),
-            entry.status === "loaded" ? DONE_LINGER_MS : ERROR_LINGER_MS,
+            DONE_LINGER_MS,
           );
         }
       }
@@ -233,18 +229,6 @@ export function NotificationCenter({ onOpenObject }: NotificationCenterProps) {
   }, []);
 
   return <Toaster />;
-}
-
-/** Compares the fields of two entries that affect how a card is rendered */
-function areEntriesEqual(a: LoadEntry | undefined, b: LoadEntry): boolean {
-  return (
-    a !== undefined &&
-    a.status === b.status &&
-    a.progress === b.progress &&
-    a.total === b.total &&
-    a.title === b.title &&
-    a.error === b.error
-  );
 }
 
 type NotificationCardProps = {
