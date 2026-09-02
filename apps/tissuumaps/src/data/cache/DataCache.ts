@@ -480,7 +480,7 @@ export class DataCache<
     dataSource: TDataSource,
     context: TContext,
   ): {
-    dataProvider: DataProvider<TDataSource, TData> | undefined;
+    dataProvider: TDataProvider | undefined;
     normalizedDataSource: TDataSource;
     entryKey: string;
   } {
