@@ -12,7 +12,6 @@ import { useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 
 import "./App.css";
-import { NotificationCenter } from "./components/NotificationCenter";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
 import { LabelsPanel } from "./components/panels/LabelsPanel";
 import { PointsPanel } from "./components/panels/PointsPanel";
@@ -20,6 +19,7 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
+import { NotificationCenter } from "./components/widgets/NotificationCenter";
 import {
   type DataObjectKind,
   requestFocusObject,
