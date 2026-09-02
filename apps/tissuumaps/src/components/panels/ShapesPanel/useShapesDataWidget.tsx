@@ -11,52 +11,39 @@ import { ShapesSettingsCategory } from "./category";
 export function useShapesDataWidget(shapes: Shapes) {
   const [activeSettingsCategory, setActiveSettingsCategory] =
     useState<ShapesSettingsCategory | null>(null);
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<
     string | null
   >(null);
 
-  const [activeTable, activeGroupByColumn] = useMemo(() => {
+  const activeGroupByColumn = useMemo(() => {
     if (shapes.dataSource.table !== undefined) {
       if (
         activeSettingsCategory === ShapesSettingsCategory.shapeFillColor &&
         getActiveConfigSource(shapes.shapeFillColor) === "groupBy" &&
         isGroupByConfig(shapes.shapeFillColor)
       ) {
-        return [
-          shapes.dataSource.table,
-          shapes.shapeFillColor.groupBy.column,
-        ] as const;
+        return shapes.shapeFillColor.groupBy.column;
       }
       if (
         activeSettingsCategory === ShapesSettingsCategory.shapeFillVisibility &&
         getActiveConfigSource(shapes.shapeFillVisibility) === "groupBy" &&
         isGroupByConfig(shapes.shapeFillVisibility)
       ) {
-        return [
-          shapes.dataSource.table,
-          shapes.shapeFillVisibility.groupBy.column,
-        ] as const;
+        return shapes.shapeFillVisibility.groupBy.column;
       }
       if (
         activeSettingsCategory === ShapesSettingsCategory.shapeFillOpacity &&
         getActiveConfigSource(shapes.shapeFillOpacity) === "groupBy" &&
         isGroupByConfig(shapes.shapeFillOpacity)
       ) {
-        return [
-          shapes.dataSource.table,
-          shapes.shapeFillOpacity.groupBy.column,
-        ] as const;
+        return shapes.shapeFillOpacity.groupBy.column;
       }
       if (
         activeSettingsCategory === ShapesSettingsCategory.shapeStrokeColor &&
         getActiveConfigSource(shapes.shapeStrokeColor) === "groupBy" &&
         isGroupByConfig(shapes.shapeStrokeColor)
       ) {
-        return [
-          shapes.dataSource.table,
-          shapes.shapeStrokeColor.groupBy.column,
-        ] as const;
+        return shapes.shapeStrokeColor.groupBy.column;
       }
       if (
         activeSettingsCategory ===
@@ -64,23 +51,17 @@ export function useShapesDataWidget(shapes: Shapes) {
         getActiveConfigSource(shapes.shapeStrokeVisibility) === "groupBy" &&
         isGroupByConfig(shapes.shapeStrokeVisibility)
       ) {
-        return [
-          shapes.dataSource.table,
-          shapes.shapeStrokeVisibility.groupBy.column,
-        ] as const;
+        return shapes.shapeStrokeVisibility.groupBy.column;
       }
       if (
         activeSettingsCategory === ShapesSettingsCategory.shapeStrokeOpacity &&
         getActiveConfigSource(shapes.shapeStrokeOpacity) === "groupBy" &&
         isGroupByConfig(shapes.shapeStrokeOpacity)
       ) {
-        return [
-          shapes.dataSource.table,
-          shapes.shapeStrokeOpacity.groupBy.column,
-        ] as const;
+        return shapes.shapeStrokeOpacity.groupBy.column;
       }
     }
-    return [null, null] as const;
+    return null;
   }, [
     shapes.dataSource.table,
     activeSettingsCategory,
@@ -91,15 +72,6 @@ export function useShapesDataWidget(shapes: Shapes) {
     shapes.shapeStrokeVisibility,
     shapes.shapeStrokeOpacity,
   ]);
-
-  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const [prevActiveTable, setPrevActiveTable] = useState(activeTable);
-  if (activeTable !== prevActiveTable) {
-    setPrevActiveTable(activeTable);
-    if (activeTable !== null) {
-      setSelectedTable(activeTable);
-    }
-  }
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
@@ -114,8 +86,6 @@ export function useShapesDataWidget(shapes: Shapes) {
   return {
     activeSettingsCategory,
     setActiveSettingsCategory,
-    selectedTable,
-    setSelectedTable,
     selectedGroupByColumn,
     setSelectedGroupByColumn,
   };
