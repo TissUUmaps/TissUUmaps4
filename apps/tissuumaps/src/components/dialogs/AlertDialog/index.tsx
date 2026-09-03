@@ -14,27 +14,21 @@ import {
 // callbacks, which are owned by the DialogProvider.
 export type AlertDialogParams = Omit<AlertDialogProps, "open" | "onDismiss">;
 
-export interface AlertDialogProps {
+export type AlertDialogProps = {
   title: string;
   body?: ReactNode;
-  actionButton?: ReactNode;
+  actionLabel?: string;
   /** Whether the dialog is shown. */
   open: boolean;
-  /**
-   * Dismisses the dialog (action button, escape, or backdrop). An alert
-   * resolves to `true`.
-   */
+  /** Called when the user dismisses the dialog (action button or escape). */
   onDismiss: () => void;
-}
+};
 
-/**
- * Acknowledgement dialog with a single button. Resolves to `true` once
- * dismissed.
- */
+/** Acknowledgement dialog with a single button. */
 export function AlertDialog({
   title,
   body,
-  actionButton,
+  actionLabel,
   open,
   onDismiss,
 }: AlertDialogProps) {
@@ -54,7 +48,7 @@ export function AlertDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogAction onClick={onDismiss}>
-            {actionButton ?? "Okay"}
+            {actionLabel ?? "Okay"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -19,11 +19,11 @@ export type PromptDialogParams = Omit<
   "open" | "onCancel" | "onConfirm"
 >;
 
-export interface PromptDialogProps {
+export type PromptDialogProps = {
   title: string;
   body?: ReactNode;
-  cancelButton?: ReactNode;
-  actionButton?: ReactNode;
+  cancelLabel?: string;
+  actionLabel?: string;
   defaultValue?: string;
   /** Extra props for the input, except those owned by the dialog itself. */
   inputProps?: Omit<
@@ -32,24 +32,18 @@ export interface PromptDialogProps {
   >;
   /** Whether the dialog is shown. */
   open: boolean;
-  /**
-   * Dismisses the prompt without a value (cancel button, escape, or
-   * backdrop). Resolves to `null`.
-   */
+  /** Called when the user cancels the dialog (cancel button or escape). */
   onCancel: () => void;
-  /** Submits the prompt. Resolves to the input's value. */
+  /** Called with the input value when the form is submitted. */
   onConfirm: (value: string) => void;
-}
+};
 
-/**
- * Text-input dialog. Resolves to the entered string on submit, or `null`
- * when cancelled or dismissed.
- */
+/** Text-input dialog with a cancel and a submit button. */
 export function PromptDialog({
   title,
   body,
-  cancelButton,
-  actionButton,
+  cancelLabel,
+  actionLabel,
   defaultValue,
   inputProps,
   open,
@@ -86,10 +80,10 @@ export function PromptDialog({
           />
           <AlertDialogFooter>
             <AlertDialogCancel type="button">
-              {cancelButton ?? "Cancel"}
+              {cancelLabel ?? "Cancel"}
             </AlertDialogCancel>
             <AlertDialogAction type="submit">
-              {actionButton ?? "Okay"}
+              {actionLabel ?? "Okay"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </form>

@@ -18,31 +18,25 @@ export type ConfirmDialogParams = Omit<
   "open" | "onCancel" | "onConfirm"
 >;
 
-export interface ConfirmDialogProps {
+export type ConfirmDialogProps = {
   title: string;
   body?: ReactNode;
-  cancelButton?: ReactNode;
-  actionButton?: ReactNode;
+  cancelLabel?: string;
+  actionLabel?: string;
   /** Whether the dialog is shown. */
   open: boolean;
-  /**
-   * Rejects the prompt (cancel button, escape, or backdrop). Resolves to
-   * `false`.
-   */
+  /** Called when the user cancels the dialog (cancel button or escape). */
   onCancel: () => void;
-  /** Accepts the prompt. Resolves to `true`. */
+  /** Called when the user clicks the action button. */
   onConfirm: () => void;
-}
+};
 
-/**
- * Yes/no dialog. Resolves to `true` when confirmed and `false` when
- * cancelled or dismissed.
- */
+/** Yes/no dialog with a cancel and an action button. */
 export function ConfirmDialog({
   title,
   body,
-  cancelButton,
-  actionButton,
+  cancelLabel,
+  actionLabel,
   open,
   onCancel,
   onConfirm,
@@ -62,9 +56,9 @@ export function ConfirmDialog({
           ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelButton ?? "No"}</AlertDialogCancel>
+          <AlertDialogCancel>{cancelLabel ?? "No"}</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm}>
-            {actionButton ?? "Yes"}
+            {actionLabel ?? "Yes"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
