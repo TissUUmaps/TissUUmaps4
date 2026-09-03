@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 
+// The caller-facing fields: everything except the open state and the
+// callbacks, which are owned by the DialogProvider.
+export type PromptDialogParams = Omit<
+  PromptDialogProps,
+  "open" | "onCancel" | "onConfirm"
+>;
+
 export interface PromptDialogProps {
   title: string;
   body?: ReactNode;

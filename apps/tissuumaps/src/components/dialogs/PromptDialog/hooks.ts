@@ -1,17 +1,6 @@
-import { useCallback } from "react";
+import { useDialogContext } from "../DialogContext";
 
-import { type Params, useDialogContext } from "../DialogContext";
-
-/** Opens a text-input dialog. Resolves to the entered string, or `null`. */
+/** Opens a text-input dialog. Resolves to the entered string, or `null` when cancelled or dismissed. */
 export function usePromptDialog() {
-  const dialog = useDialogContext();
-
-  return useCallback(
-    (params: Params<"prompt">) =>
-      dialog({
-        ...(typeof params === "string" ? { title: params } : params),
-        type: "prompt",
-      }),
-    [dialog],
-  );
+  return useDialogContext().prompt;
 }

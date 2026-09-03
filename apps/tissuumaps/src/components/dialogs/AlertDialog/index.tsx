@@ -10,6 +10,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// The caller-facing fields: everything except the open state and the
+// callbacks, which are owned by the DialogProvider.
+export type AlertDialogParams = Omit<AlertDialogProps, "open" | "onDismiss">;
+
 export interface AlertDialogProps {
   title: string;
   body?: ReactNode;

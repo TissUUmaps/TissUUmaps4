@@ -1,142 +1,91 @@
-import { type ReactNode, useCallback, useReducer, useRef } from "react";
-
-import { AlertDialog } from "./AlertDialog";
-import { ConfirmDialog } from "./ConfirmDialog";
 import {
-  type AlertParams,
-  type ConfirmParams,
-  type DialogAction,
-  DialogContext,
-  type DialogContextType,
-  type DialogType,
-  type PromptParams,
-} from "./DialogContext";
-import { PromptDialog } from "./PromptDialog";
+  type ReactElement,
+  type ReactNode,
+  cloneElement,
+  useRef,
+  useState,
+} from "react";
 
-type DialogState = {
-  open: boolean;
-  openId: number;
-  type: DialogType;
-} & Partial<AlertParams & ConfirmParams & PromptParams>;
+import { AlertDialog, type AlertDialogParams } from "./AlertDialog";
+import { ConfirmDialog, type ConfirmDialogParams } from "./ConfirmDialog";
+import { DialogContext, type DialogContextValue } from "./DialogContext";
+import { PromptDialog, type PromptDialogParams } from "./PromptDialog";
 
-type ReducerAction = DialogAction | { type: "close" };
+type DialogProviderProps = {
+  children: ReactNode;
+};
 
-function dialogReducer(state: DialogState, action: ReducerAction): DialogState {
-  if (action.type === "close") {
-    return { ...state, open: false };
-  }
-  // The previous state is deliberately not spread here, so that fields of the
-  // previous dialog don't leak into the new one. `openId` increments on every
-  // open so uncontrolled content (e.g. the prompt input) remounts rather than
-  // retaining the previous dialog's value.
-  return { open: true, openId: state.openId + 1, ...action };
-}
+type ActiveDialog = {
+  id: number;
+  element: ReactElement<{ open: boolean }>;
+};
 
 /**
  * Orchestrates the imperative dialog API: it owns the open state and the
- * pending promise, and renders the matching dialog for the active type. The
- * presentation and per-type behavior live in the `*-dialog` components.
- * Because dialogs open imperatively, `AlertDialogTrigger` is never used.
+ * pending promise, and renders the currently active dialog element. Because
+ * dialogs open imperatively, `AlertDialogTrigger` is never used.
  */
-export function DialogProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(dialogReducer, {
-    open: false,
-    openId: 0,
-    type: "alert",
-    title: "",
-  });
+export function DialogProvider({ children }: DialogProviderProps) {
+  const [dialog, setDialog] = useState<ActiveDialog | null>(null);
+  const [open, setOpen] = useState(false);
 
-  const resolveRef =
-    useRef<
-      (
-        value: boolean | string | null | PromiseLike<boolean | string | null>,
-      ) => void
-    >(null);
+  // Settles the dialog still pending (if any) with its dismissal value.
+  const dismissRef = useRef<(() => void) | null>(null);
 
-  const typeRef = useRef<DialogType>("alert");
-
-  // `resolveByType`, `close`, and `confirm` read only refs and the stable
-  // `dispatch`, so the `dialog` callback below can capture them once (deps
-  // `[]`) without going stale.
-  // Resolves the pending promise with the dismissal value for the active type.
-  function resolveByType() {
-    const type = typeRef.current;
-    if (type === "alert") {
-      resolveRef.current?.(true);
-    } else if (type === "prompt") {
-      resolveRef.current?.(null);
-    } else {
-      resolveRef.current?.(false);
-    }
-    resolveRef.current = null;
+  // Memoization is left to the React Compiler: the manual `useCallback` /
+  // `useMemo` pair cannot be preserved around the generic `show`.
+  function show<T>(
+    dismissValue: T,
+    render: (settle: (value: T) => void) => ReactElement<{ open: boolean }>,
+  ) {
+    dismissRef.current?.();
+    return new Promise<T>((resolve) => {
+      const settle = (value: T) => {
+        dismissRef.current = null;
+        setOpen(false);
+        resolve(value);
+      };
+      dismissRef.current = () => settle(dismissValue);
+      // A new id on every open so uncontrolled content (e.g. the prompt
+      // input) remounts rather than retaining the previous dialog's value.
+      setDialog((previous) => ({
+        id: (previous?.id ?? 0) + 1,
+        element: render(settle),
+      }));
+      setOpen(true);
+    });
   }
 
-  function close() {
-    dispatch({ type: "close" });
-    resolveByType();
-  }
-
-  function confirm(value?: string) {
-    dispatch({ type: "close" });
-    resolveRef.current?.(value ?? true);
-    resolveRef.current = null;
-  }
-
-  const dialog: DialogContextType = useCallback(
-    <T extends DialogAction>(params: T) => {
-      // Resolve any dialog still open before replacing it.
-      resolveByType();
-      typeRef.current = params.type;
-      dispatch(params);
-
-      return new Promise<
-        T["type"] extends "alert" | "confirm" ? boolean : null | string
-      >((resolve) => {
-        resolveRef.current = resolve as (
-          value: boolean | string | null | PromiseLike<boolean | string | null>,
-        ) => void;
-      });
-    },
-    [],
-  );
+  const value: DialogContextValue = {
+    alert: (params: AlertDialogParams) =>
+      show<void>(undefined, (settle) => (
+        <AlertDialog {...params} open onDismiss={() => settle()} />
+      )),
+    confirm: (params: ConfirmDialogParams) =>
+      show(false, (settle) => (
+        <ConfirmDialog
+          {...params}
+          open
+          onCancel={() => settle(false)}
+          onConfirm={() => settle(true)}
+        />
+      )),
+    prompt: (params: PromptDialogParams) =>
+      show<string | null>(null, (settle) => (
+        <PromptDialog
+          {...params}
+          open
+          onCancel={() => settle(null)}
+          onConfirm={settle}
+        />
+      )),
+  };
 
   return (
-    <DialogContext.Provider value={dialog}>
+    <DialogContext.Provider value={value}>
       {children}
-      {state.type === "alert" && (
-        <AlertDialog
-          open={state.open}
-          title={state.title ?? ""}
-          body={state.body}
-          actionButton={state.actionButton}
-          onDismiss={close}
-        />
-      )}
-      {state.type === "confirm" && (
-        <ConfirmDialog
-          open={state.open}
-          title={state.title ?? ""}
-          body={state.body}
-          cancelButton={state.cancelButton}
-          actionButton={state.actionButton}
-          onCancel={close}
-          onConfirm={() => confirm()}
-        />
-      )}
-      {state.type === "prompt" && (
-        <PromptDialog
-          key={state.openId}
-          open={state.open}
-          title={state.title ?? ""}
-          body={state.body}
-          cancelButton={state.cancelButton}
-          actionButton={state.actionButton}
-          defaultValue={state.defaultValue}
-          inputProps={state.inputProps}
-          onCancel={close}
-          onConfirm={confirm}
-        />
-      )}
+      {/* The element stays mounted with `open=false` so the close animation plays. */}
+      {dialog && cloneElement(dialog.element, { key: dialog.id, open })}
     </DialogContext.Provider>
   );
 }

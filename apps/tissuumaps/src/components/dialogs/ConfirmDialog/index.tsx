@@ -11,6 +11,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// The caller-facing fields: everything except the open state and the
+// callbacks, which are owned by the DialogProvider.
+export type ConfirmDialogParams = Omit<
+  ConfirmDialogProps,
+  "open" | "onCancel" | "onConfirm"
+>;
+
 export interface ConfirmDialogProps {
   title: string;
   body?: ReactNode;
