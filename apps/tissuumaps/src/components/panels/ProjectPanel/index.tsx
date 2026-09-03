@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 
 import { Field, FieldControl, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
-import { useConfirm } from "@/components/dialogs";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,7 +31,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
   const name = useProjectStore((state) => state.name);
   const setName = useProjectStore((state) => state.setName);
   const clearProject = useProjectStore((state) => state.clear);
-  const confirm = useConfirm();
+  const confirm = useConfirmDialog();
 
   const confirmClearProject = useCallback(() => {
     void confirm({

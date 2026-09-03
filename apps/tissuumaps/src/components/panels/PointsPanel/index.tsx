@@ -12,7 +12,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
-import { useConfirm } from "@/components/dialogs";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -101,7 +101,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
 
   const updatePoints = useProjectStore((state) => state.updatePoints);
   const deletePoints = useProjectStore((state) => state.deletePoints);
-  const confirm = useConfirm();
+  const confirm = useConfirmDialog();
 
   const pointsData = usePointsData(points.id);
 

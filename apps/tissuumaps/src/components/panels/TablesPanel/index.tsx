@@ -12,7 +12,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
-import { useConfirm } from "@/components/dialogs";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
@@ -77,7 +77,7 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
 
   const updateTable = useProjectStore((state) => state.updateTable);
   const deleteTable = useProjectStore((state) => state.deleteTable);
-  const confirm = useConfirm();
+  const confirm = useConfirmDialog();
 
   const { ref, handleRef } = useSortable({ id: table.id, index });
 

@@ -19,7 +19,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
-import { useConfirm } from "@/components/dialogs";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -106,7 +106,7 @@ type LayerAccordionItemProps = {
 function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
   const updateLayer = useProjectStore((state) => state.updateLayer);
   const deleteLayer = useProjectStore((state) => state.deleteLayer);
-  const confirm = useConfirm();
+  const confirm = useConfirmDialog();
 
   const objectNames = useLayerObjects(layer.id);
   const hasObjects = objectNames.length > 0;

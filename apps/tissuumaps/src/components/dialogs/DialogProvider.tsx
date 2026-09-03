@@ -1,7 +1,7 @@
 import { type ReactNode, useCallback, useReducer, useRef } from "react";
 
-import { AlertDialog } from "./alert-dialog";
-import { ConfirmDialog } from "./confirm-dialog";
+import { AlertDialog } from "./AlertDialog";
+import { ConfirmDialog } from "./ConfirmDialog";
 import {
   type AlertParams,
   type ConfirmParams,
@@ -10,8 +10,8 @@ import {
   type DialogContextType,
   type DialogType,
   type PromptParams,
-} from "./dialog-context";
-import { PromptDialog } from "./prompt-dialog";
+} from "./DialogContext";
+import { PromptDialog } from "./PromptDialog";
 
 type DialogState = {
   open: boolean;

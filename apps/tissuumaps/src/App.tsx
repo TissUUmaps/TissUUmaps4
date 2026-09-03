@@ -10,7 +10,7 @@ import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import "./App.css";
-import { DialogProvider } from "./components/dialogs";
+import { DialogProvider } from "./components/dialogs/DialogProvider";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
 import { LabelsPanel } from "./components/panels/LabelsPanel";
 import { PointsPanel } from "./components/panels/PointsPanel";

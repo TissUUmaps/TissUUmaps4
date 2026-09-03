@@ -12,7 +12,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
-import { useConfirm } from "@/components/dialogs";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -86,7 +86,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
 
   const updateImage = useProjectStore((state) => state.updateImage);
   const deleteImage = useProjectStore((state) => state.deleteImage);
-  const confirm = useConfirm();
+  const confirm = useConfirmDialog();
 
   const { ref, handleRef } = useSortable({ id: image.id, index });
 
