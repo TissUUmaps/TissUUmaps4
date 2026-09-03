@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -100,6 +101,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
 
   const updateLabels = useProjectStore((state) => state.updateLabels);
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
+  const confirm = useConfirmDialog();
 
   const labelsData = useLabelsData(labels.id);
 
@@ -151,14 +153,14 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             <Button
               variant="ghost"
               onClick={() => {
-                if (
-                  // TODO replace by dialog overlay
-                  window.confirm(
-                    "Are you sure you want to delete these labels?",
-                  )
-                ) {
-                  deleteLabels(labels.id);
-                }
+                void confirm({
+                  title: "Delete labels",
+                  body: "Are you sure you want to delete these labels? This action cannot be undone.",
+                }).then((confirmed) => {
+                  if (confirmed) {
+                    deleteLabels(labels.id);
+                  }
+                });
               }}
               title="Delete labels"
             >

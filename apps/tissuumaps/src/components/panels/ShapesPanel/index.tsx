@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -100,6 +101,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
 
   const updateShapes = useProjectStore((state) => state.updateShapes);
   const deleteShapes = useProjectStore((state) => state.deleteShapes);
+  const confirm = useConfirmDialog();
 
   const shapesData = useShapesData(shapes.id);
 
@@ -151,14 +153,14 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             <Button
               variant="ghost"
               onClick={() => {
-                if (
-                  // TODO replace by dialog overlay
-                  window.confirm(
-                    "Are you sure you want to delete this shape cloud?",
-                  )
-                ) {
-                  deleteShapes(shapes.id);
-                }
+                void confirm({
+                  title: "Delete shape cloud",
+                  body: "Are you sure you want to delete this shape cloud? This action cannot be undone.",
+                }).then((confirmed) => {
+                  if (confirmed) {
+                    deleteShapes(shapes.id);
+                  }
+                });
               }}
               title="Delete shape cloud"
             >

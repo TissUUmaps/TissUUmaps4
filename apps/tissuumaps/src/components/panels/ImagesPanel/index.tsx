@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -85,6 +86,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
 
   const updateImage = useProjectStore((state) => state.updateImage);
   const deleteImage = useProjectStore((state) => state.deleteImage);
+  const confirm = useConfirmDialog();
 
   const { ref, handleRef } = useSortable({ id: image.id, index });
 
@@ -129,12 +131,14 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             <Button
               variant="ghost"
               onClick={() => {
-                // TODO replace by dialog overlay
-                if (
-                  window.confirm("Are you sure you want to delete this image?")
-                ) {
-                  deleteImage(image.id);
-                }
+                void confirm({
+                  title: "Delete image",
+                  body: "Are you sure you want to delete this image? This action cannot be undone.",
+                }).then((confirmed) => {
+                  if (confirmed) {
+                    deleteImage(image.id);
+                  }
+                });
               }}
               title="Delete image"
             >

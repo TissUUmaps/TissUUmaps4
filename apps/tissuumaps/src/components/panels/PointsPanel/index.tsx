@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
   AccordionTriggerUpDownIcon,
 } from "@/components/common/accordion";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -100,6 +101,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
 
   const updatePoints = useProjectStore((state) => state.updatePoints);
   const deletePoints = useProjectStore((state) => state.deletePoints);
+  const confirm = useConfirmDialog();
 
   const pointsData = usePointsData(points.id);
 
@@ -169,14 +171,14 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             <Button
               variant="ghost"
               onClick={() => {
-                if (
-                  // TODO replace by dialog overlay
-                  window.confirm(
-                    "Are you sure you want to delete this point cloud?",
-                  )
-                ) {
-                  deletePoints(points.id);
-                }
+                void confirm({
+                  title: "Delete point cloud",
+                  body: "Are you sure you want to delete this point cloud? This action cannot be undone.",
+                }).then((confirmed) => {
+                  if (confirmed) {
+                    deletePoints(points.id);
+                  }
+                });
               }}
               title="Delete point cloud"
             >
