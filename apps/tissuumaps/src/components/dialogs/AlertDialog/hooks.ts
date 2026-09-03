@@ -1,6 +1,6 @@
 import { useDialogContext } from "../DialogContext";
 
-/** Opens an acknowledgement dialog. Resolves once dismissed. */
+/** Returns the `alert` function of the nearest `DialogProvider`. */
 export function useAlertDialog() {
   return useDialogContext().alert;
 }

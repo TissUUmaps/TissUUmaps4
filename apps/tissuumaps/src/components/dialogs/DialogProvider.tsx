@@ -1,8 +1,9 @@
 import {
+  type Dispatch,
+  Fragment,
   type ReactElement,
   type ReactNode,
-  cloneElement,
-  useRef,
+  type SetStateAction,
   useState,
 } from "react";
 
@@ -17,75 +18,84 @@ type DialogProviderProps = {
 
 type ActiveDialog = {
   id: number;
-  element: ReactElement<{ open: boolean }>;
+  render: (open: boolean) => ReactElement;
 };
 
 /**
- * Orchestrates the imperative dialog API: it owns the open state and the
- * pending promise, and renders the currently active dialog element. Because
- * dialogs open imperatively, `AlertDialogTrigger` is never used.
+ * Builds the imperative dialog API on top of the provider's state setters.
+ * Called once per provider: the setters are stable, so the value never needs
+ * to change.
  */
-export function DialogProvider({ children }: DialogProviderProps) {
-  const [dialog, setDialog] = useState<ActiveDialog | null>(null);
-  const [open, setOpen] = useState(false);
-
+function createDialogContextValue(
+  setDialog: Dispatch<SetStateAction<ActiveDialog | null>>,
+  setOpen: Dispatch<SetStateAction<boolean>>,
+): DialogContextValue {
   // Settles the dialog still pending (if any) with its dismissal value.
-  const dismissRef = useRef<(() => void) | null>(null);
+  let dismiss: (() => void) | null = null;
 
-  // Memoization is left to the React Compiler: the manual `useCallback` /
-  // `useMemo` pair cannot be preserved around the generic `show`.
   function show<T>(
     dismissValue: T,
-    render: (settle: (value: T) => void) => ReactElement<{ open: boolean }>,
+    render: (settle: (value: T) => void) => (open: boolean) => ReactElement,
   ) {
-    dismissRef.current?.();
+    dismiss?.();
     return new Promise<T>((resolve) => {
       const settle = (value: T) => {
-        dismissRef.current = null;
+        dismiss = null;
         setOpen(false);
         resolve(value);
       };
-      dismissRef.current = () => settle(dismissValue);
+      dismiss = () => settle(dismissValue);
       // A new id on every open so uncontrolled content (e.g. the prompt
       // input) remounts rather than retaining the previous dialog's value.
       setDialog((previous) => ({
         id: (previous?.id ?? 0) + 1,
-        element: render(settle),
+        render: render(settle),
       }));
       setOpen(true);
     });
   }
 
-  const value: DialogContextValue = {
+  return {
     alert: (params: AlertDialogParams) =>
-      show<void>(undefined, (settle) => (
-        <AlertDialog {...params} open onDismiss={() => settle()} />
+      show<void>(undefined, (settle) => (open) => (
+        <AlertDialog {...params} open={open} onDismiss={() => settle()} />
       )),
     confirm: (params: ConfirmDialogParams) =>
-      show(false, (settle) => (
+      show(false, (settle) => (open) => (
         <ConfirmDialog
           {...params}
-          open
+          open={open}
           onCancel={() => settle(false)}
           onConfirm={() => settle(true)}
         />
       )),
     prompt: (params: PromptDialogParams) =>
-      show<string | null>(null, (settle) => (
+      show<string | null>(null, (settle) => (open) => (
         <PromptDialog
           {...params}
-          open
+          open={open}
           onCancel={() => settle(null)}
           onConfirm={settle}
         />
       )),
   };
+}
+
+/**
+ * Orchestrates the imperative dialog API: it owns the open state and the
+ * pending promise, and renders the currently active dialog. Because dialogs
+ * open imperatively, `AlertDialogTrigger` is never used.
+ */
+export function DialogProvider({ children }: DialogProviderProps) {
+  const [dialog, setDialog] = useState<ActiveDialog | null>(null);
+  const [open, setOpen] = useState(false);
+  const [value] = useState(() => createDialogContextValue(setDialog, setOpen));
 
   return (
     <DialogContext.Provider value={value}>
       {children}
-      {/* The element stays mounted with `open=false` so the close animation plays. */}
-      {dialog && cloneElement(dialog.element, { key: dialog.id, open })}
+      {/* The dialog stays mounted with `open=false` so the close animation plays. */}
+      {dialog && <Fragment key={dialog.id}>{dialog.render(open)}</Fragment>}
     </DialogContext.Provider>
   );
 }

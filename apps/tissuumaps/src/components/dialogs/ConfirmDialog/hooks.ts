@@ -1,6 +1,6 @@
 import { useDialogContext } from "../DialogContext";
 
-/** Opens a yes/no dialog. Resolves to `true` when confirmed, `false` when cancelled or dismissed. */
+/** Returns the `confirm` function of the nearest `DialogProvider`. */
 export function useConfirmDialog() {
   return useDialogContext().confirm;
 }
