@@ -5,11 +5,32 @@ import {
   ColorUtils,
   type Dims,
   GeometryUtils,
+  type NumericArray,
   type OpenSeadragonViewerOptions,
   type Rect,
 } from "@tissuumaps/core";
 
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
+
+/**
+ * Extracts the raw pixel values of an invalidated tile
+ *
+ * The values are expected in row-major order, one per tile pixel (see
+ * {@link OpenSeadragonContext.setTiledImageDataAccessor}).
+ */
+export type DataAccessor = (
+  event: OpenSeadragon.TileInvalidatedEvent,
+) => Promise<NumericArray>;
+
+/**
+ * Maps a pixel value to the RGBA color it is drawn with
+ *
+ * Each of the four returned components is in `[0, 255]` (see
+ * {@link OpenSeadragonContext.setTiledImageTransferFunction}).
+ */
+export type TransferFunction = (
+  value: number,
+) => [number, number, number, number];
 
 /**
  * A wrapper around an OpenSeadragon viewer
@@ -33,18 +54,33 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  * images before requesting additions still resolves its indices against the
  * world as it is once those removals have been applied.
  *
- * Tiled images can also be tinted (see {@link setTiledImageTint}). As
- * OpenSeadragon has no notion of a per-image color, the tint is applied to the
- * tiles themselves, in a `tile-invalidated` handler installed on the viewer.
- * Tints are kept per tile source, rather than per tiled image, which is the
- * granularity at which OpenSeadragon keys its tile caches, and which also covers
- * the navigator: it mirrors the world with tiled images of its own, but shares
- * their tile sources, and its tiles are invalidated through this viewer.
+ * Tiled images can also be recolored: a tiled image whose pixels carry values
+ * rather than colors is drawn by mapping each value to an RGBA color (see
+ * {@link setTiledImageDataAccessor} and
+ * {@link setTiledImageTransferFunction}), and any tiled image can be tinted
+ * (see {@link setTiledImageTint}). As OpenSeadragon has no notion of a per-image
+ * color, both are applied to the tiles themselves, in a single
+ * `tile-invalidated` handler installed on the viewer, which maps values to
+ * colors first and tints afterwards. Both are kept per tile source, rather than
+ * per tiled image, which is the granularity at which OpenSeadragon keys its tile
+ * caches, and which also covers the navigator: it mirrors the world with tiled
+ * images of its own, but shares their tile sources, and its tiles are
+ * invalidated through this viewer.
  */
 export class OpenSeadragonContext {
   readonly viewer: OpenSeadragon.Viewer;
-  private readonly _tileSourceTints: WeakMap<OpenSeadragon.TileSource, Color> =
-    new WeakMap();
+  private readonly _tileSourceDataAccessors = new WeakMap<
+    OpenSeadragon.TileSource,
+    DataAccessor
+  >();
+  private readonly _tileSourceTransferFunctions = new WeakMap<
+    OpenSeadragon.TileSource,
+    TransferFunction
+  >();
+  private readonly _tileSourceTints = new WeakMap<
+    OpenSeadragon.TileSource,
+    Color
+  >();
   private _animationMemory?: {
     viewerOptions: Partial<OpenSeadragonViewerOptions>;
     tiledImageViewerOptions: WeakMap<
@@ -78,28 +114,8 @@ export class OpenSeadragonContext {
       }
     });
     this.viewer.addHandler("tile-invalidated", async (event) => {
-      const tiledImage = event.tile.tiledImage;
-      if (tiledImage !== null) {
-        const tint = this._tileSourceTints.get(tiledImage.source);
-        if (tint !== undefined) {
-          const { r, g, b } = tint;
-          const ctx = (await event.getData(
-            "context2d",
-          )) as CanvasRenderingContext2D;
-          const { width, height } = ctx.canvas;
-          ctx.save(); // push context state
-          // pre-multiply alpha
-          ctx.globalCompositeOperation = "destination-over";
-          ctx.fillStyle = "rgba(0, 0, 0, 1)";
-          ctx.fillRect(0, 0, width, height);
-          // multiply with color
-          ctx.globalCompositeOperation = "multiply";
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
-          ctx.fillRect(0, 0, width, height);
-          ctx.restore(); // pop context state
-          await event.setData(ctx, "context2d");
-        }
-      }
+      await this._renderData(event);
+      await this._renderTint(event);
     });
   }
 
@@ -261,6 +277,44 @@ export class OpenSeadragonContext {
   }
 
   /**
+   * Resolves a tile source specifier to a ready-to-use OpenSeadragon tile source
+   *
+   * Fetches the image information if the specifier is a URL, awaits promised
+   * tile sources, and passes ready tile sources through. Doing this before an
+   * addition keeps the loading concurrent, while the additions themselves stay
+   * serialized (see {@link addTiledImage}).
+   *
+   * @param tiledImageOptions - Options containing the tile source to open
+   * @param options - Optional abort signal
+   * @returns A promise that resolves with the opened tile source
+   */
+  async openTileSource(
+    tiledImageOptions: Omit<
+      OpenSeadragon.TileSourceSpecifier,
+      "success" | "error"
+    >,
+    options?: { signal?: AbortSignal },
+  ): Promise<OpenSeadragon.TileSource> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    // OpenSeadragon types tile sources as `string | object`, which also covers
+    // promises of an already opened tile source; anything else is passed through
+    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
+    signal?.throwIfAborted();
+    try {
+      const { source: openedTileSource } =
+        (await this.viewer.instantiateTileSourceClass(
+          // this needs to be a shallow copy; OpenSeadragon mutates it!
+          { ...tiledImageOptions, tileSource },
+        )) as { source: OpenSeadragon.TileSource };
+      signal?.throwIfAborted();
+      return openedTileSource;
+    } catch (error) {
+      throw new Error("Failed to open tile source", { cause: error });
+    }
+  }
+
+  /**
    * Adds a tiled image to the OpenSeadragon viewer
    *
    * The tile source is opened right away, i.e. concurrently with the tile sources
@@ -350,6 +404,111 @@ export class OpenSeadragonContext {
   }
 
   /**
+   * Sets the data accessor of a tiled image
+   *
+   * The accessor extracts the raw pixel values of a tile from its tile
+   * invalidation event, one value per tile pixel in row-major order. Together
+   * with the transfer function (see {@link setTiledImageTransferFunction}), it
+   * replaces the tile data with the colors those values map to. Passing
+   * `undefined` removes the accessor; as long as either of the two is missing,
+   * the tiles are left as they are.
+   *
+   * Like tints (see {@link setTiledImageTint}), accessors are remembered per
+   * tile source - the granularity at which OpenSeadragon keys its tile caches -
+   * until the tile source is garbage-collected. Tiled images that share a tile
+   * source therefore also share an accessor, with the last one set winning -
+   * including the tiled images of the navigator, which mirror those of this
+   * viewer and are colored along with them.
+   *
+   * The accessor is only written, and its tiles are only invalidated, if it
+   * actually changed - compared by identity, so a freshly created closure counts
+   * as a change: invalidating them re-runs the color mapping on every loaded tile
+   * of the tile source, starting over from the original tile data.
+   *
+   * @param tiledImage - The tiled image to update
+   * @param dataAccessor - Function extracting the pixel values of a tile from
+   * its tile invalidation event, or `undefined` for no data accessor
+   */
+  setTiledImageDataAccessor(
+    tiledImage: OpenSeadragon.TiledImage,
+    dataAccessor: DataAccessor | undefined,
+  ): void {
+    const oldDataAccessor = this._tileSourceDataAccessors.get(
+      tiledImage.source,
+    );
+    if (
+      (oldDataAccessor === undefined && dataAccessor !== undefined) ||
+      (oldDataAccessor !== undefined && dataAccessor === undefined) ||
+      (oldDataAccessor !== undefined &&
+        dataAccessor !== undefined &&
+        oldDataAccessor !== dataAccessor)
+    ) {
+      if (dataAccessor !== undefined) {
+        this._tileSourceDataAccessors.set(tiledImage.source, dataAccessor);
+      } else {
+        this._tileSourceDataAccessors.delete(tiledImage.source);
+      }
+      tiledImage
+        .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
+        .catch((error) => {
+          console.error(`Failed to invalidate tiles: ${error}`);
+        });
+    }
+  }
+
+  /**
+   * Sets the transfer function of a tiled image
+   *
+   * The transfer function maps a pixel value to the RGBA color it is drawn
+   * with, with each component in `[0, 255]`. It is called once per pixel of
+   * every recolored tile (see {@link setTiledImageDataAccessor}), and is only
+   * used once a data accessor is set as well. Passing `undefined` removes the
+   * transfer function, which leaves the tiles as they are.
+   *
+   * Like accessors, transfer functions are remembered per tile source and are
+   * shared by the tiled images sharing that tile source, with the last one set
+   * winning (see {@link setTiledImageDataAccessor}).
+   *
+   * Like the accessor, the transfer function is only written, and its tiles are
+   * only invalidated, if it actually changed - compared by identity, so a freshly
+   * created closure counts as a change (see
+   * {@link setTiledImageDataAccessor}).
+   *
+   * @param tiledImage - The tiled image to update
+   * @param transferFunction - Function mapping a pixel value to its RGBA color,
+   * or `undefined` for no transfer function
+   */
+  setTiledImageTransferFunction(
+    tiledImage: OpenSeadragon.TiledImage,
+    transferFunction: TransferFunction | undefined,
+  ): void {
+    const oldTransferFunction = this._tileSourceTransferFunctions.get(
+      tiledImage.source,
+    );
+    if (
+      (oldTransferFunction === undefined && transferFunction !== undefined) ||
+      (oldTransferFunction !== undefined && transferFunction === undefined) ||
+      (oldTransferFunction !== undefined &&
+        transferFunction !== undefined &&
+        oldTransferFunction !== transferFunction)
+    ) {
+      if (transferFunction !== undefined) {
+        this._tileSourceTransferFunctions.set(
+          tiledImage.source,
+          transferFunction,
+        );
+      } else {
+        this._tileSourceTransferFunctions.delete(tiledImage.source);
+      }
+      tiledImage
+        .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
+        .catch((error) => {
+          console.error(`Failed to invalidate tiles: ${error}`);
+        });
+    }
+  }
+
+  /**
    * Sets the tint color of a tiled image
    *
    * The tint is applied per tile: the tile is first composited over opaque
@@ -395,9 +554,7 @@ export class OpenSeadragonContext {
       tiledImage
         .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
         .catch((error) => {
-          console.error(
-            `Failed to invalidate tiles of tinted OpenSeadragon image: ${error}`,
-          );
+          console.error(`Failed to invalidate tiles: ${error}`);
         });
     }
   }
@@ -495,44 +652,6 @@ export class OpenSeadragonContext {
   }
 
   /**
-   * Resolves a tile source specifier to a ready-to-use OpenSeadragon tile source
-   *
-   * Fetches the image information if the specifier is a URL, awaits promised
-   * tile sources, and passes ready tile sources through. Doing this before an
-   * addition keeps the loading concurrent, while the additions themselves stay
-   * serialized (see {@link addTiledImage}).
-   *
-   * @param tiledImageOptions - Options containing the tile source to open
-   * @param options - Optional abort signal
-   * @returns A promise that resolves with the opened tile source
-   */
-  async openTileSource(
-    tiledImageOptions: Omit<
-      OpenSeadragon.TileSourceSpecifier,
-      "success" | "error"
-    >,
-    options?: { signal?: AbortSignal },
-  ): Promise<OpenSeadragon.TileSource> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    // OpenSeadragon types tile sources as `string | object`, which also covers
-    // promises of an already opened tile source; anything else is passed through
-    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
-    signal?.throwIfAborted();
-    try {
-      const { source: openedTileSource } =
-        (await this.viewer.instantiateTileSourceClass(
-          // this needs to be a shallow copy; OpenSeadragon mutates it!
-          { ...tiledImageOptions, tileSource },
-        )) as { source: OpenSeadragon.TileSource };
-      signal?.throwIfAborted();
-      return openedTileSource;
-    } catch (error) {
-      throw new Error("Failed to open tile source", { cause: error });
-    }
-  }
-
-  /**
    * Implementation of {@link addTiledImage}, bypassing the world mutation queue
    *
    * Must only be called from within an enqueued world mutation, such that the
@@ -590,5 +709,83 @@ export class OpenSeadragonContext {
     const result = this._worldMutationQueue.then(task);
     this._worldMutationQueue = result.catch(() => {}); // prevent unhandled rejections in console
     return result;
+  }
+
+  /**
+   * Replaces the data of an invalidated tile with the colors of its values
+   *
+   * Does nothing unless the tile source of the tile has both a data accessor
+   * and a transfer function (see {@link setTiledImageDataAccessor} and
+   * {@link setTiledImageTransferFunction}).
+   *
+   * The pixel values are taken to match the tile canvas pixel for pixel, in
+   * row-major order; any remaining pixel is left fully transparent.
+   *
+   * @param event - The tile invalidation event whose tile data is replaced
+   * @returns A promise that resolves once the tile data has been replaced
+   */
+  private async _renderData(
+    event: OpenSeadragon.TileInvalidatedEvent,
+  ): Promise<void> {
+    const tiledImage = event.tile.tiledImage;
+    if (tiledImage === null) {
+      return;
+    }
+    const dataAccessor = this._tileSourceDataAccessors.get(tiledImage.source);
+    if (dataAccessor === undefined) {
+      return;
+    }
+    const transferFunction = this._tileSourceTransferFunctions.get(
+      tiledImage.source,
+    );
+    if (transferFunction === undefined) {
+      return;
+    }
+    const data = await dataAccessor(event);
+    const ctx = (await event.getData("context2d")) as CanvasRenderingContext2D;
+    const img = ctx.createImageData(ctx.canvas.width, ctx.canvas.height);
+    for (let i = 0; i < data.length; i++) {
+      const [r, g, b, a] = transferFunction(data[i]!);
+      img.data[i * 4 + 0] = r;
+      img.data[i * 4 + 1] = g;
+      img.data[i * 4 + 2] = b;
+      img.data[i * 4 + 3] = a;
+    }
+    ctx.putImageData(img, 0, 0);
+    await event.setData(ctx, "context2d");
+  }
+
+  /**
+   * Tints the data of an invalidated tile
+   *
+   * Does nothing unless a tint is set for the tile source of the tile (see
+   * {@link setTiledImageTint}, which also describes how the tint is applied).
+   *
+   * @param event - The tile invalidation event whose tile data is tinted
+   * @returns A promise that resolves once the tile data has been tinted
+   */
+  private async _renderTint(
+    event: OpenSeadragon.TileInvalidatedEvent,
+  ): Promise<void> {
+    const tiledImage = event.tile.tiledImage;
+    if (tiledImage === null) {
+      return;
+    }
+    const tint = this._tileSourceTints.get(tiledImage.source);
+    if (tint === undefined) {
+      return;
+    }
+    const ctx = (await event.getData("context2d")) as CanvasRenderingContext2D;
+    ctx.save(); // push context state
+    // pre-multiply alpha
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.fillStyle = "rgba(0, 0, 0, 1)";
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    // multiply with color
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = `rgba(${tint.r}, ${tint.g}, ${tint.b}, 1)`;
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.restore(); // pop context state
+    await event.setData(ctx, "context2d");
   }
 }
