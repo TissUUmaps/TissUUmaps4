@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import {
   loadProjectFromFile,
+  loadProjectFromURL,
   saveAndDownloadProjectToJSON,
 } from "@/data/io/project";
 import { useProjectStore } from "@/stores/project";
@@ -30,6 +31,23 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
   const name = useProjectStore((state) => state.name);
   const setName = useProjectStore((state) => state.setName);
   const clearProject = useProjectStore((state) => state.clear);
+
+  const promptLoadProjectFromURL = useCallback(() => {
+    // TODO replace by dialog overlay
+    const projectUrl = window.prompt("Enter project URL to load")?.trim();
+    if (!projectUrl) {
+      return;
+    }
+    loadProjectFromURL(projectUrl)
+      .then(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.set("project", projectUrl);
+        window.history.replaceState({}, "", url);
+      })
+      .catch((error) => {
+        console.error(`Failed to load project from ${projectUrl}:`, error);
+      });
+  }, []);
 
   const confirmClearProject = useCallback(() => {
     if (
@@ -99,7 +117,16 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
                   }
                 }}
               >
-                Load project
+                Load project from file
+              </Button>
+            }
+          />
+        </Field>
+        <Field>
+          <FieldControl
+            render={
+              <Button onClick={() => promptLoadProjectFromURL()}>
+                Load project from URL
               </Button>
             }
           />
