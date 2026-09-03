@@ -139,12 +139,7 @@ export {
   type ItemsDataProvider,
   type ItemsDataProviderOpenOptions,
 } from "./storage/base";
-export {
-  type CustomTileSource,
-  type ImageData,
-  type ImageDataProvider,
-  type TileSourceConfig,
-} from "./storage/image";
+export { type ImageData, type ImageDataProvider } from "./storage/image";
 export { type LabelsData, type LabelsDataProvider } from "./storage/labels";
 export {
   type PointsData,
@@ -177,17 +172,21 @@ export {
 } from "./types/geometry";
 export { type InteractionMode } from "./types/interaction";
 export {
+  type CustomTileSource,
+  type OpenSeadragonOptions,
+  type OpenSeadragonViewerOptions,
+  type TileSourceConfig,
+} from "./types/openseadragon";
+export {
   type Plugin,
   type PluginRegistry,
   type PluginStores,
 } from "./types/plugins";
 export {
-  type OpenSeadragonOptions,
-  type OpenSeadragonViewerOptions,
   type WebGLOptions,
   type WebGLPointsRenderOptions,
   type WebGLShapesRenderOptions,
-} from "./types/render";
+} from "./types/webgl";
 
 export {
   type AppStoreState,
