@@ -1,6 +1,11 @@
+import type OpenSeadragon from "openseadragon";
+
 import type { LabelsDataSource } from "../model/labels";
 import type { UintArray } from "../types/arrays";
-import type { ProgressCallback } from "../types/callbacks";
+import type {
+  CustomTileSource,
+  TileSourceConfig,
+} from "../types/openseadragon";
 import type { ItemsData, ItemsDataProvider } from "./base";
 
 /**
@@ -23,56 +28,21 @@ export interface LabelsDataProvider<
  */
 export interface LabelsData extends ItemsData {
   /**
-   * Returns the full labels image width in pixels
+   * Returns the tile source of this label image
    *
-   * @param level - Pyramid level (defaults to the highest resolution)
+   * @returns The tile source, which can be a URL string, a TileSourceConfig
+   * object, or a CustomTileSource object
    */
-  getWidth(level?: number): number;
+  getTileSource(): string | TileSourceConfig | CustomTileSource;
 
   /**
-   * Returns the full labels image height in pixels
+   * Extracts the raw label image data from a tile invalidation event
    *
-   * @param level - Pyramid level (defaults to the highest resolution)
+   * @param event - The tile invalidation event
+   * @returns The label image data as an unsigned integer array
+   * @throws Error if the event does not contain label image data
    */
-  getHeight(level?: number): number;
-
-  /** Returns the number of pyramid levels */
-  getLevelCount(): number;
-
-  /**
-   * Returns the scale factor for a given pyramid level relative to the
-   * highest resolution
-   *
-   * @param level - Pyramid level
-   */
-  getLevelScale(level: number): number;
-
-  /**
-   * Returns the tile width for a given pyramid level
-   *
-   * @param level - Pyramid level
-   */
-  getTileWidth(level: number): number;
-
-  /**
-   * Returns the tile height for a given pyramid level
-   *
-   * @param level - Pyramid level
-   */
-  getTileHeight(level: number): number;
-
-  /**
-   * Loads a single tile as an unsigned integer array
-   *
-   * @param level - Pyramid level
-   * @param x - Tile column index
-   * @param y - Tile row index
-   * @param options - Optional abort signal and progress callback
-   */
-  loadTile(
-    level: number,
-    x: number,
-    y: number,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<UintArray>;
+  getData(
+    event: OpenSeadragon.TileInvalidatedEvent,
+  ): Promise<number[] | UintArray>;
 }

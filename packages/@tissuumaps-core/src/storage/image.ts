@@ -1,5 +1,9 @@
 import type { ImageDataSource } from "../model/image";
 import type { Color } from "../model/primitives";
+import type {
+  CustomTileSource,
+  TileSourceConfig,
+} from "../types/openseadragon";
 import type { Data, DataProvider } from "./base";
 
 /**
@@ -50,20 +54,4 @@ export interface ImageData extends Data {
 
   /** Returns the color of a specific channel, or undefined if not multi-channel or not available */
   getChannelColor?: (c: number) => Color | undefined;
-}
-
-/** Configuration object accepted by OpenSeadragon as a tile source */
-export type TileSourceConfig = object;
-
-/** A custom tile source that resolves tile URLs programmatically */
-export interface CustomTileSource {
-  /**
-   * Returns the URL for a specific tile
-   *
-   * @param level - Pyramid level
-   * @param x - Tile column index
-   * @param y - Tile row index
-   * @returns The tile URL, or a function that returns the URL
-   */
-  getTileUrl(level: number, x: number, y: number): string | (() => string);
 }
