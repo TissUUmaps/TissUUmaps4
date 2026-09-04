@@ -43,8 +43,8 @@ export class WebGLUtils {
    *
    * Inverse of {@link createDataToWorldMatrix}.
    *
-   * @param objectTransform - The data → layer transform of the object (inverted)
-   * @param layerTransform - The layer → world transform of the object's layer (inverted)
+   * @param objectTransform - The data → layer transform of the object
+   * @param layerTransform - The layer → world transform of the object's layer
    * @returns The world → data transformation matrix
    */
   static createWorldToDataMatrix(
