@@ -461,7 +461,7 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Applies the transform, flip, visibility, and opacity of an object reference to the rendered object's backdrop and TiledImages
+   * Applies the transform, visibility, and opacity of an object reference to the rendered object's backdrop and TiledImages
    *
    * The opacity is computed per TiledImage via {@link getTiledImageOpacity}, so that
    * subclasses can vary it by channel; all other properties are shared by all
