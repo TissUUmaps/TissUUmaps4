@@ -31,8 +31,7 @@ function osdCorners(
     flip: boolean;
     width: number;
     rotation: number;
-    x: number;
-    y: number;
+    position: { x: number; y: number };
   },
   contentSize: { x: number; y: number },
 ): vec2[] {
@@ -59,8 +58,8 @@ function osdCorners(
     const dx = c[0] - cx;
     const dy = c[1] - cy;
     return vec2.fromValues(
-      geom.x + cx + dx * cos - dy * sin,
-      geom.y + cy + dx * sin + dy * cos,
+      geom.position.x + cx + dx * cos - dy * sin,
+      geom.position.y + cy + dx * sin + dy * cos,
     );
   });
 }
@@ -260,10 +259,7 @@ describe("OpenSeadragonUtils", () => {
           layerTransform,
           contentSize,
         );
-        const osd = osdCorners(
-          { ...geom, x: geom.position.x, y: geom.position.y },
-          contentSize,
-        );
+        const osd = osdCorners(geom, contentSize);
         const webgl = webglCorners(
           objectTransform,
           layerTransform,
