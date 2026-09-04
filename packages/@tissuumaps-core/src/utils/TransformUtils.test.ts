@@ -165,63 +165,6 @@ describe("TransformUtils", () => {
       expect(tf.translation.x + tf.scale * pivot.x).toBeCloseTo(mapped[0]);
       expect(tf.translation.y + tf.scale * pivot.y).toBeCloseTo(mapped[1]);
     });
-
-    it.each([
-      { flip: false, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
-      {
-        flip: false,
-        scale: 2.5,
-        rotation: 60,
-        translation: { x: -10, y: 20 },
-      },
-      {
-        flip: false,
-        scale: 0.5,
-        rotation: -45,
-        translation: { x: 100, y: 100 },
-      },
-      { flip: true, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
-      {
-        flip: true,
-        scale: 2.5,
-        rotation: 60,
-        translation: { x: -10, y: 20 },
-      },
-      {
-        flip: true,
-        scale: 0.5,
-        rotation: -45,
-        translation: { x: 100, y: 100 },
-      },
-    ])(
-      "rebuilds %j from translate, flip/rotate about the scaled pivot, scale",
-      (tf) => {
-        const m = TransformUtils.toSimilarityMatrix(tf);
-        const result = TransformUtils.fromSimilarityMatrix(m, pivot);
-        const rebuilt = mat3.create();
-        mat3.translate(rebuilt, rebuilt, [
-          result.translation.x,
-          result.translation.y,
-        ]);
-        // Flip and rotate about the scaled pivot
-        mat3.translate(rebuilt, rebuilt, [
-          result.scale * pivot.x,
-          result.scale * pivot.y,
-        ]);
-        mat3.rotate(rebuilt, rebuilt, (Math.PI * result.rotation) / 180);
-        if (result.flip) {
-          mat3.scale(rebuilt, rebuilt, [-1, 1]);
-        }
-        mat3.translate(rebuilt, rebuilt, [
-          -result.scale * pivot.x,
-          -result.scale * pivot.y,
-        ]);
-        mat3.scale(rebuilt, rebuilt, [result.scale, result.scale]);
-        for (let i = 0; i < 9; i++) {
-          expect(rebuilt[i]).toBeCloseTo(m[i]!);
-        }
-      },
-    );
   });
 
   describe("toSimilarityMatrix", () => {
@@ -292,6 +235,61 @@ describe("TransformUtils", () => {
     });
   });
 
+  describe("toSimilarityMatrix with pivot", () => {
+    const pivot = { x: 50, y: 25 };
+
+    it("matches the pivot-free result for a pivot at the origin", () => {
+      const tf: SimilarityTransform = {
+        flip: true,
+        scale: 2,
+        rotation: 30,
+        translation: { x: 5, y: 7 },
+      };
+      const m = TransformUtils.toSimilarityMatrix(tf, { x: 0, y: 0 });
+      const ref = TransformUtils.toSimilarityMatrix(tf);
+      for (let i = 0; i < 9; i++) {
+        expect(m[i]).toBeCloseTo(ref[i]!);
+      }
+    });
+
+    it("returns identity for an empty partial transform", () => {
+      const m = TransformUtils.toSimilarityMatrix({}, pivot);
+      const identity = mat3.create();
+      for (let i = 0; i < 9; i++) {
+        expect(m[i]).toBeCloseTo(identity[i]!);
+      }
+    });
+
+    it("flips about the pivot", () => {
+      const m = TransformUtils.toSimilarityMatrix({ flip: true }, pivot);
+      const q = vec2.transformMat3(vec2.create(), [10, 20], m);
+      expect(q[0]).toBeCloseTo(2 * pivot.x - 10);
+      expect(q[1]).toBeCloseTo(20);
+    });
+
+    it("rotates about the pivot", () => {
+      const m = TransformUtils.toSimilarityMatrix({ rotation: 90 }, pivot);
+      const fixed = vec2.transformMat3(vec2.create(), [pivot.x, pivot.y], m);
+      expect(fixed[0]).toBeCloseTo(pivot.x);
+      expect(fixed[1]).toBeCloseTo(pivot.y);
+      // (pivot.x + 1, pivot.y) rotates by 90° about the pivot to (pivot.x, pivot.y + 1)
+      const q = vec2.transformMat3(vec2.create(), [pivot.x + 1, pivot.y], m);
+      expect(q[0]).toBeCloseTo(pivot.x);
+      expect(q[1]).toBeCloseTo(pivot.y + 1);
+    });
+
+    it("scales about the origin and rotates about the scaled pivot", () => {
+      const m = TransformUtils.toSimilarityMatrix(
+        { scale: 2, rotation: 90 },
+        pivot,
+      );
+      // Scale is not pivoted, so the pivot lands at scale * pivot
+      const q = vec2.transformMat3(vec2.create(), [pivot.x, pivot.y], m);
+      expect(q[0]).toBeCloseTo(2 * pivot.x);
+      expect(q[1]).toBeCloseTo(2 * pivot.y);
+    });
+  });
+
   describe("fromSimilarityMatrix / toSimilarityMatrix roundtrip", () => {
     it.each([
       { flip: false, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
@@ -329,6 +327,75 @@ describe("TransformUtils", () => {
       expect(result.translation.x).toBeCloseTo(tf.translation.x);
       expect(result.translation.y).toBeCloseTo(tf.translation.y);
     });
+  });
+
+  describe("fromSimilarityMatrix / toSimilarityMatrix roundtrip with pivot", () => {
+    const pivot = { x: 50, y: 25 };
+
+    it.each([
+      { flip: false, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
+      {
+        flip: false,
+        scale: 2.5,
+        rotation: 60,
+        translation: { x: -10, y: 20 },
+      },
+      {
+        flip: false,
+        scale: 0.5,
+        rotation: -45,
+        translation: { x: 100, y: 100 },
+      },
+      { flip: true, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
+      {
+        flip: true,
+        scale: 2.5,
+        rotation: 60,
+        translation: { x: -10, y: 20 },
+      },
+      {
+        flip: true,
+        scale: 0.5,
+        rotation: -45,
+        translation: { x: 100, y: 100 },
+      },
+    ])("roundtrips %j through the matrix", (tf) => {
+      const m = TransformUtils.toSimilarityMatrix(tf, pivot);
+      const result = TransformUtils.fromSimilarityMatrix(m, pivot);
+      expect(result.flip).toBe(tf.flip);
+      expect(result.scale).toBeCloseTo(tf.scale);
+      expect(result.rotation).toBeCloseTo(tf.rotation);
+      expect(result.translation.x).toBeCloseTo(tf.translation.x);
+      expect(result.translation.y).toBeCloseTo(tf.translation.y);
+    });
+
+    it.each([
+      { flip: false, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
+      {
+        flip: false,
+        scale: 2.5,
+        rotation: 60,
+        translation: { x: -10, y: 20 },
+      },
+      {
+        flip: true,
+        scale: 0.5,
+        rotation: -45,
+        translation: { x: 100, y: 100 },
+      },
+    ])(
+      "roundtrips the origin-pivoted matrix of %j through the transform",
+      (tf) => {
+        const m = TransformUtils.toSimilarityMatrix(tf);
+        const rebuilt = TransformUtils.toSimilarityMatrix(
+          TransformUtils.fromSimilarityMatrix(m, pivot),
+          pivot,
+        );
+        for (let i = 0; i < 9; i++) {
+          expect(rebuilt[i]).toBeCloseTo(m[i]!);
+        }
+      },
+    );
   });
 
   describe("transformBoundingBox", () => {

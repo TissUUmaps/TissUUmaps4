@@ -50,26 +50,45 @@ export class TransformUtils {
   /**
    * Builds a 3×3 similarity matrix from a (partial) {@link SimilarityTransform}
    *
-   * Applies, in order: flip, scale, rotation, and translation.
+   * Applies, in order: flip/scale, rotation, and translation.
+   *
+   * If `pivot` is given, flip and rotation are applied about `pivot` (in the
+   * source coordinates of the transform) instead of the origin, while scale
+   * stays about the origin. The translation is then the position of the
+   * scaled content before it is flipped and rotated about its (scaled)
+   * pivot. This is the inverse of {@link fromSimilarityMatrix} called with
+   * the same pivot.
    *
    * @param tf - The transform components (all optional)
+   * @param pivot - Optional point about which flip and rotation are applied
    * @returns The composed matrix
    */
-  static toSimilarityMatrix(tf: Partial<SimilarityTransform>): mat3 {
+  static toSimilarityMatrix(
+    tf: Partial<SimilarityTransform>,
+    pivot?: { x: number; y: number },
+  ): mat3 {
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,
     // so we need to apply transformations in reverse order.
     const m = mat3.create();
     if (tf.translation !== undefined) {
       mat3.translate(m, m, [tf.translation.x, tf.translation.y]);
     }
+    if (pivot !== undefined) {
+      const scale = tf.scale ?? 1;
+      mat3.translate(m, m, [scale * pivot.x, scale * pivot.y]);
+    }
     if (tf.rotation !== undefined) {
       mat3.rotate(m, m, (Math.PI * tf.rotation) / 180);
     }
-    if (tf.scale !== undefined) {
-      mat3.scale(m, m, [tf.scale, tf.scale]);
-    }
     if (tf.flip) {
       mat3.scale(m, m, [-1, 1]);
+    }
+    if (pivot !== undefined) {
+      const scale = tf.scale ?? 1;
+      mat3.translate(m, m, [-scale * pivot.x, -scale * pivot.y]);
+    }
+    if (tf.scale !== undefined) {
+      mat3.scale(m, m, [tf.scale, tf.scale]);
     }
     return m;
   }
