@@ -10,7 +10,7 @@ import {
 import { projectStore } from "@/stores/project";
 
 /** The GET parameter naming the project to load */
-export const projectUrlParam = "project";
+export const projectURLParam = "project";
 
 /**
  * Creates a deep copy of a project, keeping only the project's own properties
@@ -155,17 +155,17 @@ export function saveAndDownloadProjectToJSON(project?: Project): void {
  *
  * @param projectUrl - The URL the project was loaded from
  */
-export function setProjectUrlParam(projectUrl: string): void {
+export function setProjectURLParam(projectUrl: string): void {
   const url = new URL(window.location.href);
-  url.searchParams.set(projectUrlParam, projectUrl);
+  url.searchParams.set(projectURLParam, projectUrl);
   window.history.replaceState({}, "", url);
 }
 
 /**
  * Removes the project URL from the address bar
  */
-export function clearProjectUrlParam(): void {
+export function clearProjectURLParam(): void {
   const url = new URL(window.location.href);
-  url.searchParams.delete(projectUrlParam);
+  url.searchParams.delete(projectURLParam);
   window.history.replaceState({}, "", url);
 }

@@ -12,11 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  clearProjectUrlParam,
+  clearProjectURLParam,
   loadProjectFromFile,
   loadProjectFromURL,
   saveAndDownloadProjectToJSON,
-  setProjectUrlParam,
+  setProjectURLParam,
 } from "@/data/io/project";
 import { useProjectStore } from "@/stores/project";
 
@@ -42,10 +42,10 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
     }
     loadProjectFromURL(projectUrl)
       .then(() => {
-        setProjectUrlParam(projectUrl);
+        setProjectURLParam(projectUrl);
       })
       .catch((error) => {
-        console.error(`Failed to load project from ${projectUrl}:`, error);
+        console.error("Failed to load project from URL", error);
       });
   }, []);
 
@@ -57,7 +57,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
       )
     ) {
       clearProject();
-      clearProjectUrlParam();
+      clearProjectURLParam();
     }
   }, [clearProject]);
 
@@ -98,9 +98,13 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
             onChange={(event) => {
               const files = event.target.files;
               if (files !== null && files.length > 0) {
-                loadProjectFromFile(files[0]!).catch((error) => {
-                  console.error("Failed to load project from file", error);
-                });
+                loadProjectFromFile(files[0]!)
+                  .then(() => {
+                    clearProjectURLParam();
+                  })
+                  .catch((error) => {
+                    console.error("Failed to load project from file", error);
+                  });
               }
             }}
             hidden
