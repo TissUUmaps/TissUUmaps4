@@ -68,17 +68,14 @@ export class OpenSeadragonUtils {
     rotation: number;
     position: OpenSeadragon.Point;
   } {
-    const m = mat3.create();
-    mat3.multiply(
-      m,
+    const m = mat3.multiply(
+      mat3.create(),
       TransformUtils.toSimilarityMatrix(layerTransform),
       TransformUtils.toSimilarityMatrix(objectTransform),
     );
+    const pivot = { x: contentSize.x / 2, y: contentSize.y / 2 };
     const { flip, scale, rotation, translation } =
-      TransformUtils.fromSimilarityMatrix(m, {
-        x: contentSize.x / 2,
-        y: contentSize.y / 2,
-      });
+      TransformUtils.fromSimilarityMatrix(m, pivot);
     return {
       flip,
       width: contentSize.x * scale,
