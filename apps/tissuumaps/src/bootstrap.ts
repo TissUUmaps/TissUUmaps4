@@ -1,11 +1,8 @@
 import { startDataCaches } from "./data/cache";
-import { loadProjectFromURL } from "./data/io/project";
+import { loadProjectFromURL, projectUrlParam } from "./data/io/project";
 import { enableBuiltInDataProviders } from "./data/providers";
 import { notifyTissUUmapsLoaded } from "./events";
 import { startPluginRegistry } from "./plugins";
-
-/** The GET parameter naming the project to load on startup */
-const projectUrlParam = "project";
 
 /** The project loaded on startup when the URL does not name one */
 const fallbackProjectUrl = "project.json";
