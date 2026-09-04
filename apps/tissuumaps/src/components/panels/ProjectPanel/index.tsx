@@ -12,8 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
+  clearProjectURLParam,
   loadProjectFromFile,
+  loadProjectFromURL,
   saveAndDownloadProjectToJSON,
+  setProjectURLParam,
 } from "@/data/io/project";
 import { useProjectStore } from "@/stores/project";
 
@@ -31,6 +34,21 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
   const setName = useProjectStore((state) => state.setName);
   const clearProject = useProjectStore((state) => state.clear);
 
+  const promptLoadProjectFromURL = useCallback(() => {
+    // TODO replace by dialog overlay
+    const projectUrl = window.prompt("Enter project URL to load")?.trim();
+    if (!projectUrl) {
+      return;
+    }
+    loadProjectFromURL(projectUrl)
+      .then(() => {
+        setProjectURLParam(projectUrl);
+      })
+      .catch((error) => {
+        console.error("Failed to load project from URL", error);
+      });
+  }, []);
+
   const confirmClearProject = useCallback(() => {
     if (
       // TODO replace by dialog overlay
@@ -39,9 +57,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
       )
     ) {
       clearProject();
-      const url = new URL(window.location.href);
-      url.searchParams.delete("project");
-      window.history.replaceState({}, "", url);
+      clearProjectURLParam();
     }
   }, [clearProject]);
 
@@ -82,9 +98,13 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
             onChange={(event) => {
               const files = event.target.files;
               if (files !== null && files.length > 0) {
-                loadProjectFromFile(files[0]!).catch((error) => {
-                  console.error("Failed to load project from file", error);
-                });
+                loadProjectFromFile(files[0]!)
+                  .then(() => {
+                    clearProjectURLParam();
+                  })
+                  .catch((error) => {
+                    console.error("Failed to load project from file", error);
+                  });
               }
             }}
             hidden
@@ -99,7 +119,16 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
                   }
                 }}
               >
-                Load project
+                Load project from file
+              </Button>
+            }
+          />
+        </Field>
+        <Field>
+          <FieldControl
+            render={
+              <Button onClick={() => promptLoadProjectFromURL()}>
+                Load project from URL
               </Button>
             }
           />

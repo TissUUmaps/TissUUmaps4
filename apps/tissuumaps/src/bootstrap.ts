@@ -1,11 +1,8 @@
 import { startDataCaches } from "./data/cache";
-import { loadProjectFromURL } from "./data/io/project";
+import { loadProjectFromURL, projectURLParam } from "./data/io/project";
 import { enableBuiltInDataProviders } from "./data/providers";
 import { notifyTissUUmapsLoaded } from "./events";
 import { startPluginRegistry } from "./plugins";
-
-/** The GET parameter naming the project to load on startup */
-const projectUrlParam = "project";
 
 /** The project loaded on startup when the URL does not name one */
 const fallbackProjectUrl = "project.json";
@@ -35,7 +32,7 @@ export function bootstrap(): () => void {
 }
 
 /**
- * Starts loading the project named by the {@link projectUrlParam} GET
+ * Starts loading the project named by the {@link projectURLParam} GET
  * parameter, falling back to {@link fallbackProjectUrl} if it is absent or empty
  *
  * Failures are logged, unless loading was cancelled.
@@ -45,7 +42,7 @@ export function bootstrap(): () => void {
 function loadInitialProject(): () => void {
   const abortController = new AbortController();
   const params = new URLSearchParams(window.location.search);
-  const projectUrl = params.get(projectUrlParam) || fallbackProjectUrl;
+  const projectUrl = params.get(projectURLParam) || fallbackProjectUrl;
   loadProjectFromURL(projectUrl, { signal: abortController.signal }).catch(
     (error) => {
       if (!abortController.signal.aborted) {
