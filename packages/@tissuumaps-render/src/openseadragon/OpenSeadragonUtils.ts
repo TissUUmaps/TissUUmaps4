@@ -47,10 +47,11 @@ export class OpenSeadragonUtils {
   /**
    * Computes the effective flip, width, rotation, and position for a tiled image based on its transforms and content size
    *
-   * Composes the data → layer → world similarity matrices (including flip),
-   * then decomposes the result around the image center to match
-   * OpenSeadragon's flip/rotation-around-image-center convention. The
-   * decomposed translation is then the OpenSeadragon position directly.
+   * Composes the data → layer → world similarity matrices (including flip)
+   * and decomposes the result with flip and rotation pivoted at the image
+   * center, matching OpenSeadragon's flip/rotation-around-image-center
+   * convention. The decomposed translation is then the OpenSeadragon
+   * position directly.
    *
    * @param objectTransform - The data → layer transform of the object
    * @param layerTransform - The layer → world transform of the object's layer
@@ -75,7 +76,8 @@ export class OpenSeadragonUtils {
     );
     const { flip, scale, rotation, translation } =
       TransformUtils.fromSimilarityMatrix(m, {
-        center: { x: contentSize.x / 2, y: contentSize.y / 2 },
+        x: contentSize.x / 2,
+        y: contentSize.y / 2,
       });
     return {
       flip,
