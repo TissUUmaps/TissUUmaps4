@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { MathUtils, type Points, createPoints } from "@tissuumaps/core";
 
@@ -22,6 +23,7 @@ import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { usePointsData } from "@/hooks/useData";
+import { useFocusObjectHandler } from "@/hooks/useFocusObjectHandler";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -42,8 +44,18 @@ export function PointsPanel({ className }: PointsPanelProps) {
   const addPoints = useProjectStore((state) => state.addPoints);
   const movePoints = useProjectStore((state) => state.movePoints);
 
+  // Controlled accordion so notifications can expand a specific point cloud.
+  const [openIds, setOpenIds] = useState<string[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusObjectHandler("points", (id) => {
+    setOpenIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    containerRef.current
+      ?.querySelector(`[data-object-id="${CSS.escape(id)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  });
+
   return (
-    <div className={cn("flex flex-col gap-y-2", className)}>
+    <div ref={containerRef} className={cn("flex flex-col gap-y-2", className)}>
       <DragDropProvider
         onDragEnd={(event) => {
           const { source, canceled } = event.operation;
@@ -54,7 +66,12 @@ export function PointsPanel({ className }: PointsPanelProps) {
           }
         }}
       >
-        <Accordion multiple className="gap-y-2">
+        <Accordion
+          multiple
+          value={openIds}
+          onValueChange={setOpenIds}
+          className="gap-y-2"
+        >
           {points.map((currentPoints, index) => (
             <PointsAccordionItem
               key={currentPoints.id}
@@ -111,8 +128,11 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const { ref, handleRef } = useSortable({ id: points.id, index });
 
   return (
-    <div ref={ref}>
-      <AccordionItem className="border rounded-md bg-sidebar p-2">
+    <div ref={ref} data-object-id={points.id}>
+      <AccordionItem
+        value={points.id}
+        className="border rounded-md bg-sidebar p-2"
+      >
         <AccordionHeader>
           <GripVertical ref={handleRef} />
           <div className="flex-1 w-full">

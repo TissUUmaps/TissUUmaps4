@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { type Image, MathUtils, createImage } from "@tissuumaps/core";
 
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/input-group";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { useFocusObjectHandler } from "@/hooks/useFocusObjectHandler";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -38,8 +40,18 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
   const addImage = useProjectStore((state) => state.addImage);
   const moveImage = useProjectStore((state) => state.moveImage);
 
+  // Controlled accordion so notifications can expand a specific image.
+  const [openIds, setOpenIds] = useState<string[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusObjectHandler("image", (id) => {
+    setOpenIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    containerRef.current
+      ?.querySelector(`[data-object-id="${CSS.escape(id)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  });
+
   return (
-    <div className={cn("flex flex-col gap-y-2", className)}>
+    <div ref={containerRef} className={cn("flex flex-col gap-y-2", className)}>
       <DragDropProvider
         onDragEnd={(event) => {
           const { source, canceled } = event.operation;
@@ -50,7 +62,12 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
           }
         }}
       >
-        <Accordion multiple className="gap-y-2">
+        <Accordion
+          multiple
+          value={openIds}
+          onValueChange={setOpenIds}
+          className="gap-y-2"
+        >
           {images.map((image, index) => (
             <ImageAccordionItem key={image.id} image={image} index={index} />
           ))}
@@ -89,8 +106,11 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
   const { ref, handleRef } = useSortable({ id: image.id, index });
 
   return (
-    <div ref={ref}>
-      <AccordionItem className="border rounded-md bg-sidebar p-2">
+    <div ref={ref} data-object-id={image.id}>
+      <AccordionItem
+        value={image.id}
+        className="border rounded-md bg-sidebar p-2"
+      >
         <AccordionHeader>
           <GripVertical ref={handleRef} />
           <div className="flex-1 w-full">

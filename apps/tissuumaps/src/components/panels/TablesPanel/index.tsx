@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { GripVertical, Trash2Icon } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { type Table, createTable } from "@tissuumaps/core";
 
@@ -15,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { useFocusObjectHandler } from "@/hooks/useFocusObjectHandler";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -32,8 +34,18 @@ export function TablesPanel({ className }: TablesPanelProps) {
   const addTable = useProjectStore((state) => state.addTable);
   const moveTable = useProjectStore((state) => state.moveTable);
 
+  // Controlled accordion so notifications can expand a specific table.
+  const [openIds, setOpenIds] = useState<string[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusObjectHandler("table", (id) => {
+    setOpenIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    containerRef.current
+      ?.querySelector(`[data-object-id="${CSS.escape(id)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  });
+
   return (
-    <div className={cn("flex flex-col gap-y-2", className)}>
+    <div ref={containerRef} className={cn("flex flex-col gap-y-2", className)}>
       <DragDropProvider
         onDragEnd={(event) => {
           const { source, canceled } = event.operation;
@@ -44,7 +56,12 @@ export function TablesPanel({ className }: TablesPanelProps) {
           }
         }}
       >
-        <Accordion multiple className="gap-y-2">
+        <Accordion
+          multiple
+          value={openIds}
+          onValueChange={setOpenIds}
+          className="gap-y-2"
+        >
           {tables.map((table, index) => (
             <TableAccordionItem key={table.id} table={table} index={index} />
           ))}
@@ -80,8 +97,11 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
   const { ref, handleRef } = useSortable({ id: table.id, index });
 
   return (
-    <div ref={ref}>
-      <AccordionItem className="border rounded-md bg-sidebar p-2">
+    <div ref={ref} data-object-id={table.id}>
+      <AccordionItem
+        value={table.id}
+        className="border rounded-md bg-sidebar p-2"
+      >
         <AccordionHeader>
           <GripVertical ref={handleRef} />
           <div className="flex-1 w-full">

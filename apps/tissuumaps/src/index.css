@@ -121,3 +121,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Indeterminate progress bar animation (see components/ui/progress.tsx) */
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
