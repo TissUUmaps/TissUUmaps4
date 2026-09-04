@@ -8,12 +8,19 @@ import type { Data, DataProvider } from "./base";
  * @typeParam TImageDataSource - The data source type this data provider opens
  * @typeParam TImageData - The {@link ImageData} type produced by this data
  * provider
+ * @typeParam TNormalizedImageDataSource - The normalized data source type
+ * produced by `normalize` and accepted by `load`
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ImageDataProvider<
   TImageDataSource extends ImageDataSource,
   TImageData extends ImageData,
-> extends DataProvider<TImageDataSource, TImageData> {}
+  TNormalizedImageDataSource extends TImageDataSource = TImageDataSource,
+> extends DataProvider<
+  TImageDataSource,
+  TImageData,
+  TNormalizedImageDataSource
+> {}
 
 /**
  * Loaded image data providing one or more OpenSeadragon-compatible tile sources

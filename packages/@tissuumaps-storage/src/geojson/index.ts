@@ -3,6 +3,6 @@ export { GeoJSONShapesDataProvider } from "./GeoJSONShapesDataProvider";
 export {
   geoJSONShapesDataSourceDefaults,
   geoJSONShapesDataSourceType,
-  type DefaultGeoJSONShapesDataSource,
+  type NormalizedGeoJSONShapesDataSource,
   type GeoJSONShapesDataSource,
 } from "./GeoJSONShapesDataSource";

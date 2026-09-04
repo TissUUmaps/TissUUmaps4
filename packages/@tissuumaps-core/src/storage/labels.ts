@@ -9,12 +9,19 @@ import type { ItemsData, ItemsDataProvider } from "./base";
  * @typeParam TLabelsDataSource - The data source type this data provider opens
  * @typeParam TLabelsData - The {@link LabelsData} type produced by this data
  * provider
+ * @typeParam TNormalizedLabelsDataSource - The normalized data source type
+ * produced by `normalize` and accepted by `load`
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface LabelsDataProvider<
   TLabelsDataSource extends LabelsDataSource,
   TLabelsData extends LabelsData,
-> extends ItemsDataProvider<TLabelsDataSource, TLabelsData> {}
+  TNormalizedLabelsDataSource extends TLabelsDataSource = TLabelsDataSource,
+> extends ItemsDataProvider<
+  TLabelsDataSource,
+  TLabelsData,
+  TNormalizedLabelsDataSource
+> {}
 
 /**
  * Loaded label image data providing a tiled, multi-resolution integer raster

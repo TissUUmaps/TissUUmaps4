@@ -17,13 +17,14 @@ import {
 import { CSVTableData } from "./CSVTableData";
 import {
   type CSVTableDataSource,
-  type DefaultCSVTableDataSource,
+  type NormalizedCSVTableDataSource,
   csvTableDataSourceDefaults,
 } from "./CSVTableDataSource";
 
 export class CSVTableDataProvider implements TableDataProvider<
   CSVTableDataSource,
-  CSVTableData
+  CSVTableData,
+  NormalizedCSVTableDataSource
 > {
   readonly name = "CSV";
 
@@ -72,18 +73,19 @@ export class CSVTableDataProvider implements TableDataProvider<
     ],
   };
 
-  normalizeDataSource(
+  normalize(
     dataSource: CSVTableDataSource,
-  ): DefaultCSVTableDataSource {
+    projectUrl: string | null,
+  ): NormalizedCSVTableDataSource {
     let { url } = dataSource;
     if (url !== undefined) {
-      url = new URL(url, document.baseURI).href;
+      url = new URL(url, projectUrl ?? document.baseURI).href;
     }
     return { ...csvTableDataSourceDefaults, ...dataSource, url };
   }
 
   async load(
-    dataSource: CSVTableDataSource,
+    normalizedDataSource: NormalizedCSVTableDataSource,
     options?: DataProviderOpenOptions,
   ): Promise<CSVTableData> {
     const { signal, onProgress, workspace = null } = options ?? {};
@@ -99,8 +101,6 @@ export class CSVTableDataProvider implements TableDataProvider<
       | undefined;
     let byteLength: number | undefined;
     let parseError: unknown;
-
-    const normalizedDataSource = this.normalizeDataSource(dataSource);
 
     const parseConfig: Partial<ParseLocalConfig & ParseRemoteConfig> = {
       ...normalizedDataSource.parseConfig,

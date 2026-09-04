@@ -142,13 +142,16 @@ type LoadCall<TDataSource extends DataSource, TData extends Data, TOptions> = {
  * captured call's deferred is settled
  */
 function createTestDataProvider(options?: {
-  normalizeDataSource?: (dataSource: TestDataSource) => TestDataSource;
+  normalize?: (
+    dataSource: TestDataSource,
+    projectUrl: string | null,
+  ) => TestDataSource;
 }): {
   dataProvider: DataProvider<TestDataSource, TestData>;
   load: Mock;
   calls: LoadCall<TestDataSource, TestData, DataProviderOpenOptions>[];
 } {
-  const { normalizeDataSource = (dataSource: TestDataSource) => dataSource } =
+  const { normalize = (dataSource: TestDataSource) => dataSource } =
     options ?? {};
   const calls: LoadCall<TestDataSource, TestData, DataProviderOpenOptions>[] =
     [];
@@ -164,7 +167,7 @@ function createTestDataProvider(options?: {
       name: "Test data provider",
       schema: {},
       uischema: { type: "VerticalLayout" },
-      normalizeDataSource,
+      normalize,
       load,
     },
     load,
@@ -202,7 +205,7 @@ function createTestItemsDataProvider(): {
       name: "Test items data provider",
       schema: {},
       uischema: { type: "VerticalLayout" },
-      normalizeDataSource: (dataSource) => dataSource,
+      normalize: (dataSource) => dataSource,
       load,
     },
     load,
@@ -230,7 +233,7 @@ function createTestTableDataProvider(): {
       name: "Test table data provider",
       schema: {},
       uischema: { type: "VerticalLayout" },
-      normalizeDataSource: (dataSource) => dataSource,
+      normalize: (dataSource) => dataSource,
       load,
     },
     load,
@@ -269,9 +272,12 @@ function createObject(
 
 function createContext(
   dataProvider: DataProvider<TestDataSource, TestData> | undefined,
-  options?: { workspace?: FileSystemDirectoryHandle | null },
+  options?: {
+    workspace?: FileSystemDirectoryHandle | null;
+    projectUrl?: string | null;
+  },
 ): DataCacheContext<TestDataSource, TestData> {
-  const { workspace = null } = options ?? {};
+  const { workspace = null, projectUrl = null } = options ?? {};
   const dataProviders = new Map<
     string,
     DataProvider<TestDataSource, TestData>
@@ -279,7 +285,7 @@ function createContext(
   if (dataProvider !== undefined) {
     dataProviders.set("test", dataProvider);
   }
-  return { workspace, dataProviders };
+  return { workspace, projectUrl, dataProviders };
 }
 
 function createWorkspace(): FileSystemDirectoryHandle {
@@ -391,7 +397,7 @@ describe("DataCache", () => {
     it("shares the data between objects whose data sources normalize equally", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider({
-        normalizeDataSource: (dataSource) => ({
+        normalize: (dataSource) => ({
           ...dataSource,
           url: dataSource.url ?? "default.test",
         }),
@@ -832,6 +838,38 @@ describe("DataCache", () => {
       expect(second.load).toHaveBeenCalledOnce();
     });
 
+    it("re-normalizes the data source when the project URL changes", async () => {
+      const { dataCache } = createTestDataCache();
+      const { dataProvider, load, calls } = createTestDataProvider({
+        normalize: (dataSource, projectUrl) => ({
+          ...dataSource,
+          url: new URL(dataSource.url!, projectUrl ?? "https://base/").href,
+        }),
+      });
+      const object = createObject("a", { type: "test", url: "a.test" });
+
+      const promise = dataCache.load(
+        object,
+        createContext(dataProvider, { projectUrl: "https://first/dir/p.json" }),
+      );
+      calls.at(-1)!.deferred.resolve(createTestData("first").data);
+      await promise;
+      const reloaded = dataCache.load(
+        object,
+        createContext(dataProvider, {
+          projectUrl: "https://second/dir/p.json",
+        }),
+      );
+      calls.at(-1)!.deferred.resolve(createTestData("second").data);
+
+      expect((await reloaded).value).toBe("second");
+      expect(load).toHaveBeenCalledTimes(2);
+      expect(calls.map((call) => call.dataSource.url)).toEqual([
+        "https://first/dir/a.test",
+        "https://second/dir/a.test",
+      ]);
+    });
+
     it("keeps the data when only the data provider map identity changes", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
@@ -1072,12 +1110,14 @@ function createItemsContext(options: {
   tableDataProvider?: DataProvider<TableDataSource, TableData>;
   tables?: DataObject<TableDataSource>[];
   workspace?: FileSystemDirectoryHandle | null;
+  projectUrl?: string | null;
 }): ItemsDataCacheContext<TestItemsDataSource, TestItemsData> {
   const {
     dataProvider,
     tableDataProvider,
     tables = [],
     workspace = null,
+    projectUrl = null,
   } = options;
   const dataProviders = new Map<
     string,
@@ -1090,7 +1130,13 @@ function createItemsContext(options: {
   if (tableDataProvider !== undefined) {
     tableDataProviders.set("table", tableDataProvider);
   }
-  return { workspace, dataProviders, tables, tableDataProviders };
+  return {
+    workspace,
+    projectUrl,
+    dataProviders,
+    tables,
+    tableDataProviders,
+  };
 }
 
 describe("ItemsDataCache", () => {
@@ -1241,6 +1287,7 @@ describe("ItemsDataCache", () => {
     await promise;
     tableDataCache.retainOnly([table], {
       workspace: null,
+      projectUrl: null,
       dataProviders: itemsContext.tableDataProviders,
     });
     const objectDataRefs = itemsDataCache.retainOnly([object], itemsContext);
@@ -1280,6 +1327,7 @@ describe("ItemsDataCache", () => {
     await promise;
     tableDataCache.retainOnly([], {
       workspace: null,
+      projectUrl: null,
       dataProviders: itemsContext.tableDataProviders,
     });
     const objectDataRefs = itemsDataCache.retainOnly([object], itemsContext);
@@ -1312,6 +1360,7 @@ describe("ItemsDataCache", () => {
     });
     const tableContext = {
       workspace: null,
+      projectUrl: null,
       dataProviders: itemsContext.tableDataProviders,
     };
     const tableController = new AbortController();

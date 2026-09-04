@@ -3,6 +3,6 @@ export { OMEZarrImageDataProvider } from "./OMEZarrImageDataProvider";
 export {
   omeZarrImageDataSourceDefaults,
   omeZarrImageDataSourceType,
-  type DefaultOMEZarrImageDataSource,
+  type NormalizedOMEZarrImageDataSource,
   type OMEZarrImageDataSource,
 } from "./OMEZarrImageDataSource";

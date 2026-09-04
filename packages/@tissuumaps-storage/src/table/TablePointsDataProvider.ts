@@ -6,14 +6,15 @@ import {
 
 import { TablePointsData } from "./TablePointsData";
 import {
-  type DefaultTablePointsDataSource,
+  type NormalizedTablePointsDataSource,
   type TablePointsDataSource,
   tablePointsDataSourceDefaults,
 } from "./TablePointsDataSource";
 
 export class TablePointsDataProvider implements PointsDataProvider<
   TablePointsDataSource,
-  TablePointsData
+  TablePointsData,
+  NormalizedTablePointsDataSource
 > {
   readonly name = "Table";
 
@@ -56,14 +57,14 @@ export class TablePointsDataProvider implements PointsDataProvider<
     ],
   };
 
-  normalizeDataSource(
+  normalize(
     dataSource: TablePointsDataSource,
-  ): DefaultTablePointsDataSource {
+  ): NormalizedTablePointsDataSource {
     return { ...tablePointsDataSourceDefaults, ...dataSource };
   }
 
   async load(
-    dataSource: TablePointsDataSource,
+    normalizedDataSource: NormalizedTablePointsDataSource,
     options?: ItemsDataProviderOpenOptions,
   ): Promise<TablePointsData> {
     const { signal, tableDataPromise } = options ?? {};
@@ -71,7 +72,6 @@ export class TablePointsDataProvider implements PointsDataProvider<
     if (tableDataPromise === undefined) {
       throw new Error("Table data must be provided");
     }
-    const normalizedDataSource = this.normalizeDataSource(dataSource);
     const tableData = await AsyncUtils.raceSignal(tableDataPromise, { signal });
     return new TablePointsData(
       tableData,

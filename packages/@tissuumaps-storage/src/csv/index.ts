@@ -4,5 +4,5 @@ export {
   csvTableDataSourceDefaults,
   csvTableDataSourceType,
   type CSVTableDataSource,
-  type DefaultCSVTableDataSource,
+  type NormalizedCSVTableDataSource,
 } from "./CSVTableDataSource";

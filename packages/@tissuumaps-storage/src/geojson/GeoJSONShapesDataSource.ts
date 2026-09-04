@@ -11,7 +11,7 @@ export interface GeoJSONShapesDataSource extends ShapesDataSource<
   nameProperty?: string;
 }
 
-export type DefaultGeoJSONShapesDataSource = Required<
+export type NormalizedGeoJSONShapesDataSource = Required<
   Pick<GeoJSONShapesDataSource, keyof typeof geoJSONShapesDataSourceDefaults>
 > &
   Omit<GeoJSONShapesDataSource, keyof typeof geoJSONShapesDataSourceDefaults>;
