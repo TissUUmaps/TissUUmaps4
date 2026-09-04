@@ -154,8 +154,6 @@ export function PointsSettingsWidget({
               onTransformChange={(transform) =>
                 updatePoints(points.id, { transform })
               }
-              flip={points.flip}
-              onFlipChange={(flip) => updatePoints(points.id, { flip })}
             />
           </AccordionPanel>
         </AccordionItem>

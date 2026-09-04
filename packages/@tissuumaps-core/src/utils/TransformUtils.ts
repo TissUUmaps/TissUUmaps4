@@ -4,66 +4,82 @@ import type { SimilarityTransform } from "../model/primitives";
 import type { Rect } from "../types/geometry";
 
 /**
- * Utility methods for converting between {@link SimilarityTransform} objects
- * and `gl-matrix` `mat3` matrices
+ * Utility methods for converting between {@link SimilarityTransform}
+ * objects and `gl-matrix` {@link mat3} matrices
  */
 export class TransformUtils {
   /**
    * Decomposes a 3×3 similarity matrix into a {@link SimilarityTransform}
    *
-   * Extracts uniform scale, rotation (in degrees), and translation
-   * from a column-major `gl-matrix` `mat3`.
+   * Extracts flip, uniform scale, rotation (in degrees), and translation
+   * from a column-major `gl-matrix` {@link mat3}. A negative 2D determinant
+   * indicates a horizontal reflection.
+   *
+   * When `center` is provided the returned translation is adjusted so that
+   * flip and rotation are expressed around that center instead of the origin.
    *
    * @param m - The source matrix
+   * @param options - Optional center in pre-scaled coordinates
    * @returns The decomposed transform
    */
-  static fromSimilarityMatrix(m: mat3): SimilarityTransform {
+  static fromSimilarityMatrix(
+    m: mat3,
+    options?: { center?: { x: number; y: number } },
+  ): SimilarityTransform {
     // gl-matrix, like OpenGL, uses column-major order.
+    // Detect reflection via the sign of the 2D determinant.
+    const det = m[0] * m[4] - m[3] * m[1];
+    const flip = det < 0;
+    const c0 = flip ? -m[0] : m[0];
+    const c1 = flip ? -m[1] : m[1];
+    const scale = Math.sqrt(c0 * c0 + c1 * c1);
+    const angle = Math.atan2(c1, c0);
+    let tx = m[6];
+    let ty = m[7];
+    const { center } = options ?? {};
+    if (center !== undefined) {
+      const cx = center.x * scale;
+      const cy = center.y * scale;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      tx -= cy * sin + cx * (1 - cos);
+      ty -= cy * (1 - cos) - cx * sin;
+      if (flip) {
+        tx -= 2 * cx * cos;
+        ty -= 2 * cx * sin;
+      }
+    }
     return {
-      scale: Math.sqrt(m[0] * m[0] + m[1] * m[1]),
-      rotation: (Math.atan2(m[1], m[0]) * 180) / Math.PI,
-      translation: { x: m[6], y: m[7] },
+      flip,
+      scale,
+      rotation: (angle * 180) / Math.PI,
+      translation: { x: tx, y: ty },
     };
   }
 
   /**
    * Builds a 3×3 similarity matrix from a (partial) {@link SimilarityTransform}
    *
-   * Applies, in order: scale, rotation (around `center` if provided),
-   * and translation.
+   * Applies, in order: flip, scale, rotation, and translation.
    *
    * @param tf - The transform components (all optional)
-   * @param options - Optional rotation center in pre-scaled coordinates
    * @returns The composed matrix
    */
-  static toSimilarityMatrix(
-    tf: Partial<SimilarityTransform>,
-    options?: { center?: { x: number; y: number } },
-  ): mat3 {
-    const { center } = options ?? {};
+  static toSimilarityMatrix(tf: Partial<SimilarityTransform>): mat3 {
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,
     // so we need to apply transformations in reverse order.
     const m = mat3.create();
     if (tf.translation !== undefined) {
       mat3.translate(m, m, [tf.translation.x, tf.translation.y]);
     }
-    if (center !== undefined) {
-      mat3.translate(m, m, [
-        center.x * (tf.scale ?? 1),
-        center.y * (tf.scale ?? 1),
-      ]);
-    }
     if (tf.rotation !== undefined) {
       mat3.rotate(m, m, (Math.PI * tf.rotation) / 180);
     }
-    if (center !== undefined) {
-      mat3.translate(m, m, [
-        -center.x * (tf.scale ?? 1),
-        -center.y * (tf.scale ?? 1),
-      ]);
-    }
     if (tf.scale !== undefined) {
       mat3.scale(m, m, [tf.scale, tf.scale]);
+    }
+    if (tf.flip) {
+      mat3.scale(m, m, [-1, 1]);
     }
     return m;
   }

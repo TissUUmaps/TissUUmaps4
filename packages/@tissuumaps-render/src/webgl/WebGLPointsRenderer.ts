@@ -711,7 +711,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       }
       objectsUBOBuffer.set(
         WebGLUtils.transposeAndConvertMatrixToGLMat2x4(
-          WebGLUtils.createDataToWorldMatrix(newRef.object, newRef.layer),
+          WebGLUtils.createDataToWorldMatrix(
+            newRef.object.transform,
+            newRef.layer.transform,
+          ),
         ),
         objectIndex * 8,
       );

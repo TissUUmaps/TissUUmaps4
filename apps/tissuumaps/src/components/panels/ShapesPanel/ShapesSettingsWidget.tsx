@@ -152,8 +152,6 @@ export function ShapesSettingsWidget({
               onTransformChange={(transform) =>
                 updateShapes(shapes.id, { transform })
               }
-              flip={shapes.flip}
-              onFlipChange={(flip) => updateShapes(shapes.id, { flip })}
             />
           </AccordionPanel>
         </AccordionItem>

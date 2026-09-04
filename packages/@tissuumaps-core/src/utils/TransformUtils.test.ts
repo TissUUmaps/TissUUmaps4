@@ -8,17 +8,17 @@ describe("TransformUtils", () => {
   describe("fromSimilarityMatrix", () => {
     it("extracts scale, rotation, and translation from a matrix", () => {
       const scale = 2;
-      const rotation = 45;
+      const rotationDeg = 45;
       const translation = { x: 10, y: 20 };
       const m = mat3.create();
       mat3.translate(m, m, [translation.x, translation.y]);
-      mat3.rotate(m, m, (Math.PI * rotation) / 180);
+      mat3.rotate(m, m, (Math.PI * rotationDeg) / 180);
       mat3.scale(m, m, [scale, scale]);
 
       const tf = TransformUtils.fromSimilarityMatrix(m);
 
       expect(tf.scale).toBeCloseTo(scale);
-      expect(tf.rotation).toBeCloseTo(rotation);
+      expect(tf.rotation).toBeCloseTo(rotationDeg);
       expect(tf.translation.x).toBeCloseTo(translation.x);
       expect(tf.translation.y).toBeCloseTo(translation.y);
     });
@@ -51,11 +51,43 @@ describe("TransformUtils", () => {
       expect(tf.translation.x).toBeCloseTo(0);
       expect(tf.translation.y).toBeCloseTo(0);
     });
+
+    it("detects flip from negative determinant", () => {
+      const m = mat3.create();
+      mat3.scale(m, m, [-1, 1]);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
+      expect(tf.flip).toBe(true);
+      expect(tf.scale).toBeCloseTo(1);
+      expect(tf.rotation).toBeCloseTo(0);
+    });
+
+    it("detects flip with scale and rotation", () => {
+      const m = mat3.create();
+      mat3.translate(m, m, [5, 7]);
+      mat3.rotate(m, m, (Math.PI * 30) / 180);
+      mat3.scale(m, m, [2, 2]);
+      mat3.scale(m, m, [-1, 1]);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
+      expect(tf.flip).toBe(true);
+      expect(tf.scale).toBeCloseTo(2);
+      expect(tf.rotation).toBeCloseTo(30);
+      expect(tf.translation.x).toBeCloseTo(5);
+      expect(tf.translation.y).toBeCloseTo(7);
+    });
+
+    it("returns flip: false for non-flipped matrix", () => {
+      const m = mat3.create();
+      mat3.rotate(m, m, Math.PI / 4);
+      mat3.scale(m, m, [3, 3]);
+      const tf = TransformUtils.fromSimilarityMatrix(m);
+      expect(tf.flip).toBe(false);
+    });
   });
 
   describe("toSimilarityMatrix", () => {
     it("creates a matrix from scale, rotation, and translation", () => {
       const tf: SimilarityTransform = {
+        flip: false,
         scale: 2,
         rotation: 30,
         translation: { x: 5, y: 7 },
@@ -93,48 +125,22 @@ describe("TransformUtils", () => {
       expect(m[7]).toBeCloseTo(5);
     });
 
-    it("applies rotation around a center", () => {
-      const center = { x: 2, y: 3 };
-      const m = TransformUtils.toSimilarityMatrix(
-        { rotation: 90, scale: 1 },
-        { center },
-      );
-      const tf = TransformUtils.fromSimilarityMatrix(m);
-      expect(tf.rotation).toBeCloseTo(90);
-      expect(tf.scale).toBeCloseTo(1);
-      // The origin maps to (m[6], m[7]) which should be (5, 1)
-      expect(m[6]).toBeCloseTo(5);
-      expect(m[7]).toBeCloseTo(1);
-    });
-
-    it("applies rotation around a center without explicit scale (defaults to 1)", () => {
-      const center = { x: 2, y: 3 };
-      const withDefault = TransformUtils.toSimilarityMatrix(
-        { rotation: 90 },
-        { center },
-      );
-      const withExplicit = TransformUtils.toSimilarityMatrix(
-        { rotation: 90, scale: 1 },
-        { center },
-      );
-      // Omitting scale should behave identically to scale: 1
-      for (let i = 0; i < 9; i++) {
-        expect(withDefault[i]).toBeCloseTo(withExplicit[i]!);
-      }
-    });
-
-    it("applies rotation around a center with scale", () => {
-      const center = { x: 1, y: 1 };
-      const m = TransformUtils.toSimilarityMatrix(
-        { rotation: 180, scale: 2 },
-        { center },
-      );
-      const tf = TransformUtils.fromSimilarityMatrix(m);
-      expect(tf.rotation).toBeCloseTo(180);
-      expect(tf.scale).toBeCloseTo(2);
-      // At 180° rotation around scaled center (2,2): translation = (4,4)
-      expect(m[6]).toBeCloseTo(4);
-      expect(m[7]).toBeCloseTo(4);
+    it("creates a flipped matrix", () => {
+      const tf: SimilarityTransform = {
+        flip: true,
+        scale: 2,
+        rotation: 30,
+        translation: { x: 5, y: 7 },
+      };
+      const m = TransformUtils.toSimilarityMatrix(tf);
+      const det = m[0] * m[4] - m[3] * m[1];
+      expect(det).toBeLessThan(0);
+      const result = TransformUtils.fromSimilarityMatrix(m);
+      expect(result.flip).toBe(true);
+      expect(result.scale).toBeCloseTo(tf.scale);
+      expect(result.rotation).toBeCloseTo(tf.rotation);
+      expect(result.translation.x).toBeCloseTo(tf.translation.x);
+      expect(result.translation.y).toBeCloseTo(tf.translation.y);
     });
 
     it("returns identity for empty partial transform", () => {
@@ -148,12 +154,36 @@ describe("TransformUtils", () => {
 
   describe("fromSimilarityMatrix / toSimilarityMatrix roundtrip", () => {
     it.each([
-      { scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
-      { scale: 2.5, rotation: 60, translation: { x: -10, y: 20 } },
-      { scale: 0.5, rotation: -45, translation: { x: 100, y: 100 } },
+      { flip: false, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
+      {
+        flip: false,
+        scale: 2.5,
+        rotation: 60,
+        translation: { x: -10, y: 20 },
+      },
+      {
+        flip: false,
+        scale: 0.5,
+        rotation: -45,
+        translation: { x: 100, y: 100 },
+      },
+      { flip: true, scale: 1, rotation: 0, translation: { x: 0, y: 0 } },
+      {
+        flip: true,
+        scale: 2.5,
+        rotation: 60,
+        translation: { x: -10, y: 20 },
+      },
+      {
+        flip: true,
+        scale: 0.5,
+        rotation: -45,
+        translation: { x: 100, y: 100 },
+      },
     ])("roundtrips %j", (tf) => {
       const m = TransformUtils.toSimilarityMatrix(tf);
       const result = TransformUtils.fromSimilarityMatrix(m);
+      expect(result.flip).toBe(tf.flip);
       expect(result.scale).toBeCloseTo(tf.scale);
       expect(result.rotation).toBeCloseTo(tf.rotation);
       expect(result.translation.x).toBeCloseTo(tf.translation.x);

@@ -7,6 +7,7 @@ import {
 
 /** Identity similarity transform */
 export const identityTransform = {
+  flip: false,
   scale: 1,
   rotation: 0,
   translation: { x: 0, y: 0 },

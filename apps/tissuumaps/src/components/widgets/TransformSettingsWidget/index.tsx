@@ -7,29 +7,28 @@ import { Switch } from "@/components/ui/switch";
 export type TransformSettingsWidgetProps = {
   transform: SimilarityTransform;
   onTransformChange: (transform: SimilarityTransform) => void;
-  flip?: boolean;
-  onFlipChange?: (flip: boolean) => void;
   className?: string;
 };
 
 export function TransformSettingsWidget({
   transform,
   onTransformChange,
-  flip,
-  onFlipChange,
   className,
 }: TransformSettingsWidgetProps) {
   return (
     <div className={className}>
-      {onFlipChange !== undefined && (
-        <Field>
-          <FieldLabel>Flip</FieldLabel>
-          <div className="flex flex-row items-center gap-x-2">
-            <Switch checked={flip} onCheckedChange={onFlipChange} />
-            {flip ? "Yes" : "No"}
-          </div>
-        </Field>
-      )}
+      <Field>
+        <FieldLabel>Flip</FieldLabel>
+        <div className="flex flex-row items-center gap-x-2">
+          <Switch
+            checked={transform.flip}
+            onCheckedChange={(checked) =>
+              onTransformChange({ ...transform, flip: checked })
+            }
+          />
+          {transform.flip ? "Yes" : "No"}
+        </div>
+      </Field>
       <div className="grid grid-cols-2 gap-x-2 gap-y-2">
         <Field>
           <FieldLabel>Scale</FieldLabel>

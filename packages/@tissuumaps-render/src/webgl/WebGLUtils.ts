@@ -1,7 +1,6 @@
 import { mat3 } from "gl-matrix";
 
 import {
-  type Layer,
   type Rect,
   type SimilarityTransform,
   TransformUtils,
@@ -16,58 +15,50 @@ import {
  */
 export class WebGLUtils {
   /**
-   * Computes the data → world transformation matrix
+   * Composes data → layer and layer → world similarity matrices
    *
-   * Applies, in order: optional horizontal flip, data → layer transform,
-   * then layer → world transform.
+   * Flip is encoded in each matrix (negative determinant) so that a layer
+   * flip mirrors the entire coordinate system — all objects move to
+   * mirrored positions as a group.
    *
-   * @param obj - Object providing the flip flag and data → layer transform
-   * @param layer - Layer providing the layer → world transform
+   * @param objectTransform - The data → layer transform of the object
+   * @param layerTransform - The layer → world transform of the object's layer
+   * @returns The data → world transformation matrix
    */
   static createDataToWorldMatrix(
-    obj: { flip: boolean; transform: SimilarityTransform },
-    layer: Layer,
+    objectTransform: SimilarityTransform,
+    layerTransform: SimilarityTransform,
   ): mat3 {
+    const dataToLayerMatrix =
+      TransformUtils.toSimilarityMatrix(objectTransform);
+    const layerToWorldMatrix =
+      TransformUtils.toSimilarityMatrix(layerTransform);
     const dataToWorldMatrix = mat3.create();
-    if (obj.flip) {
-      const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
-      mat3.multiply(dataToWorldMatrix, flipMatrix, dataToWorldMatrix);
-    }
-    const dataToLayerMatrix = TransformUtils.toSimilarityMatrix(obj.transform);
-    mat3.multiply(dataToWorldMatrix, dataToLayerMatrix, dataToWorldMatrix);
-    const layerToWorldMatrix = TransformUtils.toSimilarityMatrix(
-      layer.transform,
-    );
-    mat3.multiply(dataToWorldMatrix, layerToWorldMatrix, dataToWorldMatrix);
+    mat3.multiply(dataToWorldMatrix, layerToWorldMatrix, dataToLayerMatrix);
     return dataToWorldMatrix;
   }
 
   /**
    * Computes the world → data transformation matrix
    *
-   * Inverse of {@link createDataToWorldMatrix}: applies world → layer,
-   * layer → data, then optional horizontal un-flip.
+   * Inverse of {@link createDataToWorldMatrix}.
    *
-   * @param obj - Object providing the data → layer transform (inverted) and flip flag
-   * @param layer - Layer providing the layer → world transform (inverted)
+   * @param objectTransform - The data → layer transform of the object
+   * @param layerTransform - The layer → world transform of the object's layer
+   * @returns The world → data transformation matrix
    */
   static createWorldToDataMatrix(
-    obj: { flip: boolean; transform: SimilarityTransform },
-    layer: Layer,
+    objectTransform: SimilarityTransform,
+    layerTransform: SimilarityTransform,
   ): mat3 {
     const worldToDataMatrix = mat3.create();
-    const worldToLayerMatrix = TransformUtils.toSimilarityMatrix(
-      layer.transform,
-    );
+    const worldToLayerMatrix =
+      TransformUtils.toSimilarityMatrix(layerTransform);
     mat3.invert(worldToLayerMatrix, worldToLayerMatrix);
-    mat3.multiply(worldToDataMatrix, worldToLayerMatrix, worldToDataMatrix);
-    const layerToDataMatrix = TransformUtils.toSimilarityMatrix(obj.transform);
+    const layerToDataMatrix =
+      TransformUtils.toSimilarityMatrix(objectTransform);
     mat3.invert(layerToDataMatrix, layerToDataMatrix);
-    mat3.multiply(worldToDataMatrix, layerToDataMatrix, worldToDataMatrix);
-    if (obj.flip) {
-      const flipMatrix = mat3.fromScaling(mat3.create(), [-1, 1]);
-      mat3.multiply(worldToDataMatrix, flipMatrix, worldToDataMatrix);
-    }
+    mat3.multiply(worldToDataMatrix, layerToDataMatrix, worldToLayerMatrix);
     return worldToDataMatrix;
   }
 

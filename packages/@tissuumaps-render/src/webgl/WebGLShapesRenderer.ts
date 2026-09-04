@@ -252,8 +252,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         continue; // scanline data texture is currently being regenerated
       }
       const worldToDataMatrix = WebGLUtils.createWorldToDataMatrix(
-        renderedShapes.ref.object,
-        renderedShapes.ref.layer,
+        renderedShapes.ref.object.transform,
+        renderedShapes.ref.layer.transform,
       );
       this.context.gl.uniformMatrix3x2fv(
         this._uniformLocations.worldToDataMatrix,
