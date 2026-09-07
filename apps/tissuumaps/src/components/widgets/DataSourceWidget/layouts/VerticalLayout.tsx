@@ -15,7 +15,7 @@ const MemoizedVerticalLayout = memo((props: Omit<LayoutProps, "data">) => {
   const { renderers, cells } = useJsonForms();
 
   // readonly mode
-  if (props.enabled === false) {
+  if (!props.enabled) {
     return (
       <div
         hidden={!props.visible}

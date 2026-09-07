@@ -14,19 +14,26 @@ import {
 } from "@/components/common/field";
 
 export const InputControl = withJsonFormsControlProps((props: ControlProps) => {
+  const [isFocused, setFocused] = useState<boolean>(false);
+
   // readonly mode
-  if (props.enabled === false) {
+  if (!props.enabled) {
     return (
       <Field className="contents">
         <FieldLabel>
           {computeLabel(props.label, props.required ?? false, true)}:
         </FieldLabel>
-        <span className="truncate">{props.data ?? ""}</span>
+        <span className="truncate">
+          <DispatchCell
+            uischema={props.uischema}
+            schema={props.schema}
+            path={props.path}
+            enabled={props.enabled}
+          />
+        </span>
       </Field>
     );
   }
-
-  const [isFocused, setFocused] = useState<boolean>(false);
 
   const options = {
     ...(props.config as { [key: string]: unknown }),
