@@ -49,10 +49,11 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
     }
     setOSContext(os.context);
     // Push the viewport straight into the renderers instead of through React
-    // state: a passive useEffect runs after paint, so the overlay would lag
-    // one frame behind the OSD canvas. With the default animationTime of 0,
-    // OSD applies the viewport synchronously, so drawing here lands in the
-    // same paint.
+    // state. OSD raises "viewport-change" from its animation-frame update, after
+    // the springs advanced and before it draws the world, and getBounds(true)
+    // returns the bounds it is about to paint. Drawing here therefore lands in
+    // the same frame, whereas a passive useEffect runs after paint and would
+    // leave the overlay one frame behind the OSD canvas.
     const updateViewport = (viewport: Rect) => {
       setGLViewport(viewport);
       setSVGViewport(viewport);
@@ -81,6 +82,8 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
       setOSContext(null);
     };
   }, [
+    // all callbacks have a stable identity; a new one would tear down and
+    // recreate the whole overlay
     osReady,
     osRef,
     initGL,

@@ -18,9 +18,7 @@ export function useSVG(
   const viewportRef = useRef<Rect | null>(null);
   const containerSizeRef = useRef(containerSize);
 
-  // called synchronously from the viewport-change handler in Viewer (see there);
-  // stable identity, as Viewer's effect depends on it and would otherwise
-  // recreate the whole overlay on every render
+  // called synchronously from the viewport-change handler in Viewer (see there)
   const setSVGViewport = useCallback((viewport: Rect) => {
     viewportRef.current = viewport;
     if (svgRef.current !== null) {
