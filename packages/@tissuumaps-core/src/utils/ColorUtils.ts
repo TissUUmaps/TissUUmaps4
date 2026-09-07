@@ -36,13 +36,14 @@ export class ColorUtils {
   }
 
   /**
-   * Packs an RGB color into a single 24-bit integer (`0xRRGGBB`)
+   * Packs an RGB color into a single 24-bit integer (little-endian: `0xBBGGRR`)
    *
    * @param color - The color to pack
-   * @returns The packed color
+   * @returns The packed color (little-endian: `0xBBGGRR`)
    */
   static packColor(color: Color): number {
-    return (color.r << 16) | (color.g << 8) | color.b;
+    // never exceeds 24 bits (0xFFFFFF), so no need for >>> 0
+    return (color.b << 16) | (color.g << 8) | color.r;
   }
 
   /**

@@ -61,7 +61,7 @@ describe("ColorUtils", () => {
   describe("packColor", () => {
     it("packs a color to a 24-bit integer", () => {
       expect(ColorUtils.packColor({ r: 1, g: 2, b: 3 })).toBe(
-        (1 << 16) | (2 << 8) | 3,
+        (3 << 16) | (2 << 8) | 1,
       );
     });
 
