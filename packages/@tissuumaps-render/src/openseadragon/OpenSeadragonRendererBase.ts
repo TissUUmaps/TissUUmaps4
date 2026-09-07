@@ -25,8 +25,9 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  *
  * An immutable snapshot of the model state and loaders that a renderer needs,
  * which subclasses extend with whatever else their objects resolve their
- * appearance from. It carries inputs only; state derived from them is owned by
- * the renderer (see {@link OpenSeadragonRendererBase.resolveObjects}).
+ * appearance from. It carries inputs only. A renderer that derives state from
+ * an object does so by wrapping `loadObject`, which is called once per object,
+ * concurrently, and whose failures are logged and skipped.
  */
 export type OpenSeadragonSyncContext<
   TObject extends Image | Labels,
@@ -100,11 +101,10 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Synchronizes the viewer's tiled images with the current model state
    *
-   * Loads all objects assigned to the given layers, resolves what subclasses
-   * derive from them (see {@link resolveObjects}), removes the tiled images that
-   * are no longer needed, and creates or updates the remaining ones. Resolves
-   * once the tiled images have actually been added to the world, i.e. once the
-   * viewer reflects the given model state.
+   * Loads all objects assigned to the given layers, removes the tiled images
+   * that are no longer needed, and creates or updates the remaining ones.
+   * Resolves once the tiled images have actually been added to the world, i.e.
+   * once the viewer reflects the given model state.
    *
    * Objects whose tiled images cannot be created, e.g. because their data
    * provides no tile sources, are logged and skipped, just like objects whose
@@ -127,7 +127,6 @@ export abstract class OpenSeadragonRendererBase<
     const newRefs = await this._loadObjects(layers, objects, context, {
       signal,
     });
-    await this.resolveObjects(newRefs, context, { signal });
     let offset = 0;
     const newRenderedObjects: RenderedObject<TObject, TObjectData>[] = [];
     const renderedObjectsByNewRef = await this._cleanRenderedObjects(
@@ -248,31 +247,6 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Resolves what a subclass derives asynchronously from the loaded objects
-   *
-   * Called by {@link synchronize} once the data of all objects has loaded, and
-   * before any tiled image is created or updated, so that the synchronous
-   * per-tiled-image hooks ({@link getTiledImageColor},
-   * {@link getTiledImageOpacity} and {@link getTiledImageDataTransfer}) can rely
-   * on the result. Subclasses own that state, and are expected to keep it
-   * where nothing relevant changed. Does nothing by default.
-   *
-   * @param _refs - The loaded object references, in world order
-   * @param _context - The inputs of the current synchronization
-   * @param _options - Optional abort signal
-   */
-  protected resolveObjects(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _refs: ObjectRef<TObject, TObjectData>[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: TContext,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _options?: { signal?: AbortSignal },
-  ): Promise<void> {
-    return Promise.resolve();
-  }
-
-  /**
    * Returns the tile sources for the given object data
    *
    * @param data - The object data (image or labels) for which to retrieve the tile sources
@@ -363,8 +337,9 @@ export abstract class OpenSeadragonRendererBase<
    * whose tiles carry values rather than colors override this to map the values
    * to colors (see {@link OpenSeadragonContext.updateTiledImageDataTransfer}).
    * As data transfers are compared by identity, the returned object has to stay
-   * the same for as long as its outcome would not change, which is what
-   * {@link resolveObjects} is for.
+   * the same for as long as its outcome would not change. This hook is
+   * synchronous; subclasses resolve the data transfer while the object's data
+   * loads, by wrapping `loadObject` (see {@link OpenSeadragonSyncContext}).
    *
    * @param _ref - The object reference for which to get the data transfer
    * @param _index - The index of the tiled image (e.g. channel), or `null` for the object's backdrop
@@ -391,7 +366,7 @@ export abstract class OpenSeadragonRendererBase<
    *
    * @param layers - The layers for which to load objects
    * @param objects - The objects to load (images or labels), filtered by layer membership
-   * @param loadObject - A function that retrieves the (cached) data for a given object
+   * @param context - The inputs of the current synchronization, whose `loadObject` retrieves the (cached) data of an object
    * @param options - Optional abort signal
    * @returns A promise that resolves to one object reference per successfully loaded object
    */

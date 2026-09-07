@@ -7,6 +7,8 @@ import {
   type DefaultMap,
   type Labels,
   type LabelsData,
+  type Layer,
+  MathUtils,
   type Table,
   type TableData,
   type TileSourceConfig,
@@ -52,24 +54,23 @@ export type OpenSeadragonLabelsSyncContext = OpenSeadragonSyncContext<
  * not part of it; OpenSeadragon applies them when drawing the tiled image.
  *
  * As data transfers are compared by identity, each object's data transfer is
- * kept (see {@link resolveObjects}) until its data or one of the configurations
- * it was resolved from changes, so that tiles are only recolored when needed.
+ * kept (see {@link _updateRenderedLabels}) until its data or one of the
+ * configurations it was resolved from changes, so that tiles are only recolored
+ * when needed.
  */
 export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   Labels,
   LabelsData,
   OpenSeadragonLabelsSyncContext
 > {
-  /** The color of labels that the data does not list, in `ImageData` byte order */
-  private static readonly _defaultPixel =
-    OpenSeadragonLabelsRenderer._packPixel(
+  private static readonly _defaultPixelValue =
+    OpenSeadragonLabelsRenderer._packLabel(
       ColorResolver.encodeColor(defaultLabelColor),
-      defaultLabelVisibility
-        ? OpacityResolver.encodeOpacity(defaultLabelOpacity)
-        : 0,
+      VisibilityResolver.encodeVisibility(defaultLabelVisibility),
+      OpacityResolver.encodeOpacity(defaultLabelOpacity),
     );
 
-  private readonly _dataTransfers = new Map<
+  private readonly _renderedLabels = new Map<
     string,
     {
       data: LabelsData;
@@ -79,56 +80,58 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   >();
 
   /**
-   * Resolves the data transfer of every labels object, concurrently
+   * Synchronizes the viewer's tiled images with the current model state
    *
-   * An object's data transfer is kept as long as its data and its label color,
-   * visibility and opacity configurations are unchanged, and is resolved anew
-   * otherwise. Data transfers of objects that are not referenced anymore are
-   * dropped.
+   * Resolves the data transfer of each labels object along with its data (see
+   * {@link _updateRenderedLabels}), by wrapping the context's `loadObject`, and
+   * drops the data transfers of objects that are gone. Objects whose data
+   * transfer cannot be resolved are logged and skipped, like objects whose data
+   * failed to load; the logged error names the resolution as the cause, so
+   * that it is not mistaken for a failed data load.
    *
-   * @param refs - The loaded labels references
-   * @param context - The inputs of the current synchronization
+   * @param layers - Layers to render
+   * @param labels - Labels objects to display
+   * @param context - The inputs to synchronize with
    * @param options - Optional abort signal
    */
-  protected override async resolveObjects(
-    refs: ObjectRef<Labels, LabelsData>[],
+  override synchronize(
+    layers: Layer[],
+    labels: Labels[],
     context: OpenSeadragonLabelsSyncContext,
     options?: { signal?: AbortSignal },
   ): Promise<void> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    await Promise.all(
-      refs.map(async (ref) => {
-        const entry = this._dataTransfers.get(ref.object.id);
-        if (
-          entry !== undefined &&
-          entry.data === ref.data &&
-          deepEqual(entry.state.labelColor, ref.object.labelColor) &&
-          deepEqual(entry.state.labelVisibility, ref.object.labelVisibility) &&
-          deepEqual(entry.state.labelOpacity, ref.object.labelOpacity)
-        ) {
-          return;
-        }
-        const dataTransfer =
-          await OpenSeadragonLabelsRenderer._resolveDataTransfer(ref, context, {
-            signal,
-          });
-        this._dataTransfers.set(ref.object.id, {
-          data: ref.data,
-          state: {
-            labelColor: structuredClone(ref.object.labelColor),
-            labelVisibility: structuredClone(ref.object.labelVisibility),
-            labelOpacity: structuredClone(ref.object.labelOpacity),
-          },
-          dataTransfer,
-        });
-      }),
-    );
-    for (const objectId of this._dataTransfers.keys()) {
-      if (!refs.some((ref) => ref.object.id === objectId)) {
-        this._dataTransfers.delete(objectId);
+    for (const labelsId of this._renderedLabels.keys()) {
+      if (!labels.some((currentLabels) => currentLabels.id === labelsId)) {
+        this._renderedLabels.delete(labelsId);
       }
     }
+    return super.synchronize(
+      layers,
+      labels,
+      {
+        ...context,
+        loadObject: async (currentLabels, options) => {
+          const data = await context.loadObject(currentLabels, options);
+          try {
+            await this._updateRenderedLabels(
+              currentLabels,
+              data,
+              context,
+              options,
+            );
+          } catch (error) {
+            if (!options?.signal?.aborted) {
+              throw new Error("Failed to resolve data transfer", {
+                cause: error,
+              });
+            }
+            throw error;
+          }
+          return data;
+        },
+      },
+      options,
+    );
   }
 
   /**
@@ -148,8 +151,11 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   /**
    * Returns the data transfer resolved for the given labels object
    *
+   * A labels object has a single tiled image, whose tiles carry the label IDs,
+   * and no backdrop, so the index is not looked at.
+   *
    * @param ref - The labels reference for which to get the data transfer
-   * @returns The data transfer resolved by {@link resolveObjects}, or
+   * @returns The data transfer resolved by {@link _updateRenderedLabels}, or
    * `undefined` if the object has not been resolved
    */
   protected override getTiledImageDataTransfer(
@@ -159,7 +165,60 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _context: OpenSeadragonLabelsSyncContext,
   ): DataTransfer | undefined {
-    return this._dataTransfers.get(ref.object.id)?.dataTransfer;
+    const renderedLabels = this._renderedLabels.get(ref.object.id);
+    if (renderedLabels !== undefined) {
+      return renderedLabels.dataTransfer;
+    }
+    return undefined;
+  }
+
+  /**
+   * Resolves the data transfer of a labels object, unless it is up to date
+   *
+   * Called by {@link synchronize} once the object's data has loaded, and
+   * concurrently for different objects. An object's data transfer is kept as
+   * long as its data and its label color, visibility and opacity configurations
+   * are unchanged, and is resolved anew otherwise (see
+   * {@link _resolveDataTransfer}). If resolving fails, the previous entry stays
+   * in place.
+   *
+   * @param labels - The labels object
+   * @param data - The loaded data of the labels object
+   * @param context - The inputs of the current synchronization
+   * @param options - Optional abort signal
+   */
+  private async _updateRenderedLabels(
+    labels: Labels,
+    data: LabelsData,
+    context: OpenSeadragonLabelsSyncContext,
+    options?: { signal?: AbortSignal },
+  ): Promise<void> {
+    const renderedLabels = this._renderedLabels.get(labels.id);
+    if (
+      renderedLabels === undefined ||
+      renderedLabels.data !== data ||
+      !deepEqual(renderedLabels.state.labelColor, labels.labelColor) ||
+      !deepEqual(
+        renderedLabels.state.labelVisibility,
+        labels.labelVisibility,
+      ) ||
+      !deepEqual(renderedLabels.state.labelOpacity, labels.labelOpacity)
+    ) {
+      this._renderedLabels.set(labels.id, {
+        data,
+        state: {
+          labelColor: structuredClone(labels.labelColor),
+          labelVisibility: structuredClone(labels.labelVisibility),
+          labelOpacity: structuredClone(labels.labelOpacity),
+        },
+        dataTransfer: await OpenSeadragonLabelsRenderer._resolveDataTransfer(
+          labels,
+          data,
+          context,
+          options,
+        ),
+      });
+    }
   }
 
   /**
@@ -171,20 +230,22 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    * data does not list are drawn with the default label color, visibility and
    * opacity.
    *
-   * @param ref - The labels reference to resolve
+   * @param labels - The labels object to resolve
+   * @param data - The loaded data of the labels object
    * @param context - The inputs of the current synchronization
    * @param options - Optional abort signal
    * @returns The resolved data transfer
    */
   private static async _resolveDataTransfer(
-    ref: ObjectRef<Labels, LabelsData>,
+    labels: Labels,
+    data: LabelsData,
     context: OpenSeadragonLabelsSyncContext,
     options?: { signal?: AbortSignal },
   ): Promise<DataTransfer> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     let loadTable;
-    const tableId = ref.object.dataSource.table;
+    const tableId = labels.dataSource.table;
     if (tableId !== undefined) {
       const table = context.tables.find((table) => table.id === tableId);
       if (table !== undefined) {
@@ -194,63 +255,76 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
         console.warn(`Table with ID ${tableId} not found`);
       }
     }
-    const ids = ref.data.getIds();
-    const [colors, visibilities, opacities] = await Promise.all([
-      ColorResolver.resolveColors(
-        ids,
-        ref.object.labelColor,
-        context.colorMaps,
-        defaultLabelColor,
-        { signal, loadTable },
-      ),
-      VisibilityResolver.resolveVisibilities(
-        ids,
-        ref.object.labelVisibility,
-        context.visibilityMaps,
-        defaultLabelVisibility,
-        { signal, loadTable },
-      ),
-      OpacityResolver.resolveOpacities(
-        ids,
-        ref.object.labelOpacity,
-        context.opacityMaps,
-        defaultLabelOpacity,
-        { signal, loadTable },
-      ),
-    ]);
-    const pixels = new Map<number, number>();
+    const ids = data.getIds();
+    const [encodedColors, encodedVisibilities, encodedOpacities] =
+      await Promise.all([
+        ColorResolver.resolveColors(
+          ids,
+          labels.labelColor,
+          context.colorMaps,
+          defaultLabelColor,
+          { signal, loadTable },
+        ),
+        VisibilityResolver.resolveVisibilities(
+          ids,
+          labels.labelVisibility,
+          context.visibilityMaps,
+          defaultLabelVisibility,
+          { signal, loadTable },
+        ),
+        OpacityResolver.resolveOpacities(
+          ids,
+          labels.labelOpacity,
+          context.opacityMaps,
+          defaultLabelOpacity,
+          { signal, loadTable },
+        ),
+      ]);
+    const pixelValues = new Map<number, number>();
     await AsyncUtils.forEach(
       ids,
       (id, i) => {
-        const alpha = visibilities[i]! > 0 ? opacities[i]! : 0;
-        pixels.set(
-          id,
-          OpenSeadragonLabelsRenderer._packPixel(colors[i]!, alpha),
+        const pixelValue = OpenSeadragonLabelsRenderer._packLabel(
+          encodedColors[i]!,
+          encodedVisibilities[i]!,
+          encodedOpacities[i]!,
         );
+        pixelValues.set(id, pixelValue);
       },
       { signal },
     );
     return {
-      getData: (event) => ref.data.getData(event),
+      getData: (event) => data.getData(event),
       transfer: (value) =>
         value === 0
           ? 0
-          : (pixels.get(value) ?? OpenSeadragonLabelsRenderer._defaultPixel),
+          : (pixelValues.get(value) ??
+            OpenSeadragonLabelsRenderer._defaultPixelValue),
     };
   }
 
   /**
-   * Packs a color and an alpha value into a pixel in `ImageData` byte order
+   * Packs the encoded appearance of a label into a pixel value
    *
-   * @param color - The packed RGB color, as encoded by {@link ColorResolver}
-   * @param alpha - The alpha value in `[0, 255]`
-   * @returns The pixel, `(a << 24) | (b << 16) | (g << 8) | r` (see
-   * {@link DataTransfer})
+   * The visibility and opacity are folded into the alpha channel: an invisible
+   * label is fully transparent, a visible one carries its opacity. The pixel is
+   * in `ImageData` byte order, `(a << 24) | (b << 16) | (g << 8) | r` (see
+   * {@link DataTransfer}), which the encoded color already follows in its lower
+   * 24 bits.
+   *
+   * @param color - The color, as encoded by {@link ColorResolver}
+   * @param visibility - The visibility, as encoded by {@link VisibilityResolver}
+   * @param opacity - The opacity, as encoded by {@link OpacityResolver}
+   * @returns The pixel value, as an unsigned 32-bit integer
    */
-  private static _packPixel(color: number, alpha: number): number {
-    const r = (color >>> 16) & 0xff;
-    const g = (color >>> 8) & 0xff;
-    const b = color & 0xff;
-    return ((alpha << 24) | (b << 16) | (g << 8) | r) >>> 0;
+  private static _packLabel(
+    color: number,
+    visibility: number,
+    opacity: number,
+  ): number {
+    if (visibility > 0) {
+      return MathUtils.safeOr(color, MathUtils.safeLeftShift(opacity, 24));
+    }
+    return color;
   }
 }
