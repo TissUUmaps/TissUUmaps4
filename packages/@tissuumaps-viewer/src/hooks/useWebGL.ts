@@ -18,7 +18,6 @@ type GL = {
 
 export function useWebGL(
   adapter: ViewerAdapter,
-  viewport: Rect | null,
   containerSize: { width: number; height: number } | null,
 ) {
   const {
@@ -42,7 +41,7 @@ export function useWebGL(
   const [glReady, setGLReady] = useState(false);
 
   const glOptionsRef = useRef(glOptions);
-  const viewportRef = useRef(viewport);
+  const viewportRef = useRef<Rect | null>(null);
   const containerSizeRef = useRef(containerSize);
 
   const [syncPoints, dispatchSyncPoints] = useReducer((x) => x + 1, 0);
@@ -68,6 +67,18 @@ export function useWebGL(
       glRef.current.shapesRenderer.draw();
     }
   }
+
+  // called synchronously from the viewport-change handler in Viewer (see there)
+  const setGLViewport = useCallback((viewport: Rect) => {
+    viewportRef.current = viewport;
+    if (glRef.current !== null) {
+      const redrawPoints = glRef.current.pointsRenderer.setViewport(viewport);
+      const redrawShapes = glRef.current.shapesRenderer.setViewport(viewport);
+      if (redrawPoints || redrawShapes) {
+        draw();
+      }
+    }
+  }, []);
 
   const initGL = useCallback((parentOrNull: HTMLElement | null) => {
     if (parentOrNull === null) {
@@ -122,6 +133,10 @@ export function useWebGL(
         pointsRenderer.destroy();
         context.destroy();
         throw new Error("Error creating shapes renderer", { cause: error });
+      }
+      // a viewport change may have arrived while awaiting the points renderer
+      if (viewportRef.current !== null) {
+        pointsRenderer.setViewport(viewportRef.current);
       }
       const gl = { canvas, context, pointsRenderer, shapesRenderer };
       glRef.current = gl;
@@ -211,17 +226,6 @@ export function useWebGL(
       }
     }
   }, [glReady, glOptions]);
-
-  useEffect(() => {
-    viewportRef.current = viewport;
-    if (glReady && glRef.current !== null && viewport !== null) {
-      const redrawPoints = glRef.current.pointsRenderer.setViewport(viewport);
-      const redrawShapes = glRef.current.shapesRenderer.setViewport(viewport);
-      if (redrawPoints || redrawShapes) {
-        draw();
-      }
-    }
-  }, [glReady, viewport]);
 
   useEffect(() => {
     containerSizeRef.current = containerSize;
@@ -326,5 +330,12 @@ export function useWebGL(
     syncShapes,
   ]);
 
-  return { initGL, glRef, glReady, glPointsBounds, glShapesBounds };
+  return {
+    initGL,
+    setGLViewport,
+    glRef,
+    glReady,
+    glPointsBounds,
+    glShapesBounds,
+  };
 }

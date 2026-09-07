@@ -7,7 +7,6 @@ import type { ViewerAdapter } from "../adapter";
 
 export function useSVG(
   adapter: ViewerAdapter,
-  viewport: Rect | null,
   containerSize: { width: number; height: number } | null,
 ) {
   const { interactionMode, addShape } = adapter;
@@ -16,8 +15,16 @@ export function useSVG(
   const [svgReady, setSVGReady] = useState(false);
 
   const interactionModeRef = useRef(interactionMode);
-  const viewportRef = useRef(viewport);
+  const viewportRef = useRef<Rect | null>(null);
   const containerSizeRef = useRef(containerSize);
+
+  // called synchronously from the viewport-change handler in Viewer (see there)
+  const setSVGViewport = useCallback((viewport: Rect) => {
+    viewportRef.current = viewport;
+    if (svgRef.current !== null) {
+      svgRef.current.controller.setViewport(viewport);
+    }
+  }, []);
 
   const initSVG = useCallback(
     (parent: HTMLElement | null) => {
@@ -55,18 +62,11 @@ export function useSVG(
   }, [svgReady, interactionMode]);
 
   useEffect(() => {
-    viewportRef.current = viewport;
-    if (svgReady && svgRef.current !== null && viewport !== null) {
-      svgRef.current.controller.setViewport(viewport);
-    }
-  }, [svgReady, viewport]);
-
-  useEffect(() => {
     containerSizeRef.current = containerSize;
     if (svgReady && svgRef.current !== null && containerSize !== null) {
       svgRef.current.controller.resizeContainer(containerSize);
     }
   }, [svgReady, containerSize]);
 
-  return { initSVG, svgRef, svgReady };
+  return { initSVG, setSVGViewport, svgRef, svgReady };
 }

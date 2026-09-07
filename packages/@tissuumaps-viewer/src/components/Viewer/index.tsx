@@ -18,15 +18,6 @@ export type ViewerProps = {
 export function Viewer({ adapter, children, className }: ViewerProps) {
   const [osContext, setOSContext] = useState<OpenSeadragonContext | null>(null);
 
-  const [viewport, setViewport] = useState<Rect | null>(null);
-  const updateViewport = useCallback((newViewport: Rect) => {
-    setViewport((oldViewport) =>
-      oldViewport !== null && GeometryUtils.rectEquals(oldViewport, newViewport)
-        ? oldViewport
-        : newViewport,
-    );
-  }, []);
-
   const [containerSize, setContainerSize] = useState<{
     width: number;
     height: number;
@@ -45,12 +36,11 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
 
   const { initOS, osRef, osReady, updateOSExternalBounds } =
     useOpenSeadragon(adapter);
-  const { initGL, glPointsBounds, glShapesBounds } = useWebGL(
+  const { initGL, setGLViewport, glPointsBounds, glShapesBounds } = useWebGL(
     adapter,
-    viewport,
     containerSize,
   );
-  const { initSVG } = useSVG(adapter, viewport, containerSize);
+  const { initSVG, setSVGViewport } = useSVG(adapter, containerSize);
 
   useEffect(() => {
     const os = osRef.current;
@@ -58,6 +48,15 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
       return;
     }
     setOSContext(os.context);
+    // Push the viewport straight into the renderers instead of through React
+    // state: a passive useEffect runs after paint, so the overlay would lag
+    // one frame behind the OSD canvas. With the default animationTime of 0,
+    // OSD applies the viewport synchronously, so drawing here lands in the
+    // same paint.
+    const updateViewport = (viewport: Rect) => {
+      setGLViewport(viewport);
+      setSVGViewport(viewport);
+    };
     updateViewport(os.context.getViewport());
     updateContainerSize(os.context.getContainerSize());
     const onViewportChanged = (event: OpenSeadragon.ViewerEvent) => {
@@ -78,11 +77,18 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
       destroySVG();
       os.context.viewer.removeHandler("resize", onContainerResized);
       os.context.viewer.removeHandler("viewport-change", onViewportChanged);
-      setViewport(null);
       setContainerSize(null);
       setOSContext(null);
     };
-  }, [osReady, osRef, initGL, initSVG, updateViewport, updateContainerSize]);
+  }, [
+    osReady,
+    osRef,
+    initGL,
+    initSVG,
+    setGLViewport,
+    setSVGViewport,
+    updateContainerSize,
+  ]);
 
   useEffect(() => {
     const osExternalBounds = [];
