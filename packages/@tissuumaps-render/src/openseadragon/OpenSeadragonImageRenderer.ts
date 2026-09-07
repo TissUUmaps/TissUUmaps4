@@ -5,7 +5,6 @@ import {
   type CustomTileSource,
   type Image,
   type ImageData,
-  type Layer,
   MathUtils,
   type NumericArray,
   type TileSourceConfig,
@@ -40,9 +39,9 @@ export type OpenSeadragonImageSyncContext = OpenSeadragonSyncContext<
  * {@link getTiledImageOpacity}).
  *
  * As data transfers are compared by identity, each channel's data transfer is
- * kept (see {@link _updateRenderedImage}) until the image's data or the
- * channel's color or contrast limits change, so that tiles are only recolored
- * when needed.
+ * kept (see {@link resolveObject}) until the image's data or the channel's
+ * color or contrast limits change, so that tiles are only recolored when
+ * needed.
  */
 export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   Image,
@@ -63,180 +62,41 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   >();
 
   /**
-   * Synchronizes the viewer's tiled images with the current model state
+   * Drops the data transfers of all images other than the given ones
    *
-   * Resolves the data transfers of each image's channels along with its data
-   * (see {@link _updateRenderedImage}), by wrapping the context's `loadObject`,
-   * and drops the data transfers of images that are gone. Images whose data
-   * transfers cannot be resolved are logged and skipped, like images whose data
-   * failed to load; the logged error names the resolution as the cause, so
-   * that it is not mistaken for a failed data load.
-   *
-   * @param layers - Layers to render
-   * @param images - Images to display
-   * @param context - The inputs to synchronize with
-   * @param options - Optional abort signal
+   * @param images - The images about to be displayed
    */
-  override synchronize(
-    layers: Layer[],
-    images: Image[],
-    context: OpenSeadragonImageSyncContext,
-    options?: { signal?: AbortSignal },
-  ): Promise<void> {
+  protected override retainObjects(images: Image[]): void {
     for (const imageId of this._renderedImages.keys()) {
       if (!images.some((image) => image.id === imageId)) {
         this._renderedImages.delete(imageId);
       }
     }
-    return super.synchronize(
-      layers,
-      images,
-      {
-        ...context,
-        loadObject: async (image, opts) => {
-          const { signal } = opts ?? {};
-          signal?.throwIfAborted();
-          const data = await context.loadObject(image, { signal });
-          try {
-            this._updateRenderedImage(image, data);
-          } catch (error) {
-            throw new Error("Failed to resolve data transfers", {
-              cause: error,
-            });
-          }
-          return data;
-        },
-      },
-      options,
-    );
-  }
-
-  /**
-   * Returns the tile sources for the given image data
-   *
-   * Multi-channel image data provides one tile source per channel, in channel
-   * order; all other image data provides a single tile source.
-   *
-   * @param data - The image data for which to retrieve the tile sources
-   * @returns The tile sources, one per channel for multi-channel image data and
-   * a single one otherwise
-   */
-  protected override getTileSources(
-    data: ImageData,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: OpenSeadragonImageSyncContext,
-  ): (string | TileSourceConfig | CustomTileSource)[] {
-    const tileSources: (string | TileSourceConfig | CustomTileSource)[] = [];
-    const n = data.getSizeC();
-    if (n !== undefined) {
-      for (let c = 0; c < n; c++) {
-        tileSources.push(data.getTileSource(c));
-      }
-    } else {
-      tileSources.push(data.getTileSource());
-    }
-    return tileSources;
-  }
-
-  /**
-   * Returns whether the channels of the given image data are blended additively
-   *
-   * Multi-channel image data blends additively, so that its channels add up
-   * rather than hide one another. Image data that is not multi-channel has a
-   * single tile source, so there is nothing to add up, and it keeps
-   * OpenSeadragon's default compositing, which preserves the transparency of its
-   * tiles.
-   *
-   * @param data - The image data to check
-   * @returns Whether the image's channels are blended additively
-   */
-  protected override usesAdditiveBlending(
-    data: ImageData,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: OpenSeadragonImageSyncContext,
-  ): boolean {
-    return data.getSizeC() !== undefined;
-  }
-
-  /**
-   * Computes the effective opacity for one of an image's tiled images
-   *
-   * Multiplies the layer and image opacity computed by the base class with the
-   * visibility and opacity of the channel that the tiled image renders. Channels
-   * are only applied to multi-channel image data, and channels that the image
-   * does not define are visible at full opacity. Without a channel index, i.e.
-   * for the image's backdrop, the layer and image opacity is returned as is.
-   *
-   * @param ref - The image reference for which to compute the opacity
-   * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
-   * @returns The effective opacity for the tiled image
-   */
-  protected override getTiledImageOpacity(
-    ref: ObjectRef<Image, ImageData>,
-    index: number | null,
-    context: OpenSeadragonImageSyncContext,
-  ): number {
-    let alpha = super.getTiledImageOpacity(ref, index, context);
-    if (alpha > 0 && index !== null && ref.data.getSizeC() !== undefined) {
-      const channel = ref.object.channels?.[index];
-      const channelVisibility =
-        channel?.visibility ?? ref.data.getChannelVisibility?.(index) ?? true;
-      const channelOpacity =
-        channel?.opacity ?? ref.data.getChannelOpacity?.(index) ?? 1.0;
-      alpha *= channelVisibility ? channelOpacity : 0;
-    }
-    return alpha;
-  }
-
-  /**
-   * Returns the data transfer resolved for one of an image's tiled images
-   *
-   * Only the tiled images of an image's channels are recolored, never its
-   * backdrop.
-   *
-   * @param ref - The image reference for which to get the data transfer
-   * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
-   * @returns The channel's data transfer resolved by
-   * {@link _updateRenderedImage}, or `undefined` if the channel has none
-   */
-  protected override getTiledImageDataTransfer(
-    ref: ObjectRef<Image, ImageData>,
-    index: number | null,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: OpenSeadragonImageSyncContext,
-  ): DataTransfer | undefined {
-    if (index !== null) {
-      const renderedImage = this._renderedImages.get(ref.object.id);
-      if (renderedImage !== undefined) {
-        const renderedImageChannel = renderedImage.channels[index];
-        if (renderedImageChannel !== undefined) {
-          return renderedImageChannel.dataTransfer;
-        }
-      }
-    }
-    return undefined;
   }
 
   /**
    * Resolves the data transfers of an image's channels, unless they are up to date
    *
-   * Called by {@link synchronize} once the image's data has loaded. Image data
-   * that is not multi-channel has no channels to resolve. Otherwise, each
-   * channel's color and contrast limits are resolved from the image's channel
-   * settings, falling back to those reported by the data, and its data transfer
-   * is kept as long as the image's data and the resolved values are unchanged,
-   * and is created anew otherwise (see {@link _createDataTransfer}). Channels
-   * are resolved independently, so that changing one channel only recolors the
-   * tiles of that channel.
+   * Image data that is not multi-channel has no channels to resolve. Otherwise,
+   * each channel's color and contrast limits are resolved from the image's
+   * channel settings, falling back to those reported by the data, and its data
+   * transfer is kept as long as the image's data and the resolved values are
+   * unchanged, and is created anew otherwise (see {@link _createDataTransfer}).
+   * Channels are resolved independently, so that changing one channel only
+   * recolors the tiles of that channel.
    *
-   * @param image - The image
+   * @param image - The image to resolve
    * @param data - The loaded data of the image
+   * @returns A promise that resolves once the data transfers have been resolved
    */
-  private _updateRenderedImage(image: Image, data: ImageData): void {
+  protected override resolveObject(
+    image: Image,
+    data: ImageData,
+  ): Promise<void> {
     const sizeC = data.getSizeC();
     if (sizeC === undefined) {
       this._renderedImages.delete(image.id);
-      return;
+      return Promise.resolve();
     }
     const renderedImage = this._renderedImages.get(image.id);
     const renderedImageChannels = [];
@@ -270,6 +130,104 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
       data,
       channels: renderedImageChannels,
     });
+    return Promise.resolve();
+  }
+
+  /**
+   * Returns the tile sources for the given image data
+   *
+   * Multi-channel image data provides one tile source per channel, in channel
+   * order; all other image data provides a single tile source.
+   *
+   * @param data - The image data for which to retrieve the tile sources
+   * @returns The tile sources, one per channel for multi-channel image data and
+   * a single one otherwise
+   */
+  protected override getTileSources(
+    data: ImageData,
+  ): (string | TileSourceConfig | CustomTileSource)[] {
+    const tileSources: (string | TileSourceConfig | CustomTileSource)[] = [];
+    const n = data.getSizeC();
+    if (n !== undefined) {
+      for (let c = 0; c < n; c++) {
+        tileSources.push(data.getTileSource(c));
+      }
+    } else {
+      tileSources.push(data.getTileSource());
+    }
+    return tileSources;
+  }
+
+  /**
+   * Returns whether the channels of the given image data are blended additively
+   *
+   * Multi-channel image data blends additively, so that its channels add up
+   * rather than hide one another. Image data that is not multi-channel has a
+   * single tile source, so there is nothing to add up, and it keeps
+   * OpenSeadragon's default compositing, which preserves the transparency of its
+   * tiles.
+   *
+   * @param data - The image data to check
+   * @returns Whether the image's channels are blended additively
+   */
+  protected override usesAdditiveBlending(data: ImageData): boolean {
+    return data.getSizeC() !== undefined;
+  }
+
+  /**
+   * Computes the effective opacity for one of an image's tiled images
+   *
+   * Multiplies the layer and image opacity computed by the base class with the
+   * visibility and opacity of the channel that the tiled image renders. Channels
+   * are only applied to multi-channel image data, and channels that the image
+   * does not define are visible at full opacity. Without a channel index, i.e.
+   * for the image's backdrop, the layer and image opacity is returned as is.
+   *
+   * @param ref - The image reference for which to compute the opacity
+   * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
+   * @returns The effective opacity for the tiled image
+   */
+  protected override getTiledImageOpacity(
+    ref: ObjectRef<Image, ImageData>,
+    index: number | null,
+  ): number {
+    let alpha = super.getTiledImageOpacity(ref, index);
+    if (alpha > 0 && index !== null && ref.data.getSizeC() !== undefined) {
+      const channel = ref.object.channels?.[index];
+      const channelVisibility =
+        channel?.visibility ?? ref.data.getChannelVisibility?.(index) ?? true;
+      const channelOpacity =
+        channel?.opacity ?? ref.data.getChannelOpacity?.(index) ?? 1.0;
+      alpha *= channelVisibility ? channelOpacity : 0;
+    }
+    return alpha;
+  }
+
+  /**
+   * Returns the data transfer resolved for one of an image's tiled images
+   *
+   * Only the tiled images of an image's channels are recolored, never its
+   * backdrop.
+   *
+   * @param ref - The image reference for which to get the data transfer
+   * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
+   * @returns The channel's data transfer resolved by {@link resolveObject},
+   * or `undefined` if the channel has none
+   */
+  protected override getTiledImageDataTransfer(
+    ref: ObjectRef<Image, ImageData>,
+    index: number | null,
+  ): DataTransfer | undefined {
+    if (index !== null) {
+      const renderedImage = this._renderedImages.get(ref.object.id);
+      if (renderedImage !== undefined) {
+        const renderedImageChannel = renderedImage.channels[index];
+        if (renderedImageChannel !== undefined) {
+          return renderedImageChannel.dataTransfer;
+        }
+      }
+    }
+    return undefined;
   }
 
   /**

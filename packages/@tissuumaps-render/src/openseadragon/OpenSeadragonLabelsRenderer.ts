@@ -8,7 +8,6 @@ import {
   type DefaultMap,
   type Labels,
   type LabelsData,
-  type Layer,
   type Table,
   type TableData,
   type TileSourceConfig,
@@ -54,9 +53,8 @@ export type OpenSeadragonLabelsSyncContext = OpenSeadragonSyncContext<
  * not part of it; OpenSeadragon applies them when drawing the tiled image.
  *
  * As data transfers are compared by identity, each object's data transfer is
- * kept (see {@link _updateRenderedLabels}) until its data or one of the
- * configurations it was resolved from changes, so that tiles are only recolored
- * when needed.
+ * kept (see {@link resolveObject}) until its data or one of the configurations
+ * it was resolved from changes, so that tiles are only recolored when needed.
  */
 export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   Labels,
@@ -79,117 +77,37 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   >();
 
   /**
-   * Synchronizes the viewer's tiled images with the current model state
+   * Drops the data transfers of all labels objects other than the given ones
    *
-   * Resolves the data transfer of each labels object along with its data (see
-   * {@link _updateRenderedLabels}), by wrapping the context's `loadObject`, and
-   * drops the data transfers of objects that are gone. Objects whose data
-   * transfer cannot be resolved are logged and skipped, like objects whose data
-   * failed to load; the logged error names the resolution as the cause, so
-   * that it is not mistaken for a failed data load.
-   *
-   * @param layers - Layers to render
-   * @param labels - Labels objects to display
-   * @param context - The inputs to synchronize with
-   * @param options - Optional abort signal
+   * @param labels - The labels objects about to be displayed
    */
-  override synchronize(
-    layers: Layer[],
-    labels: Labels[],
-    context: OpenSeadragonLabelsSyncContext,
-    options?: { signal?: AbortSignal },
-  ): Promise<void> {
+  protected override retainObjects(labels: Labels[]): void {
     for (const labelsId of this._renderedLabels.keys()) {
       if (!labels.some((currentLabels) => currentLabels.id === labelsId)) {
         this._renderedLabels.delete(labelsId);
       }
     }
-    return super.synchronize(
-      layers,
-      labels,
-      {
-        ...context,
-        loadObject: async (currentLabels, opts) => {
-          const { signal } = opts ?? {};
-          signal?.throwIfAborted();
-          const data = await context.loadObject(currentLabels, { signal });
-          try {
-            await this._updateRenderedLabels(currentLabels, data, context, {
-              signal,
-            });
-          } catch (error) {
-            if (!signal?.aborted) {
-              throw new Error("Failed to resolve data transfer", {
-                cause: error,
-              });
-            }
-            throw error;
-          }
-          return data;
-        },
-      },
-      options,
-    );
-  }
-
-  /**
-   * Returns the tile source for the given labels data
-   *
-   * @param data - The labels data for which to retrieve the tile source
-   * @returns The single tile source of the labels data
-   */
-  protected override getTileSources(
-    data: LabelsData,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: OpenSeadragonLabelsSyncContext,
-  ): (string | TileSourceConfig | CustomTileSource)[] {
-    return [data.getTileSource()];
-  }
-
-  /**
-   * Returns the data transfer resolved for the given labels object
-   *
-   * A labels object has a single tiled image, whose tiles carry the label IDs,
-   * and no backdrop, so the index is not looked at.
-   *
-   * @param ref - The labels reference for which to get the data transfer
-   * @returns The data transfer resolved by {@link _updateRenderedLabels}, or
-   * `undefined` if the object has not been resolved
-   */
-  protected override getTiledImageDataTransfer(
-    ref: ObjectRef<Labels, LabelsData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _index: number | null,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: OpenSeadragonLabelsSyncContext,
-  ): DataTransfer | undefined {
-    const renderedLabels = this._renderedLabels.get(ref.object.id);
-    if (renderedLabels !== undefined) {
-      return renderedLabels.dataTransfer;
-    }
-    return undefined;
   }
 
   /**
    * Resolves the data transfer of a labels object, unless it is up to date
    *
-   * Called by {@link synchronize} once the object's data has loaded, and
-   * concurrently for different objects. An object's data transfer is kept as
-   * long as its data and its label color, visibility and opacity configurations
-   * are unchanged, and is resolved anew otherwise (see
-   * {@link _resolveDataTransfer}). If resolving fails, the previous entry stays
-   * in place.
+   * An object's data transfer is kept as long as its data and its label color,
+   * visibility and opacity configurations are unchanged, and is resolved anew
+   * otherwise (see {@link _resolveDataTransfer}). If resolving fails, the
+   * previous entry stays in place.
    *
    * @todo Changes to the color, visibility and opacity maps themselves are not
    * detected; they are only re-read when a configuration referencing them
    * changes.
    *
-   * @param labels - The labels object
+   * @param labels - The labels object to resolve
    * @param data - The loaded data of the labels object
    * @param context - The inputs of the current synchronization
    * @param options - Optional abort signal
+   * @returns A promise that resolves once the data transfer has been resolved
    */
-  private async _updateRenderedLabels(
+  protected override async resolveObject(
     labels: Labels,
     data: LabelsData,
     context: OpenSeadragonLabelsSyncContext,
@@ -221,6 +139,38 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
         ),
       });
     }
+  }
+
+  /**
+   * Returns the tile source for the given labels data
+   *
+   * @param data - The labels data for which to retrieve the tile source
+   * @returns The single tile source of the labels data
+   */
+  protected override getTileSources(
+    data: LabelsData,
+  ): (string | TileSourceConfig | CustomTileSource)[] {
+    return [data.getTileSource()];
+  }
+
+  /**
+   * Returns the data transfer resolved for the given labels object
+   *
+   * A labels object has a single tiled image, whose tiles carry the label IDs,
+   * and no backdrop, so the index is not looked at.
+   *
+   * @param ref - The labels reference for which to get the data transfer
+   * @returns The data transfer resolved by {@link resolveObject}, or
+   * `undefined` if the object has not been resolved
+   */
+  protected override getTiledImageDataTransfer(
+    ref: ObjectRef<Labels, LabelsData>,
+  ): DataTransfer | undefined {
+    const renderedLabels = this._renderedLabels.get(ref.object.id);
+    if (renderedLabels !== undefined) {
+      return renderedLabels.dataTransfer;
+    }
+    return undefined;
   }
 
   /**
