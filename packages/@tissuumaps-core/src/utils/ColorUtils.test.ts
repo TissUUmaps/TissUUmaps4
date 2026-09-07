@@ -58,6 +58,25 @@ describe("ColorUtils", () => {
     });
   });
 
+  describe("packRGBA", () => {
+    it("adds the opacity as alpha for a visible item", () => {
+      expect(ColorUtils.packRGBA(0x030201, 1, 0xff)).toBe(0xff030201);
+    });
+
+    it("yields zero alpha for an invisible item", () => {
+      expect(ColorUtils.packRGBA(0x030201, 0, 0xff)).toBe(0x00030201);
+    });
+
+    it("discards any existing alpha", () => {
+      expect(ColorUtils.packRGBA(0xaa030201, 1, 0x80)).toBe(0x80030201);
+      expect(ColorUtils.packRGBA(0xaa030201, 0, 0x80)).toBe(0x00030201);
+    });
+
+    it("returns an unsigned 32-bit integer", () => {
+      expect(ColorUtils.packRGBA(0xffffff, 1, 0xff)).toBe(0xffffffff);
+    });
+  });
+
   describe("packColor", () => {
     it("packs a color to a 24-bit integer", () => {
       expect(ColorUtils.packColor({ r: 1, g: 2, b: 3 })).toBe(

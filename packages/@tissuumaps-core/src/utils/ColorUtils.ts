@@ -1,4 +1,5 @@
 import type { Color } from "../model/primitives";
+import { MathUtils } from "./MathUtils";
 
 /** Utility methods for color parsing, packing, and conversion */
 export class ColorUtils {
@@ -48,6 +49,26 @@ export class ColorUtils {
   static packColor(color: Color): number {
     // never exceeds 24 bits (0xFFFFFF), so no need for >>> 0
     return (color.b << 16) | (color.g << 8) | color.r;
+  }
+
+  /**
+   * Folds a visibility and an opacity into the alpha channel of a packed color
+   *
+   * Combines the lower 24 bits of `color` (see {@link packColor}) with
+   * `opacity` as alpha if `visibility` is non-zero, and with zero alpha
+   * otherwise, into a packed 32-bit RGBA color, `0xAABBGGRR`.
+   *
+   * @param color - The packed color, `0xBBGGRR`; any higher bits are discarded
+   * @param visibility - The visibility, `0` for invisible
+   * @param opacity - The opacity, in the range [0, 255]
+   * @returns The packed RGBA color, `0xAABBGGRR`, as an unsigned 32-bit integer
+   */
+  static packRGBA(color: number, visibility: number, opacity: number): number {
+    const rgb = color & 0x00ffffff;
+    if (visibility > 0) {
+      return MathUtils.safeOr(rgb, MathUtils.safeLeftShift(opacity, 24));
+    }
+    return rgb;
   }
 
   /**

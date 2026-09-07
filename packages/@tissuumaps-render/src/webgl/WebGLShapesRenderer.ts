@@ -586,7 +586,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         if (renderedShapes !== undefined) {
           this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
         }
-        await WebGLShapesRenderer.foldAlphas(
+        await WebGLShapesRenderer.foldRGBA(
           shapeFillColors,
           shapeFillVisibilities,
           shapeFillOpacities,
@@ -618,7 +618,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
             renderedShapes.shapeStrokeColorsTexture,
           );
         }
-        await WebGLShapesRenderer.foldAlphas(
+        await WebGLShapesRenderer.foldRGBA(
           shapeStrokeColors,
           shapeStrokeVisibilities,
           shapeStrokeOpacities,
@@ -808,6 +808,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
 
   /**
    * Returns whether the fill colors of an object have to be resolved again
+   *
+   * @todo Changes to the color, visibility and opacity maps themselves are not
+   * detected; they are only re-read when a configuration referencing them
+   * changes.
    */
   private static _checkShapeFillColorsChanged(
     renderedShapes: RenderedShapes | undefined,
@@ -836,6 +840,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
 
   /**
    * Returns whether the stroke colors of an object have to be resolved again
+   *
+   * @todo Changes to the color, visibility and opacity maps themselves are not
+   * detected; they are only re-read when a configuration referencing them
+   * changes.
    */
   private static _checkShapeStrokeColorsChanged(
     renderedShapes: RenderedShapes | undefined,
@@ -866,7 +874,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Resolves the RGB fill or stroke color of every shape of an object
    *
    * The alpha channel is added later, by
-   * {@link WebGLRendererBase.foldAlphas}, from the separately resolved
+   * {@link WebGLRendererBase.foldRGBA}, from the separately resolved
    * visibilities and opacities.
    *
    * @param options - Optional abort signal and table loader

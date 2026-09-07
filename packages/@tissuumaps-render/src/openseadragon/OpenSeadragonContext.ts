@@ -52,8 +52,7 @@ export type DataTransfer = {
  * {@link updateTiledImageDataTransfer}). As OpenSeadragon has no notion of a
  * per-image color mapping, it is applied to the tiles themselves, in a
  * `tile-invalidated` handler installed on the viewer. Data transfers are kept
- * per tile source, rather than per tiled image, which is the granularity at
- * which OpenSeadragon keys its tile caches, and which also covers the
+ * per tile source, rather than per tiled image, which also covers the
  * navigator: it mirrors the world with tiled images of its own, but shares
  * their tile sources, and its tiles are invalidated through this viewer.
  */
@@ -396,12 +395,10 @@ export class OpenSeadragonContext {
    * is applied to every tile of the tiled image, including those loaded later.
    *
    * The data transfer is remembered per tile source, until the tile source is
-   * garbage-collected, because that is what OpenSeadragon keys its tile caches
-   * by: tiles that share their original data share their recolored data, too.
-   * Tiled images that share a tile source therefore also share a data transfer,
-   * with the last one set winning - including the tiled images of the
-   * navigator, which mirror those of this viewer and are recolored along with
-   * them.
+   * garbage-collected. Tiled images that share a tile source therefore also
+   * share a data transfer, with the last one set winning - including the tiled
+   * images of the navigator, which mirror those of this viewer and are
+   * recolored along with them.
    *
    * Data transfers are compared by identity: the tiles are only invalidated,
    * and thereby recolored from their original data, if a different data
@@ -658,7 +655,7 @@ export class OpenSeadragonContext {
     const { width, height } = tile.sourceBounds;
     for (const w of [Math.floor(width), Math.ceil(width)]) {
       const h = n / w;
-      if (Number.isInteger(h) && Math.abs(h - height) < 1) {
+      if (Number.isInteger(h) && Math.abs(h - height) <= 1) {
         return { width: w, height: h };
       }
     }

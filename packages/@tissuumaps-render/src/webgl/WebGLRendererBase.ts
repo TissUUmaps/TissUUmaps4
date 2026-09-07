@@ -1,8 +1,8 @@
 import {
   AsyncUtils,
+  ColorUtils,
   GeometryUtils,
   type Layer,
-  MathUtils,
   type Points,
   type PointsData,
   type Rect,
@@ -378,9 +378,7 @@ export abstract class WebGLRendererBase<
    *
    * The three are resolved independently, so that none of them has to wait for
    * the others (see the two-pass loading of the renderers). This combines them
-   * into what the shaders sample, `0xAABBGGRR`: the lower 24 bits of the color
-   * (see `ColorUtils.packColor`), with the item's opacity as alpha where it is
-   * visible, and no alpha where it is not.
+   * into what the shaders sample, `0xAABBGGRR` (see `ColorUtils.packRGBA`).
    *
    * All three buffers have to be of the same length; where they are padded, the
    * padding is folded along with the rest and never sampled.
@@ -390,7 +388,7 @@ export abstract class WebGLRendererBase<
    * @param opacities - The resolved alpha values
    * @param options - Optional abort signal
    */
-  protected static foldAlphas(
+  protected static foldRGBA(
     colors: Uint32Array,
     visibilities: Uint8Array,
     opacities: Uint8Array,
@@ -399,12 +397,7 @@ export abstract class WebGLRendererBase<
     return AsyncUtils.forEach(
       colors,
       (color, i) => {
-        if (visibilities[i]! > 0) {
-          colors[i] = MathUtils.safeOr(
-            color & 0x00ffffff,
-            MathUtils.safeLeftShift(opacities[i]!, 24),
-          );
-        }
+        colors[i] = ColorUtils.packRGBA(color, visibilities[i]!, opacities[i]!);
       },
       options,
     );

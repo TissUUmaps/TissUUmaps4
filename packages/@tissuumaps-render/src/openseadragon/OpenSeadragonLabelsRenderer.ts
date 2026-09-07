@@ -3,12 +3,12 @@ import { deepEqual } from "fast-equals";
 import {
   AsyncUtils,
   type Color,
+  ColorUtils,
   type CustomTileSource,
   type DefaultMap,
   type Labels,
   type LabelsData,
   type Layer,
-  MathUtils,
   type Table,
   type TableData,
   type TileSourceConfig,
@@ -63,16 +63,11 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   LabelsData,
   OpenSeadragonLabelsSyncContext
 > {
-  private static readonly _defaultPixelValue =
-    VisibilityResolver.encodeVisibility(defaultLabelVisibility) > 0
-      ? MathUtils.safeOr(
-          ColorResolver.encodeColor(defaultLabelColor) & 0x00ffffff,
-          MathUtils.safeLeftShift(
-            OpacityResolver.encodeOpacity(defaultLabelOpacity),
-            24,
-          ),
-        )
-      : 0;
+  private static readonly _defaultPixelValue = ColorUtils.packRGBA(
+    ColorResolver.encodeColor(defaultLabelColor),
+    VisibilityResolver.encodeVisibility(defaultLabelVisibility),
+    OpacityResolver.encodeOpacity(defaultLabelOpacity),
+  );
 
   private readonly _renderedLabels = new Map<
     string,
@@ -185,6 +180,10 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    * {@link _resolveDataTransfer}). If resolving fails, the previous entry stays
    * in place.
    *
+   * @todo Changes to the color, visibility and opacity maps themselves are not
+   * detected; they are only re-read when a configuration referencing them
+   * changes.
+   *
    * @param labels - The labels object
    * @param data - The loaded data of the labels object
    * @param context - The inputs of the current synchronization
@@ -286,14 +285,14 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
     await AsyncUtils.forEach(
       labelIds,
       (labelId, i) => {
-        let pixelValue = labelColors[i]!;
-        if (labelVisibilities[i]! > 0) {
-          pixelValue = MathUtils.safeOr(
-            pixelValue & 0x00ffffff,
-            MathUtils.safeLeftShift(labelOpacities[i]!, 24),
-          );
-        }
-        labelPixelValues.set(labelId, pixelValue);
+        labelPixelValues.set(
+          labelId,
+          ColorUtils.packRGBA(
+            labelColors[i]!,
+            labelVisibilities[i]!,
+            labelOpacities[i]!,
+          ),
+        );
       },
       { signal },
     );
