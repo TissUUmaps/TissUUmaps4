@@ -9,6 +9,9 @@ import {
 
 import { projectStore } from "@/stores/project";
 
+/** The GET parameter naming the project to load */
+export const projectURLParam = "project";
+
 /**
  * Creates a deep copy of a project, keeping only the project's own properties
  *
@@ -144,4 +147,25 @@ export function saveAndDownloadProjectToJSON(project?: Project): void {
   projectLink.href = projectUrl;
   projectLink.click();
   setTimeout(() => URL.revokeObjectURL(projectUrl), 60_000);
+}
+
+/**
+ * Records the project URL in the address bar, so that reloading the page
+ * restores the same project
+ *
+ * @param projectUrl - The URL the project was loaded from
+ */
+export function setProjectURLParam(projectUrl: string): void {
+  const url = new URL(window.location.href);
+  url.searchParams.set(projectURLParam, projectUrl);
+  window.history.replaceState({}, "", url);
+}
+
+/**
+ * Removes the project URL from the address bar
+ */
+export function clearProjectURLParam(): void {
+  const url = new URL(window.location.href);
+  url.searchParams.delete(projectURLParam);
+  window.history.replaceState({}, "", url);
 }

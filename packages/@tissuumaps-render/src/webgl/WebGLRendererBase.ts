@@ -279,8 +279,8 @@ export abstract class WebGLRendererBase<
       const bounds = TransformUtils.transformBoundingBox(
         renderedObject.objectBounds,
         WebGLUtils.createDataToWorldMatrix(
-          renderedObject.ref.object,
-          renderedObject.ref.layer,
+          renderedObject.ref.object.transform,
+          renderedObject.ref.layer.transform,
         ),
       );
       return union !== null ? GeometryUtils.boundingBox(union, bounds) : bounds;

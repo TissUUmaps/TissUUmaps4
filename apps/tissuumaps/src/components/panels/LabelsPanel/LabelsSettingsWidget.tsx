@@ -125,8 +125,6 @@ export function LabelsSettingsWidget({
               onTransformChange={(transform) =>
                 updateLabels(labels.id, { transform })
               }
-              flip={labels.flip}
-              onFlipChange={(flip) => updateLabels(labels.id, { flip })}
             />
           </AccordionPanel>
         </AccordionItem>
