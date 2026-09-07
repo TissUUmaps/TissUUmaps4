@@ -15,71 +15,80 @@ export class TransformUtils {
    * from a column-major `gl-matrix` {@link mat3}. A negative 2D determinant
    * indicates a horizontal reflection.
    *
-   * When `center` is provided the returned translation is adjusted so that
-   * flip and rotation are expressed around that center instead of the origin.
+   * If `pivot` is given, flip and rotation are expressed about `pivot`
+   * (in the input coordinates of `m`) instead of the origin, while scale
+   * stays about the origin. Flip, scale, and rotation are unaffected; only
+   * the translation changes to `m(pivot) - scale * pivot`, i.e. the position
+   * of the scaled content before it is flipped and rotated about its (scaled)
+   * pivot. This matches viewers that place an image by its top-left corner
+   * and then flip/rotate it about its center.
    *
    * @param m - The source matrix
-   * @param options - Optional center in pre-scaled coordinates
+   * @param pivot - Optional point about which flip and rotation are expressed
    * @returns The decomposed transform
    */
   static fromSimilarityMatrix(
     m: mat3,
-    options?: { center?: { x: number; y: number } },
+    pivot?: { x: number; y: number },
   ): SimilarityTransform {
     // gl-matrix, like OpenGL, uses column-major order.
-    // Detect reflection via the sign of the 2D determinant.
     const det = m[0] * m[4] - m[3] * m[1];
     const flip = det < 0;
     const c0 = flip ? -m[0] : m[0];
     const c1 = flip ? -m[1] : m[1];
-    const scale = Math.sqrt(c0 * c0 + c1 * c1);
-    const angle = Math.atan2(c1, c0);
-    let tx = m[6];
-    let ty = m[7];
-    const { center } = options ?? {};
-    if (center !== undefined) {
-      const cx = center.x * scale;
-      const cy = center.y * scale;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      tx -= cy * sin + cx * (1 - cos);
-      ty -= cy * (1 - cos) - cx * sin;
-      if (flip) {
-        tx -= 2 * cx * cos;
-        ty -= 2 * cx * sin;
-      }
+    const scale = Math.hypot(c0, c1);
+    const rotation = (Math.atan2(c1, c0) * 180) / Math.PI; // in (-180, 180]
+    const translation = { x: m[6], y: m[7] };
+    if (pivot !== undefined) {
+      const { x: cx, y: cy } = pivot;
+      translation.x = m[0] * cx + m[3] * cy + m[6] - scale * cx;
+      translation.y = m[1] * cx + m[4] * cy + m[7] - scale * cy;
     }
-    return {
-      flip,
-      scale,
-      rotation: (angle * 180) / Math.PI,
-      translation: { x: tx, y: ty },
-    };
+    return { flip, scale, rotation, translation };
   }
 
   /**
    * Builds a 3×3 similarity matrix from a (partial) {@link SimilarityTransform}
    *
-   * Applies, in order: flip, scale, rotation, and translation.
+   * Applies, in order: flip/scale, rotation, and translation.
+   *
+   * If `pivot` is given, flip and rotation are applied about `pivot` (in the
+   * source coordinates of the transform) instead of the origin, while scale
+   * stays about the origin. The translation is then the position of the
+   * scaled content before it is flipped and rotated about its (scaled)
+   * pivot. This is the inverse of {@link fromSimilarityMatrix} called with
+   * the same pivot.
    *
    * @param tf - The transform components (all optional)
+   * @param pivot - Optional point about which flip and rotation are applied
    * @returns The composed matrix
    */
-  static toSimilarityMatrix(tf: Partial<SimilarityTransform>): mat3 {
+  static toSimilarityMatrix(
+    tf: Partial<SimilarityTransform>,
+    pivot?: { x: number; y: number },
+  ): mat3 {
     // gl-matrix, like OpenGL, uses pre-multiplied matrices,
     // so we need to apply transformations in reverse order.
     const m = mat3.create();
     if (tf.translation !== undefined) {
       mat3.translate(m, m, [tf.translation.x, tf.translation.y]);
     }
+    if (pivot !== undefined) {
+      const scale = tf.scale ?? 1;
+      mat3.translate(m, m, [scale * pivot.x, scale * pivot.y]);
+    }
     if (tf.rotation !== undefined) {
       mat3.rotate(m, m, (Math.PI * tf.rotation) / 180);
     }
-    if (tf.scale !== undefined) {
-      mat3.scale(m, m, [tf.scale, tf.scale]);
-    }
     if (tf.flip) {
       mat3.scale(m, m, [-1, 1]);
+    }
+    if (pivot !== undefined) {
+      const scale = tf.scale ?? 1;
+      mat3.translate(m, m, [-scale * pivot.x, -scale * pivot.y]);
+    }
+    if (tf.scale !== undefined) {
+      mat3.scale(m, m, [tf.scale, tf.scale]);
     }
     return m;
   }
