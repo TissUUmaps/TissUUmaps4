@@ -79,37 +79,6 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   >();
 
   /**
-   * Returns the tile source for the given labels data
-   *
-   * @param data - The labels data for which to retrieve the tile source
-   * @returns The single tile source of the labels data
-   */
-  protected override getTileSources(
-    data: LabelsData,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: OpenSeadragonLabelsSyncContext,
-  ): (string | TileSourceConfig | CustomTileSource)[] {
-    return [data.getTileSource()];
-  }
-
-  /**
-   * Returns the data transfer resolved for the given labels object
-   *
-   * @param ref - The labels reference for which to get the data transfer
-   * @returns The data transfer resolved by {@link resolveObjects}, or
-   * `undefined` if the object has not been resolved
-   */
-  protected override getTiledImageDataTransfer(
-    ref: ObjectRef<Labels, LabelsData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _index: number | null,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: OpenSeadragonLabelsSyncContext,
-  ): DataTransfer | undefined {
-    return this._dataTransfers.get(ref.object.id)?.dataTransfer;
-  }
-
-  /**
    * Resolves the data transfer of every labels object, concurrently
    *
    * An object's data transfer is kept as long as its data and its label color,
@@ -160,6 +129,37 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
         this._dataTransfers.delete(objectId);
       }
     }
+  }
+
+  /**
+   * Returns the tile source for the given labels data
+   *
+   * @param data - The labels data for which to retrieve the tile source
+   * @returns The single tile source of the labels data
+   */
+  protected override getTileSources(
+    data: LabelsData,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _context: OpenSeadragonLabelsSyncContext,
+  ): (string | TileSourceConfig | CustomTileSource)[] {
+    return [data.getTileSource()];
+  }
+
+  /**
+   * Returns the data transfer resolved for the given labels object
+   *
+   * @param ref - The labels reference for which to get the data transfer
+   * @returns The data transfer resolved by {@link resolveObjects}, or
+   * `undefined` if the object has not been resolved
+   */
+  protected override getTiledImageDataTransfer(
+    ref: ObjectRef<Labels, LabelsData>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _index: number | null,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _context: OpenSeadragonLabelsSyncContext,
+  ): DataTransfer | undefined {
+    return this._dataTransfers.get(ref.object.id)?.dataTransfer;
   }
 
   /**

@@ -248,6 +248,31 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
+   * Resolves what a subclass derives asynchronously from the loaded objects
+   *
+   * Called by {@link synchronize} once the data of all objects has loaded, and
+   * before any tiled image is created or updated, so that the synchronous
+   * per-tiled-image hooks ({@link getTiledImageColor},
+   * {@link getTiledImageOpacity} and {@link getTiledImageDataTransfer}) can rely
+   * on the result. Subclasses own that state, and are expected to keep it
+   * where nothing relevant changed. Does nothing by default.
+   *
+   * @param _refs - The loaded object references, in world order
+   * @param _context - The inputs of the current synchronization
+   * @param _options - Optional abort signal
+   */
+  protected resolveObjects(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _refs: ObjectRef<TObject, TObjectData>[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _context: TContext,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options?: { signal?: AbortSignal },
+  ): Promise<void> {
+    return Promise.resolve();
+  }
+
+  /**
    * Returns the tile sources for the given object data
    *
    * @param data - The object data (image or labels) for which to retrieve the tile sources
@@ -355,31 +380,6 @@ export abstract class OpenSeadragonRendererBase<
     _context: TContext,
   ): DataTransfer | undefined {
     return undefined;
-  }
-
-  /**
-   * Resolves what a subclass derives asynchronously from the loaded objects
-   *
-   * Called by {@link synchronize} once the data of all objects has loaded, and
-   * before any tiled image is created or updated, so that the synchronous
-   * per-tiled-image hooks ({@link getTiledImageColor},
-   * {@link getTiledImageOpacity} and {@link getTiledImageDataTransfer}) can rely
-   * on the result. Subclasses own that state, and are expected to keep it
-   * where nothing relevant changed. Does nothing by default.
-   *
-   * @param _refs - The loaded object references, in world order
-   * @param _context - The inputs of the current synchronization
-   * @param _options - Optional abort signal
-   */
-  protected resolveObjects(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _refs: ObjectRef<TObject, TObjectData>[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: TContext,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _options?: { signal?: AbortSignal },
-  ): Promise<void> {
-    return Promise.resolve();
   }
 
   /**
