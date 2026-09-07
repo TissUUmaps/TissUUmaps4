@@ -16,7 +16,7 @@ type GL = {
   shapesRenderer: WebGLShapesRenderer;
 };
 
-function draw(gl: GL | null) {
+function drawGL(gl: GL | null) {
   if (gl !== null) {
     gl.context.clear();
     gl.pointsRenderer.draw();
@@ -74,7 +74,7 @@ export function useWebGL(
       const redrawPoints = glRef.current.pointsRenderer.setViewport(viewport);
       const redrawShapes = glRef.current.shapesRenderer.setViewport(viewport);
       if (redrawPoints || redrawShapes) {
-        draw(glRef.current);
+        drawGL(glRef.current);
       }
     }
   }, []);
@@ -140,7 +140,7 @@ export function useWebGL(
       const gl = { canvas, context, pointsRenderer, shapesRenderer };
       glRef.current = gl;
       setGLReady(true);
-      draw(gl);
+      drawGL(gl);
       return gl;
     }
 
@@ -215,7 +215,7 @@ export function useWebGL(
           glOptions.shapesRenderOptions,
         );
       if (redrawPoints || redrawShapes) {
-        draw(glRef.current);
+        drawGL(glRef.current);
       }
       if (resyncPoints) {
         dispatchSyncPoints();
@@ -234,7 +234,7 @@ export function useWebGL(
         containerSize,
       );
       if (redraw) {
-        draw(glRef.current);
+        drawGL(glRef.current);
       }
     }
   }, [glReady, containerSize]);
@@ -259,7 +259,7 @@ export function useWebGL(
         .then((renderedBounds) => {
           if (!abortController.signal.aborted) {
             setGLPointsBounds(renderedBounds ?? null);
-            draw(glRef.current);
+            drawGL(glRef.current);
           }
         })
         .catch((error) => {
@@ -304,7 +304,7 @@ export function useWebGL(
         .then((renderedBounds) => {
           if (!abortController.signal.aborted) {
             setGLShapesBounds(renderedBounds ?? null);
-            draw(glRef.current);
+            drawGL(glRef.current);
           }
         })
         .catch((error) => {
