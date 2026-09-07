@@ -5,14 +5,15 @@ import type {
 
 import { OpenSeadragonImageData } from "./OpenSeadragonImageData";
 import {
-  type DefaultOpenSeadragonImageDataSource,
+  type NormalizedOpenSeadragonImageDataSource,
   type OpenSeadragonImageDataSource,
   openSeadragonImageDataSourceDefaults,
 } from "./OpenSeadragonImageDataSource";
 
 export class OpenSeadragonImageDataProvider implements ImageDataProvider<
   OpenSeadragonImageDataSource,
-  OpenSeadragonImageData
+  OpenSeadragonImageData,
+  NormalizedOpenSeadragonImageDataSource
 > {
   readonly name = "OpenSeadragon";
 
@@ -41,12 +42,13 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     ],
   };
 
-  normalizeDataSource(
+  normalize(
     dataSource: OpenSeadragonImageDataSource,
-  ): DefaultOpenSeadragonImageDataSource {
+    projectUrl: string | null,
+  ): NormalizedOpenSeadragonImageDataSource {
     let { url } = dataSource;
     if (url !== undefined) {
-      url = new URL(url, document.baseURI).href;
+      url = new URL(url, projectUrl ?? document.baseURI).href;
     }
     return {
       ...openSeadragonImageDataSourceDefaults,
@@ -56,13 +58,11 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
   }
 
   async load(
-    dataSource: OpenSeadragonImageDataSource,
+    normalizedDataSource: NormalizedOpenSeadragonImageDataSource,
     options?: DataProviderOpenOptions,
   ): Promise<OpenSeadragonImageData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-
-    const normalizedDataSource = this.normalizeDataSource(dataSource);
 
     if (normalizedDataSource.tileSourceConfig !== undefined) {
       if (

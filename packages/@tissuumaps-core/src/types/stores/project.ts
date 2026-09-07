@@ -10,8 +10,20 @@ import type { Table } from "../../model/table";
 
 /**
  * The state of the project store, i.e. the currently open {@link Project}
+ *
+ * In addition to the project itself, the store keeps track of the URL the
+ * project was loaded from, which is what relative URLs in its data sources are
+ * resolved against. That URL describes where the project came from rather than
+ * what it contains, so it is not part of {@link Project} and is not to be saved,
+ * serialized or exported with it.
  */
-export type ProjectStoreState = Project;
+export type ProjectStoreState = Project & {
+  /**
+   * The absolute URL the open project was loaded from, or `null` if it was not
+   * loaded from a URL
+   */
+  url: string | null;
+};
 
 /**
  * The actions of the project store

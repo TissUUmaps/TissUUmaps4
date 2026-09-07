@@ -17,7 +17,7 @@ export interface TablePointsDataSource extends PointsDataSource<
   y?: string;
 }
 
-export type DefaultTablePointsDataSource = Required<
+export type NormalizedTablePointsDataSource = Required<
   Pick<TablePointsDataSource, keyof typeof tablePointsDataSourceDefaults>
 > &
   Omit<TablePointsDataSource, keyof typeof tablePointsDataSourceDefaults>;

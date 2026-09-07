@@ -39,7 +39,7 @@ export interface CSVTableDataSource extends TableDataSource<
     >;
 }
 
-export type DefaultCSVTableDataSource = Required<
+export type NormalizedCSVTableDataSource = Required<
   Pick<CSVTableDataSource, keyof typeof csvTableDataSourceDefaults>
 > &
   Omit<CSVTableDataSource, keyof typeof csvTableDataSourceDefaults>;

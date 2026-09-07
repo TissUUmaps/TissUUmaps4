@@ -9,12 +9,19 @@ import type { ItemsData, ItemsDataProvider } from "./base";
  * @typeParam TTableDataSource - The data source type this data provider opens
  * @typeParam TTableData - The {@link TableData} type produced by this data
  * provider
+ * @typeParam TNormalizedTableDataSource - The normalized data source type
+ * produced by `normalize` and accepted by `load`
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface TableDataProvider<
   TTableDataSource extends TableDataSource,
   TTableData extends TableData,
-> extends ItemsDataProvider<TTableDataSource, TTableData> {}
+  TNormalizedTableDataSource extends TTableDataSource = TTableDataSource,
+> extends ItemsDataProvider<
+  TTableDataSource,
+  TTableData,
+  TNormalizedTableDataSource
+> {}
 
 /**
  * Loaded tabular data providing column-wise access

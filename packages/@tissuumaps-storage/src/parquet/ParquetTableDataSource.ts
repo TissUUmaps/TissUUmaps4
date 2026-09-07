@@ -12,7 +12,7 @@ export interface ParquetTableDataSource extends TableDataSource<
   requestHeaders?: { [headerName: string]: string };
 }
 
-export type DefaultParquetTableDataSource = Required<
+export type NormalizedParquetTableDataSource = Required<
   Pick<ParquetTableDataSource, keyof typeof parquetTableDataSourceDefaults>
 > &
   Omit<ParquetTableDataSource, keyof typeof parquetTableDataSourceDefaults>;

@@ -3,6 +3,6 @@ export { TablePointsDataProvider } from "./TablePointsDataProvider";
 export {
   tablePointsDataSourceDefaults,
   tablePointsDataSourceType,
-  type DefaultTablePointsDataSource,
+  type NormalizedTablePointsDataSource,
   type TablePointsDataSource,
 } from "./TablePointsDataSource";

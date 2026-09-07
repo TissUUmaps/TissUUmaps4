@@ -55,7 +55,9 @@ export type DataCacheEntry<
 /**
  * What an entry's data depends on, besides its data source
  *
- * A cache entry is destroyed and reloaded whenever any of these changes.
+ * A cache entry is destroyed and reloaded whenever any of these changes. The
+ * project URL is not among them: it only affects the entry through the
+ * normalized data source, and hence through the entry key itself.
  */
 export type DataCacheEntryDependencies<
   TDataSource extends DataSource,
@@ -104,8 +106,14 @@ export type DataCacheContext<
     TData
   >,
 > = {
-  /** The open workspace, if any */
+  /** The directory handle of the open workspace, if any */
   workspace: FileSystemDirectoryHandle | null;
+
+  /**
+   * The absolute URL the open project was loaded from, if any, against which
+   * relative data source URLs are resolved
+   */
+  projectUrl: string | null;
 
   /** The registered data providers, by data source type */
   dataProviders: Map<string, TDataProvider>;
@@ -161,6 +169,7 @@ export class DataCache<
     TDataSource,
     {
       dataProvider: TDataProvider | undefined;
+      projectUrl: string | null;
       normalizedDataSource: TDataSource;
       entryKey: string;
     }
@@ -459,7 +468,8 @@ export class DataCache<
    * Normalizes a data source and derives the key of its cache entry
    *
    * The result is memoized per data source object, and recomputed whenever the
-   * data provider registered for the data source's type changes.
+   * data provider registered for the data source's type or the project URL
+   * changes - both of which normalization depends on.
    *
    * @param dataSource - The data source to resolve
    * @param context - See {@link DataCacheContext}
@@ -470,21 +480,30 @@ export class DataCache<
     dataSource: TDataSource,
     context: TContext,
   ): {
-    dataProvider: DataProvider<TDataSource, TData> | undefined;
+    dataProvider: TDataProvider | undefined;
     normalizedDataSource: TDataSource;
     entryKey: string;
   } {
     const cached = this._resolvedDataSources.get(dataSource);
     const dataProvider = context.dataProviders.get(dataSource.type);
-    if (cached !== undefined && cached.dataProvider === dataProvider) {
+    if (
+      cached !== undefined &&
+      cached.dataProvider === dataProvider &&
+      cached.projectUrl === context.projectUrl
+    ) {
       return cached;
     }
     const normalizedDataSource =
-      dataProvider?.normalizeDataSource(dataSource) ?? dataSource;
+      dataProvider?.normalize(dataSource, context.projectUrl) ?? dataSource;
     const entryKey = JSONUtils.stringify(normalizedDataSource, {
       stable: true,
     });
-    const resolved = { dataProvider, normalizedDataSource, entryKey };
+    const resolved = {
+      dataProvider,
+      projectUrl: context.projectUrl,
+      normalizedDataSource,
+      entryKey,
+    };
     this._resolvedDataSources.set(dataSource, resolved);
     return resolved;
   }
@@ -714,6 +733,7 @@ export class ItemsDataCache<
     }
     const tableDataCacheContext = {
       workspace: context.workspace,
+      projectUrl: context.projectUrl,
       dataProviders: context.tableDataProviders,
     };
     const tableCacheEntry = DataCache.getEntry(

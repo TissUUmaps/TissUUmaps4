@@ -7,14 +7,15 @@ import type {
 
 import { OMEZarrImageData } from "./OMEZarrImageData";
 import {
-  type DefaultOMEZarrImageDataSource,
+  type NormalizedOMEZarrImageDataSource,
   type OMEZarrImageDataSource,
   omeZarrImageDataSourceDefaults,
 } from "./OMEZarrImageDataSource";
 
 export class OMEZarrImageDataProvider implements ImageDataProvider<
   OMEZarrImageDataSource,
-  OMEZarrImageData
+  OMEZarrImageData,
+  NormalizedOMEZarrImageDataSource
 > {
   readonly name = "OME-Zarr";
 
@@ -65,28 +66,29 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     ],
   };
 
-  normalizeDataSource(
+  normalize(
     dataSource: OMEZarrImageDataSource,
-  ): DefaultOMEZarrImageDataSource {
+    projectUrl: string | null,
+  ): NormalizedOMEZarrImageDataSource {
     let { url } = dataSource;
     if (url !== undefined) {
-      url = new URL(url, document.baseURI).href;
+      url = new URL(url, projectUrl ?? document.baseURI).href;
     }
     return { ...omeZarrImageDataSourceDefaults, ...dataSource, url };
   }
 
   async load(
-    dataSource: OMEZarrImageDataSource,
+    normalizedDataSource: NormalizedOMEZarrImageDataSource,
     options?: DataProviderOpenOptions,
   ): Promise<OMEZarrImageData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
-    const normalizedDataSource = this.normalizeDataSource(dataSource);
-
-    const { sizeC, z, t } = normalizedDataSource;
     // validate before any file handling, so that no object URL is leaked
-    if (sizeC !== undefined && sizeC <= 0) {
+    if (
+      normalizedDataSource.sizeC !== undefined &&
+      normalizedDataSource.sizeC <= 0
+    ) {
       throw new Error("Number of channels must be a positive integer.");
     }
 
@@ -108,12 +110,23 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     }
     let tileSource: OMEZarrTileSource | undefined;
     let tileSources: OMEZarrTileSource[] | undefined;
-    if (sizeC === undefined) {
-      tileSource = new OMEZarrTileSource({ url, z, t });
+    if (normalizedDataSource.sizeC === undefined) {
+      tileSource = new OMEZarrTileSource({
+        url,
+        z: normalizedDataSource.z,
+        t: normalizedDataSource.t,
+      });
     } else {
       tileSources = [];
-      for (let c = 0; c < sizeC; c++) {
-        tileSources.push(new OMEZarrTileSource({ url, c, z, t }));
+      for (let c = 0; c < normalizedDataSource.sizeC; c++) {
+        tileSources.push(
+          new OMEZarrTileSource({
+            url,
+            c,
+            z: normalizedDataSource.z,
+            t: normalizedDataSource.t,
+          }),
+        );
       }
     }
     return new OMEZarrImageData(tileSource, tileSources, objectUrl);

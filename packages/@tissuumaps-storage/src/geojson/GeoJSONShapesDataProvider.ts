@@ -5,15 +5,16 @@ import type {
 
 import { GeoJSONShapesData } from "./GeoJSONShapesData";
 import {
-  type DefaultGeoJSONShapesDataSource,
   type GeoJSONShapesDataSource,
+  type NormalizedGeoJSONShapesDataSource,
   geoJSONShapesDataSourceDefaults,
 } from "./GeoJSONShapesDataSource";
 import { runGeoJSONWorker } from "./runGeoJSONWorker";
 
 export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   GeoJSONShapesDataSource,
-  GeoJSONShapesData
+  GeoJSONShapesData,
+  NormalizedGeoJSONShapesDataSource
 > {
   readonly name = "GeoJSON";
 
@@ -64,25 +65,23 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
     ],
   };
 
-  normalizeDataSource(
+  normalize(
     dataSource: GeoJSONShapesDataSource,
-  ): DefaultGeoJSONShapesDataSource {
+    projectUrl: string | null,
+  ): NormalizedGeoJSONShapesDataSource {
     let { url } = dataSource;
     if (url !== undefined) {
-      url = new URL(url, document.baseURI).href;
+      url = new URL(url, projectUrl ?? document.baseURI).href;
     }
     return { ...geoJSONShapesDataSourceDefaults, ...dataSource, url };
   }
 
   async load(
-    dataSource: GeoJSONShapesDataSource,
+    normalizedDataSource: NormalizedGeoJSONShapesDataSource,
     options?: DataProviderOpenOptions,
   ): Promise<GeoJSONShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-
-    const normalizedDataSource = this.normalizeDataSource(dataSource);
-
     let file, url;
     if (normalizedDataSource.path !== undefined && workspace !== null) {
       const fh = await workspace.getFileHandle(normalizedDataSource.path);
