@@ -18,7 +18,6 @@ export function useSVG(
   const viewportRef = useRef<Rect | null>(null);
   const containerSizeRef = useRef(containerSize);
 
-  // called synchronously from the viewport-change handler in Viewer (see there)
   const setSVGViewport = useCallback((viewport: Rect) => {
     viewportRef.current = viewport;
     if (svgRef.current !== null) {

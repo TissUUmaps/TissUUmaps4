@@ -42,6 +42,8 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
   );
   const { initSVG, setSVGViewport } = useSVG(adapter, containerSize);
 
+  // the setters and init callbacks are memoized; a new identity tears down and
+  // recreates the whole overlay
   useEffect(() => {
     const os = osRef.current;
     if (!osReady || os === null) {
@@ -82,8 +84,6 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
       setOSContext(null);
     };
   }, [
-    // all callbacks have a stable identity; a new one would tear down and
-    // recreate the whole overlay
     osReady,
     osRef,
     initGL,

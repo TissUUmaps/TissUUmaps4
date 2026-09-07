@@ -68,7 +68,6 @@ export function useWebGL(
     }
   }
 
-  // called synchronously from the viewport-change handler in Viewer (see there)
   const setGLViewport = useCallback((viewport: Rect) => {
     viewportRef.current = viewport;
     if (glRef.current !== null) {
