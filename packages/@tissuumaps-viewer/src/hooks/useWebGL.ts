@@ -132,7 +132,8 @@ export function useWebGL(
         context.destroy();
         throw new Error("Error creating shapes renderer", { cause: error });
       }
-      // a viewport change may have arrived while awaiting the points renderer
+      // set only now, as the viewport may have changed while awaiting the
+      // points renderer
       if (viewportRef.current !== null) {
         pointsRenderer.setViewport(viewportRef.current);
       }
