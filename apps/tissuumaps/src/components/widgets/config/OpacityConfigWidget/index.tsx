@@ -1,10 +1,9 @@
 import { MathUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
-import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
-import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
+import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { useProjectStore } from "@/stores/project";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
@@ -87,19 +86,14 @@ function FromOpacityConfigWidget({
     setCurrentFromColumn: setColumn,
   } = adapter;
 
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(tableId);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
         <FieldLabel>Table column</FieldLabel>
-        <SimpleAsyncCombobox
-          suggestQueries={suggestTableColumnQueries}
-          getItem={resolveTableColumnQuery}
-          itemQuery={(column) => column}
-          selectedItem={column}
-          onSelectedItemChange={setColumn}
+        <TableColumnInput
+          tableId={tableId}
+          value={column}
+          onValueChange={setColumn}
         />
       </Field>
     </div>
@@ -125,19 +119,14 @@ function GroupByOpacityConfigWidget({
 
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(tableId);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
         <FieldLabel>Table column</FieldLabel>
-        <SimpleAsyncCombobox
-          suggestQueries={suggestTableColumnQueries}
-          getItem={resolveTableColumnQuery}
-          itemQuery={(column) => column}
-          selectedItem={column}
-          onSelectedItemChange={setColumn}
+        <TableColumnInput
+          tableId={tableId}
+          value={column}
+          onValueChange={setColumn}
         />
       </Field>
       <Field>
