@@ -68,7 +68,9 @@ export function useWebGL(
     }
   }
 
-  // called synchronously from the viewport-change handler in Viewer (see there)
+  // called synchronously from the viewport-change handler in Viewer (see there);
+  // stable identity, as Viewer's effect depends on it and would otherwise
+  // recreate the whole overlay on every render
   const setGLViewport = useCallback((viewport: Rect) => {
     viewportRef.current = viewport;
     if (glRef.current !== null) {
