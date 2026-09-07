@@ -2,7 +2,6 @@ import { deepEqual } from "fast-equals";
 import type OpenSeadragon from "openseadragon";
 
 import {
-  type Color,
   type CustomTileSource,
   GeometryUtils,
   type Image,
@@ -278,30 +277,6 @@ export abstract class OpenSeadragonRendererBase<
     _context: TContext,
   ): boolean {
     return false;
-  }
-
-  /**
-   * Returns the tint color for one of an object's tiled images
-   *
-   * Returns `undefined` here, i.e. the tiled images of an object are rendered in
-   * the colors of their own tiles; subclasses override this to tint them per
-   * channel. Only the tiled images of an object's channels are tinted, never its
-   * backdrop, so this is always called with a channel index.
-   *
-   * @param _ref - The object reference for which to compute the color
-   * @param _index - The index of the channel rendered by the tiled image, or `null` for the object's backdrop
-   * @returns The color to tint the tiled image with, or `undefined` for no tint.
-   * Defaults to `undefined`.
-   */
-  protected getTiledImageColor(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _ref: ObjectRef<TObject, TObjectData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _index: number | null,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _context: TContext,
-  ): Color | undefined {
-    return undefined;
   }
 
   /**
@@ -733,14 +708,16 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Applies the transform of an object reference and the given color and opacity to a single TiledImage
+   * Applies the transform, opacity and data transfer of an object reference to a single TiledImage
    *
    * Only properties whose value actually changed are written, as each write
-   * triggers a redraw. The color is applied as a tint on the TiledImage's tiles
-   * (see {@link OpenSeadragonContext.updateTiledImageTint}).
+   * triggers a redraw. The data transfer is applied to the TiledImage's tiles
+   * (see {@link OpenSeadragonContext.updateTiledImageDataTransfer}).
    *
    * @param tiledImage - The TiledImage to update
    * @param ref - The object reference whose transform to apply
+   * @param index - The index of the tiled image (e.g. channel), or `null` for the object's backdrop
+   * @param context - The inputs of the current synchronization
    */
   private _updateTiledImage(
     tiledImage: OpenSeadragon.TiledImage,
@@ -784,10 +761,7 @@ export abstract class OpenSeadragonRendererBase<
         tiledImage.update(/* viewportChanged */ false);
       }
     }
-    // (channel) color --> tint
-    const color = this.getTiledImageColor(ref, index, context);
-    this.context.updateTiledImageTint(tiledImage, color);
-    // (labels) values --> data transfer
+    // (channel/label) values --> data transfer
     const dataTransfer = this.getTiledImageDataTransfer(ref, index, context);
     this.context.updateTiledImageDataTransfer(tiledImage, dataTransfer);
   }

@@ -690,7 +690,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         visibilities !== undefined &&
         opacities !== undefined
       ) {
-        await WebGLPointsRenderer.packAlpha(colors, visibilities, opacities, {
+        await WebGLPointsRenderer.foldAlphas(colors, visibilities, opacities, {
           signal,
         });
         this.context.loadBuffer(
@@ -962,7 +962,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Resolves the RGB color of every point of an object
    *
    * The alpha channel is added later, by
-   * {@link WebGLRendererBase.packAlpha}, from the separately resolved
+   * {@link WebGLRendererBase.foldAlphas}, from the separately resolved
    * visibilities and opacities.
    *
    * @param options - Optional abort signal and table loader

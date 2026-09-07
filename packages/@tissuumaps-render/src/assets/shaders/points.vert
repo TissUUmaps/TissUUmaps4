@@ -40,7 +40,7 @@ layout(std140) uniform ObjectsUBO {
 layout(location = 0) in float a_x; // in data units
 layout(location = 1) in float a_y; // in data units
 layout(location = 2) in float a_size; // in world units
-layout(location = 3) in uint a_color; // packed 8-bit RGBA (little-endian)
+layout(location = 3) in uint a_color; // packed 8-bit RGBA, 0xAABBGGRR (red in the lowest byte)
 layout(location = 4) in uint a_marker; // marker index
 layout(location = 5) in uint a_object; // object index
 
@@ -48,7 +48,7 @@ layout(location = 5) in uint a_object; // object index
 flat out vec4 v_color; // RGBA color
 flat out uvec3 v_marker; // (col, row, channel)
 
-// Unpacks a uint-packed 8-bit RGBA color (little-endian)
+// Unpacks a uint-packed 8-bit RGBA color, 0xAABBGGRR (red in the lowest byte)
 vec4 unpackColor(uint color) {
     float r = float((color >> 0) & 0xFFu) / 255.0;
     float g = float((color >> 8) & 0xFFu) / 255.0;

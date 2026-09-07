@@ -1,5 +1,8 @@
+import type OpenSeadragon from "openseadragon";
+
 import type { ImageDataSource } from "../model/image";
 import type { Color } from "../model/primitives";
+import type { NumericArray } from "../types/arrays";
 import type {
   CustomTileSource,
   TileSourceConfig,
@@ -50,15 +53,31 @@ export interface ImageData extends Data {
    */
   getTileSource(c?: number): string | TileSourceConfig | CustomTileSource;
 
-  /** Returns the name of a specific channel, or undefined if not multi-channel */
-  getChannelName?: (c: number) => string | undefined;
+  /**
+   * Extracts the raw image data of a specific channel from a tile invalidation event
+   *
+   * @param c - The channel index (0-based)
+   * @param event - The tile invalidation event
+   * @returns The channel's values for the invalidated tile, one per tile pixel
+   * in row-major order
+   */
+  getChannelData?: (
+    c: number,
+    event: OpenSeadragon.TileInvalidatedEvent,
+  ) => Promise<NumericArray>;
 
-  /** Returns the visibility of a specific channel, or undefined if not multi-channel or not available */
+  /** Returns the name of a specific channel */
+  getChannelName?: (c: number) => string;
+
+  /** Returns the visibility of a specific channel, or undefined if not available */
   getChannelVisibility?: (c: number) => boolean | undefined;
 
-  /** Returns the opacity of a specific channel, or undefined if not multi-channel or not available */
+  /** Returns the opacity of a specific channel, or undefined if not available */
   getChannelOpacity?: (c: number) => number | undefined;
 
-  /** Returns the color of a specific channel, or undefined if not multi-channel or not available */
+  /** Returns the color of a specific channel, or undefined if not available */
   getChannelColor?: (c: number) => Color | undefined;
+
+  /** Returns the contrast limits of a specific channel, or undefined if not available */
+  getChannelContrastLimits?: (c: number) => [number, number] | undefined;
 }

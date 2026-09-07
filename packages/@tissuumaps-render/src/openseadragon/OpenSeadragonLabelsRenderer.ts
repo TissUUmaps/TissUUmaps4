@@ -64,11 +64,15 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   OpenSeadragonLabelsSyncContext
 > {
   private static readonly _defaultPixelValue =
-    OpenSeadragonLabelsRenderer._packLabel(
-      ColorResolver.encodeColor(defaultLabelColor),
-      VisibilityResolver.encodeVisibility(defaultLabelVisibility),
-      OpacityResolver.encodeOpacity(defaultLabelOpacity),
-    );
+    VisibilityResolver.encodeVisibility(defaultLabelVisibility) > 0
+      ? MathUtils.safeOr(
+          ColorResolver.encodeColor(defaultLabelColor) & 0x00ffffff,
+          MathUtils.safeLeftShift(
+            OpacityResolver.encodeOpacity(defaultLabelOpacity),
+            24,
+          ),
+        )
+      : 0;
 
   private readonly _renderedLabels = new Map<
     string,
@@ -110,17 +114,16 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
       labels,
       {
         ...context,
-        loadObject: async (currentLabels, options) => {
-          const data = await context.loadObject(currentLabels, options);
+        loadObject: async (currentLabels, opts) => {
+          const { signal } = opts ?? {};
+          signal?.throwIfAborted();
+          const data = await context.loadObject(currentLabels, { signal });
           try {
-            await this._updateRenderedLabels(
-              currentLabels,
-              data,
-              context,
-              options,
-            );
+            await this._updateRenderedLabels(currentLabels, data, context, {
+              signal,
+            });
           } catch (error) {
-            if (!options?.signal?.aborted) {
+            if (!signal?.aborted) {
               throw new Error("Failed to resolve data transfer", {
                 cause: error,
               });
@@ -255,76 +258,57 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
         console.warn(`Table with ID ${tableId} not found`);
       }
     }
-    const ids = data.getIds();
-    const [encodedColors, encodedVisibilities, encodedOpacities] =
-      await Promise.all([
-        ColorResolver.resolveColors(
-          ids,
-          labels.labelColor,
-          context.colorMaps,
-          defaultLabelColor,
-          { signal, loadTable },
-        ),
-        VisibilityResolver.resolveVisibilities(
-          ids,
-          labels.labelVisibility,
-          context.visibilityMaps,
-          defaultLabelVisibility,
-          { signal, loadTable },
-        ),
-        OpacityResolver.resolveOpacities(
-          ids,
-          labels.labelOpacity,
-          context.opacityMaps,
-          defaultLabelOpacity,
-          { signal, loadTable },
-        ),
-      ]);
-    const pixelValues = new Map<number, number>();
+    const labelIds = data.getIds();
+    const [labelColors, labelVisibilities, labelOpacities] = await Promise.all([
+      ColorResolver.resolveColors(
+        labelIds,
+        labels.labelColor,
+        context.colorMaps,
+        defaultLabelColor,
+        { signal, loadTable },
+      ),
+      VisibilityResolver.resolveVisibilities(
+        labelIds,
+        labels.labelVisibility,
+        context.visibilityMaps,
+        defaultLabelVisibility,
+        { signal, loadTable },
+      ),
+      OpacityResolver.resolveOpacities(
+        labelIds,
+        labels.labelOpacity,
+        context.opacityMaps,
+        defaultLabelOpacity,
+        { signal, loadTable },
+      ),
+    ]);
+    const labelPixelValues = new Map<number, number>();
     await AsyncUtils.forEach(
-      ids,
-      (id, i) => {
-        const pixelValue = OpenSeadragonLabelsRenderer._packLabel(
-          encodedColors[i]!,
-          encodedVisibilities[i]!,
-          encodedOpacities[i]!,
-        );
-        pixelValues.set(id, pixelValue);
+      labelIds,
+      (labelId, i) => {
+        let pixelValue = labelColors[i]!;
+        if (labelVisibilities[i]! > 0) {
+          pixelValue = MathUtils.safeOr(
+            pixelValue & 0x00ffffff,
+            MathUtils.safeLeftShift(labelOpacities[i]!, 24),
+          );
+        }
+        labelPixelValues.set(labelId, pixelValue);
       },
       { signal },
     );
     return {
       getData: (event) => data.getData(event),
-      transfer: (value) =>
-        value === 0
-          ? 0
-          : (pixelValues.get(value) ??
-            OpenSeadragonLabelsRenderer._defaultPixelValue),
+      transfer: (values, buffer) => {
+        for (let i = 0; i < values.length; i++) {
+          const labelId = values[i]!;
+          buffer[i] =
+            labelId === 0
+              ? 0
+              : (labelPixelValues.get(labelId) ??
+                OpenSeadragonLabelsRenderer._defaultPixelValue);
+        }
+      },
     };
-  }
-
-  /**
-   * Packs the encoded appearance of a label into a pixel value
-   *
-   * The visibility and opacity are folded into the alpha channel: an invisible
-   * label is fully transparent, a visible one carries its opacity. The pixel is
-   * in `ImageData` byte order, `(a << 24) | (b << 16) | (g << 8) | r` (see
-   * {@link DataTransfer}), which the encoded color already follows in its lower
-   * 24 bits.
-   *
-   * @param color - The color, as encoded by {@link ColorResolver}
-   * @param visibility - The visibility, as encoded by {@link VisibilityResolver}
-   * @param opacity - The opacity, as encoded by {@link OpacityResolver}
-   * @returns The pixel value, as an unsigned 32-bit integer
-   */
-  private static _packLabel(
-    color: number,
-    visibility: number,
-    opacity: number,
-  ): number {
-    if (visibility > 0) {
-      return MathUtils.safeOr(color, MathUtils.safeLeftShift(opacity, 24));
-    }
-    return color;
   }
 }

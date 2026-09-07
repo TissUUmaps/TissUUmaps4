@@ -36,10 +36,14 @@ export class ColorUtils {
   }
 
   /**
-   * Packs an RGB color into a single 24-bit integer (little-endian: `0xBBGGRR`)
+   * Packs an RGB color into a single 24-bit integer, `0xBBGGRR`
+   *
+   * The red component occupies the lowest byte, so that the integer, when
+   * stored in host byte order on a little-endian host, matches the R, G, B byte
+   * order of a canvas `ImageData` buffer.
    *
    * @param color - The color to pack
-   * @returns The packed color (little-endian: `0xBBGGRR`)
+   * @returns The packed color, `0xBBGGRR`
    */
   static packColor(color: Color): number {
     // never exceeds 24 bits (0xFFFFFF), so no need for >>> 0

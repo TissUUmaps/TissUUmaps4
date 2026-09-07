@@ -1,4 +1,9 @@
-import type { LabelsData, ProgressCallback, UintArray } from "@tissuumaps/core";
+import type {
+  CustomTileSource,
+  LabelsData,
+  TileSourceConfig,
+  UintArray,
+} from "@tissuumaps/core";
 
 import { DataWrapperBase } from "./DataWrapperBase";
 
@@ -21,37 +26,14 @@ export class LabelsDataWrapper
     return this.data.getNames();
   }
 
-  getWidth(level?: number): number {
-    return this.data.getWidth(level);
-  }
-
-  getHeight(level?: number): number {
-    return this.data.getHeight(level);
-  }
-
-  getLevelCount(): number {
-    return this.data.getLevelCount();
-  }
-
-  getLevelScale(level: number): number {
-    return this.data.getLevelScale(level);
-  }
-
-  getTileWidth(level: number): number {
-    return this.data.getTileWidth(level);
-  }
-
-  getTileHeight(level: number): number {
-    return this.data.getTileHeight(level);
-  }
-
-  loadTile(
-    level: number,
-    x: number,
-    y: number,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<UintArray> {
+  getTileSource(): string | TileSourceConfig | CustomTileSource {
     // caching is handled by renderers
-    return this.data.loadTile(level, x, y, options);
+    return this.data.getTileSource();
+  }
+
+  getData(
+    event: Parameters<LabelsData["getData"]>[0],
+  ): Promise<number[] | UintArray> {
+    return this.data.getData(event);
   }
 }

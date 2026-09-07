@@ -1,11 +1,18 @@
-import type {
-  Color,
-  CustomTileSource,
-  Image,
-  ImageData,
-  TileSourceConfig,
+import { deepEqual } from "fast-equals";
+
+import {
+  type Channel,
+  type CustomTileSource,
+  type Image,
+  type ImageData,
+  type Layer,
+  MathUtils,
+  type NumericArray,
+  type TileSourceConfig,
+  defaultChannelColor,
 } from "@tissuumaps/core";
 
+import type { DataTransfer } from "./OpenSeadragonContext";
 import {
   type ObjectRef,
   OpenSeadragonRendererBase,
@@ -19,12 +26,91 @@ export type OpenSeadragonImageSyncContext = OpenSeadragonSyncContext<
 
 /**
  * Renderer for the tiled images of {@link Image} data objects
+ *
+ * Multi-channel image data provides one tiled image per channel, whose tiles
+ * carry the channel's values rather than colors. Each channel is recolored by a
+ * data transfer (see {@link OpenSeadragonContext.updateTiledImageDataTransfer})
+ * that scales the values between the channel's contrast limits and multiplies
+ * them with the channel's color. Color and contrast limits are taken from the
+ * image's channel settings, falling back to those reported by the image data;
+ * channels with neither are drawn as they are, as are channels whose data does
+ * not provide values, and image data that is not multi-channel. Channel
+ * visibility and opacity are not part of the transfer: like layer and image
+ * opacity, OpenSeadragon applies them when drawing the tiled image (see
+ * {@link getTiledImageOpacity}).
+ *
+ * As data transfers are compared by identity, each channel's data transfer is
+ * kept (see {@link _updateRenderedImage}) until the image's data or the
+ * channel's color or contrast limits change, so that tiles are only recolored
+ * when needed.
  */
 export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   Image,
   ImageData,
   OpenSeadragonImageSyncContext
 > {
+  private static readonly _opaque = MathUtils.safeLeftShift(255, 24);
+
+  private readonly _renderedImages = new Map<
+    string,
+    {
+      data: ImageData;
+      channels: {
+        state: Pick<Channel, "color" | "contrastLimits">;
+        dataTransfer: DataTransfer | undefined;
+      }[];
+    }
+  >();
+
+  /**
+   * Synchronizes the viewer's tiled images with the current model state
+   *
+   * Resolves the data transfers of each image's channels along with its data
+   * (see {@link _updateRenderedImage}), by wrapping the context's `loadObject`,
+   * and drops the data transfers of images that are gone. Images whose data
+   * transfers cannot be resolved are logged and skipped, like images whose data
+   * failed to load; the logged error names the resolution as the cause, so
+   * that it is not mistaken for a failed data load.
+   *
+   * @param layers - Layers to render
+   * @param images - Images to display
+   * @param context - The inputs to synchronize with
+   * @param options - Optional abort signal
+   */
+  override synchronize(
+    layers: Layer[],
+    images: Image[],
+    context: OpenSeadragonImageSyncContext,
+    options?: { signal?: AbortSignal },
+  ): Promise<void> {
+    for (const imageId of this._renderedImages.keys()) {
+      if (!images.some((image) => image.id === imageId)) {
+        this._renderedImages.delete(imageId);
+      }
+    }
+    return super.synchronize(
+      layers,
+      images,
+      {
+        ...context,
+        loadObject: async (image, opts) => {
+          const { signal } = opts ?? {};
+          signal?.throwIfAborted();
+          const data = await context.loadObject(image, { signal });
+          try {
+            this._updateRenderedImage(image, data);
+          } catch (error) {
+            throw new Error("Failed to resolve data transfers", {
+              cause: error,
+            });
+          }
+          return data;
+        },
+      },
+      options,
+    );
+  }
+
   /**
    * Returns the tile sources for the given image data
    *
@@ -73,40 +159,6 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   }
 
   /**
-   * Returns the tint color for one of an image's tiled images
-   *
-   * Returns the color of the channel that the tiled image renders. Channels are
-   * only applied to multi-channel image data, and channels that the image does
-   * not define have no color, in which case the channel's tiles are rendered in
-   * their own colors.
-   *
-   * Only multi-channel image data is tinted: its channels are blended additively
-   * onto an opaque backdrop (see {@link usesAdditiveBlending}), where tinting a
-   * tile may drop its transparency. Tiles of image data that is not
-   * multi-channel are composited over whatever is below them, so their
-   * transparency has to be preserved.
-   *
-   * @param ref - The image reference for which to compute the color
-   * @param index - The index of the tiled image (channel), or `undefined` for the image's backdrop
-   * @returns The channel's color, or `undefined` for no tint
-   */
-  protected override getTiledImageColor(
-    ref: ObjectRef<Image, ImageData>,
-    index: number | null,
-    context: OpenSeadragonImageSyncContext,
-  ): Color | undefined {
-    if (index !== null && ref.data.getSizeC() !== undefined) {
-      const channel = ref.object.channels?.[index];
-      const channelColor =
-        channel?.color !== undefined
-          ? channel.color
-          : ref.data.getChannelColor?.(index);
-      return channelColor;
-    }
-    return super.getTiledImageColor(ref, index, context);
-  }
-
-  /**
    * Computes the effective opacity for one of an image's tiled images
    *
    * Multiplies the layer and image opacity computed by the base class with the
@@ -116,7 +168,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * for the image's backdrop, the layer and image opacity is returned as is.
    *
    * @param ref - The image reference for which to compute the opacity
-   * @param index - The index of the tiled image (channel), or `undefined` for the image's backdrop
+   * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
    * @returns The effective opacity for the tiled image
    */
   protected override getTiledImageOpacity(
@@ -128,16 +180,185 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     if (alpha > 0 && index !== null && ref.data.getSizeC() !== undefined) {
       const channel = ref.object.channels?.[index];
       const channelVisibility =
-        channel?.visibility !== undefined
-          ? channel.visibility
-          : (ref.data.getChannelVisibility?.(index) ?? true);
+        channel?.visibility ?? ref.data.getChannelVisibility?.(index) ?? true;
       const channelOpacity =
-        channel?.opacity !== undefined
-          ? channel.opacity
-          : (ref.data.getChannelOpacity?.(index) ?? 1.0);
-
+        channel?.opacity ?? ref.data.getChannelOpacity?.(index) ?? 1.0;
       alpha *= channelVisibility ? channelOpacity : 0;
     }
     return alpha;
+  }
+
+  /**
+   * Returns the data transfer resolved for one of an image's tiled images
+   *
+   * Only the tiled images of an image's channels are recolored, never its
+   * backdrop.
+   *
+   * @param ref - The image reference for which to get the data transfer
+   * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
+   * @returns The channel's data transfer resolved by
+   * {@link _updateRenderedImage}, or `undefined` if the channel has none
+   */
+  protected override getTiledImageDataTransfer(
+    ref: ObjectRef<Image, ImageData>,
+    index: number | null,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _context: OpenSeadragonImageSyncContext,
+  ): DataTransfer | undefined {
+    if (index !== null) {
+      const renderedImage = this._renderedImages.get(ref.object.id);
+      if (renderedImage !== undefined) {
+        const renderedImageChannel = renderedImage.channels[index];
+        if (renderedImageChannel !== undefined) {
+          return renderedImageChannel.dataTransfer;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Resolves the data transfers of an image's channels, unless they are up to date
+   *
+   * Called by {@link synchronize} once the image's data has loaded. Image data
+   * that is not multi-channel has no channels to resolve. Otherwise, each
+   * channel's color and contrast limits are resolved from the image's channel
+   * settings, falling back to those reported by the data, and its data transfer
+   * is kept as long as the image's data and the resolved values are unchanged,
+   * and is created anew otherwise (see {@link _createDataTransfer}). Channels
+   * are resolved independently, so that changing one channel only recolors the
+   * tiles of that channel.
+   *
+   * @param image - The image
+   * @param data - The loaded data of the image
+   */
+  private _updateRenderedImage(image: Image, data: ImageData): void {
+    const sizeC = data.getSizeC();
+    if (sizeC === undefined) {
+      this._renderedImages.delete(image.id);
+      return;
+    }
+    const renderedImage = this._renderedImages.get(image.id);
+    const renderedImageChannels = [];
+    for (let c = 0; c < sizeC; c++) {
+      const renderedImageChannel = renderedImage?.channels[c];
+      const renderedImageChannelState = structuredClone({
+        color: image.channels?.[c]?.color ?? data.getChannelColor?.(c),
+        contrastLimits:
+          image.channels?.[c]?.contrastLimits ??
+          data.getChannelContrastLimits?.(c),
+      });
+      if (
+        renderedImage !== undefined &&
+        renderedImage.data === data &&
+        renderedImageChannel !== undefined &&
+        deepEqual(renderedImageChannel.state, renderedImageChannelState)
+      ) {
+        renderedImageChannels.push(renderedImageChannel);
+      } else {
+        renderedImageChannels.push({
+          state: renderedImageChannelState,
+          dataTransfer: OpenSeadragonImageRenderer._createDataTransfer(
+            data,
+            c,
+            renderedImageChannelState,
+          ),
+        });
+      }
+    }
+    this._renderedImages.set(image.id, {
+      data,
+      channels: renderedImageChannels,
+    });
+  }
+
+  /**
+   * Creates the data transfer of an image channel
+   *
+   * The transfer scales each value linearly between the contrast limits,
+   * clamped to `[0, 1]`, and multiplies the result with the channel's color, or
+   * with {@link defaultChannelColor} if the channel has none. Without contrast
+   * limits, the value range of the data type of each tile's data is used (see
+   * {@link _getDataTypeRange}); contrast limits that are not ascending render
+   * every value black. The resulting pixels are opaque; channel visibility and
+   * opacity are applied by OpenSeadragon when drawing the tiled image.
+   *
+   * @param data - The image data providing the channel's values
+   * @param index - The index of the tiled image (channel)
+   * @param state - The resolved color and contrast limits of the channel
+   * @returns The data transfer, or `undefined` if the channel has neither a
+   * color nor contrast limits, or if the data provides no channel values
+   */
+  private static _createDataTransfer(
+    data: ImageData,
+    index: number,
+    state: Pick<Channel, "color" | "contrastLimits">,
+  ): DataTransfer | undefined {
+    if (
+      data.getChannelData !== undefined &&
+      (state.color !== undefined || state.contrastLimits !== undefined)
+    ) {
+      const {
+        r: channelR,
+        g: channelG,
+        b: channelB,
+      } = state.color ?? defaultChannelColor;
+      return {
+        getData: (event) => data.getChannelData!(index, event),
+        transfer: (values, buffer) => {
+          const [vmin, vmax] =
+            state.contrastLimits ??
+            OpenSeadragonImageRenderer._getDataTypeRange(values);
+          const scale = vmax > vmin ? 1 / (vmax - vmin) : 0;
+          for (let i = 0; i < values.length; i++) {
+            const v = MathUtils.clamp((values[i]! - vmin) * scale, 0, 1);
+            const color =
+              (Math.round(channelB * v) << 16) |
+              (Math.round(channelG * v) << 8) |
+              Math.round(channelR * v);
+            buffer[i] = MathUtils.safeOr(
+              OpenSeadragonImageRenderer._opaque,
+              color,
+            );
+          }
+        },
+      };
+    }
+    return undefined;
+  }
+
+  /**
+   * Returns the value range that the type of the given array can hold
+   *
+   * Integer typed arrays span their full integer range, floating-point typed
+   * arrays are taken to hold normalized values in `[0, 1]`, and plain arrays
+   * are taken to hold 8-bit values.
+   *
+   * @param values - The array whose value range to return
+   * @returns The value range, as `[min, max]`
+   */
+  private static _getDataTypeRange(values: NumericArray): [number, number] {
+    if (values instanceof Uint8Array) {
+      return [0, 255];
+    }
+    if (values instanceof Uint16Array) {
+      return [0, 65535];
+    }
+    if (values instanceof Uint32Array) {
+      return [0, 4294967295];
+    }
+    if (values instanceof Int8Array) {
+      return [-128, 127];
+    }
+    if (values instanceof Int16Array) {
+      return [-32768, 32767];
+    }
+    if (values instanceof Int32Array) {
+      return [-2147483648, 2147483647];
+    }
+    if (Array.isArray(values)) {
+      return [0, 255];
+    }
+    return [0, 1];
   }
 }

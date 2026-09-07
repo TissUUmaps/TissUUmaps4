@@ -586,7 +586,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         if (renderedShapes !== undefined) {
           this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
         }
-        await WebGLShapesRenderer.packAlpha(
+        await WebGLShapesRenderer.foldAlphas(
           shapeFillColors,
           shapeFillVisibilities,
           shapeFillOpacities,
@@ -618,7 +618,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
             renderedShapes.shapeStrokeColorsTexture,
           );
         }
-        await WebGLShapesRenderer.packAlpha(
+        await WebGLShapesRenderer.foldAlphas(
           shapeStrokeColors,
           shapeStrokeVisibilities,
           shapeStrokeOpacities,
@@ -866,7 +866,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Resolves the RGB fill or stroke color of every shape of an object
    *
    * The alpha channel is added later, by
-   * {@link WebGLRendererBase.packAlpha}, from the separately resolved
+   * {@link WebGLRendererBase.foldAlphas}, from the separately resolved
    * visibilities and opacities.
    *
    * @param options - Optional abort signal and table loader
