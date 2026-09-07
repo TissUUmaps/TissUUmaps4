@@ -26,6 +26,9 @@ import {
 
 import shapesFragmentShader from "../assets/shaders/shapes.frag?raw";
 import shapesVertexShader from "../assets/shaders/shapes.vert?raw";
+import { ColorResolver } from "../resolvers/ColorResolver";
+import { OpacityResolver } from "../resolvers/OpacityResolver";
+import { VisibilityResolver } from "../resolvers/VisibilityResolver";
 import type { WebGLContext } from "./WebGLContext";
 import {
   type ObjectRef,
@@ -34,9 +37,6 @@ import {
 } from "./WebGLRendererBase";
 import { WebGLShapesRasterizer } from "./WebGLShapesRasterizer";
 import { WebGLUtils } from "./WebGLUtils";
-import { ColorResolver } from "./resolvers/ColorResolver";
-import { OpacityResolver } from "./resolvers/OpacityResolver";
-import { VisibilityResolver } from "./resolvers/VisibilityResolver";
 
 /**
  * WebGL renderer for two-dimensional shape clouds

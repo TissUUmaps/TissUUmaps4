@@ -28,6 +28,11 @@ import {
 import markersUrl from "../assets/markers/markers.png?url";
 import pointsFragmentShader from "../assets/shaders/points.frag?raw";
 import pointsVertexShader from "../assets/shaders/points.vert?raw";
+import { ColorResolver } from "../resolvers/ColorResolver";
+import { MarkerResolver } from "../resolvers/MarkerResolver";
+import { OpacityResolver } from "../resolvers/OpacityResolver";
+import { SizeResolver } from "../resolvers/SizeResolver";
+import { VisibilityResolver } from "../resolvers/VisibilityResolver";
 import type { WebGLContext } from "./WebGLContext";
 import {
   type ObjectRef,
@@ -35,11 +40,6 @@ import {
   WebGLRendererBase,
 } from "./WebGLRendererBase";
 import { WebGLUtils } from "./WebGLUtils";
-import { ColorResolver } from "./resolvers/ColorResolver";
-import { MarkerResolver } from "./resolvers/MarkerResolver";
-import { OpacityResolver } from "./resolvers/OpacityResolver";
-import { SizeResolver } from "./resolvers/SizeResolver";
-import { VisibilityResolver } from "./resolvers/VisibilityResolver";
 
 /**
  * WebGL renderer for two-dimensional point clouds

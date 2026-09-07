@@ -15,9 +15,9 @@ import {
   defaultLabelVisibility,
 } from "@tissuumaps/core";
 
-import { ColorResolver } from "../webgl/resolvers/ColorResolver";
-import { OpacityResolver } from "../webgl/resolvers/OpacityResolver";
-import { VisibilityResolver } from "../webgl/resolvers/VisibilityResolver";
+import { ColorResolver } from "../resolvers/ColorResolver";
+import { OpacityResolver } from "../resolvers/OpacityResolver";
+import { VisibilityResolver } from "../resolvers/VisibilityResolver";
 import type { DataTransfer } from "./OpenSeadragonContext";
 import {
   type ObjectRef,
