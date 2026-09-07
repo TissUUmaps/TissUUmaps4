@@ -2,6 +2,8 @@ import { useCallback, useRef } from "react";
 
 import { Field, FieldControl, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
+import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,33 +35,36 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
   const name = useProjectStore((state) => state.name);
   const setName = useProjectStore((state) => state.setName);
   const clearProject = useProjectStore((state) => state.clear);
+  const confirm = useConfirmDialog();
+  const prompt = usePromptDialog();
 
   const promptLoadProjectFromURL = useCallback(() => {
-    // TODO replace by dialog overlay
-    const projectUrl = window.prompt("Enter project URL to load")?.trim();
-    if (!projectUrl) {
-      return;
-    }
-    loadProjectFromURL(projectUrl)
-      .then(() => {
-        setProjectURLParam(projectUrl);
-      })
-      .catch((error) => {
-        console.error("Failed to load project from URL", error);
-      });
-  }, []);
+    void prompt({ title: "Enter project URL to load" }).then((value) => {
+      const projectUrl = value?.trim();
+      if (!projectUrl) {
+        return;
+      }
+      loadProjectFromURL(projectUrl)
+        .then(() => {
+          setProjectURLParam(projectUrl);
+        })
+        .catch((error) => {
+          console.error("Failed to load project from URL", error);
+        });
+    });
+  }, [prompt]);
 
   const confirmClearProject = useCallback(() => {
-    if (
-      // TODO replace by dialog overlay
-      window.confirm(
-        "Are you sure you want to clear the project? All unsaved changes will be lost.",
-      )
-    ) {
-      clearProject();
-      clearProjectURLParam();
-    }
-  }, [clearProject]);
+    void confirm({
+      title: "Clear project",
+      body: "Are you sure you want to clear the project? All unsaved changes will be lost.",
+    }).then((confirmed) => {
+      if (confirmed) {
+        clearProject();
+        clearProjectURLParam();
+      }
+    });
+  }, [clearProject, confirm]);
 
   return (
     <div className={className}>
