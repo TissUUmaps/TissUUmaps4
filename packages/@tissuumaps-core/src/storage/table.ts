@@ -28,9 +28,13 @@ export interface TableDataProvider<
  */
 export interface TableData extends ItemsData {
   /**
-   * Returns column name suggestions matching the current query
+   * Returns column query suggestions matching the current query
    *
-   * @param currentQuery - The partial column name to autocomplete
+   * A suggestion ending in `/` is a group: it does not resolve to a column,
+   * but continues the query into the group. Columns whose name ends in `/`
+   * can therefore not be picked from the suggestions.
+   *
+   * @param currentQuery - The partial column query to autocomplete
    * @param options - Optional abort signal
    * @returns A list of suggested column queries matching the current one
    */
