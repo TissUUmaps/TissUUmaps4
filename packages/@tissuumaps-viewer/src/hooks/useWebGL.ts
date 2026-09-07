@@ -16,6 +16,14 @@ type GL = {
   shapesRenderer: WebGLShapesRenderer;
 };
 
+function draw(gl: GL | null) {
+  if (gl !== null) {
+    gl.context.clear();
+    gl.pointsRenderer.draw();
+    gl.shapesRenderer.draw();
+  }
+}
+
 export function useWebGL(
   adapter: ViewerAdapter,
   containerSize: { width: number; height: number } | null,
@@ -60,21 +68,13 @@ export function useWebGL(
     return canvas;
   }
 
-  function draw() {
-    if (glRef.current !== null) {
-      glRef.current.context.clear();
-      glRef.current.pointsRenderer.draw();
-      glRef.current.shapesRenderer.draw();
-    }
-  }
-
   const setGLViewport = useCallback((viewport: Rect) => {
     viewportRef.current = viewport;
     if (glRef.current !== null) {
       const redrawPoints = glRef.current.pointsRenderer.setViewport(viewport);
       const redrawShapes = glRef.current.shapesRenderer.setViewport(viewport);
       if (redrawPoints || redrawShapes) {
-        draw();
+        draw(glRef.current);
       }
     }
   }, []);
@@ -140,7 +140,7 @@ export function useWebGL(
       const gl = { canvas, context, pointsRenderer, shapesRenderer };
       glRef.current = gl;
       setGLReady(true);
-      draw();
+      draw(gl);
       return gl;
     }
 
@@ -215,7 +215,7 @@ export function useWebGL(
           glOptions.shapesRenderOptions,
         );
       if (redrawPoints || redrawShapes) {
-        draw();
+        draw(glRef.current);
       }
       if (resyncPoints) {
         dispatchSyncPoints();
@@ -234,7 +234,7 @@ export function useWebGL(
         containerSize,
       );
       if (redraw) {
-        draw();
+        draw(glRef.current);
       }
     }
   }, [glReady, containerSize]);
@@ -259,7 +259,7 @@ export function useWebGL(
         .then((renderedBounds) => {
           if (!abortController.signal.aborted) {
             setGLPointsBounds(renderedBounds ?? null);
-            draw();
+            draw(glRef.current);
           }
         })
         .catch((error) => {
@@ -304,7 +304,7 @@ export function useWebGL(
         .then((renderedBounds) => {
           if (!abortController.signal.aborted) {
             setGLShapesBounds(renderedBounds ?? null);
-            draw();
+            draw(glRef.current);
           }
         })
         .catch((error) => {
