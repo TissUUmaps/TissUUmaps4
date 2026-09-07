@@ -105,7 +105,6 @@ export function useWebGL(
           resolvePointsRendererInitPromise,
           rejectPointsRendererInitPromise,
           {
-            viewport: viewportRef.current ?? undefined,
             renderOptions: glOptionsRef.current.pointsRenderOptions,
             signal: abortController.signal,
           },
