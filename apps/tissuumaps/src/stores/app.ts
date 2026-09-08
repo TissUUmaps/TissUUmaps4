@@ -2,7 +2,12 @@ import { createStore, useStore } from "zustand";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
-import type { AppStore, AppStoreApi, AppStoreState } from "@tissuumaps/core";
+import type {
+  AppStore,
+  AppStoreApi,
+  AppStoreState,
+  PluginStores,
+} from "@tissuumaps/core";
 
 import { dataStore } from "./data";
 import { projectStore } from "./project";
@@ -43,11 +48,13 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
         }),
       registerPlugin: (plugin) => {
         get().unregisterPlugin(plugin.id);
-        try {
-          plugin.setup({ appStore, dataStore, projectStore, settingsStore });
-        } catch (error) {
-          console.error(`Error during setup of plugin ${plugin.id}:`, error);
-          return;
+        if (plugin.setup !== undefined) {
+          try {
+            plugin.setup(pluginStores);
+          } catch (error) {
+            console.error(`Error during setup of plugin ${plugin.id}:`, error);
+            return;
+          }
         }
         set((draft) => {
           draft.plugins.set(plugin.id, plugin);
@@ -102,3 +109,14 @@ function createInitialAppStoreState(): AppStoreState {
     plugins: new Map(),
   };
 }
+
+/**
+ * The stores handed to a plugin, both when it is set up and when its panel is
+ * mounted
+ */
+export const pluginStores: PluginStores = {
+  appStore,
+  dataStore,
+  projectStore,
+  settingsStore,
+};

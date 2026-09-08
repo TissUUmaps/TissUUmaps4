@@ -136,7 +136,7 @@ export type AppStoreActions = {
   ) => void;
 
   /**
-   * Registers a plugin and calls its `setup` function, see
+   * Registers a plugin and calls its `setup` function, if it has one, see
    * {@link PluginRegistry.registerPlugin}
    *
    * @param plugin - The plugin to register

@@ -176,7 +176,11 @@ export {
   type Vertex,
 } from "./types/geometry";
 export { type InteractionMode } from "./types/interaction";
-export { type Plugin, type PluginRegistry } from "./types/plugins";
+export {
+  type Plugin,
+  type PluginRegistry,
+  type PluginStores,
+} from "./types/plugins";
 export {
   type OpenSeadragonOptions,
   type OpenSeadragonViewerOptions,
