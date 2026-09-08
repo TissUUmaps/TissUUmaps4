@@ -4,6 +4,9 @@ import { withJsonFormsCellProps } from "@jsonforms/react";
 import { Switch } from "@/components/ui/switch";
 
 export const BooleanCell = withJsonFormsCellProps((props: CellProps) => {
+  if (!props.enabled) {
+    return props.data ? "Yes" : "No";
+  }
   const options = {
     ...(props.config as { [key: string]: unknown }),
     ...props.uischema.options,
@@ -13,7 +16,6 @@ export const BooleanCell = withJsonFormsCellProps((props: CellProps) => {
       id={props.id}
       checked={!!props.data}
       onCheckedChange={(checked) => props.handleChange(props.path, checked)}
-      disabled={!props.enabled}
       autoFocus={options.focus as boolean | undefined}
     />
   );

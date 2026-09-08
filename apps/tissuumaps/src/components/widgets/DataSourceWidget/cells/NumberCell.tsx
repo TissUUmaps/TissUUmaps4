@@ -4,6 +4,10 @@ import { withJsonFormsCellProps } from "@jsonforms/react";
 import { Input } from "@/components/ui/input";
 
 export const NumberCell = withJsonFormsCellProps((props: CellProps) => {
+  const value = (props.data as string | number | undefined | null) ?? "";
+  if (!props.enabled) {
+    return value;
+  }
   const options = {
     ...(props.config as { [key: string]: unknown }),
     ...props.uischema.options,
@@ -14,7 +18,7 @@ export const NumberCell = withJsonFormsCellProps((props: CellProps) => {
       inputMode="decimal"
       step="0.1"
       id={props.id}
-      value={(props.data as string | number | undefined | null) ?? ""}
+      value={value}
       onChange={(event) =>
         props.handleChange(
           props.path,
@@ -23,7 +27,6 @@ export const NumberCell = withJsonFormsCellProps((props: CellProps) => {
             : undefined,
         )
       }
-      disabled={!props.enabled}
       autoFocus={options.focus as boolean | undefined}
     />
   );
