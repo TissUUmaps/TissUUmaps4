@@ -68,6 +68,9 @@ export class SVGController {
   }
 
   /**
+   * Creates the transform node inside the given container and registers the
+   * shape drawing event handlers
+   *
    * The viewport starts out as the unit square; {@link setViewport} is the only
    * way to change it.
    *
