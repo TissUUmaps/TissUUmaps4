@@ -132,7 +132,6 @@ export function useWebGL(
       let shapesRenderer: WebGLShapesRenderer;
       try {
         shapesRenderer = new WebGLShapesRenderer(context, {
-          viewport: viewportRef.current ?? undefined,
           renderOptions: glOptionsRef.current.shapesRenderOptions,
         });
       } catch (error) {
@@ -144,6 +143,7 @@ export function useWebGL(
       // points renderer
       if (viewportRef.current !== null) {
         pointsRenderer.setViewport(viewportRef.current);
+        shapesRenderer.setViewport(viewportRef.current);
       }
       const gl = { canvas, context, pointsRenderer, shapesRenderer };
       glRef.current = gl;

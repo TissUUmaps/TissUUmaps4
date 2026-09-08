@@ -32,9 +32,12 @@ export function useSVG(
       }
       const container = SVGController.createContainer();
       parent.appendChild(container);
-      const controller = new SVGController(container, viewportRef.current, {
+      const controller = new SVGController(container, {
         onShapeComplete: addShape,
       });
+      if (viewportRef.current !== null) {
+        controller.setViewport(viewportRef.current);
+      }
       if (containerSizeRef.current !== null) {
         controller.resizeContainer(containerSizeRef.current);
       }

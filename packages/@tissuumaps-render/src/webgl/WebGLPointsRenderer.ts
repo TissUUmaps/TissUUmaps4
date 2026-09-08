@@ -107,7 +107,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param context - The WebGL context to use for rendering
    * @param onInitialized - Called once the marker atlas texture has been loaded
    * @param onError - Called if the marker atlas texture could not be loaded
-   * @param options - Optional abort signal, viewport, and render options
+   * @param options - Optional abort signal and render options
    */
   constructor(
     context: WebGLContext,
@@ -115,11 +115,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     onError: (error: Error) => void,
     options?: {
       signal?: AbortSignal;
-      viewport?: Rect;
       renderOptions?: WebGLPointsRenderOptions;
     },
   ) {
-    super(context, options);
+    super(context);
     const { signal, renderOptions } = options ?? {};
     const { globalPointSizeFactor } = renderOptions ?? {};
     this._globalPointSizeFactor = globalPointSizeFactor ?? 1.0;

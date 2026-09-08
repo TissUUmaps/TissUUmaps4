@@ -76,13 +76,13 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Creates the shader program and retrieves uniform locations
    *
    * @param context - The WebGL context to use for rendering
-   * @param options - Optional viewport and render options
+   * @param options - Optional render options
    */
   constructor(
     context: WebGLContext,
-    options?: { viewport?: Rect; renderOptions?: WebGLShapesRenderOptions },
+    options?: { renderOptions?: WebGLShapesRenderOptions },
   ) {
-    super(context, options);
+    super(context);
     const { renderOptions } = options ?? {};
     const { strokeWidth, numScanlines } = renderOptions ?? {};
     this._strokeWidth = strokeWidth ?? 1.0;
