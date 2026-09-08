@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import type { Rect } from "@tissuumaps/core";
+import type { Dims, Rect } from "@tissuumaps/core";
 import {
   WebGLContext,
   WebGLPointsRenderer,
@@ -32,10 +32,7 @@ function drawGL(gl: GL | null) {
   }
 }
 
-export function useWebGL(
-  adapter: ViewerAdapter,
-  containerSize: { width: number; height: number } | null,
-) {
+export function useWebGL(adapter: ViewerAdapter) {
   const {
     layers,
     points,
@@ -58,7 +55,7 @@ export function useWebGL(
 
   const glOptionsRef = useRef(glOptions);
   const viewportRef = useRef<Rect | null>(null);
-  const containerSizeRef = useRef(containerSize);
+  const containerSizeRef = useRef<Dims | null>(null);
 
   const [syncPoints, dispatchSyncPoints] = useReducer((x) => x + 1, 0);
   const [syncShapes, dispatchSyncShapes] = useReducer((x) => x + 1, 0);
@@ -82,6 +79,19 @@ export function useWebGL(
       const redrawPoints = glRef.current.pointsRenderer.setViewport(viewport);
       const redrawShapes = glRef.current.shapesRenderer.setViewport(viewport);
       if (redrawPoints || redrawShapes) {
+        drawGL(glRef.current);
+      }
+    }
+  }, []);
+
+  const setGLContainerSize = useCallback((containerSize: Dims) => {
+    containerSizeRef.current = containerSize;
+    if (glRef.current !== null) {
+      const redraw = glRef.current.context.resizeCanvas(
+        glRef.current.canvas,
+        containerSize,
+      );
+      if (redraw) {
         drawGL(glRef.current);
       }
     }
@@ -235,19 +245,6 @@ export function useWebGL(
   }, [glReady, glOptions]);
 
   useEffect(() => {
-    containerSizeRef.current = containerSize;
-    if (glReady && glRef.current !== null && containerSize !== null) {
-      const redraw = glRef.current.context.resizeCanvas(
-        glRef.current.canvas,
-        containerSize,
-      );
-      if (redraw) {
-        drawGL(glRef.current);
-      }
-    }
-  }, [glReady, containerSize]);
-
-  useEffect(() => {
     const abortController = new AbortController();
     if (glReady && glRef.current !== null) {
       glRef.current.pointsRenderer
@@ -340,6 +337,7 @@ export function useWebGL(
   return {
     initGL,
     setGLViewport,
+    setGLContainerSize,
     glRef,
     glReady,
     glPointsBounds,

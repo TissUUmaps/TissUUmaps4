@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Rect } from "@tissuumaps/core";
+import type { Dims, Rect } from "@tissuumaps/core";
 import { SVGController } from "@tissuumaps/render";
 
 import type { ViewerAdapter } from "../adapter";
 
-export function useSVG(
-  adapter: ViewerAdapter,
-  containerSize: { width: number; height: number } | null,
-) {
+export function useSVG(adapter: ViewerAdapter) {
   const { interactionMode, addShape } = adapter;
 
   const svgRef = useRef<{ controller: SVGController } | null>(null);
@@ -16,12 +13,19 @@ export function useSVG(
 
   const interactionModeRef = useRef(interactionMode);
   const viewportRef = useRef<Rect | null>(null);
-  const containerSizeRef = useRef(containerSize);
+  const containerSizeRef = useRef<Dims | null>(null);
 
   const setSVGViewport = useCallback((viewport: Rect) => {
     viewportRef.current = viewport;
     if (svgRef.current !== null) {
       svgRef.current.controller.setViewport(viewport);
+    }
+  }, []);
+
+  const setSVGContainerSize = useCallback((containerSize: Dims) => {
+    containerSizeRef.current = containerSize;
+    if (svgRef.current !== null) {
+      svgRef.current.controller.resizeContainer(containerSize);
     }
   }, []);
 
@@ -63,12 +67,5 @@ export function useSVG(
     }
   }, [svgReady, interactionMode]);
 
-  useEffect(() => {
-    containerSizeRef.current = containerSize;
-    if (svgReady && svgRef.current !== null && containerSize !== null) {
-      svgRef.current.controller.resizeContainer(containerSize);
-    }
-  }, [svgReady, containerSize]);
-
-  return { initSVG, setSVGViewport, svgRef, svgReady };
+  return { initSVG, setSVGViewport, setSVGContainerSize, svgRef, svgReady };
 }
