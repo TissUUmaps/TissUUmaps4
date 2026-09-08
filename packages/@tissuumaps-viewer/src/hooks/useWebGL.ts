@@ -19,10 +19,10 @@ type GL = {
 /**
  * Clears the canvas and redraws both WebGL renderers
  *
- * Deliberately a module-level function of the GL object rather than a callback
- * inside the hook: it keeps one identity for the lifetime of the module, so the
- * memoized setters below cannot capture a stale copy of it and no hook has to
- * list it as a dependency.
+ * Module-level so it closes over nothing from the render scope: the memoized
+ * setters can call it without listing it as a dependency, however it changes.
+ *
+ * @param gl - The GL object to draw on; nothing is drawn if null
  */
 function drawGL(gl: GL | null) {
   if (gl !== null) {
@@ -91,6 +91,11 @@ export function useWebGL(adapter: ViewerAdapter) {
         glRef.current.canvas,
         containerSize,
       );
+      // OSD raises "resize" before it updates the viewport bounds, so this
+      // draws the old viewport and is superseded by the viewport-change draw
+      // later in the same update - except on a resize that leaves the bounds
+      // unchanged, where it is the only draw that refills the resized, and
+      // therefore blank, canvas.
       if (redraw) {
         drawGL(glRef.current);
       }
