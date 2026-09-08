@@ -53,13 +53,14 @@ export abstract class WebGLRendererBase<
   /**
    * Creates a new WebGLRendererBase instance
    *
+   * The viewport starts out as the unit square; {@link setViewport} is the only
+   * way to change it.
+   *
    * @param context - The WebGL context to use for rendering
-   * @param options - Optional initial viewport, defaulting to the unit square
    */
-  constructor(context: WebGLContext, options?: { viewport?: Rect }) {
-    const { viewport } = options ?? {};
+  constructor(context: WebGLContext) {
     this.context = context;
-    this.viewport = viewport ?? { x: 0, y: 0, width: 1, height: 1 };
+    this.viewport = { x: 0, y: 0, width: 1, height: 1 };
   }
 
   /**

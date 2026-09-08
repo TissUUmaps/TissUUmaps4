@@ -1,23 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Rect } from "@tissuumaps/core";
+import type { Dims, Rect } from "@tissuumaps/core";
 import { SVGController } from "@tissuumaps/render";
 
 import type { ViewerAdapter } from "../adapter";
 
-export function useSVG(
-  adapter: ViewerAdapter,
-  viewport: Rect | null,
-  containerSize: { width: number; height: number } | null,
-) {
+export function useSVG(adapter: ViewerAdapter) {
   const { interactionMode, addShape } = adapter;
 
   const svgRef = useRef<{ controller: SVGController } | null>(null);
   const [svgReady, setSVGReady] = useState(false);
 
   const interactionModeRef = useRef(interactionMode);
-  const viewportRef = useRef(viewport);
-  const containerSizeRef = useRef(containerSize);
+  const viewportRef = useRef<Rect | null>(null);
+  const containerSizeRef = useRef<Dims | null>(null);
+
+  const setSVGViewport = useCallback((viewport: Rect) => {
+    viewportRef.current = viewport;
+    if (svgRef.current !== null) {
+      svgRef.current.controller.setViewport(viewport);
+    }
+  }, []);
+
+  const setSVGContainerSize = useCallback((containerSize: Dims) => {
+    containerSizeRef.current = containerSize;
+    if (svgRef.current !== null) {
+      svgRef.current.controller.resizeContainer(containerSize);
+    }
+  }, []);
 
   const initSVG = useCallback(
     (parent: HTMLElement | null) => {
@@ -26,9 +36,12 @@ export function useSVG(
       }
       const container = SVGController.createContainer();
       parent.appendChild(container);
-      const controller = new SVGController(container, viewportRef.current, {
+      const controller = new SVGController(container, {
         onShapeComplete: addShape,
       });
+      if (viewportRef.current !== null) {
+        controller.setViewport(viewportRef.current);
+      }
       if (containerSizeRef.current !== null) {
         controller.resizeContainer(containerSizeRef.current);
       }
@@ -54,19 +67,5 @@ export function useSVG(
     }
   }, [svgReady, interactionMode]);
 
-  useEffect(() => {
-    viewportRef.current = viewport;
-    if (svgReady && svgRef.current !== null && viewport !== null) {
-      svgRef.current.controller.setViewport(viewport);
-    }
-  }, [svgReady, viewport]);
-
-  useEffect(() => {
-    containerSizeRef.current = containerSize;
-    if (svgReady && svgRef.current !== null && containerSize !== null) {
-      svgRef.current.controller.resizeContainer(containerSize);
-    }
-  }, [svgReady, containerSize]);
-
-  return { initSVG, svgRef, svgReady };
+  return { initSVG, setSVGViewport, setSVGContainerSize, svgRef, svgReady };
 }

@@ -68,13 +68,17 @@ export class SVGController {
   }
 
   /**
+   * Creates the transform node inside the given container and registers the
+   * shape drawing event handlers
+   *
+   * The viewport starts out as the unit square; {@link setViewport} is the only
+   * way to change it.
+   *
    * @param container - The `<svg>` element to draw on (typically created by {@link createContainer})
-   * @param initialViewport - Initial world-space viewport rectangle
    * @param options - Optional shape drawing event handlers
    */
   constructor(
     container: SVGSVGElement,
-    initialViewport: Rect | null,
     options?: { onShapeComplete?: (shape: MultiPolygon) => void },
   ) {
     this.container = container;
@@ -82,7 +86,7 @@ export class SVGController {
     this.shapeCompleteHandler = options?.onShapeComplete;
     container.replaceChildren(this.transformNode);
     this._containerSize = container.getBoundingClientRect();
-    this._viewport = initialViewport ?? { x: 0, y: 0, width: 1, height: 1 };
+    this._viewport = { x: 0, y: 0, width: 1, height: 1 };
     this._updateTransformNode();
 
     this._registerEventHandlers();

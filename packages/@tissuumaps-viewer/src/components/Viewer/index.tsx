@@ -1,6 +1,6 @@
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
-import { GeometryUtils, type Rect } from "@tissuumaps/core";
+import type { Dims, Rect } from "@tissuumaps/core";
 import type { OpenSeadragonContext } from "@tissuumaps/render";
 
 import type { ViewerAdapter } from "../../adapter";
@@ -18,46 +18,40 @@ export type ViewerProps = {
 export function Viewer({ adapter, children, className }: ViewerProps) {
   const [osContext, setOSContext] = useState<OpenSeadragonContext | null>(null);
 
-  const [viewport, setViewport] = useState<Rect | null>(null);
-  const updateViewport = useCallback((newViewport: Rect) => {
-    setViewport((oldViewport) =>
-      oldViewport !== null && GeometryUtils.rectEquals(oldViewport, newViewport)
-        ? oldViewport
-        : newViewport,
-    );
-  }, []);
-
-  const [containerSize, setContainerSize] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
-  const updateContainerSize = useCallback(
-    (newContainerSize: { width: number; height: number }) => {
-      setContainerSize((oldContainerSize) =>
-        oldContainerSize !== null &&
-        GeometryUtils.dimsEquals(oldContainerSize, newContainerSize)
-          ? oldContainerSize
-          : newContainerSize,
-      );
-    },
-    [],
-  );
-
   const { initOS, osRef, osReady, updateOSExternalBounds } =
     useOpenSeadragon(adapter);
-  const { initGL, glPointsBounds, glShapesBounds } = useWebGL(
-    adapter,
-    viewport,
-    containerSize,
-  );
-  const { initSVG } = useSVG(adapter, viewport, containerSize);
+  const {
+    initGL,
+    setGLViewport,
+    setGLContainerSize,
+    glPointsBounds,
+    glShapesBounds,
+  } = useWebGL(adapter);
+  const { initSVG, setSVGViewport, setSVGContainerSize } = useSVG(adapter);
 
+  // the setters and init callbacks are memoized; a new identity tears down and
+  // recreates the whole overlay
   useEffect(() => {
     const os = osRef.current;
     if (!osReady || os === null) {
       return;
     }
     setOSContext(os.context);
+    // Push the viewport and container size straight into the renderers instead
+    // of through React state. OSD raises "viewport-change" and "resize" from its
+    // animation-frame update, after the springs advanced and before it draws the
+    // world, and getBounds(true) returns the bounds it is about to paint.
+    // Drawing here therefore lands in the same frame, whereas a passive
+    // useEffect runs after paint and would leave the overlay one frame behind
+    // the OSD canvas.
+    const updateViewport = (viewport: Rect) => {
+      setGLViewport(viewport);
+      setSVGViewport(viewport);
+    };
+    const updateContainerSize = (containerSize: Dims) => {
+      setGLContainerSize(containerSize);
+      setSVGContainerSize(containerSize);
+    };
     updateViewport(os.context.getViewport());
     updateContainerSize(os.context.getContainerSize());
     const onViewportChanged = (event: OpenSeadragon.ViewerEvent) => {
@@ -78,11 +72,18 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
       destroySVG();
       os.context.viewer.removeHandler("resize", onContainerResized);
       os.context.viewer.removeHandler("viewport-change", onViewportChanged);
-      setViewport(null);
-      setContainerSize(null);
       setOSContext(null);
     };
-  }, [osReady, osRef, initGL, initSVG, updateViewport, updateContainerSize]);
+  }, [
+    osReady,
+    osRef,
+    initGL,
+    initSVG,
+    setGLViewport,
+    setSVGViewport,
+    setGLContainerSize,
+    setSVGContainerSize,
+  ]);
 
   useEffect(() => {
     const osExternalBounds = [];

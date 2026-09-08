@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import type { Rect } from "@tissuumaps/core";
+import type { Dims, Rect } from "@tissuumaps/core";
 import {
   WebGLContext,
   WebGLPointsRenderer,
@@ -16,11 +16,23 @@ type GL = {
   shapesRenderer: WebGLShapesRenderer;
 };
 
-export function useWebGL(
-  adapter: ViewerAdapter,
-  viewport: Rect | null,
-  containerSize: { width: number; height: number } | null,
-) {
+/**
+ * Clears the canvas and redraws both WebGL renderers
+ *
+ * Module-level so it closes over nothing from the render scope: the memoized
+ * setters can call it without listing it as a dependency, however it changes.
+ *
+ * @param gl - The GL object to draw on; nothing is drawn if null
+ */
+function drawGL(gl: GL | null) {
+  if (gl !== null) {
+    gl.context.clear();
+    gl.pointsRenderer.draw();
+    gl.shapesRenderer.draw();
+  }
+}
+
+export function useWebGL(adapter: ViewerAdapter) {
   const {
     layers,
     points,
@@ -42,8 +54,8 @@ export function useWebGL(
   const [glReady, setGLReady] = useState(false);
 
   const glOptionsRef = useRef(glOptions);
-  const viewportRef = useRef(viewport);
-  const containerSizeRef = useRef(containerSize);
+  const viewportRef = useRef<Rect | null>(null);
+  const containerSizeRef = useRef<Dims | null>(null);
 
   const [syncPoints, dispatchSyncPoints] = useReducer((x) => x + 1, 0);
   const [syncShapes, dispatchSyncShapes] = useReducer((x) => x + 1, 0);
@@ -61,13 +73,34 @@ export function useWebGL(
     return canvas;
   }
 
-  function draw() {
+  const setGLViewport = useCallback((viewport: Rect) => {
+    viewportRef.current = viewport;
     if (glRef.current !== null) {
-      glRef.current.context.clear();
-      glRef.current.pointsRenderer.draw();
-      glRef.current.shapesRenderer.draw();
+      const redrawPoints = glRef.current.pointsRenderer.setViewport(viewport);
+      const redrawShapes = glRef.current.shapesRenderer.setViewport(viewport);
+      if (redrawPoints || redrawShapes) {
+        drawGL(glRef.current);
+      }
     }
-  }
+  }, []);
+
+  const setGLContainerSize = useCallback((containerSize: Dims) => {
+    containerSizeRef.current = containerSize;
+    if (glRef.current !== null) {
+      const redraw = glRef.current.context.resizeCanvas(
+        glRef.current.canvas,
+        containerSize,
+      );
+      // OSD raises "resize" before it updates the viewport bounds, so this
+      // draws the old viewport and is superseded by the viewport-change draw
+      // later in the same update - except on a resize that leaves the bounds
+      // unchanged, where it is the only draw that refills the resized, and
+      // therefore blank, canvas.
+      if (redraw) {
+        drawGL(glRef.current);
+      }
+    }
+  }, []);
 
   const initGL = useCallback((parentOrNull: HTMLElement | null) => {
     if (parentOrNull === null) {
@@ -95,7 +128,6 @@ export function useWebGL(
           resolvePointsRendererInitPromise,
           rejectPointsRendererInitPromise,
           {
-            viewport: viewportRef.current ?? undefined,
             renderOptions: glOptionsRef.current.pointsRenderOptions,
             signal: abortController.signal,
           },
@@ -115,7 +147,6 @@ export function useWebGL(
       let shapesRenderer: WebGLShapesRenderer;
       try {
         shapesRenderer = new WebGLShapesRenderer(context, {
-          viewport: viewportRef.current ?? undefined,
           renderOptions: glOptionsRef.current.shapesRenderOptions,
         });
       } catch (error) {
@@ -123,10 +154,16 @@ export function useWebGL(
         context.destroy();
         throw new Error("Error creating shapes renderer", { cause: error });
       }
+      // set only now, as the viewport may have changed while awaiting the
+      // points renderer
+      if (viewportRef.current !== null) {
+        pointsRenderer.setViewport(viewportRef.current);
+        shapesRenderer.setViewport(viewportRef.current);
+      }
       const gl = { canvas, context, pointsRenderer, shapesRenderer };
       glRef.current = gl;
       setGLReady(true);
-      draw();
+      drawGL(gl);
       return gl;
     }
 
@@ -201,7 +238,7 @@ export function useWebGL(
           glOptions.shapesRenderOptions,
         );
       if (redrawPoints || redrawShapes) {
-        draw();
+        drawGL(glRef.current);
       }
       if (resyncPoints) {
         dispatchSyncPoints();
@@ -211,30 +248,6 @@ export function useWebGL(
       }
     }
   }, [glReady, glOptions]);
-
-  useEffect(() => {
-    viewportRef.current = viewport;
-    if (glReady && glRef.current !== null && viewport !== null) {
-      const redrawPoints = glRef.current.pointsRenderer.setViewport(viewport);
-      const redrawShapes = glRef.current.shapesRenderer.setViewport(viewport);
-      if (redrawPoints || redrawShapes) {
-        draw();
-      }
-    }
-  }, [glReady, viewport]);
-
-  useEffect(() => {
-    containerSizeRef.current = containerSize;
-    if (glReady && glRef.current !== null && containerSize !== null) {
-      const redraw = glRef.current.context.resizeCanvas(
-        glRef.current.canvas,
-        containerSize,
-      );
-      if (redraw) {
-        draw();
-      }
-    }
-  }, [glReady, containerSize]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -256,7 +269,7 @@ export function useWebGL(
         .then((renderedBounds) => {
           if (!abortController.signal.aborted) {
             setGLPointsBounds(renderedBounds ?? null);
-            draw();
+            drawGL(glRef.current);
           }
         })
         .catch((error) => {
@@ -301,7 +314,7 @@ export function useWebGL(
         .then((renderedBounds) => {
           if (!abortController.signal.aborted) {
             setGLShapesBounds(renderedBounds ?? null);
-            draw();
+            drawGL(glRef.current);
           }
         })
         .catch((error) => {
@@ -326,5 +339,13 @@ export function useWebGL(
     syncShapes,
   ]);
 
-  return { initGL, glRef, glReady, glPointsBounds, glShapesBounds };
+  return {
+    initGL,
+    setGLViewport,
+    setGLContainerSize,
+    glRef,
+    glReady,
+    glPointsBounds,
+    glShapesBounds,
+  };
 }
