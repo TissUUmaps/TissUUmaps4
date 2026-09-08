@@ -16,6 +16,14 @@ type GL = {
   shapesRenderer: WebGLShapesRenderer;
 };
 
+/**
+ * Clears the canvas and redraws both WebGL renderers
+ *
+ * Deliberately a module-level function of the GL object rather than a callback
+ * inside the hook: it keeps one identity for the lifetime of the module, so the
+ * memoized setters below cannot capture a stale copy of it and no hook has to
+ * list it as a dependency.
+ */
 function drawGL(gl: GL | null) {
   if (gl !== null) {
     gl.context.clear();
