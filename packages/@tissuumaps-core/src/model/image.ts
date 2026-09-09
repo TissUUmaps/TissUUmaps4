@@ -24,6 +24,8 @@ export type Channel = {
    * Channel name
    *
    * Overrides the channel name provided by the image data provider, if any.
+   *
+   * @defaultValue The name reported by the image data provider, or `undefined`
    */
   name?: string;
 
@@ -32,7 +34,7 @@ export type Channel = {
    *
    * Overrides the channel visibility provided by the image data provider, if any.
    *
-   * @defaultValue `true`
+   * @defaultValue The visibility reported by the image data provider, or `true`
    */
   visibility?: boolean;
 
@@ -41,7 +43,7 @@ export type Channel = {
    *
    * Overrides the channel opacity provided by the image data provider, if any.
    *
-   * @defaultValue `1`
+   * @defaultValue The opacity reported by the image data provider, or `1`
    */
   opacity?: number;
 
@@ -49,6 +51,8 @@ export type Channel = {
    * Channel color
    *
    * Overrides the channel color provided by the image data provider, if any.
+   *
+   * @defaultValue The color reported by the image data provider, or {@link defaultChannelColor}
    */
   color?: Color;
 
@@ -56,6 +60,8 @@ export type Channel = {
    * Channel contrast limits, in the channel's image data value range
    *
    * Overrides the channel contrast limits provided by the image data provider, if any.
+   *
+   * @defaultValue The contrast limits reported by the image data provider, or the renderer's default range
    */
   contrastLimits?: [number, number];
 };
