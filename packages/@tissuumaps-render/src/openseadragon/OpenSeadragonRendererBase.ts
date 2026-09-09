@@ -361,9 +361,7 @@ export abstract class OpenSeadragonRendererBase<
    * is then resolved (see {@link resolveObject}). The returned references are
    * ordered by layer and then by object, which determines the order of the
    * corresponding tiled images in the world. Objects whose data failed to load,
-   * or that could not be resolved, are logged and skipped; the logged error
-   * names the resolution as the cause, so that it is not mistaken for a failed
-   * data load.
+   * or that could not be resolved, are logged and skipped.
    *
    * @param layers - The layers for which to load objects
    * @param objects - The objects to load (images or labels), filtered by layer membership
