@@ -94,8 +94,10 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    *
    * An object's data transfer is kept as long as its data and its label color,
    * visibility and opacity configurations are unchanged, and is resolved anew
-   * otherwise (see {@link _resolveDataTransfer}). If resolving fails, the
-   * previous entry stays in place.
+   * otherwise (see {@link _resolveDataTransfer}). If resolving fails, e.g.
+   * because a table failed to load, the failure is logged and the object is
+   * drawn with the default label color, visibility and opacity instead, until
+   * its data or one of its configurations changes.
    *
    * @todo Changes to the color, visibility and opacity maps themselves are not
    * detected; they are only re-read when a configuration referencing them
@@ -124,6 +126,24 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
       ) ||
       !deepEqual(renderedLabels.state.labelOpacity, labels.labelOpacity)
     ) {
+      let dataTransfer;
+      try {
+        dataTransfer = await OpenSeadragonLabelsRenderer._resolveDataTransfer(
+          labels,
+          data,
+          context,
+          options,
+        );
+      } catch (error) {
+        if (options?.signal?.aborted) {
+          throw error;
+        }
+        console.warn(
+          `Failed to resolve labels with ID '${labels.id}', using defaults`,
+          error,
+        );
+        dataTransfer = OpenSeadragonLabelsRenderer._createDataTransfer(data);
+      }
       this._renderedLabels.set(labels.id, {
         data,
         state: {
@@ -131,12 +151,7 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
           labelVisibility: structuredClone(labels.labelVisibility),
           labelOpacity: structuredClone(labels.labelOpacity),
         },
-        dataTransfer: await OpenSeadragonLabelsRenderer._resolveDataTransfer(
-          labels,
-          data,
-          context,
-          options,
-        ),
+        dataTransfer,
       });
     }
   }
@@ -177,10 +192,8 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    * Resolves the data transfer of a labels object
    *
    * Resolves the color, visibility and opacity of every label ID that the data
-   * lists, and folds them into a lookup table from ID to packed pixel. Label
-   * value `0` is background and maps to a fully transparent pixel; IDs that the
-   * data does not list are drawn with the default label color, visibility and
-   * opacity.
+   * lists, and folds them into a lookup table from ID to packed pixel (see
+   * {@link _createDataTransfer}).
    *
    * @param labels - The labels object to resolve
    * @param data - The loaded data of the labels object
@@ -246,6 +259,27 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
       },
       { signal },
     );
+    return OpenSeadragonLabelsRenderer._createDataTransfer(
+      data,
+      labelPixelValues,
+    );
+  }
+
+  /**
+   * Creates the data transfer of a labels object from a lookup table
+   *
+   * Label value `0` is background and maps to a fully transparent pixel; IDs
+   * that the lookup table does not list are drawn with the default label color,
+   * visibility and opacity.
+   *
+   * @param data - The loaded data of the labels object
+   * @param labelPixelValues - The lookup table from label ID to packed pixel
+   * @returns The data transfer
+   */
+  private static _createDataTransfer(
+    data: LabelsData,
+    labelPixelValues?: Map<number, number>,
+  ): DataTransfer {
     return {
       getData: (event) => data.getData(event),
       transfer: (values, pixelBuffer) => {
@@ -254,7 +288,7 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
           pixelBuffer[i] =
             labelId === 0
               ? 0
-              : (labelPixelValues.get(labelId) ??
+              : (labelPixelValues?.get(labelId) ??
                 OpenSeadragonLabelsRenderer._defaultPixelValue);
         }
       },

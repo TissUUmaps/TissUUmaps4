@@ -93,8 +93,7 @@ export abstract class OpenSeadragonRendererBase<
    *
    * Objects whose tiled images cannot be created, e.g. because their data
    * provides no tile sources, are logged and skipped, just like objects whose
-   * data failed to load or that could not be resolved (see
-   * {@link _loadObjects}).
+   * data failed to load (see {@link _loadObjects}).
    *
    * @param layers - Layers to render
    * @param objects - Objects (images or labels) to display
@@ -250,12 +249,12 @@ export abstract class OpenSeadragonRendererBase<
    *
    * Called by {@link synchronize} for every object, concurrently, right after
    * its data has loaded and before its tiled images are created or updated. An
-   * object that cannot be resolved is logged and skipped, like an object whose
-   * data failed to load. Does nothing here; subclasses override this to
-   * resolve, from the object, its data and the inputs of the synchronization,
-   * whatever their synchronous hooks return later (see
-   * {@link getTiledImageDataTransfer}), and to keep it for as long as its
-   * outcome would not change.
+   * object that cannot be resolved is logged, but kept: its tiled images are
+   * still created or updated, with whatever the synchronous hooks return for
+   * it. Does nothing here; subclasses override this to resolve, from the
+   * object, its data and the inputs of the synchronization, whatever their
+   * synchronous hooks return later (see {@link getTiledImageDataTransfer}),
+   * and to keep it for as long as its outcome would not change.
    *
    * @param _object - The object (image or labels) to resolve
    * @param _data - The loaded data of the object
@@ -360,14 +359,15 @@ export abstract class OpenSeadragonRendererBase<
    * Each object's data is loaded with the context's `loadObject`, and the object
    * is then resolved (see {@link resolveObject}). The returned references are
    * ordered by layer and then by object, which determines the order of the
-   * corresponding tiled images in the world. Objects whose data failed to load,
-   * or that could not be resolved, are logged and skipped.
+   * corresponding tiled images in the world. Objects whose data failed to load
+   * are logged and skipped; objects that could not be resolved are logged, but
+   * kept.
    *
    * @param layers - The layers for which to load objects
    * @param objects - The objects to load (images or labels), filtered by layer membership
    * @param context - The inputs of the current synchronization
    * @param options - Optional abort signal
-   * @returns A promise that resolves to one object reference per successfully loaded and resolved object
+   * @returns A promise that resolves to one object reference per successfully loaded object
    */
   private async _loadObjects(
     layers: Layer[],
@@ -390,10 +390,13 @@ export abstract class OpenSeadragonRendererBase<
                 signal,
               });
             } catch (error) {
-              if (!signal?.aborted) {
-                throw new Error("Failed to resolve object", { cause: error });
+              if (signal?.aborted) {
+                throw error;
               }
-              throw error;
+              console.error(
+                `Failed to resolve object with ID '${currentObject.id}'`,
+                error,
+              );
             }
             return { layer: currentLayer, object: currentObject, data };
           });
