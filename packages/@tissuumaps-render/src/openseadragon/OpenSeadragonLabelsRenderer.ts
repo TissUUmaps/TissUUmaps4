@@ -248,10 +248,10 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
     );
     return {
       getData: (event) => data.getData(event),
-      transfer: (values, buffer) => {
+      transfer: (values, pixelBuffer) => {
         for (let i = 0; i < values.length; i++) {
           const labelId = values[i]!;
-          buffer[i] =
+          pixelBuffer[i] =
             labelId === 0
               ? 0
               : (labelPixelValues.get(labelId) ??

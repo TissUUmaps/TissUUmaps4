@@ -263,7 +263,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
       } = state.color ?? defaultChannelColor;
       return {
         getData: (event) => data.getChannelData!(index, event),
-        transfer: (values, buffer) => {
+        transfer: (values, pixelBuffer) => {
           const [vmin, vmax] =
             state.contrastLimits ??
             OpenSeadragonImageRenderer._getDataTypeRange(values);
@@ -274,7 +274,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
               (Math.round(channelB * v) << 16) |
               (Math.round(channelG * v) << 8) |
               Math.round(channelR * v);
-            buffer[i] = MathUtils.safeOr(
+            pixelBuffer[i] = MathUtils.safeOr(
               OpenSeadragonImageRenderer._opaque,
               color,
             );

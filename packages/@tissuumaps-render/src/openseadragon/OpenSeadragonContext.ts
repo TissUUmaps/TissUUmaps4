@@ -20,13 +20,15 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  * color of each value to the pixel at the same index, as `0xAABBGGRR`, i.e.
  * `(a << 24) | (b << 16) | (g << 8) | r` (see
  * {@link OpenSeadragonContext.updateTiledImageDataTransfer}). It is called
- * once per tile, with `buffer` as long as `values`.
+ * once per tile, with `pixelBuffer` as long as `values`. The buffer is reused
+ * across tiles and still holds the colors of the previous one, so every pixel
+ * has to be written.
  */
 export type DataTransfer = {
   getData: (
     event: OpenSeadragon.TileInvalidatedEvent,
   ) => Promise<{ values: NumericArray; width: number; height: number }>;
-  transfer: (values: NumericArray, buffer: Uint32Array) => void;
+  transfer: (values: NumericArray, pixelBuffer: Uint32Array) => void;
 };
 
 /**
@@ -82,6 +84,7 @@ export class OpenSeadragonContext {
   private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
   private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
   private _worldMutationQueue: Promise<unknown> = Promise.resolve();
+  private _pixelBuffer = new ArrayBuffer(0);
   private _destroyed: boolean = false;
 
   /**
@@ -611,13 +614,21 @@ export class OpenSeadragonContext {
    * Does nothing unless a data transfer is set for the tile source of the tile
    * (see {@link updateTiledImageDataTransfer}).
    *
-   * The colors are drawn onto a new canvas of the raster's size, rather than
-   * onto the tile's own canvas: obtaining that would convert the tile's
-   * original data to a canvas first, only for it to be overwritten. The colors
-   * are written as packed 32-bit values through a `Uint32Array` view of the
-   * `ImageData` buffer, whose bytes are R, G, B, A. The `0xAABBGGRR` layout of
-   * {@link DataTransfer} lands in that order on a little-endian host; on a
-   * big-endian host, the bytes of every pixel are swapped afterwards.
+   * The colors are written as packed 32-bit values through a `Uint32Array`
+   * view of an `ImageData` buffer, whose bytes are R, G, B, A. The
+   * `0xAABBGGRR` layout of {@link DataTransfer} lands in that order on a
+   * little-endian host; on a big-endian host, the bytes of every pixel are
+   * swapped afterwards. The buffer is shared by all tiles of the viewer and
+   * only ever grows, as this is a hot path: changing a data transfer
+   * reconverts every cached tile. Sharing is safe because nothing awaits
+   * between filling and copying the buffer, and `putImageData` copies the
+   * pixels.
+   *
+   * The pixels are copied onto a new canvas of the raster's size, which
+   * becomes the tile's data. The canvas cannot be shared, as OpenSeadragon
+   * keeps it in its tile cache by reference. Nor is the tile's own canvas
+   * used: obtaining that would convert the tile's original data to a canvas
+   * first, only for it to be overwritten.
    *
    * @param event - The tile invalidation event whose tile data is replaced
    * @returns A promise that resolves once the tile data has been replaced
@@ -638,20 +649,25 @@ export class OpenSeadragonContext {
     if (values.length !== width * height) {
       throw new Error("Invalid tile data size");
     }
+    const byteLength = 4 * width * height;
+    if (this._pixelBuffer.byteLength < byteLength) {
+      this._pixelBuffer = new ArrayBuffer(byteLength);
+    }
+    const pixelBuffer = new Uint32Array(this._pixelBuffer, 0, width * height);
+    dataTransfer.transfer(values, pixelBuffer);
+    if (!OpenSeadragonContext._isLittleEndian) {
+      const view = new DataView(this._pixelBuffer);
+      for (let i = 0; i < pixelBuffer.length; i++) {
+        view.setUint32(4 * i, pixelBuffer[i]!, /* littleEndian */ true);
+      }
+    }
+    const bytes = new Uint8ClampedArray(this._pixelBuffer, 0, byteLength);
+    const imageData = new ImageData(bytes, width, height);
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d")!;
-    const img = ctx.createImageData(width, height);
-    const buffer = new Uint32Array(img.data.buffer);
-    dataTransfer.transfer(values, buffer);
-    if (!OpenSeadragonContext._isLittleEndian) {
-      const view = new DataView(img.data.buffer);
-      for (let i = 0; i < buffer.length; i++) {
-        view.setUint32(4 * i, buffer[i]!, /* littleEndian */ true);
-      }
-    }
-    ctx.putImageData(img, 0, 0);
+    ctx.putImageData(imageData, 0, 0);
     await event.setData(ctx, "context2d");
   }
 }
