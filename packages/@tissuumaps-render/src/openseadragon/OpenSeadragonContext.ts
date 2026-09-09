@@ -54,7 +54,10 @@ export type DataTransfer = {
  * `tile-invalidated` handler installed on the viewer. Data transfers are kept
  * per tile source, rather than per tiled image, which also covers the
  * navigator: it mirrors the world with tiled images of its own, but shares
- * their tile sources, and its tiles are invalidated through this viewer.
+ * their tile sources, and OpenSeadragon raises the invalidation events of its
+ * tiles on this viewer. Its tiles are cached separately, though, so the
+ * navigator's mirror of a tiled image is invalidated alongside the original
+ * whenever the data transfer changes.
  */
 export class OpenSeadragonContext {
   private static readonly _isLittleEndian =
@@ -398,7 +401,11 @@ export class OpenSeadragonContext {
    * garbage-collected. Tiled images that share a tile source therefore also
    * share a data transfer, with the last one set winning - including the tiled
    * images of the navigator, which mirror those of this viewer and are
-   * recolored along with them.
+   * recolored along with them. As the navigator keeps a tile cache of its own,
+   * which the invalidation of `tiledImage` does not reach, its tiled images
+   * that share the tile source are invalidated explicitly, too. Those are few
+   * low-resolution tiles, so this stays cheap; invalidating the whole viewer
+   * would re-run every data transfer on every loaded tile instead.
    *
    * Data transfers are compared by identity: the tiles are only invalidated,
    * and thereby recolored from their original data, if a different data
@@ -422,11 +429,23 @@ export class OpenSeadragonContext {
       } else {
         this._tileSourceDataTransfers.delete(tiledImage.source);
       }
-      tiledImage
-        .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
-        .catch((error) => {
-          console.error(`Failed to invalidate tiles: ${error}`);
-        });
+      const tiledImagesToInvalidate = [tiledImage];
+      const navigator = this.viewer.navigator as OpenSeadragon.Navigator | null;
+      if (navigator !== null) {
+        for (let i = 0; i < navigator.world.getItemCount(); i++) {
+          const navigatorTiledImage = navigator.world.getItemAt(i);
+          if (navigatorTiledImage.source === tiledImage.source) {
+            tiledImagesToInvalidate.push(navigatorTiledImage);
+          }
+        }
+      }
+      for (const tiledImageToInvalidate of tiledImagesToInvalidate) {
+        tiledImageToInvalidate
+          .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
+          .catch((error) => {
+            console.error(`Failed to invalidate tiles: ${error}`);
+          });
+      }
     }
   }
 
