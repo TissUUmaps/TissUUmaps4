@@ -1,23 +1,29 @@
 import {
+  type DockviewApi,
   DockviewDefaultTab,
   DockviewReact,
   type DockviewReadyEvent,
   type DockviewTheme,
   type IDockviewPanelHeaderProps,
+  type IDockviewPanelProps,
 } from "dockview-react";
 import { Moon, Sun } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
 import { DialogProvider } from "./components/dialogs/DialogProvider";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
 import { LabelsPanel } from "./components/panels/LabelsPanel";
+import { PluginPanel } from "./components/panels/PluginPanel";
 import { PointsPanel } from "./components/panels/PointsPanel";
 import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
+import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
 
 /** The Tailwind CSS-styled dockview theme defined in `dockview.css` */
@@ -25,6 +31,12 @@ const dockviewTheme: DockviewTheme = {
   name: "tailwindcss",
   className: "dockview-theme-tailwindcss",
 };
+
+/**
+ * The ID of the project panel, into whose group the panels contributed by
+ * plugins are added
+ */
+const projectPanelId = "projectPanel";
 
 /** The panels that can be shown in the dockview layout, by component name */
 const dockviewComponents = {
@@ -35,11 +47,15 @@ const dockviewComponents = {
   PointsPanel: () => <PointsPanel className="m-2" />,
   ShapesPanel: () => <ShapesPanel className="m-2" />,
   TablesPanel: () => <TablesPanel className="m-2" />,
+  PluginPanel: (props: IDockviewPanelProps<{ pluginId: string }>) => (
+    <PluginPanel pluginId={props.params.pluginId} className="m-2" />
+  ),
 };
 
 /**
  * The tab headers available to panels, by component name: one that lets the
- * user close the panel, and one for panels that are always shown
+ * user close the panel, one for panels that are always shown, and one for the
+ * panels contributed by plugins, whose close button unregisters the plugin
  */
 const dockviewTabComponents = {
   ClosablePanelHeader: (props: IDockviewPanelHeaderProps) => {
@@ -47,6 +63,19 @@ const dockviewTabComponents = {
   },
   PersistentPanelHeader: (props: IDockviewPanelHeaderProps) => {
     return <DockviewDefaultTab hideClose={true} {...props} />;
+  },
+  PluginPanelHeader: (
+    props: IDockviewPanelHeaderProps<{ pluginId: string }>,
+  ) => {
+    return (
+      <DockviewDefaultTab
+        {...props}
+        hideClose={false}
+        closeActionOverride={() =>
+          pluginRegistry.unregisterPlugin(props.params.pluginId)
+        }
+      />
+    );
   },
 };
 
@@ -79,7 +108,7 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
   viewerPanel.group.header.hidden = true;
   viewerPanel.group.locked = true;
   const projectPanel = event.api.addPanel({
-    id: "projectPanel",
+    id: projectPanelId,
     title: "Project",
     component: "ProjectPanel",
     tabComponent: "PersistentPanelHeader",
@@ -135,6 +164,9 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
  */
 export function App() {
   const dark = useSettingsStore((state) => state.dark);
+  const [dockviewApi, setDockviewApi] = useState<DockviewApi | null>(null);
+
+  usePluginPanels(dockviewApi, projectPanelId);
 
   return (
     <DialogProvider>
@@ -147,7 +179,10 @@ export function App() {
           components={dockviewComponents}
           tabComponents={dockviewTabComponents}
           rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
-          onReady={onDockviewReady}
+          onReady={(event) => {
+            onDockviewReady(event);
+            setDockviewApi(event.api);
+          }}
         />
       </div>
     </DialogProvider>

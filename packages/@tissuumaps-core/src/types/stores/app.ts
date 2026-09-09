@@ -11,7 +11,6 @@ import type { PointsData, PointsDataProvider } from "../../storage/points";
 import type { ShapesData, ShapesDataProvider } from "../../storage/shapes";
 import type { TableData, TableDataProvider } from "../../storage/table";
 import type { InteractionMode } from "../interaction";
-import type { Plugin } from "../plugins";
 
 /**
  * The state of the app store, holding what is not part of the project
@@ -53,8 +52,15 @@ export type AppStoreState = {
     TableDataProvider<TableDataSource, TableData>
   >;
 
-  /** The registered plugins, by plugin ID */
-  plugins: Map<string, Plugin>;
+  /**
+   * The registered plugins, by plugin ID, each as its human-readable name
+   * together with the element its user interface is mounted into, if it has one
+   *
+   * Written by the plugin registry, which owns the plugin lifecycle and keeps
+   * the plugin objects themselves to itself, so that nothing a plugin owns ends
+   * up frozen in the store.
+   */
+  plugins: Map<string, { name: string; container?: HTMLElement }>;
 };
 
 /**
@@ -134,22 +140,6 @@ export type AppStoreActions = {
     type: string,
     dataProvider: TableDataProvider<TableDataSource, TableData>,
   ) => void;
-
-  /**
-   * Registers a plugin and calls its `setup` function, see
-   * {@link PluginRegistry.registerPlugin}
-   *
-   * @param plugin - The plugin to register
-   */
-  registerPlugin: (plugin: Plugin) => void;
-
-  /**
-   * Calls a registered plugin's `teardown` function and unregisters it, see
-   * {@link PluginRegistry.unregisterPlugin}
-   *
-   * @param pluginId - The ID of the plugin to unregister
-   */
-  unregisterPlugin: (pluginId: string) => void;
 };
 
 /**
