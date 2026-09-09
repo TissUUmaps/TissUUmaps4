@@ -2,27 +2,21 @@ import { createStore, useStore } from "zustand";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
-import type {
-  AppStore,
-  AppStoreApi,
-  AppStoreState,
-  PluginStores,
-} from "@tissuumaps/core";
+import type { AppStore, AppStoreApi, AppStoreState } from "@tissuumaps/core";
 
-import { dataStore } from "./data";
-import { projectStore } from "./project";
-import { settingsStore } from "./settings";
 import "./zustand";
 
 /**
  * The store holding application state that is not part of the project
  *
  * This comprises the open workspace, the current interaction mode, the
- * registered data providers, and the registered plugins.
+ * registered data providers, and the registered plugins. The plugins are
+ * written by the plugin registry, which owns their lifecycle, rather than
+ * through an action.
  */
 export const appStore: AppStoreApi = createStore<AppStore>()(
   devtools(
-    immer((set, get) => ({
+    immer((set) => ({
       ...createInitialAppStoreState(),
       setWorkspace: (workspace) => set({ workspace }),
       setInteractionMode: (interactionMode) => set({ interactionMode }),
@@ -46,38 +40,6 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
         set((draft) => {
           draft.tableDataProviders.set(type, dataProvider);
         }),
-      registerPlugin: (plugin) => {
-        get().unregisterPlugin(plugin.id);
-        if (plugin.setup !== undefined) {
-          try {
-            plugin.setup(pluginStores);
-          } catch (error) {
-            console.error(`Error during setup of plugin ${plugin.id}:`, error);
-            return;
-          }
-        }
-        set((draft) => {
-          draft.plugins.set(plugin.id, plugin);
-        });
-      },
-      unregisterPlugin: (pluginId) => {
-        const plugin = get().plugins.get(pluginId);
-        if (plugin !== undefined) {
-          set((draft) => {
-            draft.plugins.delete(pluginId);
-          });
-          if (plugin.teardown !== undefined) {
-            try {
-              plugin.teardown();
-            } catch (error) {
-              console.error(
-                `Error during teardown of plugin ${plugin.id}:`,
-                error,
-              );
-            }
-          }
-        }
-      },
     })),
     { name: "app", enabled: import.meta.env.DEV },
   ),
@@ -109,14 +71,3 @@ function createInitialAppStoreState(): AppStoreState {
     plugins: new Map(),
   };
 }
-
-/**
- * The stores handed to a plugin, both when it is set up and when its panel is
- * mounted
- */
-export const pluginStores: PluginStores = {
-  appStore,
-  dataStore,
-  projectStore,
-  settingsStore,
-};

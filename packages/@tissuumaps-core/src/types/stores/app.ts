@@ -53,8 +53,13 @@ export type AppStoreState = {
     TableDataProvider<TableDataSource, TableData>
   >;
 
-  /** The registered plugins, by plugin ID */
-  plugins: Map<string, Plugin>;
+  /**
+   * The registered plugins, by plugin ID, each together with the element its
+   * user interface is mounted into, if it has one
+   *
+   * Written by the plugin registry, which owns the plugin lifecycle.
+   */
+  plugins: Map<string, Plugin & { container?: HTMLElement }>;
 };
 
 /**
@@ -134,22 +139,6 @@ export type AppStoreActions = {
     type: string,
     dataProvider: TableDataProvider<TableDataSource, TableData>,
   ) => void;
-
-  /**
-   * Registers a plugin and calls its `setup` function, if it has one, see
-   * {@link PluginRegistry.registerPlugin}
-   *
-   * @param plugin - The plugin to register
-   */
-  registerPlugin: (plugin: Plugin) => void;
-
-  /**
-   * Calls a registered plugin's `teardown` function and unregisters it, see
-   * {@link PluginRegistry.unregisterPlugin}
-   *
-   * @param pluginId - The ID of the plugin to unregister
-   */
-  unregisterPlugin: (pluginId: string) => void;
 };
 
 /**

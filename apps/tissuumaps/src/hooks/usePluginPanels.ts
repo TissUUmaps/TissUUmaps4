@@ -19,7 +19,7 @@ const pluginPanelIdPrefix = "plugin:";
  * registered with the app store
  *
  * A plugin's panel is shown for exactly as long as the plugin is registered:
- * registering a plugin that has a panel adds the panel to the dockview layout,
+ * registering a plugin that has a `mount` adds a panel to the dockview layout,
  * and unregistering the plugin removes it again. A panel is not made active
  * when it is added, so that a plugin registering during startup does not take
  * the group it is added to over.
@@ -45,7 +45,7 @@ export function usePluginPanels(
     }
     const pluginPanels = new Map<string, Plugin>();
     for (const plugin of plugins.values()) {
-      if (plugin.panel !== undefined) {
+      if (plugin.mount !== undefined) {
         pluginPanels.set(pluginPanelIdPrefix + plugin.id, plugin);
       }
     }

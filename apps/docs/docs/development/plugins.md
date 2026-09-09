@@ -11,8 +11,9 @@ Once the application has started up, TissUUmaps exposes its plugin registry as
 window.tissuumaps.registerPlugin({
   id: "my-plugin",
   name: "My plugin",
-  setup: ({ appStore, dataStore, projectStore, settingsStore }) => {},
-  teardown: () => {},
+  setup: ({ appStore, dataStore, projectStore, settingsStore }) => {
+    return () => {}; // teardown
+  },
 });
 ```
 
@@ -31,8 +32,9 @@ function registerMyPlugin() {
   window.tissuumaps.registerPlugin({
     id: "my-plugin",
     name: "My plugin",
-    setup: ({ appStore, dataStore, projectStore, settingsStore }) => {},
-    teardown: () => {},
+    setup: ({ appStore, dataStore, projectStore, settingsStore }) => {
+      return () => {}; // teardown
+    },
   });
 }
 
@@ -49,7 +51,7 @@ Note that the project is not yet loaded when `tissuumaps-loaded` fires — loadi
 is only started during startup. A plugin that depends on project contents should
 subscribe to `projectStore` in `setup` instead of reading it once.
 
-A plugin is unregistered again — tearing it down — using
+A plugin is unregistered again — unmounting and tearing it down — using
 `window.tissuumaps.unregisterPlugin(pluginId)`.
 
 ## Plugin properties
@@ -58,23 +60,40 @@ A plugin is unregistered again — tearing it down — using
   `id` is already in use unregisters the previous plugin first.
 - `name` (required): a human-readable name for the plugin.
 - `setup` (optional): called once, immediately upon registration, with a reference
-  to each of the application's Zustand stores (see below). Errors thrown by
+  to each of the application's Zustand stores (see below). It may return a
+  teardown callback, see [Plugin lifecycle](#plugin-lifecycle). Errors thrown by
   `setup` are caught and logged; they do not abort application startup. The
-  plugin is then not registered, and its `teardown` is _not_ called - a
-  `teardown` never has to cope with a half-initialized plugin. A `setup` that can
-  fail part-way through is responsible for releasing what it had already set up
-  before it rethrows. A plugin that only adds a user interface does not need a
-  `setup`, because its panel's `mount` receives the same stores.
-- `panel` (optional): mounts a user interface panel shown for as long as the
-  plugin is registered, see [User interface plugins](#user-interface-plugins).
-- `teardown` (optional): called when the plugin is unregistered, and when the
-  application shuts down. Only ever called for a plugin that was registered
-  successfully, i.e. one whose `setup` did not throw. Errors thrown by `teardown`
-  are caught and logged. It is called _before_ the plugin's `panel` is unmounted.
+  plugin is then not registered, and no teardown happens - a teardown never has
+  to cope with a half-initialized plugin. A `setup` that can fail part-way
+  through is responsible for releasing what it had already set up before it
+  rethrows. A plugin that only adds a user interface does not need a `setup`,
+  because its `mount` receives the same stores.
+- `mount` (optional): mounts a user interface panel shown for as long as the
+  plugin is registered, and may return an unmount callback, see
+  [User interface plugins](#user-interface-plugins).
+
+## Plugin lifecycle
+
+A plugin goes through four steps, all of them optional:
+
+1. `setup` is called when the plugin is registered.
+2. `mount` is called once `setup` has returned successfully, so anything `setup`
+   prepares is available to it.
+3. The unmount callback returned by `mount` is called when the plugin is
+   unregistered.
+4. The teardown callback returned by `setup` is called last, once the user
+   interface has been unmounted.
+
+Unregistering happens through `window.tissuumaps.unregisterPlugin(pluginId)`, by
+closing the plugin's panel, by registering another plugin with the same `id`, and
+when the application shuts down. The unmount and teardown callbacks are only ever
+called for a plugin that was registered successfully; errors they throw are
+caught and logged. If `mount` throws, the plugin is not registered either, but
+since `setup` did succeed, its teardown callback _is_ called.
 
 ## Stores
 
-The `setup` function receives the application's four Zustand stores:
+`setup` and `mount` receive the application's four Zustand stores:
 
 | Store           | Contents                                                                     |
 | --------------- | ---------------------------------------------------------------------------- |
@@ -111,7 +130,7 @@ data loading by changing the project instead, for example
 
 ## User interface plugins
 
-A plugin adds a panel to the TissUUmaps user interface by declaring a `panel`.
+A plugin adds a panel to the TissUUmaps user interface by declaring a `mount`.
 The panel appears as a tab titled with the plugin's `name`, next to the built-in
 Project, Images, Labels, Points, Shapes and Tables panels:
 
@@ -119,39 +138,42 @@ Project, Images, Labels, Points, Shapes and Tables panels:
 window.tissuumaps.registerPlugin({
   id: "my-plugin",
   name: "My plugin",
-  panel: (container, { projectStore }) => {
+  mount: (container, { projectStore }) => {
     const paragraph = document.createElement("p");
     const update = (state) => {
       paragraph.textContent = `${state.images.length} images`;
     };
     update(projectStore.getState());
     container.append(paragraph);
-    return projectStore.subscribe(update);
+    return projectStore.subscribe(update); // unmount
   },
 });
 ```
 
-Because `panel` receives the stores itself, a plugin that only adds a user
-interface needs neither `setup` nor `teardown`.
+Because `mount` receives the stores itself, a plugin that only adds a user
+interface does not need a `setup`.
 
-`panel` is called with an empty `HTMLElement` owned by the panel, into which the
+`mount` is called with an empty `HTMLElement` owned by TissUUmaps, into which the
 plugin renders its user interface, and with the same four stores that `setup`
-would receive. It may return a callback that unmounts that user interface again.
-TissUUmaps empties the container after the callback has run, so the callback only
-has to release what is not plain DOM, such as store subscriptions, listeners on
-`window`, or a React root.
+receives. It may return a callback that unmounts that user interface again.
+The container is discarded together with the plugin, so the callback only has to
+release what is not plain DOM, such as store subscriptions, listeners on `window`,
+or a React root.
 
 ### Panel lifetime
 
 The panel is shown for exactly as long as the plugin is registered:
 
-- `panel` is called once the plugin's `setup` has returned successfully, if there
-  is one, so anything `setup` prepares is available to it.
-- The panel stays mounted while other tabs of its group are active — switching
-  tabs does not remount it.
-- Unregistering the plugin calls `teardown` and then the callback returned by
-  `panel`. Because `teardown` runs first, cleaning up the user interface belongs
-  in the unmount callback rather than in `teardown`.
+- `mount` is called immediately upon registration, right after `setup`. The
+  container is not part of the document at that point: TissUUmaps attaches it to
+  the panel once the panel is shown. Measure the container's size with a
+  `ResizeObserver` rather than once in `mount`.
+- The user interface stays mounted while other tabs of its group are active, and
+  when the panel is dragged elsewhere — neither remounts it.
+- Unregistering the plugin calls the callback returned by `mount` first and the
+  callback returned by `setup` afterwards, so an unmount callback may still rely
+  on whatever `setup` set up. The container is discarded afterwards; registering
+  the plugin again gives it a fresh one.
 
 :::caution
 
@@ -161,38 +183,23 @@ page, or by calling `registerPlugin` again.
 
 :::
 
-In development, React's [Strict Mode](https://react.dev/reference/react/StrictMode)
-deliberately mounts every component twice, so `panel` is called, unmounted and
-called again. This is not a bug: it checks that the unmount callback really
-undoes everything `panel` did.
-
 ### Bringing your own framework
 
-`panel` is a plain DOM contract, so a plugin can use whichever framework it
+`mount` is a plain DOM contract, so a plugin can use whichever framework it
 likes — or none at all. With React, for example:
 
 ```javascript
-panel: (container, stores) => {
-  const element = document.createElement("div");
-  container.append(element);
-  const root = ReactDOM.createRoot(element);
+mount: (container, stores) => {
+  const root = ReactDOM.createRoot(container);
   root.render(React.createElement(MyPanel, { stores }));
-  return () => queueMicrotask(() => root.unmount());
+  return () => root.unmount();
 };
 ```
 
-Note the two details: the root is created on an element of the plugin's own
-rather than on `container` itself, and it is unmounted in a microtask.
-TissUUmaps unmounts panels from within its own rendering, where unmounting a
-React root synchronously makes React warn; deferring it avoids that, and by then
-TissUUmaps has emptied `container` — which detaches the plugin's element with the
-React root's content intact inside it, rather than pulling that content out from
-under React.
-
 :::caution
 
-The registry keeps the plugin object in an Immer store, which deep-freezes it.
-Keep mutable plugin state in closures rather than in properties of the plugin
-object.
+The registry keeps a copy of the plugin object in an Immer store, which
+deep-freezes it together with any objects the plugin object references. Keep
+mutable plugin state in closures rather than in properties of the plugin object.
 
 :::

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import { pluginStores, useAppStore } from "@/stores/app";
+import { useAppStore } from "@/stores/app";
 
 export type PluginPanelProps = {
   pluginId: string;
@@ -10,43 +10,32 @@ export type PluginPanelProps = {
 /**
  * The panel of a registered plugin
  *
- * Hands the plugin an empty container element to mount its user interface into,
- * and unmounts that user interface again when the plugin is unregistered, or
- * re-registered with a different `panel`. The container is emptied afterwards, so
- * a plugin only has to release what is not plain DOM.
+ * Shows the element into which the plugin registry mounted the plugin's user
+ * interface when the plugin was registered, as held by the app store. The panel
+ * only attaches that element; mounting and unmounting are the registry's
+ * business, so that the user interface is unmounted before the plugin is torn
+ * down, and so that it survives the panel being hidden, moved or remounted.
  *
- * Errors thrown while mounting and unmounting are caught and logged, as they
- * are for a plugin's `setup` and `teardown`: a failing plugin must not take the
- * application down with it.
+ * Re-registering the plugin swaps in the new element.
  */
 export function PluginPanel({ pluginId, className }: PluginPanelProps) {
-  const panel = useAppStore((state) => state.plugins.get(pluginId)?.panel);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const container = useAppStore(
+    (state) => state.plugins.get(pluginId)?.container,
+  );
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (panel === undefined || container === null) {
+    const element = ref.current;
+    if (element === null) {
       return;
     }
-    let unmount: (() => void) | void = undefined;
-    try {
-      unmount = panel(container, pluginStores);
-    } catch (error) {
-      console.error(`Error while mounting panel of plugin ${pluginId}:`, error);
+    if (container === undefined) {
+      element.replaceChildren();
+    } else if (container.parentElement !== element) {
+      element.replaceChildren(container);
     }
-    return () => {
-      try {
-        unmount?.();
-      } catch (error) {
-        console.error(
-          `Error while unmounting panel of plugin ${pluginId}:`,
-          error,
-        );
-      } finally {
-        container.replaceChildren();
-      }
-    };
-  }, [panel, pluginId]);
+  }, [container]);
 
-  return <div ref={containerRef} className={className} />;
+  return <div ref={ref} className={className} />;
 }

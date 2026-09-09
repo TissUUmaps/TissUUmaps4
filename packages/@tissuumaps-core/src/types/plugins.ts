@@ -15,6 +15,11 @@ export type PluginStores = {
 
 /**
  * A plugin that can be registered with the application
+ *
+ * A plugin's lifecycle is `setup`, `mount`, `unmount`, `teardown`: registering
+ * the plugin calls {@link setup} and then {@link mount}, and unregistering it
+ * calls the callback returned by `mount` and then the callback returned by
+ * `setup`. All four steps are optional.
  */
 export type Plugin = {
   /** The unique ID of the plugin */
@@ -24,48 +29,50 @@ export type Plugin = {
   name: string;
 
   /**
-   * Mounts the plugin's panel, through which it shows a user interface, if any
+   * Sets up the plugin and registers any necessary event listeners or other resources
    *
-   * The panel is shown as a tab titled with the plugin's {@link name}, for
-   * exactly as long as the plugin is registered: it is mounted once
-   * {@link setup} has returned successfully, if there is one, and unmounted when
-   * the plugin is unregistered. Closing the panel unregisters the plugin; a
-   * plugin without a panel can only be unregistered through the registry.
+   * Called first when the plugin is registered. A plugin whose `setup` throws is
+   * not registered, and the teardown callback is not called: releasing whatever
+   * `setup` had already acquired before it throws is `setup`'s own
+   * responsibility.
    *
-   * Called with an empty element owned by the panel. The application empties the
-   * container again after the returned callback has run, so the callback only
-   * has to release what is not plain DOM, such as store subscriptions, listeners
-   * on `window`, or a React root.
+   * A plugin that only contributes a user interface does not need a `setup`:
+   * its {@link mount} receives the same stores.
+   *
+   * @param stores - The stores provided by the application for the plugin to interact with
+   * @returns A teardown callback that unregisters the event listeners and
+   * releases the other resources again, if any. It is called last when the
+   * plugin is unregistered, after the user interface has been unmounted, and
+   * only for a plugin that was registered successfully.
+   */
+  setup?: (stores: PluginStores) => (() => void) | void;
+
+  /**
+   * Mounts the plugin's user interface, if any
+   *
+   * A plugin with a `mount` is shown as a panel titled with the plugin's
+   * {@link name}, for exactly as long as the plugin is registered. Closing the
+   * panel unregisters the plugin; a plugin without a `mount` can only be
+   * unregistered through the registry.
+   *
+   * Called once {@link setup} has returned successfully, with an empty element
+   * owned by the application. The element is not part of the document yet: the
+   * application attaches it to the panel once that is shown, and keeps the user
+   * interface mounted while the panel is hidden behind other tabs or moved.
+   * A plugin whose `mount` throws is not registered, and the teardown callback
+   * returned by `setup` is called.
+   *
+   * The container is discarded together with the plugin, so the returned
+   * callback only has to release what is not plain DOM, such as store
+   * subscriptions, listeners on `window`, or a React root.
    *
    * @param container - The element to mount the user interface into
    * @param stores - The stores provided by the application for the plugin to interact with
-   * @returns A callback that unmounts the user interface again, if any
+   * @returns An unmount callback that unmounts the user interface again, if
+   * any. It is called first when the plugin is unregistered, before the
+   * teardown callback returned by {@link setup}.
    */
-  panel?: (container: HTMLElement, stores: PluginStores) => (() => void) | void;
-
-  /**
-   * Sets up the plugin and registers any necessary event listeners or other resources
-   *
-   * A plugin whose `setup` throws is not registered, and its {@link teardown} is
-   * not called: releasing whatever `setup` had already acquired before it throws
-   * is `setup`'s own responsibility.
-   *
-   * A plugin that only contributes a {@link panel} does not need a `setup`: its
-   * `panel` receives the same stores.
-   *
-   * @param stores - The stores provided by the application for the plugin to interact with
-   */
-  setup?: (stores: PluginStores) => void;
-
-  /**
-   * Tears down the plugin and unregisters any event listeners or other resources
-   *
-   * Only called for a plugin that was registered successfully, i.e. one whose
-   * {@link setup} did not throw. It is called before the plugin's {@link panel}
-   * is unmounted, so cleaning up the user interface belongs in the callback
-   * returned by {@link panel} rather than here.
-   */
-  teardown?: () => void;
+  mount?: (container: HTMLElement, stores: PluginStores) => (() => void) | void;
 };
 
 /**
@@ -73,7 +80,7 @@ export type Plugin = {
  */
 export type PluginRegistry = {
   /**
-   * Registers a plugin and calls its `setup` function, if it has one
+   * Registers a plugin, calling its `setup` and then its `mount`, if it has them
    *
    * Registering a plugin whose ID is already in use unregisters the previously
    * registered plugin first.
@@ -83,7 +90,8 @@ export type PluginRegistry = {
   registerPlugin: (plugin: Plugin) => void;
 
   /**
-   * Calls a registered plugin's `teardown` function and unregisters it
+   * Unregisters a registered plugin, calling the unmount callback returned by
+   * its `mount` and then the teardown callback returned by its `setup`
    *
    * @param pluginId - The ID of the plugin to unregister
    */

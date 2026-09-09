@@ -23,7 +23,7 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
-import { appStore } from "./stores/app";
+import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
 
 /** The Tailwind CSS-styled dockview theme defined in `dockview.css` */
@@ -72,7 +72,7 @@ const dockviewTabComponents = {
         {...props}
         hideClose={false}
         closeActionOverride={() =>
-          appStore.getState().unregisterPlugin(props.params.pluginId)
+          pluginRegistry.unregisterPlugin(props.params.pluginId)
         }
       />
     );
