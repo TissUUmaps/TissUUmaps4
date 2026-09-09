@@ -59,7 +59,7 @@ export class ColorUtils {
    * otherwise, into a packed 32-bit RGBA color, `0xAABBGGRR`.
    *
    * @param color - The packed color, `0xBBGGRR`; any higher bits are discarded
-   * @param visibility - The visibility, `0` for invisible
+   * @param visibility - The visibility, larger than `0` for visible
    * @param opacity - The opacity, in the range [0, 255]
    * @returns The packed RGBA color, `0xAABBGGRR`, as an unsigned 32-bit integer
    */
