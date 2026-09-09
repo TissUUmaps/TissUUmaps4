@@ -9,7 +9,6 @@ import {
   MathUtils,
   type NumericArray,
   type TileSourceConfig,
-  defaultChannelColor,
 } from "@tissuumaps/core";
 
 import type { DataTransfer } from "./OpenSeadragonContext";
@@ -33,9 +32,11 @@ export type OpenSeadragonImageSyncContext = {
  * data transfer (see {@link OpenSeadragonContext.updateTiledImageDataTransfer})
  * that scales the values between the channel's contrast limits and multiplies
  * them with the channel's color. Color and contrast limits are taken from the
- * image's channel settings, falling back to those reported by the image data;
- * channels with neither are drawn as they are, as are channels whose data does
- * not provide values, and image data that is not multi-channel. Channel
+ * image's channel settings, falling back to those reported by the image data,
+ * and channels with contrast limits but no color use a default color for their
+ * channel index (see {@link ColorUtils.getDefaultChannelColor}); channels with
+ * neither are drawn as they are, as are channels whose data does not provide
+ * values, and image data that is not multi-channel. Channel
  * visibility and opacity are not part of the transfer: like layer and image
  * opacity, OpenSeadragon applies them when drawing the tiled image (see
  * {@link getTiledImageOpacity}).
@@ -235,10 +236,11 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    *
    * The transfer scales each value linearly between the contrast limits,
    * clamped to `[0, 1]`, and multiplies the result with the channel's color, or
-   * with {@link defaultChannelColor} if the channel has none. Without contrast
-   * limits, the value range of the data type of each tile's data is used (see
-   * {@link _getDataTypeRange}); contrast limits that are not ascending render
-   * every value black. The resulting pixels are opaque; channel visibility and
+   * with the default color for the channel index (see
+   * {@link ColorUtils.getDefaultChannelColor}) if the channel has none. Without
+   * contrast limits, the value range of the data type of each tile's data is
+   * used (see {@link _getDataTypeRange}); contrast limits that are not
+   * ascending render every value black. The resulting pixels are opaque; channel visibility and
    * opacity are applied by OpenSeadragon when drawing the tiled image.
    *
    * The scaled color is not computed per pixel: the transfer packs a ramp of
@@ -265,7 +267,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
         r: channelR,
         g: channelG,
         b: channelB,
-      } = state.color ?? defaultChannelColor;
+      } = state.color ?? ColorUtils.getDefaultChannelColor(index);
       const ramp = new Uint32Array(256);
       for (let i = 0; i < ramp.length; i++) {
         const scale = i / (ramp.length - 1);

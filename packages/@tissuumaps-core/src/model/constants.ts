@@ -13,13 +13,6 @@ export const identityTransform = {
   translation: { x: 0, y: 0 },
 } as const satisfies SimilarityTransform;
 
-/** Default image channel color */
-export const defaultChannelColor = {
-  r: 255,
-  g: 255,
-  b: 255,
-} as const satisfies Color;
-
 // TODO always use defaultLabelColorPalette instead
 /** Default label color */
 export const defaultLabelColor = {

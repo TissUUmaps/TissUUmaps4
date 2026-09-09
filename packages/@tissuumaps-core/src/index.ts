@@ -112,7 +112,6 @@ export {
   type SimilarityTransform,
 } from "./model/primitives";
 export {
-  defaultChannelColor,
   defaultLabelColor,
   defaultLabelColorPalette,
   defaultLabelOpacity,
