@@ -16,13 +16,14 @@ import type { DataTransfer } from "./OpenSeadragonContext";
 import {
   type ObjectRef,
   OpenSeadragonRendererBase,
-  type OpenSeadragonSyncContext,
 } from "./OpenSeadragonRendererBase";
 
-export type OpenSeadragonImageSyncContext = OpenSeadragonSyncContext<
-  Image,
-  ImageData
->;
+export type OpenSeadragonImageSyncContext = {
+  loadObject: (
+    image: Image,
+    options?: { signal?: AbortSignal },
+  ) => Promise<ImageData>;
+};
 
 /**
  * Renderer for the tiled images of {@link Image} data objects

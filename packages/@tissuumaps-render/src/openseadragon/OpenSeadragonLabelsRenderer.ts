@@ -23,17 +23,17 @@ import type { DataTransfer } from "./OpenSeadragonContext";
 import {
   type ObjectRef,
   OpenSeadragonRendererBase,
-  type OpenSeadragonSyncContext,
 } from "./OpenSeadragonRendererBase";
 
-export type OpenSeadragonLabelsSyncContext = OpenSeadragonSyncContext<
-  Labels,
-  LabelsData
-> & {
+export type OpenSeadragonLabelsSyncContext = {
   tables: Table[];
   colorMaps: DefaultMap<Color>[];
   visibilityMaps: DefaultMap<boolean>[];
   opacityMaps: DefaultMap<number>[];
+  loadObject: (
+    labels: Labels,
+    options?: { signal?: AbortSignal },
+  ) => Promise<LabelsData>;
   loadTable: (
     table: Table,
     options?: { signal?: AbortSignal },

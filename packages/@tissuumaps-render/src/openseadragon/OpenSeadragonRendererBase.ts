@@ -20,24 +20,6 @@ import type {
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
 
 /**
- * The inputs of one {@link OpenSeadragonRendererBase.synchronize} call
- *
- * An immutable snapshot of the model state and loaders that a renderer needs,
- * which subclasses extend with whatever else their objects resolve their
- * appearance from. It carries inputs only; a renderer that derives state from
- * an object does so in {@link OpenSeadragonRendererBase.resolveObject}.
- */
-export type OpenSeadragonSyncContext<
-  TObject extends Image | Labels,
-  TObjectData extends ImageData | LabelsData,
-> = {
-  loadObject: (
-    object: TObject,
-    options?: { signal?: AbortSignal },
-  ) => Promise<TObjectData>;
-};
-
-/**
  * Base class for OpenSeadragon renderers that manage tiled images for objects (images or labels)
  *
  * Each renderer owns an anchor, an invisible tiled image spanning everything the
@@ -57,7 +39,12 @@ export type OpenSeadragonSyncContext<
 export abstract class OpenSeadragonRendererBase<
   TObject extends Image | Labels,
   TObjectData extends ImageData | LabelsData,
-  TSyncContext extends OpenSeadragonSyncContext<TObject, TObjectData>,
+  TSyncContext extends {
+    loadObject: (
+      object: TObject,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TObjectData>;
+  },
 > {
   private static _defaultBounds = { x: 0, y: 0, width: 1, height: 1 };
 
@@ -111,8 +98,10 @@ export abstract class OpenSeadragonRendererBase<
    *
    * @param layers - Layers to render
    * @param objects - Objects (images or labels) to display
-   * @param context - The inputs to synchronize with (see
-   * {@link OpenSeadragonSyncContext})
+   * @param context - The inputs to synchronize with: an immutable snapshot of
+   * the model state and loaders that the renderer needs. It carries inputs
+   * only; a renderer that derives state from an object does so in
+   * {@link resolveObject}.
    * @param options - Optional abort signal
    */
   async synchronize(
