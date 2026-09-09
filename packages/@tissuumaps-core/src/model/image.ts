@@ -53,7 +53,7 @@ export type Channel = {
    * Overrides the channel color provided by the image data provider, if any.
    *
    * @defaultValue The color reported by the image data provider, or a default
-   * color for the channel index (see {@link ColorUtils.getDefaultChannelColor})
+   * color for the channel index (see {@link RenderUtils.getDefaultChannelColor})
    */
   color?: Color;
 

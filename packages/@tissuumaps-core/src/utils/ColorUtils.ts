@@ -113,48 +113,6 @@ export class ColorUtils {
   static colorsEqual(a: Color, b: Color): boolean {
     return a.r === b.r && a.g === b.g && a.b === b.b;
   }
-
-  /**
-   * Returns a default color for a channel, for use when no channel colors are
-   * known
-   *
-   * The first six channels map to red, green, blue, yellow, cyan, and magenta.
-   * Further channels are assigned hues 128 degrees apart, with saturation and
-   * brightness decreasing by 0.05 every ten channels. Channel indices wrap
-   * around after 100, so that saturation and brightness stay above 0.5.
-   * Colors are not guaranteed to be unique.
-   *
-   * Resembles `ImageChannel.getDefaultChannelColor` in QuPath v0.7.0, except
-   * that yellow, cyan, and magenta have been replaced by pure versions (255
-   * for the two highest components, 0 for the lowest), and that QuPath wraps
-   * after 360 channels instead, yielding dim colors and eventually black.
-   *
-   * @param c - The channel index, a non-negative integer
-   * @returns The default color for the channel
-   */
-  static getDefaultChannelColor(c: number): Color {
-    c = c % 100;
-    switch (c) {
-      case 0:
-        return { r: 255, g: 0, b: 0 }; // red
-      case 1:
-        return { r: 0, g: 255, b: 0 }; // green
-      case 2:
-        return { r: 0, g: 0, b: 255 }; // blue
-      case 3:
-        return { r: 255, g: 255, b: 0 }; // yellow
-      case 4:
-        return { r: 0, g: 255, b: 255 }; // cyan
-      case 5:
-        return { r: 255, g: 0, b: 255 }; // magenta
-      default: {
-        const hue = ((c * 128) % 360) / 360;
-        const level = 1 - Math.floor(c / 10) / 20;
-        return ColorUtils.fromHSB(hue, level, level);
-      }
-    }
-  }
-
   /**
    * Converts an HSB (HSV) color to RGB, following Java's `Color.HSBtoRGB`
    *
@@ -163,11 +121,7 @@ export class ColorUtils {
    * @param brightness - The brightness, in the range [0, 1]
    * @returns The RGB color, with integer components in the range [0, 255]
    */
-  private static fromHSB(
-    hue: number,
-    saturation: number,
-    brightness: number,
-  ): Color {
+  static fromHSB(hue: number, saturation: number, brightness: number): Color {
     const scale = (x: number) => Math.round(x * 255);
     if (saturation === 0) {
       const v = scale(brightness);

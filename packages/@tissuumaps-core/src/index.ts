@@ -221,6 +221,7 @@ export { HashUtils } from "./utils/HashUtils";
 export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { ParseUtils } from "./utils/ParseUtils";
+export { RenderUtils } from "./utils/RenderUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 
 export {

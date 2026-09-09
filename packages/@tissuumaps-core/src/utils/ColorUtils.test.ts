@@ -173,91 +173,37 @@ describe("ColorUtils", () => {
     });
   });
 
-  describe("getDefaultChannelColor", () => {
-    it("returns fixed colors for the first six channels", () => {
-      expect(ColorUtils.getDefaultChannelColor(0)).toEqual({
-        r: 255,
-        g: 0,
-        b: 0,
-      });
-      expect(ColorUtils.getDefaultChannelColor(1)).toEqual({
-        r: 0,
-        g: 255,
-        b: 0,
-      });
-      expect(ColorUtils.getDefaultChannelColor(2)).toEqual({
-        r: 0,
-        g: 0,
-        b: 255,
-      });
-      expect(ColorUtils.getDefaultChannelColor(3)).toEqual({
-        r: 255,
-        g: 255,
-        b: 0,
-      });
-      expect(ColorUtils.getDefaultChannelColor(4)).toEqual({
-        r: 0,
-        g: 255,
-        b: 255,
-      });
-      expect(ColorUtils.getDefaultChannelColor(5)).toEqual({
-        r: 255,
-        g: 0,
-        b: 255,
+  describe("fromHSB", () => {
+    it("returns gray for zero saturation", () => {
+      expect(ColorUtils.fromHSB(0.3, 0, 0.5)).toEqual({
+        r: 128,
+        g: 128,
+        b: 128,
       });
     });
 
-    it("derives further channels from HSB", () => {
-      // channel 6: hue 48deg, full saturation and brightness
-      expect(ColorUtils.getDefaultChannelColor(6)).toEqual({
-        r: 255,
-        g: 204,
-        b: 0,
-      });
-      // channel 7: hue 176deg, full saturation and brightness
-      expect(ColorUtils.getDefaultChannelColor(7)).toEqual({
-        r: 0,
-        g: 255,
-        b: 238,
-      });
-      // channel 10: hue 200deg, saturation and brightness 0.95
-      expect(ColorUtils.getDefaultChannelColor(10)).toEqual({
-        r: 12,
-        g: 166,
-        b: 242,
-      });
+    it.each([
+      [0, { r: 255, g: 0, b: 0 }],
+      [1 / 6, { r: 255, g: 255, b: 0 }],
+      [2 / 6, { r: 0, g: 255, b: 0 }],
+      [3 / 6, { r: 0, g: 255, b: 255 }],
+      [4 / 6, { r: 0, g: 0, b: 255 }],
+      [5 / 6, { r: 255, g: 0, b: 255 }],
+    ])("maps hue %f at full saturation and brightness", (hue, color) => {
+      expect(ColorUtils.fromHSB(hue, 1, 1)).toEqual(color);
     });
 
-    it("wraps around after 100 channels", () => {
-      expect(ColorUtils.getDefaultChannelColor(100)).toEqual(
-        ColorUtils.getDefaultChannelColor(0),
+    it("wraps hues outside [0, 1)", () => {
+      expect(ColorUtils.fromHSB(1.5, 1, 1)).toEqual(
+        ColorUtils.fromHSB(0.5, 1, 1),
       );
-      expect(ColorUtils.getDefaultChannelColor(107)).toEqual(
-        ColorUtils.getDefaultChannelColor(7),
+      expect(ColorUtils.fromHSB(-0.25, 1, 1)).toEqual(
+        ColorUtils.fromHSB(0.75, 1, 1),
       );
     });
 
-    it("keeps saturation and brightness above 0.5", () => {
-      for (let c = 0; c < 100; c++) {
-        const { r, g, b } = ColorUtils.getDefaultChannelColor(c);
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const brightness = max / 255;
-        const saturation = (max - min) / max;
-        expect(brightness).toBeGreaterThan(0.5);
-        expect(saturation).toBeGreaterThan(0.5);
-      }
-    });
-
-    it("returns integer components within [0, 255] for all channels", () => {
-      for (let c = 0; c < 100; c++) {
-        const { r, g, b } = ColorUtils.getDefaultChannelColor(c);
-        for (const v of [r, g, b]) {
-          expect(Number.isInteger(v)).toBe(true);
-          expect(v).toBeGreaterThanOrEqual(0);
-          expect(v).toBeLessThanOrEqual(255);
-        }
-      }
+    it("scales by brightness", () => {
+      expect(ColorUtils.fromHSB(0, 1, 0.5)).toEqual({ r: 128, g: 0, b: 0 });
     });
   });
 

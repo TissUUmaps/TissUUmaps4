@@ -7,7 +7,7 @@ import {
   type Image,
   type ImageData,
   MathUtils,
-  type NumericArray,
+  RenderUtils,
   type TileSourceConfig,
 } from "@tissuumaps/core";
 
@@ -34,7 +34,7 @@ export type OpenSeadragonImageSyncContext = {
  * them with the channel's color. Color and contrast limits are taken from the
  * image's channel settings, falling back to those reported by the image data;
  * channels without a color use a default color for their channel index (see
- * {@link ColorUtils.getDefaultChannelColor}), and channels without contrast
+ * {@link RenderUtils.getDefaultChannelColor}), and channels without contrast
  * limits use the value range of their data type. Channels whose data does not
  * provide values are drawn as they are, as is image data that is not
  * multi-channel. Channel visibility and opacity are not part of the transfer:
@@ -237,9 +237,9 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * The transfer scales each value linearly between the contrast limits,
    * clamped to `[0, 1]`, and multiplies the result with the channel's color, or
    * with the default color for the channel index (see
-   * {@link ColorUtils.getDefaultChannelColor}) if the channel has none. Without
+   * {@link RenderUtils.getDefaultChannelColor}) if the channel has none. Without
    * contrast limits, the value range of the data type of each tile's data is
-   * used (see {@link _getDataTypeRange}); contrast limits that are not
+   * used (see {@link RenderUtils.getDataTypeRange}); contrast limits that are not
    * ascending render every value black. The resulting pixels are opaque;
    * channel visibility and opacity are applied by OpenSeadragon when drawing
    * the tiled image.
@@ -263,7 +263,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     const { getChannelData } = data;
     if (getChannelData !== undefined) {
       const { r, g, b } =
-        state.color ?? ColorUtils.getDefaultChannelColor(index);
+        state.color ?? RenderUtils.getDefaultChannelColor(index);
       const ramp = new Uint32Array(256);
       for (let i = 0; i < ramp.length; i++) {
         const scale = i / (ramp.length - 1);
@@ -281,8 +281,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
         getData: (event) => getChannelData(index, event),
         transfer: (values, pixelBuffer) => {
           const [vmin, vmax] =
-            state.contrastLimits ??
-            OpenSeadragonImageRenderer._getDataTypeRange(values);
+            state.contrastLimits ?? RenderUtils.getDataTypeRange(values);
           const rampScale = vmax > vmin ? (ramp.length - 1) / (vmax - vmin) : 0;
           for (let i = 0; i < values.length; i++) {
             const value = values[i]!;
@@ -295,40 +294,5 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
       };
     }
     return undefined;
-  }
-
-  /**
-   * Returns the value range that the type of the given array can hold
-   *
-   * Integer typed arrays span their full integer range, floating-point typed
-   * arrays are taken to hold normalized values in `[0, 1]`, and plain arrays
-   * are taken to hold 8-bit values.
-   *
-   * @param values - The array whose value range to return
-   * @returns The value range, as `[min, max]`
-   */
-  private static _getDataTypeRange(values: NumericArray): [number, number] {
-    if (values instanceof Uint8Array) {
-      return [0, 255];
-    }
-    if (values instanceof Uint16Array) {
-      return [0, 65535];
-    }
-    if (values instanceof Uint32Array) {
-      return [0, 4294967295];
-    }
-    if (values instanceof Int8Array) {
-      return [-128, 127];
-    }
-    if (values instanceof Int16Array) {
-      return [-32768, 32767];
-    }
-    if (values instanceof Int32Array) {
-      return [-2147483648, 2147483647];
-    }
-    if (Array.isArray(values)) {
-      return [0, 255];
-    }
-    return [0, 1];
   }
 }
