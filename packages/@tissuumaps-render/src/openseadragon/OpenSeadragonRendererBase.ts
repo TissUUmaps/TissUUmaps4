@@ -111,10 +111,10 @@ export abstract class OpenSeadragonRendererBase<
   ): Promise<void> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    this.retainObjects(objects);
     const newRefs = await this._loadObjects(layers, objects, context, {
       signal,
     });
+    this.retainObjects(newRefs.map((newRef) => newRef.object));
     let offset = 0;
     const newRenderedObjects: RenderedObject<TObject, TObjectData>[] = [];
     const renderedObjectsByNewRef = await this._cleanRenderedObjects(newRefs, {
@@ -232,8 +232,9 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Retains what was resolved for the given objects, and discards the rest
    *
-   * Called by {@link synchronize} before any object is loaded, with the objects
-   * that are about to be displayed. Does nothing here; subclasses that keep
+   * Called by {@link synchronize} once all objects have loaded, with the
+   * objects that are about to be displayed: those assigned to a rendered layer
+   * whose data loaded successfully. Does nothing here; subclasses that keep
    * state per object (see {@link resolveObject}) override this to drop the
    * state of every object that is not among the given ones.
    *
