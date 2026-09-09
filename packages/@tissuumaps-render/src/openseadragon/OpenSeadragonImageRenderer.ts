@@ -1,91 +1,137 @@
-import type {
-  Color,
-  CustomTileSource,
-  Image,
-  ImageData,
-  Layer,
-  TileSourceConfig,
+import { deepEqual } from "fast-equals";
+
+import {
+  type Channel,
+  ColorUtils,
+  type CustomTileSource,
+  type Image,
+  type ImageData,
+  MathUtils,
+  RenderUtils,
+  type TileSourceConfig,
 } from "@tissuumaps/core";
 
+import type { DataTransfer } from "./OpenSeadragonContext";
 import {
   type ObjectRef,
   OpenSeadragonRendererBase,
-  type RenderedObject,
 } from "./OpenSeadragonRendererBase";
+
+export type OpenSeadragonImageSyncContext = {
+  loadObject: (
+    image: Image,
+    options?: { signal?: AbortSignal },
+  ) => Promise<ImageData>;
+};
 
 /**
  * Renderer for the tiled images of {@link Image} data objects
+ *
+ * Multi-channel image data provides one tiled image per channel, whose tiles
+ * carry the channel's values rather than colors. Each channel is recolored by a
+ * data transfer (see {@link OpenSeadragonContext.updateTiledImageDataTransfer})
+ * that scales the values between the channel's contrast limits and multiplies
+ * them with the channel's color. Color and contrast limits are taken from the
+ * image's channel settings, falling back to those reported by the image data;
+ * channels without a color use a default color for their channel index (see
+ * {@link RenderUtils.getDefaultChannelColor}), and channels without contrast
+ * limits use the value range of their data type. Channels whose data does not
+ * provide values are drawn as they are, as is image data that is not
+ * multi-channel. Channel visibility and opacity are not part of the transfer:
+ * like layer and image opacity, OpenSeadragon applies them when drawing the
+ * tiled image (see {@link getTiledImageOpacity}).
+ *
+ * As data transfers are compared by identity, each channel's data transfer is
+ * kept (see {@link resolveObject}) until the image's data or the channel's
+ * color or contrast limits change, so that tiles are only recolored when
+ * needed.
  */
 export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   Image,
-  ImageData
+  ImageData,
+  OpenSeadragonImageSyncContext
 > {
-  /**
-   * Synchronizes the viewer's tiled images with the current model state
-   *
-   * Loads all image objects assigned to the given layers, removes the tiled
-   * images that are no longer needed, and creates or updates the remaining ones.
-   * Resolves once the tiled images have actually been added to the world, i.e.
-   * once the viewer reflects the given model state.
-   *
-   * Images whose tiled images cannot be created, e.g. because their data
-   * provides no tile sources, are logged and skipped, just like images whose
-   * data failed to load (see {@link loadObjects}).
-   *
-   * @param layers - Layers to render
-   * @param images - Image objects to display
-   * @param loadImage - Async getter for image data
-   * @param options - Optional abort signal
-   */
-  async synchronize(
-    layers: Layer[],
-    images: Image[],
-    loadImage: (
-      image: Image,
-      options?: { signal?: AbortSignal },
-    ) => Promise<ImageData>,
-    options?: { signal?: AbortSignal },
-  ): Promise<void> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const newRefs: ObjectRef<Image, ImageData>[] = await this.loadObjects(
-      layers,
-      images,
-      loadImage,
-      { signal },
-    );
-    let offset = 0;
-    const newRenderedImages: RenderedObject<Image, ImageData>[] = [];
-    const renderedImagesByNewRef = await this.cleanRenderedObjects(newRefs, {
-      signal,
-    });
-    for (const newRef of newRefs) {
-      let renderedImage = renderedImagesByNewRef.get(newRef);
-      if (renderedImage === undefined) {
-        try {
-          renderedImage = this.createRenderedObject(offset, newRef, { signal });
-        } catch (error) {
-          console.error(
-            `Failed to create tiled images for object with ID '${newRef.object.id}'`,
-            error,
-          );
-          continue;
-        }
-      } else {
-        this.updateRenderedObject(renderedImage, newRef);
-      }
-      newRenderedImages.push(renderedImage);
-      const useBackdrop = this.usesAdditiveBlending(renderedImage.ref.data);
-      offset += (useBackdrop ? 1 : 0) + renderedImage.tileSourceCount;
+  private readonly _renderedImages = new Map<
+    string,
+    {
+      data: ImageData;
+      channels: {
+        state: Pick<Channel, "color" | "contrastLimits">;
+        dataTransfer: DataTransfer | undefined;
+      }[];
     }
-    this.renderedObjects = newRenderedImages;
-    await Promise.allSettled(
-      newRenderedImages.map(
-        (renderedImage) => renderedImage.tiledImagesPromise,
-      ),
-    );
-    signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
-    await this.updateBounds({ signal });
+  >();
+
+  /**
+   * Drops the data transfers of all images other than the given ones
+   *
+   * @param images - The images about to be displayed
+   */
+  protected override retainObjects(images: Image[]): void {
+    for (const imageId of this._renderedImages.keys()) {
+      if (!images.some((image) => image.id === imageId)) {
+        this._renderedImages.delete(imageId);
+      }
+    }
+  }
+
+  /**
+   * Resolves the data transfers of an image's channels, unless they are up to date
+   *
+   * Image data that is not multi-channel has no channels to resolve. Otherwise,
+   * each channel's color and contrast limits are resolved from the image's
+   * channel settings, falling back to those reported by the data, and its data
+   * transfer is kept as long as the image's data and the resolved values are
+   * unchanged, and is created anew otherwise (see {@link _createDataTransfer}).
+   * Channels are resolved independently, so that changing one channel only
+   * recolors the tiles of that channel.
+   *
+   * @param image - The image to resolve
+   * @param data - The loaded data of the image
+   * @returns A promise that resolves once the data transfers have been resolved
+   */
+  protected override resolveObject(
+    image: Image,
+    data: ImageData,
+  ): Promise<void> {
+    const sizeC = data.getSizeC();
+    if (sizeC === undefined) {
+      this._renderedImages.delete(image.id);
+      return Promise.resolve();
+    }
+    const renderedImage = this._renderedImages.get(image.id);
+    const renderedImageChannels = [];
+    for (let c = 0; c < sizeC; c++) {
+      const renderedImageChannel = renderedImage?.channels[c];
+      const renderedImageChannelState = structuredClone({
+        color: image.channels?.[c]?.color ?? data.getChannelColor?.(c),
+        contrastLimits:
+          image.channels?.[c]?.contrastLimits ??
+          data.getChannelContrastLimits?.(c),
+      });
+      if (
+        renderedImage !== undefined &&
+        renderedImage.data === data &&
+        renderedImageChannel !== undefined &&
+        deepEqual(renderedImageChannel.state, renderedImageChannelState)
+      ) {
+        renderedImageChannels.push(renderedImageChannel);
+      } else {
+        renderedImageChannels.push({
+          state: renderedImageChannelState,
+          dataTransfer: OpenSeadragonImageRenderer._createDataTransfer(
+            data,
+            c,
+            renderedImageChannelState,
+          ),
+        });
+      }
+    }
+    this._renderedImages.set(image.id, {
+      data,
+      channels: renderedImageChannels,
+    });
+    return Promise.resolve();
   }
 
   /**
@@ -98,7 +144,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * @returns The tile sources, one per channel for multi-channel image data and
    * a single one otherwise
    */
-  protected getTileSources(
+  protected override getTileSources(
     data: ImageData,
   ): (string | TileSourceConfig | CustomTileSource)[] {
     const tileSources: (string | TileSourceConfig | CustomTileSource)[] = [];
@@ -130,39 +176,6 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   }
 
   /**
-   * Returns the tint color for one of an image's tiled images
-   *
-   * Returns the color of the channel that the tiled image renders. Channels are
-   * only applied to multi-channel image data, and channels that the image does
-   * not define have no color, in which case the channel's tiles are rendered in
-   * their own colors.
-   *
-   * Only multi-channel image data is tinted: its channels are blended additively
-   * onto an opaque backdrop (see {@link usesAdditiveBlending}), where tinting a
-   * tile may drop its transparency. Tiles of image data that is not
-   * multi-channel are composited over whatever is below them, so their
-   * transparency has to be preserved.
-   *
-   * @param ref - The image reference for which to compute the color
-   * @param c - The index of the channel rendered by the tiled image
-   * @returns The channel's color, or `undefined` for no tint
-   */
-  protected override getTiledImageColor(
-    ref: ObjectRef<Image, ImageData>,
-    c: number,
-  ): Color | undefined {
-    if (ref.data.getSizeC() !== undefined) {
-      const channel = ref.object.channels?.[c];
-      const channelColor =
-        channel?.color !== undefined
-          ? channel.color
-          : ref.data.getChannelColor?.(c);
-      return channelColor;
-    }
-    return super.getTiledImageColor(ref, c);
-  }
-
-  /**
    * Computes the effective opacity for one of an image's tiled images
    *
    * Multiplies the layer and image opacity computed by the base class with the
@@ -172,28 +185,114 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * for the image's backdrop, the layer and image opacity is returned as is.
    *
    * @param ref - The image reference for which to compute the opacity
-   * @param c - The index of the channel rendered by the tiled image, or
-   * `undefined` for the image's backdrop
+   * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
    * @returns The effective opacity for the tiled image
    */
   protected override getTiledImageOpacity(
     ref: ObjectRef<Image, ImageData>,
-    c?: number,
+    index: number | null,
   ): number {
-    let opacity = super.getTiledImageOpacity(ref, c);
-    if (opacity > 0 && c !== undefined && ref.data.getSizeC() !== undefined) {
-      const channel = ref.object.channels?.[c];
+    let alpha = super.getTiledImageOpacity(ref, index);
+    if (alpha > 0 && index !== null && ref.data.getSizeC() !== undefined) {
+      const channel = ref.object.channels?.[index];
       const channelVisibility =
-        channel?.visibility !== undefined
-          ? channel.visibility
-          : (ref.data.getChannelVisibility?.(c) ?? true);
+        channel?.visibility ?? ref.data.getChannelVisibility?.(index) ?? true;
       const channelOpacity =
-        channel?.opacity !== undefined
-          ? channel.opacity
-          : (ref.data.getChannelOpacity?.(c) ?? 1.0);
-
-      opacity *= channelVisibility ? channelOpacity : 0;
+        channel?.opacity ?? ref.data.getChannelOpacity?.(index) ?? 1.0;
+      alpha *= channelVisibility ? channelOpacity : 0;
     }
-    return opacity;
+    return alpha;
+  }
+
+  /**
+   * Returns the data transfer resolved for one of an image's tiled images
+   *
+   * Only the tiled images of an image's channels are recolored, never its
+   * backdrop.
+   *
+   * @param ref - The image reference for which to get the data transfer
+   * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
+   * @returns The channel's data transfer resolved by {@link resolveObject},
+   * or `undefined` if the channel has none
+   */
+  protected override getTiledImageDataTransfer(
+    ref: ObjectRef<Image, ImageData>,
+    index: number | null,
+  ): DataTransfer | undefined {
+    if (index !== null) {
+      const renderedImage = this._renderedImages.get(ref.object.id);
+      if (renderedImage !== undefined) {
+        const renderedImageChannel = renderedImage.channels[index];
+        if (renderedImageChannel !== undefined) {
+          return renderedImageChannel.dataTransfer;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Creates the data transfer of an image channel
+   *
+   * The transfer scales each value linearly between the contrast limits,
+   * clamped to `[0, 1]`, and multiplies the result with the channel's color, or
+   * with the default color for the channel index (see
+   * {@link RenderUtils.getDefaultChannelColor}) if the channel has none. Without
+   * contrast limits, the value range of the data type of each tile's data is
+   * used (see {@link RenderUtils.getDataTypeRange}); contrast limits that are not
+   * ascending render every value black. The resulting pixels are opaque;
+   * channel visibility and opacity are applied by OpenSeadragon when drawing
+   * the tiled image.
+   *
+   * The scaled color is not computed per pixel: the transfer packs a ramp of
+   * 256 colors once, with `ColorUtils.packColor` and `ColorUtils.packRGBA`,
+   * and maps each value to the nearest ramp entry. As no color component
+   * exceeds 255, the ramp holds every color the channel can take.
+   *
+   * @param data - The image data providing the channel's values
+   * @param index - The index of the tiled image (channel)
+   * @param state - The resolved color and contrast limits of the channel
+   * @returns The data transfer, or `undefined` if the data provides no channel
+   * values
+   */
+  private static _createDataTransfer(
+    data: ImageData,
+    index: number,
+    state: Pick<Channel, "color" | "contrastLimits">,
+  ): DataTransfer | undefined {
+    const { getChannelData } = data;
+    if (getChannelData !== undefined) {
+      const { r, g, b } =
+        state.color ?? RenderUtils.getDefaultChannelColor(index);
+      const ramp = new Uint32Array(256);
+      for (let i = 0; i < ramp.length; i++) {
+        const scale = i / (ramp.length - 1);
+        ramp[i] = ColorUtils.packRGBA(
+          ColorUtils.packColor({
+            r: r * scale,
+            g: g * scale,
+            b: b * scale,
+          }),
+          1,
+          255,
+        );
+      }
+      return {
+        getData: (event) => getChannelData(index, event),
+        transfer: (values, pixelBuffer) => {
+          const [vmin, vmax] =
+            state.contrastLimits ?? RenderUtils.getDataTypeRange(values);
+          const rampScale = vmax > vmin ? (ramp.length - 1) / (vmax - vmin) : 0;
+          for (let i = 0; i < values.length; i++) {
+            const value = values[i]!;
+            const rampIndex = Math.round(
+              MathUtils.clamp((value - vmin) * rampScale, 0, ramp.length - 1),
+            );
+            pixelBuffer[i] = ramp[rampIndex]!;
+          }
+        },
+      };
+    }
+    return undefined;
   }
 }

@@ -21,30 +21,50 @@ export const imageDefaults = {} as const satisfies Partial<RawImage>;
  */
 export type Channel = {
   /**
-   * Channel name, overriding the name reported by the data provider
+   * Channel name
+   *
+   * Overrides the channel name provided by the image data provider, if any.
+   *
+   * @defaultValue The name reported by the image data provider, or `undefined`
    */
   name?: string;
 
   /**
    * Channel visibility
    *
-   * @defaultValue `true`
+   * Overrides the channel visibility provided by the image data provider, if any.
+   *
+   * @defaultValue The visibility reported by the image data provider, or `true`
    */
   visibility?: boolean;
 
   /**
-   * Channel opacity, in the range [0, 1], multiplied with the image opacity
+   * Channel opacity, in the range [0, 1]
    *
-   * @defaultValue `1`
+   * Overrides the channel opacity provided by the image data provider, if any.
+   *
+   * @defaultValue The opacity reported by the image data provider, or `1`
    */
   opacity?: number;
 
   /**
-   * Channel color, multiplied with the channel's image data
+   * Channel color
    *
-   * Without a color, the channel's image data is rendered in its own colors.
+   * Overrides the channel color provided by the image data provider, if any.
+   *
+   * @defaultValue The color reported by the image data provider, or a default
+   * color for the channel index (see {@link RenderUtils.getDefaultChannelColor})
    */
   color?: Color;
+
+  /**
+   * Channel contrast limits, in the channel's image data value range
+   *
+   * Overrides the channel contrast limits provided by the image data provider, if any.
+   *
+   * @defaultValue The contrast limits reported by the image data provider, or the renderer's default range
+   */
+  contrastLimits?: [number, number];
 };
 
 /**

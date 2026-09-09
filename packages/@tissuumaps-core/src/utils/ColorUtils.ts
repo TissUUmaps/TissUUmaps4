@@ -1,4 +1,5 @@
 import type { Color } from "../model/primitives";
+import { MathUtils } from "./MathUtils";
 
 /** Utility methods for color parsing, packing, and conversion */
 export class ColorUtils {
@@ -36,13 +37,38 @@ export class ColorUtils {
   }
 
   /**
-   * Packs an RGB color into a single 24-bit integer (`0xRRGGBB`)
+   * Packs an RGB color into a single 24-bit integer, `0xBBGGRR`
+   *
+   * The red component occupies the lowest byte, so that the integer, when
+   * stored in host byte order on a little-endian host, matches the R, G, B byte
+   * order of a canvas `ImageData` buffer.
    *
    * @param color - The color to pack
-   * @returns The packed color
+   * @returns The packed color, `0xBBGGRR`
    */
   static packColor(color: Color): number {
-    return (color.r << 16) | (color.g << 8) | color.b;
+    // never exceeds 24 bits (0xFFFFFF), so no need for >>> 0
+    return (color.b << 16) | (color.g << 8) | color.r;
+  }
+
+  /**
+   * Folds a visibility and an opacity into the alpha channel of a packed color
+   *
+   * Combines the lower 24 bits of `color` (see {@link packColor}) with
+   * `opacity` as alpha if `visibility` is non-zero, and with zero alpha
+   * otherwise, into a packed 32-bit RGBA color, `0xAABBGGRR`.
+   *
+   * @param color - The packed color, `0xBBGGRR`; any higher bits are discarded
+   * @param visibility - The visibility, larger than `0` for visible
+   * @param opacity - The opacity, in the range [0, 255]
+   * @returns The packed RGBA color, `0xAABBGGRR`, as an unsigned 32-bit integer
+   */
+  static packRGBA(color: number, visibility: number, opacity: number): number {
+    const rgb = color & 0x00ffffff;
+    if (visibility > 0) {
+      return MathUtils.safeOr(rgb, MathUtils.safeLeftShift(opacity, 24));
+    }
+    return rgb;
   }
 
   /**
@@ -86,5 +112,40 @@ export class ColorUtils {
    */
   static colorsEqual(a: Color, b: Color): boolean {
     return a.r === b.r && a.g === b.g && a.b === b.b;
+  }
+  /**
+   * Converts an HSB (HSV) color to RGB, following Java's `Color.HSBtoRGB`
+   *
+   * @param hue - The hue, in the range [0, 1) (values outside wrap around)
+   * @param saturation - The saturation, in the range [0, 1]
+   * @param brightness - The brightness, in the range [0, 1]
+   * @returns The RGB color, with integer components in the range [0, 255]
+   */
+  static fromHSB(hue: number, saturation: number, brightness: number): Color {
+    const scale = (x: number) => Math.round(x * 255);
+    if (saturation === 0) {
+      const v = scale(brightness);
+      return { r: v, g: v, b: v };
+    }
+    const h = (hue - Math.floor(hue)) * 6;
+    const f = h - Math.floor(h);
+    const v = scale(brightness);
+    const p = scale(brightness * (1 - saturation));
+    const q = scale(brightness * (1 - saturation * f));
+    const t = scale(brightness * (1 - saturation * (1 - f)));
+    switch (Math.floor(h)) {
+      case 0:
+        return { r: v, g: t, b: p };
+      case 1:
+        return { r: q, g: v, b: p };
+      case 2:
+        return { r: p, g: v, b: t };
+      case 3:
+        return { r: p, g: q, b: v };
+      case 4:
+        return { r: t, g: p, b: v };
+      default:
+        return { r: v, g: p, b: q };
+    }
   }
 }

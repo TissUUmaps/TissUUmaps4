@@ -1,4 +1,5 @@
-import type { OpenSeadragonOptions, WebGLOptions } from "../types/render";
+import type { OpenSeadragonOptions } from "../types/openseadragon";
+import type { WebGLOptions } from "../types/webgl";
 import { type Model, type RawModel, createModel } from "./base";
 import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";

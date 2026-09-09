@@ -1,15 +1,35 @@
 import OpenSeadragon from "openseadragon";
 
 import {
-  type Color,
-  ColorUtils,
   type Dims,
   GeometryUtils,
+  type NumericArray,
   type OpenSeadragonViewerOptions,
   type Rect,
 } from "@tissuumaps/core";
 
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
+
+/**
+ * Recolors the tiles of a tiled image whose pixels carry values rather than colors
+ *
+ * `getData` extracts the raw pixel values of an invalidated tile, in row-major
+ * order, one per raster pixel, along with the width and height of the raster.
+ * The raster may cover the full tile size rather than the tile's source bounds,
+ * as OpenSeadragon crops it when drawing. `transfer` writes the packed RGBA
+ * color of each value to the pixel at the same index, as `0xAABBGGRR`, i.e.
+ * `(a << 24) | (b << 16) | (g << 8) | r` (see
+ * {@link OpenSeadragonContext.updateTiledImageDataTransfer}). It is called
+ * once per tile, with `pixelBuffer` as long as `values`. The buffer is reused
+ * across tiles and still holds the colors of the previous one, so every pixel
+ * has to be written.
+ */
+export type DataTransfer = {
+  getData: (
+    event: OpenSeadragon.TileInvalidatedEvent,
+  ) => Promise<{ values: NumericArray; width: number; height: number }>;
+  transfer: (values: NumericArray, pixelBuffer: Uint32Array) => void;
+};
 
 /**
  * A wrapper around an OpenSeadragon viewer
@@ -33,18 +53,27 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  * images before requesting additions still resolves its indices against the
  * world as it is once those removals have been applied.
  *
- * Tiled images can also be tinted (see {@link setTiledImageTint}). As
- * OpenSeadragon has no notion of a per-image color, the tint is applied to the
- * tiles themselves, in a `tile-invalidated` handler installed on the viewer.
- * Tints are kept per tile source, rather than per tiled image, which is the
- * granularity at which OpenSeadragon keys its tile caches, and which also covers
- * the navigator: it mirrors the world with tiled images of its own, but shares
- * their tile sources, and its tiles are invalidated through this viewer.
+ * Tiled images can also be recolored: a tiled image whose pixels carry values
+ * rather than colors is drawn by mapping each value to an RGBA color (see
+ * {@link updateTiledImageDataTransfer}). As OpenSeadragon has no notion of a
+ * per-image color mapping, it is applied to the tiles themselves, in a
+ * `tile-invalidated` handler installed on the viewer. Data transfers are kept
+ * per tile source, rather than per tiled image, which also covers the
+ * navigator: it mirrors the world with tiled images of its own, but shares
+ * their tile sources, and OpenSeadragon raises the invalidation events of its
+ * tiles on this viewer. Its tiles are cached separately, though, so the
+ * navigator's mirror of a tiled image is invalidated alongside the original
+ * whenever the data transfer changes.
  */
 export class OpenSeadragonContext {
+  private static readonly _isLittleEndian =
+    new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
+
   readonly viewer: OpenSeadragon.Viewer;
-  private readonly _tileSourceTints: WeakMap<OpenSeadragon.TileSource, Color> =
-    new WeakMap();
+  private readonly _tileSourceDataTransfers = new WeakMap<
+    OpenSeadragon.TileSource,
+    DataTransfer
+  >();
   private _animationMemory?: {
     viewerOptions: Partial<OpenSeadragonViewerOptions>;
     tiledImageViewerOptions: WeakMap<
@@ -55,6 +84,7 @@ export class OpenSeadragonContext {
   private _animationStartHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
   private _animationFinishHandler?: OpenSeadragon.EventHandler<OpenSeadragon.ViewerEvent>;
   private _worldMutationQueue: Promise<unknown> = Promise.resolve();
+  private _pixelBuffer = new ArrayBuffer(0);
   private _destroyed: boolean = false;
 
   /**
@@ -77,30 +107,11 @@ export class OpenSeadragonContext {
         event.preventDefaultAction = true;
       }
     });
-    this.viewer.addHandler("tile-invalidated", async (event) => {
-      const tiledImage = event.tile.tiledImage;
-      if (tiledImage !== null) {
-        const tint = this._tileSourceTints.get(tiledImage.source);
-        if (tint !== undefined) {
-          const { r, g, b } = tint;
-          const ctx = (await event.getData(
-            "context2d",
-          )) as CanvasRenderingContext2D;
-          const { width, height } = ctx.canvas;
-          ctx.save(); // push context state
-          // pre-multiply alpha
-          ctx.globalCompositeOperation = "destination-over";
-          ctx.fillStyle = "rgba(0, 0, 0, 1)";
-          ctx.fillRect(0, 0, width, height);
-          // multiply with color
-          ctx.globalCompositeOperation = "multiply";
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
-          ctx.fillRect(0, 0, width, height);
-          ctx.restore(); // pop context state
-          await event.setData(ctx, "context2d");
-        }
-      }
-    });
+    this.viewer.addHandler("tile-invalidated", (event) =>
+      this._transferData(event).catch((error) => {
+        console.error(`Failed to transfer tile data: ${error}`);
+      }),
+    );
   }
 
   /**
@@ -261,6 +272,44 @@ export class OpenSeadragonContext {
   }
 
   /**
+   * Resolves a tile source specifier to a ready-to-use OpenSeadragon tile source
+   *
+   * Fetches the image information if the specifier is a URL, awaits promised
+   * tile sources, and passes ready tile sources through. Doing this before an
+   * addition keeps the loading concurrent, while the additions themselves stay
+   * serialized (see {@link addTiledImage}).
+   *
+   * @param tiledImageOptions - Options containing the tile source to open
+   * @param options - Optional abort signal
+   * @returns A promise that resolves with the opened tile source
+   */
+  async openTileSource(
+    tiledImageOptions: Omit<
+      OpenSeadragon.TileSourceSpecifier,
+      "success" | "error"
+    >,
+    options?: { signal?: AbortSignal },
+  ): Promise<OpenSeadragon.TileSource> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    // OpenSeadragon types tile sources as `string | object`, which also covers
+    // promises of an already opened tile source; anything else is passed through
+    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
+    signal?.throwIfAborted();
+    try {
+      const { source: openedTileSource } =
+        (await this.viewer.instantiateTileSourceClass(
+          // this needs to be a shallow copy; OpenSeadragon mutates it!
+          { ...tiledImageOptions, tileSource },
+        )) as { source: OpenSeadragon.TileSource };
+      signal?.throwIfAborted();
+      return openedTileSource;
+    } catch (error) {
+      throw new Error("Failed to open tile source", { cause: error });
+    }
+  }
+
+  /**
    * Adds a tiled image to the OpenSeadragon viewer
    *
    * The tile source is opened right away, i.e. concurrently with the tile sources
@@ -350,55 +399,62 @@ export class OpenSeadragonContext {
   }
 
   /**
-   * Sets the tint color of a tiled image
+   * Updates the data transfer of a tiled image
    *
-   * The tint is applied per tile: the tile is first composited over opaque
-   * black, which turns its transparency into intensity, and is then multiplied
-   * with `tint`. Passing `undefined` leaves the tiles untinted. It is applied to
-   * every tile of the tiled image, including those loaded later.
+   * The data transfer is applied per tile: the tile's pixel values are
+   * extracted and each is replaced by the color it maps to (see
+   * {@link DataTransfer}). Passing `undefined` leaves the tiles as they are. It
+   * is applied to every tile of the tiled image, including those loaded later.
    *
-   * As tinting drops the transparency of a tile, tinted tiled images must be
-   * composited additively onto an opaque backdrop.
+   * The data transfer is remembered per tile source, until the tile source is
+   * garbage-collected. Tiled images that share a tile source therefore also
+   * share a data transfer, with the last one set winning - including the tiled
+   * images of the navigator, which mirror those of this viewer and are
+   * recolored along with them. As the navigator keeps a tile cache of its own,
+   * which the invalidation of `tiledImage` does not reach, its tiled images
+   * that share the tile source are invalidated explicitly, too. Those are few
+   * low-resolution tiles, so this stays cheap; invalidating the whole viewer
+   * would re-run every data transfer on every loaded tile instead.
    *
-   * The tint is remembered per tile source, until the tile source is
-   * garbage-collected, because that is what OpenSeadragon keys its tile caches
-   * by: tiles that share their original data share their tinted data, too.
-   * Tiled images that share a tile source therefore also share a tint, with the
-   * last one set winning - including the tiled images of the navigator, which
-   * mirror those of this viewer and are tinted along with them.
-   *
-   * The tint is only written, and its tiles are only invalidated, if it actually
-   * changed: invalidating them re-runs the tinting on every loaded tile of the
-   * tile source, starting over from the original tile data.
+   * Data transfers are compared by identity: the tiles are only invalidated,
+   * and thereby recolored from their original data, if a different data
+   * transfer object is passed. Callers are expected to pass the same object for
+   * as long as its outcome would not change, as invalidating the tiles re-runs
+   * the data transfer on every loaded tile of the tile source.
    *
    * @param tiledImage - The tiled image to update
-   * @param tint - The color to tint the tiled image with, or `undefined` for
-   * no tint
+   * @param dataTransfer - The data transfer to apply, or `undefined` for none
    */
-  setTiledImageTint(
+  updateTiledImageDataTransfer(
     tiledImage: OpenSeadragon.TiledImage,
-    tint: Color | undefined,
+    dataTransfer: DataTransfer | undefined,
   ): void {
-    const oldTint = this._tileSourceTints.get(tiledImage.source);
-    if (
-      (oldTint === undefined && tint !== undefined) ||
-      (oldTint !== undefined && tint === undefined) ||
-      (oldTint !== undefined &&
-        tint !== undefined &&
-        !ColorUtils.colorsEqual(oldTint, tint))
-    ) {
-      if (tint !== undefined) {
-        this._tileSourceTints.set(tiledImage.source, tint);
+    const oldDataTransfer = this._tileSourceDataTransfers.get(
+      tiledImage.source,
+    );
+    if (dataTransfer !== oldDataTransfer) {
+      if (dataTransfer !== undefined) {
+        this._tileSourceDataTransfers.set(tiledImage.source, dataTransfer);
       } else {
-        this._tileSourceTints.delete(tiledImage.source);
+        this._tileSourceDataTransfers.delete(tiledImage.source);
       }
-      tiledImage
-        .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
-        .catch((error) => {
-          console.error(
-            `Failed to invalidate tiles of tinted OpenSeadragon image: ${error}`,
-          );
-        });
+      const tiledImagesToInvalidate = [tiledImage];
+      const navigator = this.viewer.navigator as OpenSeadragon.Navigator | null;
+      if (navigator !== null) {
+        for (let i = 0; i < navigator.world.getItemCount(); i++) {
+          const navigatorTiledImage = navigator.world.getItemAt(i);
+          if (navigatorTiledImage.source === tiledImage.source) {
+            tiledImagesToInvalidate.push(navigatorTiledImage);
+          }
+        }
+      }
+      for (const tiledImageToInvalidate of tiledImagesToInvalidate) {
+        tiledImageToInvalidate
+          .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
+          .catch((error) => {
+            console.error(`Failed to invalidate tiles: ${error}`);
+          });
+      }
     }
   }
 
@@ -495,44 +551,6 @@ export class OpenSeadragonContext {
   }
 
   /**
-   * Resolves a tile source specifier to a ready-to-use OpenSeadragon tile source
-   *
-   * Fetches the image information if the specifier is a URL, awaits promised
-   * tile sources, and passes ready tile sources through. Doing this before an
-   * addition keeps the loading concurrent, while the additions themselves stay
-   * serialized (see {@link addTiledImage}).
-   *
-   * @param tiledImageOptions - Options containing the tile source to open
-   * @param options - Optional abort signal
-   * @returns A promise that resolves with the opened tile source
-   */
-  async openTileSource(
-    tiledImageOptions: Omit<
-      OpenSeadragon.TileSourceSpecifier,
-      "success" | "error"
-    >,
-    options?: { signal?: AbortSignal },
-  ): Promise<OpenSeadragon.TileSource> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    // OpenSeadragon types tile sources as `string | object`, which also covers
-    // promises of an already opened tile source; anything else is passed through
-    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
-    signal?.throwIfAborted();
-    try {
-      const { source: openedTileSource } =
-        (await this.viewer.instantiateTileSourceClass(
-          // this needs to be a shallow copy; OpenSeadragon mutates it!
-          { ...tiledImageOptions, tileSource },
-        )) as { source: OpenSeadragon.TileSource };
-      signal?.throwIfAborted();
-      return openedTileSource;
-    } catch (error) {
-      throw new Error("Failed to open tile source", { cause: error });
-    }
-  }
-
-  /**
    * Implementation of {@link addTiledImage}, bypassing the world mutation queue
    *
    * Must only be called from within an enqueued world mutation, such that the
@@ -590,5 +608,68 @@ export class OpenSeadragonContext {
     const result = this._worldMutationQueue.then(task);
     this._worldMutationQueue = result.catch(() => {}); // prevent unhandled rejections in console
     return result;
+  }
+
+  /**
+   * Replaces the data of an invalidated tile with the colors of its values
+   *
+   * Does nothing unless a data transfer is set for the tile source of the tile
+   * (see {@link updateTiledImageDataTransfer}).
+   *
+   * The colors are written as packed 32-bit values through a `Uint32Array`
+   * view of an `ImageData` buffer, whose bytes are R, G, B, A. The
+   * `0xAABBGGRR` layout of {@link DataTransfer} lands in that order on a
+   * little-endian host; on a big-endian host, the bytes of every pixel are
+   * swapped afterwards. The buffer is shared by all tiles of the viewer and
+   * only ever grows, as this is a hot path: changing a data transfer
+   * reconverts every cached tile. Sharing is safe because nothing awaits
+   * between filling and copying the buffer, and `putImageData` copies the
+   * pixels.
+   *
+   * The pixels are copied onto a new canvas of the raster's size, which
+   * becomes the tile's data. The canvas cannot be shared, as OpenSeadragon
+   * keeps it in its tile cache by reference. Nor is the tile's own canvas
+   * used: obtaining that would convert the tile's original data to a canvas
+   * first, only for it to be overwritten.
+   *
+   * @param event - The tile invalidation event whose tile data is replaced
+   * @returns A promise that resolves once the tile data has been replaced
+   * @throws Error if the number of pixel values does not match the raster size
+   */
+  private async _transferData(
+    event: OpenSeadragon.TileInvalidatedEvent,
+  ): Promise<void> {
+    const tiledImage = event.tile.tiledImage;
+    if (tiledImage === null) {
+      return;
+    }
+    const dataTransfer = this._tileSourceDataTransfers.get(tiledImage.source);
+    if (dataTransfer === undefined) {
+      return;
+    }
+    const { values, width, height } = await dataTransfer.getData(event);
+    if (values.length !== width * height) {
+      throw new Error("Invalid tile data size");
+    }
+    const byteLength = 4 * width * height;
+    if (this._pixelBuffer.byteLength < byteLength) {
+      this._pixelBuffer = new ArrayBuffer(byteLength);
+    }
+    const pixelBuffer = new Uint32Array(this._pixelBuffer, 0, width * height);
+    dataTransfer.transfer(values, pixelBuffer);
+    if (!OpenSeadragonContext._isLittleEndian) {
+      const view = new DataView(this._pixelBuffer);
+      for (let i = 0; i < pixelBuffer.length; i++) {
+        view.setUint32(4 * i, pixelBuffer[i]!, /* littleEndian */ true);
+      }
+    }
+    const bytes = new Uint8ClampedArray(this._pixelBuffer, 0, byteLength);
+    const imageData = new ImageData(bytes, width, height);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.putImageData(imageData, 0, 0);
+    await event.setData(ctx, "context2d");
   }
 }

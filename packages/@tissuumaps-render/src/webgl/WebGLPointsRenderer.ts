@@ -28,6 +28,11 @@ import {
 import markersUrl from "../assets/markers/markers.png?url";
 import pointsFragmentShader from "../assets/shaders/points.frag?raw";
 import pointsVertexShader from "../assets/shaders/points.vert?raw";
+import { ColorResolver } from "../resolvers/ColorResolver";
+import { MarkerResolver } from "../resolvers/MarkerResolver";
+import { OpacityResolver } from "../resolvers/OpacityResolver";
+import { SizeResolver } from "../resolvers/SizeResolver";
+import { VisibilityResolver } from "../resolvers/VisibilityResolver";
 import type { WebGLContext } from "./WebGLContext";
 import {
   type ObjectRef,
@@ -35,11 +40,6 @@ import {
   WebGLRendererBase,
 } from "./WebGLRendererBase";
 import { WebGLUtils } from "./WebGLUtils";
-import { ColorResolver } from "./resolvers/ColorResolver";
-import { MarkerResolver } from "./resolvers/MarkerResolver";
-import { OpacityResolver } from "./resolvers/OpacityResolver";
-import { SizeResolver } from "./resolvers/SizeResolver";
-import { VisibilityResolver } from "./resolvers/VisibilityResolver";
 
 /**
  * WebGL renderer for two-dimensional point clouds
@@ -690,7 +690,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         visibilities !== undefined &&
         opacities !== undefined
       ) {
-        await WebGLPointsRenderer.packAlpha(colors, visibilities, opacities, {
+        await WebGLPointsRenderer.foldRGBA(colors, visibilities, opacities, {
           signal,
         });
         this.context.loadBuffer(
@@ -865,6 +865,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    *
    * Colors carry the resolved visibilities and opacities in their alpha channel,
    * so they also depend on the layer- and object-level visibility and opacity.
+   *
+   * @todo Changes to the color, visibility and opacity maps themselves are not
+   * detected; they are only re-read when a configuration referencing them
+   * changes.
    */
   private static _checkColorsChanged(
     renderedPoints: RenderedPoints | undefined,
@@ -962,7 +966,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Resolves the RGB color of every point of an object
    *
    * The alpha channel is added later, by
-   * {@link WebGLRendererBase.packAlpha}, from the separately resolved
+   * {@link WebGLRendererBase.foldRGBA}, from the separately resolved
    * visibilities and opacities.
    *
    * @param options - Optional abort signal and table loader

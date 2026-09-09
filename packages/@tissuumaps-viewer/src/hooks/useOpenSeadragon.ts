@@ -158,9 +158,12 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
     const abortController = new AbortController();
     if (osReady && osRef.current !== null) {
       osRef.current.imageRenderer
-        .synchronize(layers, images, loadImage, {
-          signal: abortController.signal,
-        })
+        .synchronize(
+          layers,
+          images,
+          { loadObject: loadImage },
+          { signal: abortController.signal },
+        )
         .catch((error) => {
           if (!abortController.signal.aborted) {
             console.error("Error synchronizing OpenSeadragon images", error);
@@ -179,12 +182,14 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
         .synchronize(
           layers,
           labels,
-          tables,
-          colorMaps,
-          visibilityMaps,
-          opacityMaps,
-          loadLabels,
-          loadTable,
+          {
+            tables,
+            colorMaps,
+            visibilityMaps,
+            opacityMaps,
+            loadObject: loadLabels,
+            loadTable,
+          },
           { signal: abortController.signal },
         )
         .catch((error) => {

@@ -26,6 +26,9 @@ import {
 
 import shapesFragmentShader from "../assets/shaders/shapes.frag?raw";
 import shapesVertexShader from "../assets/shaders/shapes.vert?raw";
+import { ColorResolver } from "../resolvers/ColorResolver";
+import { OpacityResolver } from "../resolvers/OpacityResolver";
+import { VisibilityResolver } from "../resolvers/VisibilityResolver";
 import type { WebGLContext } from "./WebGLContext";
 import {
   type ObjectRef,
@@ -34,9 +37,6 @@ import {
 } from "./WebGLRendererBase";
 import { WebGLShapesRasterizer } from "./WebGLShapesRasterizer";
 import { WebGLUtils } from "./WebGLUtils";
-import { ColorResolver } from "./resolvers/ColorResolver";
-import { OpacityResolver } from "./resolvers/OpacityResolver";
-import { VisibilityResolver } from "./resolvers/VisibilityResolver";
 
 /**
  * WebGL renderer for two-dimensional shape clouds
@@ -586,7 +586,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         if (renderedShapes !== undefined) {
           this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
         }
-        await WebGLShapesRenderer.packAlpha(
+        await WebGLShapesRenderer.foldRGBA(
           shapeFillColors,
           shapeFillVisibilities,
           shapeFillOpacities,
@@ -618,7 +618,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
             renderedShapes.shapeStrokeColorsTexture,
           );
         }
-        await WebGLShapesRenderer.packAlpha(
+        await WebGLShapesRenderer.foldRGBA(
           shapeStrokeColors,
           shapeStrokeVisibilities,
           shapeStrokeOpacities,
@@ -808,6 +808,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
 
   /**
    * Returns whether the fill colors of an object have to be resolved again
+   *
+   * @todo Changes to the color, visibility and opacity maps themselves are not
+   * detected; they are only re-read when a configuration referencing them
+   * changes.
    */
   private static _checkShapeFillColorsChanged(
     renderedShapes: RenderedShapes | undefined,
@@ -836,6 +840,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
 
   /**
    * Returns whether the stroke colors of an object have to be resolved again
+   *
+   * @todo Changes to the color, visibility and opacity maps themselves are not
+   * detected; they are only re-read when a configuration referencing them
+   * changes.
    */
   private static _checkShapeStrokeColorsChanged(
     renderedShapes: RenderedShapes | undefined,
@@ -866,7 +874,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Resolves the RGB fill or stroke color of every shape of an object
    *
    * The alpha channel is added later, by
-   * {@link WebGLRendererBase.packAlpha}, from the separately resolved
+   * {@link WebGLRendererBase.foldRGBA}, from the separately resolved
    * visibilities and opacities.
    *
    * @param options - Optional abort signal and table loader

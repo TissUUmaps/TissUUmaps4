@@ -119,12 +119,12 @@ int windingNumber(vec2 p, sampler2D sampler, uint textureWidth, uint offset, uin
     return wn;
 }
 
-// unpacks a uint-packed 8-bit RGBA color
+// Unpacks a uint-packed 8-bit RGBA color, 0xAABBGGRR (red in the lowest byte)
 vec4 unpackColor(uint color) {
-    float r = float((color >> 24) & 0xFFu) / 255.0;
-    float g = float((color >> 16) & 0xFFu) / 255.0;
-    float b = float((color >> 8) & 0xFFu) / 255.0;
-    float a = float((color >> 0) & 0xFFu) / 255.0;
+    float r = float((color >> 0) & 0xFFu) / 255.0;
+    float g = float((color >> 8) & 0xFFu) / 255.0;
+    float b = float((color >> 16) & 0xFFu) / 255.0;
+    float a = float((color >> 24) & 0xFFu) / 255.0;
     return vec4(r, g, b, a);
 }
 

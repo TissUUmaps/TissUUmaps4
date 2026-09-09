@@ -2,7 +2,6 @@ import { deepEqual } from "fast-equals";
 import type OpenSeadragon from "openseadragon";
 
 import {
-  type Color,
   type CustomTileSource,
   GeometryUtils,
   type Image,
@@ -14,7 +13,10 @@ import {
   type TileSourceConfig,
 } from "@tissuumaps/core";
 
-import type { OpenSeadragonContext } from "./OpenSeadragonContext";
+import type {
+  DataTransfer,
+  OpenSeadragonContext,
+} from "./OpenSeadragonContext";
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
 
 /**
@@ -24,7 +26,7 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  * renderer contributes to the world (see
  * {@link OpenSeadragonContext.updateBounds}). Renderers share a viewer, so the
  * anchor also marks where the renderer's own tiled images belong: they directly
- * follow the anchor, in the order of {@link renderedObjects}, with one tiled
+ * follow the anchor, in the order of {@link _renderedObjects}, with one tiled
  * image per channel of each object.
  *
  * The tiled images of an object that uses additive blending are preceded by one
@@ -32,20 +34,26 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  *
  * Tiled images are inserted behind the anchor when they are added, rather than
  * moved there afterwards, as OpenSeadragon's navigator cannot keep up with
- * reordering. {@link cleanRenderedObjects} recreates those that are out of place.
+ * reordering. {@link _cleanRenderedObjects} recreates those that are out of place.
  */
 export abstract class OpenSeadragonRendererBase<
   TObject extends Image | Labels,
   TObjectData extends ImageData | LabelsData,
+  TSyncContext extends {
+    loadObject: (
+      object: TObject,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TObjectData>;
+  },
 > {
   private static _defaultBounds = { x: 0, y: 0, width: 1, height: 1 };
 
   readonly context: OpenSeadragonContext;
-  protected renderedObjects: RenderedObject<TObject, TObjectData>[] = [];
   private _anchor: OpenSeadragon.TiledImage | undefined;
-  private _extraBounds: Rect[] = [];
+  private _renderedObjects: RenderedObject<TObject, TObjectData>[] = [];
   private _anchorTaskPromise: Promise<unknown> = Promise.resolve();
   private _destroyed: boolean = false;
+  private _extraBounds: Rect[] = [];
 
   /**
    * Creates a new OpenSeadragonRendererBase instance and asynchronously adds its anchor
@@ -76,16 +84,71 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Sets additional bounds to be covered by the anchor
+   * Synchronizes the viewer's tiled images with the current model state
    *
-   * Used to include content that is not rendered by OpenSeadragon (e.g. points
-   * and shapes rendered with WebGL) in the viewer's world bounds. Takes effect on
-   * the next {@link updateBounds} call.
+   * Loads all objects assigned to the given layers, removes the tiled images
+   * that are no longer needed, and creates or updates the remaining ones.
+   * Resolves once the tiled images have actually been added to the world, i.e.
+   * once the viewer reflects the given model state.
    *
-   * @param bounds - Additional bounds, in world coordinates
+   * Objects whose tiled images cannot be created, e.g. because their data
+   * provides no tile sources, are logged and skipped, just like objects whose
+   * data failed to load (see {@link _loadObjects}).
+   *
+   * @param layers - Layers to render
+   * @param objects - Objects (images or labels) to display
+   * @param context - The inputs to synchronize with: an immutable snapshot of
+   * the model state and loaders that the renderer needs. It carries inputs
+   * only; a renderer that derives state from an object does so in
+   * {@link resolveObject}.
+   * @param options - Optional abort signal
    */
-  setExtraBounds(bounds: Rect[]): void {
-    this._extraBounds = bounds;
+  async synchronize(
+    layers: Layer[],
+    objects: TObject[],
+    context: TSyncContext,
+    options?: { signal?: AbortSignal },
+  ): Promise<void> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const newRefs = await this._loadObjects(layers, objects, context, {
+      signal,
+    });
+    this.retainObjects(newRefs.map((newRef) => newRef.object));
+    let offset = 0;
+    const newRenderedObjects: RenderedObject<TObject, TObjectData>[] = [];
+    const renderedObjectsByNewRef = await this._cleanRenderedObjects(newRefs, {
+      signal,
+    });
+    for (const newRef of newRefs) {
+      let renderedObject = renderedObjectsByNewRef.get(newRef);
+      if (renderedObject === undefined) {
+        try {
+          renderedObject = this._createRenderedObject(offset, newRef, {
+            signal,
+          });
+        } catch (error) {
+          console.error(
+            `Failed to create tiled images for object with ID '${newRef.object.id}'`,
+            error,
+          );
+          continue;
+        }
+      } else {
+        this._updateRenderedObject(renderedObject, newRef);
+      }
+      newRenderedObjects.push(renderedObject);
+      const useBackdrop = this.usesAdditiveBlending(renderedObject.ref.data);
+      offset += (useBackdrop ? 1 : 0) + renderedObject.tileSourceCount;
+    }
+    this._renderedObjects = newRenderedObjects;
+    await Promise.allSettled(
+      newRenderedObjects.map(
+        (renderedObject) => renderedObject.tiledImagesPromise,
+      ),
+    );
+    signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
+    await this.updateBounds({ signal });
   }
 
   /**
@@ -93,7 +156,7 @@ export abstract class OpenSeadragonRendererBase<
    *
    * Rendered objects whose tiled images have not been added to the world yet are
    * ignored; they update the anchor themselves upon arrival (see
-   * {@link createRenderedObject}). Does nothing once the renderer has been
+   * {@link _createRenderedObject}). Does nothing once the renderer has been
    * destroyed, as there is no anchor to resize anymore.
    *
    * @param options - Optional abort signal
@@ -106,7 +169,7 @@ export abstract class OpenSeadragonRendererBase<
       const { signal } = options ?? {};
       signal?.throwIfAborted();
       const tiledImageBounds = [];
-      for (const renderedObject of this.renderedObjects) {
+      for (const renderedObject of this._renderedObjects) {
         if (renderedObject.backdrop !== undefined) {
           tiledImageBounds.push(renderedObject.backdrop.getBounds());
         }
@@ -127,21 +190,34 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
+   * Sets additional bounds to be covered by the anchor
+   *
+   * Used to include content that is not rendered by OpenSeadragon (e.g. points
+   * and shapes rendered with WebGL) in the viewer's world bounds. Takes effect on
+   * the next {@link updateBounds} call.
+   *
+   * @param bounds - Additional bounds, in world coordinates
+   */
+  setExtraBounds(bounds: Rect[]): void {
+    this._extraBounds = bounds;
+  }
+
+  /**
    * Destroys the renderer by removing the anchor tiled image and all rendered objects from the OpenSeadragon viewer
    *
    * Rendered objects whose tiled images have not been added to the world yet are
    * only marked for deletion, and are removed as soon as they arrive.
    *
    * The renderer is unusable afterwards: it has no anchor anymore, so
-   * {@link updateBounds} does nothing, {@link cleanRenderedObjects} throws, and
+   * {@link updateBounds} does nothing, {@link _cleanRenderedObjects} throws, and
    * tiled images that still arrive are removed right away.
    */
   async destroy(): Promise<void> {
     this._destroyed = true;
-    for (const renderedObject of this.renderedObjects) {
-      await this.deleteRenderedObject(renderedObject);
+    for (const renderedObject of this._renderedObjects) {
+      await this._deleteRenderedObject(renderedObject);
     }
-    this.renderedObjects = [];
+    this._renderedObjects = [];
     // remove the anchor once all pending anchor tasks have settled, as they
     // would otherwise re-create it
     await this._enqueueAnchorTask(async () => {
@@ -154,25 +230,151 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Concurrently loads the data of all objects assigned to the specified layers
+   * Retains what was resolved for the given objects, and discards the rest
    *
-   * The returned references are ordered by layer and then by object, which
-   * determines the order of the corresponding tiled images in the world. Objects
-   * whose data failed to load are logged and skipped.
+   * Called by {@link synchronize} once all objects have loaded, with the
+   * objects that are about to be displayed: those assigned to a rendered layer
+   * whose data loaded successfully. Does nothing here; subclasses that keep
+   * state per object (see {@link resolveObject}) override this to drop the
+   * state of every object that is not among the given ones.
+   *
+   * @param _objects - The objects (images or labels) about to be displayed
+   */
+  protected retainObjects(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _objects: TObject[],
+  ): void {}
+
+  /**
+   * Resolves what a renderer derives from an object, once its data has loaded
+   *
+   * Called by {@link _loadObjects} for every object on one of the given layers,
+   * concurrently, right after
+   * its data has loaded and before its tiled images are created or updated. An
+   * object that cannot be resolved is logged, but kept: its tiled images are
+   * still created or updated, with whatever the synchronous hooks return for
+   * it. Does nothing here; subclasses override this to resolve, from the
+   * object, its data and the inputs of the synchronization, whatever their
+   * synchronous hooks return later (see {@link getTiledImageDataTransfer}),
+   * and to keep it for as long as its outcome would not change.
+   *
+   * @param _object - The object (image or labels) to resolve
+   * @param _data - The loaded data of the object
+   * @param _context - The inputs of the current synchronization
+   * @param _options - Optional abort signal
+   * @returns A promise that resolves once the object has been resolved
+   */
+  protected resolveObject(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _object: TObject,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _data: TObjectData,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _context: TSyncContext,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options?: { signal?: AbortSignal },
+  ): Promise<void> {
+    return Promise.resolve();
+  }
+
+  /**
+   * Returns the tile sources for the given object data
+   *
+   * @param data - The object data (image or labels) for which to retrieve the tile sources
+   * @returns The tile sources, which can be a URL string, a TileSourceConfig object, or a CustomTileSource object
+   */
+  protected abstract getTileSources(
+    data: TObjectData,
+  ): (string | TileSourceConfig | CustomTileSource)[];
+
+  /**
+   * Returns whether the channels of the given object data are blended additively
+   *
+   * The channels of an object that blends additively are composited with
+   * OpenSeadragon's "lighter" operation onto an opaque black backdrop below
+   * them, so that they add up among themselves while the backdrop hides
+   * whatever is below the object, thereby compositing the object as a whole over
+   * it. Objects that do not blend additively have no backdrop and keep
+   * OpenSeadragon's default composite operation, i.e. each of their channels is
+   * composited over the one below it.
+   *
+   * @param _data - The object data (image or labels) to check
+   * @returns Whether the object's channels are blended additively. Defaults to `false`.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected usesAdditiveBlending(_data: TObjectData): boolean {
+    return false;
+  }
+
+  /**
+   * Computes the effective opacity for one of an object's tiled images
+   *
+   * Returns `0` when either the layer or the object is invisible; otherwise
+   * multiplies layer and object opacities. The channel index is ignored here,
+   * i.e. all tiled images of an object share the same opacity; subclasses
+   * override this to additionally apply per-channel visibility and opacity. The
+   * channel index is omitted for an object's backdrop, which carries the opacity
+   * of the object itself.
+   *
+   * @param ref - The object reference for which to compute the opacity
+   * @param _index - The index of the tiled image (e.g. channel), or `null` for the object's backdrop
+   * @returns The effective opacity for the tiled image
+   */
+  protected getTiledImageOpacity(
+    ref: ObjectRef<TObject, TObjectData>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _index: number | null,
+  ): number {
+    const visibility = ref.layer.visibility && ref.object.visibility;
+    const opacity = ref.layer.opacity * ref.object.opacity;
+    return visibility ? opacity : 0;
+  }
+
+  /**
+   * Returns the data transfer for one of an object's tiled images
+   *
+   * Returns `undefined` here, i.e. the tiles are drawn as they are; subclasses
+   * whose tiles carry values rather than colors override this to map the values
+   * to colors (see {@link OpenSeadragonContext.updateTiledImageDataTransfer}).
+   * As data transfers are compared by identity, the returned object has to stay
+   * the same for as long as its outcome would not change. This hook is
+   * synchronous; subclasses resolve the data transfer once the object's data
+   * has loaded (see {@link resolveObject}), and only return it here.
+   *
+   * @param _ref - The object reference for which to get the data transfer
+   * @param _index - The index of the tiled image (e.g. channel), or `null` for the object's backdrop
+   * @returns The data transfer to apply, or `undefined` for none. Defaults to
+   * `undefined`.
+   */
+  protected getTiledImageDataTransfer(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _ref: ObjectRef<TObject, TObjectData>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _index: number | null,
+  ): DataTransfer | undefined {
+    return undefined;
+  }
+
+  /**
+   * Concurrently loads and resolves all objects assigned to the specified layers
+   *
+   * Each object's data is loaded with the context's `loadObject`, and the object
+   * is then resolved (see {@link resolveObject}). The returned references are
+   * ordered by layer and then by object, which determines the order of the
+   * corresponding tiled images in the world. Objects whose data failed to load
+   * are logged and skipped; objects that could not be resolved are logged, but
+   * kept.
    *
    * @param layers - The layers for which to load objects
    * @param objects - The objects to load (images or labels), filtered by layer membership
-   * @param loadObject - A function that retrieves the (cached) data for a given object
+   * @param context - The inputs of the current synchronization
    * @param options - Optional abort signal
    * @returns A promise that resolves to one object reference per successfully loaded object
    */
-  protected async loadObjects(
+  private async _loadObjects(
     layers: Layer[],
     objects: TObject[],
-    loadObject: (
-      object: TObject,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TObjectData>,
+    context: TSyncContext,
     options?: { signal?: AbortSignal },
   ): Promise<ObjectRef<TObject, TObjectData>[]> {
     const { signal } = options ?? {};
@@ -182,8 +384,25 @@ export abstract class OpenSeadragonRendererBase<
       for (const currentObject of objects.filter(
         (object) => object.layer === currentLayer.id,
       )) {
-        const dataPromise = loadObject(currentObject, { signal });
-        dataPromise.catch((error) => {
+        const newRefPromise = context
+          .loadObject(currentObject, { signal })
+          .then(async (data) => {
+            try {
+              await this.resolveObject(currentObject, data, context, {
+                signal,
+              });
+            } catch (error) {
+              if (signal?.aborted) {
+                throw error;
+              }
+              console.error(
+                `Failed to resolve object with ID '${currentObject.id}'`,
+                error,
+              );
+            }
+            return { layer: currentLayer, object: currentObject, data };
+          });
+        newRefPromise.catch((error) => {
           if (!signal?.aborted) {
             console.error(
               `Failed to load object with ID '${currentObject.id}'`,
@@ -191,11 +410,6 @@ export abstract class OpenSeadragonRendererBase<
             );
           }
         });
-        const newRefPromise = dataPromise.then((data) => ({
-          layer: currentLayer,
-          object: currentObject,
-          data,
-        }));
         newRefPromises.push(newRefPromise);
       }
     }
@@ -215,7 +429,7 @@ export abstract class OpenSeadragonRendererBase<
    * its position among the reusable references, counted from the anchor. A
    * partially misplaced object is not reusable. All other rendered objects are
    * deleted, and are expected to be recreated by the caller via
-   * {@link createRenderedObject}, which is also how the world is reordered.
+   * {@link _createRenderedObject}, which is also how the world is reordered.
    *
    * @param newRefs - The new object references, in the intended world order
    * @param options - Optional abort signal
@@ -223,7 +437,7 @@ export abstract class OpenSeadragonRendererBase<
    * @throws Error if the renderer has no anchor, i.e. it is not initialized or
    * already destroyed
    */
-  protected async cleanRenderedObjects(
+  private async _cleanRenderedObjects(
     newRefs: ObjectRef<TObject, TObjectData>[],
     options?: { signal?: AbortSignal },
   ): Promise<
@@ -245,7 +459,7 @@ export abstract class OpenSeadragonRendererBase<
     const survivors = new Set<RenderedObject<TObject, TObjectData>>();
     let offset = 1;
     for (const newRef of newRefs) {
-      const renderedObject = this.renderedObjects.find(
+      const renderedObject = this._renderedObjects.find(
         (renderedObject) =>
           renderedObject.ref.layer.id === newRef.layer.id &&
           renderedObject.ref.object.id === newRef.object.id &&
@@ -276,13 +490,13 @@ export abstract class OpenSeadragonRendererBase<
         offset += (useBackdrop ? 1 : 0) + renderedObject.tileSourceCount;
       }
     }
-    for (const renderedObject of this.renderedObjects) {
+    for (const renderedObject of this._renderedObjects) {
       if (!survivors.has(renderedObject)) {
-        await this.deleteRenderedObject(renderedObject);
+        await this._deleteRenderedObject(renderedObject);
         signal?.throwIfAborted();
       }
     }
-    this.renderedObjects = [...survivors];
+    this._renderedObjects = [...survivors];
     return renderedObjectsByNewRef;
   }
 
@@ -291,7 +505,7 @@ export abstract class OpenSeadragonRendererBase<
    *
    * The TiledImages are inserted at consecutive indices, starting `offset` places
    * after the anchor, which establishes the world layout that
-   * {@link cleanRenderedObjects} expects. `offset` therefore counts TiledImages,
+   * {@link _cleanRenderedObjects} expects. `offset` therefore counts TiledImages,
    * not objects, and callers have to advance it by
    * {@link RenderedObject.tileSourceCount} plus the object's backdrop, if it has
    * one. The indices are resolved once each addition is executed, as the anchor
@@ -320,7 +534,7 @@ export abstract class OpenSeadragonRendererBase<
    * @returns The newly created rendered object, which does not have TiledImages yet
    * @throws Error if the object data provides no tile sources
    */
-  protected createRenderedObject(
+  private _createRenderedObject(
     offset: number,
     newRef: ObjectRef<TObject, TObjectData>,
     options?: { signal?: AbortSignal },
@@ -386,7 +600,7 @@ export abstract class OpenSeadragonRendererBase<
       backdropPromise.catch(() => {}); // prevent unhandled rejections in console
     }
     const tiledImagePromises = tileSourcePromises.map(
-      (tileSourcePromise, c) => {
+      (tileSourcePromise, index) => {
         const tiledImagePromise = this.context.addTiledImage(
           {
             tileSource: tileSourcePromise,
@@ -401,7 +615,9 @@ export abstract class OpenSeadragonRendererBase<
                   this._anchor,
                 );
                 if (anchorIndex !== -1) {
-                  return anchorIndex + 1 + offset + (useBackdrop ? 1 : 0) + c;
+                  return (
+                    anchorIndex + 1 + offset + (useBackdrop ? 1 : 0) + index
+                  );
                 }
               }
               return undefined;
@@ -451,7 +667,7 @@ export abstract class OpenSeadragonRendererBase<
         } else {
           newRenderedObject.backdrop = backdrop;
           newRenderedObject.tiledImages = tiledImages;
-          this.updateRenderedObject(newRenderedObject);
+          this._updateRenderedObject(newRenderedObject);
           await this.updateBounds({ signal });
         }
         return tiledImages;
@@ -468,14 +684,14 @@ export abstract class OpenSeadragonRendererBase<
    * TiledImages of an object, and by its backdrop. The backdrop is opaque where
    * the object is, so it gets {@link getTiledImageOpacity} without a channel index. The
    * applied data source is recorded in the rendered object's state, where
-   * {@link cleanRenderedObjects} picks it up to detect TiledImages that have to
+   * {@link _cleanRenderedObjects} picks it up to detect TiledImages that have to
    * be recreated.
    *
    * @param renderedObject - The rendered object to update
    * @param newRef - The new object reference to update the rendered object with. If not provided, the existing reference will be used.
    * @throws Error if the TiledImages have not been created yet
    */
-  protected updateRenderedObject(
+  private _updateRenderedObject(
     renderedObject: RenderedObject<TObject, TObjectData>,
     newRef: ObjectRef<TObject, TObjectData> = renderedObject.ref,
   ): void {
@@ -484,20 +700,11 @@ export abstract class OpenSeadragonRendererBase<
     }
     renderedObject.ref = newRef;
     if (renderedObject.backdrop !== undefined) {
-      this._updateTiledImage(
-        renderedObject.backdrop,
-        newRef,
-        undefined,
-        this.getTiledImageOpacity(newRef),
-      );
+      this._updateTiledImage(renderedObject.backdrop, newRef, null);
     }
-    for (let c = 0; c < renderedObject.tiledImages.length; c++) {
-      this._updateTiledImage(
-        renderedObject.tiledImages[c]!,
-        newRef,
-        this.getTiledImageColor(newRef, c),
-        this.getTiledImageOpacity(newRef, c),
-      );
+    for (let index = 0; index < renderedObject.tiledImages.length; index++) {
+      const tiledImage = renderedObject.tiledImages[index]!;
+      this._updateTiledImage(tiledImage, newRef, index);
     }
     renderedObject.state = {
       object: {
@@ -514,12 +721,12 @@ export abstract class OpenSeadragonRendererBase<
    * image requested after them, so a caller that deletes before it creates still
    * gets the world indices it expects.
    *
-   * Deleting a rendered object does not remove it from {@link renderedObjects}.
+   * Deleting a rendered object does not remove it from {@link _renderedObjects}.
    *
    * @param renderedObject - The rendered object to delete
    * @returns A promise that resolves once its backdrop and all of its TiledImages have been removed
    */
-  protected deleteRenderedObject(
+  private _deleteRenderedObject(
     renderedObject: RenderedObject<TObject, TObjectData>,
   ): Promise<void> {
     if (renderedObject.tiledImages === undefined) {
@@ -536,52 +743,20 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Returns the tile sources for the given object data
-   *
-   * @param data - The object data (image or labels) for which to retrieve the tile sources
-   * @returns The tile sources, which can be a URL string, a TileSourceConfig object, or a CustomTileSource object
-   */
-  protected abstract getTileSources(
-    data: TObjectData,
-  ): (string | TileSourceConfig | CustomTileSource)[];
-
-  /**
-   * Returns whether the channels of the given object data are blended additively
-   *
-   * The channels of an object that blends additively are composited with
-   * OpenSeadragon's "lighter" operation onto an opaque black backdrop below
-   * them, so that they add up among themselves while the backdrop hides
-   * whatever is below the object, thereby compositing the object as a whole over
-   * it. Objects that do not blend additively have no backdrop and keep
-   * OpenSeadragon's default composite operation, i.e. each of their channels is
-   * composited over the one below it.
-   *
-   * @param _data - The object data (image or labels) to check
-   * @returns Whether the object's channels are blended additively. Defaults to `false`.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected usesAdditiveBlending(_data: TObjectData): boolean {
-    return false;
-  }
-
-  /**
-   * Applies the transform of an object reference and the given color and opacity to a single TiledImage
+   * Applies the transform, opacity and data transfer of an object reference to a single TiledImage
    *
    * Only properties whose value actually changed are written, as each write
-   * triggers a redraw. The color is applied as a tint on the TiledImage's tiles
-   * (see {@link OpenSeadragonContext.setTiledImageTint}).
+   * triggers a redraw. The data transfer is applied to the TiledImage's tiles
+   * (see {@link OpenSeadragonContext.updateTiledImageDataTransfer}).
    *
    * @param tiledImage - The TiledImage to update
    * @param ref - The object reference whose transform to apply
-   * @param color - The color to tint the TiledImage with, or `undefined` for no
-   * tint
-   * @param opacity - The effective opacity to apply
+   * @param index - The index of the tiled image (e.g. channel), or `null` for the object's backdrop
    */
   private _updateTiledImage(
     tiledImage: OpenSeadragon.TiledImage,
     ref: ObjectRef<TObject, TObjectData>,
-    color: Color | undefined,
-    opacity: number,
+    index: number | null,
   ): void {
     // transform --> flip, width, rotation, position
     // The bounds are taken without rotation, as OpenSeadragon rotates them
@@ -609,8 +784,9 @@ export abstract class OpenSeadragonRendererBase<
       tiledImage.setPosition(transform.position, true);
     }
     // visibility & opacity --> opacity
+    const opacity = this.getTiledImageOpacity(ref, index);
     const oldOpacity = tiledImage.getOpacity();
-    if (oldOpacity !== opacity) {
+    if (opacity !== oldOpacity) {
       tiledImage.setOpacity(opacity);
       if (oldOpacity === 0 && opacity > 0) {
         // OpenSeadragon does not load tiles for invisible images,
@@ -618,8 +794,9 @@ export abstract class OpenSeadragonRendererBase<
         tiledImage.update(/* viewportChanged */ false);
       }
     }
-    // color
-    this.context.setTiledImageTint(tiledImage, color);
+    // (channel/label) values --> data transfer
+    const dataTransfer = this.getTiledImageDataTransfer(ref, index);
+    this.context.updateTiledImageDataTransfer(tiledImage, dataTransfer);
   }
 
   /**
@@ -630,7 +807,7 @@ export abstract class OpenSeadragonRendererBase<
    * {@link _anchor} has to be enqueued here: concurrent tasks would each replace
    * the anchor they captured, leaving the anchors created in between orphaned in
    * the world, which shifts all subsequent world indices and thereby invalidates
-   * the layout expected by {@link cleanRenderedObjects}.
+   * the layout expected by {@link _cleanRenderedObjects}.
    *
    * The queue is per renderer, and separate from the context's addition queue,
    * which anchor tasks enqueue onto themselves.
@@ -642,53 +819,6 @@ export abstract class OpenSeadragonRendererBase<
     const result = this._anchorTaskPromise.then(task);
     this._anchorTaskPromise = result.catch(() => {}); // prevent unhandled rejections in console
     return result;
-  }
-
-  /**
-   * Returns the tint color for one of an object's tiled images
-   *
-   * Returns `undefined` here, i.e. the tiled images of an object are rendered in
-   * the colors of their own tiles; subclasses override this to tint them per
-   * channel. Only the tiled images of an object's channels are tinted, never its
-   * backdrop, so this is always called with a channel index.
-   *
-   * @param _ref - The object reference for which to compute the color
-   * @param _c - The index of the channel rendered by the tiled image
-   * @returns The color to tint the tiled image with, or `undefined` for no tint.
-   * Defaults to `undefined`.
-   */
-  protected getTiledImageColor(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _ref: ObjectRef<TObject, TObjectData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _c: number,
-  ): Color | undefined {
-    return undefined;
-  }
-
-  /**
-   * Computes the effective opacity for one of an object's tiled images
-   *
-   * Returns `0` when either the layer or the object is invisible; otherwise
-   * multiplies layer and object opacities. The channel index is ignored here,
-   * i.e. all tiled images of an object share the same opacity; subclasses
-   * override this to additionally apply per-channel visibility and opacity. The
-   * channel index is omitted for an object's backdrop, which carries the opacity
-   * of the object itself.
-   *
-   * @param ref - The object reference for which to compute the opacity
-   * @param _c - The index of the channel rendered by the tiled image, or
-   * `undefined` for the object's backdrop
-   * @returns The effective opacity for the tiled image
-   */
-  protected getTiledImageOpacity(
-    ref: ObjectRef<TObject, TObjectData>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _c?: number,
-  ): number {
-    const visibility = ref.layer.visibility && ref.object.visibility;
-    const opacity = ref.layer.opacity * ref.object.opacity;
-    return visibility ? opacity : 0;
   }
 }
 

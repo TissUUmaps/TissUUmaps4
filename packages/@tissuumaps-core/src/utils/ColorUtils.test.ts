@@ -58,10 +58,29 @@ describe("ColorUtils", () => {
     });
   });
 
+  describe("packRGBA", () => {
+    it("adds the opacity as alpha for a visible item", () => {
+      expect(ColorUtils.packRGBA(0x030201, 1, 0xff)).toBe(0xff030201);
+    });
+
+    it("yields zero alpha for an invisible item", () => {
+      expect(ColorUtils.packRGBA(0x030201, 0, 0xff)).toBe(0x00030201);
+    });
+
+    it("discards any existing alpha", () => {
+      expect(ColorUtils.packRGBA(0xaa030201, 1, 0x80)).toBe(0x80030201);
+      expect(ColorUtils.packRGBA(0xaa030201, 0, 0x80)).toBe(0x00030201);
+    });
+
+    it("returns an unsigned 32-bit integer", () => {
+      expect(ColorUtils.packRGBA(0xffffff, 1, 0xff)).toBe(0xffffffff);
+    });
+  });
+
   describe("packColor", () => {
     it("packs a color to a 24-bit integer", () => {
       expect(ColorUtils.packColor({ r: 1, g: 2, b: 3 })).toBe(
-        (1 << 16) | (2 << 8) | 3,
+        (3 << 16) | (2 << 8) | 1,
       );
     });
 
@@ -151,6 +170,40 @@ describe("ColorUtils", () => {
     it("returns true for the same object", () => {
       const color = { r: 10, g: 20, b: 30 };
       expect(ColorUtils.colorsEqual(color, color)).toBe(true);
+    });
+  });
+
+  describe("fromHSB", () => {
+    it("returns gray for zero saturation", () => {
+      expect(ColorUtils.fromHSB(0.3, 0, 0.5)).toEqual({
+        r: 128,
+        g: 128,
+        b: 128,
+      });
+    });
+
+    it.each([
+      [0, { r: 255, g: 0, b: 0 }],
+      [1 / 6, { r: 255, g: 255, b: 0 }],
+      [2 / 6, { r: 0, g: 255, b: 0 }],
+      [3 / 6, { r: 0, g: 255, b: 255 }],
+      [4 / 6, { r: 0, g: 0, b: 255 }],
+      [5 / 6, { r: 255, g: 0, b: 255 }],
+    ])("maps hue %f at full saturation and brightness", (hue, color) => {
+      expect(ColorUtils.fromHSB(hue, 1, 1)).toEqual(color);
+    });
+
+    it("wraps hues outside [0, 1)", () => {
+      expect(ColorUtils.fromHSB(1.5, 1, 1)).toEqual(
+        ColorUtils.fromHSB(0.5, 1, 1),
+      );
+      expect(ColorUtils.fromHSB(-0.25, 1, 1)).toEqual(
+        ColorUtils.fromHSB(0.75, 1, 1),
+      );
+    });
+
+    it("scales by brightness", () => {
+      expect(ColorUtils.fromHSB(0, 1, 0.5)).toEqual({ r: 128, g: 0, b: 0 });
     });
   });
 
