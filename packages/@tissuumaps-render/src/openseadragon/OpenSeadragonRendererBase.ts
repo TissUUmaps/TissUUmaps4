@@ -247,7 +247,8 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Resolves what a renderer derives from an object, once its data has loaded
    *
-   * Called by {@link synchronize} for every object, concurrently, right after
+   * Called by {@link _loadObjects} for every object on one of the given layers,
+   * concurrently, right after
    * its data has loaded and before its tiled images are created or updated. An
    * object that cannot be resolved is logged, but kept: its tiled images are
    * still created or updated, with whatever the synchronous hooks return for
