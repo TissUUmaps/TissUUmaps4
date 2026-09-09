@@ -14,14 +14,18 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  * Recolors the tiles of a tiled image whose pixels carry values rather than colors
  *
  * `getData` extracts the raw pixel values of an invalidated tile, in row-major
- * order, one per tile pixel. `transfer` writes the packed RGBA color of each
- * value to the pixel at the same index, as `0xAABBGGRR`, i.e.
+ * order, one per raster pixel, along with the width and height of the raster.
+ * The raster may cover the full tile size rather than the tile's source bounds,
+ * as OpenSeadragon crops it when drawing. `transfer` writes the packed RGBA
+ * color of each value to the pixel at the same index, as `0xAABBGGRR`, i.e.
  * `(a << 24) | (b << 16) | (g << 8) | r` (see
  * {@link OpenSeadragonContext.updateTiledImageDataTransfer}). It is called
  * once per tile, with `buffer` as long as `values`.
  */
 export type DataTransfer = {
-  getData: (event: OpenSeadragon.TileInvalidatedEvent) => Promise<NumericArray>;
+  getData: (
+    event: OpenSeadragon.TileInvalidatedEvent,
+  ) => Promise<{ values: NumericArray; width: number; height: number }>;
   transfer: (values: NumericArray, buffer: Uint32Array) => void;
 };
 
@@ -607,19 +611,17 @@ export class OpenSeadragonContext {
    * Does nothing unless a data transfer is set for the tile source of the tile
    * (see {@link updateTiledImageDataTransfer}).
    *
-   * The colors are drawn onto a new canvas of the tile's size in source pixels,
-   * rather than onto the tile's own canvas: obtaining that would convert the
-   * tile's original data to a canvas first, only for it to be overwritten. The
-   * pixel values have to match the tile pixel for pixel, in row-major order
-   * (see {@link _getTileSize}). The colors are written as packed 32-bit
-   * values through a `Uint32Array` view of the `ImageData` buffer, whose bytes
-   * are R, G, B, A. The `0xAABBGGRR` layout of {@link DataTransfer} lands in
-   * that order on a little-endian host; on a big-endian host, the bytes of
-   * every pixel are swapped afterwards.
+   * The colors are drawn onto a new canvas of the raster's size, rather than
+   * onto the tile's own canvas: obtaining that would convert the tile's
+   * original data to a canvas first, only for it to be overwritten. The colors
+   * are written as packed 32-bit values through a `Uint32Array` view of the
+   * `ImageData` buffer, whose bytes are R, G, B, A. The `0xAABBGGRR` layout of
+   * {@link DataTransfer} lands in that order on a little-endian host; on a
+   * big-endian host, the bytes of every pixel are swapped afterwards.
    *
    * @param event - The tile invalidation event whose tile data is replaced
    * @returns A promise that resolves once the tile data has been replaced
-   * @throws Error if the number of pixel values does not match the tile size
+   * @throws Error if the number of pixel values does not match the raster size
    */
   private async _transferData(
     event: OpenSeadragon.TileInvalidatedEvent,
@@ -632,18 +634,17 @@ export class OpenSeadragonContext {
     if (dataTransfer === undefined) {
       return;
     }
-    const data = await dataTransfer.getData(event);
-    const { width, height } = OpenSeadragonContext._getTileSize(
-      event.tile,
-      data.length,
-    );
+    const { values, width, height } = await dataTransfer.getData(event);
+    if (values.length !== width * height) {
+      throw new Error("Invalid tile data size");
+    }
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d")!;
     const img = ctx.createImageData(width, height);
     const buffer = new Uint32Array(img.data.buffer);
-    dataTransfer.transfer(data, buffer);
+    dataTransfer.transfer(values, buffer);
     if (!OpenSeadragonContext._isLittleEndian) {
       const view = new DataView(img.data.buffer);
       for (let i = 0; i < buffer.length; i++) {
@@ -652,32 +653,5 @@ export class OpenSeadragonContext {
     }
     ctx.putImageData(img, 0, 0);
     await event.setData(ctx, "context2d");
-  }
-
-  /**
-   * Determines the size of a tile, in source pixels, from its source bounds and the number of its pixel values
-   *
-   * OpenSeadragon derives the source bounds of a tile by scaling both image
-   * dimensions with the tile source's level scale, a single factor per level.
-   * For an edge tile of a level whose dimensions were rounded differently along
-   * the two axes, this leaves one of the bounds off by up to one pixel from the
-   * actual tile size. The width is therefore taken from the bounds, rounded
-   * either way, and the height from the number of pixel values, which has to
-   * come out as an integer within one pixel of the bounds.
-   *
-   * @param tile - The tile whose size to determine
-   * @param n - The number of pixel values of the tile
-   * @returns The width and height of the tile, in source pixels
-   * @throws Error if no such size exists
-   */
-  private static _getTileSize(tile: OpenSeadragon.Tile, n: number): Dims {
-    const { width, height } = tile.sourceBounds;
-    for (const w of [Math.floor(width), Math.ceil(width)]) {
-      const h = n / w;
-      if (Number.isInteger(h) && Math.abs(h - height) <= 1) {
-        return { width: w, height: h };
-      }
-    }
-    throw new Error("Invalid tile data size");
   }
 }

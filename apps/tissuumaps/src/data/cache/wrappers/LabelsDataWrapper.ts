@@ -33,7 +33,7 @@ export class LabelsDataWrapper
 
   getData(
     event: Parameters<LabelsData["getData"]>[0],
-  ): Promise<number[] | UintArray> {
+  ): Promise<{ values: number[] | UintArray; width: number; height: number }> {
     return this.data.getData(event);
   }
 }

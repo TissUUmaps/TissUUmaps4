@@ -63,15 +63,19 @@ export interface ImageData extends Data {
    * from the event, and as a guard against calling this for image data that is
    * not multi-channel.
    *
+   * The raster does not need to be cropped to the tile's source bounds: it may
+   * cover the full tile size, as the renderer crops it when drawing.
+   *
    * @param c - The channel index (0-based)
    * @param event - The tile invalidation event
-   * @returns The channel's values for the invalidated tile, one per tile pixel
-   * in row-major order
+   * @returns The channel's values for the invalidated tile, one per raster
+   * pixel in row-major order, along with the width and height of the raster in
+   * pixels
    */
   getChannelData?: (
     c: number,
     event: OpenSeadragon.TileInvalidatedEvent,
-  ) => Promise<NumericArray>;
+  ) => Promise<{ values: NumericArray; width: number; height: number }>;
 
   /** Returns the name of a specific channel, or undefined if not available */
   getChannelName?: (c: number) => string | undefined;

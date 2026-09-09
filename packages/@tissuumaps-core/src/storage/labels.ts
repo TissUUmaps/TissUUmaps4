@@ -45,11 +45,15 @@ export interface LabelsData extends ItemsData {
   /**
    * Extracts the raw label image data from a tile invalidation event
    *
+   * The raster does not need to be cropped to the tile's source bounds: it may
+   * cover the full tile size, as the renderer crops it when drawing.
+   *
    * @param event - The tile invalidation event
-   * @returns The label image data as an unsigned integer array
+   * @returns The label IDs of the invalidated tile, one per raster pixel in
+   * row-major order, along with the width and height of the raster in pixels
    * @throws Error if the event does not contain label image data
    */
   getData(
     event: OpenSeadragon.TileInvalidatedEvent,
-  ): Promise<number[] | UintArray>;
+  ): Promise<{ values: number[] | UintArray; width: number; height: number }>;
 }
