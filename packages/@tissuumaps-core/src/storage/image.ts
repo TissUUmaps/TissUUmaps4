@@ -73,8 +73,8 @@ export interface ImageData extends Data {
     event: OpenSeadragon.TileInvalidatedEvent,
   ) => Promise<NumericArray>;
 
-  /** Returns the name of a specific channel */
-  getChannelName?: (c: number) => string;
+  /** Returns the name of a specific channel, or undefined if not available */
+  getChannelName?: (c: number) => string | undefined;
 
   /** Returns the visibility of a specific channel, or undefined if not available */
   getChannelVisibility?: (c: number) => boolean | undefined;
