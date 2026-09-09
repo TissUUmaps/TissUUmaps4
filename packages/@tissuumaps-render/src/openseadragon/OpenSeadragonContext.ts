@@ -108,7 +108,9 @@ export class OpenSeadragonContext {
       }
     });
     this.viewer.addHandler("tile-invalidated", (event) =>
-      this._transferData(event),
+      this._transferData(event).catch((error) => {
+        console.error(`Failed to transfer tile data: ${error}`);
+      }),
     );
   }
 
