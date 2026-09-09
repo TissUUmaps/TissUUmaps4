@@ -1,11 +1,3 @@
-import {
-  type BlockedSourceOptions,
-  type GeoTIFF,
-  type RemoteSourceOptions,
-  fromBlob,
-  fromUrl,
-} from "geotiff";
-
 import type {
   DataProviderLoadOptions,
   ImageDataProvider,
@@ -19,17 +11,8 @@ import {
 } from "./TIFFImageDataSource";
 import { type TIFFChannel, findTIFFParser } from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
+import { openTIFF } from "./openTIFF";
 import { readChannelHistogram } from "./readChannelHistogram";
-
-/**
- * Remote files are read in 64 KiB blocks, of which 256 (16 MiB) are cached per
- * open file. Without blocks, geotiff.js sends one range request per tag value
- * and per strip.
- */
-const remoteSourceOptions: RemoteSourceOptions & BlockedSourceOptions = {
-  blockSize: 65536,
-  cacheSize: 256,
-};
 
 export class TIFFImageDataProvider implements ImageDataProvider<
   TIFFImageDataSource,
@@ -99,27 +82,10 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     normalizedDataSource: NormalizedTIFFImageDataSource,
     options?: DataProviderLoadOptions,
   ): Promise<TIFFImageData> {
-    const { signal, workspace = null } = options ?? {};
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
 
-    let tiff: GeoTIFF;
-    if (normalizedDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(normalizedDataSource.path);
-      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
-      const file = await fh.getFile();
-      signal?.throwIfAborted(); // getFile() does not throw on abort
-      tiff = await fromBlob(file, signal);
-    } else if (normalizedDataSource.url !== undefined) {
-      tiff = await fromUrl(
-        normalizedDataSource.url,
-        remoteSourceOptions,
-        signal,
-      );
-    } else if (normalizedDataSource.path !== undefined) {
-      throw new Error("An open workspace is required to open local-only data.");
-    } else {
-      throw new Error("A URL or workspace path is required to load data.");
-    }
+    const tiff = await openTIFF(normalizedDataSource, options);
 
     const { z, t } = normalizedDataSource;
     const parser = await findTIFFParser(tiff, { signal });
