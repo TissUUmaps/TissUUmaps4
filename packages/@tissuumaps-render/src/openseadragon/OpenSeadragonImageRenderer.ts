@@ -2,6 +2,7 @@ import { deepEqual } from "fast-equals";
 
 import {
   type Channel,
+  ColorUtils,
   type CustomTileSource,
   type Image,
   type ImageData,
@@ -48,8 +49,6 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   ImageData,
   OpenSeadragonImageSyncContext
 > {
-  private static readonly _opaque = MathUtils.safeLeftShift(255, 24);
-
   private readonly _renderedImages = new Map<
     string,
     {
@@ -241,6 +240,11 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * every value black. The resulting pixels are opaque; channel visibility and
    * opacity are applied by OpenSeadragon when drawing the tiled image.
    *
+   * The scaled color is not computed per pixel: the transfer packs a ramp of
+   * 256 colors once, with `ColorUtils.packColor` and `ColorUtils.packRGBA`,
+   * and maps each value to the nearest ramp entry. As no color component
+   * exceeds 255, the ramp holds every color the channel can take.
+   *
    * @param data - The image data providing the channel's values
    * @param index - The index of the tiled image (channel)
    * @param state - The resolved color and contrast limits of the channel
@@ -261,23 +265,32 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
         g: channelG,
         b: channelB,
       } = state.color ?? defaultChannelColor;
+      const ramp = new Uint32Array(256);
+      for (let i = 0; i < ramp.length; i++) {
+        const scale = i / (ramp.length - 1);
+        ramp[i] = ColorUtils.packRGBA(
+          ColorUtils.packColor({
+            r: channelR * scale,
+            g: channelG * scale,
+            b: channelB * scale,
+          }),
+          1,
+          255,
+        );
+      }
       return {
         getData: (event) => data.getChannelData!(index, event),
         transfer: (values, pixelBuffer) => {
           const [vmin, vmax] =
             state.contrastLimits ??
             OpenSeadragonImageRenderer._getDataTypeRange(values);
-          const scale = vmax > vmin ? 1 / (vmax - vmin) : 0;
+          const rampScale = vmax > vmin ? (ramp.length - 1) / (vmax - vmin) : 0;
           for (let i = 0; i < values.length; i++) {
-            const v = MathUtils.clamp((values[i]! - vmin) * scale, 0, 1);
-            const color =
-              (Math.round(channelB * v) << 16) |
-              (Math.round(channelG * v) << 8) |
-              Math.round(channelR * v);
-            pixelBuffer[i] = MathUtils.safeOr(
-              OpenSeadragonImageRenderer._opaque,
-              color,
+            const value = values[i]!;
+            const rampIndex = Math.round(
+              MathUtils.clamp((value - vmin) * rampScale, 0, ramp.length - 1),
             );
+            pixelBuffer[i] = ramp[rampIndex]!;
           }
         },
       };
