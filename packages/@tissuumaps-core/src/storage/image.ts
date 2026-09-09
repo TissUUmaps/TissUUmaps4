@@ -56,6 +56,13 @@ export interface ImageData extends Data {
   /**
    * Extracts the raw image data of a specific channel from a tile invalidation event
    *
+   * Only available for multi-channel image data. The tile in `event` already
+   * belongs to the channel's tile source, so `c` is redundant for the current
+   * OpenSeadragon-based renderer; it is kept for consistency with the other
+   * `getChannelX` methods, for renderers that cannot derive the channel index
+   * from the event, and as a guard against calling this for image data that is
+   * not multi-channel.
+   *
    * @param c - The channel index (0-based)
    * @param event - The tile invalidation event
    * @returns The channel's values for the invalidated tile, one per tile pixel
