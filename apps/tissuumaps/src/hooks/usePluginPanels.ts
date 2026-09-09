@@ -1,8 +1,6 @@
 import type { DockviewApi } from "dockview-react";
 import { useEffect } from "react";
 
-import type { Plugin } from "@tissuumaps/core";
-
 import { useAppStore } from "@/stores/app";
 
 /**
@@ -43,10 +41,13 @@ export function usePluginPanels(
     if (dockviewApi === null) {
       return;
     }
-    const pluginPanels = new Map<string, Plugin>();
-    for (const plugin of plugins.values()) {
-      if (plugin.mount !== undefined) {
-        pluginPanels.set(pluginPanelIdPrefix + plugin.id, plugin);
+    const pluginPanels = new Map<string, { id: string; name: string }>();
+    for (const [pluginId, plugin] of plugins) {
+      if (plugin.container !== undefined) {
+        pluginPanels.set(pluginPanelIdPrefix + pluginId, {
+          id: pluginId,
+          name: plugin.name,
+        });
       }
     }
     for (const dockviewPanel of dockviewApi.panels) {

@@ -28,8 +28,8 @@ const pluginStores: PluginStores = {
  * The callbacks that unmount the user interface and tear the plugin down again,
  * for each registered plugin, by plugin ID
  *
- * Kept outside of the app store, whose state holds the plugins themselves and
- * their containers, since the callbacks are the registry's business alone.
+ * Kept outside of the app store, whose state holds the plugins' names and
+ * containers, since the callbacks are the registry's business alone.
  */
 const pluginRegistrations = new Map<
   string,
@@ -40,11 +40,14 @@ const pluginRegistrations = new Map<
  * The plugin registry, which owns the plugin lifecycle
  *
  * Registering a plugin calls its `setup` and then its `mount`, and adds the
- * plugin to the app store once both have succeeded, together with the element
- * its user interface is mounted into; unregistering it removes the plugin from
- * the app store first, and then calls the unmount callback returned by `mount`
- * and the teardown callback returned by `setup`. The registry is the only
- * writer of the app store's `plugins`.
+ * plugin to the app store once both have succeeded, as its name together with
+ * the element its user interface is mounted into; unregistering it removes the
+ * plugin from the app store first, and then calls the unmount callback returned
+ * by `mount` and the teardown callback returned by `setup`. The registry is the
+ * only writer of the app store's `plugins`.
+ *
+ * The plugin object itself is not kept: the app store only holds what the user
+ * interface renders, so that Immer does not freeze anything the plugin owns.
  *
  * Errors thrown by a plugin are caught and logged, so that a failing plugin
  * does not take the application down with it. A plugin whose `setup` throws is
@@ -85,7 +88,7 @@ export const pluginRegistry: PluginRegistry = {
     pluginRegistrations.set(plugin.id, { unmount, teardown });
     appStore.setState((draft) => {
       // the element is opaque to Immer, which its draft type cannot express
-      draft.plugins.set(plugin.id, castDraft({ ...plugin, container }));
+      draft.plugins.set(plugin.id, castDraft({ name: plugin.name, container }));
     });
   },
   unregisterPlugin: (pluginId) => {

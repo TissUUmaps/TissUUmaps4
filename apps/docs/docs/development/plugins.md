@@ -195,11 +195,3 @@ mount: (container, stores) => {
   return () => root.unmount();
 };
 ```
-
-:::caution
-
-The registry keeps a copy of the plugin object in an Immer store, which
-deep-freezes it together with any objects the plugin object references. Keep
-mutable plugin state in closures rather than in properties of the plugin object.
-
-:::

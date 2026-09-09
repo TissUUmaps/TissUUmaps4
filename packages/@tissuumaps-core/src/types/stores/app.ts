@@ -11,7 +11,6 @@ import type { PointsData, PointsDataProvider } from "../../storage/points";
 import type { ShapesData, ShapesDataProvider } from "../../storage/shapes";
 import type { TableData, TableDataProvider } from "../../storage/table";
 import type { InteractionMode } from "../interaction";
-import type { Plugin } from "../plugins";
 
 /**
  * The state of the app store, holding what is not part of the project
@@ -54,12 +53,14 @@ export type AppStoreState = {
   >;
 
   /**
-   * The registered plugins, by plugin ID, each together with the element its
-   * user interface is mounted into, if it has one
+   * The registered plugins, by plugin ID, each as its human-readable name
+   * together with the element its user interface is mounted into, if it has one
    *
-   * Written by the plugin registry, which owns the plugin lifecycle.
+   * Written by the plugin registry, which owns the plugin lifecycle and keeps
+   * the plugin objects themselves to itself, so that nothing a plugin owns ends
+   * up frozen in the store.
    */
-  plugins: Map<string, Plugin & { container?: HTMLElement }>;
+  plugins: Map<string, { name: string; container?: HTMLElement }>;
 };
 
 /**
