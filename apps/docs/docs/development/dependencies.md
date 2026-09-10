@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 5
 ---
 
 # Dependencies
@@ -10,10 +10,12 @@ sidebar_position: 3
 - Vite
 - TypeScript
 - ESLint (linting)
-- Prettier (formatting)
-- Vitest (testing with coverage)
-- Husky + lint-staged (pre-commit hooks)
+- Prettier + import-sort plugin (formatting)
+- Vitest + jsdom + node-canvas (testing with coverage)
+- API Extractor + unplugin-dts (type declaration rollups for packages)
+- vite-plugin-singlefile (single-file production build of the application)
 - Docusaurus + TypeDoc + GitHub Pages (documentation)
+- Husky + lint-staged (pre-commit hooks)
 - GitHub Actions (CI/CD)
 
 ## Core dependencies
@@ -22,7 +24,7 @@ sidebar_position: 3
 - Zustand + Immer (state management with immutable updates)
 - Tailwind CSS (CSS framework)
 - Dockview (docking layout manager)
-- Shadcn/ui + Base UI (component library) + Lucide (icon component library)
+- Base UI (headless component library) with shadcn/ui-generated wrappers vendored into `components/ui` (`components.json`) + Lucide (icon component library)
 - OpenSeadragon (zoomable image and labels rendering)
 - JSON Forms (JSON Schema-based form renderer)
 - TanStack Table + TanStack Virtual (virtualized data tables)
@@ -30,7 +32,7 @@ sidebar_position: 3
 
 ## Data loading
 
-- Hyparquet + hyparquet-compressors (Parquet tables)
+- Hyparquet + hyparquet-compressors (Parquet tables; bundled into the Parquet worker)
 - PapaParse (CSV tables)
 - omezarr-tilesource (OME-Zarr images)
 

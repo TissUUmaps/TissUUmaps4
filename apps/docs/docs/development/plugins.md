@@ -1,5 +1,5 @@
 ---
-sidebar_position: 7
+sidebar_position: 8
 ---
 
 # Plugins
@@ -54,6 +54,10 @@ subscribe to `projectStore` in `setup` instead of reading it once.
 A plugin is unregistered again — unmounting and tearing it down — using
 `window.tissuumaps.unregisterPlugin(pluginId)`.
 
+For TypeScript, the `Plugin`, `PluginRegistry` and `PluginStores` types are
+exported from `@tissuumaps/core`, and `window.tissuumaps` is typed as
+`PluginRegistry | undefined`.
+
 ## Plugin properties
 
 - `id` (required): a unique identifier for the plugin. Registering a plugin whose
@@ -86,8 +90,9 @@ A plugin goes through four steps, all of them optional:
 
 Unregistering happens through `window.tissuumaps.unregisterPlugin(pluginId)`, by
 closing the plugin's panel, by registering another plugin with the same `id`, and
-when the application shuts down. The unmount and teardown callbacks are only ever
-called for a plugin that was registered successfully; errors they throw are
+when the plugin registry is stopped (currently only on hot module replacement
+during development, not on page unload). The unmount and teardown callbacks are
+only ever called for a plugin whose `setup` succeeded; errors they throw are
 caught and logged. If `mount` throws, the plugin is not registered either, but
 since `setup` did succeed, its teardown callback _is_ called.
 
@@ -95,12 +100,12 @@ since `setup` did succeed, its teardown callback _is_ called.
 
 `setup` and `mount` receive the application's four Zustand stores:
 
-| Store           | Contents                                                                     |
-| --------------- | ---------------------------------------------------------------------------- |
-| `appStore`      | Application state: workspace, interaction mode, data providers, plugins      |
-| `dataStore`     | Data references (`DataRef`) for the loaded data of each project object       |
-| `projectStore`  | The currently loaded project: layers, images, labels, points, shapes, tables |
-| `settingsStore` | User settings that are persisted across sessions                             |
+| Store           | Contents                                                                                              |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| `appStore`      | Application state: workspace, interaction mode, data providers, plugins                               |
+| `dataStore`     | Data references (`DataRef`) for the loaded data of each project object                                |
+| `projectStore`  | The currently loaded project (name, layers, images, labels, points, shapes, tables, maps) and its URL |
+| `settingsStore` | User settings that are persisted across sessions                                                      |
 
 Each store is a Zustand store API. Using `appStore` as an example, a plugin can
 read the current value of `myProperty` using `appStore.getState().myProperty`,
@@ -126,7 +131,8 @@ returns the map and makes Immer reject the update — always use a block body.
 `dataStore` is derived state: its contents are reconciled from `appStore` and
 `projectStore` by the application. Plugins should treat it as read-only and drive
 data loading by changing the project instead, for example
-`projectStore.getState().updateTable(tableId, { dataSource })`.
+`projectStore.getState().updateTable(tableId, { dataSource })`. Likewise,
+`appStore`'s `plugins` is written by the registry alone.
 
 ## User interface plugins
 
