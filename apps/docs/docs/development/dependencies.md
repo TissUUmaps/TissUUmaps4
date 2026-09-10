@@ -33,6 +33,7 @@ sidebar_position: 3
 - Hyparquet + hyparquet-compressors (Parquet tables)
 - PapaParse (CSV tables)
 - omezarr-tilesource (OME-Zarr images)
+- geotiff.js + geotiff-tilesource (TIFF images, see below)
 
 ## Utilities
 
@@ -40,6 +41,30 @@ sidebar_position: 3
 - fast-equals (equality comparison)
 - gl-matrix (WebGL matrix operations)
 - class-variance-authority + clsx + tailwind-merge (class name composition)
+
+## Patched dependencies
+
+Patches live in `patches/` and are applied by pnpm. Drop each once upstream
+ships the fix.
+
+- **geotiff 3.0.5**: the LZW dictionary is one code short
+  ([#546](https://github.com/geotiffjs/geotiff.js/pull/546)), and deferred tag
+  arrays are read with the wrong byte order
+  ([#536](https://github.com/geotiffjs/geotiff.js/pull/536)). Tiles are
+  decoded in our own worker (`tiff.worker.ts`) so that it uses the patched
+  code too.
+
+## Forked dependencies
+
+- **geotiff-tilesource**: our fork of pearcetm/GeoTIFFTileSource, branch
+  `tissuumaps` of
+  [TissUUmaps/GeoTIFFTileSource](https://github.com/TissUUmaps/GeoTIFFTileSource).
+  It carries six changes we need, each also submitted upstream. Drop the fork
+  once they are released. The package has no types, so
+  `geotiff-tilesource.d.ts` declares what we use.
+
+To move the pin: `pnpm --filter @tissuumaps/storage update geotiff-tilesource`.
+Never force-push the branch, the lockfile points at the commit.
 
 ## Web APIs (selection)
 
