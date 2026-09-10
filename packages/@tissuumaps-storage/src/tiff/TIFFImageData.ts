@@ -76,5 +76,7 @@ export class TIFFImageData implements ImageData {
     return this._channels?.[c]?.contrastLimits;
   }
 
-  close(): void {}
+  close(): void {
+    // the decoder pool is shared, and the file is read on demand
+  }
 }
