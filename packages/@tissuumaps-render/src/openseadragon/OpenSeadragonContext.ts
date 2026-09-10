@@ -86,6 +86,7 @@ export class OpenSeadragonContext {
   private _worldMutationQueue: Promise<unknown> = Promise.resolve();
   private _pixelBuffer = new ArrayBuffer(0);
   private _destroyed: boolean = false;
+  private _viewportControlledByUser: boolean = false;
 
   /**
    * Creates a new OpenSeadragonContext instance and initializes the OpenSeadragon viewer
@@ -106,6 +107,24 @@ export class OpenSeadragonContext {
       if (["r", "R", "f"].includes(event.originalEvent.key)) {
         event.preventDefaultAction = true;
       }
+    });
+    // "pan"/"zoom" cannot be attributed to the user - OSD raises them for its
+    // own container resizes too - so user control is taken from input events,
+    // on the canvas and on the navigator element that OSD tracks separately.
+    const onUserInput = () => {
+      this._viewportControlledByUser = true;
+    };
+    const navigator = this.viewer.navigator as OpenSeadragon.Navigator | null;
+    for (const element of [this.viewer.canvas, navigator?.element]) {
+      for (const eventType of ["pointerdown", "wheel", "keydown"] as const) {
+        element?.addEventListener(eventType, onUserInput, {
+          capture: true,
+          passive: true,
+        });
+      }
+    }
+    this.viewer.addHandler("home", () => {
+      this._viewportControlledByUser = false;
     });
     this.viewer.addHandler("tile-invalidated", (event) =>
       this._transferData(event).catch((error) => {
@@ -471,12 +490,13 @@ export class OpenSeadragonContext {
    * viewport is left untouched. Otherwise, a new dummy is created at `dummyIndex`
    * (defaulting to the index of `dummy`, or appended if neither is specified),
    * `dummy` is removed, and the viewport is fitted to `newBounds` - unless the
-   * operation was aborted in the meantime, in which case the new dummy is still
-   * returned (see below), but the viewport is left where it is. Where
-   * possible, OpenSeadragon replaces `dummy` as part of the addition, so that the
-   * new dummy takes its place without leaving a gap. Replacing `dummy` cannot be
-   * aborted once the new dummy has been created, as that would leave the caller
-   * without a dummy.
+   * operation was aborted in the meantime, or the user has taken control of the
+   * viewport by panning or zooming it (see {@link resetViewport}), in which case
+   * the new dummy is still returned (see below), but the viewport is left where
+   * it is. Where possible, OpenSeadragon replaces `dummy` as part of the
+   * addition, so that the new dummy takes its place without leaving a gap.
+   * Replacing `dummy` cannot be aborted once the new dummy has been created, as
+   * that would leave the caller without a dummy.
    *
    * @param newBounds - The new world bounds
    * @param options - Optional abort signal, dummy to replace, and index at which
@@ -523,14 +543,24 @@ export class OpenSeadragonContext {
     if (dummy !== undefined && replace !== true) {
       await this.removeTiledImage(dummy);
     }
-    if (!signal?.aborted) {
-      // TODO only fit bounds if not manually panned/zoomed
+    if (!signal?.aborted && !this._viewportControlledByUser) {
       const { x, y, width, height } = newBounds;
       this.viewer.viewport.fitBounds(
         new OpenSeadragon.Rect(x, y, width, height),
       );
     }
     return newDummy;
+  }
+
+  /**
+   * Hands viewport control back to the renderers
+   *
+   * Fits the viewport to the world bounds, and resumes doing so whenever they
+   * change (see {@link updateBounds}), until the user pans or zooms again. Call
+   * this when the content of the viewer is replaced, e.g. on opening a project.
+   */
+  resetViewport(): void {
+    this.viewer.viewport.goHome(); // raises "home"
   }
 
   /**

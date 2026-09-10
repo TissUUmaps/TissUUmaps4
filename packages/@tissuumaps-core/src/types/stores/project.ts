@@ -13,9 +13,10 @@ import type { Table } from "../../model/table";
  *
  * In addition to the project itself, the store keeps track of the URL the
  * project was loaded from, which is what relative URLs in its data sources are
- * resolved against. That URL describes where the project came from rather than
- * what it contains, so it is not part of {@link Project} and is not to be saved,
- * serialized or exported with it.
+ * resolved against, and of an ID identifying the open project as such. Both
+ * describe how the project was opened rather than what it contains, so they are
+ * not part of {@link Project} and are not to be saved, serialized or exported
+ * with it.
  */
 export type ProjectStoreState = Project & {
   /**
@@ -23,6 +24,12 @@ export type ProjectStoreState = Project & {
    * loaded from a URL
    */
   url: string | null;
+  /**
+   * Identifies the open project regardless of its content: a fresh ID is
+   * generated whenever a project is loaded or the store is cleared, so that a
+   * new project can be told apart from edits to the open one
+   */
+  instanceId: string;
 };
 
 /**

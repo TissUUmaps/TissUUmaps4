@@ -20,6 +20,7 @@ import type {
 } from "@tissuumaps/core";
 
 export interface ViewerAdapter {
+  projectInstanceId: string;
   layers: Layer[];
   images: Image[];
   labels: Labels[];
