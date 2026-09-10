@@ -64,7 +64,7 @@
   },
   "dependencies": {
     "geotiff": "^3.0.5",
-    "geotiff-tilesource": "github:TissUUmaps/GeoTIFFTileSource#tissuumaps",
+    "geotiff-tilesource": "github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28",
     "omezarr-tilesource": "^0.2.0",
     "papaparse": "^5.5.4"
   },

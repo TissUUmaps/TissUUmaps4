@@ -63,8 +63,8 @@ ships the fix.
   once they are released. The package has no types, so
   `geotiff-tilesource.d.ts` declares what we use.
 
-To move the pin: `pnpm --filter @tissuumaps/storage update geotiff-tilesource`.
-Never force-push the branch, the lockfile points at the commit.
+The commit is pinned in `package.json`. To move it, change the hash there and
+run `pnpm install`.
 
 ## Web APIs (selection)
 
