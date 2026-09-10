@@ -17,6 +17,12 @@ export default defineConfig(({ mode }) => ({
   ],
   worker: {
     format: "es",
+    // inlined workers cannot load chunks, so they get no code splitting
+    rolldownOptions: {
+      output: {
+        codeSplitting: false,
+      },
+    },
   },
   build: {
     lib: {
@@ -36,10 +42,16 @@ export default defineConfig(({ mode }) => ({
     },
     // Worker-only deps (hyparquet, hyparquet-compressors) are intentionally NOT
     // externalized: the workers are imported with `?worker&inline`, so they must
-    // be self-contained and their deps get bundled into the inline worker. Also,
-    // openseadragon is not externalized, because nothing imports it.
+    // be self-contained and their deps get bundled into the inline worker.
     rolldownOptions: {
-      external: ["@tissuumaps/core", "omezarr-tilesource", "papaparse"],
+      external: [
+        "@tissuumaps/core",
+        "geotiff",
+        "geotiff-tilesource",
+        "omezarr-tilesource",
+        "openseadragon",
+        "papaparse",
+      ],
       checks: {
         pluginTimings: false,
       },
