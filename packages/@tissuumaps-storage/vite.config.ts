@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => ({
         ),
         parquet: resolve(import.meta.dirname, "src/parquet/index.ts"),
         table: resolve(import.meta.dirname, "src/table/index.ts"),
+        tiff: resolve(import.meta.dirname, "src/tiff/index.ts"),
       },
       formats: ["es"],
     },
