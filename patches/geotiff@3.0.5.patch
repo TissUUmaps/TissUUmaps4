@@ -1,0 +1,74 @@
+diff --git a/dist-module/compression/lzw.js b/dist-module/compression/lzw.js
+index b7ff373444a83cc574388f38cac455fb77d8f0d5..f17f27e4716182083dfc377d9fd2cb3fcafae38a 100644
+--- a/dist-module/compression/lzw.js
++++ b/dist-module/compression/lzw.js
+@@ -52,8 +52,8 @@ function appendReversed(dest, source) {
+  * @param {ArrayBuffer} input
+  */
+ function decompress(input) {
+-    const dictionaryIndex = new Uint16Array(4093);
+-    const dictionaryChar = new Uint8Array(4093);
++    const dictionaryIndex = new Uint16Array(4096);
++    const dictionaryChar = new Uint8Array(4096);
+     for (let i = 0; i <= 257; i++) {
+         dictionaryIndex[i] = 4096;
+         dictionaryChar[i] = i;
+diff --git a/dist-module/imagefiledirectory.js b/dist-module/imagefiledirectory.js
+index 94e6be646a75d39c6fd7d9703a821c83e27360e9..0b792828c49324dfd9ca5bc06ebb05edd059088c 100644
+--- a/dist-module/imagefiledirectory.js
++++ b/dist-module/imagefiledirectory.js
+@@ -178,7 +178,7 @@ class DeferredArray {
+                     offset: this.arrayOffset,
+                     length: this.itemSize * this.length,
+                 }]).then((data) => {
+-                const dataSlice = new DataSlice(data[0], this.arrayOffset, true, false);
++                const dataSlice = new DataSlice(data[0], this.arrayOffset, this.littleEndian, false);
+                 const result = getValues(this.data, getDataSliceReader(dataSlice, this.fieldType), dataSlice, this.fieldType, this.length, this.arrayOffset, true);
+                 // Mark all items as loaded in the bitmap
+                 this.maskBitmap.fill(0xFF);
+@@ -210,7 +210,7 @@ class DeferredArray {
+                         offset,
+                         length: this.itemSize,
+                     }]).then((data) => {
+-                    const dataSlice = new DataSlice(data[0], this.arrayOffset + (index * this.itemSize), true, false);
++                    const dataSlice = new DataSlice(data[0], this.arrayOffset + (index * this.itemSize), this.littleEndian, false);
+                     const readMethod = getDataSliceReader(dataSlice, this.fieldType);
+                     const value = readMethod.call(dataSlice, offset);
+                     this.data[index] = value;
+diff --git a/dist-node/compression/lzw.js b/dist-node/compression/lzw.js
+index 59f3977a5754467583306184c784594ce5317c8a..745b3a5d946f0247071ec5146eccfc6f4582e608 100644
+--- a/dist-node/compression/lzw.js
++++ b/dist-node/compression/lzw.js
+@@ -57,8 +57,8 @@ function appendReversed(dest, source) {
+  * @param {ArrayBuffer} input
+  */
+ function decompress(input) {
+-    const dictionaryIndex = new Uint16Array(4093);
+-    const dictionaryChar = new Uint8Array(4093);
++    const dictionaryIndex = new Uint16Array(4096);
++    const dictionaryChar = new Uint8Array(4096);
+     for (let i = 0; i <= 257; i++) {
+         dictionaryIndex[i] = 4096;
+         dictionaryChar[i] = i;
+diff --git a/dist-node/imagefiledirectory.js b/dist-node/imagefiledirectory.js
+index 7e34aab8e2805178c961aa0a05c1a6ec1dfbe1ac..aeed89a6658c69f0a5d13c3ff6a7ce39cad5a838 100644
+--- a/dist-node/imagefiledirectory.js
++++ b/dist-node/imagefiledirectory.js
+@@ -184,7 +184,7 @@ class DeferredArray {
+                     offset: this.arrayOffset,
+                     length: this.itemSize * this.length,
+                 }]).then((data) => {
+-                const dataSlice = new dataslice_js_1.default(data[0], this.arrayOffset, true, false);
++                const dataSlice = new dataslice_js_1.default(data[0], this.arrayOffset, this.littleEndian, false);
+                 const result = getValues(this.data, getDataSliceReader(dataSlice, this.fieldType), dataSlice, this.fieldType, this.length, this.arrayOffset, true);
+                 // Mark all items as loaded in the bitmap
+                 this.maskBitmap.fill(0xFF);
+@@ -216,7 +216,7 @@ class DeferredArray {
+                         offset,
+                         length: this.itemSize,
+                     }]).then((data) => {
+-                    const dataSlice = new dataslice_js_1.default(data[0], this.arrayOffset + (index * this.itemSize), true, false);
++                    const dataSlice = new dataslice_js_1.default(data[0], this.arrayOffset + (index * this.itemSize), this.littleEndian, false);
+                     const readMethod = getDataSliceReader(dataSlice, this.fieldType);
+                     const value = readMethod.call(dataSlice, offset);
+                     this.data[index] = value;
