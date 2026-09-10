@@ -1,10 +1,18 @@
 import type { GeoTIFFImage, Pool } from "geotiff";
 
+/** The quantiles the estimated contrast limits are placed at */
+const lowQuantile = 0.01;
+const highQuantile = 0.999;
+
 /** The number of histogram bins */
 const histogramBins = 1024;
 
 /** The most pixels read for an estimate; more do not make the quantiles more stable */
 const maxHistogramPixels = 262144;
+
+/** The `SampleFormat` values the full range depends on; 1 is unsigned integer */
+const sampleFormatSigned = 2;
+const sampleFormatFloat = 3;
 
 /**
  * Estimates the contrast limits of a channel, since TIFF stores no display
@@ -41,10 +49,10 @@ export async function estimateContrastLimits(
 function getFullRange(image: GeoTIFFImage): [number, number] | undefined {
   const bits = image.getBitsPerSample(0) || 1; // BitsPerSample defaults to 1
   const format = image.getSampleFormat(0);
-  if (format === 3 || bits > 8) {
-    return undefined; // float
+  if (format === sampleFormatFloat || bits > 8) {
+    return undefined;
   }
-  return format === 2 // signed
+  return format === sampleFormatSigned
     ? [-(2 ** (bits - 1)), 2 ** (bits - 1) - 1]
     : [0, 2 ** bits - 1];
 }
@@ -100,8 +108,8 @@ async function estimateFromPixels(
   }
 
   return [
-    quantile(histogram, count, 0.01, min, max),
-    quantile(histogram, count, 0.999, min, max),
+    quantile(histogram, count, lowQuantile, min, max),
+    quantile(histogram, count, highQuantile, min, max),
   ];
 }
 
