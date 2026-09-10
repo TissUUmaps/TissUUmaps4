@@ -1,5 +1,5 @@
 ---
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # AI policy
@@ -13,11 +13,10 @@ TissUUmaps is carefully engineered research software. As such, reproducibility, 
 - Transparently **declare any use of AI** when submitting pull requests
 - Use AI as a coding assistant only as long as you **remain 100% familiar\* with the generated code**.
 - **Do not submit AI-generated pull requests** unless you have personally verified and tested the generated code.
-- **Do not use AI agents to submit pull requests**; such pull requests will be closed without any further considerations.
 
 \* _Contributors must be able to explain the logic of any AI-generated code during the review process as if they had written it themselves._
 
-The use of AI is encouraged for writing documentation (e.g. TypeDoc comments) and unit tests _if the alternative would be a lack of such_.
+The use of AI is encouraged for writing documentation (e.g. TSDoc comments) and unit tests _if the alternative would be a lack of such_.
 
 Please be considerate of the societal, environmental, political and economical impacts of AI use in general.
 

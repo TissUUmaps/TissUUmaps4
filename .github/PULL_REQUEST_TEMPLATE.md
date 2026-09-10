@@ -47,7 +47,7 @@ If this PR depends on another PR (even in another repo), please link to it with 
 <!--
 Final Checklist:
 - My PR is the minimum possible work for the desired functionality
-- I have commented my code, particularly in hard-to-understand areas
+- My code is self-explanatory; I have only added comments where essential
 - I have made corresponding changes to docstrings and documentation (if applicable)
 - I have added tests that prove my fix is effective or that my feature works (if applicable)
 -->
