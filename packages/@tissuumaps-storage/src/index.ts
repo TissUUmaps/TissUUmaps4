@@ -4,3 +4,4 @@ export * from "./ome-zarr";
 export * from "./openseadragon";
 export * from "./parquet";
 export * from "./table";
+export * from "./tiff";
