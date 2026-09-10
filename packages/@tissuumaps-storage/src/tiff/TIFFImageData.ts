@@ -1,3 +1,4 @@
+import type { TiffRaster } from "geotiff-tilesource";
 import type OpenSeadragon from "openseadragon";
 
 import type {
@@ -55,11 +56,7 @@ export class TIFFImageData implements ImageData {
     if (this._channels === undefined) {
       throw new Error("Not a multi-channel image");
     }
-    const raster = (await event.getData(tiffRasterType)) as {
-      width: number;
-      height: number;
-      bands: TypedArray[];
-    };
+    const raster = (await event.getData(tiffRasterType)) as TiffRaster;
     const band = raster.bands[0];
     if (band === undefined) {
       throw new Error("The tile raster has no bands");
