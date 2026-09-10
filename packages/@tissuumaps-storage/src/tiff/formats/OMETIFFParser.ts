@@ -92,7 +92,7 @@ export class OMETIFFParser implements TIFFParser {
       throw new Error(`t=${t} is out of bounds (SizeT=${pixels.sizeT}).`);
     }
 
-    const ifdByPlane = mapPlanesToIFDs(pixels);
+    const ifdByPlane = mapPlanesToIFDs(pixels, images.length);
     const planes = Array.from({ length: getPlaneCountC(pixels) }, (_, c) => {
       const ifd = ifdByPlane.get(planeKey(c, z, t));
       const image = ifd !== undefined ? images[ifd] : undefined;
@@ -103,7 +103,7 @@ export class OMETIFFParser implements TIFFParser {
     });
     // IFDs of any image (overviews, labels) are not reduced copies of this one
     const claimed = new Set(
-      allPixels.flatMap((p) => [...mapPlanesToIFDs(p).values()]),
+      allPixels.flatMap((p) => [...mapPlanesToIFDs(p, images.length).values()]),
     );
     const fullWidth = planes[0]!.getWidth();
     const reduced = images.filter(
@@ -180,9 +180,14 @@ function getPlaneCountC(pixels: Pixels): number {
 
 /**
  * Maps every plane to its IFD. Within a TiffData run, planes follow
- * `DimensionOrder`: of its last three letters, the first varies fastest.
+ * `DimensionOrder`: of its last three letters, the first varies fastest. Runs
+ * are cut at the last IFD the file has, so a header that declares more planes
+ * than the file holds cannot make this loop for long.
  */
-function mapPlanesToIFDs(pixels: Pixels): Map<string, number> {
+function mapPlanesToIFDs(
+  pixels: Pixels,
+  imageCount: number,
+): Map<string, number> {
   const sizes: Record<Dim, number> = {
     C: getPlaneCountC(pixels),
     Z: pixels.sizeZ,
@@ -203,7 +208,11 @@ function mapPlanesToIFDs(pixels: Pixels): Map<string, number> {
       linear += start[dim] * stride;
       stride *= sizes[dim];
     }
-    const count = Math.min(td.planeCount, totalPlanes - linear);
+    const count = Math.min(
+      td.planeCount,
+      totalPlanes - linear,
+      imageCount - td.ifd,
+    );
     for (let i = 0; i < count; i++) {
       let rest = linear + i;
       const coords: Record<Dim, number> = { C: 0, Z: 0, T: 0 };

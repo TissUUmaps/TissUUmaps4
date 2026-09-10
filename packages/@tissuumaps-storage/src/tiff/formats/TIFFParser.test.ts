@@ -461,6 +461,15 @@ describe("findTIFFParser", () => {
       );
     });
 
+    it("does not expand planes the file does not have", async () => {
+      const description = omeDescription(
+        omeImage({ sizeC: 1, sizeZ: 100000, sizeT: 100000, channels: [{}] }),
+      );
+      const images = omePlanes(description, 1);
+      const structure = await read(fakeTIFF(images));
+      expect(structure.pyramids).toEqual([[images[0]]]);
+    });
+
     it("rejects z out of bounds", async () => {
       const description = omeDescription(
         omeImage({ sizeC: 1, channels: [{}] }),
