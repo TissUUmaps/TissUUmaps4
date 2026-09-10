@@ -102,6 +102,8 @@ A data provider implementation consists of a concrete `DataProvider`, whose `loa
 
 Each data provider has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files.
 
+Format metadata belongs in the data provider, not in the tile source. The provider reads the file's channels, colors and pyramid levels itself and hands the tile source explicit images to decode, so that channel count, names, colors and contrast limits come from the file and can be unit-tested here. The TIFF provider is the reference for this; the OME-Zarr provider still lets its tile source read the metadata, which is why it needs `sizeC` typed by hand.
+
 ## @tissuumaps/plugins
 
 Each plugin has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files.
