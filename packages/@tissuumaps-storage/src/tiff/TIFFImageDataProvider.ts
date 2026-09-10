@@ -125,18 +125,30 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     const parser = await findTIFFParser(tiff, { signal });
     const { pyramids, channels } = await parser.load(tiff, { z, t, signal });
 
-    const { GeoTIFFTileSource, pool } = installTIFFTileSource();
+    const { GeoTIFFTileSource, pool, poolSize } = installTIFFTileSource();
     let channelsWithLimits: TIFFChannel[] | undefined;
     if (channels !== undefined) {
-      channelsWithLimits = await Promise.all(
-        channels.map(async (channel, c) => ({
-          ...channel,
-          contrastLimits: await estimateContrastLimits(pyramids[c]!, {
-            pool,
-            signal,
-          }),
-        })),
+      // one estimate per decoder worker at a time, so that a file with many
+      // channels does not start every read at once
+      const limits: [number, number][] = [];
+      let next = 0;
+      await Promise.all(
+        Array.from(
+          { length: Math.min(poolSize, channels.length) },
+          async () => {
+            for (let c = next++; c < channels.length; c = next++) {
+              limits[c] = await estimateContrastLimits(pyramids[c]!, {
+                pool,
+                signal,
+              });
+            }
+          },
+        ),
       );
+      channelsWithLimits = channels.map((channel, c) => ({
+        ...channel,
+        contrastLimits: limits[c]!,
+      }));
     }
     const tileSources = pyramids.map(
       (images) =>
