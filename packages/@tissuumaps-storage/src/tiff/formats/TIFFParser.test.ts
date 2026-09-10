@@ -447,6 +447,20 @@ describe("findTIFFParser", () => {
       );
     });
 
+    it("rejects TiffData naming a file when the root has no UUID", async () => {
+      const description = `<?xml version="1.0" encoding="UTF-8"?>
+        <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">${omeImage(
+          {
+            sizeC: 1,
+            channels: [{}],
+            tiffData: `<TiffData IFD="0" PlaneCount="1"><UUID FileName="self.ome.tiff">urn:uuid:self</UUID></TiffData>`,
+          },
+        )}</OME>`;
+      await expect(read(fakeTIFF(omePlanes(description, 1)))).rejects.toThrow(
+        /no UUID.*self\.ome\.tiff/,
+      );
+    });
+
     it("rejects z out of bounds", async () => {
       const description = omeDescription(
         omeImage({ sizeC: 1, channels: [{}] }),

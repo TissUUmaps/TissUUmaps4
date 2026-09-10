@@ -136,7 +136,11 @@ function parsePixels(pixels: Element, fileUUID: string | null): Pixels {
     if (uuid !== undefined && uuid.textContent?.trim() !== fileUUID) {
       const fileName =
         uuid.getAttribute("FileName") ?? uuid.textContent?.trim();
-      throw new Error(`Multi-file OME-TIFF is not supported (${fileName}).`);
+      throw new Error(
+        fileUUID === null
+          ? `The OME-XML has no UUID, so the planes in ${fileName} cannot be matched to this file.`
+          : `Multi-file OME-TIFF is not supported (${fileName}).`,
+      );
     }
     // PlaneCount defaults to 1 if IFD is given, else to all remaining planes
     const defaultPlaneCount = td.hasAttribute("IFD") ? 1 : Infinity;
