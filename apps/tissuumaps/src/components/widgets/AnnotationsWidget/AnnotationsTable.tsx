@@ -21,6 +21,15 @@ import {
 import { useTableData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 
+/**
+ * Height of a table row in pixels
+ *
+ * Rows have a fixed height, so that the visible range follows from the scroll
+ * offset alone. Cells of extra columns must fit within it, taller content is
+ * clipped.
+ */
+const rowHeight = 36;
+
 export type AnnotationsTableRowData = {
   id: number;
   name?: string;
@@ -80,29 +89,24 @@ export function AnnotationsTable({
     };
   }, [tableData, groupByColumn]);
 
-  const { rowData, columnDefs } = useMemo(() => {
-    if (table && groupByColumn) {
-      if (tableGroups !== null) {
-        const rowData: AnnotationsTableGroupRowData[] = tableGroups.map(
-          (group) => ({ group: String(group) }),
-        );
-        rowData.sort((a, b) => a.group.localeCompare(b.group));
-        const columnDefs: ColumnDef<AnnotationsTableGroupRowData>[] = [
-          {
-            id: "group",
-            header: groupByColumn,
-            accessorKey: "group",
-          },
-        ];
-        if (extraGroupColumnDefs !== undefined) {
-          columnDefs.push(...extraGroupColumnDefs);
-        }
-        return { rowData, columnDefs };
-      }
-      return { rowData: [], columnDefs: [] };
+  const grouped = Boolean(table && groupByColumn);
+
+  const groupRows = useMemo(() => {
+    if (!grouped || tableGroups === null) {
+      return [];
     }
+    const groupRows: AnnotationsTableGroupRowData[] = tableGroups.map(
+      (group) => ({ group: String(group) }),
+    );
+    groupRows.sort((a, b) => a.group.localeCompare(b.group));
+    return groupRows;
+  }, [grouped, tableGroups]);
+
+  // the ids and the per-index accessors the item rows are built from, so that
+  // only the rows within the visible range have to be materialized
+  const { ids, getName, annotatedIds } = useMemo(() => {
     let ids: number[] = [];
-    let names: (string | undefined)[] | undefined;
+    let getName: ((index: number) => string | undefined) | undefined;
     let annotatedIds: Set<number> | undefined;
     if (data !== undefined) {
       ids = data.getIds();
@@ -115,45 +119,122 @@ export function AnnotationsTable({
           annotatedIds = new Set(tableIds);
           const tableNames = tableData.getNames?.();
           if (tableNames !== undefined) {
-            const tableNamesById = new Map(
-              tableIds.map((id, i) => [id, tableNames[i]!]),
-            );
-            names = ids.map((id) => tableNamesById.get(id));
+            // table-backed items hand out the table's own ids array, so names
+            // align by index; only other item types need the id lookup
+            if (tableIds === ids) {
+              getName = (index) => tableNames[index];
+            } else {
+              const tableNamesById = new Map(
+                tableIds.map((id, i) => [id, tableNames[i]!]),
+              );
+              getName = (index) => tableNamesById.get(ids[index]!);
+            }
           }
         }
       } else {
-        names = data.getNames?.();
+        const names = data.getNames?.();
+        if (names !== undefined) {
+          getName = (index) => names[index];
+        }
       }
     } else if (tableData !== null) {
       ids = tableData.getIds();
-      names = tableData.getNames?.();
+      const names = tableData.getNames?.();
+      if (names !== undefined) {
+        getName = (index) => names[index];
+      }
     }
-    const rowData: AnnotationsTableRowData[] = ids.map((id, i) => ({
-      id,
-      name: names?.[i],
-      annotated: annotatedIds?.has(id),
-    }));
+    return { ids, getName, annotatedIds };
+  }, [data, table, tableData]);
+
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const rowVirtualizer = useVirtualizer({
+    count: grouped ? groupRows.length : ids.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => rowHeight,
+  });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container === null) {
+      return;
+    }
+    // a hidden panel loses its scroll offset without raising a scroll event,
+    // which would leave the rendered rows outside of the visible range
+    const resizeObserver = new ResizeObserver(() => {
+      const scrollOffset = rowVirtualizer.scrollOffset ?? 0;
+      if (container.clientHeight > 0 && container.scrollTop !== scrollOffset) {
+        container.scrollTop = scrollOffset;
+      }
+    });
+    resizeObserver.observe(container);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [rowVirtualizer]);
+
+  // only the rows within the virtualizer's range are materialized, so that the
+  // cost of the table does not depend on the number of items
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const firstIndex = virtualRows[0]?.index ?? 0;
+  const lastIndex = (virtualRows[virtualRows.length - 1]?.index ?? -1) + 1;
+
+  const rowData = useMemo(() => {
+    if (grouped) {
+      return groupRows.slice(firstIndex, lastIndex);
+    }
+    const rowData: AnnotationsTableRowData[] = [];
+    for (let index = firstIndex; index < lastIndex; index++) {
+      const id = ids[index]!;
+      rowData.push({
+        id,
+        name: getName?.(index),
+        annotated: annotatedIds?.has(id),
+      });
+    }
+    return rowData;
+  }, [
+    grouped,
+    groupRows,
+    ids,
+    getName,
+    annotatedIds,
+    firstIndex,
+    lastIndex,
+  ]);
+
+  const columnDefs = useMemo(() => {
+    if (grouped) {
+      if (tableGroups === null) {
+        return [];
+      }
+      const columnDefs: ColumnDef<AnnotationsTableGroupRowData>[] = [
+        { id: "group", header: groupByColumn!, accessorKey: "group" },
+      ];
+      if (extraGroupColumnDefs !== undefined) {
+        columnDefs.push(...extraGroupColumnDefs);
+      }
+      return columnDefs;
+    }
     const columnDefs: ColumnDef<AnnotationsTableRowData>[] = [
       { id: "id", header: "ID", accessorKey: "id" },
     ];
-    if (names !== undefined) {
+    if (getName !== undefined) {
       columnDefs.push({ id: "name", header: "Name", accessorKey: "name" });
     }
     if (extraColumnDefs !== undefined) {
       columnDefs.push(...extraColumnDefs);
     }
-    return { rowData, columnDefs };
+    return columnDefs;
   }, [
-    data,
-    table,
+    grouped,
     groupByColumn,
+    tableGroups,
+    getName,
     extraColumnDefs,
     extraGroupColumnDefs,
-    tableData,
-    tableGroups,
   ]);
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const reactTable = useReactTable<
     AnnotationsTableRowData | AnnotationsTableGroupRowData
   >({
@@ -167,13 +248,6 @@ export function AnnotationsTable({
   });
 
   const reactTableRows = reactTable.getRowModel().rows;
-
-  const reactTableRowVirtualizer = useVirtualizer({
-    count: reactTableRows.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => 36,
-    getItemKey: (index) => reactTableRows[index]!.id,
-  });
 
   return (
     <div
@@ -204,22 +278,26 @@ export function AnnotationsTable({
         </TableHeader>
         <TableBody
           className="grid relative"
-          style={{ height: `${reactTableRowVirtualizer.getTotalSize()}px` }}
+          style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
         >
-          {reactTableRowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const row = reactTableRows[virtualRow.index]!;
+          {virtualRows.map((virtualRow) => {
+            const row = reactTableRows[virtualRow.index - firstIndex];
+            if (row === undefined) {
+              return null;
+            }
             const unannotated =
               !("group" in row.original) && row.original.annotated === false;
             return (
               <TableRow
-                key={virtualRow.key}
-                data-index={virtualRow.index} // required for dynamic row height measurement
-                ref={(node) => reactTableRowVirtualizer.measureElement(node)} // measure dynamic row height
+                key={row.id}
                 className={cn(
                   "flex absolute w-full border-0 items-center",
                   unannotated && "text-muted-foreground",
                 )}
-                style={{ transform: `translateY(${virtualRow.start}px)` }}
+                style={{
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell
