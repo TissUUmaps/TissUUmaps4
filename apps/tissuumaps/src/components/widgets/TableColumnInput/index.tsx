@@ -21,6 +21,32 @@ function isGroupQuery(query: string): boolean {
   return query.endsWith("/");
 }
 
+function isMatch(suggestion: string, query: string): boolean {
+  return suggestion.toLowerCase().includes(query.toLowerCase());
+}
+
+type SuggestionTextProps = {
+  suggestion: string;
+  query: string;
+};
+
+function SuggestionText({ suggestion, query }: SuggestionTextProps) {
+  const index =
+    query !== "" ? suggestion.toLowerCase().indexOf(query.toLowerCase()) : -1;
+  if (index === -1) {
+    return <span className="truncate">{suggestion}</span>;
+  }
+  return (
+    <span className="truncate">
+      {suggestion.slice(0, index)}
+      <span className="font-semibold">
+        {suggestion.slice(index, index + query.length)}
+      </span>
+      {suggestion.slice(index + query.length)}
+    </span>
+  );
+}
+
 export function TableColumnInput({
   tableId,
   value,
@@ -159,10 +185,14 @@ export function TableColumnInput({
       return isSuggestPending ? "Loading table..." : null;
     }
     if (suggestions.length === 0) {
-      return `No matches for "${text}"`;
+      return "No columns";
+    }
+    // matching suggestions are listed first, so the first one decides
+    if (!isMatch(suggestions[0]!, text)) {
+      return `No matches for "${text}", showing all columns`;
     }
     if (suggestions.length > maxSuggestions) {
-      return `Showing ${maxSuggestions} of ${suggestions.length} matches, keep typing to narrow down`;
+      return `Showing ${maxSuggestions} of ${suggestions.length} columns, keep typing to narrow down`;
     }
     return null;
   }
@@ -231,7 +261,7 @@ export function TableColumnInput({
                   {isGroupQuery(suggestion) && (
                     <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
                   )}
-                  <span className="truncate">{suggestion}</span>
+                  <SuggestionText suggestion={suggestion} query={text} />
                 </Autocomplete.Item>
               ))}
             </Autocomplete.List>
