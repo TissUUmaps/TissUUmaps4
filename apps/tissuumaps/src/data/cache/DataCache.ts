@@ -19,6 +19,14 @@ import { SharedOperation } from "./SharedOperation";
 import type { DataWrapperBase } from "./wrappers/DataWrapperBase";
 
 /**
+ * Minimum delay between progress-driven data ref publications, in milliseconds
+ *
+ * Providers may report progress per chunk or per feature; publishing every
+ * report would re-render all subscribers of the data ref for each one.
+ */
+const progressPublishIntervalMs = 100;
+
+/**
  * Loaded data as handed out by a data cache: the data's own interface, plus the
  * lifetime controls of {@link DataWrapperBase}
  */
@@ -391,10 +399,16 @@ export class DataCache<
         return this._wrapData(data);
       }),
     };
+    let lastPublishTime = -Infinity;
     newEntry.loadOp
       .observe({
         onProgress: (progress, total) => {
-          if (newEntry.dataRef.status === "loading") {
+          const now = performance.now();
+          if (
+            newEntry.dataRef.status === "loading" &&
+            now - lastPublishTime >= progressPublishIntervalMs
+          ) {
+            lastPublishTime = now;
             newEntry.dataRef = {
               promise: dataPromise,
               status: "loading",
