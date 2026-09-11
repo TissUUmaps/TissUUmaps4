@@ -181,7 +181,7 @@ export function AnnotationsTable({
       className="overflow-auto relative"
       style={{ height: `${height}px` }}
     >
-      <Table className="grid">
+      <Table className="grid w-max min-w-full">
         <TableHeader className="grid sticky top-0 z-10 bg-background">
           {reactTable.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="flex w-full">

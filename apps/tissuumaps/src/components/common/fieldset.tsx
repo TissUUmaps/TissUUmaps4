@@ -1,7 +1,13 @@
 import { Fieldset as FielsetPrimitive } from "@base-ui/react/fieldset";
 
-export function Fieldset(props: FielsetPrimitive.Root.Props) {
-  return <FielsetPrimitive.Root {...props} />;
+import { cn } from "@/lib/utils";
+
+export function Fieldset({ className, ...props }: FielsetPrimitive.Root.Props) {
+  return (
+    // browsers give a fieldset a minimum width of its content, which would keep
+    // wide content from scrolling inside it
+    <FielsetPrimitive.Root className={cn("min-w-0", className)} {...props} />
+  );
 }
 
 export function FieldsetLegend(props: FielsetPrimitive.Legend.Props) {

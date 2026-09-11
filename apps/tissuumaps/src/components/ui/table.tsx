@@ -4,17 +4,12 @@ import { cn } from "@/lib/utils";
 
 const Table = forwardRef<HTMLTableElement, ComponentPropsWithoutRef<"table">>(
   ({ className, ...props }, ref) => (
-    <div
-      data-slot="table-container"
-      className="relative w-full overflow-x-auto"
-    >
-      <table
-        ref={ref}
-        data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
-        {...props}
-      />
-    </div>
+    <table
+      ref={ref}
+      data-slot="table"
+      className={cn("w-full caption-bottom text-sm", className)}
+      {...props}
+    />
   ),
 );
 Table.displayName = "Table";
