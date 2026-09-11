@@ -50,4 +50,9 @@ export default defineConfig(({ mode }) => ({
           : ["tissuumaps-development", ...defaultServerConditions],
     },
   },
+  define: {
+    "import.meta.env.VITE_CUSTOM_HTML": JSON.stringify(
+      process.env.VITE_CUSTOM_HTML ?? "",
+    ),
+  },
 }));

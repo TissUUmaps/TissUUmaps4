@@ -41,6 +41,17 @@ jobs:
           cache-dependency-path: |
             production/pnpm-lock.yaml
             development/pnpm-lock.yaml
+      - name: Inject Matomo variables
+        env:
+          MATOMO_URL: ${{ secrets.MATOMO_URL }}
+          MATOMO_SITE_ID: ${{ secrets.MATOMO_SITE_ID }}
+        if: env.MATOMO_URL != '' && env.MATOMO_SITE_ID != ''
+        run: |
+          {
+            echo "VITE_CUSTOM_HTML<<VITE_CUSTOM_HTML_EOF"
+            envsubst '${MATOMO_URL} ${MATOMO_SITE_ID}' < development/.github/pages/custom.html
+            echo "VITE_CUSTOM_HTML_EOF"
+          } >> "$GITHUB_ENV"
       - name: Build development
         working-directory: development
         run: pnpm install --frozen-lockfile && pnpm run build && pnpm run build:docs
