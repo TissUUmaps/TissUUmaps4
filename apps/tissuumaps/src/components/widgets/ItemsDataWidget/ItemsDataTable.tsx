@@ -256,7 +256,7 @@ export function ItemsDataTable({
             return (
               <TableRow
                 key={row.id}
-                className="flex absolute w-full border-0 items-center"
+                className="flex absolute w-full border-0 items-center overflow-hidden"
                 style={{
                   height: `${virtualRow.size}px`,
                   transform: `translateY(${virtualRow.start}px)`,
