@@ -10,7 +10,7 @@ import {
   TagsIcon,
   XIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Data, DataRef } from "@tissuumaps/core";
 
@@ -69,8 +69,9 @@ export function NotificationCenter() {
   const lingerTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
 
   // Keep loads that were seen running visible for a moment after they finish,
-  // and forget loads that are gone.
-  useEffect(() => {
+  // and forget loads that are gone. A layout effect so the card never misses
+  // a frame between the store's update and the linger state.
+  useLayoutEffect(() => {
     const dataRefsByKind: Record<DataObjectKind, Map<string, DataRef<Data>>> = {
       image: imageDataRefs,
       labels: labelsDataRefs,
