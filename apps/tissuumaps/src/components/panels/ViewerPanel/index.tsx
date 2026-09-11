@@ -79,9 +79,11 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       <ViewerControl anchor={ViewerControlAnchor.TOP_LEFT}>
         <InteractionModeViewerControls />
       </ViewerControl>
-      <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
-        <PointSizeViewerControl />
-      </ViewerControl>
+      {projectState.points.length > 0 && (
+        <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
+          <PointSizeViewerControl />
+        </ViewerControl>
+      )}
     </Viewer>
   );
 }

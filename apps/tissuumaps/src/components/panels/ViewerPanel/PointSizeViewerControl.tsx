@@ -1,5 +1,7 @@
 import { ChartScatterIcon } from "lucide-react";
 
+import { MathUtils } from "@tissuumaps/core";
+
 import {
   Slider,
   SliderControl,
@@ -33,14 +35,15 @@ function sliderPositionToPointSizeFactor(position: number) {
   if (Math.abs(position) <= snapSliderPositionRange) {
     return 1;
   }
-  const decades =
+  const decadeRange = position < 0 ? decadesBelowHundred : decadesAboveHundred;
+  const positionRange =
     position < 0
-      ? ((position + snapSliderPositionRange) /
-          sliderPositionRangeBelowHundred) *
-        decadesBelowHundred
-      : ((position - snapSliderPositionRange) /
-          sliderPositionRangeAboveHundred) *
-        decadesAboveHundred;
+      ? sliderPositionRangeBelowHundred
+      : sliderPositionRangeAboveHundred;
+  const decades =
+    Math.sign(position) *
+    ((Math.abs(position) - snapSliderPositionRange) / positionRange) *
+    decadeRange;
   return Math.round(100 * 10 ** decades) / 100;
 }
 
@@ -48,23 +51,24 @@ function pointSizeFactorToSliderPosition(pointSizeFactor: number) {
   if (pointSizeFactor <= 0) {
     return -1;
   }
-  const percentage = Math.min(
-    Math.max(pointSizeFactor * 100, minPointSizePercentage),
+  const percentage = MathUtils.clamp(
+    pointSizeFactor * 100,
+    minPointSizePercentage,
     maxPointSizePercentage,
   );
   const decades = Math.log10(percentage / 100);
   if (decades === 0) {
     return 0;
   }
-  if (decades < 0) {
-    return -(
-      snapSliderPositionRange +
-      (-decades / decadesBelowHundred) * sliderPositionRangeBelowHundred
-    );
-  }
+  const decadeRange = decades < 0 ? decadesBelowHundred : decadesAboveHundred;
+  const positionRange =
+    decades < 0
+      ? sliderPositionRangeBelowHundred
+      : sliderPositionRangeAboveHundred;
   return (
-    snapSliderPositionRange +
-    (decades / decadesAboveHundred) * sliderPositionRangeAboveHundred
+    Math.sign(decades) *
+    (snapSliderPositionRange +
+      (Math.abs(decades) / decadeRange) * positionRange)
   );
 }
 
