@@ -5,10 +5,11 @@
  */
 export class TableColumnUtils {
   /**
-   * Suggests column queries matching the current query
+   * Suggests column queries for the current query
    *
-   * Columns are matched case-insensitively on containing the current query. A
-   * column equal to the current query is listed first, the remaining matches
+   * All columns are suggested. Columns matching the current query
+   * case-insensitively on containment are listed first, in table order, with a
+   * column equal to the current query first of all. The remaining columns
    * follow in table order.
    *
    * @param columns - The column names of the table
@@ -20,14 +21,20 @@ export class TableColumnUtils {
     currentQuery: string,
   ): string[] {
     const lowerCaseQuery = currentQuery.toLowerCase();
-    const matches = columns.filter((column) =>
-      column.toLowerCase().includes(lowerCaseQuery),
-    );
+    const matches: string[] = [];
+    const others: string[] = [];
+    for (const column of columns) {
+      if (column.toLowerCase().includes(lowerCaseQuery)) {
+        matches.push(column);
+      } else {
+        others.push(column);
+      }
+    }
     const exactMatchIndex = matches.indexOf(currentQuery);
     if (exactMatchIndex > 0) {
       matches.unshift(...matches.splice(exactMatchIndex, 1));
     }
-    return matches;
+    return [...matches, ...others];
   }
 
   /**

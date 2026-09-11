@@ -28,7 +28,10 @@ export interface TableDataProvider<
  */
 export interface TableData extends ItemsData {
   /**
-   * Returns column query suggestions matching the current query
+   * Returns column query suggestions for the current query
+   *
+   * Suggestions matching the current query come first, the remaining ones
+   * follow.
    *
    * A suggestion ending in `/` is a group: it does not resolve to a column,
    * but continues the query into the group. Columns whose name ends in `/`
@@ -36,7 +39,7 @@ export interface TableData extends ItemsData {
    *
    * @param currentQuery - The partial column query to autocomplete
    * @param options - Optional abort signal
-   * @returns A list of suggested column queries matching the current one
+   * @returns A list of suggested column queries
    */
   suggestColumnQueries(
     currentQuery: string,
