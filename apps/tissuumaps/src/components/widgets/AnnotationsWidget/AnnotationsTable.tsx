@@ -291,7 +291,7 @@ export function AnnotationsTable({
               <TableRow
                 key={row.id}
                 className={cn(
-                  "flex absolute w-full border-0 items-center",
+                  "flex absolute w-full border-0 items-center overflow-hidden",
                   unannotated && "text-muted-foreground",
                 )}
                 style={{
