@@ -19,6 +19,7 @@ import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
 import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
+import { PointSizeViewerControl } from "./PointSizeViewerControl";
 
 export type ViewerPanelProps = {
   className?: string;
@@ -77,6 +78,9 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     <Viewer adapter={viewerAdapter} className={className}>
       <ViewerControl anchor={ViewerControlAnchor.TOP_LEFT}>
         <InteractionModeViewerControls />
+      </ViewerControl>
+      <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
+        <PointSizeViewerControl />
       </ViewerControl>
     </Viewer>
   );
