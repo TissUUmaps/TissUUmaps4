@@ -1,6 +1,10 @@
 import { Square } from "lucide-react";
 
-import { MathUtils, colorPalettes } from "@tissuumaps/core";
+import {
+  MathUtils,
+  categoricalColorPalettes,
+  continuousColorPalettes,
+} from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
@@ -10,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useProjectStore } from "@/stores/project";
 
+import { ColorPaletteSelect } from "./ColorPaletteSelect";
 import type { ColorConfigWidgetAdapter } from "./adapter";
 
 export { ActiveColorConfigValue } from "./ActiveColorConfigValue";
@@ -161,13 +166,10 @@ function FromColorConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Color palette</FieldLabel>
-        <SimpleSelect
-          items={colorPalettes}
-          itemLabel={(colorPalette) => colorPalette.name}
-          itemValue={(colorPalette) => colorPalette.id}
+        <ColorPaletteSelect
+          colorPalettes={continuousColorPalettes}
           value={palette}
           onValueChange={setPalette}
-          nullable
         />
       </Field>
       <div className="grid grid-cols-2 gap-x-2">
@@ -250,13 +252,10 @@ function GroupByColorConfigWidget({
       </Field>
       <Field disabled={map !== null}>
         <FieldLabel>Color palette</FieldLabel>
-        <SimpleSelect
-          items={colorPalettes}
-          itemLabel={(colorPalette) => colorPalette.name}
-          itemValue={(colorPalette) => colorPalette.id}
+        <ColorPaletteSelect
+          colorPalettes={categoricalColorPalettes}
           value={palette}
           onValueChange={setPalette}
-          nullable
         />
       </Field>
       <Field>
@@ -289,13 +288,10 @@ function RandomColorConfigWidget({
     <div className={className}>
       <Field>
         <FieldLabel>Color palette</FieldLabel>
-        <SimpleSelect
-          items={colorPalettes}
-          itemLabel={(colorPalette) => colorPalette.name}
-          itemValue={(colorPalette) => colorPalette.id}
+        <ColorPaletteSelect
+          colorPalettes={categoricalColorPalettes}
           value={palette}
           onValueChange={setPalette}
-          nullable
         />
       </Field>
     </div>
