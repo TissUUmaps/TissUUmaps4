@@ -85,7 +85,8 @@ export function NotificationCenter() {
       }
     }
     for (const key of seenLoading.current) {
-      if (dataRefs.get(key)?.status !== "loading") {
+      const status = dataRefs.get(key)?.status;
+      if (status === undefined || status === "error") {
         seenLoading.current.delete(key);
       }
     }
