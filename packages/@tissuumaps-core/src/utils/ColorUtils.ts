@@ -46,19 +46,24 @@ export class ColorUtils {
    * whole `[0, 1]` range, both ends included.
    *
    * @param interpolate - Maps a position within `[0, 1]` to a CSS color string
-   * @param size - Number of colors to sample, at least two
+   * @param size - Number of colors to sample, an integer of at least two
    * @returns The sampled colors, in the order of the scheme
-   * @throws Error if `size` is smaller than two
+   * @throws Error if `size` is not an integer of at least two, or if the
+   * scheme yields a color string that cannot be parsed
    */
   static sampleColorPalette(
     interpolate: (t: number) => string,
     size: number,
   ): Color[] {
-    if (size < 2) {
+    if (!Number.isInteger(size) || size < 2) {
       throw new Error(`Invalid color palette size: ${size}`);
     }
     return Array.from({ length: size }, (_, i) => {
-      const { r, g, b } = parseCSSColor(interpolate(i / (size - 1)));
+      const spec = interpolate(i / (size - 1));
+      const { r, g, b } = parseCSSColor(spec);
+      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
+        throw new Error(`Invalid color palette color: ${spec}`);
+      }
       return { r, g, b };
     });
   }

@@ -110,6 +110,18 @@ describe("ColorUtils", () => {
         /Invalid color palette size/,
       );
     });
+
+    it("throws on a fractional size", () => {
+      expect(() => ColorUtils.sampleColorPalette(grayscale, 2.5)).toThrow(
+        /Invalid color palette size/,
+      );
+    });
+
+    it("throws on a color string it cannot parse", () => {
+      expect(() =>
+        ColorUtils.sampleColorPalette(() => "oklch(0.7 0.1 200)", 2),
+      ).toThrow(/Invalid color palette color/);
+    });
   });
 
   describe("withAlpha", () => {
