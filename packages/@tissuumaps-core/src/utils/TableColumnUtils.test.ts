@@ -12,10 +12,13 @@ describe("TableColumnUtils", () => {
       );
     });
 
-    it("matches case-insensitively", () => {
+    it("lists case-insensitive matches first", () => {
       expect(TableColumnUtils.suggestColumnQueries(columns, "AREA")).toEqual([
         "area",
         "Area_um2",
+        "cell_type",
+        "x",
+        "y",
       ]);
     });
 
@@ -25,8 +28,10 @@ describe("TableColumnUtils", () => {
       ).toEqual(["area", "Area_um2"]);
     });
 
-    it("returns no suggestions when nothing matches", () => {
-      expect(TableColumnUtils.suggestColumnQueries(columns, "z")).toEqual([]);
+    it("lists all columns in table order when nothing matches", () => {
+      expect(TableColumnUtils.suggestColumnQueries(columns, "z")).toEqual(
+        columns,
+      );
     });
   });
 
