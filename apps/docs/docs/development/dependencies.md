@@ -38,6 +38,7 @@ sidebar_position: 5
 
 ## Utilities
 
+- d3-scale-chromatic + d3-color (built-in color palettes)
 - dnd-kit (drag and drop interfaces)
 - fast-equals (equality comparison)
 - gl-matrix (WebGL matrix operations)
