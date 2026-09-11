@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   defaultClientConditions,
@@ -52,7 +53,9 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     "import.meta.env.VITE_CUSTOM_HTML": JSON.stringify(
-      process.env.VITE_CUSTOM_HTML ?? "",
+      process.env.VITE_CUSTOM_HTML_FILE
+        ? readFileSync(process.env.VITE_CUSTOM_HTML_FILE, "utf8")
+        : "",
     ),
   },
 }));
