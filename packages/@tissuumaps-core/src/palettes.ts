@@ -89,70 +89,30 @@ export type ColorPalette = {
 /** Number of colors sampled from each continuous D3 color scheme */
 const continuousColorPaletteSize = 256;
 
-/** The continuous D3 color schemes offered as color palettes */
-const continuousColorSchemes: [
+/** Builds a color palette by sampling a continuous D3 color scheme */
+function sampledColorPalette(
   id: string,
   name: string,
   interpolate: (t: number) => string,
-][] = [
-  ["viridis", "Viridis", interpolateViridis],
-  ["magma", "Magma", interpolateMagma],
-  ["inferno", "Inferno", interpolateInferno],
-  ["plasma", "Plasma", interpolatePlasma],
-  ["cividis", "Cividis", interpolateCividis],
-  ["turbo", "Turbo", interpolateTurbo],
-  ["blues", "Blues", interpolateBlues],
-  ["brbg", "BrBG", interpolateBrBG],
-  ["bugn", "BuGn", interpolateBuGn],
-  ["bupu", "BuPu", interpolateBuPu],
-  ["cool", "Cool", interpolateCool],
-  ["cubehelix", "Cubehelix", interpolateCubehelixDefault],
-  ["gnbu", "GnBu", interpolateGnBu],
-  ["greens", "Greens", interpolateGreens],
-  ["greys", "Greys", interpolateGreys],
-  ["oranges", "Oranges", interpolateOranges],
-  ["orrd", "OrRd", interpolateOrRd],
-  ["piyg", "PiYG", interpolatePiYG],
-  ["prgn", "PRGn", interpolatePRGn],
-  ["pubu", "PuBu", interpolatePuBu],
-  ["pubugn", "PuBuGn", interpolatePuBuGn],
-  ["puor", "PuOr", interpolatePuOr],
-  ["purd", "PuRd", interpolatePuRd],
-  ["purples", "Purples", interpolatePurples],
-  ["rainbow", "Rainbow", interpolateRainbow],
-  ["rdbu", "RdBu", interpolateRdBu],
-  ["rdgy", "RdGy", interpolateRdGy],
-  ["rdpu", "RdPu", interpolateRdPu],
-  ["rdylbu", "RdYlBu", interpolateRdYlBu],
-  ["rdylgn", "RdYlGn", interpolateRdYlGn],
-  ["reds", "Reds", interpolateReds],
-  ["sinebow", "Sinebow", interpolateSinebow],
-  ["spectral", "Spectral", interpolateSpectral],
-  ["warm", "Warm", interpolateWarm],
-  ["ylgn", "YlGn", interpolateYlGn],
-  ["ylgnbu", "YlGnBu", interpolateYlGnBu],
-  ["ylorbr", "YlOrBr", interpolateYlOrBr],
-  ["ylorrd", "YlOrRd", interpolateYlOrRd],
-];
+): ColorPalette {
+  return {
+    id,
+    name,
+    colors: ColorUtils.sampleColorPalette(
+      interpolate,
+      continuousColorPaletteSize,
+    ),
+  };
+}
 
-/** The categorical D3 color schemes offered as color palettes */
-const categoricalColorSchemes: [
+/** Builds a color palette from a list of hex colors */
+function hexColorPalette(
   id: string,
   name: string,
   hexColors: readonly string[],
-][] = [
-  ["category10", "Category 10", schemeCategory10],
-  ["observable10", "Observable 10", schemeObservable10],
-  ["tableau10", "Tableau 10", schemeTableau10],
-  ["accent", "Accent", schemeAccent],
-  ["dark2", "Dark 2", schemeDark2],
-  ["paired", "Paired", schemePaired],
-  ["pastel1", "Pastel 1", schemePastel1],
-  ["pastel2", "Pastel 2", schemePastel2],
-  ["set1", "Set 1", schemeSet1],
-  ["set2", "Set 2", schemeSet2],
-  ["set3", "Set 3", schemeSet3],
-];
+): ColorPalette {
+  return { id, name, colors: hexColors.map((hex) => ColorUtils.fromHex(hex)) };
+}
 
 /** Color palettes suitable for continuous data */
 export const continuousColorPalettes: ColorPalette[] = [
@@ -161,14 +121,44 @@ export const continuousColorPalettes: ColorPalette[] = [
     name: "Batlow",
     colors: ColorUtils.parsePalette(batlow),
   },
-  ...continuousColorSchemes.map(([id, name, interpolate]) => ({
-    id,
-    name,
-    colors: ColorUtils.sampleColorPalette(
-      interpolate,
-      continuousColorPaletteSize,
-    ),
-  })),
+  sampledColorPalette("viridis", "Viridis", interpolateViridis),
+  sampledColorPalette("magma", "Magma", interpolateMagma),
+  sampledColorPalette("inferno", "Inferno", interpolateInferno),
+  sampledColorPalette("plasma", "Plasma", interpolatePlasma),
+  sampledColorPalette("cividis", "Cividis", interpolateCividis),
+  sampledColorPalette("turbo", "Turbo", interpolateTurbo),
+  sampledColorPalette("blues", "Blues", interpolateBlues),
+  sampledColorPalette("brbg", "BrBG", interpolateBrBG),
+  sampledColorPalette("bugn", "BuGn", interpolateBuGn),
+  sampledColorPalette("bupu", "BuPu", interpolateBuPu),
+  sampledColorPalette("cool", "Cool", interpolateCool),
+  sampledColorPalette("cubehelix", "Cubehelix", interpolateCubehelixDefault),
+  sampledColorPalette("gnbu", "GnBu", interpolateGnBu),
+  sampledColorPalette("greens", "Greens", interpolateGreens),
+  sampledColorPalette("greys", "Greys", interpolateGreys),
+  sampledColorPalette("oranges", "Oranges", interpolateOranges),
+  sampledColorPalette("orrd", "OrRd", interpolateOrRd),
+  sampledColorPalette("piyg", "PiYG", interpolatePiYG),
+  sampledColorPalette("prgn", "PRGn", interpolatePRGn),
+  sampledColorPalette("pubu", "PuBu", interpolatePuBu),
+  sampledColorPalette("pubugn", "PuBuGn", interpolatePuBuGn),
+  sampledColorPalette("puor", "PuOr", interpolatePuOr),
+  sampledColorPalette("purd", "PuRd", interpolatePuRd),
+  sampledColorPalette("purples", "Purples", interpolatePurples),
+  sampledColorPalette("rainbow", "Rainbow", interpolateRainbow),
+  sampledColorPalette("rdbu", "RdBu", interpolateRdBu),
+  sampledColorPalette("rdgy", "RdGy", interpolateRdGy),
+  sampledColorPalette("rdpu", "RdPu", interpolateRdPu),
+  sampledColorPalette("rdylbu", "RdYlBu", interpolateRdYlBu),
+  sampledColorPalette("rdylgn", "RdYlGn", interpolateRdYlGn),
+  sampledColorPalette("reds", "Reds", interpolateReds),
+  sampledColorPalette("sinebow", "Sinebow", interpolateSinebow),
+  sampledColorPalette("spectral", "Spectral", interpolateSpectral),
+  sampledColorPalette("warm", "Warm", interpolateWarm),
+  sampledColorPalette("ylgn", "YlGn", interpolateYlGn),
+  sampledColorPalette("ylgnbu", "YlGnBu", interpolateYlGnBu),
+  sampledColorPalette("ylorbr", "YlOrBr", interpolateYlOrBr),
+  sampledColorPalette("ylorrd", "YlOrRd", interpolateYlOrRd),
 ];
 
 /** Color palettes suitable for categorical data */
@@ -178,11 +168,17 @@ export const categoricalColorPalettes: ColorPalette[] = [
     name: "Batlow",
     colors: ColorUtils.parsePalette(batlowS),
   },
-  ...categoricalColorSchemes.map(([id, name, hexColors]) => ({
-    id,
-    name,
-    colors: hexColors.map((hex) => ColorUtils.fromHex(hex)),
-  })),
+  hexColorPalette("category10", "Category 10", schemeCategory10),
+  hexColorPalette("observable10", "Observable 10", schemeObservable10),
+  hexColorPalette("tableau10", "Tableau 10", schemeTableau10),
+  hexColorPalette("accent", "Accent", schemeAccent),
+  hexColorPalette("dark2", "Dark 2", schemeDark2),
+  hexColorPalette("paired", "Paired", schemePaired),
+  hexColorPalette("pastel1", "Pastel 1", schemePastel1),
+  hexColorPalette("pastel2", "Pastel 2", schemePastel2),
+  hexColorPalette("set1", "Set 1", schemeSet1),
+  hexColorPalette("set2", "Set 2", schemeSet2),
+  hexColorPalette("set3", "Set 3", schemeSet3),
 ];
 
 /** All available color palettes, continuous and categorical */
