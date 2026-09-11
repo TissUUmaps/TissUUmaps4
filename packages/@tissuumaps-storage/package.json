@@ -57,7 +57,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "omezarr-tilesource": "^0.2.0",
+    "omezarr-tilesource": "^0.3.0",
     "papaparse": "^5.5.4"
   },
   "devDependencies": {

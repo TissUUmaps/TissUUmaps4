@@ -12,3 +12,4 @@ minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
   - "@types/node@26.0.1"
+  - omezarr-tilesource@0.3.0
