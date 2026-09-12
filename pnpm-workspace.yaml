@@ -12,3 +12,6 @@ minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
   - "@types/node@26.0.1"
+
+patchedDependencies:
+  geotiff@3.0.5: patches/geotiff@3.0.5.patch

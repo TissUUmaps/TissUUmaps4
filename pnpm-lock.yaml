@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  geotiff@3.0.5: f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b
+
 importers:
   .:
     devDependencies:
@@ -257,6 +260,12 @@ importers:
 
   packages/@tissuumaps-storage:
     dependencies:
+      geotiff:
+        specifier: ^3.0.5
+        version: 3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b)
+      geotiff-tilesource:
+        specifier: github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28
+        version: https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.0)
       omezarr-tilesource:
         specifier: ^0.2.0
         version: 0.2.0(openseadragon@6.1.0)
@@ -2959,6 +2968,12 @@ packages:
         integrity: sha512-C2Xj8FZ0uHWeCXXqX5B4/gVFQmtSkiuOolzAgutjTfseNOHT3pUjljDZsTSxXFGgio54bCzVFqmEOUrIVk8RDA==,
       }
     engines: { node: ">=20.0.0" }
+
+  "@petamoriken/float16@3.9.3":
+    resolution:
+      {
+        integrity: sha512-8awtpHXCx/bNpFt4mt2xdkgtgVvKqty8VbjHI/WWWQuEw+KLzFot3f4+LkQY9YmOtq7A5GdOnqoIC8Pdygjk2g==,
+      }
 
   "@pnpm/config.env-replace@1.1.0":
     resolution:
@@ -7208,6 +7223,25 @@ packages:
       }
     engines: { node: ">=6.9.0" }
 
+  geotiff-tilesource@https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28:
+    resolution:
+      {
+        gitHosted: true,
+        integrity: sha512-eTSLPOakxcKFYzPvL5FFIoti6PQWaLN7ikR2kn96qxtWus8SReVJJauIeeFrZoK7I9/8HmEVrx5+7Q0zhIESLQ==,
+        tarball: https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28,
+      }
+    version: 2.3.2
+    peerDependencies:
+      geotiff: ^3.0.0
+      openseadragon: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0
+
+  geotiff@3.0.5:
+    resolution:
+      {
+        integrity: sha512-OWcL9S9+yDZ6iAlXMt32T1iwUApJM8UiD47xbm6ZP1h33d10fqkPs14EG/ttT5EnefpZSx3G15iDFC5FxUNUwA==,
+      }
+    engines: { node: ">=10.19" }
+
   get-intrinsic@1.3.0:
     resolution:
       {
@@ -8255,6 +8289,12 @@ packages:
     resolution:
       {
         integrity: sha512-dp3s92+uNI1hWIpPGH3jK2kxE2lMjdXdr+DH8ynZHpd6PUlH6x6cbuXnoMmiNumznqaNO31xu9e79F0uuZ0JFg==,
+      }
+
+  lerc@3.0.0:
+    resolution:
+      {
+        integrity: sha512-Rm4J/WaHhRa93nCN2mwWDZFoRVF18G1f47C+kvQWyHGEZxFpTUi73p7lMVSAndyxGt6lJ2/CFbOcf9ra5p8aww==,
       }
 
   leven@3.1.0:
@@ -9637,6 +9677,12 @@ packages:
         integrity: sha512-yQA4H19AmPEoMUeavPMDIe1higySl/gH/yaQrkT/s07Qp+7pp2hYz30N3z2l5BkjVkF9Ow6o0wjJamm2y7Sn0A==,
       }
 
+  pako@2.2.0:
+    resolution:
+      {
+        integrity: sha512-zJq6RP/5q+TO2OpFV3FHzlPnFjmkb7Nc99a5SNjJE+uu/PkpChs+NIZSSzbBoD+6kjiISXjfYdwj1ZRQ81dz/w==,
+      }
+
   papaparse@5.6.0:
     resolution:
       {
@@ -9660,6 +9706,12 @@ packages:
     resolution:
       {
         integrity: sha512-GG2AQYWoLgL877gQIKeRPGO1xF9+eG1ujIb5soS5gPvLQ1y2o8FL90w2QWNdf9I361Mpp7726c+lj3U0qK1uGw==,
+      }
+
+  parse-headers@2.0.6:
+    resolution:
+      {
+        integrity: sha512-Tz11t3uKztEW5FEVZnj1ox8GKblWn+PvHY9TmJV5Mll2uHEwRdR/5Li1OlXoECjLYkApdhWy44ocONwXLiKO5A==,
       }
 
   parse-imports-exports@0.2.4:
@@ -10599,6 +10651,13 @@ packages:
         integrity: sha512-WuyALRjWPDGtt/wzJiadO5AXY+8hZ80hVpe6MyivgraREW751X3SbhRvG3eLKOYN+8VEvqLcf3wdnt44Z4S4SA==,
       }
     engines: { node: ">=10" }
+
+  quick-lru@6.1.2:
+    resolution:
+      {
+        integrity: sha512-AAFUA5O1d83pIHEhJwWCq/RQcRukCkn/NSm2QsTEMle5f2hP0ChI2+3Xb051PZCkLryI/Ir1MVKviT2FIloaTQ==,
+      }
+    engines: { node: ">=12" }
 
   randombytes@2.1.0:
     resolution:
@@ -12373,6 +12432,12 @@ packages:
         integrity: sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==,
       }
 
+  web-worker@1.5.0:
+    resolution:
+      {
+        integrity: sha512-RiMReJrTAiA+mBjGONMnjVDP2u3p9R1vkcGz6gDIrOMT3oGuYwX2WRMYI9ipkphSuE5XKEhydbhNEJh4NY9mlw==,
+      }
+
   webidl-conversions@8.0.1:
     resolution:
       {
@@ -12612,6 +12677,12 @@ packages:
       }
     engines: { node: ">=18" }
 
+  xml-utils@1.10.2:
+    resolution:
+      {
+        integrity: sha512-RqM+2o1RYs6T8+3DzDSoTRAUfrvaejbVHcp3+thnAtDKo8LskR+HomLajEy5UjTz24rpka7AxVBRR3g2wTUkJA==,
+      }
+
   xmlchars@2.2.0:
     resolution:
       {
@@ -12665,6 +12736,12 @@ packages:
     resolution:
       {
         integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==,
+      }
+
+  zstddec@0.2.0:
+    resolution:
+      {
+        integrity: sha512-oyPnDa1X5c13+Y7mA/FDMNJrn4S8UNBe0KCqtDmor40Re7ALrPN6npFwyYVRRh+PqozZQdeg23QtbcamZnG5rA==,
       }
 
   zustand@5.0.15:
@@ -15524,6 +15601,8 @@ snapshots:
       tslib: 2.8.1
       tsyringe: 4.10.0
 
+  "@petamoriken/float16@3.9.3": {}
+
   "@pnpm/config.env-replace@1.1.0": {}
 
   "@pnpm/network.ca-file@1.0.2":
@@ -18092,6 +18171,22 @@ snapshots:
 
   gensync@1.0.0-beta.2: {}
 
+  geotiff-tilesource@https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.0):
+    dependencies:
+      geotiff: 3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b)
+      openseadragon: 6.1.0
+
+  geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b):
+    dependencies:
+      "@petamoriken/float16": 3.9.3
+      lerc: 3.0.0
+      pako: 2.2.0
+      parse-headers: 2.0.6
+      quick-lru: 6.1.2
+      web-worker: 1.5.0
+      xml-utils: 1.10.2
+      zstddec: 0.2.0
+
   get-intrinsic@1.3.0:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -18724,6 +18819,8 @@ snapshots:
   layout-base@1.0.2: {}
 
   layout-base@2.0.1: {}
+
+  lerc@3.0.0: {}
 
   leven@3.1.0: {}
 
@@ -19742,6 +19839,8 @@ snapshots:
 
   package-manager-detector@1.8.0: {}
 
+  pako@2.2.0: {}
+
   papaparse@5.6.0: {}
 
   param-case@3.0.4:
@@ -19762,6 +19861,8 @@ snapshots:
       is-alphanumerical: 2.0.1
       is-decimal: 2.0.1
       is-hexadecimal: 2.0.1
+
+  parse-headers@2.0.6: {}
 
   parse-imports-exports@0.2.4:
     dependencies:
@@ -20388,6 +20489,8 @@ snapshots:
   queue-microtask@1.2.3: {}
 
   quick-lru@5.1.1: {}
+
+  quick-lru@6.1.2: {}
 
   randombytes@2.1.0:
     dependencies:
@@ -21471,6 +21574,8 @@ snapshots:
 
   web-namespaces@2.0.1: {}
 
+  web-worker@1.5.0: {}
+
   webidl-conversions@8.0.1: {}
 
   webpack-bundle-analyzer@4.10.2:
@@ -21668,6 +21773,8 @@ snapshots:
 
   xml-name-validator@5.0.0: {}
 
+  xml-utils@1.10.2: {}
+
   xmlchars@2.2.0: {}
 
   yallist@3.1.1: {}
@@ -21688,6 +21795,8 @@ snapshots:
       zod: 4.4.3
 
   zod@4.4.3: {}
+
+  zstddec@0.2.0: {}
 
   zustand@5.0.15(@types/react@19.2.18)(immer@11.1.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8)):
     optionalDependencies:
