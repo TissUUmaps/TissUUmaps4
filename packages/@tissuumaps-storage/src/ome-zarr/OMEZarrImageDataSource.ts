@@ -9,7 +9,6 @@ export interface OMEZarrImageDataSource extends ImageDataSource<
 > {
   t?: number;
   z?: number;
-  sizeC?: number;
 }
 
 export type NormalizedOMEZarrImageDataSource = Required<
