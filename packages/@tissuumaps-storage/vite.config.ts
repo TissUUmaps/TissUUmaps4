@@ -39,7 +39,14 @@ export default defineConfig(({ mode }) => ({
     // be self-contained and their deps get bundled into the inline worker. Also,
     // openseadragon is not externalized, because nothing imports it.
     rolldownOptions: {
-      external: ["@tissuumaps/core", "omezarr-tilesource", "papaparse"],
+      external: [
+        "@tissuumaps/core",
+        "@zarrita/storage",
+        "@zarrita/storage/zip",
+        "ome-zarr.js",
+        "omezarr-tilesource",
+        "papaparse",
+      ],
       checks: {
         pluginTimings: false,
       },

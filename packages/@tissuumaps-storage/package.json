@@ -57,7 +57,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "omezarr-tilesource": "^0.4.0",
+    "@zarrita/storage": "^0.2.0",
+    "ome-zarr.js": "^0.0.20",
+    "omezarr-tilesource": "^0.5.0",
     "papaparse": "^5.5.4"
   },
   "devDependencies": {
