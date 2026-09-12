@@ -219,6 +219,12 @@ importers:
 
   packages/@tissuumaps-core:
     dependencies:
+      d3-color:
+        specifier: ^3.1.0
+        version: 3.1.0
+      d3-scale-chromatic:
+        specifier: ^3.1.0
+        version: 3.1.0
       gl-matrix:
         specifier: ^3.4.4
         version: 3.4.4
@@ -226,6 +232,12 @@ importers:
       "@jsonforms/core":
         specifier: ^3.8.0
         version: 3.8.0
+      "@types/d3-color":
+        specifier: ^3.1.3
+        version: 3.1.3
+      "@types/d3-scale-chromatic":
+        specifier: ^3.1.0
+        version: 3.1.0
       openseadragon:
         specifier: ^6.0.2
         version: 6.1.0

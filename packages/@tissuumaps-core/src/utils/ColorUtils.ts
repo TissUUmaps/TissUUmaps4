@@ -1,3 +1,5 @@
+import { rgb as parseCSSColor } from "d3-color";
+
 import type { Color } from "../model/primitives";
 import { MathUtils } from "./MathUtils";
 
@@ -34,6 +36,30 @@ export class ColorUtils {
           b: (Number(values[2]) / maxValue) * 255,
         };
       });
+  }
+
+  /**
+   * Samples a continuous color scheme into an array of colors
+   *
+   * The scheme is evaluated at `size` evenly spaced positions covering the
+   * whole `[0, 1]` range, both ends included.
+   *
+   * @param interpolate - Maps a position within `[0, 1]` to a CSS color string
+   * @param size - Number of colors to sample, at least two
+   * @returns The sampled colors, in the order of the scheme
+   * @throws Error if `size` is smaller than two
+   */
+  static sampleColorPalette(
+    interpolate: (t: number) => string,
+    size: number,
+  ): Color[] {
+    if (size < 2) {
+      throw new Error(`Invalid color palette size: ${size}`);
+    }
+    return Array.from({ length: size }, (_, i) => {
+      const { r, g, b } = parseCSSColor(interpolate(i / (size - 1)));
+      return { r, g, b };
+    });
   }
 
   /**
