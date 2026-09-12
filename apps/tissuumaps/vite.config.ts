@@ -13,6 +13,8 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss(), mode === "production" && viteSingleFile()],
+  // Zarr probes for optional files: the dev server must 404 them, not serve index.html.
+  appType: "mpa",
   build: {
     chunkSizeWarningLimit: 2048,
     rolldownOptions: {
