@@ -222,6 +222,7 @@ export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { ParseUtils } from "./utils/ParseUtils";
 export { RenderUtils } from "./utils/RenderUtils";
+export { TableColumnUtils } from "./utils/TableColumnUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 
 export {

@@ -4,9 +4,8 @@ import type { ItemsData } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
-import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
+import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { useControlled } from "@/hooks/useControlled";
-import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 
 import {
@@ -42,9 +41,6 @@ export function ItemsDataWidget({
     null,
   );
 
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(table);
-
   return (
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
@@ -54,12 +50,10 @@ export function ItemsDataWidget({
       </FieldsetLegend>
       <Field disabled={table === null}>
         <FieldLabel>Group by</FieldLabel>
-        <SimpleAsyncCombobox
-          suggestQueries={suggestTableColumnQueries}
-          getItem={resolveTableColumnQuery}
-          itemQuery={(column) => column}
-          selectedItem={selectedGroupByColumn}
-          onSelectedItemChange={setSelectedGroupByColumn}
+        <TableColumnInput
+          tableId={table}
+          value={selectedGroupByColumn}
+          onValueChange={setSelectedGroupByColumn}
         />
       </Field>
       <ItemsDataTable

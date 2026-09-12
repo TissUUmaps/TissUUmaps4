@@ -1,8 +1,7 @@
 import { useCallback } from "react";
 
+import { useTableDataLoader } from "@/hooks/useDataLoader";
 import { useProjectStore } from "@/stores/project";
-
-import { useTableDataLoader } from "./useDataLoader";
 
 /**
  * Provides the column query callbacks for selecting a column of a table
@@ -14,7 +13,7 @@ import { useTableDataLoader } from "./useDataLoader";
  * @param tableId - The ID of the table whose columns are to be selected
  * @returns Callbacks for suggesting and for resolving column queries
  */
-export function useTableColumnSelector(tableId: string | null) {
+export function useTableColumnQueries(tableId: string | null) {
   const table = useProjectStore(
     (state) => state.tables.find((table) => table.id === tableId) ?? null,
   );
