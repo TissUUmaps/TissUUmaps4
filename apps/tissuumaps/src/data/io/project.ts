@@ -45,9 +45,10 @@ function cleanProject(project: Project): Project {
  * Loads a project into the project store, replacing the currently open project
  *
  * The loaded project is deeply frozen, so that it can only be changed through
- * the project store's actions. The project and the URL it was loaded from are
- * written in a single update, so that the two are never out of sync for the
- * data caches, which resolve relative data source URLs against the latter.
+ * the project store's actions. The project, the URL it was loaded from and its
+ * fresh instance ID are written in a single update, so that they are never out
+ * of sync for the data caches, which resolve relative data source URLs against
+ * the URL, and for the viewer, which resets its viewport on a new instance ID.
  *
  * @param project - The project to load
  * @param projectUrl - The URL the project was loaded from, absolute or relative
@@ -58,7 +59,14 @@ export function loadProject(project: Project, projectUrl: string | null): void {
   const absoluteProjectUrl =
     projectUrl !== null ? new URL(projectUrl, document.baseURI).href : null;
   projectStore.setState(
-    freeze({ ...cleanProject(project), url: absoluteProjectUrl }, true),
+    freeze(
+      {
+        ...cleanProject(project),
+        url: absoluteProjectUrl,
+        instanceId: crypto.randomUUID(),
+      },
+      true,
+    ),
   );
 }
 

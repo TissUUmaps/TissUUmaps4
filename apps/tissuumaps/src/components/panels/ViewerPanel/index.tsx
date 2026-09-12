@@ -29,6 +29,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
 
   const projectState = useProjectStore(
     useShallow((state) => ({
+      projectInstanceId: state.instanceId,
       layers: state.layers,
       images: state.images,
       labels: state.labels,
