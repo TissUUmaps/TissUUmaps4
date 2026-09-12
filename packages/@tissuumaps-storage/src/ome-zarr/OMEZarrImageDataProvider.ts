@@ -1,3 +1,5 @@
+import ZipFileStore from "@zarrita/storage/zip";
+import { NgffImage } from "ome-zarr.js";
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
 import type {
@@ -26,9 +28,6 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         type: "string",
       },
       // TODO path
-      sizeC: {
-        type: "integer",
-      },
       z: {
         type: "integer",
       },
@@ -48,11 +47,6 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         label: "URL",
       },
       // TODO path
-      {
-        type: "Control",
-        scope: "#/properties/sizeC",
-        label: "Number of channels",
-      },
       {
         type: "Control",
         scope: "#/properties/z",
@@ -83,52 +77,64 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   ): Promise<OMEZarrImageData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-
-    // validate before any file handling, so that no object URL is leaked
-    if (
-      normalizedDataSource.sizeC !== undefined &&
-      normalizedDataSource.sizeC <= 0
-    ) {
-      throw new Error("Number of channels must be a positive integer.");
-    }
-
     let url: string;
+    let store: Parameters<typeof NgffImage.load>[0];
     let objectUrl: string | undefined = undefined;
     if (normalizedDataSource.path !== undefined && workspace !== null) {
       const fh = await workspace.getFileHandle(normalizedDataSource.path);
       signal?.throwIfAborted(); // getFileHandle() does not throw on abort
       const file = await fh.getFile();
       signal?.throwIfAborted(); // getFile() does not throw on abort
+      // a workspace path refers to a single file, i.e. a zipped OME-Zarr
+      store = ZipFileStore.fromBlob(file);
+      // the tile sources load nothing from the URL (the image is shared), but
+      // need an absolute URL that is unique to the file for their tile cache keys
       objectUrl = URL.createObjectURL(file);
       url = objectUrl;
     } else if (normalizedDataSource.url !== undefined) {
       url = normalizedDataSource.url;
+      store = new URL(url).pathname.endsWith(".ozx")
+        ? ZipFileStore.fromUrl(url)
+        : url;
     } else if (normalizedDataSource.path !== undefined) {
       throw new Error("An open workspace is required to open local-only data.");
     } else {
       throw new Error("A URL or workspace path is required to load data.");
     }
-    let tileSource: OMEZarrTileSource | undefined;
-    let tileSources: OMEZarrTileSource[] | undefined;
-    if (normalizedDataSource.sizeC === undefined) {
-      tileSource = new OMEZarrTileSource({
-        url,
-        z: normalizedDataSource.z,
-        t: normalizedDataSource.t,
-      });
-    } else {
-      tileSources = [];
-      for (let c = 0; c < normalizedDataSource.sizeC; c++) {
-        tileSources.push(
-          new OMEZarrTileSource({
-            url,
-            c,
-            z: normalizedDataSource.z,
-            t: normalizedDataSource.t,
-          }),
+    try {
+      const image = await NgffImage.load(store, { signal });
+      const arrays = await Promise.all(
+        image.paths.map((path) => image.openArray(path, { signal })),
+      ); // pre-open all resolution levels once to avoid concurrent reopening
+      const cIndex = image.getAxesNames().indexOf("c");
+      const sizeC = cIndex >= 0 ? arrays[0]!.shape[cIndex]! : 1;
+      const { z, t } = normalizedDataSource;
+      let tileSource: OMEZarrTileSource | undefined;
+      let tileSources: OMEZarrTileSource[] | undefined;
+      if (sizeC > 1) {
+        const tileSourcePromises: Promise<OMEZarrTileSource>[] = [];
+        for (let c = 0; c < sizeC; c++) {
+          const tileSourcePromise = OMEZarrTileSource.open(
+            { url, c, z, t, dataType: "ome-zarr" },
+            image,
+          );
+          tileSourcePromises.push(tileSourcePromise);
+        }
+        tileSources = await Promise.all(tileSourcePromises);
+        signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
+      } else {
+        tileSource = await OMEZarrTileSource.open(
+          { url, z, t, dataType: "ome-zarr" },
+          image,
         );
+        signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
       }
+      return new OMEZarrImageData(image, tileSource, tileSources, objectUrl);
+    } catch (error) {
+      if (objectUrl !== undefined) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      throw error;
     }
-    return new OMEZarrImageData(tileSource, tileSources, objectUrl);
   }
 }
