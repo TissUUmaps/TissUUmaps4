@@ -50,8 +50,7 @@ export class OMEZarrImageData implements ImageData {
     return this._tileSource;
   }
 
-  async getChannelData(
-    _c: number,
+  async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
   ): Promise<{ values: NumericArray; width: number; height: number }> {
     const { chunk } = (await event.getData("ome-zarr")) as OMEZarrTileData;
@@ -71,13 +70,6 @@ export class OMEZarrImageData implements ImageData {
 
   getChannelVisibility(c: number): boolean | undefined {
     return this._image.checkChannelIndex(c).channels[c]!.active;
-  }
-
-  getChannelOpacity(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _c: number,
-  ): number | undefined {
-    return undefined; // omero metadata has no channel opacity
   }
 
   getChannelColor(c: number): Color | undefined {
