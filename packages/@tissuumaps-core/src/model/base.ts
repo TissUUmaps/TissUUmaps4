@@ -87,20 +87,15 @@ export const renderedDataObjectDefaults = {
 } as const satisfies Partial<RawRenderedDataObject<RawDataSource<string>>>;
 
 /**
- * A data object that can be rendered on one or more layers
+ * A data object that is rendered
+ *
+ * Which layer(s) a rendered data object is drawn on depends on its kind of
+ * data (see {@link RawRenderedRasterDataObject} and
+ * {@link RawRenderedItemsDataObject}).
  */
 export interface RawRenderedDataObject<
   TRawDataSource extends RawDataSource<string>,
 > extends RawDataObject<TRawDataSource> {
-  /**
-   * Layer ID
-   *
-   * Can be specified as:
-   * - An ID of an existing Layer
-   * - A table column holding the layer ID values for each item
-   */
-  layer: string | { column: string };
-
   /**
    * Data object visibility
    *
@@ -159,16 +154,18 @@ export function createRenderedDataObject<
 }
 
 /**
- * Default values for {@link RawSingleLayerDataObject}
+ * Default values for {@link RawRenderedRasterDataObject}
  */
-export const singleLayerDataObjectDefaults = {} as const satisfies Partial<
-  RawSingleLayerDataObject<RawDataSource<string>>
+export const renderedRasterDataObjectDefaults = {} as const satisfies Partial<
+  RawRenderedRasterDataObject<RawDataSource<string>>
 >;
 
 /**
- * A data object that can be rendered on a single layer
+ * A rendered data object whose data is a raster (e.g. images, labels)
+ *
+ * A raster cannot be split between layers, so it is drawn on a single layer.
  */
-export interface RawSingleLayerDataObject<
+export interface RawRenderedRasterDataObject<
   TRawDataSource extends RawDataSource<string>,
 > extends RawRenderedDataObject<TRawDataSource> {
   /** Layer ID */
@@ -176,37 +173,99 @@ export interface RawSingleLayerDataObject<
 }
 
 /**
- * A {@link RawSingleLayerDataObject} with {@link singleLayerDataObjectDefaults} applied
+ * A {@link RawRenderedRasterDataObject} with {@link renderedRasterDataObjectDefaults} applied
  */
-export type SingleLayerDataObject<TDataSource extends DataSource<string>> =
-  Omit<RenderedDataObject<TDataSource>, "layer"> &
+export type RenderedRasterDataObject<TDataSource extends DataSource<string>> =
+  RenderedDataObject<TDataSource> &
     Required<
       Pick<
-        RawSingleLayerDataObject<TDataSource>,
-        keyof typeof singleLayerDataObjectDefaults
+        RawRenderedRasterDataObject<TDataSource>,
+        keyof typeof renderedRasterDataObjectDefaults
       >
     > &
     Omit<
-      RawSingleLayerDataObject<TDataSource>,
-      keyof typeof singleLayerDataObjectDefaults
+      RawRenderedRasterDataObject<TDataSource>,
+      keyof typeof renderedRasterDataObjectDefaults
     >;
 
 /**
- * Creates a {@link SingleLayerDataObject} from a {@link RawSingleLayerDataObject} by applying {@link singleLayerDataObjectDefaults}
+ * Creates a {@link RenderedRasterDataObject} from a {@link RawRenderedRasterDataObject} by applying {@link renderedRasterDataObjectDefaults}
  *
- * @param rawSingleLayerDataObject - The raw single-layer data object
- * @returns The complete single-layer data object with default values applied
+ * @param rawRenderedRasterDataObject - The raw rendered raster data object
+ * @returns The complete rendered raster data object with default values applied
  */
-export function createSingleLayerDataObject<
+export function createRenderedRasterDataObject<
   TType extends string,
   TRawDataSource extends RawDataSource<TType>,
 >(
-  rawSingleLayerDataObject: RawSingleLayerDataObject<TRawDataSource>,
-): SingleLayerDataObject<DataSource<TType>> {
+  rawRenderedRasterDataObject: RawRenderedRasterDataObject<TRawDataSource>,
+): RenderedRasterDataObject<DataSource<TType>> {
   return {
-    ...createRenderedDataObject(rawSingleLayerDataObject),
-    ...structuredClone(singleLayerDataObjectDefaults),
-    ...structuredClone(rawSingleLayerDataObject),
+    ...createRenderedDataObject(rawRenderedRasterDataObject),
+    ...structuredClone(renderedRasterDataObjectDefaults),
+    ...structuredClone(rawRenderedRasterDataObject),
+  };
+}
+
+/**
+ * Default values for {@link RawRenderedItemsDataObject}
+ */
+export const renderedItemsDataObjectDefaults = {} as const satisfies Partial<
+  RawRenderedItemsDataObject<RawDataSource<string>>
+>;
+
+/**
+ * A rendered data object whose data consists of items (e.g. points, shapes)
+ *
+ * Items can be distributed across layers, so the layer may be given per item.
+ * Tables consist of items as well, but are not rendered, and hence are plain
+ * {@link RawDataObject}s.
+ */
+export interface RawRenderedItemsDataObject<
+  TRawDataSource extends RawDataSource<string>,
+> extends RawRenderedDataObject<TRawDataSource> {
+  /**
+   * Layer ID
+   *
+   * Can be specified as:
+   * - An ID of an existing Layer
+   * - A table column holding the layer ID values for each item
+   */
+  layer: string | { column: string };
+}
+
+/**
+ * A {@link RawRenderedItemsDataObject} with {@link renderedItemsDataObjectDefaults} applied
+ */
+export type RenderedItemsDataObject<TDataSource extends DataSource<string>> =
+  RenderedDataObject<TDataSource> &
+    Required<
+      Pick<
+        RawRenderedItemsDataObject<TDataSource>,
+        keyof typeof renderedItemsDataObjectDefaults
+      >
+    > &
+    Omit<
+      RawRenderedItemsDataObject<TDataSource>,
+      keyof typeof renderedItemsDataObjectDefaults
+    >;
+
+/**
+ * Creates a {@link RenderedItemsDataObject} from a {@link RawRenderedItemsDataObject} by applying {@link renderedItemsDataObjectDefaults}
+ *
+ * @param rawRenderedItemsDataObject - The raw rendered items data object
+ * @returns The complete rendered items data object with default values applied
+ */
+export function createRenderedItemsDataObject<
+  TType extends string,
+  TRawDataSource extends RawDataSource<TType>,
+>(
+  rawRenderedItemsDataObject: RawRenderedItemsDataObject<TRawDataSource>,
+): RenderedItemsDataObject<DataSource<TType>> {
+  return {
+    ...createRenderedDataObject(rawRenderedItemsDataObject),
+    ...structuredClone(renderedItemsDataObjectDefaults),
+    ...structuredClone(rawRenderedItemsDataObject),
   };
 }
 
@@ -265,43 +324,51 @@ export function createDataSource<TType extends string>(
 }
 
 /**
- * Default values for {@link RawItemsDataSource}
+ * Default values for {@link RawAnnotatedDataSource}
  */
-export const itemsDataSourceDefaults = {} as const satisfies Partial<
-  RawItemsDataSource<string>
+export const annotatedDataSourceDefaults = {} as const satisfies Partial<
+  RawAnnotatedDataSource<string>
 >;
 
 /**
- * A data source for data objects backed by tabular data
+ * A data source for rendered data objects whose items can be annotated by a
+ * referenced table (e.g. labels, points, shapes)
  */
-export interface RawItemsDataSource<
+export interface RawAnnotatedDataSource<
   TType extends string = string,
 > extends RawDataSource<TType> {
-  /** ID of the table holding the per-item values of this data source, if any */
+  /** ID of the table holding the per-item annotations of this data source, if any */
   table?: string;
 }
 
 /**
- * A {@link RawItemsDataSource} with {@link itemsDataSourceDefaults} applied
+ * A {@link RawAnnotatedDataSource} with {@link annotatedDataSourceDefaults} applied
  */
-export type ItemsDataSource<TType extends string = string> = DataSource<TType> &
-  Required<
-    Pick<RawItemsDataSource<TType>, keyof typeof itemsDataSourceDefaults>
-  > &
-  Omit<RawItemsDataSource<TType>, keyof typeof itemsDataSourceDefaults>;
+export type AnnotatedDataSource<TType extends string = string> =
+  DataSource<TType> &
+    Required<
+      Pick<
+        RawAnnotatedDataSource<TType>,
+        keyof typeof annotatedDataSourceDefaults
+      >
+    > &
+    Omit<
+      RawAnnotatedDataSource<TType>,
+      keyof typeof annotatedDataSourceDefaults
+    >;
 
 /**
- * Creates an {@link ItemsDataSource} from a {@link RawItemsDataSource} by applying {@link itemsDataSourceDefaults}
+ * Creates an {@link AnnotatedDataSource} from a {@link RawAnnotatedDataSource} by applying {@link annotatedDataSourceDefaults}
  *
- * @param rawItemsDataSource - The raw items data source
- * @returns The complete items data source with default values applied
+ * @param rawAnnotatedDataSource - The raw annotated data source
+ * @returns The complete annotated data source with default values applied
  */
-export function createItemsDataSource<TType extends string>(
-  rawItemsDataSource: RawItemsDataSource<TType>,
-): ItemsDataSource<TType> {
+export function createAnnotatedDataSource<TType extends string>(
+  rawAnnotatedDataSource: RawAnnotatedDataSource<TType>,
+): AnnotatedDataSource<TType> {
   return {
-    ...createDataSource(rawItemsDataSource),
-    ...structuredClone(itemsDataSourceDefaults),
-    ...structuredClone(rawItemsDataSource),
+    ...createDataSource(rawAnnotatedDataSource),
+    ...structuredClone(annotatedDataSourceDefaults),
+    ...structuredClone(rawAnnotatedDataSource),
   };
 }

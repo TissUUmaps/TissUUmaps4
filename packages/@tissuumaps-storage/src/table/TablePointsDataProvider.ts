@@ -1,6 +1,6 @@
 import {
+  type AnnotatedDataProviderLoadOptions,
   AsyncUtils,
-  type ItemsDataProviderOpenOptions,
   type PointsDataProvider,
 } from "@tissuumaps/core";
 
@@ -65,7 +65,7 @@ export class TablePointsDataProvider implements PointsDataProvider<
 
   async load(
     normalizedDataSource: NormalizedTablePointsDataSource,
-    options?: ItemsDataProviderOpenOptions,
+    options?: AnnotatedDataProviderLoadOptions,
   ): Promise<TablePointsData> {
     const { signal, tableDataPromise } = options ?? {};
     signal?.throwIfAborted();

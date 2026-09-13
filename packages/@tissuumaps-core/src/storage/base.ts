@@ -1,29 +1,120 @@
 import type { JsonSchema, UISchemaElement } from "@jsonforms/core";
+import type OpenSeadragon from "openseadragon";
 
-import type { DataSource, ItemsDataSource } from "../model/base";
+import type { AnnotatedDataSource, DataSource } from "../model/base";
+import type { NumericArray } from "../types/arrays";
 import type { ProgressCallback } from "../types/callbacks";
+import type {
+  CustomTileSource,
+  TileSourceConfig,
+} from "../types/openseadragon";
 import type { TableData } from "./table";
+
+/**
+ * Base interface for loaded data objects
+ */
+export interface Data {
+  /** Releases all resources held by this data object */
+  close(): void;
+}
+
+/**
+ * A {@link Data} object that contains an indexed collection of items
+ *
+ * Extended by data types whose storage is addressable by item IDs
+ * (e.g. points, shapes, tables).
+ *
+ * Implementations have to be immutable: the values returned by their accessors
+ * must not change over the lifetime of the object, and the arrays they return
+ * have to keep their identity across calls (i.e. be memoized rather than built
+ * anew on every call). Consumers rely on that identity to detect change - a
+ * renderer that compares the previous `getIds()` result against the current one
+ * re-uploads its GPU buffers whenever the two differ - so an implementation
+ * returning a fresh array each time is correct but defeats every such cache.
+ */
+export interface ItemsData extends Data {
+  /**
+   * Returns an array of item IDs
+   *
+   * The returned array is owned by this data object: callers must not modify it,
+   * and every call returns the very same array (see {@link ItemsData}).
+   *
+   * @returns The item IDs
+   */
+  getIds(): number[];
+
+  /**
+   * Returns the total number of items
+   *
+   * @returns The item count
+   */
+  getSize(): number;
+
+  /**
+   * Returns the item names if available, otherwise undefined
+   *
+   * Optional: data types that never carry item names need not implement it.
+   *
+   * The returned array is owned by this data object: callers must not modify it,
+   * and every call returns the very same array (see {@link ItemsData}).
+   *
+   * @returns The item names, or `undefined` if not available
+   */
+  getNames?: () => string[] | undefined;
+}
+
+/**
+ * A {@link Data} object that provides a tiled, multi-resolution raster
+ *
+ * Extended by data types that are drawn as OpenSeadragon tiled images (e.g.
+ * images, labels).
+ */
+export interface RasterData extends Data {
+  /**
+   * Returns the tile source of this raster
+   *
+   * Data types providing more than one tile source (see `ImageData`) extend
+   * this to address them.
+   *
+   * @returns The tile source, which can be a URL string, a TileSourceConfig
+   * object, or a CustomTileSource object
+   */
+  getTileSource(): string | TileSourceConfig | CustomTileSource;
+
+  /**
+   * Extracts the raw values of an invalidated tile
+   *
+   * Provided by raster data whose tiles carry values rather than colors (e.g.
+   * label IDs, or one sample per pixel of an image channel), which the renderer
+   * recolors through a data transfer; raster data whose tiles are drawn as they
+   * are does not provide it. The tile in `event` already belongs to one of this
+   * raster's tile sources, which identifies the channel for multi-channel data.
+   *
+   * The raster does not need to be cropped to the tile's source bounds: it may
+   * cover the full tile size, as the renderer crops it when drawing.
+   *
+   * @param event - The tile invalidation event
+   * @returns The values of the invalidated tile, one per raster pixel in
+   * row-major order, along with the width and height of the raster in pixels
+   * @throws Error if the event does not contain raster data
+   */
+  getTileData?: (
+    event: OpenSeadragon.TileInvalidatedEvent,
+  ) => Promise<{ values: NumericArray; width: number; height: number }>;
+}
 
 /**
  * Options accepted by {@link DataProvider.load}
  */
-export type DataProviderOpenOptions = {
-  /** Signal for aborting the open operation */
+export type DataProviderLoadOptions = {
+  /** Signal for aborting the load operation */
   signal?: AbortSignal;
 
   /** Directory handle of the open workspace, if any */
   workspace?: FileSystemDirectoryHandle | null;
 
-  /** Callback for reporting the progress of the open operation */
+  /** Callback for reporting the progress of the load operation */
   onProgress?: ProgressCallback;
-};
-
-/**
- * Options accepted by {@link ItemsDataProvider.load}
- */
-export type ItemsDataProviderOpenOptions = DataProviderOpenOptions & {
-  /** The data of the table referenced by the data source, if any */
-  tableDataPromise: Promise<TableData> | undefined;
 };
 
 /**
@@ -77,32 +168,46 @@ export interface DataProvider<
    * {@link DataProvider.normalize} beforehand.
    *
    * @param normalizedDataSource - The normalized data source to open
-   * @param options - See {@link DataProviderOpenOptions}
+   * @param options - See {@link DataProviderLoadOptions}
    * @returns A promise that resolves to the loaded data accessor
    */
   load(
     normalizedDataSource: TNormalizedDataSource,
-    options?: DataProviderOpenOptions,
+    options?: DataProviderLoadOptions,
   ): Promise<TData>;
 }
 
 /**
- * Base interface for items data providers
- *
- * @typeParam TItemsDataSource - The data source type this data provider opens
- * @typeParam TItemsData - The {@link ItemsData} type produced by this data
- * provider
- * @typeParam TNormalizedItemsDataSource - The data source type produced by
- * {@link DataProvider.normalize} and accepted by {@link ItemsDataProvider.load}
+ * Options accepted by {@link AnnotatedDataProvider.load}
  */
-export interface ItemsDataProvider<
-  TItemsDataSource extends ItemsDataSource,
-  TItemsData extends ItemsData,
-  TNormalizedItemsDataSource extends TItemsDataSource = TItemsDataSource,
+export type AnnotatedDataProviderLoadOptions = DataProviderLoadOptions & {
+  /** The data of the table referenced by the data source, if any */
+  tableDataPromise: Promise<TableData> | undefined;
+};
+
+/**
+ * Base interface for data providers opening {@link AnnotatedDataSource}s
+ *
+ * In addition to a {@link DataProvider}, an annotated data provider receives
+ * the data of the table referenced by the data source, if any, when loading
+ * (see {@link AnnotatedDataProviderLoadOptions}).
+ *
+ * @typeParam TAnnotatedDataSource - The data source type this data provider
+ * opens
+ * @typeParam TData - The {@link Data} type produced by this data provider
+ * @typeParam TNormalizedAnnotatedDataSource - The data source type produced by
+ * {@link DataProvider.normalize} and accepted by
+ * {@link AnnotatedDataProvider.load}
+ */
+export interface AnnotatedDataProvider<
+  TAnnotatedDataSource extends AnnotatedDataSource,
+  TData extends Data,
+  TNormalizedAnnotatedDataSource extends TAnnotatedDataSource =
+    TAnnotatedDataSource,
 > extends DataProvider<
-  TItemsDataSource,
-  TItemsData,
-  TNormalizedItemsDataSource
+  TAnnotatedDataSource,
+  TData,
+  TNormalizedAnnotatedDataSource
 > {
   /**
    * Opens a data source and returns the loaded data accessor
@@ -111,54 +216,11 @@ export interface ItemsDataProvider<
    * {@link DataProvider.normalize} beforehand.
    *
    * @param normalizedDataSource - The normalized data source to open
-   * @param options - See {@link ItemsDataProviderOpenOptions}
+   * @param options - See {@link AnnotatedDataProviderLoadOptions}
    * @returns A promise that resolves to the loaded data accessor
    */
   load(
-    normalizedDataSource: TNormalizedItemsDataSource,
-    options?: ItemsDataProviderOpenOptions,
-  ): Promise<TItemsData>;
-}
-
-/**
- * Base interface for loaded data objects
- */
-export interface Data {
-  /** Releases all resources held by this data object */
-  close(): void;
-}
-
-/**
- * A {@link Data} object that contains an indexed collection of items
- *
- * Extended by data types whose storage is addressable by item IDs
- * (e.g. points, shapes, labels, tables).
- *
- * Implementations have to be immutable: the values returned by their accessors
- * must not change over the lifetime of the object, and the arrays they return
- * have to keep their identity across calls (i.e. be memoized rather than built
- * anew on every call). Consumers rely on that identity to detect change - a
- * renderer that compares the previous `getIds()` result against the current one
- * re-uploads its GPU buffers whenever the two differ - so an implementation
- * returning a fresh array each time is correct but defeats every such cache.
- */
-export interface ItemsData extends Data {
-  /**
-   * Returns an array of item IDs
-   *
-   * The returned array is owned by this data object: callers must not modify it,
-   * and every call returns the very same array (see {@link ItemsData}).
-   */
-  getIds(): number[];
-
-  /** Returns the total number of items */
-  getSize(): number;
-
-  /**
-   * Returns the item names if available, otherwise undefined
-   *
-   * The returned array is owned by this data object: callers must not modify it,
-   * and every call returns the very same array (see {@link ItemsData}).
-   */
-  getNames(): string[] | undefined;
+    normalizedDataSource: TNormalizedAnnotatedDataSource,
+    options?: AnnotatedDataProviderLoadOptions,
+  ): Promise<TData>;
 }

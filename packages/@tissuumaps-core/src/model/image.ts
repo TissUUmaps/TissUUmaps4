@@ -1,10 +1,10 @@
 import {
   type DataSource,
   type RawDataSource,
-  type RawSingleLayerDataObject,
-  type SingleLayerDataObject,
+  type RawRenderedRasterDataObject,
+  type RenderedRasterDataObject,
   createDataSource,
-  createSingleLayerDataObject,
+  createRenderedRasterDataObject,
 } from "./base";
 import type { Color } from "./primitives";
 
@@ -19,7 +19,7 @@ export const imageDefaults = {} as const satisfies Partial<RawImage>;
  * Channels are only applied to multi-channel image data, as reported by the
  * image's data provider.
  */
-export type Channel = {
+export type ImageChannel = {
   /**
    * Channel name
    *
@@ -53,7 +53,7 @@ export type Channel = {
    * Overrides the channel color provided by the image data provider, if any.
    *
    * @defaultValue The color reported by the image data provider, or a default
-   * color for the channel index (see {@link RenderUtils.getDefaultChannelColor})
+   * color for the channel index (see {@link ImageUtils.getDefaultChannelColor})
    */
   color?: Color;
 
@@ -70,22 +70,22 @@ export type Channel = {
 /**
  * A two-dimensional raster image
  */
-export interface RawImage extends RawSingleLayerDataObject<
+export interface RawImage extends RawRenderedRasterDataObject<
   RawImageDataSource<string>
 > {
   /**
    * The channels of the image, indexed by channel
    *
    * Channels beyond the end of the array, and channels of images whose data is
-   * not multi-channel, use the default values of {@link Channel}.
+   * not multi-channel, use the default values of {@link ImageChannel}.
    */
-  channels?: Channel[];
+  channels?: ImageChannel[];
 }
 
 /**
  * A {@link RawImage} with {@link imageDefaults} applied
  */
-export type Image = SingleLayerDataObject<ImageDataSource<string>> &
+export type Image = RenderedRasterDataObject<ImageDataSource<string>> &
   Required<Pick<RawImage, keyof typeof imageDefaults>> &
   Omit<RawImage, keyof typeof imageDefaults>;
 
@@ -97,7 +97,7 @@ export type Image = SingleLayerDataObject<ImageDataSource<string>> &
  */
 export function createImage(rawImage: RawImage): Image {
   return {
-    ...createSingleLayerDataObject(rawImage),
+    ...createRenderedRasterDataObject(rawImage),
     ...structuredClone(imageDefaults),
     ...structuredClone(rawImage),
     dataSource: createImageDataSource(rawImage.dataSource),

@@ -27,7 +27,7 @@ export class TransformUtils {
    * @param pivot - Optional point about which flip and rotation are expressed
    * @returns The decomposed transform
    */
-  static fromSimilarityMatrix(
+  static decompose(
     m: mat3,
     pivot?: { x: number; y: number },
   ): SimilarityTransform {
@@ -56,14 +56,14 @@ export class TransformUtils {
    * source coordinates of the transform) instead of the origin, while scale
    * stays about the origin. The translation is then the position of the
    * scaled content before it is flipped and rotated about its (scaled)
-   * pivot. This is the inverse of {@link fromSimilarityMatrix} called with
+   * pivot. This is the inverse of {@link decompose} called with
    * the same pivot.
    *
    * @param tf - The transform components (all optional)
    * @param pivot - Optional point about which flip and rotation are applied
    * @returns The composed matrix
    */
-  static toSimilarityMatrix(
+  static compose(
     tf: Partial<SimilarityTransform>,
     pivot?: { x: number; y: number },
   ): mat3 {

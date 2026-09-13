@@ -4,16 +4,15 @@ import {
   AsyncUtils,
   type Color,
   ColorUtils,
-  type CustomTileSource,
-  type DefaultMap,
+  type GroupValueMap,
   type Labels,
   type LabelsData,
   type Table,
   type TableData,
-  type TileSourceConfig,
   defaultLabelColor,
   defaultLabelOpacity,
   defaultLabelVisibility,
+  getActiveConfigSource,
 } from "@tissuumaps/core";
 
 import { ColorResolver } from "../resolvers/ColorResolver";
@@ -27,9 +26,9 @@ import {
 
 export type OpenSeadragonLabelsSyncContext = {
   tables: Table[];
-  colorMaps: DefaultMap<Color>[];
-  visibilityMaps: DefaultMap<boolean>[];
-  opacityMaps: DefaultMap<number>[];
+  colorMaps: GroupValueMap<Color>[];
+  visibilityMaps: GroupValueMap<boolean>[];
+  opacityMaps: GroupValueMap<number>[];
   loadObject: (
     labels: Labels,
     options?: { signal?: AbortSignal },
@@ -46,11 +45,15 @@ export type OpenSeadragonLabelsSyncContext = {
  * The tiles of a labels object carry label IDs rather than colors, and are
  * recolored by a data transfer (see
  * {@link OpenSeadragonContext.updateTiledImageDataTransfer}) that looks each
- * ID up in a color lookup table. The table is resolved per object from the
- * label color, visibility and opacity configurations, in the same way as the
- * WebGL renderers resolve the appearance of their items, and folds the
- * visibility and opacity into the alpha channel. Layer and object opacity are
- * not part of it; OpenSeadragon applies them when drawing the tiled image.
+ * ID up in a color lookup table, which folds the visibility and opacity into
+ * the alpha channel. Layer and object opacity are not part of it; OpenSeadragon
+ * applies them when drawing the tiled image.
+ *
+ * A label image does not enumerate its labels (see {@link LabelsData}), so the
+ * lookup table is resolved per object for the labels that the referenced table
+ * lists, in the same way as the WebGL renderers resolve the appearance of their
+ * items, and every other label is resolved as it is first drawn (see
+ * {@link _resolveDataTransfer}).
  *
  * As data transfers are compared by identity, each object's data transfer is
  * kept (see {@link resolveObject}) until its data or one of the configurations
@@ -61,12 +64,6 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   LabelsData,
   OpenSeadragonLabelsSyncContext
 > {
-  private static readonly _defaultPixelValue = ColorUtils.packRGBA(
-    ColorResolver.encodeColor(defaultLabelColor),
-    VisibilityResolver.encodeVisibility(defaultLabelVisibility),
-    OpacityResolver.encodeOpacity(defaultLabelOpacity),
-  );
-
   private readonly _renderedLabels = new Map<
     string,
     {
@@ -94,10 +91,10 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    *
    * An object's data transfer is kept as long as its data and its label color,
    * visibility and opacity configurations are unchanged, and is resolved anew
-   * otherwise (see {@link _resolveDataTransfer}). If resolving fails, e.g.
-   * because a table failed to load, the failure is logged and the object is
-   * drawn with the default label color, visibility and opacity instead, until
-   * its data or one of its configurations changes.
+   * otherwise (see {@link _resolveDataTransfer}). If resolving from the
+   * referenced table fails, e.g. because the table failed to load, the failure
+   * is logged and the object's labels are resolved without table data instead,
+   * until its data or one of its configurations changes.
    *
    * @todo Changes to the color, visibility and opacity maps themselves are not
    * detected; they are only re-read when a configuration referencing them
@@ -115,57 +112,28 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
     context: OpenSeadragonLabelsSyncContext,
     options?: { signal?: AbortSignal },
   ): Promise<void> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
     const renderedLabels = this._renderedLabels.get(labels.id);
+    const state = {
+      labelColor: structuredClone(labels.labelColor),
+      labelVisibility: structuredClone(labels.labelVisibility),
+      labelOpacity: structuredClone(labels.labelOpacity),
+    };
     if (
       renderedLabels === undefined ||
       renderedLabels.data !== data ||
-      !deepEqual(renderedLabels.state.labelColor, labels.labelColor) ||
-      !deepEqual(
-        renderedLabels.state.labelVisibility,
-        labels.labelVisibility,
-      ) ||
-      !deepEqual(renderedLabels.state.labelOpacity, labels.labelOpacity)
+      !deepEqual(renderedLabels.state, state)
     ) {
-      let dataTransfer;
-      try {
-        dataTransfer = await OpenSeadragonLabelsRenderer._resolveDataTransfer(
+      const dataTransfer =
+        await OpenSeadragonLabelsRenderer._resolveDataTransfer(
           labels,
           data,
           context,
           options,
         );
-      } catch (error) {
-        if (options?.signal?.aborted) {
-          throw error;
-        }
-        console.warn(
-          `Failed to resolve labels with ID '${labels.id}', using defaults`,
-          error,
-        );
-        dataTransfer = OpenSeadragonLabelsRenderer._createDataTransfer(data);
-      }
-      this._renderedLabels.set(labels.id, {
-        data,
-        state: {
-          labelColor: structuredClone(labels.labelColor),
-          labelVisibility: structuredClone(labels.labelVisibility),
-          labelOpacity: structuredClone(labels.labelOpacity),
-        },
-        dataTransfer,
-      });
+      this._renderedLabels.set(labels.id, { data, state, dataTransfer });
     }
-  }
-
-  /**
-   * Returns the tile source for the given labels data
-   *
-   * @param data - The labels data for which to retrieve the tile source
-   * @returns The single tile source of the labels data
-   */
-  protected override getTileSources(
-    data: LabelsData,
-  ): (string | TileSourceConfig | CustomTileSource)[] {
-    return [data.getTileSource()];
   }
 
   /**
@@ -191,9 +159,17 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   /**
    * Resolves the data transfer of a labels object
    *
-   * Resolves the color, visibility and opacity of every label ID that the data
-   * lists, and folds them into a lookup table from ID to packed pixel (see
-   * {@link _createDataTransfer}).
+   * If a label color, visibility or opacity configuration reads from the
+   * referenced table, the table is loaded and the appearance of every label it
+   * lists is resolved up front, in the same way as the WebGL renderers resolve
+   * the appearance of their items, into a lookup table from label ID to packed
+   * pixel. Every other label - those the table does not list, and all labels
+   * if no configuration needs the table - is resolved as it is first drawn
+   * (see {@link _createDataTransfer}).
+   *
+   * If the table cannot be loaded or a configuration cannot be resolved from
+   * it, the failure is logged and the lookup table is left empty, so that all
+   * labels are resolved without table data.
    *
    * @param labels - The labels object to resolve
    * @param data - The loaded data of the labels object
@@ -209,57 +185,83 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   ): Promise<DataTransfer> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    let loadTable;
-    const tableId = labels.dataSource.table;
-    if (tableId !== undefined) {
-      const table = context.tables.find((table) => table.id === tableId);
-      if (table !== undefined) {
-        loadTable = (options?: { signal?: AbortSignal }) =>
-          context.loadTable(table, options);
+    const labelPixelValues = new Map<number, number>();
+    const requiresTable = [
+      labels.labelColor,
+      labels.labelVisibility,
+      labels.labelOpacity,
+    ].some((config) => {
+      const activeConfigSource = getActiveConfigSource(config);
+      return activeConfigSource === "from" || activeConfigSource === "groupBy";
+    });
+    if (requiresTable) {
+      const table = context.tables.find(
+        (table) => table.id === labels.dataSource.table,
+      );
+      if (labels.dataSource.table === undefined) {
+        console.warn(
+          `Labels ${labels.id} has no table, but a configuration requires one`,
+        );
+      } else if (table === undefined) {
+        console.warn(`Table with ID ${labels.dataSource.table} not found`);
       } else {
-        console.warn(`Table with ID ${tableId} not found`);
+        try {
+          const tableData = await context.loadTable(table, { signal });
+          const labelIds = tableData.getIds();
+          const loadTable = () => Promise.resolve(tableData);
+          const [
+            packedLabelColors,
+            packedLabelVisibilities,
+            packedLabelOpacities,
+          ] = await Promise.all([
+            ColorResolver.resolveColors(
+              labelIds,
+              labels.labelColor,
+              context.colorMaps,
+              defaultLabelColor,
+              { signal, loadTable },
+            ),
+            VisibilityResolver.resolveVisibilities(
+              labelIds,
+              labels.labelVisibility,
+              context.visibilityMaps,
+              defaultLabelVisibility,
+              { signal, loadTable },
+            ),
+            OpacityResolver.resolveOpacities(
+              labelIds,
+              labels.labelOpacity,
+              context.opacityMaps,
+              defaultLabelOpacity,
+              { signal, loadTable },
+            ),
+          ]);
+          await AsyncUtils.forEach(
+            labelIds,
+            (labelId, i) => {
+              labelPixelValues.set(
+                labelId,
+                ColorUtils.withAlpha(
+                  packedLabelColors[i]!,
+                  packedLabelVisibilities[i]!,
+                  packedLabelOpacities[i]!,
+                ),
+              );
+            },
+            { signal },
+          );
+        } catch (error) {
+          signal?.throwIfAborted();
+          console.warn(
+            `Failed to resolve labels ${labels.id} from table ${labels.dataSource.table}, resolving without table`,
+            error,
+          );
+          labelPixelValues.clear();
+        }
       }
     }
-    const labelIds = data.getIds();
-    const [labelColors, labelVisibilities, labelOpacities] = await Promise.all([
-      ColorResolver.resolveColors(
-        labelIds,
-        labels.labelColor,
-        context.colorMaps,
-        defaultLabelColor,
-        { signal, loadTable },
-      ),
-      VisibilityResolver.resolveVisibilities(
-        labelIds,
-        labels.labelVisibility,
-        context.visibilityMaps,
-        defaultLabelVisibility,
-        { signal, loadTable },
-      ),
-      OpacityResolver.resolveOpacities(
-        labelIds,
-        labels.labelOpacity,
-        context.opacityMaps,
-        defaultLabelOpacity,
-        { signal, loadTable },
-      ),
-    ]);
-    const labelPixelValues = new Map<number, number>();
-    await AsyncUtils.forEach(
-      labelIds,
-      (labelId, i) => {
-        labelPixelValues.set(
-          labelId,
-          ColorUtils.packRGBA(
-            labelColors[i]!,
-            labelVisibilities[i]!,
-            labelOpacities[i]!,
-          ),
-        );
-      },
-      { signal },
-    );
     return OpenSeadragonLabelsRenderer._createDataTransfer(
+      labels,
       data,
       labelPixelValues,
     );
@@ -268,28 +270,56 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   /**
    * Creates the data transfer of a labels object from a lookup table
    *
-   * Label value `0` is background and maps to a fully transparent pixel; IDs
-   * that the lookup table does not list are drawn with the default label color,
-   * visibility and opacity.
+   * Label value `0` is background and maps to a fully transparent pixel. Labels
+   * that the lookup table does not list are resolved without table data as
+   * they are first drawn (see e.g. {@link ColorResolver.resolveColorWithoutTable}):
+   * constant values and random colors resolve exactly, whereas configurations
+   * that need the table fall back to the default label color, visibility and
+   * opacity. The result is memoized in the lookup table, so that each label is
+   * resolved once.
    *
+   * @param labels - The labels object whose configurations unlisted labels are resolved from
    * @param data - The loaded data of the labels object
-   * @param labelPixelValues - The lookup table from label ID to packed pixel
+   * @param labelPixelValues - The lookup table from label ID to packed pixel,
+   * extended as labels are drawn
    * @returns The data transfer
    */
   private static _createDataTransfer(
+    labels: Labels,
     data: LabelsData,
-    labelPixelValues?: Map<number, number>,
+    labelPixelValues: Map<number, number>,
   ): DataTransfer {
     return {
-      getData: (event) => data.getData(event),
-      transfer: (values, pixelBuffer) => {
+      getTileData: (event) => data.getTileData(event),
+      transferValues: (values, pixelBuffer) => {
         for (let i = 0; i < values.length; i++) {
           const labelId = values[i]!;
-          pixelBuffer[i] =
-            labelId === 0
-              ? 0
-              : (labelPixelValues?.get(labelId) ??
-                OpenSeadragonLabelsRenderer._defaultPixelValue);
+          if (labelId === 0) {
+            pixelBuffer[i] = 0;
+          } else {
+            let labelPixelValue = labelPixelValues.get(labelId);
+            if (labelPixelValue === undefined) {
+              labelPixelValue = ColorUtils.withAlpha(
+                ColorResolver.resolveColorWithoutTable(
+                  labelId,
+                  labels.labelColor,
+                  defaultLabelColor,
+                ),
+                VisibilityResolver.resolveVisibilityWithoutTable(
+                  labelId,
+                  labels.labelVisibility,
+                  defaultLabelVisibility,
+                ),
+                OpacityResolver.resolveOpacityWithoutTable(
+                  labelId,
+                  labels.labelOpacity,
+                  defaultLabelOpacity,
+                ),
+              );
+              labelPixelValues.set(labelId, labelPixelValue);
+            }
+            pixelBuffer[i] = labelPixelValue;
+          }
         }
       },
     };

@@ -1,5 +1,5 @@
 import type {
-  DataProviderOpenOptions,
+  DataProviderLoadOptions,
   ImageDataProvider,
 } from "@tissuumaps/core";
 
@@ -59,7 +59,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
 
   async load(
     normalizedDataSource: NormalizedOpenSeadragonImageDataSource,
-    options?: DataProviderOpenOptions,
+    options?: DataProviderLoadOptions,
   ): Promise<OpenSeadragonImageData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();

@@ -64,6 +64,11 @@ export function useColorConfigWidget(
   const [currentRandomPalette, setCurrentRandomPalette] = useState<
     string | null
   >(isRandomConfig(colorConfig) ? colorConfig.random.palette : null);
+  const [currentRandomSeed, setCurrentRandomSeed] = useState<number | null>(
+    isRandomConfig(colorConfig) && colorConfig.random.seed !== undefined
+      ? colorConfig.random.seed
+      : null,
+  );
 
   useEffect(() => {
     const currentFromRange: [number, number] | null =
@@ -132,13 +137,15 @@ export function useColorConfigWidget(
       // ...and different from active config
       (activeSource !== "random" ||
         !isRandomConfig(colorConfig) ||
-        colorConfig.random.palette !== currentRandomPalette)
+        colorConfig.random.palette !== currentRandomPalette ||
+        colorConfig.random.seed !== (currentRandomSeed ?? undefined))
     ) {
       onColorConfigChange({
         ...colorConfig,
         source: "random",
         random: {
           palette: currentRandomPalette,
+          seed: currentRandomSeed ?? undefined,
         },
       });
     }
@@ -155,6 +162,7 @@ export function useColorConfigWidget(
     currentGroupByPalette,
     currentGroupByMap,
     currentRandomPalette,
+    currentRandomSeed,
     onColorConfigChange,
   ]);
 
@@ -173,6 +181,7 @@ export function useColorConfigWidget(
     currentGroupByPalette,
     currentGroupByMap,
     currentRandomPalette,
+    currentRandomSeed,
     setCurrentSource,
     setCurrentConstantValue,
     setCurrentFromColumn,
@@ -183,5 +192,6 @@ export function useColorConfigWidget(
     setCurrentGroupByPalette,
     setCurrentGroupByMap,
     setCurrentRandomPalette,
+    setCurrentRandomSeed,
   };
 }

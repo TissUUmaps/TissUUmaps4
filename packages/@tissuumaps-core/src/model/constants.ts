@@ -13,7 +13,12 @@ export const identityTransform = {
   translation: { x: 0, y: 0 },
 } as const satisfies SimilarityTransform;
 
-// TODO always use defaultLabelColorPalette instead
+/**
+ * Default seed of random configurations (see `RandomConfig`), used when a
+ * configuration does not specify one
+ */
+export const defaultRandomSeed = 0;
+
 /** Default label color */
 export const defaultLabelColor = {
   r: 255,
@@ -22,7 +27,7 @@ export const defaultLabelColor = {
 } as const satisfies Color;
 
 /** ID of the default color palette for random label colors */
-export const defaultLabelColorPalette: string = "batlowS";
+export const defaultLabelColorPalette = "batlowS";
 
 /** Default label visibility */
 export const defaultLabelVisibility = true;

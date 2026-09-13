@@ -1,5 +1,5 @@
 /** A named mapping from string keys (groups) to typed values with an optional default value */
-export type DefaultMap<TValue> = {
+export type GroupValueMap<TValue> = {
   /** Map ID, referenced from data object configurations */
   id: string;
 

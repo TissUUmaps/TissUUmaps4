@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  type DefaultMap,
+  type GroupValueMap,
   HashUtils,
   Marker,
   type MarkerConfig,
@@ -44,29 +44,32 @@ describe("MarkerResolver", () => {
     });
   });
 
-  describe("encodeMarker", () => {
+  describe("packMarker", () => {
     it("returns the marker index as-is", () => {
-      expect(MarkerResolver.encodeMarker(Marker.Star)).toBe(Marker.Star);
-      expect(MarkerResolver.encodeMarker(Marker.Cross)).toBe(0);
+      expect(MarkerResolver.packMarker(Marker.Star)).toBe(Marker.Star);
+      expect(MarkerResolver.packMarker(Marker.Cross)).toBe(0);
     });
   });
 
   describe("createMarkerBuffer", () => {
     it("creates a zeroed Uint8Array of the requested size", () => {
-      const buffer = MarkerResolver.createMarkerBuffer(3);
-      expect(buffer).toBeInstanceOf(Uint8Array);
-      expect(Array.from(buffer)).toEqual([0, 0, 0]);
+      const packedMarkers = MarkerResolver.createMarkerBuffer(3);
+      expect(packedMarkers).toBeInstanceOf(Uint8Array);
+      expect(Array.from(packedMarkers)).toEqual([0, 0, 0]);
     });
 
-    it("aligns the buffer size to the given boundary", () => {
+    it("aligns the buffer length to the given boundary", () => {
       expect(MarkerResolver.createMarkerBuffer(3, { align: 4 }).length).toBe(4);
     });
   });
 
   describe("createUniformMarkers", () => {
-    it("fills the buffer with the encoded marker", () => {
-      const buffer = MarkerResolver.createUniformMarkers(3, Marker.Square);
-      expect(Array.from(buffer)).toEqual([
+    it("fills the buffer with the packed marker", () => {
+      const packedMarkers = MarkerResolver.createUniformMarkers(
+        3,
+        Marker.Square,
+      );
+      expect(Array.from(packedMarkers)).toEqual([
         Marker.Square,
         Marker.Square,
         Marker.Square,
@@ -79,8 +82,14 @@ describe("MarkerResolver", () => {
       const config = {
         constant: { value: Marker.Diamond },
       } satisfies MarkerConfig;
-      const buffer = MarkerResolver.resolveUniformMarkers([1, 2], config);
-      expect(Array.from(buffer)).toEqual([Marker.Diamond, Marker.Diamond]);
+      const packedMarkers = MarkerResolver.resolveUniformMarkers(
+        [1, 2],
+        config,
+      );
+      expect(Array.from(packedMarkers)).toEqual([
+        Marker.Diamond,
+        Marker.Diamond,
+      ]);
     });
   });
 
@@ -91,14 +100,14 @@ describe("MarkerResolver", () => {
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkersFromTableValues(
+      const packedMarkers = await MarkerResolver.resolveMarkersFromTableValues(
         ids,
         config,
         Marker.Cross,
         loadTable,
       );
 
-      expect(Array.from(buffer)).toEqual([Marker.Disc, Marker.Star]);
+      expect(Array.from(packedMarkers)).toEqual([Marker.Disc, Marker.Star]);
     });
 
     it("uses the default marker for invalid values", async () => {
@@ -107,15 +116,15 @@ describe("MarkerResolver", () => {
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkersFromTableValues(
+      const packedMarkers = await MarkerResolver.resolveMarkersFromTableValues(
         ids,
         config,
         Marker.Ring,
         loadTable,
       );
 
-      expect(buffer[0]).toBe(Marker.Ring);
-      expect(buffer[1]).toBe(Marker.Star);
+      expect(packedMarkers[0]).toBe(Marker.Ring);
+      expect(packedMarkers[1]).toBe(Marker.Star);
     });
 
     it("forwards the signal to loadTable", async () => {
@@ -141,7 +150,7 @@ describe("MarkerResolver", () => {
       const ids = [1, 2];
       const data = createMockTableData(ids, ["A", "B"]);
       const loadTable = vi.fn().mockResolvedValue(data);
-      const markerMap: DefaultMap<Marker> = {
+      const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",
         values: {
@@ -153,7 +162,7 @@ describe("MarkerResolver", () => {
         groupBy: { column: "col1", map: "mm1" },
       } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkersFromTableGroups(
+      const packedMarkers = await MarkerResolver.resolveMarkersFromTableGroups(
         ids,
         config,
         [markerMap],
@@ -161,14 +170,14 @@ describe("MarkerResolver", () => {
         loadTable,
       );
 
-      expect(Array.from(buffer)).toEqual([Marker.Disc, Marker.Square]);
+      expect(Array.from(packedMarkers)).toEqual([Marker.Disc, Marker.Square]);
     });
 
     it("uses the marker map default for unmapped groups", async () => {
       const ids = [1];
       const data = createMockTableData(ids, ["missing"]);
       const loadTable = vi.fn().mockResolvedValue(data);
-      const markerMap: DefaultMap<Marker> = {
+      const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",
         values: {},
@@ -178,7 +187,7 @@ describe("MarkerResolver", () => {
         groupBy: { column: "col1", map: "mm1" },
       } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkersFromTableGroups(
+      const packedMarkers = await MarkerResolver.resolveMarkersFromTableGroups(
         ids,
         config,
         [markerMap],
@@ -186,7 +195,7 @@ describe("MarkerResolver", () => {
         loadTable,
       );
 
-      expect(buffer[0]).toBe(Marker.Ring);
+      expect(packedMarkers[0]).toBe(Marker.Ring);
     });
 
     it("returns uniform default marker when a map is specified but not found", async () => {
@@ -195,7 +204,7 @@ describe("MarkerResolver", () => {
         groupBy: { column: "col1", map: "nonexistent" },
       } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkersFromTableGroups(
+      const packedMarkers = await MarkerResolver.resolveMarkersFromTableGroups(
         [1, 2],
         config,
         [],
@@ -203,7 +212,7 @@ describe("MarkerResolver", () => {
         loadTable,
       );
 
-      expect(Array.from(buffer)).toEqual([Marker.Star, Marker.Star]);
+      expect(Array.from(packedMarkers)).toEqual([Marker.Star, Marker.Star]);
       expect(loadTable).not.toHaveBeenCalled();
     });
 
@@ -215,7 +224,7 @@ describe("MarkerResolver", () => {
         groupBy: { column: "col1", map: undefined },
       } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkersFromTableGroups(
+      const packedMarkers = await MarkerResolver.resolveMarkersFromTableGroups(
         ids,
         config,
         [],
@@ -223,12 +232,40 @@ describe("MarkerResolver", () => {
         loadTable,
       );
 
-      expect(buffer[0]).toBe(
+      expect(packedMarkers[0]).toBe(
         HashUtils.djb2Pick(markerPalette, JSON.stringify("groupA")),
       );
-      expect(buffer[1]).toBe(
+      expect(packedMarkers[1]).toBe(
         HashUtils.djb2Pick(markerPalette, JSON.stringify("groupB")),
       );
+    });
+  });
+
+  describe("resolveMarkerWithoutTable", () => {
+    it("returns the packed constant marker for a constant config", () => {
+      const config = {
+        constant: { value: Marker.Diamond },
+      } satisfies MarkerConfig;
+      expect(
+        MarkerResolver.resolveMarkerWithoutTable(1, config, Marker.Disc),
+      ).toBe(Marker.Diamond);
+    });
+
+    it("falls back to the default marker for table-backed configs", () => {
+      const fromConfig = { from: { column: "col1" } } satisfies MarkerConfig;
+      const groupByConfig = {
+        groupBy: { column: "col1", map: "mm1" },
+      } satisfies MarkerConfig;
+      expect(
+        MarkerResolver.resolveMarkerWithoutTable(1, fromConfig, Marker.Disc),
+      ).toBe(Marker.Disc);
+      expect(
+        MarkerResolver.resolveMarkerWithoutTable(
+          1,
+          groupByConfig,
+          Marker.Square,
+        ),
+      ).toBe(Marker.Square);
     });
   });
 
@@ -237,13 +274,13 @@ describe("MarkerResolver", () => {
       const config = {
         constant: { value: Marker.Disc },
       } satisfies MarkerConfig;
-      const buffer = await MarkerResolver.resolveMarkers(
+      const packedMarkers = await MarkerResolver.resolveMarkers(
         [1, 2],
         config,
         [],
         Marker.Cross,
       );
-      expect(Array.from(buffer)).toEqual([Marker.Disc, Marker.Disc]);
+      expect(Array.from(packedMarkers)).toEqual([Marker.Disc, Marker.Disc]);
     });
 
     it("dispatches to from config when loadTable is given", async () => {
@@ -251,7 +288,7 @@ describe("MarkerResolver", () => {
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkers(
+      const packedMarkers = await MarkerResolver.resolveMarkers(
         [1],
         config,
         [],
@@ -260,13 +297,13 @@ describe("MarkerResolver", () => {
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
-      expect(buffer[0]).toBe(Marker.Star);
+      expect(packedMarkers[0]).toBe(Marker.Star);
     });
 
     it("dispatches to groupBy config when loadTable is given", async () => {
       const data = createMockTableData([1], ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
-      const markerMap: DefaultMap<Marker> = {
+      const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",
         values: { [JSON.stringify("A")]: Marker.Diamond },
@@ -275,7 +312,7 @@ describe("MarkerResolver", () => {
         groupBy: { column: "col1", map: "mm1" },
       } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkers(
+      const packedMarkers = await MarkerResolver.resolveMarkers(
         [1],
         config,
         [markerMap],
@@ -284,35 +321,35 @@ describe("MarkerResolver", () => {
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
-      expect(buffer[0]).toBe(Marker.Diamond);
+      expect(packedMarkers[0]).toBe(Marker.Diamond);
     });
 
     it("falls back to the default marker when the config has no active source", async () => {
       const config = {} as MarkerConfig;
-      const buffer = await MarkerResolver.resolveMarkers(
+      const packedMarkers = await MarkerResolver.resolveMarkers(
         [1, 2],
         config,
         [],
         Marker.Ring,
       );
-      expect(Array.from(buffer)).toEqual([Marker.Ring, Marker.Ring]);
+      expect(Array.from(packedMarkers)).toEqual([Marker.Ring, Marker.Ring]);
     });
 
     it("falls back to the default marker for a from config without loadTable", async () => {
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkers(
+      const packedMarkers = await MarkerResolver.resolveMarkers(
         [1],
         config,
         [],
         Marker.Ring,
       );
 
-      expect(buffer[0]).toBe(Marker.Ring);
+      expect(packedMarkers[0]).toBe(Marker.Ring);
     });
 
     it("falls back to the default marker for a groupBy config without loadTable", async () => {
-      const markerMap: DefaultMap<Marker> = {
+      const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",
         values: { [JSON.stringify("A")]: Marker.Diamond },
@@ -321,7 +358,7 @@ describe("MarkerResolver", () => {
         groupBy: { column: "col1", map: "mm1" },
       } satisfies MarkerConfig;
 
-      const buffer = await MarkerResolver.resolveMarkers(
+      const packedMarkers = await MarkerResolver.resolveMarkers(
         [1],
         config,
         [markerMap],
@@ -329,7 +366,7 @@ describe("MarkerResolver", () => {
         {},
       );
 
-      expect(buffer[0]).toBe(Marker.Ring);
+      expect(packedMarkers[0]).toBe(Marker.Ring);
     });
 
     it("throws when the signal is already aborted", async () => {

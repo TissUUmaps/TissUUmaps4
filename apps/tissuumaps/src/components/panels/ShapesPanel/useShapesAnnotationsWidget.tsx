@@ -8,7 +8,7 @@ import {
 
 import { ShapesSettingsCategory } from "./category";
 
-export function useShapesDataWidget(shapes: Shapes) {
+export function useShapesAnnotationsWidget(shapes: Shapes) {
   const [activeSettingsCategory, setActiveSettingsCategory] =
     useState<ShapesSettingsCategory | null>(null);
   const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<

@@ -20,16 +20,16 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
+import { AnnotationsWidget } from "@/components/widgets/AnnotationsWidget";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { useShapesData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
-import { useShapesDataTableColumns } from "./useShapesDataTableColumns";
-import { useShapesDataWidget } from "./useShapesDataWidget";
+import { useShapesAnnotationsColumns } from "./useShapesAnnotationsColumns";
+import { useShapesAnnotationsWidget } from "./useShapesAnnotationsWidget";
 
 export type ShapesPanelProps = {
   className?: string;
@@ -95,7 +95,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
     setActiveSettingsCategory,
     selectedGroupByColumn,
     setSelectedGroupByColumn,
-  } = useShapesDataWidget(shapes);
+  } = useShapesAnnotationsWidget(shapes);
 
   const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
 
@@ -105,7 +105,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
 
   const shapesData = useShapesData(shapes.id);
 
-  const { extraTableGroupColumnDefs } = useShapesDataTableColumns(
+  const { extraTableGroupColumnDefs } = useShapesAnnotationsColumns(
     shapes,
     selectedGroupByColumn,
   );
@@ -185,7 +185,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             className="bg-card"
           />
           {shapesData !== null && (
-            <ItemsDataWidget
+            <AnnotationsWidget
               data={shapesData}
               tableHeight={200}
               table={shapes.dataSource.table ?? null}

@@ -1,9 +1,11 @@
 import { deepEqual } from "fast-equals";
 
 import {
+  AsyncUtils,
   type Color,
+  ColorUtils,
   type CoordinateSpace,
-  type DefaultMap,
+  type GroupValueMap,
   type Layer,
   type Marker,
   type Points,
@@ -270,11 +272,11 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     layers: Layer[],
     points: Points[],
     tables: Table[],
-    markerMaps: DefaultMap<Marker>[],
-    sizeMaps: DefaultMap<number>[],
-    colorMaps: DefaultMap<Color>[],
-    visibilityMaps: DefaultMap<boolean>[],
-    opacityMaps: DefaultMap<number>[],
+    markerMaps: GroupValueMap<Marker>[],
+    sizeMaps: GroupValueMap<number>[],
+    colorMaps: GroupValueMap<Color>[],
+    visibilityMaps: GroupValueMap<boolean>[],
+    opacityMaps: GroupValueMap<number>[],
     loadPoints: (
       points: Points,
       options?: { signal?: AbortSignal },
@@ -499,11 +501,11 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   private async _loadBuffers(
     newRefs: PointsRef[],
     tables: Table[],
-    markerMaps: DefaultMap<Marker>[],
-    sizeMaps: DefaultMap<number>[],
-    colorMaps: DefaultMap<Color>[],
-    visibilityMaps: DefaultMap<boolean>[],
-    opacityMaps: DefaultMap<number>[],
+    markerMaps: GroupValueMap<Marker>[],
+    sizeMaps: GroupValueMap<number>[],
+    colorMaps: GroupValueMap<Color>[],
+    visibilityMaps: GroupValueMap<boolean>[],
+    opacityMaps: GroupValueMap<number>[],
     buffersResized: boolean,
     loadTable: (
       table: Table,
@@ -519,11 +521,11 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       bufferOffset: number;
       dataChanged: boolean;
       geometryPromise?: Promise<PointsGeometry>;
-      markersPromise?: Promise<Uint8Array>;
-      sizesPromise?: Promise<Float32Array>;
-      colorsPromise?: Promise<Uint32Array>;
-      visibilitiesPromise?: Promise<Uint8Array>;
-      opacitiesPromise?: Promise<Uint8Array>;
+      packedPointMarkersPromise?: Promise<Uint8Array>;
+      packedPointSizesPromise?: Promise<Float32Array>;
+      packedPointColorsPromise?: Promise<Uint32Array>;
+      packedPointVisibilitiesPromise?: Promise<Uint8Array>;
+      packedPointOpacitiesPromise?: Promise<Uint8Array>;
     }[] = [];
     let nextBufferOffset = 0;
     for (let objectIndex = 0; objectIndex < newRefs.length; objectIndex++) {
@@ -553,62 +555,78 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         ? newRef.data.loadGeometry({ signal })
         : undefined;
       geometryPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const markersPromise =
+      const packedPointMarkersPromise =
         dataChanged ||
-        WebGLPointsRenderer._checkMarkersChanged(renderedPoints, newRef)
-          ? WebGLPointsRenderer._resolveMarkers(newRef, markerMaps, {
+        WebGLPointsRenderer._checkPointMarkerBufferChanged(
+          renderedPoints,
+          newRef,
+        )
+          ? WebGLPointsRenderer._resolvePointMarkers(newRef, markerMaps, {
               signal,
               loadTable: loadObjectTable,
             })
           : undefined;
-      markersPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const sizesPromise =
+      packedPointMarkersPromise?.catch(() => {}); // prevent unhandled rejections in console
+      const packedPointSizesPromise =
         dataChanged ||
-        WebGLPointsRenderer._checkSizesChanged(renderedPoints, newRef)
-          ? WebGLPointsRenderer._resolveSizes(newRef, sizeMaps, {
+        WebGLPointsRenderer._checkPointSizeBufferChanged(renderedPoints, newRef)
+          ? WebGLPointsRenderer._resolvePointSizes(newRef, sizeMaps, {
               signal,
               loadTable: loadObjectTable,
             })
           : undefined;
-      sizesPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const colorsPromise =
+      packedPointSizesPromise?.catch(() => {}); // prevent unhandled rejections in console
+      const packedPointColorsPromise =
         dataChanged ||
-        WebGLPointsRenderer._checkColorsChanged(renderedPoints, newRef)
-          ? WebGLPointsRenderer._resolveColors(newRef, colorMaps, {
+        WebGLPointsRenderer._checkPointColorBufferChanged(
+          renderedPoints,
+          newRef,
+        )
+          ? WebGLPointsRenderer._resolvePointColors(newRef, colorMaps, {
               signal,
               loadTable: loadObjectTable,
             })
           : undefined;
-      colorsPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const visibilitiesPromise =
+      packedPointColorsPromise?.catch(() => {}); // prevent unhandled rejections in console
+      const packedPointVisibilitiesPromise =
         dataChanged ||
-        WebGLPointsRenderer._checkColorsChanged(renderedPoints, newRef)
-          ? WebGLPointsRenderer._resolveVisibilities(newRef, visibilityMaps, {
+        WebGLPointsRenderer._checkPointColorBufferChanged(
+          renderedPoints,
+          newRef,
+        )
+          ? WebGLPointsRenderer._resolvePointVisibilities(
+              newRef,
+              visibilityMaps,
+              {
+                signal,
+                loadTable: loadObjectTable,
+              },
+            )
+          : undefined;
+      packedPointVisibilitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
+      const packedPointOpacitiesPromise =
+        dataChanged ||
+        WebGLPointsRenderer._checkPointColorBufferChanged(
+          renderedPoints,
+          newRef,
+        )
+          ? WebGLPointsRenderer._resolvePointOpacities(newRef, opacityMaps, {
               signal,
               loadTable: loadObjectTable,
             })
           : undefined;
-      visibilitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const opacitiesPromise =
-        dataChanged ||
-        WebGLPointsRenderer._checkColorsChanged(renderedPoints, newRef)
-          ? WebGLPointsRenderer._resolveOpacities(newRef, opacityMaps, {
-              signal,
-              loadTable: loadObjectTable,
-            })
-          : undefined;
-      opacitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
+      packedPointOpacitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
       objectPreloads.push({
         newRef,
         renderedPoints,
         bufferOffset: nextBufferOffset,
         dataChanged,
         geometryPromise,
-        markersPromise,
-        sizesPromise,
-        colorsPromise,
-        visibilitiesPromise,
-        opacitiesPromise,
+        packedPointMarkersPromise,
+        packedPointSizesPromise,
+        packedPointColorsPromise,
+        packedPointVisibilitiesPromise,
+        packedPointOpacitiesPromise,
       });
       nextBufferOffset += newRef.itemIds.length;
     }
@@ -627,21 +645,27 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         bufferOffset,
         dataChanged,
         geometryPromise,
-        markersPromise,
-        sizesPromise,
-        colorsPromise,
-        visibilitiesPromise,
-        opacitiesPromise,
+        packedPointMarkersPromise,
+        packedPointSizesPromise,
+        packedPointColorsPromise,
+        packedPointVisibilitiesPromise,
+        packedPointOpacitiesPromise,
       } = objectPreloads[objectIndex]!;
-      const [geometry, markers, sizes, colors, visibilities, opacities] =
-        await Promise.all([
-          geometryPromise,
-          markersPromise,
-          sizesPromise,
-          colorsPromise,
-          visibilitiesPromise,
-          opacitiesPromise,
-        ]);
+      const [
+        geometry,
+        packedPointMarkers,
+        packedPointSizes,
+        packedPointColors,
+        packedPointVisibilities,
+        packedPointOpacities,
+      ] = await Promise.all([
+        geometryPromise,
+        packedPointMarkersPromise,
+        packedPointSizesPromise,
+        packedPointColorsPromise,
+        packedPointVisibilitiesPromise,
+        packedPointOpacitiesPromise,
+      ]);
       signal?.throwIfAborted();
       let objectBounds: Rect;
       if (geometry !== undefined) {
@@ -669,34 +693,42 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       } else {
         throw new Error("Geometry must be loaded for new points object");
       }
-      if (markers !== undefined) {
+      if (packedPointMarkers !== undefined) {
         this.context.loadBuffer(
           WebGL2RenderingContext.ARRAY_BUFFER,
           this._buffers.marker,
-          markers,
+          packedPointMarkers,
           { offset: bufferOffset },
         );
       }
-      if (sizes !== undefined) {
+      if (packedPointSizes !== undefined) {
         this.context.loadBuffer(
           WebGL2RenderingContext.ARRAY_BUFFER,
           this._buffers.size,
-          sizes,
+          packedPointSizes,
           { offset: bufferOffset },
         );
       }
       if (
-        colors !== undefined &&
-        visibilities !== undefined &&
-        opacities !== undefined
+        packedPointColors !== undefined &&
+        packedPointVisibilities !== undefined &&
+        packedPointOpacities !== undefined
       ) {
-        await WebGLPointsRenderer.foldRGBA(colors, visibilities, opacities, {
-          signal,
-        });
+        await AsyncUtils.forEach(
+          packedPointColors,
+          (packedPointColor, i) => {
+            packedPointColors[i] = ColorUtils.withAlpha(
+              packedPointColor,
+              packedPointVisibilities[i]!,
+              packedPointOpacities[i]!,
+            );
+          },
+          { signal },
+        );
         this.context.loadBuffer(
           WebGL2RenderingContext.ARRAY_BUFFER,
           this._buffers.color,
-          colors,
+          packedPointColors,
           { offset: bufferOffset },
         );
       }
@@ -823,7 +855,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Returns whether the markers of an object have to be resolved again
    */
-  private static _checkMarkersChanged(
+  private static _checkPointMarkerBufferChanged(
     renderedPoints: RenderedPoints | undefined,
     newRef: PointsRef,
   ): boolean {
@@ -840,9 +872,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Returns whether the sizes of an object have to be resolved again
    *
    * Besides the point size configuration itself, sizes depend on the scaling
-   * factors and transforms that {@link _resolveSizes} multiplies into them.
+   * factors and transforms that {@link _resolvePointSizes} multiplies into them.
    */
-  private static _checkSizesChanged(
+  private static _checkPointSizeBufferChanged(
     renderedPoints: RenderedPoints | undefined,
     newRef: PointsRef,
   ): boolean {
@@ -870,7 +902,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * detected; they are only re-read when a configuration referencing them
    * changes.
    */
-  private static _checkColorsChanged(
+  private static _checkPointColorBufferChanged(
     renderedPoints: RenderedPoints | undefined,
     newRef: PointsRef,
   ): boolean {
@@ -900,21 +932,20 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    *
    * @param options - Optional abort signal and table loader
    */
-  private static _resolveMarkers(
+  private static _resolvePointMarkers(
     ref: PointsRef,
-    markerMaps: DefaultMap<Marker>[],
+    markerMaps: GroupValueMap<Marker>[],
     options?: {
       signal?: AbortSignal;
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
     },
   ): Promise<Uint8Array> {
-    const { signal, loadTable } = options ?? {};
     return MarkerResolver.resolveMarkers(
       ref.itemIds,
       ref.object.pointMarker,
       markerMaps,
       defaultPointMarker,
-      { signal, loadTable },
+      options,
     );
   }
 
@@ -923,15 +954,14 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    *
    * @param options - Optional abort signal and table loader
    */
-  private static _resolveSizes(
+  private static _resolvePointSizes(
     ref: PointsRef,
-    sizeMaps: DefaultMap<number>[],
+    sizeMaps: GroupValueMap<number>[],
     options?: {
       signal?: AbortSignal;
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
     },
   ): Promise<Float32Array> {
-    const { signal, loadTable } = options ?? {};
     let activeUnit: CoordinateSpace;
     const activeSource = getActiveConfigSource(ref.object.pointSize);
     if (activeSource === "constant" && isConstantConfig(ref.object.pointSize)) {
@@ -958,7 +988,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       ref.object.pointSize,
       sizeMaps,
       defaultPointSize,
-      { signal, sizeFactor, loadTable },
+      { ...options, sizeFactor },
     );
   }
 
@@ -966,15 +996,15 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Resolves the RGB color of every point of an object
    *
    * The alpha channel is added later, by
-   * {@link WebGLRendererBase.foldRGBA}, from the separately resolved
+   * {@link ColorUtils.withAlpha}, from the separately resolved
    * visibilities and opacities.
    *
    * @param options - Optional abort signal and table loader
    * @returns The packed colors, one per point, without alpha
    */
-  private static _resolveColors(
+  private static _resolvePointColors(
     ref: PointsRef,
-    colorMaps: DefaultMap<Color>[],
+    colorMaps: GroupValueMap<Color>[],
     options?: {
       signal?: AbortSignal;
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
@@ -1003,9 +1033,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param options - Optional abort signal and table loader
    * @returns The visibilities, one per point, `0` for invisible
    */
-  private static _resolveVisibilities(
+  private static _resolvePointVisibilities(
     ref: PointsRef,
-    visibilityMaps: DefaultMap<boolean>[],
+    visibilityMaps: GroupValueMap<boolean>[],
     options?: {
       signal?: AbortSignal;
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
@@ -1037,9 +1067,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param options - Optional abort signal and table loader
    * @returns The alpha values, one per point
    */
-  private static _resolveOpacities(
+  private static _resolvePointOpacities(
     ref: PointsRef,
-    opacityMaps: DefaultMap<number>[],
+    opacityMaps: GroupValueMap<number>[],
     options?: {
       signal?: AbortSignal;
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;

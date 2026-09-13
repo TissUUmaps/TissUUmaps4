@@ -1,4 +1,5 @@
 import type { Color } from "../model/primitives";
+import { BitUtils } from "./BitUtils";
 import { MathUtils } from "./MathUtils";
 
 /** Utility methods for color parsing, packing, and conversion */
@@ -15,7 +16,7 @@ export class ColorUtils {
    * @returns The parsed colors, in the order of the palette's lines
    * @throws Error if a non-empty line does not hold exactly three components
    */
-  static parseColorPalette(
+  static parsePalette(
     str: string,
     options?: { sep?: string; maxValue?: number },
   ): Color[] {
@@ -52,21 +53,45 @@ export class ColorUtils {
   }
 
   /**
+   * Packs a visibility into the form that {@link withAlpha} folds into a color
+   *
+   * @param visibility - The visibility
+   * @returns `1` if visible, `0` if not
+   */
+  static packVisibility(visibility: boolean): number {
+    return visibility ? 1 : 0;
+  }
+
+  /**
+   * Packs an opacity into the form that {@link withAlpha} folds into a color
+   *
+   * @param opacity - The opacity, in the range [0, 1]; values outside are clamped
+   * @returns The opacity as an integer in the range [0, 255]
+   */
+  static packOpacity(opacity: number): number {
+    return MathUtils.clamp(Math.round(opacity * 255), 0, 255);
+  }
+
+  /**
    * Folds a visibility and an opacity into the alpha channel of a packed color
    *
    * Combines the lower 24 bits of `color` (see {@link packColor}) with
    * `opacity` as alpha if `visibility` is non-zero, and with zero alpha
    * otherwise, into a packed 32-bit RGBA color, `0xAABBGGRR`.
    *
-   * @param color - The packed color, `0xBBGGRR`; any higher bits are discarded
-   * @param visibility - The visibility, larger than `0` for visible
-   * @param opacity - The opacity, in the range [0, 255]
+   * @param packedColor - The packed color, `0xBBGGRR`; any higher bits are discarded
+   * @param packedVisibility - The visibility, larger than `0` for visible
+   * @param packedOpacity - The opacity, in the range [0, 255]
    * @returns The packed RGBA color, `0xAABBGGRR`, as an unsigned 32-bit integer
    */
-  static packRGBA(color: number, visibility: number, opacity: number): number {
-    const rgb = color & 0x00ffffff;
-    if (visibility > 0) {
-      return MathUtils.safeOr(rgb, MathUtils.safeLeftShift(opacity, 24));
+  static withAlpha(
+    packedColor: number,
+    packedVisibility: number,
+    packedOpacity: number,
+  ): number {
+    const rgb = packedColor & 0x00ffffff;
+    if (packedVisibility > 0) {
+      return BitUtils.safeOr(rgb, BitUtils.safeLeftShift(packedOpacity, 24));
     }
     return rgb;
   }
@@ -110,7 +135,7 @@ export class ColorUtils {
    * @param b - The second color
    * @returns `true` if all three components are equal, `false` otherwise
    */
-  static colorsEqual(a: Color, b: Color): boolean {
+  static equals(a: Color, b: Color): boolean {
     return a.r === b.r && a.g === b.g && a.b === b.b;
   }
   /**

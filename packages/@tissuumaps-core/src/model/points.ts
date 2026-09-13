@@ -1,10 +1,10 @@
 import {
-  type ItemsDataSource,
-  type RawItemsDataSource,
-  type RawRenderedDataObject,
-  type RenderedDataObject,
-  createItemsDataSource,
-  createRenderedDataObject,
+  type AnnotatedDataSource,
+  type RawAnnotatedDataSource,
+  type RawRenderedItemsDataObject,
+  type RenderedItemsDataObject,
+  createAnnotatedDataSource,
+  createRenderedItemsDataObject,
 } from "./base";
 import type {
   ColorConfig,
@@ -36,7 +36,7 @@ export const pointsDefaults = {
 /**
  * A two-dimensional point cloud
  */
-export interface RawPoints extends RawRenderedDataObject<
+export interface RawPoints extends RawRenderedItemsDataObject<
   RawPointsDataSource<string>
 > {
   /**
@@ -92,7 +92,7 @@ export interface RawPoints extends RawRenderedDataObject<
 /**
  * A {@link RawPoints} object with {@link pointsDefaults} applied
  */
-export type Points = RenderedDataObject<PointsDataSource<string>> &
+export type Points = RenderedItemsDataObject<PointsDataSource<string>> &
   Required<Pick<RawPoints, keyof typeof pointsDefaults>> &
   Omit<RawPoints, keyof typeof pointsDefaults>;
 
@@ -104,7 +104,7 @@ export type Points = RenderedDataObject<PointsDataSource<string>> &
  */
 export function createPoints(rawPoints: RawPoints): Points {
   return {
-    ...createRenderedDataObject(rawPoints),
+    ...createRenderedItemsDataObject(rawPoints),
     ...structuredClone(pointsDefaults),
     ...structuredClone(rawPoints),
     dataSource: createPointsDataSource(rawPoints.dataSource),
@@ -124,13 +124,13 @@ export const pointsDataSourceDefaults = {} as const satisfies Partial<
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawPointsDataSource<
   TType extends string = string,
-> extends RawItemsDataSource<TType> {}
+> extends RawAnnotatedDataSource<TType> {}
 
 /**
  * A {@link RawPointsDataSource} with {@link pointsDataSourceDefaults} applied
  */
 export type PointsDataSource<TType extends string = string> =
-  ItemsDataSource<TType> &
+  AnnotatedDataSource<TType> &
     Required<
       Pick<RawPointsDataSource<TType>, keyof typeof pointsDataSourceDefaults>
     > &
@@ -146,7 +146,7 @@ export function createPointsDataSource<TType extends string>(
   rawPointsDataSource: RawPointsDataSource<TType>,
 ): PointsDataSource<TType> {
   return {
-    ...createItemsDataSource(rawPointsDataSource),
+    ...createAnnotatedDataSource(rawPointsDataSource),
     ...structuredClone(pointsDataSourceDefaults),
     ...structuredClone(rawPointsDataSource),
   };

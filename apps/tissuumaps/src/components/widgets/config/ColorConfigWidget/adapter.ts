@@ -17,6 +17,7 @@ export type ColorConfigWidgetAdapter = {
   currentGroupByPalette: string | null;
   currentGroupByMap: string | null;
   currentRandomPalette: string | null;
+  currentRandomSeed: number | null;
   setCurrentSource: (newCurrentSource: ColorConfigSource) => void;
   setCurrentConstantValue: (newCurrentValue: Color) => void;
   setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
@@ -27,4 +28,5 @@ export type ColorConfigWidgetAdapter = {
   setCurrentGroupByPalette: (newCurrentGroupByPalette: string | null) => void;
   setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
   setCurrentRandomPalette: (newCurrentRandomPalette: string | null) => void;
+  setCurrentRandomSeed: (newCurrentRandomSeed: number | null) => void;
 };

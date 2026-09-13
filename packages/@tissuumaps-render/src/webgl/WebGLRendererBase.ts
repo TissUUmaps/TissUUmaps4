@@ -1,6 +1,5 @@
 import {
   AsyncUtils,
-  ColorUtils,
   GeometryUtils,
   type Layer,
   type Points,
@@ -370,37 +369,6 @@ export abstract class WebGLRendererBase<
       }
     }
     return entry.layerItemsInfos;
-  }
-
-  /**
-   * Folds resolved visibilities and opacities into the alpha channel of resolved
-   * colors, in place
-   *
-   * The three are resolved independently, so that none of them has to wait for
-   * the others (see the two-pass loading of the renderers). This combines them
-   * into what the shaders sample, `0xAABBGGRR` (see `ColorUtils.packRGBA`).
-   *
-   * All three buffers have to be of the same length; where they are padded, the
-   * padding is folded along with the rest and never sampled.
-   *
-   * @param colors - The packed colors without alpha, overwritten with the result
-   * @param visibilities - The resolved visibilities, `0` for invisible
-   * @param opacities - The resolved alpha values
-   * @param options - Optional abort signal
-   */
-  protected static foldRGBA(
-    colors: Uint32Array,
-    visibilities: Uint8Array,
-    opacities: Uint8Array,
-    options?: { signal?: AbortSignal },
-  ): Promise<void> {
-    return AsyncUtils.forEach(
-      colors,
-      (color, i) => {
-        colors[i] = ColorUtils.packRGBA(color, visibilities[i]!, opacities[i]!);
-      },
-      options,
-    );
   }
 }
 

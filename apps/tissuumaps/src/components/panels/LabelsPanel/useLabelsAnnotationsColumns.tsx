@@ -15,10 +15,10 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import type { ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
+import type { AnnotationsTableGroupRowData } from "@/components/widgets/AnnotationsWidget/AnnotationsTable";
 import { useProjectStore } from "@/stores/project";
 
-export function useLabelsDataTableColumns(
+export function useLabelsAnnotationsColumns(
   labels: Labels,
   currentGroupByColumn: string | null,
 ) {
@@ -26,9 +26,9 @@ export function useLabelsDataTableColumns(
   const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
-  const extraTableGroupColumnDefs: ColumnDef<ItemsDataTableGroupRowData>[] =
+  const extraTableGroupColumnDefs: ColumnDef<AnnotationsTableGroupRowData>[] =
     useMemo(() => {
-      const columnDefs: ColumnDef<ItemsDataTableGroupRowData>[] = [];
+      const columnDefs: ColumnDef<AnnotationsTableGroupRowData>[] = [];
 
       // color
       if (

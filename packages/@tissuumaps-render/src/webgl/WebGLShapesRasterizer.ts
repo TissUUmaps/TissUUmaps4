@@ -1,5 +1,6 @@
 import {
   AsyncUtils,
+  BitUtils,
   MathUtils,
   type Rect,
   type ShapesGeometry,
@@ -189,9 +190,9 @@ export class WebGLShapesRasterizer {
               occupancyMaskBin++
             ) {
               const occupancyMaskIndex = occupancyMaskBin >> 5;
-              scanline.occupancyMask[occupancyMaskIndex] = MathUtils.safeOr(
+              scanline.occupancyMask[occupancyMaskIndex] = BitUtils.safeOr(
                 scanline.occupancyMask[occupancyMaskIndex]!,
-                MathUtils.safeLeftShift(1, occupancyMaskBin & 0x1f),
+                BitUtils.safeLeftShift(1, occupancyMaskBin & 0x1f),
               );
             }
             const scanlineShape = scanline.shapes.get(shapeIndex);

@@ -1,10 +1,11 @@
 import {
+  ColorUtils,
   type ConstantConfig,
-  type DefaultMap,
   type FromConfig,
   type GroupByConfig,
+  type GroupValueMap,
   MathUtils,
-  ParseUtils,
+  NumberUtils,
   type TableData,
   type VisibilityConfig,
   getActiveConfigSource,
@@ -16,7 +17,7 @@ import {
 import { ResolverBase } from "./ResolverBase";
 
 /**
- * Resolves the visibility of every item, encoded as `0` or `1`
+ * Resolves the visibility of every item, packed as `0` or `1`
  */
 export class VisibilityResolver extends ResolverBase {
   /**
@@ -30,12 +31,12 @@ export class VisibilityResolver extends ResolverBase {
    * @param visibilityMaps - Available visibility maps for groupBy lookups
    * @param defaultVisibility - Fallback visibility when no valid config or value is found
    * @param options - Optional abort signal, buffer alignment, and table loader
-   * @returns A `Uint8Array` of encoded visibility values (0 or 1), one per ID
+   * @returns A `Uint8Array` of packed visibility values (0 or 1), one per ID
    */
   static async resolveVisibilities(
     ids: number[],
     config: VisibilityConfig,
-    visibilityMaps: DefaultMap<boolean>[],
+    visibilityMaps: GroupValueMap<boolean>[],
     defaultVisibility: boolean,
     options?: {
       signal?: AbortSignal;
@@ -60,7 +61,7 @@ export class VisibilityResolver extends ResolverBase {
         ids,
         config,
         defaultVisibility,
-        (opts) => loadTable(opts),
+        loadTable,
         { signal, align },
       );
     }
@@ -74,7 +75,7 @@ export class VisibilityResolver extends ResolverBase {
         config,
         visibilityMaps,
         defaultVisibility,
-        (opts) => loadTable(opts),
+        loadTable,
         { signal, align },
       );
     }
@@ -87,12 +88,38 @@ export class VisibilityResolver extends ResolverBase {
   }
 
   /**
+   * Resolves the visibility of a single item without loading any table data
+   *
+   * Synchronous counterpart to {@link resolveVisibilities} for items that are
+   * not known up front: the labels renderer uses it for label IDs as they are
+   * first drawn, since a label image does not enumerate its labels. A constant
+   * source resolves exactly, whereas from and groupBy sources depend on table
+   * values and fall back to `defaultVisibility`.
+   *
+   * @param _id - The item ID (unused, kept for symmetry with the other resolvers)
+   * @param config - Visibility configuration specifying the data source
+   * @param defaultVisibility - Fallback visibility when the source cannot be resolved without a table
+   * @returns The packed visibility (`0` or `1`)
+   */
+  static resolveVisibilityWithoutTable(
+    _id: number,
+    config: VisibilityConfig,
+    defaultVisibility: boolean,
+  ): number {
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return VisibilityResolver.packVisibility(config.constant.value);
+    }
+    return VisibilityResolver.packVisibility(defaultVisibility);
+  }
+
+  /**
    * Creates a uniform visibility data buffer filled with the configured constant visibility
    *
    * @param ids - Ordered list of item IDs (only the length is used)
    * @param config - Constant visibility configuration containing the boolean value
    * @param options - Optional buffer alignment
-   * @returns A `Uint8Array` filled with the encoded constant visibility
+   * @returns A `Uint8Array` filled with the packed constant visibility
    */
   static resolveUniformVisibilities(
     ids: number[],
@@ -115,7 +142,7 @@ export class VisibilityResolver extends ResolverBase {
    * @param defaultVisibility - Fallback visibility when a value is missing or invalid
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
-   * @returns A `Uint8Array` of encoded visibility values
+   * @returns A `Uint8Array` of packed visibility values
    */
   static async resolveVisibilitiesFromTableValues(
     ids: number[],
@@ -127,20 +154,21 @@ export class VisibilityResolver extends ResolverBase {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const data = await loadTable({ signal });
-    const buffer = VisibilityResolver.createVisibilityBuffer(ids.length, {
-      align,
-    });
+    const packedVisibilities = VisibilityResolver.createVisibilityBuffer(
+      ids.length,
+      { align },
+    );
     await VisibilityResolver.fillFromTableValues(
-      buffer,
+      packedVisibilities,
       data,
       ids,
       config.from.column,
       defaultVisibility,
       (value) => VisibilityResolver.parseVisibility(value),
-      (visibility) => VisibilityResolver.encodeVisibility(visibility),
+      (visibility) => VisibilityResolver.packVisibility(visibility),
       { signal },
     );
-    return buffer;
+    return packedVisibilities;
   }
 
   /**
@@ -153,12 +181,12 @@ export class VisibilityResolver extends ResolverBase {
    * @param defaultVisibility - Fallback visibility when the map is not found or a group is unmapped
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
-   * @returns A `Uint8Array` of encoded visibility values
+   * @returns A `Uint8Array` of packed visibility values
    */
   static async resolveVisibilitiesFromTableGroups(
     ids: number[],
     config: Extract<VisibilityConfig, GroupByConfig<true>>,
-    visibilityMaps: DefaultMap<boolean>[],
+    visibilityMaps: GroupValueMap<boolean>[],
     defaultVisibility: boolean,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
@@ -179,21 +207,22 @@ export class VisibilityResolver extends ResolverBase {
       );
     }
     const data = await loadTable({ signal });
-    const buffer = VisibilityResolver.createVisibilityBuffer(ids.length, {
-      align,
-    });
+    const packedVisibilities = VisibilityResolver.createVisibilityBuffer(
+      ids.length,
+      { align },
+    );
     const groupVisibilities = new Map(Object.entries(visibilityMap.values));
     await VisibilityResolver.fillFromTableGroups(
-      buffer,
+      packedVisibilities,
       data,
       ids,
       config.groupBy.column,
       visibilityMap.default ?? defaultVisibility,
       (group) => groupVisibilities.get(group),
-      (visibility) => VisibilityResolver.encodeVisibility(visibility),
+      (visibility) => VisibilityResolver.packVisibility(visibility),
       { signal },
     );
-    return buffer;
+    return packedVisibilities;
   }
 
   /**
@@ -202,7 +231,7 @@ export class VisibilityResolver extends ResolverBase {
    * @param n - Number of elements
    * @param visibility - The boolean visibility to fill with
    * @param options - Optional buffer alignment
-   * @returns A `Uint8Array` filled with the encoded visibility
+   * @returns A `Uint8Array` filled with the packed visibility
    */
   static createUniformVisibilities(
     n: number,
@@ -210,26 +239,28 @@ export class VisibilityResolver extends ResolverBase {
     options?: { align?: number },
   ): Uint8Array {
     const { align = 1 } = options ?? {};
-    const buffer = VisibilityResolver.createVisibilityBuffer(n, { align });
-    const value = VisibilityResolver.encodeVisibility(visibility);
-    buffer.fill(value, 0, n);
-    return buffer;
+    const packedVisibilities = VisibilityResolver.createVisibilityBuffer(n, {
+      align,
+    });
+    const packedVisibility = VisibilityResolver.packVisibility(visibility);
+    packedVisibilities.fill(packedVisibility, 0, n);
+    return packedVisibilities;
   }
 
   /**
-   * Creates a buffer of the given size for storing encoded visibility values, aligned to the specified byte boundary
+   * Creates a buffer of the given size for storing packed visibility values, aligned to the specified byte boundary
    *
-   * @param size - The number of elements in the buffer
+   * @param n - The number of elements in the buffer
    * @param options - Optional buffer alignment
-   * @returns A `Uint8Array` of the specified size, aligned to the given byte boundary
+   * @returns A `Uint8Array` of length `n`, aligned to the given byte boundary
    */
   static createVisibilityBuffer(
-    size: number,
+    n: number,
     options?: { align?: number },
   ): Uint8Array {
     const { align = 1 } = options ?? {};
-    const alignedSize = MathUtils.align(size, align);
-    return new Uint8Array(alignedSize);
+    const alignedN = MathUtils.align(n, align);
+    return new Uint8Array(alignedN);
   }
 
   /**
@@ -242,19 +273,19 @@ export class VisibilityResolver extends ResolverBase {
     if (typeof value === "boolean") {
       return value;
     }
-    const visibility = ParseUtils.tryParseFinite(value, {
+    const visibility = NumberUtils.tryParseFinite(value, {
       requireSafeBigInt: true,
     });
     return visibility !== undefined ? visibility > 0 : undefined;
   }
 
   /**
-   * Encodes a boolean visibility into a numeric representation
+   * Packs a boolean visibility into a numeric representation
    *
-   * @param visibility - The boolean visibility to encode
+   * @param visibility - The boolean visibility to pack
    * @returns `1` if visible, `0` if not
    */
-  static encodeVisibility(visibility: boolean): number {
-    return visibility ? 1 : 0;
+  static packVisibility(visibility: boolean): number {
+    return ColorUtils.packVisibility(visibility);
   }
 }

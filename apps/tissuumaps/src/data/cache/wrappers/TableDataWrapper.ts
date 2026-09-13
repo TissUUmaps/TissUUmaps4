@@ -12,7 +12,8 @@ import { DataWrapperBase } from "./DataWrapperBase";
  *
  * Values, unique values and value ranges are each loaded once per column and
  * then kept for as long as this wrapper lives; column queries are delegated to
- * the wrapped data unchanged.
+ * the wrapped data unchanged. The optional names getter is only provided if
+ * the wrapped data provides it.
  */
 export class TableDataWrapper
   extends DataWrapperBase<TableData>
@@ -31,16 +32,21 @@ export class TableDataWrapper
     SharedOperation<[number, number] | undefined>
   >();
 
+  readonly getNames?: TableData["getNames"];
+
+  constructor(data: TableData) {
+    super(data);
+    if (data.getNames !== undefined) {
+      this.getNames = () => this.data.getNames!();
+    }
+  }
+
   getIds(): number[] {
     return this.data.getIds();
   }
 
   getSize(): number {
     return this.data.getSize();
-  }
-
-  getNames(): string[] | undefined {
-    return this.data.getNames();
   }
 
   suggestColumnQueries(

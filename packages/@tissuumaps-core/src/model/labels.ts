@@ -1,10 +1,10 @@
 import {
-  type ItemsDataSource,
-  type RawItemsDataSource,
-  type RawSingleLayerDataObject,
-  type SingleLayerDataObject,
-  createItemsDataSource,
-  createSingleLayerDataObject,
+  type AnnotatedDataSource,
+  type RawAnnotatedDataSource,
+  type RawRenderedRasterDataObject,
+  type RenderedRasterDataObject,
+  createAnnotatedDataSource,
+  createRenderedRasterDataObject,
 } from "./base";
 import type { ColorConfig, OpacityConfig, VisibilityConfig } from "./configs";
 import {
@@ -25,7 +25,7 @@ export const labelsDefaults = {
 /**
  * A two-dimensional label mask
  */
-export interface RawLabels extends RawSingleLayerDataObject<
+export interface RawLabels extends RawRenderedRasterDataObject<
   RawLabelsDataSource<string>
 > {
   /**
@@ -53,7 +53,7 @@ export interface RawLabels extends RawSingleLayerDataObject<
 /**
  * A {@link RawLabels} with {@link labelsDefaults} applied
  */
-export type Labels = SingleLayerDataObject<LabelsDataSource<string>> &
+export type Labels = RenderedRasterDataObject<LabelsDataSource<string>> &
   Required<Pick<RawLabels, keyof typeof labelsDefaults>> &
   Omit<RawLabels, keyof typeof labelsDefaults>;
 
@@ -65,7 +65,7 @@ export type Labels = SingleLayerDataObject<LabelsDataSource<string>> &
  */
 export function createLabels(rawLabels: RawLabels): Labels {
   return {
-    ...createSingleLayerDataObject(rawLabels),
+    ...createRenderedRasterDataObject(rawLabels),
     ...structuredClone(labelsDefaults),
     ...structuredClone(rawLabels),
     dataSource: createLabelsDataSource(rawLabels.dataSource),
@@ -85,13 +85,13 @@ export const labelsDataSourceDefaults = {} as const satisfies Partial<
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawLabelsDataSource<
   TType extends string = string,
-> extends RawItemsDataSource<TType> {}
+> extends RawAnnotatedDataSource<TType> {}
 
 /**
  * A {@link RawLabelsDataSource} with {@link labelsDataSourceDefaults} applied
  */
 export type LabelsDataSource<TType extends string = string> =
-  ItemsDataSource<TType> &
+  AnnotatedDataSource<TType> &
     Required<
       Pick<RawLabelsDataSource<TType>, keyof typeof labelsDataSourceDefaults>
     > &
@@ -107,7 +107,7 @@ export function createLabelsDataSource<TType extends string>(
   rawLabelsDataSource: RawLabelsDataSource<TType>,
 ): LabelsDataSource<TType> {
   return {
-    ...createItemsDataSource(rawLabelsDataSource),
+    ...createAnnotatedDataSource(rawLabelsDataSource),
     ...structuredClone(labelsDataSourceDefaults),
     ...structuredClone(rawLabelsDataSource),
   };

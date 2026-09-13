@@ -8,7 +8,7 @@ import {
 
 import { PointsSettingsCategory } from "./category";
 
-export function usePointsDataWidget(points: Points) {
+export function usePointsAnnotationsWidget(points: Points) {
   const [activeSettingsCategory, setActiveSettingsCategory] =
     useState<PointsSettingsCategory | null>(null);
   const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<

@@ -9,6 +9,8 @@ import { DataWrapperBase } from "./DataWrapperBase";
 
 /**
  * Cache wrapper around shapes data, sharing the loaded geometry
+ *
+ * The optional names getter is only provided if the wrapped data provides it.
  */
 export class ShapesDataWrapper
   extends DataWrapperBase<ShapesData>
@@ -16,16 +18,21 @@ export class ShapesDataWrapper
 {
   private _loadGeometryOp?: SharedOperation<ShapesGeometry>;
 
+  readonly getNames?: ShapesData["getNames"];
+
+  constructor(data: ShapesData) {
+    super(data);
+    if (data.getNames !== undefined) {
+      this.getNames = () => this.data.getNames!();
+    }
+  }
+
   getIds(): number[] {
     return this.data.getIds();
   }
 
   getSize(): number {
     return this.data.getSize();
-  }
-
-  getNames(): string[] | undefined {
-    return this.data.getNames();
   }
 
   /**

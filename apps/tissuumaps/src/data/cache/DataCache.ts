@@ -1,14 +1,13 @@
 import {
+  type AnnotatedDataProvider,
+  type AnnotatedDataProviderLoadOptions,
+  type AnnotatedDataSource,
   type Data,
   type DataObject,
   type DataProvider,
-  type DataProviderOpenOptions,
+  type DataProviderLoadOptions,
   type DataRef,
   type DataSource,
-  type ItemsData,
-  type ItemsDataProvider,
-  type ItemsDataProviderOpenOptions,
-  type ItemsDataSource,
   JSONUtils,
   type ProgressCallback,
   type TableData,
@@ -78,15 +77,16 @@ export type DataCacheEntryDependencies<
 };
 
 /**
- * What an items data cache entry's data depends on, besides its data source
+ * What an annotated data cache entry's data depends on, besides its data
+ * source
  */
-export type ItemsDataCacheEntryDependencies<
-  TItemsDataSource extends ItemsDataSource,
-  TItemsData extends ItemsData,
+export type AnnotatedDataCacheEntryDependencies<
+  TAnnotatedDataSource extends AnnotatedDataSource,
+  TData extends Data,
 > = DataCacheEntryDependencies<
-  TItemsDataSource,
-  TItemsData,
-  ItemsDataProvider<TItemsDataSource, TItemsData>
+  TAnnotatedDataSource,
+  TData,
+  AnnotatedDataProvider<TAnnotatedDataSource, TData>
 > & {
   /**
    * The load operation of the table referenced by the entry's data source, if
@@ -120,17 +120,18 @@ export type DataCacheContext<
 };
 
 /**
- * What an items data cache needs from the application's stores to load data
+ * What an annotated data cache needs from the application's stores to load
+ * data
  */
-export type ItemsDataCacheContext<
-  TItemsDataSource extends ItemsDataSource,
-  TItemsData extends ItemsData,
+export type AnnotatedDataCacheContext<
+  TAnnotatedDataSource extends AnnotatedDataSource,
+  TData extends Data,
 > = DataCacheContext<
-  TItemsDataSource,
-  TItemsData,
-  ItemsDataProvider<TItemsDataSource, TItemsData>
+  TAnnotatedDataSource,
+  TData,
+  AnnotatedDataProvider<TAnnotatedDataSource, TData>
 > & {
-  /** The tables of the current project, which items data sources may reference */
+  /** The tables of the current project, which annotated data sources may reference */
   tables: DataObject<TableDataSource>[];
 
   /** The registered table data providers, by data source type */
@@ -314,17 +315,17 @@ export class DataCache<
   }
 
   /**
-   * Creates the options with which an entry's data source is opened
+   * Creates the options with which an entry's data source is loaded
    *
    * @param entryDeps - The entry's dependencies
    * @param _options - The load operation's abort signal and progress callback
    * @returns The options passed to the data provider
    */
-  protected makeDataProviderOpenOptions(
+  protected makeDataProviderLoadOptions(
     entryDeps: TEntryDependencies,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _options: { signal: AbortSignal; onProgress: ProgressCallback },
-  ): DataProviderOpenOptions {
+  ): DataProviderLoadOptions {
     return { workspace: entryDeps.workspace };
   }
 
@@ -385,7 +386,7 @@ export class DataCache<
           newEntryDeps,
         );
         const data = await resolvedDataProvider.load(normalizedDataSource, {
-          ...this.makeDataProviderOpenOptions(newEntryDeps, opts),
+          ...this.makeDataProviderLoadOptions(newEntryDeps, opts),
           ...opts,
         });
         return this._wrapData(data);
@@ -557,7 +558,7 @@ export class DataCache<
   /**
    * Returns another data cache's entry for one of its objects
    *
-   * This exists so that an {@link ItemsDataCache} can reach into the table data
+   * This exists so that an {@link AnnotatedDataCache} can reach into the table data
    * cache, whose entries are private to a different instantiation of this class.
    *
    * @param dataCache - The cache to return the entry of
@@ -604,21 +605,21 @@ export class DataCache<
 /**
  * Loads and caches the data of the project's labels, points and shapes
  *
- * In addition to what a {@link DataCache} does, an items data cache resolves
- * the table that an items data source may reference, loads it through the table
- * data cache, and hands its data to the data provider. An entry therefore also
- * depends on that table's load operation, and is reloaded whenever the table
- * itself is reloaded.
+ * In addition to what a {@link DataCache} does, an annotated data cache
+ * resolves the table that an annotated data source may reference, loads it
+ * through the table data cache, and hands its data to the data provider. An
+ * entry therefore also depends on that table's load operation, and is reloaded
+ * whenever the table itself is reloaded.
  */
-export class ItemsDataCache<
-  TItemsDataSource extends ItemsDataSource,
-  TItemsData extends ItemsData,
+export class AnnotatedDataCache<
+  TAnnotatedDataSource extends AnnotatedDataSource,
+  TData extends Data,
 > extends DataCache<
-  TItemsDataSource,
-  TItemsData,
-  ItemsDataProvider<TItemsDataSource, TItemsData>,
-  ItemsDataCacheContext<TItemsDataSource, TItemsData>,
-  ItemsDataCacheEntryDependencies<TItemsDataSource, TItemsData>
+  TAnnotatedDataSource,
+  TData,
+  AnnotatedDataProvider<TAnnotatedDataSource, TData>,
+  AnnotatedDataCacheContext<TAnnotatedDataSource, TData>,
+  AnnotatedDataCacheEntryDependencies<TAnnotatedDataSource, TData>
 > {
   private readonly _tableDataCache: DataCache<TableDataSource, TableData>;
 
@@ -629,11 +630,11 @@ export class ItemsDataCache<
    * the cached objects, called whenever they change respectively are removed
    */
   constructor(
-    wrapData: (data: TItemsData) => DataWrapper<TItemsData>,
+    wrapData: (data: TData) => DataWrapper<TData>,
     tableDataCache: DataCache<TableDataSource, TableData>,
     options?: {
       onObjectDataRefsChanged?: (
-        changedObjectDataRefs: Map<string, DataRef<TItemsData>>,
+        changedObjectDataRefs: Map<string, DataRef<TData>>,
       ) => void;
       onObjectDataRefsRemoved?: (objectIds: Set<string>) => void;
     },
@@ -647,16 +648,16 @@ export class ItemsDataCache<
    * including the load operation of the table it references, if any
    *
    * @param dataSource - The normalized data source of the entry
-   * @param context - See {@link ItemsDataCacheContext}
+   * @param context - See {@link AnnotatedDataCacheContext}
    * @param options - Set `peek` to not start loading a table that is not being
    * loaded yet
    * @returns The entry's dependencies
    */
   protected override makeEntryDependencies(
-    dataSource: TItemsDataSource,
-    context: ItemsDataCacheContext<TItemsDataSource, TItemsData>,
+    dataSource: TAnnotatedDataSource,
+    context: AnnotatedDataCacheContext<TAnnotatedDataSource, TData>,
     options?: { peek?: boolean },
-  ): ItemsDataCacheEntryDependencies<TItemsDataSource, TItemsData> {
+  ): AnnotatedDataCacheEntryDependencies<TAnnotatedDataSource, TData> {
     return {
       ...super.makeEntryDependencies(dataSource, context, options),
       tableLoadOp: this._getTableLoadOperation(dataSource, context, options),
@@ -674,9 +675,9 @@ export class ItemsDataCache<
    * references a table that is not part of the project
    */
   protected override resolveDataProvider(
-    dataSource: TItemsDataSource,
-    entryDeps: ItemsDataCacheEntryDependencies<TItemsDataSource, TItemsData>,
-  ): ItemsDataProvider<TItemsDataSource, TItemsData> {
+    dataSource: TAnnotatedDataSource,
+    entryDeps: AnnotatedDataCacheEntryDependencies<TAnnotatedDataSource, TData>,
+  ): AnnotatedDataProvider<TAnnotatedDataSource, TData> {
     const dataProvider = super.resolveDataProvider(dataSource, entryDeps);
     if (dataSource.table !== undefined && entryDeps.tableLoadOp === undefined) {
       throw new Error(`Table not found: ${dataSource.table}`);
@@ -685,17 +686,17 @@ export class ItemsDataCache<
   }
 
   /**
-   * Creates the options with which an entry's data source is opened, subscribing
+   * Creates the options with which an entry's data source is loaded, subscribing
    * to the referenced table's data on the entry's behalf
    *
    * @param entryDeps - The entry's dependencies
    * @param options - The load operation's abort signal and progress callback
-   * @returns The options passed to the items data provider
+   * @returns The options passed to the annotated data provider
    */
-  protected override makeDataProviderOpenOptions(
-    entryDeps: ItemsDataCacheEntryDependencies<TItemsDataSource, TItemsData>,
+  protected override makeDataProviderLoadOptions(
+    entryDeps: AnnotatedDataCacheEntryDependencies<TAnnotatedDataSource, TData>,
     options: { signal: AbortSignal; onProgress: ProgressCallback },
-  ): ItemsDataProviderOpenOptions {
+  ): AnnotatedDataProviderLoadOptions {
     const { signal } = options;
     let tableDataPromise: Promise<TableData> | undefined;
     if (entryDeps.tableLoadOp !== undefined) {
@@ -703,7 +704,7 @@ export class ItemsDataCache<
       tableDataPromise.catch(() => {}); // prevent unhandled rejections in console
     }
     return {
-      ...super.makeDataProviderOpenOptions(entryDeps, options),
+      ...super.makeDataProviderLoadOptions(entryDeps, options),
       tableDataPromise,
     };
   }
@@ -712,7 +713,7 @@ export class ItemsDataCache<
    * Returns the load operation of the table referenced by a data source
    *
    * @param dataSource - The data source referencing the table
-   * @param context - See {@link ItemsDataCacheContext}
+   * @param context - See {@link AnnotatedDataCacheContext}
    * @param options - Set `peek` to not start loading a table that is not being
    * loaded yet
    * @returns The table's load operation, or `undefined` if the data source does
@@ -720,8 +721,8 @@ export class ItemsDataCache<
    * peeking - the table is not being loaded
    */
   private _getTableLoadOperation(
-    dataSource: TItemsDataSource,
-    context: ItemsDataCacheContext<TItemsDataSource, TItemsData>,
+    dataSource: TAnnotatedDataSource,
+    context: AnnotatedDataCacheContext<TAnnotatedDataSource, TData>,
     options?: { peek?: boolean },
   ): SharedOperation<DataWrapper<TableData>> | undefined {
     if (dataSource.table === undefined) {

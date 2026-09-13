@@ -20,16 +20,16 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
+import { AnnotationsWidget } from "@/components/widgets/AnnotationsWidget";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
 import { usePointsData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
-import { usePointsDataTableColumns } from "./usePointsDataTableColumns";
-import { usePointsDataWidget } from "./usePointsDataWidget";
+import { usePointsAnnotationsColumns } from "./usePointsAnnotationsColumns";
+import { usePointsAnnotationsWidget } from "./usePointsAnnotationsWidget";
 
 export type PointsPanelProps = {
   className?: string;
@@ -95,7 +95,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
     setActiveSettingsCategory,
     selectedGroupByColumn,
     setSelectedGroupByColumn,
-  } = usePointsDataWidget(points);
+  } = usePointsAnnotationsWidget(points);
 
   const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
 
@@ -105,7 +105,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
 
   const pointsData = usePointsData(points.id);
 
-  const { extraTableGroupColumnDefs } = usePointsDataTableColumns(
+  const { extraTableGroupColumnDefs } = usePointsAnnotationsColumns(
     points,
     selectedGroupByColumn,
   );
@@ -203,7 +203,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             className="bg-card"
           />
           {pointsData !== null && (
-            <ItemsDataWidget
+            <AnnotationsWidget
               data={pointsData}
               tableHeight={200}
               table={points.dataSource.table ?? null}

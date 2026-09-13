@@ -1,10 +1,10 @@
 import {
-  type ItemsDataSource,
-  type RawItemsDataSource,
-  type RawRenderedDataObject,
-  type RenderedDataObject,
-  createItemsDataSource,
-  createRenderedDataObject,
+  type AnnotatedDataSource,
+  type RawAnnotatedDataSource,
+  type RawRenderedItemsDataObject,
+  type RenderedItemsDataObject,
+  createAnnotatedDataSource,
+  createRenderedItemsDataObject,
 } from "./base";
 import type { ColorConfig, OpacityConfig, VisibilityConfig } from "./configs";
 import {
@@ -31,7 +31,7 @@ export const shapesDefaults = {
 /**
  * A two-dimensional shape cloud
  */
-export interface RawShapes extends RawRenderedDataObject<
+export interface RawShapes extends RawRenderedItemsDataObject<
   RawShapesDataSource<string>
 > {
   /**
@@ -80,7 +80,7 @@ export interface RawShapes extends RawRenderedDataObject<
 /**
  * A {@link RawShapes} object with {@link shapesDefaults} applied
  */
-export type Shapes = RenderedDataObject<ShapesDataSource<string>> &
+export type Shapes = RenderedItemsDataObject<ShapesDataSource<string>> &
   Required<Pick<RawShapes, keyof typeof shapesDefaults>> &
   Omit<RawShapes, keyof typeof shapesDefaults>;
 
@@ -92,7 +92,7 @@ export type Shapes = RenderedDataObject<ShapesDataSource<string>> &
  */
 export function createShapes(rawShapes: RawShapes): Shapes {
   return {
-    ...createRenderedDataObject(rawShapes),
+    ...createRenderedItemsDataObject(rawShapes),
     ...structuredClone(shapesDefaults),
     ...structuredClone(rawShapes),
     dataSource: createShapesDataSource(rawShapes.dataSource),
@@ -112,13 +112,13 @@ export const shapesDataSourceDefaults = {} as const satisfies Partial<
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RawShapesDataSource<
   TType extends string = string,
-> extends RawItemsDataSource<TType> {}
+> extends RawAnnotatedDataSource<TType> {}
 
 /**
  * A {@link RawShapesDataSource} with {@link shapesDataSourceDefaults} applied
  */
 export type ShapesDataSource<TType extends string = string> =
-  ItemsDataSource<TType> &
+  AnnotatedDataSource<TType> &
     Required<
       Pick<RawShapesDataSource<TType>, keyof typeof shapesDataSourceDefaults>
     > &
@@ -134,7 +134,7 @@ export function createShapesDataSource<TType extends string>(
   rawShapesDataSource: RawShapesDataSource<TType>,
 ): ShapesDataSource<TType> {
   return {
-    ...createItemsDataSource(rawShapesDataSource),
+    ...createAnnotatedDataSource(rawShapesDataSource),
     ...structuredClone(shapesDataSourceDefaults),
     ...structuredClone(rawShapesDataSource),
   };

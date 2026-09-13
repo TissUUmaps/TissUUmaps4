@@ -9,15 +9,15 @@ import { DataWrapperBase } from "./DataWrapperBase";
 /**
  * Cache wrapper around image data, delegating to the wrapped data
  *
- * The optional channel getters are only provided if the wrapped data provides
- * them, so that consumers can check for their presence as they would on the
- * wrapped data itself.
+ * The optional getters are only provided if the wrapped data provides them, so
+ * that consumers can check for their presence as they would on the wrapped data
+ * itself.
  */
 export class ImageDataWrapper
   extends DataWrapperBase<ImageData>
   implements ImageData
 {
-  readonly getChannelData?: ImageData["getChannelData"];
+  readonly getTileData?: ImageData["getTileData"];
   readonly getChannelName?: ImageData["getChannelName"];
   readonly getChannelVisibility?: ImageData["getChannelVisibility"];
   readonly getChannelOpacity?: ImageData["getChannelOpacity"];
@@ -26,8 +26,8 @@ export class ImageDataWrapper
 
   constructor(data: ImageData) {
     super(data);
-    if (data.getChannelData !== undefined) {
-      this.getChannelData = (c, event) => this.data.getChannelData!(c, event);
+    if (data.getTileData !== undefined) {
+      this.getTileData = (event) => this.data.getTileData!(event);
     }
     if (data.getChannelName !== undefined) {
       this.getChannelName = (c) => this.data.getChannelName!(c);

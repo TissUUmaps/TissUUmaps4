@@ -1,5 +1,5 @@
 import type {
-  DataProviderOpenOptions,
+  DataProviderLoadOptions,
   TableDataProvider,
 } from "@tissuumaps/core";
 
@@ -70,7 +70,7 @@ export class ParquetTableDataProvider implements TableDataProvider<
 
   async load(
     normalizedDataSource: NormalizedParquetTableDataSource,
-    options?: DataProviderOpenOptions,
+    options?: DataProviderLoadOptions,
   ): Promise<ParquetTableData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();

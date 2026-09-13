@@ -10,23 +10,23 @@ import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 
 import {
-  ItemsDataTable,
-  type ItemsDataTableGroupRowData,
-  type ItemsDataTableRowData,
-} from "./ItemsDataTable";
+  AnnotationsTable,
+  type AnnotationsTableGroupRowData,
+  type AnnotationsTableRowData,
+} from "./AnnotationsTable";
 
-export type ItemsDataWidgetProps = {
-  data: ItemsData;
+export type AnnotationsWidgetProps = {
+  data?: ItemsData;
   tableHeight: number;
   table: string | null;
   selectedGroupByColumn?: string | null;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
-  extraTableColumnDefs?: ColumnDef<ItemsDataTableRowData>[];
-  extraTableGroupColumnDefs?: ColumnDef<ItemsDataTableGroupRowData>[];
+  extraTableColumnDefs?: ColumnDef<AnnotationsTableRowData>[];
+  extraTableGroupColumnDefs?: ColumnDef<AnnotationsTableGroupRowData>[];
   className?: string;
 };
 
-export function ItemsDataWidget({
+export function AnnotationsWidget({
   data,
   tableHeight,
   table,
@@ -35,7 +35,7 @@ export function ItemsDataWidget({
   extraTableColumnDefs,
   extraTableGroupColumnDefs,
   className,
-}: ItemsDataWidgetProps) {
+}: AnnotationsWidgetProps) {
   const [selectedGroupByColumn, setSelectedGroupByColumn] = useControlled(
     controlledSelectedGroupByColumn,
     setControlledSelectedGroupByColumn,
@@ -50,7 +50,7 @@ export function ItemsDataWidget({
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
       <FieldsetLegend className="font-medium text-foreground">
-        Data
+        Annotations
       </FieldsetLegend>
       <Field disabled={table === null}>
         <FieldLabel>Group by</FieldLabel>
@@ -62,7 +62,7 @@ export function ItemsDataWidget({
           onSelectedItemChange={setSelectedGroupByColumn}
         />
       </Field>
-      <ItemsDataTable
+      <AnnotationsTable
         data={data}
         height={tableHeight}
         table={table}

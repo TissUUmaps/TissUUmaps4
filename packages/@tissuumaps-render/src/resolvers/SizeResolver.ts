@@ -1,10 +1,10 @@
 import {
   type ConstantConfig,
-  type DefaultMap,
   type FromConfig,
   type GroupByConfig,
+  type GroupValueMap,
   MathUtils,
-  ParseUtils,
+  NumberUtils,
   type SizeConfig,
   type TableData,
   getActiveConfigSource,
@@ -30,12 +30,12 @@ export class SizeResolver extends ResolverBase {
    * @param sizeMaps - Available size maps for groupBy lookups
    * @param defaultSize - Fallback size when no valid config or value is found
    * @param options - Optional abort signal, buffer alignment, size scaling factor, and table loader
-   * @returns A `Float32Array` of encoded size values, one per ID
+   * @returns A `Float32Array` of packed size values, one per ID
    */
   static async resolveSizes(
     ids: number[],
     config: SizeConfig,
-    sizeMaps: DefaultMap<number>[],
+    sizeMaps: GroupValueMap<number>[],
     defaultSize: number,
     options?: {
       signal?: AbortSignal;
@@ -62,7 +62,7 @@ export class SizeResolver extends ResolverBase {
         ids,
         config,
         defaultSize,
-        (opts) => loadTable(opts),
+        loadTable,
         { signal, align, sizeFactor },
       );
     }
@@ -76,7 +76,7 @@ export class SizeResolver extends ResolverBase {
         config,
         sizeMaps,
         defaultSize,
-        (opts) => loadTable(opts),
+        loadTable,
         { signal, align, sizeFactor },
       );
     }
@@ -88,12 +88,42 @@ export class SizeResolver extends ResolverBase {
   }
 
   /**
+   * Resolves the size of a single item without loading any table data
+   *
+   * Synchronous counterpart to {@link resolveSizes} for items that are not
+   * known up front, in the way the labels renderer resolves label IDs as they
+   * are first drawn (see `ColorResolver.resolveColorWithoutTable`). Labels have
+   * no size, so this has no caller yet and exists for symmetry with the other
+   * resolvers. A constant source resolves exactly, whereas from and groupBy
+   * sources depend on table values and fall back to `defaultSize`.
+   *
+   * @param _id - The item ID (unused, kept for symmetry with the other resolvers)
+   * @param config - Size configuration specifying the data source
+   * @param defaultSize - Fallback size when the source cannot be resolved without a table
+   * @param options - Optional size scaling factor
+   * @returns The packed size value
+   */
+  static resolveSizeWithoutTable(
+    _id: number,
+    config: SizeConfig,
+    defaultSize: number,
+    options?: { sizeFactor?: number },
+  ): number {
+    const { sizeFactor = 1 } = options ?? {};
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return SizeResolver.packSize(config.constant.value, { sizeFactor });
+    }
+    return SizeResolver.packSize(defaultSize, { sizeFactor });
+  }
+
+  /**
    * Creates a uniform size data buffer filled with the configured constant size
    *
    * @param ids - Ordered list of item IDs (only the length is used)
    * @param config - Constant size configuration containing the size value
    * @param options - Optional buffer alignment and size scaling factor
-   * @returns A `Float32Array` filled with the encoded constant size
+   * @returns A `Float32Array` filled with the packed constant size
    */
   static resolveUniformSizes(
     ids: number[],
@@ -115,7 +145,7 @@ export class SizeResolver extends ResolverBase {
    * @param defaultSize - Fallback size when a value is missing or invalid
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal, buffer alignment, and size scaling factor
-   * @returns A `Float32Array` of encoded size values
+   * @returns A `Float32Array` of packed size values
    */
   static async resolveSizesFromTableValues(
     ids: number[],
@@ -127,18 +157,18 @@ export class SizeResolver extends ResolverBase {
     const { signal, align = 1, sizeFactor = 1 } = options ?? {};
     signal?.throwIfAborted();
     const data = await loadTable({ signal });
-    const buffer = SizeResolver.createSizeBuffer(ids.length, { align });
+    const packedSizes = SizeResolver.createSizeBuffer(ids.length, { align });
     await SizeResolver.fillFromTableValues(
-      buffer,
+      packedSizes,
       data,
       ids,
       config.from.column,
       defaultSize,
       (value) => SizeResolver.parseSize(value),
-      (size) => SizeResolver.encodeSize(size, { sizeFactor }),
+      (size) => SizeResolver.packSize(size, { sizeFactor }),
       { signal },
     );
-    return buffer;
+    return packedSizes;
   }
 
   /**
@@ -151,12 +181,12 @@ export class SizeResolver extends ResolverBase {
    * @param defaultSize - Fallback size when the map is not found or a group is unmapped
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal, buffer alignment, and size scaling factor
-   * @returns A `Float32Array` of encoded size values
+   * @returns A `Float32Array` of packed size values
    */
   static async resolveSizesFromTableGroups(
     ids: number[],
     config: Extract<SizeConfig, GroupByConfig<true>>,
-    sizeMaps: DefaultMap<number>[],
+    sizeMaps: GroupValueMap<number>[],
     defaultSize: number,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number; sizeFactor?: number },
@@ -176,19 +206,19 @@ export class SizeResolver extends ResolverBase {
       });
     }
     const data = await loadTable({ signal });
-    const buffer = SizeResolver.createSizeBuffer(ids.length, { align });
+    const packedSizes = SizeResolver.createSizeBuffer(ids.length, { align });
     const groupSizes = new Map(Object.entries(sizeMap.values));
     await SizeResolver.fillFromTableGroups(
-      buffer,
+      packedSizes,
       data,
       ids,
       config.groupBy.column,
       sizeMap.default ?? defaultSize,
       (group) => groupSizes.get(group),
-      (size) => SizeResolver.encodeSize(size, { sizeFactor }),
+      (size) => SizeResolver.packSize(size, { sizeFactor }),
       { signal },
     );
-    return buffer;
+    return packedSizes;
   }
 
   /**
@@ -197,7 +227,7 @@ export class SizeResolver extends ResolverBase {
    * @param n - Number of elements
    * @param size - The size value to fill with
    * @param options - Optional buffer alignment and size scaling factor
-   * @returns A `Float32Array` filled with the encoded size value
+   * @returns A `Float32Array` filled with the packed size value
    */
   static createUniformSizes(
     n: number,
@@ -205,26 +235,26 @@ export class SizeResolver extends ResolverBase {
     options?: { align?: number; sizeFactor?: number },
   ): Float32Array {
     const { align = 1, sizeFactor = 1 } = options ?? {};
-    const buffer = SizeResolver.createSizeBuffer(n, { align });
-    const value = SizeResolver.encodeSize(size, { sizeFactor });
-    buffer.fill(value, 0, n);
-    return buffer;
+    const packedSizes = SizeResolver.createSizeBuffer(n, { align });
+    const packedSize = SizeResolver.packSize(size, { sizeFactor });
+    packedSizes.fill(packedSize, 0, n);
+    return packedSizes;
   }
 
   /**
-   * Creates a buffer of the given size for storing encoded size values, aligned to the specified byte boundary
+   * Creates a buffer of the given size for storing packed size values, aligned to the specified byte boundary
    *
-   * @param size - The number of elements in the buffer
+   * @param n - The number of elements in the buffer
    * @param options - Optional buffer alignment
-   * @returns A `Float32Array` of the specified size, aligned to the given byte boundary
+   * @returns A `Float32Array` of length `n`, aligned to the given byte boundary
    */
   static createSizeBuffer(
-    size: number,
+    n: number,
     options?: { align?: number },
   ): Float32Array {
     const { align = 1 } = options ?? {};
-    const alignedSize = MathUtils.align(size, align);
-    return new Float32Array(alignedSize);
+    const alignedN = MathUtils.align(n, align);
+    return new Float32Array(alignedN);
   }
 
   /**
@@ -234,17 +264,17 @@ export class SizeResolver extends ResolverBase {
    * @returns The numeric size value, or `undefined` if `value` is not a number
    */
   static parseSize(value: unknown): number | undefined {
-    return ParseUtils.tryParseFinite(value, { requireSafeBigInt: true });
+    return NumberUtils.tryParseFinite(value, { requireSafeBigInt: true });
   }
 
   /**
-   * Encodes a size value, optionally scaled by a size factor
+   * Packs a size value, optionally scaled by a size factor
    *
-   * @param size - The size value to encode
+   * @param size - The size value to pack
    * @param options - Optional size scaling factor (defaults to 1)
    * @returns The scaled size value
    */
-  static encodeSize(size: number, options?: { sizeFactor?: number }): number {
+  static packSize(size: number, options?: { sizeFactor?: number }): number {
     const { sizeFactor = 1 } = options ?? {};
     return size * sizeFactor;
   }

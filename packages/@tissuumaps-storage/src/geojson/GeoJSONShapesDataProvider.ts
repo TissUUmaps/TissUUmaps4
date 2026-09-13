@@ -1,5 +1,5 @@
 import type {
-  DataProviderOpenOptions,
+  DataProviderLoadOptions,
   ShapesDataProvider,
 } from "@tissuumaps/core";
 
@@ -78,7 +78,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
 
   async load(
     normalizedDataSource: NormalizedGeoJSONShapesDataSource,
-    options?: DataProviderOpenOptions,
+    options?: DataProviderLoadOptions,
   ): Promise<GeoJSONShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
