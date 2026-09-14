@@ -57,18 +57,9 @@ export function SimpleSelect<
           className="outline-none select-none isolate z-50"
           sideOffset={8}
         >
-          <SelectPrimitive.Popup
-            className="group min-w-(--anchor-width) origin-(--transform-origin) bg-clip-padding rounded-md bg-[canvas] text-gray-900 shadow-lg shadow-gray-200 outline-1 outline-gray-200 transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-[side=none]:min-w-[calc(var(--anchor-width)+1rem)] data-[side=none]:data-ending-style:transition-none data-starting-style:scale-90 data-starting-style:opacity-0 data-[side=none]:data-starting-style:scale-100 data-[side=none]:data-starting-style:opacity-100 data-[side=none]:data-starting-style:transition-none dark:shadow-none dark:outline-gray-300 dark:bg-gray-900 dark:text-gray-100"
-            style={{
-              minWidth: "var(--anchor-width)",
-              transformOrigin: "var(--transform-origin)",
-            }}
-          >
+          <SelectPrimitive.Popup className="group min-w-(--anchor-width) origin-(--transform-origin) bg-clip-padding rounded-md bg-[canvas] text-gray-900 shadow-lg shadow-gray-200 outline-1 outline-gray-200 transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-[side=none]:min-w-[calc(var(--anchor-width)+1rem)] data-[side=none]:data-ending-style:transition-none data-starting-style:scale-90 data-starting-style:opacity-0 data-[side=none]:data-starting-style:scale-100 data-[side=none]:data-starting-style:opacity-100 data-[side=none]:data-starting-style:transition-none dark:shadow-none dark:outline-gray-300 dark:bg-gray-900 dark:text-gray-100">
             <SelectPrimitive.ScrollUpArrow className="top-0 z-1 flex h-4 w-full cursor-default items-center justify-center rounded-md bg-[canvas] text-center text-xs before:absolute data-[side=none]:before:-top-full before:left-0 before:h-full before:w-full before:content-[''] dark:bg-gray-900 dark:text-gray-100" />
-            <SelectPrimitive.List
-              className="relative py-1 scroll-py-6 overflow-y-auto max-h-(--available-height) dark:bg-gray-900"
-              style={{ maxHeight: "var(--available-height)" }}
-            >
+            <SelectPrimitive.List className="relative py-1 scroll-py-6 overflow-y-auto max-h-(--available-height) dark:bg-gray-900">
               {memoizedItems.map(({ label, value }) => (
                 <SelectPrimitive.Item
                   key={String(value)}

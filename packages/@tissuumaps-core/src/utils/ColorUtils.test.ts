@@ -78,6 +78,52 @@ describe("ColorUtils", () => {
     });
   });
 
+  describe("sampleColorScheme", () => {
+    const grayscale = (t: number) => {
+      const value = Math.round(t * 255);
+      return `rgb(${value}, ${value}, ${value})`;
+    };
+
+    it("samples both ends of the scheme", () => {
+      const result = ColorUtils.sampleColorScheme(grayscale, 2);
+      expect(result).toEqual([
+        { r: 0, g: 0, b: 0 },
+        { r: 255, g: 255, b: 255 },
+      ]);
+    });
+
+    it("samples evenly spaced positions", () => {
+      const result = ColorUtils.sampleColorScheme(grayscale, 3);
+      expect(result[1]).toEqual({ r: 128, g: 128, b: 128 });
+    });
+
+    it("parses hex color strings", () => {
+      const result = ColorUtils.sampleColorScheme(() => "#010203", 2);
+      expect(result).toEqual([
+        { r: 1, g: 2, b: 3 },
+        { r: 1, g: 2, b: 3 },
+      ]);
+    });
+
+    it("throws on a size smaller than two", () => {
+      expect(() => ColorUtils.sampleColorScheme(grayscale, 1)).toThrow(
+        /Invalid color scheme size/,
+      );
+    });
+
+    it("throws on a fractional size", () => {
+      expect(() => ColorUtils.sampleColorScheme(grayscale, 2.5)).toThrow(
+        /Invalid color scheme size/,
+      );
+    });
+
+    it("throws on a color string it cannot parse", () => {
+      expect(() =>
+        ColorUtils.sampleColorScheme(() => "oklch(0.7 0.1 200)", 2),
+      ).toThrow(/Invalid color scheme color/);
+    });
+  });
+
   describe("withAlpha", () => {
     it("adds the opacity as alpha for a visible item", () => {
       expect(ColorUtils.withAlpha(0x030201, 1, 0xff)).toBe(0xff030201);

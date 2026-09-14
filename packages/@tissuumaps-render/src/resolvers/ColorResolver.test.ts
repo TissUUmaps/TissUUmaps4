@@ -52,22 +52,28 @@ describe("ColorResolver", () => {
   });
 
   describe("parseColor", () => {
-    it("maps a value in the lower third of the range to the first color", () => {
+    it("maps the minimum of the range to the first color", () => {
       expect(
         ColorResolver.parseColor(0, [0, 3], undefined, testPalette),
       ).toEqual(red);
     });
 
-    it("maps a value in the middle third to the second color", () => {
+    it("maps the middle of the range to the middle color", () => {
       expect(
         ColorResolver.parseColor(1.5, [0, 3], undefined, testPalette),
       ).toEqual(green);
     });
 
-    it("maps a value at the maximum to the last color", () => {
+    it("maps the maximum of the range to the last color", () => {
       expect(
         ColorResolver.parseColor(3, [0, 3], undefined, testPalette),
       ).toEqual(blue);
+    });
+
+    it("interpolates between the two colors a value falls between", () => {
+      expect(
+        ColorResolver.parseColor(0.75, [0, 3], undefined, testPalette),
+      ).toEqual({ r: 127.5, g: 127.5, b: 0 });
     });
 
     it("maps every value onto the first color for an empty range", () => {
@@ -77,27 +83,27 @@ describe("ColorResolver", () => {
     });
 
     it("prefers the configured value range over the data range", () => {
-      // 5/10 = 0.5, floor(0.5*3) = 1 → green
+      // 5/10 = 0.5, the middle of the palette → green
       expect(
         ColorResolver.parseColor(5, [0, 100], [0, 10], testPalette),
       ).toEqual(green);
     });
 
     it("uses the data value range when no configured range is given", () => {
-      // 50/100 = 0.5, floor(0.5*3) = 1 → green
+      // 50/100 = 0.5, the middle of the palette → green
       expect(
         ColorResolver.parseColor(50, [0, 100], undefined, testPalette),
       ).toEqual(green);
     });
 
     it("defaults to [0, 1] when both ranges are undefined", () => {
-      // 0.5/1 = 0.5, floor(0.5*3) = 1 → green
+      // 0.5/1 = 0.5, the middle of the palette → green
       expect(
         ColorResolver.parseColor(0.5, undefined, undefined, testPalette),
       ).toEqual(green);
     });
 
-    it("clamps the index for out-of-range values", () => {
+    it("clamps out-of-range values to the palette ends", () => {
       expect(
         ColorResolver.parseColor(-10, [0, 1], undefined, testPalette),
       ).toEqual(red);

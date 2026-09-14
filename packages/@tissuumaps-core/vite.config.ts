@@ -22,7 +22,14 @@ export default defineConfig(({ mode }) => ({
       fileName: "index",
     },
     rolldownOptions: {
-      external: ["@jsonforms/core", "gl-matrix", "openseadragon", "zustand"],
+      external: [
+        "@jsonforms/core",
+        "d3-color",
+        "d3-scale-chromatic",
+        "gl-matrix",
+        "openseadragon",
+        "zustand",
+      ],
       checks: {
         pluginTimings: false,
       },
