@@ -115,4 +115,4 @@ Both the image and the labels are OME-Zarr images served next to the project fil
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`OMEZarrImageDataProvider`](/docs/api/@tissuumaps/storage/classes/OMEZarrImageDataProvider) and [`OMEZarrLabelsDataProvider`](/docs/api/@tissuumaps/storage/classes/OMEZarrLabelsDataProvider), both building on a shared `OMEZarrDataProvider` base class. Reading OME-Zarr metadata and arrays is delegated to [ome-zarr.js](https://github.com/ome/ome-zarr.js), and tiling to [omezarr-tilesource](https://www.npmjs.com/package/omezarr-tilesource).
+The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`OMEZarrImageDataProvider`](/docs/api/@tissuumaps/storage/classes/OMEZarrImageDataProvider) and [`OMEZarrLabelsDataProvider`](/docs/api/@tissuumaps/storage/classes/OMEZarrLabelsDataProvider). Reading OME-Zarr metadata and arrays is delegated to [ome-zarr.js](https://github.com/ome/ome-zarr.js), and tiling to [omezarr-tilesource](https://www.npmjs.com/package/omezarr-tilesource).

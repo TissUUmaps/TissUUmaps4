@@ -1,15 +1,17 @@
-import { NgffImage } from "ome-zarr.js";
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
-import type { LabelsDataProvider } from "@tissuumaps/core";
+import type {
+  DataProviderLoadOptions,
+  LabelsDataProvider,
+} from "@tissuumaps/core";
 
-import { OMEZarrDataProvider } from "./OMEZarrDataProvider";
 import { OMEZarrLabelsData } from "./OMEZarrLabelsData";
 import {
   type NormalizedOMEZarrLabelsDataSource,
   type OMEZarrLabelsDataSource,
   omeZarrLabelsDataSourceDefaults,
 } from "./OMEZarrLabelsDataSource";
+import { openOMEZarr } from "./openOMEZarr";
 
 /**
  * Data provider for OME-Zarr label images
@@ -18,19 +20,13 @@ import {
  * single tile source; the image's channel axis, if any, is not iterated, and
  * `image-label` metadata is not read.
  */
-export class OMEZarrLabelsDataProvider
-  extends OMEZarrDataProvider<
-    OMEZarrLabelsDataSource,
-    OMEZarrLabelsData,
-    NormalizedOMEZarrLabelsDataSource
-  >
-  implements
-    LabelsDataProvider<
-      OMEZarrLabelsDataSource,
-      OMEZarrLabelsData,
-      NormalizedOMEZarrLabelsDataSource
-    >
-{
+export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
+  OMEZarrLabelsDataSource,
+  OMEZarrLabelsData,
+  NormalizedOMEZarrLabelsDataSource
+> {
+  readonly name = "OME-Zarr";
+
   readonly schema = {
     type: "object",
     properties: {
@@ -99,30 +95,44 @@ export class OMEZarrLabelsDataProvider
   }
 
   /**
-   * Loads the OME-Zarr label image and opens its tile source
+   * Opens an OME-Zarr labels data source and returns the loaded label image
+   * data
    *
-   * @param url - The absolute URL to open the tile source with
-   * @param store - The zarr store to load the OME-Zarr label image from
-   * @param normalizedDataSource - The normalized data source being loaded,
-   * whose `z` and `t` select the plane to open
-   * @param objectUrl - The object URL created for a workspace file, if any
-   * @param signal - The abort signal of the load operation, if any
+   * The OME-Zarr label image is loaded with {@link openOMEZarr} and its tile
+   * source is opened, with the `z` and `t` of the data source selecting the
+   * plane to open.
+   *
+   * @param normalizedDataSource - The normalized data source to open
+   * @param options - See `DataProviderLoadOptions`; `workspace` is required
+   * for data sources with a `path` but no `url`
    * @returns A promise that resolves to the loaded label image data
+   * @throws Error if the data source has neither a URL nor a workspace path,
+   * or has only a workspace path while no workspace is open
    */
-  protected async open(
-    url: string,
-    store: Parameters<typeof NgffImage.load>[0],
+  async load(
     normalizedDataSource: NormalizedOMEZarrLabelsDataSource,
-    objectUrl: string | undefined,
-    signal: AbortSignal | undefined,
+    options?: DataProviderLoadOptions,
   ): Promise<OMEZarrLabelsData> {
-    const image = await NgffImage.load(store, { signal });
-    const { z, t } = normalizedDataSource;
-    const tileSource = await OMEZarrTileSource.open(
-      { url, z, t, dataType: "ome-zarr" },
-      image,
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const { image, url, objectUrl } = await openOMEZarr(
+      normalizedDataSource,
+      options,
     );
-    signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
-    return new OMEZarrLabelsData(tileSource, objectUrl);
+    try {
+      const { z, t } = normalizedDataSource;
+      const tileSource = await OMEZarrTileSource.open(
+        { url, z, t, dataType: "ome-zarr" },
+        image,
+      );
+      signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
+      return new OMEZarrLabelsData(tileSource, objectUrl);
+    } catch (error) {
+      // the label image data owns the object URL only once it has been created
+      if (objectUrl !== undefined) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      throw error;
+    }
   }
 }

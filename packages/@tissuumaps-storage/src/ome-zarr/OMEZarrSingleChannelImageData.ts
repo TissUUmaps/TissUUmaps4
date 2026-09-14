@@ -16,7 +16,7 @@ export class OMEZarrSingleChannelImageData extends OMEZarrImageData {
    * @param tileSource - The tile source of the image, opened with
    * `dataType: "ome-zarr"`
    * @param objectUrl - The object URL created for the workspace file the
-   * image was loaded from, if any (see {@link OMEZarrData})
+   * image was loaded from, if any (see {@link OMEZarrImageData})
    */
   constructor(tileSource: OMEZarrTileSource, objectUrl?: string) {
     super(objectUrl);
