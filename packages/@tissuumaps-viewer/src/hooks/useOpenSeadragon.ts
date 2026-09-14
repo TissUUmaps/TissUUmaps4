@@ -18,6 +18,7 @@ type OS = {
 
 export function useOpenSeadragon(adapter: ViewerAdapter) {
   const {
+    projectInstanceId,
     layers,
     images,
     labels,
@@ -153,6 +154,12 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
       );
     }
   }, [osReady, osOptions]);
+
+  useEffect(() => {
+    if (osReady && osRef.current !== null) {
+      osRef.current.context.resetViewport();
+    }
+  }, [osReady, projectInstanceId]);
 
   useEffect(() => {
     const abortController = new AbortController();
