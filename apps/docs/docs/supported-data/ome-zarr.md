@@ -35,12 +35,12 @@ Images **with a channel axis**, even one holding a single channel, are opened as
 
 Per-channel rendering settings are taken from the image's `omero` metadata where present:
 
-| Setting         | `omero` source                        | Fallback                                                                           |
-| --------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
-| Name            | `channels[c].label`                   | none                                                                               |
-| Visibility      | `channels[c].active`                  | visible                                                                            |
-| Color           | `channels[c].color` (6-digit hex)     | white if any channel has a color, otherwise a color derived from the channel index |
-| Contrast limits | `channels[c].window.start` and `.end` | the value range of the array's data type                                           |
+| Setting         | `omero` source                        | Fallback                                 |
+| --------------- | ------------------------------------- | ---------------------------------------- |
+| Name            | `channels[c].label`                   | none                                     |
+| Visibility      | `channels[c].active`                  | visible                                  |
+| Color           | `channels[c].color` (6-digit hex)     | a color derived from the channel index   |
+| Contrast limits | `channels[c].window.start` and `.end` | the value range of the array's data type |
 
 All of these can be overridden per channel in the project file through the image's `channels` array (see the [example](#example) below).
 

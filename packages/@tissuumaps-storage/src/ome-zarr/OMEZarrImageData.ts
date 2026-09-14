@@ -146,22 +146,17 @@ export class OMEZarrImageData implements ImageData {
    * Returns the color of a channel from the image's `omero` metadata
    *
    * Channel colors are 6-digit hex strings with an optional `#`. Channels
-   * without a valid color are white if any channel of the image has a color,
-   * so that the channels of an image are colored consistently, and have no
-   * color otherwise (leaving the renderer to derive one from the index).
+   * without a valid color have no color, leaving the renderer to derive one
+   * from the channel index, even if other channels of the image have one.
    *
    * @param c - The channel index (0-based)
-   * @returns The channel's color, or `undefined` if no channel has one
+   * @returns The channel's color, or `undefined` if it has no valid one
    * @throws Error if `c` is out of bounds
    */
   getChannelColor(c: number): Color | undefined {
-    const { channels } = this._image.checkChannelIndex(c);
-    const match = /^#?([0-9A-Fa-f]{6})$/.exec(channels[c]!.color);
-    if (match !== null) {
-      return ColorUtils.fromHex(`#${match[1]}`);
-    }
-    const hasColors = channels.some((channel) => channel.color !== undefined);
-    return hasColors ? { r: 255, g: 255, b: 255 } : undefined;
+    const { color } = this._image.checkChannelIndex(c).channels[c]!;
+    const match = /^#?([0-9A-Fa-f]{6})$/.exec(color);
+    return match !== null ? ColorUtils.fromHex(`#${match[1]}`) : undefined;
   }
 
   /**
