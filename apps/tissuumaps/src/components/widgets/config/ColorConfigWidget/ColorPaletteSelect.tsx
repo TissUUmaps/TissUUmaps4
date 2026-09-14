@@ -1,4 +1,4 @@
-import type { Color, ColorPalette } from "@tissuumaps/core";
+import type { ColorPalette } from "@tissuumaps/core";
 
 import { SimpleSelect } from "@/components/common/simple-select";
 
@@ -18,8 +18,8 @@ export function ColorPaletteSelect({
   return (
     <SimpleSelect
       items={colorPalettes}
-      itemLabel={colorPaletteLabel}
-      itemValue={colorPaletteId}
+      itemLabel={(p) => <ColorPaletteLabel colorPalette={p} />}
+      itemValue={(p) => p.id}
       value={value}
       onValueChange={onValueChange}
       nullable
@@ -27,24 +27,12 @@ export function ColorPaletteSelect({
   );
 }
 
-function colorPaletteLabel(colorPalette: ColorPalette) {
-  return (
-    <>
-      <ColorPaletteSwatch colors={colorPalette.colors} />
-      {colorPalette.name}
-    </>
-  );
-}
-
-function colorPaletteId(colorPalette: ColorPalette) {
-  return colorPalette.id;
-}
-
-type ColorPaletteSwatchProps = {
-  colors: Color[];
+type ColorPaletteLabelProps = {
+  colorPalette: ColorPalette;
 };
 
-function ColorPaletteSwatch({ colors }: ColorPaletteSwatchProps) {
+function ColorPaletteLabel({ colorPalette }: ColorPaletteLabelProps) {
+  const { colors, name } = colorPalette;
   const count = Math.min(colors.length, colorPaletteSwatchColorCount);
   const swatchColors = Array.from(
     { length: count },
@@ -55,11 +43,14 @@ function ColorPaletteSwatch({ colors }: ColorPaletteSwatchProps) {
       `rgb(${r}, ${g}, ${b}) ${(100 * i) / swatchColors.length}% ${(100 * (i + 1)) / swatchColors.length}%`,
   );
   return (
-    <span
-      className="h-3 w-8 shrink-0 rounded-xs border border-input"
-      style={{
-        backgroundImage: `linear-gradient(to right, ${stops.join(", ")})`,
-      }}
-    />
+    <>
+      <span
+        className="h-3 w-8 shrink-0 rounded-xs border border-input"
+        style={{
+          backgroundImage: `linear-gradient(to right, ${stops.join(", ")})`,
+        }}
+      />
+      {name}
+    </>
   );
 }

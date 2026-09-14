@@ -87,25 +87,39 @@ export type ColorPalette = {
 };
 
 /** Number of colors sampled from each continuous D3 color scheme */
-const continuousColorPaletteSize = 256;
+const sampledColorPaletteColorCount = 256;
 
-/** Builds a color palette by sampling a continuous D3 color scheme */
+/**
+ * Builds a color palette by sampling a continuous D3 color scheme
+ *
+ * @param id - Color palette ID, persisted in project configs
+ * @param name - Human-readable color palette name
+ * @param colorScheme - Maps a position within `[0, 1]` to a CSS color string
+ * @returns The color palette, holding `sampledColorPaletteColorCount` colors
+ */
 function sampledColorPalette(
   id: string,
   name: string,
-  interpolate: (t: number) => string,
+  colorScheme: (t: number) => string,
 ): ColorPalette {
   return {
     id,
     name,
     colors: ColorUtils.sampleColorScheme(
-      interpolate,
-      continuousColorPaletteSize,
+      colorScheme,
+      sampledColorPaletteColorCount,
     ),
   };
 }
 
-/** Builds a color palette from a list of hex colors */
+/**
+ * Builds a color palette from a list of hex colors
+ *
+ * @param id - Color palette ID, persisted in project configs
+ * @param name - Human-readable color palette name
+ * @param hexColors - The colors making up the palette, in order
+ * @returns The color palette
+ */
 function hexColorPalette(
   id: string,
   name: string,

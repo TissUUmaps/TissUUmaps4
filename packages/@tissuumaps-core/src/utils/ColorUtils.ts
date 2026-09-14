@@ -42,24 +42,27 @@ export class ColorUtils {
   /**
    * Samples a continuous color scheme into an array of colors
    *
-   * The scheme is evaluated at `size` evenly spaced positions covering the
-   * whole `[0, 1]` range, both ends included.
+   * The scheme is evaluated at `n` evenly spaced positions covering the whole
+   * `[0, 1]` range, both ends included.
    *
-   * @param interpolate - Maps a position within `[0, 1]` to a CSS color string
-   * @param size - Number of colors to sample, an integer of at least two
+   * @param colorScheme - Maps a position within `[0, 1]` to a CSS color string
+   * @param n - Number of colors to sample, an integer of at least two
    * @returns The sampled colors, in the order of the scheme
-   * @throws Error if `size` is not an integer of at least two, or if the
-   * scheme yields a color string that cannot be parsed
+   * @throws Error if `n` is not an integer of at least two, or if the scheme
+   * yields a color string that cannot be parsed
    */
   static sampleColorScheme(
-    interpolate: (t: number) => string,
-    size: number,
+    colorScheme: (t: number) => string,
+    n: number,
   ): Color[] {
-    if (!Number.isInteger(size) || size < 2) {
-      throw new Error(`Invalid color scheme size: ${size}`);
+    if (!Number.isInteger(n) || n < 2) {
+      throw new Error(`Invalid color scheme size: ${n}`);
     }
-    return Array.from({ length: size }, (_, i) => {
-      const spec = interpolate(i / (size - 1));
+    return Array.from({ length: n }, (_, i) => {
+      const spec = colorScheme(i / (n - 1));
+      // d3-color reports a parse failure as NaN components, rather than by
+      // throwing or returning null. It does not clamp, so this detects an
+      // unparseable color only, not an out-of-range one.
       const { r, g, b } = parseCSSColor(spec);
       if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
         throw new Error(`Invalid color scheme color: ${spec}`);
