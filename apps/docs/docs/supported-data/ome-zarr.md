@@ -31,7 +31,7 @@ Images with more than two spatial dimensions are shown one **plane** at a time, 
 
 ### Channels
 
-Images whose channel axis holds **more than one channel** are opened as multi-channel image data with one tile source per channel. TissUUmaps renders every channel itself, stretching it between its contrast limits, multiplying it with its color, and blending the channels additively.
+Images **with a channel axis**, even one holding a single channel, are opened as multi-channel image data with one tile source per channel. TissUUmaps renders every channel itself, stretching it between its contrast limits, multiplying it with its color, and blending the channels additively.
 
 Per-channel rendering settings are taken from the image's `omero` metadata where present:
 
@@ -44,7 +44,7 @@ Per-channel rendering settings are taken from the image's `omero` metadata where
 
 All of these can be overridden per channel in the project file through the image's `channels` array (see the [example](#example) below).
 
-Images without a channel axis, or with a **single channel**, are opened as single-channel image data with one tile source. Their tiles are rendered by the tile source itself, which applies the color and window of the `omero` channel (falling back to white and the data type's value range). The project file's `channels` array does not apply to single-channel images.
+Images **without a channel axis** are opened as single-channel image data with one tile source. Their tiles are rendered by the tile source itself, which applies the color and window of the `omero` channel (falling back to white and the data type's value range). The project file's `channels` array does not apply to single-channel images.
 
 ## Labels
 

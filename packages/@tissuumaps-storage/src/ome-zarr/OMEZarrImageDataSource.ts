@@ -13,9 +13,9 @@ export const omeZarrImageDataSourceDefaults = {};
  * OME-Zarr file (`url` ending in `.ozx`), or a zipped OME-Zarr file in the
  * open workspace (`path`).
  *
- * Images with a channel axis of more than one channel are opened as
- * multi-channel image data with one tile source per channel; all others as
- * single-channel image data.
+ * Images with a channel axis (even one of length one) are opened as
+ * multi-channel image data with one tile source per channel; images without
+ * a channel axis as single-channel image data.
  *
  * Images with more than two spatial dimensions are opened as a single plane:
  * `z` and `t` select the plane, and default to the image's `omero` defaults

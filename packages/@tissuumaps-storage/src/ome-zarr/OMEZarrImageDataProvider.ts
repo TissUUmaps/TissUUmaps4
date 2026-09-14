@@ -19,7 +19,7 @@ import { openOMEZarr } from "./openOMEZarr";
  * Data provider for OME-Zarr images
  *
  * Opens an {@link OMEZarrImageDataSource} as `OMEZarrMultiChannelImageData`
- * if the image has a channel axis with more than one channel, and as
+ * if the image has a channel axis (even one of length one), and as
  * `OMEZarrSingleChannelImageData` otherwise.
  */
 export class OMEZarrImageDataProvider implements ImageDataProvider<
@@ -92,8 +92,8 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * Opens an OME-Zarr image data source and returns the loaded image data
    *
    * The OME-Zarr image is loaded with {@link openOMEZarr} and one tile source
-   * per channel is opened, or a single tile source for images without a
-   * channel axis or with one channel. All resolution levels are opened once up
+   * per channel is opened for images with a channel axis, or a single tile
+   * source for images without one. All resolution levels are opened once up
    * front, both to read the channel count from the full-resolution array and
    * so that the tile sources share the opened arrays instead of reopening them
    * concurrently. The `z` and `t` of the data source select the plane to open.
@@ -120,9 +120,9 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         image.paths.map((path) => image.openArray(path, { signal })),
       ); // pre-open all resolution levels once to avoid concurrent reopening
       const cIndex = image.getAxesNames().indexOf("c");
-      const sizeC = cIndex >= 0 ? arrays[0]!.shape[cIndex]! : 1;
       const { z, t } = normalizedDataSource;
-      if (sizeC > 1) {
+      if (cIndex >= 0) {
+        const sizeC = arrays[0]!.shape[cIndex]!;
         const tileSourcePromises: Promise<OMEZarrTileSource>[] = [];
         for (let c = 0; c < sizeC; c++) {
           const tileSourcePromise = OMEZarrTileSource.open(
