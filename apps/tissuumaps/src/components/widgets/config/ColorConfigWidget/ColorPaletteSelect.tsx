@@ -46,9 +46,7 @@ type ColorPaletteSwatchProps = {
 
 function ColorPaletteSwatch({ colors }: ColorPaletteSwatchProps) {
   const step = Math.ceil(colors.length / colorPaletteSwatchColorCount);
-  const swatchColors = colors.filter(
-    (_, i) => i % step === 0 || i === colors.length - 1,
-  );
+  const swatchColors = colors.filter((_, i) => i % step === 0);
   const stops = swatchColors.map(
     ({ r, g, b }, i) =>
       `rgb(${r}, ${g}, ${b}) ${(100 * i) / swatchColors.length}% ${(100 * (i + 1)) / swatchColors.length}%`,
