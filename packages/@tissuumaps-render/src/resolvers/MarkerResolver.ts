@@ -1,13 +1,13 @@
 import {
   type ConstantConfig,
-  type DefaultMap,
   type FromConfig,
   type GroupByConfig,
+  type GroupValueMap,
   HashUtils,
   type Marker,
   type MarkerConfig,
   MathUtils,
-  ParseUtils,
+  NumberUtils,
   type TableData,
   getActiveConfigSource,
   isConstantConfig,
@@ -19,7 +19,7 @@ import {
 import { ResolverBase } from "./ResolverBase";
 
 /**
- * Resolves the marker of every item, encoded as a {@link Marker} index
+ * Resolves the marker of every item, packed as a {@link Marker} index
  */
 export class MarkerResolver extends ResolverBase {
   /**
@@ -33,12 +33,12 @@ export class MarkerResolver extends ResolverBase {
    * @param markerMaps - Available marker maps for groupBy lookups
    * @param defaultMarker - Fallback marker when no valid config or value is found
    * @param options - Optional abort signal, buffer alignment, and table loader
-   * @returns A `Uint8Array` of encoded marker values, one per ID
+   * @returns A `Uint8Array` of packed marker values, one per ID
    */
   static async resolveMarkers(
     ids: number[],
     config: MarkerConfig,
-    markerMaps: DefaultMap<Marker>[],
+    markerMaps: GroupValueMap<Marker>[],
     defaultMarker: Marker,
     options?: {
       signal?: AbortSignal;
@@ -86,12 +86,39 @@ export class MarkerResolver extends ResolverBase {
   }
 
   /**
+   * Resolves the marker of a single item without loading any table data
+   *
+   * Synchronous counterpart to {@link resolveMarkers} for items that are not
+   * known up front, in the way the labels renderer resolves label IDs as they
+   * are first drawn (see `ColorResolver.resolveColorWithoutTable`). Labels have
+   * no marker, so this has no caller yet and exists for symmetry with the
+   * other resolvers. A constant source resolves exactly, whereas from and
+   * groupBy sources depend on table values and fall back to `defaultMarker`.
+   *
+   * @param _id - The item ID (unused, kept for symmetry with the other resolvers)
+   * @param config - Marker configuration specifying the data source
+   * @param defaultMarker - Fallback marker when the source cannot be resolved without a table
+   * @returns The packed marker index
+   */
+  static resolveMarkerWithoutTable(
+    _id: number,
+    config: MarkerConfig,
+    defaultMarker: Marker,
+  ): number {
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return MarkerResolver.packMarker(config.constant.value);
+    }
+    return MarkerResolver.packMarker(defaultMarker);
+  }
+
+  /**
    * Creates a uniform marker data buffer filled with the configured constant marker
    *
    * @param ids - Ordered list of item IDs (only the length is used)
    * @param config - Constant marker configuration containing the marker value
    * @param options - Optional buffer alignment
-   * @returns A `Uint8Array` filled with the encoded constant marker
+   * @returns A `Uint8Array` filled with the packed constant marker
    */
   static resolveUniformMarkers(
     ids: number[],
@@ -114,7 +141,7 @@ export class MarkerResolver extends ResolverBase {
    * @param defaultMarker - Fallback marker when a value is missing or invalid
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
-   * @returns A `Uint8Array` of encoded marker values
+   * @returns A `Uint8Array` of packed marker values
    */
   static async resolveMarkersFromTableValues(
     ids: number[],
@@ -126,18 +153,20 @@ export class MarkerResolver extends ResolverBase {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const data = await loadTable({ signal });
-    const buffer = MarkerResolver.createMarkerBuffer(ids.length, { align });
+    const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
+      align,
+    });
     await MarkerResolver.fillFromTableValues(
-      buffer,
+      packedMarkers,
       data,
       ids,
       config.from.column,
       defaultMarker,
       (value) => MarkerResolver.parseMarker(value),
-      (marker) => MarkerResolver.encodeMarker(marker),
+      (marker) => MarkerResolver.packMarker(marker),
       { signal },
     );
-    return buffer;
+    return packedMarkers;
   }
 
   /**
@@ -150,12 +179,12 @@ export class MarkerResolver extends ResolverBase {
    * @param defaultMarker - Fallback marker when the map is not found or a group is unmapped
    * @param loadTable - Async function that loads the {@link TableData}
    * @param options - Optional abort signal and buffer alignment
-   * @returns A `Uint8Array` of encoded marker values
+   * @returns A `Uint8Array` of packed marker values
    */
   static async resolveMarkersFromTableGroups(
     ids: number[],
     config: Extract<MarkerConfig, GroupByConfig<false>>,
-    markerMaps: DefaultMap<Marker>[],
+    markerMaps: GroupValueMap<Marker>[],
     defaultMarker: Marker,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
@@ -175,33 +204,37 @@ export class MarkerResolver extends ResolverBase {
         });
       }
       const data = await loadTable({ signal });
-      const buffer = MarkerResolver.createMarkerBuffer(ids.length, { align });
+      const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
+        align,
+      });
       const groupMarkers = new Map(Object.entries(markerMap.values));
       await MarkerResolver.fillFromTableGroups(
-        buffer,
+        packedMarkers,
         data,
         ids,
         config.groupBy.column,
         markerMap.default ?? defaultMarker,
         (group) => groupMarkers.get(group),
-        (marker) => MarkerResolver.encodeMarker(marker),
+        (marker) => MarkerResolver.packMarker(marker),
         { signal },
       );
-      return buffer;
+      return packedMarkers;
     }
     const data = await loadTable({ signal });
-    const buffer = MarkerResolver.createMarkerBuffer(ids.length, { align });
+    const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
+      align,
+    });
     await MarkerResolver.fillFromTableGroups(
-      buffer,
+      packedMarkers,
       data,
       ids,
       config.groupBy.column,
       defaultMarker,
       (group) => HashUtils.djb2Pick(markerPalette, group),
-      (marker) => MarkerResolver.encodeMarker(marker),
+      (marker) => MarkerResolver.packMarker(marker),
       { signal },
     );
-    return buffer;
+    return packedMarkers;
   }
 
   /**
@@ -210,7 +243,7 @@ export class MarkerResolver extends ResolverBase {
    * @param n - Number of elements
    * @param marker - The marker to fill with
    * @param options - Optional buffer alignment
-   * @returns A `Uint8Array` filled with the encoded marker
+   * @returns A `Uint8Array` filled with the packed marker
    */
   static createUniformMarkers(
     n: number,
@@ -218,26 +251,26 @@ export class MarkerResolver extends ResolverBase {
     options?: { align?: number },
   ): Uint8Array {
     const { align = 1 } = options ?? {};
-    const buffer = MarkerResolver.createMarkerBuffer(n, { align });
-    const value = MarkerResolver.encodeMarker(marker);
-    buffer.fill(value, 0, n);
-    return buffer;
+    const packedMarkers = MarkerResolver.createMarkerBuffer(n, { align });
+    const packedMarker = MarkerResolver.packMarker(marker);
+    packedMarkers.fill(packedMarker, 0, n);
+    return packedMarkers;
   }
 
   /**
-   * Creates a buffer of the given size for storing encoded marker values, aligned to the specified byte boundary
+   * Creates a buffer of the given size for storing packed marker values, aligned to the specified byte boundary
    *
-   * @param size - The number of elements in the buffer
+   * @param n - The number of elements in the buffer
    * @param options - Optional buffer alignment
-   * @returns A `Uint8Array` of the specified size, aligned to the given byte boundary
+   * @returns A `Uint8Array` of length `n`, aligned to the given byte boundary
    */
   static createMarkerBuffer(
-    size: number,
+    n: number,
     options?: { align?: number },
   ): Uint8Array {
     const { align = 1 } = options ?? {};
-    const alignedSize = MathUtils.align(size, align);
-    return new Uint8Array(alignedSize);
+    const alignedN = MathUtils.align(n, align);
+    return new Uint8Array(alignedN);
   }
 
   /**
@@ -247,16 +280,16 @@ export class MarkerResolver extends ResolverBase {
    * @returns The value cast to a {@link Marker}, or `undefined` if not a number
    */
   static parseMarker(value: unknown): Marker | undefined {
-    return ParseUtils.tryParseSafeInt(value) as Marker | undefined;
+    return NumberUtils.tryParseSafeInt(value) as Marker | undefined;
   }
 
   /**
-   * Encodes a {@link Marker} into its numeric representation
+   * Packs a {@link Marker} into its numeric representation
    *
-   * @param marker - The marker to encode
+   * @param marker - The marker to pack
    * @returns The marker index as a number
    */
-  static encodeMarker(marker: Marker): number {
+  static packMarker(marker: Marker): number {
     return marker;
   }
 }

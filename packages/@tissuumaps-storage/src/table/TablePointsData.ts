@@ -25,7 +25,7 @@ export class TablePointsData implements PointsData {
   }
 
   getNames(): string[] | undefined {
-    return this._tableData.getNames();
+    return this._tableData.getNames?.();
   }
 
   async loadGeometry(options?: {

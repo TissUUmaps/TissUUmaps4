@@ -29,10 +29,8 @@ export class WebGLUtils {
     objectTransform: SimilarityTransform,
     layerTransform: SimilarityTransform,
   ): mat3 {
-    const dataToLayerMatrix =
-      TransformUtils.toSimilarityMatrix(objectTransform);
-    const layerToWorldMatrix =
-      TransformUtils.toSimilarityMatrix(layerTransform);
+    const dataToLayerMatrix = TransformUtils.compose(objectTransform);
+    const layerToWorldMatrix = TransformUtils.compose(layerTransform);
     return mat3.multiply(mat3.create(), layerToWorldMatrix, dataToLayerMatrix);
   }
 
@@ -49,11 +47,9 @@ export class WebGLUtils {
     objectTransform: SimilarityTransform,
     layerTransform: SimilarityTransform,
   ): mat3 {
-    const worldToLayerMatrix =
-      TransformUtils.toSimilarityMatrix(layerTransform);
+    const worldToLayerMatrix = TransformUtils.compose(layerTransform);
     mat3.invert(worldToLayerMatrix, worldToLayerMatrix);
-    const layerToDataMatrix =
-      TransformUtils.toSimilarityMatrix(objectTransform);
+    const layerToDataMatrix = TransformUtils.compose(objectTransform);
     mat3.invert(layerToDataMatrix, layerToDataMatrix);
     return mat3.multiply(mat3.create(), layerToDataMatrix, worldToLayerMatrix);
   }

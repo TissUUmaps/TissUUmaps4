@@ -1,28 +1,32 @@
 export {
+  annotatedDataSourceDefaults,
+  createAnnotatedDataSource,
   createDataObject,
   createDataSource,
-  createItemsDataSource,
   createModel,
   createRenderedDataObject,
-  createSingleLayerDataObject,
+  createRenderedItemsDataObject,
+  createRenderedRasterDataObject,
   dataObjectDefaults,
   dataSourceDefaults,
-  itemsDataSourceDefaults,
   modelDefaults,
   renderedDataObjectDefaults,
-  singleLayerDataObjectDefaults,
+  renderedItemsDataObjectDefaults,
+  renderedRasterDataObjectDefaults,
+  type AnnotatedDataSource,
   type DataObject,
   type DataSource,
-  type ItemsDataSource,
   type Model,
+  type RawAnnotatedDataSource,
   type RawDataObject,
   type RawDataSource,
-  type RawItemsDataSource,
   type RawModel,
   type RawRenderedDataObject,
-  type RawSingleLayerDataObject,
+  type RawRenderedItemsDataObject,
+  type RawRenderedRasterDataObject,
   type RenderedDataObject,
-  type SingleLayerDataObject,
+  type RenderedItemsDataObject,
+  type RenderedRasterDataObject,
 } from "./model/base";
 export {
   getActiveConfigSource,
@@ -58,8 +62,8 @@ export {
   createImageDataSource,
   imageDataSourceDefaults,
   imageDefaults,
-  type Channel,
   type Image,
+  type ImageChannel,
   type ImageDataSource,
   type RawImage,
   type RawImageDataSource,
@@ -108,7 +112,7 @@ export {
   Marker,
   type Color,
   type CoordinateSpace,
-  type DefaultMap,
+  type GroupValueMap,
   type SimilarityTransform,
 } from "./model/primitives";
 export {
@@ -122,6 +126,7 @@ export {
   defaultPointSize,
   defaultPointSizeUnit,
   defaultPointVisibility,
+  defaultRandomSeed,
   defaultShapeFillColor,
   defaultShapeFillOpacity,
   defaultShapeFillVisibility,
@@ -132,12 +137,13 @@ export {
 } from "./model/constants";
 
 export {
+  type AnnotatedDataProvider,
+  type AnnotatedDataProviderLoadOptions,
   type Data,
   type DataProvider,
-  type DataProviderOpenOptions,
+  type DataProviderLoadOptions,
   type ItemsData,
-  type ItemsDataProvider,
-  type ItemsDataProviderOpenOptions,
+  type RasterData,
 } from "./storage/base";
 export { type ImageData, type ImageDataProvider } from "./storage/image";
 export { type LabelsData, type LabelsDataProvider } from "./storage/labels";
@@ -215,13 +221,14 @@ export {
 } from "./types/stores/settings";
 
 export { AsyncUtils } from "./utils/AsyncUtils";
+export { BitUtils } from "./utils/BitUtils";
 export { ColorUtils } from "./utils/ColorUtils";
 export { GeometryUtils } from "./utils/GeometryUtils";
 export { HashUtils } from "./utils/HashUtils";
+export { ImageUtils } from "./utils/ImageUtils";
 export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
-export { ParseUtils } from "./utils/ParseUtils";
-export { RenderUtils } from "./utils/RenderUtils";
+export { NumberUtils } from "./utils/NumberUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 
 export {

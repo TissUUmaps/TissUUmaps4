@@ -4,7 +4,8 @@ import {
   AsyncUtils,
   type Color,
   type ColorConfig,
-  type DefaultMap,
+  ColorUtils,
+  type GroupValueMap,
   type Layer,
   MathUtils,
   type OpacityConfig,
@@ -174,9 +175,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     layers: Layer[],
     shapes: Shapes[],
     tables: Table[],
-    colorMaps: DefaultMap<Color>[],
-    visibilityMaps: DefaultMap<boolean>[],
-    opacityMaps: DefaultMap<number>[],
+    colorMaps: GroupValueMap<Color>[],
+    visibilityMaps: GroupValueMap<boolean>[],
+    opacityMaps: GroupValueMap<number>[],
     loadShapes: (
       shapes: Shapes,
       options?: { signal?: AbortSignal },
@@ -382,9 +383,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     newRefs: ShapesRef[],
     renderedShapesByNewRef: Map<ShapesRef, RenderedShapes>,
     tables: Table[],
-    colorMaps: DefaultMap<Color>[],
-    visibilityMaps: DefaultMap<boolean>[],
-    opacityMaps: DefaultMap<number>[],
+    colorMaps: GroupValueMap<Color>[],
+    visibilityMaps: GroupValueMap<boolean>[],
+    opacityMaps: GroupValueMap<number>[],
     loadTable: (
       table: Table,
       options?: { signal?: AbortSignal },
@@ -397,12 +398,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       newRef: ShapesRef;
       renderedShapes: RenderedShapes | undefined;
       geometryPromise: Promise<ShapesGeometry> | undefined;
-      shapeFillColorsPromise: Promise<Uint32Array> | undefined;
-      shapeFillVisibilitiesPromise: Promise<Uint8Array> | undefined;
-      shapeFillOpacitiesPromise: Promise<Uint8Array> | undefined;
-      shapeStrokeColorsPromise: Promise<Uint32Array> | undefined;
-      shapeStrokeVisibilitiesPromise: Promise<Uint8Array> | undefined;
-      shapeStrokeOpacitiesPromise: Promise<Uint8Array> | undefined;
+      packedShapeFillColorsPromise: Promise<Uint32Array> | undefined;
+      packedShapeFillVisibilitiesPromise: Promise<Uint8Array> | undefined;
+      packedShapeFillOpacitiesPromise: Promise<Uint8Array> | undefined;
+      packedShapeStrokeColorsPromise: Promise<Uint32Array> | undefined;
+      packedShapeStrokeVisibilitiesPromise: Promise<Uint8Array> | undefined;
+      packedShapeStrokeOpacitiesPromise: Promise<Uint8Array> | undefined;
     }[] = [];
     for (const newRef of newRefs) {
       const renderedShapes = renderedShapesByNewRef.get(newRef);
@@ -426,9 +427,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           ? newRef.data.loadGeometry({ signal })
           : undefined;
       geometryPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const shapeFillColorsPromise =
-        WebGLShapesRenderer._checkShapeFillColorsChanged(renderedShapes, newRef)
-          ? this._resolveShapeColors(
+      const packedShapeFillColorsPromise =
+        WebGLShapesRenderer._checkShapeFillColorsTextureChanged(
+          renderedShapes,
+          newRef,
+        )
+          ? WebGLShapesRenderer._resolveShapeColors(
               newRef,
               newRef.object.shapeFillColor,
               defaultShapeFillColor,
@@ -436,10 +440,13 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
               { signal, loadTable: loadObjectTable },
             )
           : undefined;
-      shapeFillColorsPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const shapeFillVisibilitiesPromise =
-        WebGLShapesRenderer._checkShapeFillColorsChanged(renderedShapes, newRef)
-          ? this._resolveShapeVisibilities(
+      packedShapeFillColorsPromise?.catch(() => {}); // prevent unhandled rejections in console
+      const packedShapeFillVisibilitiesPromise =
+        WebGLShapesRenderer._checkShapeFillColorsTextureChanged(
+          renderedShapes,
+          newRef,
+        )
+          ? WebGLShapesRenderer._resolveShapeVisibilities(
               newRef,
               newRef.object.shapeFillVisibility,
               defaultShapeFillVisibility,
@@ -447,10 +454,13 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
               { signal, loadTable: loadObjectTable },
             )
           : undefined;
-      shapeFillVisibilitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const shapeFillOpacitiesPromise =
-        WebGLShapesRenderer._checkShapeFillColorsChanged(renderedShapes, newRef)
-          ? this._resolveShapeOpacities(
+      packedShapeFillVisibilitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
+      const packedShapeFillOpacitiesPromise =
+        WebGLShapesRenderer._checkShapeFillColorsTextureChanged(
+          renderedShapes,
+          newRef,
+        )
+          ? WebGLShapesRenderer._resolveShapeOpacities(
               newRef,
               newRef.object.shapeFillOpacity,
               defaultShapeFillOpacity,
@@ -458,13 +468,13 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
               { signal, loadTable: loadObjectTable },
             )
           : undefined;
-      shapeFillOpacitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const shapeStrokeColorsPromise =
-        WebGLShapesRenderer._checkShapeStrokeColorsChanged(
+      packedShapeFillOpacitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
+      const packedShapeStrokeColorsPromise =
+        WebGLShapesRenderer._checkShapeStrokeColorsTextureChanged(
           renderedShapes,
           newRef,
         )
-          ? this._resolveShapeColors(
+          ? WebGLShapesRenderer._resolveShapeColors(
               newRef,
               newRef.object.shapeStrokeColor,
               defaultShapeStrokeColor,
@@ -472,13 +482,13 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
               { signal, loadTable: loadObjectTable },
             )
           : undefined;
-      shapeStrokeColorsPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const shapeStrokeVisibilitiesPromise =
-        WebGLShapesRenderer._checkShapeStrokeColorsChanged(
+      packedShapeStrokeColorsPromise?.catch(() => {}); // prevent unhandled rejections in console
+      const packedShapeStrokeVisibilitiesPromise =
+        WebGLShapesRenderer._checkShapeStrokeColorsTextureChanged(
           renderedShapes,
           newRef,
         )
-          ? this._resolveShapeVisibilities(
+          ? WebGLShapesRenderer._resolveShapeVisibilities(
               newRef,
               newRef.object.shapeStrokeVisibility,
               defaultShapeStrokeVisibility,
@@ -486,13 +496,13 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
               { signal, loadTable: loadObjectTable },
             )
           : undefined;
-      shapeStrokeVisibilitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
-      const shapeStrokeOpacitiesPromise =
-        WebGLShapesRenderer._checkShapeStrokeColorsChanged(
+      packedShapeStrokeVisibilitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
+      const packedShapeStrokeOpacitiesPromise =
+        WebGLShapesRenderer._checkShapeStrokeColorsTextureChanged(
           renderedShapes,
           newRef,
         )
-          ? this._resolveShapeOpacities(
+          ? WebGLShapesRenderer._resolveShapeOpacities(
               newRef,
               newRef.object.shapeStrokeOpacity,
               defaultShapeStrokeOpacity,
@@ -500,17 +510,17 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
               { signal, loadTable: loadObjectTable },
             )
           : undefined;
-      shapeStrokeOpacitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
+      packedShapeStrokeOpacitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
       objectPreloads.push({
         newRef,
         renderedShapes,
         geometryPromise,
-        shapeFillColorsPromise,
-        shapeFillVisibilitiesPromise,
-        shapeFillOpacitiesPromise,
-        shapeStrokeColorsPromise,
-        shapeStrokeVisibilitiesPromise,
-        shapeStrokeOpacitiesPromise,
+        packedShapeFillColorsPromise,
+        packedShapeFillVisibilitiesPromise,
+        packedShapeFillOpacitiesPromise,
+        packedShapeStrokeColorsPromise,
+        packedShapeStrokeVisibilitiesPromise,
+        packedShapeStrokeOpacitiesPromise,
       });
     }
     const newRenderedShapes: RenderedShapes[] = [];
@@ -518,29 +528,29 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       newRef,
       renderedShapes,
       geometryPromise,
-      shapeFillColorsPromise,
-      shapeFillVisibilitiesPromise,
-      shapeFillOpacitiesPromise,
-      shapeStrokeColorsPromise,
-      shapeStrokeVisibilitiesPromise,
-      shapeStrokeOpacitiesPromise,
+      packedShapeFillColorsPromise,
+      packedShapeFillVisibilitiesPromise,
+      packedShapeFillOpacitiesPromise,
+      packedShapeStrokeColorsPromise,
+      packedShapeStrokeVisibilitiesPromise,
+      packedShapeStrokeOpacitiesPromise,
     } of objectPreloads) {
       const [
         geometry,
-        shapeFillColors,
-        shapeFillVisibilities,
-        shapeFillOpacities,
-        shapeStrokeColors,
-        shapeStrokeVisibilities,
-        shapeStrokeOpacities,
+        packedShapeFillColors,
+        packedShapeFillVisibilities,
+        packedShapeFillOpacities,
+        packedShapeStrokeColors,
+        packedShapeStrokeVisibilities,
+        packedShapeStrokeOpacities,
       ] = await Promise.all([
         geometryPromise,
-        shapeFillColorsPromise,
-        shapeFillVisibilitiesPromise,
-        shapeFillOpacitiesPromise,
-        shapeStrokeColorsPromise,
-        shapeStrokeVisibilitiesPromise,
-        shapeStrokeOpacitiesPromise,
+        packedShapeFillColorsPromise,
+        packedShapeFillVisibilitiesPromise,
+        packedShapeFillOpacitiesPromise,
+        packedShapeStrokeColorsPromise,
+        packedShapeStrokeVisibilitiesPromise,
+        packedShapeStrokeOpacitiesPromise,
       ]);
       signal?.throwIfAborted();
       let objectBounds: Rect;
@@ -579,26 +589,32 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       }
       let shapeFillColorsTexture: WebGLTexture;
       if (
-        shapeFillColors !== undefined &&
-        shapeFillVisibilities !== undefined &&
-        shapeFillOpacities !== undefined
+        packedShapeFillColors !== undefined &&
+        packedShapeFillVisibilities !== undefined &&
+        packedShapeFillOpacities !== undefined
       ) {
         if (renderedShapes !== undefined) {
           this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
         }
-        await WebGLShapesRenderer.foldRGBA(
-          shapeFillColors,
-          shapeFillVisibilities,
-          shapeFillOpacities,
+        await AsyncUtils.forEach(
+          packedShapeFillColors,
+          (packedShapeFillColor, i) => {
+            packedShapeFillColors[i] = ColorUtils.withAlpha(
+              packedShapeFillColor,
+              packedShapeFillVisibilities[i]!,
+              packedShapeFillOpacities[i]!,
+            );
+          },
           { signal },
         );
         shapeFillColorsTexture = this.context.createDataTexture(
           WebGL2RenderingContext.R32UI,
           WebGLShapesRenderer._shapeColorsTextureWidth,
-          shapeFillColors.length / WebGLShapesRenderer._shapeColorsTextureWidth,
+          packedShapeFillColors.length /
+            WebGLShapesRenderer._shapeColorsTextureWidth,
           WebGL2RenderingContext.RED_INTEGER,
           WebGL2RenderingContext.UNSIGNED_INT,
-          shapeFillColors,
+          packedShapeFillColors,
         );
       } else if (renderedShapes !== undefined) {
         shapeFillColorsTexture = renderedShapes.shapeFillColorsTexture;
@@ -609,29 +625,34 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       }
       let shapeStrokeColorsTexture: WebGLTexture;
       if (
-        shapeStrokeColors !== undefined &&
-        shapeStrokeVisibilities !== undefined &&
-        shapeStrokeOpacities !== undefined
+        packedShapeStrokeColors !== undefined &&
+        packedShapeStrokeVisibilities !== undefined &&
+        packedShapeStrokeOpacities !== undefined
       ) {
         if (renderedShapes !== undefined) {
           this.context.gl.deleteTexture(
             renderedShapes.shapeStrokeColorsTexture,
           );
         }
-        await WebGLShapesRenderer.foldRGBA(
-          shapeStrokeColors,
-          shapeStrokeVisibilities,
-          shapeStrokeOpacities,
+        await AsyncUtils.forEach(
+          packedShapeStrokeColors,
+          (packedShapeStrokeColor, i) => {
+            packedShapeStrokeColors[i] = ColorUtils.withAlpha(
+              packedShapeStrokeColor,
+              packedShapeStrokeVisibilities[i]!,
+              packedShapeStrokeOpacities[i]!,
+            );
+          },
           { signal },
         );
         shapeStrokeColorsTexture = this.context.createDataTexture(
           WebGL2RenderingContext.R32UI,
           WebGLShapesRenderer._shapeColorsTextureWidth,
-          shapeStrokeColors.length /
+          packedShapeStrokeColors.length /
             WebGLShapesRenderer._shapeColorsTextureWidth,
           WebGL2RenderingContext.RED_INTEGER,
           WebGL2RenderingContext.UNSIGNED_INT,
-          shapeStrokeColors,
+          packedShapeStrokeColors,
         );
       } else if (renderedShapes !== undefined) {
         shapeStrokeColorsTexture = renderedShapes.shapeStrokeColorsTexture;
@@ -813,7 +834,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * detected; they are only re-read when a configuration referencing them
    * changes.
    */
-  private static _checkShapeFillColorsChanged(
+  private static _checkShapeFillColorsTextureChanged(
     renderedShapes: RenderedShapes | undefined,
     newRef: ShapesRef,
   ): boolean {
@@ -845,7 +866,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * detected; they are only re-read when a configuration referencing them
    * changes.
    */
-  private static _checkShapeStrokeColorsChanged(
+  private static _checkShapeStrokeColorsTextureChanged(
     renderedShapes: RenderedShapes | undefined,
     newRef: ShapesRef,
   ): boolean {
@@ -874,17 +895,17 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Resolves the RGB fill or stroke color of every shape of an object
    *
    * The alpha channel is added later, by
-   * {@link WebGLRendererBase.foldRGBA}, from the separately resolved
+   * {@link ColorUtils.withAlpha}, from the separately resolved
    * visibilities and opacities.
    *
    * @param options - Optional abort signal and table loader
    * @returns The packed colors, one per shape, without alpha
    */
-  private _resolveShapeColors(
+  private static _resolveShapeColors(
     ref: ShapesRef,
     shapeColor: ColorConfig,
     defaultShapeColor: Color,
-    colorMaps: DefaultMap<Color>[],
+    colorMaps: GroupValueMap<Color>[],
     options?: {
       signal?: AbortSignal;
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
@@ -919,11 +940,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * @param options - Optional abort signal and table loader
    * @returns The visibilities, one per shape, `0` for invisible
    */
-  private _resolveShapeVisibilities(
+  private static _resolveShapeVisibilities(
     ref: ShapesRef,
     shapeVisibility: VisibilityConfig,
     defaultShapeVisibility: boolean,
-    visibilityMaps: DefaultMap<boolean>[],
+    visibilityMaps: GroupValueMap<boolean>[],
     options?: {
       signal?: AbortSignal;
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
@@ -961,11 +982,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * @param options - Optional abort signal and table loader
    * @returns The alpha values, one per shape
    */
-  private _resolveShapeOpacities(
+  private static _resolveShapeOpacities(
     ref: ShapesRef,
     shapeOpacity: OpacityConfig,
     defaultShapeOpacity: number,
-    opacityMaps: DefaultMap<number>[],
+    opacityMaps: GroupValueMap<number>[],
     options?: {
       signal?: AbortSignal;
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;

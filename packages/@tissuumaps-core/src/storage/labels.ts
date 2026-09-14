@@ -2,11 +2,33 @@ import type OpenSeadragon from "openseadragon";
 
 import type { LabelsDataSource } from "../model/labels";
 import type { UintArray } from "../types/arrays";
-import type {
-  CustomTileSource,
-  TileSourceConfig,
-} from "../types/openseadragon";
-import type { ItemsData, ItemsDataProvider } from "./base";
+import type { AnnotatedDataProvider, RasterData } from "./base";
+
+/**
+ * Loaded label image data providing a tiled, multi-resolution integer raster
+ *
+ * Each pixel value represents a label (segment) ID. Unlike points and shapes, a
+ * label image does not enumerate its labels: their IDs are only known per
+ * tile, as the tiles are read, so that arbitrarily large label images can be
+ * opened without scanning them.
+ */
+export interface LabelsData extends RasterData {
+  /**
+   * Extracts the label IDs of an invalidated tile
+   *
+   * Label images always carry values rather than colors, so unlike for
+   * {@link RasterData.getTileData} this is not optional, and the values are
+   * unsigned integers.
+   *
+   * @param event - The tile invalidation event
+   * @returns The label IDs of the invalidated tile, one per raster pixel in
+   * row-major order, along with the width and height of the raster in pixels
+   * @throws Error if the event does not contain label image data
+   */
+  getTileData(
+    event: OpenSeadragon.TileInvalidatedEvent,
+  ): Promise<{ values: number[] | UintArray; width: number; height: number }>;
+}
 
 /**
  * Data provider for label images
@@ -22,38 +44,8 @@ export interface LabelsDataProvider<
   TLabelsDataSource extends LabelsDataSource,
   TLabelsData extends LabelsData,
   TNormalizedLabelsDataSource extends TLabelsDataSource = TLabelsDataSource,
-> extends ItemsDataProvider<
+> extends AnnotatedDataProvider<
   TLabelsDataSource,
   TLabelsData,
   TNormalizedLabelsDataSource
 > {}
-
-/**
- * Loaded label image data providing a tiled, multi-resolution integer raster
- *
- * Each pixel value represents a label (segment) ID.
- */
-export interface LabelsData extends ItemsData {
-  /**
-   * Returns the tile source of this label image
-   *
-   * @returns The tile source, which can be a URL string, a TileSourceConfig
-   * object, or a CustomTileSource object
-   */
-  getTileSource(): string | TileSourceConfig | CustomTileSource;
-
-  /**
-   * Extracts the raw label image data from a tile invalidation event
-   *
-   * The raster does not need to be cropped to the tile's source bounds: it may
-   * cover the full tile size, as the renderer crops it when drawing.
-   *
-   * @param event - The tile invalidation event
-   * @returns The label IDs of the invalidated tile, one per raster pixel in
-   * row-major order, along with the width and height of the raster in pixels
-   * @throws Error if the event does not contain label image data
-   */
-  getData(
-    event: OpenSeadragon.TileInvalidatedEvent,
-  ): Promise<{ values: number[] | UintArray; width: number; height: number }>;
-}

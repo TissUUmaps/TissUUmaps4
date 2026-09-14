@@ -1,42 +1,6 @@
 import type { ShapesDataSource } from "../model/shapes";
 import type { ProgressCallback } from "../types/callbacks";
-import type { ItemsData, ItemsDataProvider } from "./base";
-
-/**
- * Data provider for shape (polygon) collections
- *
- * @typeParam TShapesDataSource - The data source type this data provider opens
- * @typeParam TShapesData - The {@link ShapesData} type produced by this data
- * provider
- * @typeParam TNormalizedShapesDataSource - The normalized data source type
- * produced by `normalize` and accepted by `load`
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ShapesDataProvider<
-  TShapesDataSource extends ShapesDataSource,
-  TShapesData extends ShapesData,
-  TNormalizedShapesDataSource extends TShapesDataSource = TShapesDataSource,
-> extends ItemsDataProvider<
-  TShapesDataSource,
-  TShapesData,
-  TNormalizedShapesDataSource
-> {}
-
-/**
- * Loaded shape collection data providing geometry access
- */
-export interface ShapesData extends ItemsData {
-  /**
-   * Loads the geometry for all shapes
-   *
-   * @param options - Optional abort signal and progress callback
-   * @returns A promise that resolves to the loaded shapes geometry
-   */
-  loadGeometry(options?: {
-    signal?: AbortSignal;
-    onProgress?: ProgressCallback;
-  }): Promise<ShapesGeometry>;
-}
+import type { AnnotatedDataProvider, ItemsData } from "./base";
 
 /**
  * Geometry for shapes (multi-polygons) stored in CSR-style format
@@ -87,3 +51,39 @@ export type ShapesGeometry = {
    */
   coords: Float32Array;
 };
+
+/**
+ * Loaded shape collection data providing geometry access
+ */
+export interface ShapesData extends ItemsData {
+  /**
+   * Loads the geometry for all shapes
+   *
+   * @param options - Optional abort signal and progress callback
+   * @returns A promise that resolves to the loaded shapes geometry
+   */
+  loadGeometry(options?: {
+    signal?: AbortSignal;
+    onProgress?: ProgressCallback;
+  }): Promise<ShapesGeometry>;
+}
+
+/**
+ * Data provider for shape (polygon) collections
+ *
+ * @typeParam TShapesDataSource - The data source type this data provider opens
+ * @typeParam TShapesData - The {@link ShapesData} type produced by this data
+ * provider
+ * @typeParam TNormalizedShapesDataSource - The normalized data source type
+ * produced by `normalize` and accepted by `load`
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ShapesDataProvider<
+  TShapesDataSource extends ShapesDataSource,
+  TShapesData extends ShapesData,
+  TNormalizedShapesDataSource extends TShapesDataSource = TShapesDataSource,
+> extends AnnotatedDataProvider<
+  TShapesDataSource,
+  TShapesData,
+  TNormalizedShapesDataSource
+> {}

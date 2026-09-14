@@ -39,7 +39,7 @@ export const continuousColorPalettes: ColorPalette[] = [
   {
     id: "batlow",
     name: "Batlow (continuous)",
-    colors: ColorUtils.parseColorPalette(batlow),
+    colors: ColorUtils.parsePalette(batlow),
   },
 ];
 
@@ -48,7 +48,7 @@ export const categoricalColorPalettes: ColorPalette[] = [
   {
     id: "batlowS",
     name: "Batlow (categorical)",
-    colors: ColorUtils.parseColorPalette(batlowS),
+    colors: ColorUtils.parsePalette(batlowS),
   },
 ];
 

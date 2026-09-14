@@ -281,11 +281,15 @@ export abstract class OpenSeadragonRendererBase<
    * Returns the tile sources for the given object data
    *
    * @param data - The object data (image or labels) for which to retrieve the tile sources
-   * @returns The tile sources, which can be a URL string, a TileSourceConfig object, or a CustomTileSource object
+   * @returns The tile sources, one per tiled image of the object. Defaults to
+   * the single tile source of the data; renderers of multi-channel data
+   * override this.
    */
-  protected abstract getTileSources(
+  protected getTileSources(
     data: TObjectData,
-  ): (string | TileSourceConfig | CustomTileSource)[];
+  ): (string | TileSourceConfig | CustomTileSource)[] {
+    return [data.getTileSource()];
+  }
 
   /**
    * Returns whether the channels of the given object data are blended additively

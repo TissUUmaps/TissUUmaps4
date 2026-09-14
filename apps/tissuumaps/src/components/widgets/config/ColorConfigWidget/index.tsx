@@ -1,12 +1,18 @@
-import { Square } from "lucide-react";
+import { RefreshCwIcon, Square } from "lucide-react";
 
-import { MathUtils, colorPalettes } from "@tissuumaps/core";
+import { MathUtils, colorPalettes, defaultRandomSeed } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { useProjectStore } from "@/stores/project";
 
@@ -283,8 +289,12 @@ function RandomColorConfigWidget({
   adapter,
   className,
 }: RandomColorConfigWidgetProps) {
-  const { currentRandomPalette: palette, setCurrentRandomPalette: setPalette } =
-    adapter;
+  const {
+    currentRandomPalette: palette,
+    currentRandomSeed: seed,
+    setCurrentRandomPalette: setPalette,
+    setCurrentRandomSeed: setSeed,
+  } = adapter;
   return (
     <div className={className}>
       <Field>
@@ -297,6 +307,38 @@ function RandomColorConfigWidget({
           onValueChange={setPalette}
           nullable
         />
+      </Field>
+      <Field>
+        <FieldLabel>Seed</FieldLabel>
+        <InputGroup>
+          <InputGroupInput
+            type="number"
+            inputMode="numeric"
+            step={1}
+            placeholder={String(defaultRandomSeed)}
+            value={seed ?? ""}
+            onChange={(event) => {
+              if (event.target.value === "") {
+                setSeed(null);
+              } else {
+                const newValue = event.target.valueAsNumber;
+                if (!isNaN(newValue)) {
+                  setSeed(Math.trunc(newValue));
+                }
+              }
+            }}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              size="icon-xs"
+              aria-label="Shuffle seed"
+              title="Shuffle seed"
+              onClick={() => setSeed(Math.floor(Math.random() * 0x100000000))}
+            >
+              <RefreshCwIcon />
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
       </Field>
     </div>
   );

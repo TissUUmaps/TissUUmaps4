@@ -70,12 +70,14 @@ export class OpenSeadragonUtils {
   } {
     const m = mat3.multiply(
       mat3.create(),
-      TransformUtils.toSimilarityMatrix(layerTransform),
-      TransformUtils.toSimilarityMatrix(objectTransform),
+      TransformUtils.compose(layerTransform),
+      TransformUtils.compose(objectTransform),
     );
     const pivot = { x: contentSize.x / 2, y: contentSize.y / 2 };
-    const { flip, scale, rotation, translation } =
-      TransformUtils.fromSimilarityMatrix(m, pivot);
+    const { flip, scale, rotation, translation } = TransformUtils.decompose(
+      m,
+      pivot,
+    );
     return {
       flip,
       width: contentSize.x * scale,

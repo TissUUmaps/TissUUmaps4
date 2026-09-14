@@ -20,16 +20,15 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
+import { AnnotationsWidget } from "@/components/widgets/AnnotationsWidget";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { ItemsDataWidget } from "@/components/widgets/ItemsDataWidget";
-import { useLabelsData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
-import { useLabelsDataTableColumns } from "./useLabelsDataTableColumns";
-import { useLabelsDataWidget } from "./useLabelsDataWidget";
+import { useLabelsAnnotationsColumns } from "./useLabelsAnnotationsColumns";
+import { useLabelsAnnotationsWidget } from "./useLabelsAnnotationsWidget";
 
 export type LabelsPanelProps = {
   className?: string;
@@ -95,7 +94,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
     setActiveSettingsCategory,
     selectedGroupByColumn,
     setSelectedGroupByColumn,
-  } = useLabelsDataWidget(labels);
+  } = useLabelsAnnotationsWidget(labels);
 
   const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
 
@@ -103,9 +102,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
   const confirm = useConfirmDialog();
 
-  const labelsData = useLabelsData(labels.id);
-
-  const { extraTableGroupColumnDefs } = useLabelsDataTableColumns(
+  const { extraTableGroupColumnDefs } = useLabelsAnnotationsColumns(
     labels,
     selectedGroupByColumn,
   );
@@ -184,11 +181,10 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             onActiveCategoryChange={setActiveSettingsCategory}
             className="bg-card"
           />
-          {labelsData !== null && (
-            <ItemsDataWidget
-              data={labelsData}
+          {labels.dataSource.table !== undefined && (
+            <AnnotationsWidget
               tableHeight={200}
-              table={labels.dataSource.table ?? null}
+              table={labels.dataSource.table}
               selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
               extraTableGroupColumnDefs={extraTableGroupColumnDefs}

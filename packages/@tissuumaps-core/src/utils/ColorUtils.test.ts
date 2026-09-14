@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { ColorUtils } from "./ColorUtils";
 
 describe("ColorUtils", () => {
-  describe("parseColorPalette", () => {
+  describe("parsePalette", () => {
     it("parses a simple color palette with default separator and maxValue", () => {
       const str = "0 0 0\n1 1 1";
-      const result = ColorUtils.parseColorPalette(str);
+      const result = ColorUtils.parsePalette(str);
       expect(result).toEqual([
         { r: 0, g: 0, b: 0 },
         { r: 255, g: 255, b: 255 },
@@ -15,7 +15,7 @@ describe("ColorUtils", () => {
 
     it("parses a color palette with custom separator and maxValue", () => {
       const str = "0,0,0\n0.5,0.5,0.5\n1,1,1";
-      const result = ColorUtils.parseColorPalette(str, {
+      const result = ColorUtils.parsePalette(str, {
         sep: ",",
         maxValue: 1,
       });
@@ -28,7 +28,7 @@ describe("ColorUtils", () => {
 
     it("parses an 8-bit palette with maxValue 255", () => {
       const str = "0 0 0\n128 64 32\n255 255 255";
-      const result = ColorUtils.parseColorPalette(str, {
+      const result = ColorUtils.parsePalette(str, {
         sep: " ",
         maxValue: 255,
       });
@@ -41,39 +41,59 @@ describe("ColorUtils", () => {
 
     it("throws on invalid line", () => {
       const str = "0 0\n1 1 1";
-      expect(() => ColorUtils.parseColorPalette(str)).toThrow(
+      expect(() => ColorUtils.parsePalette(str)).toThrow(
         /Invalid color palette line 0/,
       );
     });
 
     it("ignores empty lines", () => {
       const str = "\n0 0 0\n\n1 1 1\n";
-      const result = ColorUtils.parseColorPalette(str);
+      const result = ColorUtils.parsePalette(str);
       expect(result).toHaveLength(2);
     });
 
     it("parses a single color line", () => {
-      const result = ColorUtils.parseColorPalette("0.5 0.5 0.5");
+      const result = ColorUtils.parsePalette("0.5 0.5 0.5");
       expect(result).toEqual([{ r: 127.5, g: 127.5, b: 127.5 }]);
     });
   });
 
-  describe("packRGBA", () => {
+  describe("packVisibility", () => {
+    it("packs booleans as 1 or 0", () => {
+      expect(ColorUtils.packVisibility(true)).toBe(1);
+      expect(ColorUtils.packVisibility(false)).toBe(0);
+    });
+  });
+
+  describe("packOpacity", () => {
+    it("scales opacity (0–1) into the 0–255 range", () => {
+      expect(ColorUtils.packOpacity(0)).toBe(0);
+      expect(ColorUtils.packOpacity(1)).toBe(255);
+      expect(ColorUtils.packOpacity(0.5)).toBe(128); // round(127.5)
+    });
+
+    it("clamps the packed value to [0, 255]", () => {
+      expect(ColorUtils.packOpacity(2)).toBe(255);
+      expect(ColorUtils.packOpacity(-1)).toBe(0);
+    });
+  });
+
+  describe("withAlpha", () => {
     it("adds the opacity as alpha for a visible item", () => {
-      expect(ColorUtils.packRGBA(0x030201, 1, 0xff)).toBe(0xff030201);
+      expect(ColorUtils.withAlpha(0x030201, 1, 0xff)).toBe(0xff030201);
     });
 
     it("yields zero alpha for an invisible item", () => {
-      expect(ColorUtils.packRGBA(0x030201, 0, 0xff)).toBe(0x00030201);
+      expect(ColorUtils.withAlpha(0x030201, 0, 0xff)).toBe(0x00030201);
     });
 
     it("discards any existing alpha", () => {
-      expect(ColorUtils.packRGBA(0xaa030201, 1, 0x80)).toBe(0x80030201);
-      expect(ColorUtils.packRGBA(0xaa030201, 0, 0x80)).toBe(0x00030201);
+      expect(ColorUtils.withAlpha(0xaa030201, 1, 0x80)).toBe(0x80030201);
+      expect(ColorUtils.withAlpha(0xaa030201, 0, 0x80)).toBe(0x00030201);
     });
 
     it("returns an unsigned 32-bit integer", () => {
-      expect(ColorUtils.packRGBA(0xffffff, 1, 0xff)).toBe(0xffffffff);
+      expect(ColorUtils.withAlpha(0xffffff, 1, 0xff)).toBe(0xffffffff);
     });
   });
 
@@ -133,43 +153,37 @@ describe("ColorUtils", () => {
     });
   });
 
-  describe("colorsEqual", () => {
+  describe("equals", () => {
     it("returns true for identical colors", () => {
       expect(
-        ColorUtils.colorsEqual({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 3 }),
+        ColorUtils.equals({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 3 }),
       ).toBe(true);
     });
 
     it("returns false when a component differs", () => {
       expect(
-        ColorUtils.colorsEqual({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 4 }),
+        ColorUtils.equals({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 4 }),
       ).toBe(false);
       expect(
-        ColorUtils.colorsEqual({ r: 1, g: 2, b: 3 }, { r: 1, g: 9, b: 3 }),
+        ColorUtils.equals({ r: 1, g: 2, b: 3 }, { r: 1, g: 9, b: 3 }),
       ).toBe(false);
       expect(
-        ColorUtils.colorsEqual({ r: 1, g: 2, b: 3 }, { r: 9, g: 2, b: 3 }),
+        ColorUtils.equals({ r: 1, g: 2, b: 3 }, { r: 9, g: 2, b: 3 }),
       ).toBe(false);
     });
 
     it("compares fractional components exactly", () => {
       expect(
-        ColorUtils.colorsEqual(
-          { r: 127.5, g: 0, b: 0 },
-          { r: 127.5, g: 0, b: 0 },
-        ),
+        ColorUtils.equals({ r: 127.5, g: 0, b: 0 }, { r: 127.5, g: 0, b: 0 }),
       ).toBe(true);
       expect(
-        ColorUtils.colorsEqual(
-          { r: 127.5, g: 0, b: 0 },
-          { r: 128, g: 0, b: 0 },
-        ),
+        ColorUtils.equals({ r: 127.5, g: 0, b: 0 }, { r: 128, g: 0, b: 0 }),
       ).toBe(false);
     });
 
     it("returns true for the same object", () => {
       const color = { r: 10, g: 20, b: 30 };
-      expect(ColorUtils.colorsEqual(color, color)).toBe(true);
+      expect(ColorUtils.equals(color, color)).toBe(true);
     });
   });
 

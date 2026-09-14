@@ -5,7 +5,7 @@ import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";
 import { type Layer, type RawLayer, createLayer } from "./layer";
 import { type Points, type RawPoints, createPoints } from "./points";
-import type { Color, DefaultMap, Marker } from "./primitives";
+import type { Color, GroupValueMap, Marker } from "./primitives";
 import { type RawShapes, type Shapes, createShapes } from "./shapes";
 import { type RawTable, type Table, createTable } from "./table";
 
@@ -111,35 +111,35 @@ export interface RawProject extends RawModel {
    *
    * @defaultValue {@link projectDefaults.markerMaps}
    */
-  markerMaps?: DefaultMap<Marker>[];
+  markerMaps?: GroupValueMap<Marker>[];
 
   /**
    * Project-global size maps, referenced by {@link GroupByConfig} size configurations
    *
    * @defaultValue {@link projectDefaults.sizeMaps}
    */
-  sizeMaps?: DefaultMap<number>[];
+  sizeMaps?: GroupValueMap<number>[];
 
   /**
    * Project-global color maps, referenced by {@link GroupByConfig} color configurations
    *
    * @defaultValue {@link projectDefaults.colorMaps}
    */
-  colorMaps?: DefaultMap<Color>[];
+  colorMaps?: GroupValueMap<Color>[];
 
   /**
    * Project-global visibility maps, referenced by {@link GroupByConfig} visibility configurations
    *
    * @defaultValue {@link projectDefaults.visibilityMaps}
    */
-  visibilityMaps?: DefaultMap<boolean>[];
+  visibilityMaps?: GroupValueMap<boolean>[];
 
   /**
    * Project-global opacity maps, referenced by {@link GroupByConfig} opacity configurations
    *
    * @defaultValue {@link projectDefaults.opacityMaps}
    */
-  opacityMaps?: DefaultMap<number>[];
+  opacityMaps?: GroupValueMap<number>[];
 
   /**
    * OpenSeadragon viewer options for images/labels

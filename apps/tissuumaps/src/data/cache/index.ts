@@ -18,7 +18,7 @@ import { appStore } from "@/stores/app";
 import { dataStore } from "@/stores/data";
 import { projectStore } from "@/stores/project";
 
-import { DataCache, ItemsDataCache } from "./DataCache";
+import { AnnotatedDataCache, DataCache } from "./DataCache";
 import { ImageDataWrapper } from "./wrappers/ImageDataWrapper";
 import { LabelsDataWrapper } from "./wrappers/LabelsDataWrapper";
 import { PointsDataWrapper } from "./wrappers/PointsDataWrapper";
@@ -64,64 +64,61 @@ export const imageDataCache = new DataCache<ImageDataSource, ImageData>(
 );
 
 /** Caches the data of the project's labels, publishing it to the data store */
-export const labelsDataCache = new ItemsDataCache<LabelsDataSource, LabelsData>(
-  (data) => new LabelsDataWrapper(data),
-  tableDataCache,
-  {
-    onObjectDataRefsChanged: (changedLabelsDataRefs) =>
-      dataStore.setState((draft) => {
-        for (const [labelsId, newDataRef] of changedLabelsDataRefs) {
-          draft.labelsDataRefs.set(labelsId, newDataRef);
-        }
-      }),
-    onObjectDataRefsRemoved: (removedLabelsIds) =>
-      dataStore.setState((draft) => {
-        for (const labelsId of removedLabelsIds) {
-          draft.labelsDataRefs.delete(labelsId);
-        }
-      }),
-  },
-);
+export const labelsDataCache = new AnnotatedDataCache<
+  LabelsDataSource,
+  LabelsData
+>((data) => new LabelsDataWrapper(data), tableDataCache, {
+  onObjectDataRefsChanged: (changedLabelsDataRefs) =>
+    dataStore.setState((draft) => {
+      for (const [labelsId, newDataRef] of changedLabelsDataRefs) {
+        draft.labelsDataRefs.set(labelsId, newDataRef);
+      }
+    }),
+  onObjectDataRefsRemoved: (removedLabelsIds) =>
+    dataStore.setState((draft) => {
+      for (const labelsId of removedLabelsIds) {
+        draft.labelsDataRefs.delete(labelsId);
+      }
+    }),
+});
 
 /** Caches the data of the project's points, publishing it to the data store */
-export const pointsDataCache = new ItemsDataCache<PointsDataSource, PointsData>(
-  (data) => new PointsDataWrapper(data),
-  tableDataCache,
-  {
-    onObjectDataRefsChanged: (changedPointsDataRefs) =>
-      dataStore.setState((draft) => {
-        for (const [pointsId, newDataRef] of changedPointsDataRefs) {
-          draft.pointsDataRefs.set(pointsId, newDataRef);
-        }
-      }),
-    onObjectDataRefsRemoved: (removedPointsIds) =>
-      dataStore.setState((draft) => {
-        for (const pointsId of removedPointsIds) {
-          draft.pointsDataRefs.delete(pointsId);
-        }
-      }),
-  },
-);
+export const pointsDataCache = new AnnotatedDataCache<
+  PointsDataSource,
+  PointsData
+>((data) => new PointsDataWrapper(data), tableDataCache, {
+  onObjectDataRefsChanged: (changedPointsDataRefs) =>
+    dataStore.setState((draft) => {
+      for (const [pointsId, newDataRef] of changedPointsDataRefs) {
+        draft.pointsDataRefs.set(pointsId, newDataRef);
+      }
+    }),
+  onObjectDataRefsRemoved: (removedPointsIds) =>
+    dataStore.setState((draft) => {
+      for (const pointsId of removedPointsIds) {
+        draft.pointsDataRefs.delete(pointsId);
+      }
+    }),
+});
 
 /** Caches the data of the project's shapes, publishing it to the data store */
-export const shapesDataCache = new ItemsDataCache<ShapesDataSource, ShapesData>(
-  (data) => new ShapesDataWrapper(data),
-  tableDataCache,
-  {
-    onObjectDataRefsChanged: (changedShapesDataRefs) =>
-      dataStore.setState((draft) => {
-        for (const [shapesId, newDataRef] of changedShapesDataRefs) {
-          draft.shapesDataRefs.set(shapesId, newDataRef);
-        }
-      }),
-    onObjectDataRefsRemoved: (removedShapesIds) =>
-      dataStore.setState((draft) => {
-        for (const shapesId of removedShapesIds) {
-          draft.shapesDataRefs.delete(shapesId);
-        }
-      }),
-  },
-);
+export const shapesDataCache = new AnnotatedDataCache<
+  ShapesDataSource,
+  ShapesData
+>((data) => new ShapesDataWrapper(data), tableDataCache, {
+  onObjectDataRefsChanged: (changedShapesDataRefs) =>
+    dataStore.setState((draft) => {
+      for (const [shapesId, newDataRef] of changedShapesDataRefs) {
+        draft.shapesDataRefs.set(shapesId, newDataRef);
+      }
+    }),
+  onObjectDataRefsRemoved: (removedShapesIds) =>
+    dataStore.setState((draft) => {
+      for (const shapesId of removedShapesIds) {
+        draft.shapesDataRefs.delete(shapesId);
+      }
+    }),
+});
 
 /**
  * Starts keeping the data caches in sync with the app and the project store
@@ -158,7 +155,7 @@ export function startDataCaches(): () => void {
  *
  * Each cache is only sanitized if the state it depends on has changed with
  * respect to the given previous state, when initializing, or when cleaning up;
- * the items data caches are additionally sanitized whenever the table data
+ * the annotated data caches are additionally sanitized whenever the table data
  * cache was.
  *
  * @param options - Whether the caches are being initialized (`init`) or emptied

@@ -1,36 +1,36 @@
 import { describe, expect, it } from "vitest";
 
-import { RenderUtils } from "./RenderUtils";
+import { ImageUtils } from "./ImageUtils";
 
-describe("RenderUtils", () => {
+describe("ImageUtils", () => {
   describe("getDefaultChannelColor", () => {
     it("returns fixed colors for the first six channels", () => {
-      expect(RenderUtils.getDefaultChannelColor(0)).toEqual({
+      expect(ImageUtils.getDefaultChannelColor(0)).toEqual({
         r: 255,
         g: 0,
         b: 0,
       });
-      expect(RenderUtils.getDefaultChannelColor(1)).toEqual({
+      expect(ImageUtils.getDefaultChannelColor(1)).toEqual({
         r: 0,
         g: 255,
         b: 0,
       });
-      expect(RenderUtils.getDefaultChannelColor(2)).toEqual({
+      expect(ImageUtils.getDefaultChannelColor(2)).toEqual({
         r: 0,
         g: 0,
         b: 255,
       });
-      expect(RenderUtils.getDefaultChannelColor(3)).toEqual({
+      expect(ImageUtils.getDefaultChannelColor(3)).toEqual({
         r: 255,
         g: 255,
         b: 0,
       });
-      expect(RenderUtils.getDefaultChannelColor(4)).toEqual({
+      expect(ImageUtils.getDefaultChannelColor(4)).toEqual({
         r: 0,
         g: 255,
         b: 255,
       });
-      expect(RenderUtils.getDefaultChannelColor(5)).toEqual({
+      expect(ImageUtils.getDefaultChannelColor(5)).toEqual({
         r: 255,
         g: 0,
         b: 255,
@@ -39,19 +39,19 @@ describe("RenderUtils", () => {
 
     it("derives further channels from HSB", () => {
       // channel 6: hue 48deg, full saturation and brightness
-      expect(RenderUtils.getDefaultChannelColor(6)).toEqual({
+      expect(ImageUtils.getDefaultChannelColor(6)).toEqual({
         r: 255,
         g: 204,
         b: 0,
       });
       // channel 7: hue 176deg, full saturation and brightness
-      expect(RenderUtils.getDefaultChannelColor(7)).toEqual({
+      expect(ImageUtils.getDefaultChannelColor(7)).toEqual({
         r: 0,
         g: 255,
         b: 238,
       });
       // channel 10: hue 200deg, saturation and brightness 0.95
-      expect(RenderUtils.getDefaultChannelColor(10)).toEqual({
+      expect(ImageUtils.getDefaultChannelColor(10)).toEqual({
         r: 12,
         g: 166,
         b: 242,
@@ -59,17 +59,17 @@ describe("RenderUtils", () => {
     });
 
     it("wraps around after 100 channels", () => {
-      expect(RenderUtils.getDefaultChannelColor(100)).toEqual(
-        RenderUtils.getDefaultChannelColor(0),
+      expect(ImageUtils.getDefaultChannelColor(100)).toEqual(
+        ImageUtils.getDefaultChannelColor(0),
       );
-      expect(RenderUtils.getDefaultChannelColor(107)).toEqual(
-        RenderUtils.getDefaultChannelColor(7),
+      expect(ImageUtils.getDefaultChannelColor(107)).toEqual(
+        ImageUtils.getDefaultChannelColor(7),
       );
     });
 
     it("keeps saturation and brightness above 0.5", () => {
       for (let c = 0; c < 100; c++) {
-        const { r, g, b } = RenderUtils.getDefaultChannelColor(c);
+        const { r, g, b } = ImageUtils.getDefaultChannelColor(c);
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
         const brightness = max / 255;
@@ -81,7 +81,7 @@ describe("RenderUtils", () => {
 
     it("returns integer components within [0, 255] for all channels", () => {
       for (let c = 0; c < 100; c++) {
-        const { r, g, b } = RenderUtils.getDefaultChannelColor(c);
+        const { r, g, b } = ImageUtils.getDefaultChannelColor(c);
         for (const v of [r, g, b]) {
           expect(Number.isInteger(v)).toBe(true);
           expect(v).toBeGreaterThanOrEqual(0);
@@ -100,18 +100,18 @@ describe("RenderUtils", () => {
       [new Int16Array(1), [-32768, 32767]],
       [new Int32Array(1), [-2147483648, 2147483647]],
     ])("returns the full integer range of %o", (values, range) => {
-      expect(RenderUtils.getDataTypeRange(values)).toEqual(range);
+      expect(ImageUtils.getDataTypeRange(values)).toEqual(range);
     });
 
     it.each([new Float32Array(1), new Float64Array(1)])(
       "returns [0, 1] for %o",
       (values) => {
-        expect(RenderUtils.getDataTypeRange(values)).toEqual([0, 1]);
+        expect(ImageUtils.getDataTypeRange(values)).toEqual([0, 1]);
       },
     );
 
     it("returns the 8-bit range for plain arrays", () => {
-      expect(RenderUtils.getDataTypeRange([1, 2, 3])).toEqual([0, 255]);
+      expect(ImageUtils.getDataTypeRange([1, 2, 3])).toEqual([0, 255]);
     });
   });
 });

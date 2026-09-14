@@ -1,25 +1,24 @@
 import { type Mock, describe, expect, it, vi } from "vitest";
 
 import type {
+  AnnotatedDataProvider,
+  AnnotatedDataProviderLoadOptions,
+  AnnotatedDataSource,
   Data,
   DataObject,
   DataProvider,
-  DataProviderOpenOptions,
+  DataProviderLoadOptions,
   DataRef,
   DataSource,
-  ItemsData,
-  ItemsDataProvider,
-  ItemsDataProviderOpenOptions,
-  ItemsDataSource,
   TableData,
   TableDataSource,
 } from "@tissuumaps/core";
 
 import {
+  AnnotatedDataCache,
+  type AnnotatedDataCacheContext,
   DataCache,
   type DataCacheContext,
-  ItemsDataCache,
-  type ItemsDataCacheContext,
 } from "./DataCache";
 import { DataWrapperBase } from "./wrappers/DataWrapperBase";
 import { TableDataWrapper } from "./wrappers/TableDataWrapper";
@@ -28,9 +27,9 @@ type TestDataSource = DataSource<"test">;
 
 type TestData = Data & { value: string };
 
-type TestItemsDataSource = ItemsDataSource<"test">;
+type TestAnnotatedDataSource = AnnotatedDataSource<"test">;
 
-type TestItemsData = ItemsData & { value: string };
+type TestAnnotatedData = Data & { value: string };
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -69,24 +68,12 @@ class TestDataWrapper extends DataWrapperBase<TestData> implements TestData {
   }
 }
 
-class TestItemsDataWrapper
-  extends DataWrapperBase<TestItemsData>
-  implements TestItemsData
+class TestAnnotatedDataWrapper
+  extends DataWrapperBase<TestAnnotatedData>
+  implements TestAnnotatedData
 {
   get value(): string {
     return this.data.value;
-  }
-
-  getIds(): number[] {
-    return this.data.getIds();
-  }
-
-  getSize(): number {
-    return this.data.getSize();
-  }
-
-  getNames(): string[] | undefined {
-    return this.data.getNames();
   }
 }
 
@@ -95,21 +82,12 @@ function createTestData(value = "data"): { data: TestData; close: Mock } {
   return { data: { value, close }, close };
 }
 
-function createTestItemsData(value = "items"): {
-  data: TestItemsData;
+function createTestAnnotatedData(value = "annotated"): {
+  data: TestAnnotatedData;
   close: Mock;
 } {
   const close = vi.fn();
-  return {
-    data: {
-      value,
-      close,
-      getIds: () => [],
-      getSize: () => 0,
-      getNames: () => undefined,
-    },
-    close,
-  };
+  return { data: { value, close }, close };
 }
 
 function createTestTableData(): { data: TableData; close: Mock } {
@@ -149,16 +127,16 @@ function createTestDataProvider(options?: {
 }): {
   dataProvider: DataProvider<TestDataSource, TestData>;
   load: Mock;
-  calls: LoadCall<TestDataSource, TestData, DataProviderOpenOptions>[];
+  calls: LoadCall<TestDataSource, TestData, DataProviderLoadOptions>[];
 } {
   const { normalize = (dataSource: TestDataSource) => dataSource } =
     options ?? {};
-  const calls: LoadCall<TestDataSource, TestData, DataProviderOpenOptions>[] =
+  const calls: LoadCall<TestDataSource, TestData, DataProviderLoadOptions>[] =
     [];
   const load = vi.fn(
-    (dataSource: TestDataSource, openOptions?: DataProviderOpenOptions) => {
+    (dataSource: TestDataSource, loadOptions?: DataProviderLoadOptions) => {
       const deferred = createDeferred<TestData>();
-      calls.push({ dataSource, options: openOptions, deferred });
+      calls.push({ dataSource, options: loadOptions, deferred });
       return deferred.promise;
     },
   );
@@ -175,34 +153,37 @@ function createTestDataProvider(options?: {
   };
 }
 
-/** Items data provider counterpart of {@link createTestDataProvider} */
-function createTestItemsDataProvider(): {
-  dataProvider: ItemsDataProvider<TestItemsDataSource, TestItemsData>;
+/** Annotated data provider counterpart of {@link createTestDataProvider} */
+function createTestAnnotatedDataProvider(): {
+  dataProvider: AnnotatedDataProvider<
+    TestAnnotatedDataSource,
+    TestAnnotatedData
+  >;
   load: Mock;
   calls: LoadCall<
-    TestItemsDataSource,
-    TestItemsData,
-    ItemsDataProviderOpenOptions
+    TestAnnotatedDataSource,
+    TestAnnotatedData,
+    AnnotatedDataProviderLoadOptions
   >[];
 } {
   const calls: LoadCall<
-    TestItemsDataSource,
-    TestItemsData,
-    ItemsDataProviderOpenOptions
+    TestAnnotatedDataSource,
+    TestAnnotatedData,
+    AnnotatedDataProviderLoadOptions
   >[] = [];
   const load = vi.fn(
     (
-      dataSource: TestItemsDataSource,
-      openOptions?: ItemsDataProviderOpenOptions,
+      dataSource: TestAnnotatedDataSource,
+      loadOptions?: AnnotatedDataProviderLoadOptions,
     ) => {
-      const deferred = createDeferred<TestItemsData>();
-      calls.push({ dataSource, options: openOptions, deferred });
+      const deferred = createDeferred<TestAnnotatedData>();
+      calls.push({ dataSource, options: loadOptions, deferred });
       return deferred.promise;
     },
   );
   return {
     dataProvider: {
-      name: "Test items data provider",
+      name: "Test annotated data provider",
       schema: {},
       uischema: { type: "VerticalLayout" },
       normalize: (dataSource) => dataSource,
@@ -217,14 +198,14 @@ function createTestItemsDataProvider(): {
 function createTestTableDataProvider(): {
   dataProvider: DataProvider<TableDataSource, TableData>;
   load: Mock;
-  calls: LoadCall<TableDataSource, TableData, DataProviderOpenOptions>[];
+  calls: LoadCall<TableDataSource, TableData, DataProviderLoadOptions>[];
 } {
-  const calls: LoadCall<TableDataSource, TableData, DataProviderOpenOptions>[] =
+  const calls: LoadCall<TableDataSource, TableData, DataProviderLoadOptions>[] =
     [];
   const load = vi.fn(
-    (dataSource: TableDataSource, openOptions?: DataProviderOpenOptions) => {
+    (dataSource: TableDataSource, loadOptions?: DataProviderLoadOptions) => {
       const deferred = createDeferred<TableData>();
-      calls.push({ dataSource, options: openOptions, deferred });
+      calls.push({ dataSource, options: loadOptions, deferred });
       return deferred.promise;
     },
   );
@@ -1094,10 +1075,10 @@ describe("DataCache", () => {
   });
 });
 
-function createItemsObject(
+function createAnnotatedObject(
   id: string,
-  dataSource: TestItemsDataSource,
-): DataObject<TestItemsDataSource> {
+  dataSource: TestAnnotatedDataSource,
+): DataObject<TestAnnotatedDataSource> {
   return { id, name: id, dataSource };
 }
 
@@ -1105,13 +1086,16 @@ function createTableObject(id: string): DataObject<TableDataSource> {
   return { id, name: id, dataSource: { type: "table", url: `${id}.table` } };
 }
 
-function createItemsContext(options: {
-  dataProvider: ItemsDataProvider<TestItemsDataSource, TestItemsData>;
+function createAnnotatedContext(options: {
+  dataProvider: AnnotatedDataProvider<
+    TestAnnotatedDataSource,
+    TestAnnotatedData
+  >;
   tableDataProvider?: DataProvider<TableDataSource, TableData>;
   tables?: DataObject<TableDataSource>[];
   workspace?: FileSystemDirectoryHandle | null;
   projectUrl?: string | null;
-}): ItemsDataCacheContext<TestItemsDataSource, TestItemsData> {
+}): AnnotatedDataCacheContext<TestAnnotatedDataSource, TestAnnotatedData> {
   const {
     dataProvider,
     tableDataProvider,
@@ -1121,7 +1105,7 @@ function createItemsContext(options: {
   } = options;
   const dataProviders = new Map<
     string,
-    ItemsDataProvider<TestItemsDataSource, TestItemsData>
+    AnnotatedDataProvider<TestAnnotatedDataSource, TestAnnotatedData>
   >([["test", dataProvider]]);
   const tableDataProviders = new Map<
     string,
@@ -1139,19 +1123,22 @@ function createItemsContext(options: {
   };
 }
 
-describe("ItemsDataCache", () => {
+describe("AnnotatedDataCache", () => {
   it("passes no table data promise for data sources without a table", () => {
     const tableDataCache = new DataCache<TableDataSource, TableData>(
       (data) => new TableDataWrapper(data),
     );
-    const itemsDataCache = new ItemsDataCache<
-      TestItemsDataSource,
-      TestItemsData
-    >((data) => new TestItemsDataWrapper(data), tableDataCache);
-    const { dataProvider, calls } = createTestItemsDataProvider();
-    const object = createItemsObject("a", { type: "test", url: "a.test" });
+    const annotatedDataCache = new AnnotatedDataCache<
+      TestAnnotatedDataSource,
+      TestAnnotatedData
+    >((data) => new TestAnnotatedDataWrapper(data), tableDataCache);
+    const { dataProvider, calls } = createTestAnnotatedDataProvider();
+    const object = createAnnotatedObject("a", { type: "test", url: "a.test" });
 
-    void itemsDataCache.load(object, createItemsContext({ dataProvider }));
+    void annotatedDataCache.load(
+      object,
+      createAnnotatedContext({ dataProvider }),
+    );
 
     expect(calls.at(-1)!.options?.tableDataPromise).toBeUndefined();
   });
@@ -1160,22 +1147,22 @@ describe("ItemsDataCache", () => {
     const tableDataCache = new DataCache<TableDataSource, TableData>(
       (data) => new TableDataWrapper(data),
     );
-    const itemsDataCache = new ItemsDataCache<
-      TestItemsDataSource,
-      TestItemsData
-    >((data) => new TestItemsDataWrapper(data), tableDataCache);
-    const { dataProvider, calls } = createTestItemsDataProvider();
+    const annotatedDataCache = new AnnotatedDataCache<
+      TestAnnotatedDataSource,
+      TestAnnotatedData
+    >((data) => new TestAnnotatedDataWrapper(data), tableDataCache);
+    const { dataProvider, calls } = createTestAnnotatedDataProvider();
     const table = createTableObject("t");
     const tableDataProvider = createTestTableDataProvider();
-    const object = createItemsObject("a", {
+    const object = createAnnotatedObject("a", {
       type: "test",
       url: "a.test",
       table: "t",
     });
 
-    void itemsDataCache.load(
+    void annotatedDataCache.load(
       object,
-      createItemsContext({
+      createAnnotatedContext({
         dataProvider,
         tableDataProvider: tableDataProvider.dataProvider,
         tables: [table],
@@ -1195,55 +1182,55 @@ describe("ItemsDataCache", () => {
     const tableDataCache = new DataCache<TableDataSource, TableData>(
       (data) => new TableDataWrapper(data),
     );
-    const itemsDataCache = new ItemsDataCache<
-      TestItemsDataSource,
-      TestItemsData
-    >((data) => new TestItemsDataWrapper(data), tableDataCache);
-    const { dataProvider, load } = createTestItemsDataProvider();
-    const object = createItemsObject("a", {
+    const annotatedDataCache = new AnnotatedDataCache<
+      TestAnnotatedDataSource,
+      TestAnnotatedData
+    >((data) => new TestAnnotatedDataWrapper(data), tableDataCache);
+    const { dataProvider, load } = createTestAnnotatedDataProvider();
+    const object = createAnnotatedObject("a", {
       type: "test",
       url: "a.test",
       table: "missing",
     });
 
     await expect(
-      itemsDataCache.load(object, createItemsContext({ dataProvider })),
+      annotatedDataCache.load(object, createAnnotatedContext({ dataProvider })),
     ).rejects.toThrow("Table not found: missing");
     expect(load).not.toHaveBeenCalled();
   });
 
-  it("reloads the items when the table entry is recreated", async () => {
+  it("reloads the annotated data when the table entry is recreated", async () => {
     const tableDataCache = new DataCache<TableDataSource, TableData>(
       (data) => new TableDataWrapper(data),
     );
-    const itemsDataCache = new ItemsDataCache<
-      TestItemsDataSource,
-      TestItemsData
-    >((data) => new TestItemsDataWrapper(data), tableDataCache);
-    const { dataProvider, load, calls } = createTestItemsDataProvider();
+    const annotatedDataCache = new AnnotatedDataCache<
+      TestAnnotatedDataSource,
+      TestAnnotatedData
+    >((data) => new TestAnnotatedDataWrapper(data), tableDataCache);
+    const { dataProvider, load, calls } = createTestAnnotatedDataProvider();
     const table = createTableObject("t");
     const first = createTestTableDataProvider();
     const second = createTestTableDataProvider();
-    const object = createItemsObject("a", {
+    const object = createAnnotatedObject("a", {
       type: "test",
       url: "a.test",
       table: "t",
     });
 
-    const promise = itemsDataCache.load(
+    const promise = annotatedDataCache.load(
       object,
-      createItemsContext({
+      createAnnotatedContext({
         dataProvider,
         tableDataProvider: first.dataProvider,
         tables: [table],
       }),
     );
     first.calls.at(-1)!.deferred.resolve(createTestTableData().data);
-    calls.at(-1)!.deferred.resolve(createTestItemsData().data);
+    calls.at(-1)!.deferred.resolve(createTestAnnotatedData().data);
     await promise;
-    void itemsDataCache.load(
+    void annotatedDataCache.load(
       object,
-      createItemsContext({
+      createAnnotatedContext({
         dataProvider,
         tableDataProvider: second.dataProvider,
         tables: [table],
@@ -1257,103 +1244,110 @@ describe("ItemsDataCache", () => {
     );
   });
 
-  it("keeps the items entry while the table entry is retained", async () => {
+  it("keeps the annotated data entry while the table entry is retained", async () => {
     const tableDataCache = new DataCache<TableDataSource, TableData>(
       (data) => new TableDataWrapper(data),
     );
-    const itemsDataCache = new ItemsDataCache<
-      TestItemsDataSource,
-      TestItemsData
-    >((data) => new TestItemsDataWrapper(data), tableDataCache);
-    const { dataProvider, load, calls } = createTestItemsDataProvider();
+    const annotatedDataCache = new AnnotatedDataCache<
+      TestAnnotatedDataSource,
+      TestAnnotatedData
+    >((data) => new TestAnnotatedDataWrapper(data), tableDataCache);
+    const { dataProvider, load, calls } = createTestAnnotatedDataProvider();
     const table = createTableObject("t");
     const tableDataProvider = createTestTableDataProvider();
-    const object = createItemsObject("a", {
+    const object = createAnnotatedObject("a", {
       type: "test",
       url: "a.test",
       table: "t",
     });
-    const itemsContext = createItemsContext({
+    const annotatedContext = createAnnotatedContext({
       dataProvider,
       tableDataProvider: tableDataProvider.dataProvider,
       tables: [table],
     });
 
-    const promise = itemsDataCache.load(object, itemsContext);
+    const promise = annotatedDataCache.load(object, annotatedContext);
     tableDataProvider.calls
       .at(-1)!
       .deferred.resolve(createTestTableData().data);
-    calls.at(-1)!.deferred.resolve(createTestItemsData().data);
+    calls.at(-1)!.deferred.resolve(createTestAnnotatedData().data);
     await promise;
     tableDataCache.retainOnly([table], {
       workspace: null,
       projectUrl: null,
-      dataProviders: itemsContext.tableDataProviders,
+      dataProviders: annotatedContext.tableDataProviders,
     });
-    const objectDataRefs = itemsDataCache.retainOnly([object], itemsContext);
+    const objectDataRefs = annotatedDataCache.retainOnly(
+      [object],
+      annotatedContext,
+    );
 
     expect([...objectDataRefs.keys()]).toEqual(["a"]);
     expect(load).toHaveBeenCalledOnce();
   });
 
-  it("destroys the items entry when the table entry is destroyed", async () => {
+  it("destroys the annotated data entry when the table entry is destroyed", async () => {
     const tableDataCache = new DataCache<TableDataSource, TableData>(
       (data) => new TableDataWrapper(data),
     );
-    const itemsDataCache = new ItemsDataCache<
-      TestItemsDataSource,
-      TestItemsData
-    >((data) => new TestItemsDataWrapper(data), tableDataCache);
-    const { dataProvider, calls } = createTestItemsDataProvider();
+    const annotatedDataCache = new AnnotatedDataCache<
+      TestAnnotatedDataSource,
+      TestAnnotatedData
+    >((data) => new TestAnnotatedDataWrapper(data), tableDataCache);
+    const { dataProvider, calls } = createTestAnnotatedDataProvider();
     const table = createTableObject("t");
     const tableDataProvider = createTestTableDataProvider();
-    const object = createItemsObject("a", {
+    const object = createAnnotatedObject("a", {
       type: "test",
       url: "a.test",
       table: "t",
     });
-    const itemsContext = createItemsContext({
+    const annotatedContext = createAnnotatedContext({
       dataProvider,
       tableDataProvider: tableDataProvider.dataProvider,
       tables: [table],
     });
-    const { data: itemsData, close: closeItemsData } = createTestItemsData();
+    const { data: annotatedData, close: closeAnnotatedData } =
+      createTestAnnotatedData();
 
-    const promise = itemsDataCache.load(object, itemsContext);
+    const promise = annotatedDataCache.load(object, annotatedContext);
     tableDataProvider.calls
       .at(-1)!
       .deferred.resolve(createTestTableData().data);
-    calls.at(-1)!.deferred.resolve(itemsData);
+    calls.at(-1)!.deferred.resolve(annotatedData);
     await promise;
     tableDataCache.retainOnly([], {
       workspace: null,
       projectUrl: null,
-      dataProviders: itemsContext.tableDataProviders,
+      dataProviders: annotatedContext.tableDataProviders,
     });
-    const objectDataRefs = itemsDataCache.retainOnly([object], itemsContext);
+    const objectDataRefs = annotatedDataCache.retainOnly(
+      [object],
+      annotatedContext,
+    );
 
     expect(objectDataRefs.size).toBe(0);
-    expect(closeItemsData).toHaveBeenCalledOnce();
+    expect(closeAnnotatedData).toHaveBeenCalledOnce();
     expect(tableDataProvider.load).toHaveBeenCalledOnce();
   });
 
-  it("keeps the referenced table's load alive while the items load needs it", async () => {
+  it("keeps the referenced table's load alive while the annotated data load needs it", async () => {
     const tableDataCache = new DataCache<TableDataSource, TableData>(
       (data) => new TableDataWrapper(data),
     );
-    const itemsDataCache = new ItemsDataCache<
-      TestItemsDataSource,
-      TestItemsData
-    >((data) => new TestItemsDataWrapper(data), tableDataCache);
-    const { dataProvider } = createTestItemsDataProvider();
+    const annotatedDataCache = new AnnotatedDataCache<
+      TestAnnotatedDataSource,
+      TestAnnotatedData
+    >((data) => new TestAnnotatedDataWrapper(data), tableDataCache);
+    const { dataProvider } = createTestAnnotatedDataProvider();
     const table = createTableObject("t");
     const tableDataProvider = createTestTableDataProvider();
-    const object = createItemsObject("a", {
+    const object = createAnnotatedObject("a", {
       type: "test",
       url: "a.test",
       table: "t",
     });
-    const itemsContext = createItemsContext({
+    const annotatedContext = createAnnotatedContext({
       dataProvider,
       tableDataProvider: tableDataProvider.dataProvider,
       tables: [table],
@@ -1361,15 +1355,15 @@ describe("ItemsDataCache", () => {
     const tableContext = {
       workspace: null,
       projectUrl: null,
-      dataProviders: itemsContext.tableDataProviders,
+      dataProviders: annotatedContext.tableDataProviders,
     };
     const tableController = new AbortController();
 
-    // the table is loaded for its own consumer as well as for the items load
+    // the table is loaded for its own consumer as well as for the annotated data load
     const abortedTable = tableDataCache.load(table, tableContext, {
       signal: tableController.signal,
     });
-    void itemsDataCache.load(object, itemsContext);
+    void annotatedDataCache.load(object, annotatedContext);
     tableController.abort();
     await captureRejection(abortedTable);
 
@@ -1378,35 +1372,35 @@ describe("ItemsDataCache", () => {
     );
   });
 
-  it("abandons the referenced table's load when the items load is abandoned", async () => {
+  it("abandons the referenced table's load when the annotated data load is abandoned", async () => {
     const tableDataCache = new DataCache<TableDataSource, TableData>(
       (data) => new TableDataWrapper(data),
     );
-    const itemsDataCache = new ItemsDataCache<
-      TestItemsDataSource,
-      TestItemsData
-    >((data) => new TestItemsDataWrapper(data), tableDataCache);
-    const { dataProvider, calls } = createTestItemsDataProvider();
+    const annotatedDataCache = new AnnotatedDataCache<
+      TestAnnotatedDataSource,
+      TestAnnotatedData
+    >((data) => new TestAnnotatedDataWrapper(data), tableDataCache);
+    const { dataProvider, calls } = createTestAnnotatedDataProvider();
     const table = createTableObject("t");
     const tableDataProvider = createTestTableDataProvider();
-    const object = createItemsObject("a", {
+    const object = createAnnotatedObject("a", {
       type: "test",
       url: "a.test",
       table: "t",
     });
-    const itemsContext = createItemsContext({
+    const annotatedContext = createAnnotatedContext({
       dataProvider,
       tableDataProvider: tableDataProvider.dataProvider,
       tables: [table],
     });
     const controller = new AbortController();
 
-    const aborted = itemsDataCache.load(object, itemsContext, {
+    const aborted = annotatedDataCache.load(object, annotatedContext, {
       signal: controller.signal,
     });
     controller.abort();
     await captureRejection(aborted);
-    await flushAsync(); // the items load is abandoned
+    await flushAsync(); // the annotated data load is abandoned
     await flushAsync(); // its claim on the table is released, and that abandoned
 
     expect(calls.at(-1)!.options?.signal?.aborted).toBe(true);

@@ -13,10 +13,10 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
 /**
  * Recolors the tiles of a tiled image whose pixels carry values rather than colors
  *
- * `getData` extracts the raw pixel values of an invalidated tile, in row-major
+ * `getTileData` extracts the raw pixel values of an invalidated tile, in row-major
  * order, one per raster pixel, along with the width and height of the raster.
  * The raster may cover the full tile size rather than the tile's source bounds,
- * as OpenSeadragon crops it when drawing. `transfer` writes the packed RGBA
+ * as OpenSeadragon crops it when drawing. `transferValues` writes the packed RGBA
  * color of each value to the pixel at the same index, as `0xAABBGGRR`, i.e.
  * `(a << 24) | (b << 16) | (g << 8) | r` (see
  * {@link OpenSeadragonContext.updateTiledImageDataTransfer}). It is called
@@ -25,10 +25,10 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  * has to be written.
  */
 export type DataTransfer = {
-  getData: (
+  getTileData: (
     event: OpenSeadragon.TileInvalidatedEvent,
   ) => Promise<{ values: NumericArray; width: number; height: number }>;
-  transfer: (values: NumericArray, pixelBuffer: Uint32Array) => void;
+  transferValues: (values: NumericArray, pixelBuffer: Uint32Array) => void;
 };
 
 /**
@@ -647,7 +647,7 @@ export class OpenSeadragonContext {
     if (dataTransfer === undefined) {
       return;
     }
-    const { values, width, height } = await dataTransfer.getData(event);
+    const { values, width, height } = await dataTransfer.getTileData(event);
     if (values.length !== width * height) {
       throw new Error("Invalid tile data size");
     }
@@ -656,7 +656,7 @@ export class OpenSeadragonContext {
       this._pixelBuffer = new ArrayBuffer(byteLength);
     }
     const pixelBuffer = new Uint32Array(this._pixelBuffer, 0, width * height);
-    dataTransfer.transfer(values, pixelBuffer);
+    dataTransfer.transferValues(values, pixelBuffer);
     if (!OpenSeadragonContext._isLittleEndian) {
       const view = new DataView(this._pixelBuffer);
       for (let i = 0; i < pixelBuffer.length; i++) {

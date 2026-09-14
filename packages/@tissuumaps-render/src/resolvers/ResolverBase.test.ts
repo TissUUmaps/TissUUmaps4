@@ -34,7 +34,7 @@ function createMockTableData(
 
 describe("ResolverBase", () => {
   describe("fillFromTableValues", () => {
-    it("fills the buffer from table values using parseTableValue and encodeValue", async () => {
+    it("fills the buffer from table values using parseTableValue and packValue", async () => {
       const ids = [1, 2, 3];
       const { data } = createMockTableData([1, 2, 3], [10, 20, 30], [10, 30]);
       const buffer = new Float32Array(3);

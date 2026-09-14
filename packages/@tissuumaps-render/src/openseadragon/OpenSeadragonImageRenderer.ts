@@ -1,13 +1,13 @@
 import { deepEqual } from "fast-equals";
 
 import {
-  type Channel,
   ColorUtils,
   type CustomTileSource,
   type Image,
+  type ImageChannel,
   type ImageData,
+  ImageUtils,
   MathUtils,
-  RenderUtils,
   type TileSourceConfig,
 } from "@tissuumaps/core";
 
@@ -34,7 +34,7 @@ export type OpenSeadragonImageSyncContext = {
  * them with the channel's color. Color and contrast limits are taken from the
  * image's channel settings, falling back to those reported by the image data;
  * channels without a color use a default color for their channel index (see
- * {@link RenderUtils.getDefaultChannelColor}), and channels without contrast
+ * {@link ImageUtils.getDefaultChannelColor}), and channels without contrast
  * limits use the value range of their data type. Channels whose data does not
  * provide values are drawn as they are, as is image data that is not
  * multi-channel. Channel visibility and opacity are not part of the transfer:
@@ -51,12 +51,12 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   ImageData,
   OpenSeadragonImageSyncContext
 > {
-  private readonly _renderedImages = new Map<
+  private readonly _renderedMultichannelImages = new Map<
     string,
     {
       data: ImageData;
       channels: {
-        state: Pick<Channel, "color" | "contrastLimits">;
+        state: Pick<ImageChannel, "color" | "contrastLimits">;
         dataTransfer: DataTransfer | undefined;
       }[];
     }
@@ -68,9 +68,9 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * @param images - The images about to be displayed
    */
   protected override retainObjects(images: Image[]): void {
-    for (const imageId of this._renderedImages.keys()) {
+    for (const imageId of this._renderedMultichannelImages.keys()) {
       if (!images.some((image) => image.id === imageId)) {
-        this._renderedImages.delete(imageId);
+        this._renderedMultichannelImages.delete(imageId);
       }
     }
   }
@@ -96,41 +96,40 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   ): Promise<void> {
     const sizeC = data.getSizeC();
     if (sizeC === undefined) {
-      this._renderedImages.delete(image.id);
+      this._renderedMultichannelImages.delete(image.id);
       return Promise.resolve();
     }
-    const renderedImage = this._renderedImages.get(image.id);
-    const renderedImageChannels = [];
-    for (let c = 0; c < sizeC; c++) {
-      const renderedImageChannel = renderedImage?.channels[c];
-      const renderedImageChannelState = structuredClone({
-        color: image.channels?.[c]?.color ?? data.getChannelColor?.(c),
+    const renderedMultichannelImage = this._renderedMultichannelImages.get(
+      image.id,
+    );
+    const channels = [];
+    for (let index = 0; index < sizeC; index++) {
+      const channel = renderedMultichannelImage?.channels[index];
+      const channelState = structuredClone({
+        color: image.channels?.[index]?.color ?? data.getChannelColor?.(index),
         contrastLimits:
-          image.channels?.[c]?.contrastLimits ??
-          data.getChannelContrastLimits?.(c),
+          image.channels?.[index]?.contrastLimits ??
+          data.getChannelContrastLimits?.(index),
       });
       if (
-        renderedImage !== undefined &&
-        renderedImage.data === data &&
-        renderedImageChannel !== undefined &&
-        deepEqual(renderedImageChannel.state, renderedImageChannelState)
+        renderedMultichannelImage !== undefined &&
+        renderedMultichannelImage.data === data &&
+        channel !== undefined &&
+        deepEqual(channel.state, channelState)
       ) {
-        renderedImageChannels.push(renderedImageChannel);
+        channels.push(channel);
       } else {
-        renderedImageChannels.push({
-          state: renderedImageChannelState,
+        channels.push({
+          state: channelState,
           dataTransfer: OpenSeadragonImageRenderer._createDataTransfer(
             data,
-            c,
-            renderedImageChannelState,
+            index,
+            channelState,
           ),
         });
       }
     }
-    this._renderedImages.set(image.id, {
-      data,
-      channels: renderedImageChannels,
-    });
+    this._renderedMultichannelImages.set(image.id, { data, channels });
     return Promise.resolve();
   }
 
@@ -220,11 +219,13 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     index: number | null,
   ): DataTransfer | undefined {
     if (index !== null) {
-      const renderedImage = this._renderedImages.get(ref.object.id);
-      if (renderedImage !== undefined) {
-        const renderedImageChannel = renderedImage.channels[index];
-        if (renderedImageChannel !== undefined) {
-          return renderedImageChannel.dataTransfer;
+      const renderedMultichannelImage = this._renderedMultichannelImages.get(
+        ref.object.id,
+      );
+      if (renderedMultichannelImage !== undefined) {
+        const channel = renderedMultichannelImage.channels[index];
+        if (channel !== undefined) {
+          return channel.dataTransfer;
         }
       }
     }
@@ -237,51 +238,46 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * The transfer scales each value linearly between the contrast limits,
    * clamped to `[0, 1]`, and multiplies the result with the channel's color, or
    * with the default color for the channel index (see
-   * {@link RenderUtils.getDefaultChannelColor}) if the channel has none. Without
+   * {@link ImageUtils.getDefaultChannelColor}) if the channel has none. Without
    * contrast limits, the value range of the data type of each tile's data is
-   * used (see {@link RenderUtils.getDataTypeRange}); contrast limits that are not
+   * used (see {@link ImageUtils.getDataTypeRange}); contrast limits that are not
    * ascending render every value black. The resulting pixels are opaque;
    * channel visibility and opacity are applied by OpenSeadragon when drawing
    * the tiled image.
    *
    * The scaled color is not computed per pixel: the transfer packs a ramp of
-   * 256 colors once, with `ColorUtils.packColor` and `ColorUtils.packRGBA`,
+   * 256 colors once, with `ColorUtils.packColor` and `ColorUtils.withAlpha`,
    * and maps each value to the nearest ramp entry. As no color component
    * exceeds 255, the ramp holds every color the channel can take.
    *
    * @param data - The image data providing the channel's values
    * @param index - The index of the tiled image (channel)
-   * @param state - The resolved color and contrast limits of the channel
+   * @param channel - The color and contrast limits of the channel
    * @returns The data transfer, or `undefined` if the data provides no channel
    * values
    */
   private static _createDataTransfer(
     data: ImageData,
     index: number,
-    state: Pick<Channel, "color" | "contrastLimits">,
+    channel: Pick<ImageChannel, "color" | "contrastLimits">,
   ): DataTransfer | undefined {
-    const { getChannelData } = data;
-    if (getChannelData !== undefined) {
+    if (data.getTileData !== undefined) {
       const { r, g, b } =
-        state.color ?? RenderUtils.getDefaultChannelColor(index);
+        channel.color ?? ImageUtils.getDefaultChannelColor(index);
       const ramp = new Uint32Array(256);
       for (let i = 0; i < ramp.length; i++) {
         const scale = i / (ramp.length - 1);
-        ramp[i] = ColorUtils.packRGBA(
-          ColorUtils.packColor({
-            r: r * scale,
-            g: g * scale,
-            b: b * scale,
-          }),
+        ramp[i] = ColorUtils.withAlpha(
+          ColorUtils.packColor({ r: r * scale, g: g * scale, b: b * scale }),
           1,
           255,
         );
       }
       return {
-        getData: (event) => getChannelData(index, event),
-        transfer: (values, pixelBuffer) => {
+        getTileData: (event) => data.getTileData!(event),
+        transferValues: (values, pixelBuffer) => {
           const [vmin, vmax] =
-            state.contrastLimits ?? RenderUtils.getDataTypeRange(values);
+            channel.contrastLimits ?? ImageUtils.getDataTypeRange(values);
           const rampScale = vmax > vmin ? (ramp.length - 1) / (vmax - vmin) : 0;
           for (let i = 0; i < values.length; i++) {
             const value = values[i]!;

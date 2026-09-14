@@ -6,7 +6,7 @@
  * `tryParse*` methods report rejection by returning `undefined`, the `parse*`
  * methods by throwing.
  */
-export class ParseUtils {
+export class NumberUtils {
   /**
    * Parses a value as a finite number
    *
@@ -15,7 +15,7 @@ export class ParseUtils {
    * @throws Error if the value is not a finite number
    */
   static parseFinite(value: unknown): number {
-    const v = ParseUtils.tryParseFinite(value);
+    const v = NumberUtils.tryParseFinite(value);
     if (v === undefined) {
       throw new Error(`Value is not a finite number: ${String(value)}`);
     }
@@ -30,7 +30,7 @@ export class ParseUtils {
    * @throws Error if the value is not a safe integer
    */
   static parseSafeInt(value: unknown): number {
-    const v = ParseUtils.tryParseSafeInt(value);
+    const v = NumberUtils.tryParseSafeInt(value);
     if (v === undefined) {
       throw new Error(`Value is not a safe integer: ${String(value)}`);
     }
@@ -83,7 +83,7 @@ export class ParseUtils {
    * integer
    */
   static tryParseSafeInt(value: unknown): number | undefined {
-    const v = ParseUtils.tryParseFinite(value, { requireSafeBigInt: true });
+    const v = NumberUtils.tryParseFinite(value, { requireSafeBigInt: true });
     if (v === undefined) {
       return undefined;
     }

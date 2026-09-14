@@ -1,6 +1,6 @@
 import type {
   Color,
-  DefaultMap,
+  GroupValueMap,
   Image,
   ImageData,
   InteractionMode,
@@ -26,11 +26,11 @@ export interface ViewerAdapter {
   points: Points[];
   shapes: Shapes[];
   tables: Table[];
-  markerMaps: DefaultMap<Marker>[];
-  sizeMaps: DefaultMap<number>[];
-  colorMaps: DefaultMap<Color>[];
-  visibilityMaps: DefaultMap<boolean>[];
-  opacityMaps: DefaultMap<number>[];
+  markerMaps: GroupValueMap<Marker>[];
+  sizeMaps: GroupValueMap<number>[];
+  colorMaps: GroupValueMap<Color>[];
+  visibilityMaps: GroupValueMap<boolean>[];
+  opacityMaps: GroupValueMap<number>[];
   osOptions: OpenSeadragonOptions;
   glOptions: WebGLOptions;
   loadImage: (

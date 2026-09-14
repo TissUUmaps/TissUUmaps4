@@ -20,10 +20,10 @@ import {
 } from "@tissuumaps/core";
 
 import { markers } from "@/components/markers";
-import type { ItemsDataTableGroupRowData } from "@/components/widgets/ItemsDataWidget/ItemsDataTable";
+import type { AnnotationsTableGroupRowData } from "@/components/widgets/AnnotationsWidget/AnnotationsTable";
 import { useProjectStore } from "@/stores/project";
 
-export function usePointsDataTableColumns(
+export function usePointsAnnotationsColumns(
   points: Points,
   currentGroupByColumn: string | null,
 ) {
@@ -33,9 +33,9 @@ export function usePointsDataTableColumns(
   const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
-  const extraTableGroupColumnDefs: ColumnDef<ItemsDataTableGroupRowData>[] =
+  const extraTableGroupColumnDefs: ColumnDef<AnnotationsTableGroupRowData>[] =
     useMemo(() => {
-      const columnDefs: ColumnDef<ItemsDataTableGroupRowData>[] = [];
+      const columnDefs: ColumnDef<AnnotationsTableGroupRowData>[] = [];
 
       // marker
       if (

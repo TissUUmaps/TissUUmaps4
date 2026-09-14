@@ -2,8 +2,8 @@ import type { Color } from "../model/primitives";
 import type { NumericArray } from "../types/arrays";
 import { ColorUtils } from "./ColorUtils";
 
-/** Utility methods for rendering image channels */
-export class RenderUtils {
+/** Utility methods for image channel defaults */
+export class ImageUtils {
   /**
    * Returns the value range that the type of the given array can hold, for use
    * as default contrast limits of image channel data

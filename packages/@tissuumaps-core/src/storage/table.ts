@@ -1,30 +1,14 @@
 import type { TableDataSource } from "../model/table";
 import type { GenericArray } from "../types/arrays";
 import type { ProgressCallback } from "../types/callbacks";
-import type { ItemsData, ItemsDataProvider } from "./base";
-
-/**
- * Data provider for tabular data
- *
- * @typeParam TTableDataSource - The data source type this data provider opens
- * @typeParam TTableData - The {@link TableData} type produced by this data
- * provider
- * @typeParam TNormalizedTableDataSource - The normalized data source type
- * produced by `normalize` and accepted by `load`
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface TableDataProvider<
-  TTableDataSource extends TableDataSource,
-  TTableData extends TableData,
-  TNormalizedTableDataSource extends TTableDataSource = TTableDataSource,
-> extends ItemsDataProvider<
-  TTableDataSource,
-  TTableData,
-  TNormalizedTableDataSource
-> {}
+import type { DataProvider, ItemsData } from "./base";
 
 /**
  * Loaded tabular data providing column-wise access
+ *
+ * The items of a table are its rows, each of which annotates one item of
+ * another data object (see `AnnotatedDataSource`); the item IDs and names are
+ * those of the annotated items, in row order.
  */
 export interface TableData extends ItemsData {
   /**
@@ -89,3 +73,23 @@ export interface TableData extends ItemsData {
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<[number, number] | undefined>;
 }
+
+/**
+ * Data provider for tabular data
+ *
+ * @typeParam TTableDataSource - The data source type this data provider opens
+ * @typeParam TTableData - The {@link TableData} type produced by this data
+ * provider
+ * @typeParam TNormalizedTableDataSource - The normalized data source type
+ * produced by `normalize` and accepted by `load`
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface TableDataProvider<
+  TTableDataSource extends TableDataSource,
+  TTableData extends TableData,
+  TNormalizedTableDataSource extends TTableDataSource = TTableDataSource,
+> extends DataProvider<
+  TTableDataSource,
+  TTableData,
+  TNormalizedTableDataSource
+> {}

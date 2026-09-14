@@ -8,7 +8,7 @@ import {
 
 import { LabelsSettingsCategory } from "./category";
 
-export function useLabelsDataWidget(labels: Labels) {
+export function useLabelsAnnotationsWidget(labels: Labels) {
   const [activeSettingsCategory, setActiveSettingsCategory] =
     useState<LabelsSettingsCategory | null>(null);
   const [selectedGroupByColumn, setSelectedGroupByColumn] = useState<

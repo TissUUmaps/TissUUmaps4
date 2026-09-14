@@ -165,7 +165,7 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       await WebGLShapesRasterizer.createScanlines(
         1,
         geometry,
-        [false, true, false],
+        new Uint8Array([0, 1, 0]),
         unitBounds,
       );
 
@@ -185,7 +185,7 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       await WebGLShapesRasterizer.createScanlines(
         1,
         geometry,
-        [true, false, true],
+        new Uint8Array([1, 0, 1]),
         unitBounds,
       );
 
@@ -343,7 +343,7 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       await WebGLShapesRasterizer.createScanlines(
         2,
         geometry,
-        [false, false],
+        new Uint8Array([0, 0]),
         unitBounds,
       );
 
@@ -408,7 +408,7 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       await WebGLShapesRasterizer.createScanlines(
         1,
         geometry,
-        [false, false],
+        new Uint8Array([0, 0]),
         unitBounds,
       );
 

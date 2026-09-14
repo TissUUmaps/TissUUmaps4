@@ -1,7 +1,7 @@
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
 import type {
-  DataProviderOpenOptions,
+  DataProviderLoadOptions,
   ImageDataProvider,
 } from "@tissuumaps/core";
 
@@ -79,7 +79,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
 
   async load(
     normalizedDataSource: NormalizedOMEZarrImageDataSource,
-    options?: DataProviderOpenOptions,
+    options?: DataProviderLoadOptions,
   ): Promise<OMEZarrImageData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();

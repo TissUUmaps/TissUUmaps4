@@ -19,33 +19,35 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTableData } from "@/hooks/useData";
+import { cn } from "@/lib/utils";
 
-export type ItemsDataTableRowData = {
+export type AnnotationsTableRowData = {
   id: number;
   name?: string;
+  annotated?: boolean;
 };
 
-export type ItemsDataTableGroupRowData = {
+export type AnnotationsTableGroupRowData = {
   group: string;
 };
 
-export type ItemsDataTableProps = {
-  data: ItemsData;
+export type AnnotationsTableProps = {
+  data?: ItemsData;
   height: number;
   table: string | null;
   groupByColumn?: string | null;
-  extraColumnDefs?: ColumnDef<ItemsDataTableRowData>[];
-  extraGroupColumnDefs?: ColumnDef<ItemsDataTableGroupRowData>[];
+  extraColumnDefs?: ColumnDef<AnnotationsTableRowData>[];
+  extraGroupColumnDefs?: ColumnDef<AnnotationsTableGroupRowData>[];
 };
 
-export function ItemsDataTable({
+export function AnnotationsTable({
   data,
   height,
   table,
   groupByColumn,
   extraColumnDefs,
   extraGroupColumnDefs,
-}: ItemsDataTableProps) {
+}: AnnotationsTableProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [tableGroups, setTableGroups] = useState<GenericArray<string> | null>(
@@ -81,11 +83,11 @@ export function ItemsDataTable({
   const { rowData, columnDefs } = useMemo(() => {
     if (table && groupByColumn) {
       if (tableGroups !== null) {
-        const rowData: ItemsDataTableGroupRowData[] = tableGroups.map(
+        const rowData: AnnotationsTableGroupRowData[] = tableGroups.map(
           (group) => ({ group: String(group) }),
         );
         rowData.sort((a, b) => a.group.localeCompare(b.group));
-        const columnDefs: ColumnDef<ItemsDataTableGroupRowData>[] = [
+        const columnDefs: ColumnDef<AnnotationsTableGroupRowData>[] = [
           {
             id: "group",
             header: groupByColumn,
@@ -99,30 +101,39 @@ export function ItemsDataTable({
       }
       return { rowData: [], columnDefs: [] };
     }
-    const ids = data.getIds();
+    let ids: number[] = [];
     let names: (string | undefined)[] | undefined;
-    if (table !== null) {
-      // the selected table governs the names; while it is still loading there
-      // are none yet, rather than the object's own names, which would show a
-      // different column for a moment and then be replaced
-      if (tableData !== null) {
-        const tableNames = tableData.getNames();
-        if (tableNames !== undefined) {
+    let annotatedIds: Set<number> | undefined;
+    if (data !== undefined) {
+      ids = data.getIds();
+      if (table !== null) {
+        // the selected table governs the names; while it is still loading there
+        // are none yet, rather than the object's own names, which would show a
+        // different column for a moment and then be replaced
+        if (tableData !== null) {
           const tableIds = tableData.getIds();
-          const tableNamesById = new Map(
-            tableIds.map((id, i) => [id, tableNames[i]!]),
-          );
-          names = ids.map((id) => tableNamesById.get(id));
+          annotatedIds = new Set(tableIds);
+          const tableNames = tableData.getNames?.();
+          if (tableNames !== undefined) {
+            const tableNamesById = new Map(
+              tableIds.map((id, i) => [id, tableNames[i]!]),
+            );
+            names = ids.map((id) => tableNamesById.get(id));
+          }
         }
+      } else {
+        names = data.getNames?.();
       }
-    } else {
-      names = data.getNames();
+    } else if (tableData !== null) {
+      ids = tableData.getIds();
+      names = tableData.getNames?.();
     }
-    const rowData: ItemsDataTableRowData[] = ids.map((id, i) => ({
+    const rowData: AnnotationsTableRowData[] = ids.map((id, i) => ({
       id,
-      name: names !== undefined ? names[i] : undefined,
+      name: names?.[i],
+      annotated: annotatedIds?.has(id),
     }));
-    const columnDefs: ColumnDef<ItemsDataTableRowData>[] = [
+    const columnDefs: ColumnDef<AnnotationsTableRowData>[] = [
       { id: "id", header: "ID", accessorKey: "id" },
     ];
     if (names !== undefined) {
@@ -144,11 +155,11 @@ export function ItemsDataTable({
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const reactTable = useReactTable<
-    ItemsDataTableRowData | ItemsDataTableGroupRowData
+    AnnotationsTableRowData | AnnotationsTableGroupRowData
   >({
     data: rowData,
     columns: columnDefs as ColumnDef<
-      ItemsDataTableRowData | ItemsDataTableGroupRowData
+      AnnotationsTableRowData | AnnotationsTableGroupRowData
     >[],
     getRowId: (row) => ("group" in row ? row.group : String(row.id)),
     getCoreRowModel: getCoreRowModel(),
@@ -197,12 +208,17 @@ export function ItemsDataTable({
         >
           {reactTableRowVirtualizer.getVirtualItems().map((virtualRow) => {
             const row = reactTableRows[virtualRow.index]!;
+            const unannotated =
+              !("group" in row.original) && row.original.annotated === false;
             return (
               <TableRow
                 key={virtualRow.key}
                 data-index={virtualRow.index} // required for dynamic row height measurement
                 ref={(node) => reactTableRowVirtualizer.measureElement(node)} // measure dynamic row height
-                className="flex absolute w-full border-0 items-center"
+                className={cn(
+                  "flex absolute w-full border-0 items-center",
+                  unannotated && "text-muted-foreground",
+                )}
                 style={{ transform: `translateY(${virtualRow.start}px)` }}
               >
                 {row.getVisibleCells().map((cell) => (

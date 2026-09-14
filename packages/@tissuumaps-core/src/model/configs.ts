@@ -124,9 +124,19 @@ export function isGroupByConfig<
 }
 
 /** Configuration to use random values */
-export type RandomConfig<TRandom> = Config<"random"> & {
+export type RandomConfig<TRandomExtra = unknown> = Config<"random"> & {
   /** Specification of random value generation */
-  random: NonNullable<TRandom>;
+  random: {
+    /**
+     * The seed for the random number generator
+     *
+     * Values are drawn deterministically from the item ID and the seed, so
+     * different seeds yield different assignments for the same items.
+     *
+     * @defaultValue {@link defaultRandomSeed}
+     */
+    seed?: number;
+  } & TRandomExtra;
 };
 
 /**
@@ -135,10 +145,10 @@ export type RandomConfig<TRandom> = Config<"random"> & {
  * @param obj - The object to check
  * @returns Whether the object is a {@link RandomConfig}
  */
-export function isRandomConfig<TRandom>(
+export function isRandomConfig<TRandomExtra = unknown>(
   obj: unknown,
-): obj is RandomConfig<TRandom> {
-  return (obj as RandomConfig<TRandom>).random !== undefined;
+): obj is RandomConfig<TRandomExtra> {
+  return (obj as RandomConfig<TRandomExtra>).random !== undefined;
 }
 
 /**

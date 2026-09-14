@@ -8,8 +8,8 @@ import {
 
 import {
   AsyncUtils,
-  type DataProviderOpenOptions,
-  ParseUtils,
+  type DataProviderLoadOptions,
+  NumberUtils,
   type TableDataProvider,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -86,7 +86,7 @@ export class CSVTableDataProvider implements TableDataProvider<
 
   async load(
     normalizedDataSource: NormalizedCSVTableDataSource,
-    options?: DataProviderOpenOptions,
+    options?: DataProviderLoadOptions,
   ): Promise<CSVTableData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
@@ -160,7 +160,7 @@ export class CSVTableDataProvider implements TableDataProvider<
             if (Array.isArray(columnChunk)) {
               columnChunk[currentChunkRow] = value;
             } else {
-              const numericValue = ParseUtils.tryParseFinite(value);
+              const numericValue = NumberUtils.tryParseFinite(value);
               if (numericValue !== undefined) {
                 columnChunk[currentChunkRow] = numericValue;
               } else {
@@ -298,7 +298,7 @@ export class CSVTableDataProvider implements TableDataProvider<
         );
       }
       ids = Array.from<string | number, number>(idColumnValues, (id) =>
-        ParseUtils.parseSafeInt(id),
+        NumberUtils.parseSafeInt(id),
       );
     }
 
