@@ -51,18 +51,18 @@ export class ColorUtils {
    * @throws Error if `size` is not an integer of at least two, or if the
    * scheme yields a color string that cannot be parsed
    */
-  static sampleColorPalette(
+  static sampleColorScheme(
     interpolate: (t: number) => string,
     size: number,
   ): Color[] {
     if (!Number.isInteger(size) || size < 2) {
-      throw new Error(`Invalid color palette size: ${size}`);
+      throw new Error(`Invalid color scheme size: ${size}`);
     }
     return Array.from({ length: size }, (_, i) => {
       const spec = interpolate(i / (size - 1));
       const { r, g, b } = parseCSSColor(spec);
       if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
-        throw new Error(`Invalid color palette color: ${spec}`);
+        throw new Error(`Invalid color scheme color: ${spec}`);
       }
       return { r, g, b };
     });

@@ -98,7 +98,7 @@ function sampledColorPalette(
   return {
     id,
     name,
-    colors: ColorUtils.sampleColorPalette(
+    colors: ColorUtils.sampleColorScheme(
       interpolate,
       continuousColorPaletteSize,
     ),

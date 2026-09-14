@@ -78,14 +78,14 @@ describe("ColorUtils", () => {
     });
   });
 
-  describe("sampleColorPalette", () => {
+  describe("sampleColorScheme", () => {
     const grayscale = (t: number) => {
       const value = Math.round(t * 255);
       return `rgb(${value}, ${value}, ${value})`;
     };
 
     it("samples both ends of the scheme", () => {
-      const result = ColorUtils.sampleColorPalette(grayscale, 2);
+      const result = ColorUtils.sampleColorScheme(grayscale, 2);
       expect(result).toEqual([
         { r: 0, g: 0, b: 0 },
         { r: 255, g: 255, b: 255 },
@@ -93,12 +93,12 @@ describe("ColorUtils", () => {
     });
 
     it("samples evenly spaced positions", () => {
-      const result = ColorUtils.sampleColorPalette(grayscale, 3);
+      const result = ColorUtils.sampleColorScheme(grayscale, 3);
       expect(result[1]).toEqual({ r: 128, g: 128, b: 128 });
     });
 
     it("parses hex color strings", () => {
-      const result = ColorUtils.sampleColorPalette(() => "#010203", 2);
+      const result = ColorUtils.sampleColorScheme(() => "#010203", 2);
       expect(result).toEqual([
         { r: 1, g: 2, b: 3 },
         { r: 1, g: 2, b: 3 },
@@ -106,21 +106,21 @@ describe("ColorUtils", () => {
     });
 
     it("throws on a size smaller than two", () => {
-      expect(() => ColorUtils.sampleColorPalette(grayscale, 1)).toThrow(
-        /Invalid color palette size/,
+      expect(() => ColorUtils.sampleColorScheme(grayscale, 1)).toThrow(
+        /Invalid color scheme size/,
       );
     });
 
     it("throws on a fractional size", () => {
-      expect(() => ColorUtils.sampleColorPalette(grayscale, 2.5)).toThrow(
-        /Invalid color palette size/,
+      expect(() => ColorUtils.sampleColorScheme(grayscale, 2.5)).toThrow(
+        /Invalid color scheme size/,
       );
     });
 
     it("throws on a color string it cannot parse", () => {
       expect(() =>
-        ColorUtils.sampleColorPalette(() => "oklch(0.7 0.1 200)", 2),
-      ).toThrow(/Invalid color palette color/);
+        ColorUtils.sampleColorScheme(() => "oklch(0.7 0.1 200)", 2),
+      ).toThrow(/Invalid color scheme color/);
     });
   });
 
