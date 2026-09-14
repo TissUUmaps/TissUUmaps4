@@ -1,9 +1,10 @@
-import { NgffImage } from "ome-zarr.js";
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
-import type { ImageDataProvider } from "@tissuumaps/core";
+import type {
+  DataProviderLoadOptions,
+  ImageDataProvider,
+} from "@tissuumaps/core";
 
-import { OMEZarrDataProvider } from "./OMEZarrDataProvider";
 import type { OMEZarrImageData } from "./OMEZarrImageData";
 import {
   type NormalizedOMEZarrImageDataSource,
@@ -12,6 +13,7 @@ import {
 } from "./OMEZarrImageDataSource";
 import { OMEZarrMultiChannelImageData } from "./OMEZarrMultiChannelImageData";
 import { OMEZarrSingleChannelImageData } from "./OMEZarrSingleChannelImageData";
+import { openOMEZarr } from "./openOMEZarr";
 
 /**
  * Data provider for OME-Zarr images
@@ -20,19 +22,13 @@ import { OMEZarrSingleChannelImageData } from "./OMEZarrSingleChannelImageData";
  * if the image has a channel axis with more than one channel, and as
  * `OMEZarrSingleChannelImageData` otherwise.
  */
-export class OMEZarrImageDataProvider
-  extends OMEZarrDataProvider<
-    OMEZarrImageDataSource,
-    OMEZarrImageData,
-    NormalizedOMEZarrImageDataSource
-  >
-  implements
-    ImageDataProvider<
-      OMEZarrImageDataSource,
-      OMEZarrImageData,
-      NormalizedOMEZarrImageDataSource
-    >
-{
+export class OMEZarrImageDataProvider implements ImageDataProvider<
+  OMEZarrImageDataSource,
+  OMEZarrImageData,
+  NormalizedOMEZarrImageDataSource
+> {
+  readonly name = "OME-Zarr";
+
   readonly schema = {
     type: "object",
     properties: {
@@ -93,53 +89,64 @@ export class OMEZarrImageDataProvider
   }
 
   /**
-   * Loads the OME-Zarr image and opens one tile source per channel, or a
-   * single tile source for images without a channel axis or with one channel
+   * Opens an OME-Zarr image data source and returns the loaded image data
    *
-   * All resolution levels are opened once up front, both to read the channel
-   * count from the full-resolution array and so that the tile sources share
-   * the opened arrays instead of reopening them concurrently.
+   * The OME-Zarr image is loaded with {@link openOMEZarr} and one tile source
+   * per channel is opened, or a single tile source for images without a
+   * channel axis or with one channel. All resolution levels are opened once up
+   * front, both to read the channel count from the full-resolution array and
+   * so that the tile sources share the opened arrays instead of reopening them
+   * concurrently. The `z` and `t` of the data source select the plane to open.
    *
-   * @param url - The absolute URL to open tile sources with
-   * @param store - The zarr store to load the OME-Zarr image from
-   * @param normalizedDataSource - The normalized data source being loaded,
-   * whose `z` and `t` select the plane to open
-   * @param objectUrl - The object URL created for a workspace file, if any
-   * @param signal - The abort signal of the load operation, if any
+   * @param normalizedDataSource - The normalized data source to open
+   * @param options - See `DataProviderLoadOptions`; `workspace` is required
+   * for data sources with a `path` but no `url`
    * @returns A promise that resolves to the loaded image data
+   * @throws Error if the data source has neither a URL nor a workspace path,
+   * or has only a workspace path while no workspace is open
    */
-  protected async open(
-    url: string,
-    store: Parameters<typeof NgffImage.load>[0],
+  async load(
     normalizedDataSource: NormalizedOMEZarrImageDataSource,
-    objectUrl: string | undefined,
-    signal: AbortSignal | undefined,
+    options?: DataProviderLoadOptions,
   ): Promise<OMEZarrImageData> {
-    const image = await NgffImage.load(store, { signal });
-    const arrays = await Promise.all(
-      image.paths.map((path) => image.openArray(path, { signal })),
-    ); // pre-open all resolution levels once to avoid concurrent reopening
-    const cIndex = image.getAxesNames().indexOf("c");
-    const sizeC = cIndex >= 0 ? arrays[0]!.shape[cIndex]! : 1;
-    const { z, t } = normalizedDataSource;
-    if (sizeC > 1) {
-      const tileSourcePromises: Promise<OMEZarrTileSource>[] = [];
-      for (let c = 0; c < sizeC; c++) {
-        const tileSourcePromise = OMEZarrTileSource.open(
-          { url, c, z, t, dataType: "ome-zarr" },
-          image,
-        );
-        tileSourcePromises.push(tileSourcePromise);
-      }
-      const tileSources = await Promise.all(tileSourcePromises);
-      signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
-      return new OMEZarrMultiChannelImageData(image, tileSources, objectUrl);
-    }
-    const tileSource = await OMEZarrTileSource.open(
-      { url, z, t, dataType: "ome-zarr" },
-      image,
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const { image, url, objectUrl } = await openOMEZarr(
+      normalizedDataSource,
+      options,
     );
-    signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
-    return new OMEZarrSingleChannelImageData(tileSource, objectUrl);
+    try {
+      const arrays = await Promise.all(
+        image.paths.map((path) => image.openArray(path, { signal })),
+      ); // pre-open all resolution levels once to avoid concurrent reopening
+      const cIndex = image.getAxesNames().indexOf("c");
+      const sizeC = cIndex >= 0 ? arrays[0]!.shape[cIndex]! : 1;
+      const { z, t } = normalizedDataSource;
+      if (sizeC > 1) {
+        const tileSourcePromises: Promise<OMEZarrTileSource>[] = [];
+        for (let c = 0; c < sizeC; c++) {
+          const tileSourcePromise = OMEZarrTileSource.open(
+            { url, c, z, t, dataType: "ome-zarr" },
+            image,
+          );
+          tileSourcePromises.push(tileSourcePromise);
+        }
+        const tileSources = await Promise.all(tileSourcePromises);
+        signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
+        return new OMEZarrMultiChannelImageData(image, tileSources, objectUrl);
+      }
+      const tileSource = await OMEZarrTileSource.open(
+        { url, z, t, dataType: "ome-zarr" },
+        image,
+      );
+      signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
+      return new OMEZarrSingleChannelImageData(tileSource, objectUrl);
+    } catch (error) {
+      // the image data owns the object URL only once it has been created
+      if (objectUrl !== undefined) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      throw error;
+    }
   }
 }

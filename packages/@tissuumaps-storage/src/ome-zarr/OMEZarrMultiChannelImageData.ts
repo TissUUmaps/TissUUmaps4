@@ -27,7 +27,7 @@ export class OMEZarrMultiChannelImageData extends OMEZarrImageData {
    * @param tileSources - One tile source per channel, in channel order, each
    * opened with `dataType: "ome-zarr"` and the channel selected
    * @param objectUrl - The object URL created for the workspace file the
-   * image was loaded from, if any (see {@link OMEZarrData})
+   * image was loaded from, if any (see {@link OMEZarrImageData})
    */
   constructor(
     image: NgffImage,

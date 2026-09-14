@@ -1,4 +1,4 @@
-import type { OMEZarrTileSource } from "omezarr-tilesource";
+import type { OMEZarrTileData, OMEZarrTileSource } from "omezarr-tilesource";
 import type OpenSeadragon from "openseadragon";
 
 import type {
@@ -8,27 +8,30 @@ import type {
   UintArray,
 } from "@tissuumaps/core";
 
-import { OMEZarrData } from "./OMEZarrData";
-
 /**
  * Loaded OME-Zarr label image data
  *
  * Provides a single tile source whose chunks hold label IDs as unsigned
  * integers. Label IDs are not enumerated up front: they are read per tile,
  * so that arbitrarily large label images can be opened without scanning them.
+ *
+ * Owns the object URL that the OME-Zarr labels data provider creates for label
+ * images loaded from a workspace file, and revokes it on
+ * {@link OMEZarrLabelsData.close}.
  */
-export class OMEZarrLabelsData extends OMEZarrData implements LabelsData {
+export class OMEZarrLabelsData implements LabelsData {
   private readonly _tileSource: OMEZarrTileSource;
+  private readonly _objectUrl: string | undefined;
 
   /**
    * @param tileSource - The tile source of the label image, opened with
    * `dataType: "ome-zarr"`
    * @param objectUrl - The object URL created for the workspace file the label
-   * image was loaded from, if any (see {@link OMEZarrData})
+   * image was loaded from, if any; revoked on {@link OMEZarrLabelsData.close}
    */
   constructor(tileSource: OMEZarrTileSource, objectUrl?: string) {
-    super(objectUrl);
     this._tileSource = tileSource;
+    this._objectUrl = objectUrl;
   }
 
   /** Returns the tile source of the label image */
@@ -39,8 +42,12 @@ export class OMEZarrLabelsData extends OMEZarrData implements LabelsData {
   /**
    * Extracts the label IDs of an invalidated tile from its OME-Zarr chunk
    *
-   * Only unsigned integer chunks of up to 32 bits are accepted, as label IDs
-   * have to be non-negative integers and the renderer resolves them as such.
+   * The tile has to belong to an `OMEZarrTileSource` opened with
+   * `dataType: "ome-zarr"`, whose tiles carry the two-dimensional (height x
+   * width) chunk read from the zarr array (with the channel, z-slice and
+   * timepoint already selected) instead of a rendered image. Only unsigned
+   * integer chunks of up to 32 bits are accepted, as label IDs have to be
+   * non-negative integers and the renderer resolves them as such.
    *
    * @param event - The tile invalidation event
    * @returns The label IDs of the invalidated tile, one per raster pixel in
@@ -51,7 +58,7 @@ export class OMEZarrLabelsData extends OMEZarrData implements LabelsData {
   async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
   ): Promise<{ values: UintArray; width: number; height: number }> {
-    const chunk = await OMEZarrData.getTileChunk(event);
+    const { chunk } = (await event.getData("ome-zarr")) as OMEZarrTileData;
     if (
       chunk.data instanceof Uint8Array ||
       chunk.data instanceof Uint16Array ||
@@ -64,5 +71,12 @@ export class OMEZarrLabelsData extends OMEZarrData implements LabelsData {
       };
     }
     throw new Error(`Unsupported data type: ${chunk.data.constructor.name}`);
+  }
+
+  /** Revokes the object URL of the workspace file this label image was loaded from, if any */
+  close(): void {
+    if (this._objectUrl !== undefined) {
+      URL.revokeObjectURL(this._objectUrl);
+    }
   }
 }
