@@ -119,6 +119,7 @@ export class OpenSeadragonContext {
         // disable key bindings for rotation and flipping
         event.preventDefaultAction = true;
       } else if (
+        !event.preventDefaultAction &&
         OpenSeadragonContext._navigationKeyCodes.has(
           event.originalEvent.code,
         ) &&
