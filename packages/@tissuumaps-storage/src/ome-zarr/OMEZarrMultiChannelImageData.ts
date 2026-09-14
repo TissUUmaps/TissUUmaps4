@@ -11,7 +11,7 @@ import {
 import { OMEZarrImageData } from "./OMEZarrImageData";
 
 /**
- * Loaded OME-Zarr image data with more than one channel
+ * Loaded OME-Zarr image data with a channel axis
  *
  * Provides one tile source per channel, addressed by channel index, and the
  * per-channel rendering metadata (name, visibility, color, contrast limits)

@@ -5,7 +5,7 @@ import type { CustomTileSource, TileSourceConfig } from "@tissuumaps/core";
 import { OMEZarrImageData } from "./OMEZarrImageData";
 
 /**
- * Loaded OME-Zarr image data without a channel axis or with a single channel
+ * Loaded OME-Zarr image data without a channel axis
  *
  * Provides a single tile source that is not addressed by channel.
  */
