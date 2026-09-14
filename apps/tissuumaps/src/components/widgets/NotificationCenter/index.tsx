@@ -10,7 +10,7 @@ import {
   TagsIcon,
   XIcon,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { Data, DataRef } from "@tissuumaps/core";
 
@@ -21,21 +21,12 @@ import { useProjectStore } from "@/stores/project";
 /** How long a finished load stays visible, in milliseconds */
 const doneLingerMs = 1500;
 
-type DataObjectKind = "image" | "labels" | "points" | "shapes" | "table";
-
-const kinds: Record<DataObjectKind, { label: string; icon: LucideIcon }> = {
-  image: { label: "Image", icon: ImageIcon },
-  labels: { label: "Labels", icon: TagsIcon },
-  points: { label: "Points", icon: ChartScatterIcon },
-  shapes: { label: "Shapes", icon: ShapesIcon },
-  table: { label: "Table", icon: TableIcon },
-};
-
-type Notification = {
-  kind: DataObjectKind;
-  id: string;
-  name: string;
-  dataRef: DataRef<Data>;
+type DataObjectKind = {
+  kind: string;
+  label: string;
+  icon: LucideIcon;
+  dataRefs: Map<string, DataRef<Data>>;
+  objects: { id: string; name: string }[];
 };
 
 /**
@@ -57,6 +48,57 @@ export function NotificationCenter() {
   const points = useProjectStore((state) => state.points);
   const shapes = useProjectStore((state) => state.shapes);
   const tables = useProjectStore((state) => state.tables);
+  const kinds = useMemo<DataObjectKind[]>(
+    () => [
+      {
+        kind: "image",
+        label: "Image",
+        icon: ImageIcon,
+        dataRefs: imageDataRefs,
+        objects: images,
+      },
+      {
+        kind: "labels",
+        label: "Labels",
+        icon: TagsIcon,
+        dataRefs: labelsDataRefs,
+        objects: labels,
+      },
+      {
+        kind: "points",
+        label: "Points",
+        icon: ChartScatterIcon,
+        dataRefs: pointsDataRefs,
+        objects: points,
+      },
+      {
+        kind: "shapes",
+        label: "Shapes",
+        icon: ShapesIcon,
+        dataRefs: shapesDataRefs,
+        objects: shapes,
+      },
+      {
+        kind: "table",
+        label: "Table",
+        icon: TableIcon,
+        dataRefs: tableDataRefs,
+        objects: tables,
+      },
+    ],
+    [
+      imageDataRefs,
+      labelsDataRefs,
+      pointsDataRefs,
+      shapesDataRefs,
+      tableDataRefs,
+      images,
+      labels,
+      points,
+      shapes,
+      tables,
+    ],
+  );
 
   // Cards are keyed by `${kind}:${id}`. Two objects may share one data ref
   // (same data source), so the ref itself cannot identify a card. A dismissal
@@ -66,21 +108,14 @@ export function NotificationCenter() {
   );
   const [done, setDone] = useState(() => new Set<string>());
   const seenLoading = useRef(new Set<string>());
-  const lingerTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const lingerTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   // Keep loads that were seen running visible for a moment after they finish,
   // and forget loads that are gone. A layout effect so the card never misses
   // a frame between the store's update and the linger state.
   useLayoutEffect(() => {
-    const dataRefsByKind: Record<DataObjectKind, Map<string, DataRef<Data>>> = {
-      image: imageDataRefs,
-      labels: labelsDataRefs,
-      points: pointsDataRefs,
-      shapes: shapesDataRefs,
-      table: tableDataRefs,
-    };
     const dataRefs = new Map<string, DataRef<Data>>();
-    for (const [kind, refs] of Object.entries(dataRefsByKind)) {
+    for (const { kind, dataRefs: refs } of kinds) {
       for (const [id, dataRef] of refs) {
         dataRefs.set(`${kind}:${id}`, dataRef);
       }
@@ -99,90 +134,74 @@ export function NotificationCenter() {
         seenLoading.current.delete(key)
       ) {
         setDone((prev) => new Set(prev).add(key));
-        const timer = setTimeout(() => {
-          lingerTimers.current.delete(timer);
-          setDone((prev) => {
-            const next = new Set(prev);
-            next.delete(key);
-            return next;
-          });
-        }, doneLingerMs);
-        lingerTimers.current.add(timer);
+        clearTimeout(lingerTimers.current.get(key));
+        lingerTimers.current.set(
+          key,
+          setTimeout(() => {
+            lingerTimers.current.delete(key);
+            setDone((prev) => {
+              const next = new Set(prev);
+              next.delete(key);
+              return next;
+            });
+          }, doneLingerMs),
+        );
       }
     }
-  }, [
-    imageDataRefs,
-    labelsDataRefs,
-    pointsDataRefs,
-    shapesDataRefs,
-    tableDataRefs,
-  ]);
+  }, [kinds]);
 
   useEffect(() => {
     const timers = lingerTimers.current;
     return () => {
-      for (const timer of timers) {
+      for (const timer of timers.values()) {
         clearTimeout(timer);
       }
     };
   }, []);
 
-  const collect = (
-    kind: DataObjectKind,
-    dataRefs: Map<string, DataRef<Data>>,
-    objects: { id: string; name: string }[],
-  ): Notification[] =>
-    [...dataRefs]
-      .filter(
-        ([id, dataRef]) =>
-          (dataRef.status !== "loaded" || done.has(`${kind}:${id}`)) &&
-          dismissed.get(`${kind}:${id}`) !== dataRef,
-      )
-      .map(([id, dataRef]) => ({
-        kind,
-        id,
-        name: objects.find((object) => object.id === id)?.name ?? id,
-        dataRef,
-      }));
-  const notifications = [
-    ...collect("image", imageDataRefs, images),
-    ...collect("labels", labelsDataRefs, labels),
-    ...collect("points", pointsDataRefs, points),
-    ...collect("shapes", shapesDataRefs, shapes),
-    ...collect("table", tableDataRefs, tables),
-  ];
-
   return (
     <div className="pointer-events-none fixed right-3 bottom-3 z-50 flex w-80 flex-col gap-1">
-      {notifications.map(({ kind, id, name, dataRef }) => (
-        <NotificationCard
-          key={`${kind}:${id}`}
-          kind={kind}
-          name={name}
-          dataRef={dataRef}
-          onDismiss={() =>
-            setDismissed((prev) => new Map(prev).set(`${kind}:${id}`, dataRef))
-          }
-        />
-      ))}
+      {kinds.flatMap(({ kind, label, icon, dataRefs, objects }) =>
+        [...dataRefs]
+          .filter(
+            ([id, dataRef]) =>
+              (dataRef.status !== "loaded" || done.has(`${kind}:${id}`)) &&
+              dismissed.get(`${kind}:${id}`) !== dataRef,
+          )
+          .map(([id, dataRef]) => (
+            <NotificationCard
+              key={`${kind}:${id}`}
+              label={label}
+              icon={icon}
+              name={objects.find((object) => object.id === id)?.name ?? id}
+              dataRef={dataRef}
+              onDismiss={() =>
+                setDismissed((prev) =>
+                  new Map(prev).set(`${kind}:${id}`, dataRef),
+                )
+              }
+            />
+          )),
+      )}
     </div>
   );
 }
 
 type NotificationCardProps = {
-  kind: DataObjectKind;
+  label: string;
+  icon: LucideIcon;
   name: string;
   dataRef: DataRef<Data>;
   onDismiss: () => void;
 };
 
 function NotificationCard({
-  kind,
+  label,
+  icon: Icon,
   name,
   dataRef,
   onDismiss,
 }: NotificationCardProps) {
-  const { label, icon: Icon } = kinds[kind];
   const fraction =
     dataRef.status === "loaded"
       ? 1
