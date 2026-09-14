@@ -21,3 +21,5 @@ export {
   type NormalizedOMEZarrLabelsDataSource,
   type OMEZarrLabelsDataSource,
 } from "./OMEZarrLabelsDataSource";
+export { OMEZarrMultiChannelImageData } from "./OMEZarrMultiChannelImageData";
+export { OMEZarrSingleChannelImageData } from "./OMEZarrSingleChannelImageData";

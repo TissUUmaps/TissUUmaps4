@@ -4,12 +4,14 @@ import { OMEZarrTileSource } from "omezarr-tilesource";
 import type { ImageDataProvider } from "@tissuumaps/core";
 
 import { OMEZarrDataProvider } from "./OMEZarrDataProvider";
-import { OMEZarrImageData } from "./OMEZarrImageData";
+import type { OMEZarrImageData } from "./OMEZarrImageData";
 import {
   type NormalizedOMEZarrImageDataSource,
   type OMEZarrImageDataSource,
   omeZarrImageDataSourceDefaults,
 } from "./OMEZarrImageDataSource";
+import { OMEZarrMultiChannelImageData } from "./OMEZarrMultiChannelImageData";
+import { OMEZarrSingleChannelImageData } from "./OMEZarrSingleChannelImageData";
 
 export class OMEZarrImageDataProvider
   extends OMEZarrDataProvider<
@@ -88,8 +90,6 @@ export class OMEZarrImageDataProvider
     const cIndex = image.getAxesNames().indexOf("c");
     const sizeC = cIndex >= 0 ? arrays[0]!.shape[cIndex]! : 1;
     const { z, t } = normalizedDataSource;
-    let tileSource: OMEZarrTileSource | undefined;
-    let tileSources: OMEZarrTileSource[] | undefined;
     if (sizeC > 1) {
       const tileSourcePromises: Promise<OMEZarrTileSource>[] = [];
       for (let c = 0; c < sizeC; c++) {
@@ -99,15 +99,15 @@ export class OMEZarrImageDataProvider
         );
         tileSourcePromises.push(tileSourcePromise);
       }
-      tileSources = await Promise.all(tileSourcePromises);
+      const tileSources = await Promise.all(tileSourcePromises);
       signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
-    } else {
-      tileSource = await OMEZarrTileSource.open(
-        { url, z, t, dataType: "ome-zarr" },
-        image,
-      );
-      signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
+      return new OMEZarrMultiChannelImageData(image, tileSources, objectUrl);
     }
-    return new OMEZarrImageData(image, tileSource, tileSources, objectUrl);
+    const tileSource = await OMEZarrTileSource.open(
+      { url, z, t, dataType: "ome-zarr" },
+      image,
+    );
+    signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
+    return new OMEZarrSingleChannelImageData(tileSource, objectUrl);
   }
 }
