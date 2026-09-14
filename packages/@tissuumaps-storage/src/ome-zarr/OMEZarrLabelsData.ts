@@ -15,9 +15,8 @@ import type {
  * integers. Label IDs are not enumerated up front: they are read per tile,
  * so that arbitrarily large label images can be opened without scanning them.
  *
- * Owns the object URL that the OME-Zarr labels data provider creates for label
- * images loaded from a workspace file, and revokes it on
- * {@link OMEZarrLabelsData.close}.
+ * Owns the object URL created for label images loaded from a workspace file
+ * (see `openOMEZarr`), and revokes it on {@link OMEZarrLabelsData.close}.
  */
 export class OMEZarrLabelsData implements LabelsData {
   private readonly _tileSource: OMEZarrTileSource;

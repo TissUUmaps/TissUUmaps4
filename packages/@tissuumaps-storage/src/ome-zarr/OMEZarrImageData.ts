@@ -26,9 +26,8 @@ import {
  * integer chunks are rejected, as their values cannot be represented in a
  * `NumericArray` without loss.
  *
- * Owns the object URL that the OME-Zarr image data provider creates for images
- * loaded from a workspace file, and revokes it on
- * {@link OMEZarrImageData.close}.
+ * Owns the object URL created for images loaded from a workspace file (see
+ * `openOMEZarr`), and revokes it on {@link OMEZarrImageData.close}.
  */
 export class OMEZarrImageData implements ImageData {
   private readonly _image: NgffImage;
