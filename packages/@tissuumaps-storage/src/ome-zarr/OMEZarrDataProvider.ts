@@ -26,23 +26,59 @@ export abstract class OMEZarrDataProvider<
 > implements DataProvider<TDataSource, TData, TNormalizedDataSource> {
   readonly name = "OME-Zarr";
 
+  /**
+   * The JSON schema for the data source
+   *
+   * Left to subclasses, as image and labels data sources differ in the fields
+   * they accept beyond those of {@link OMEZarrDataSource}.
+   */
   abstract readonly schema: DataProvider<
     TDataSource,
     TData,
     TNormalizedDataSource
   >["schema"];
 
+  /** The JSON Forms UI schema for the data source (see {@link OMEZarrDataProvider.schema}) */
   abstract readonly uischema: DataProvider<
     TDataSource,
     TData,
     TNormalizedDataSource
   >["uischema"];
 
+  /**
+   * Returns the data source with all of this data provider's defaults applied
+   * and its URL resolved
+   *
+   * Left to subclasses, which apply their own defaults on top of
+   * {@link omeZarrDataSourceDefaults}.
+   *
+   * @param dataSource - The data source to normalize
+   * @param projectUrl - The absolute URL of the project, or `null` for projects
+   * that were not loaded from a URL
+   * @returns The normalized data source
+   */
   abstract normalize(
     dataSource: TDataSource,
     projectUrl: string | null,
   ): TNormalizedDataSource;
 
+  /**
+   * Opens an OME-Zarr data source and returns the loaded data
+   *
+   * Resolves the data source to a zarr store: a workspace `path` (which has
+   * to refer to a zipped OME-Zarr file) is read through the open workspace,
+   * a `url` ending in `.ozx` is opened as a remote zipped OME-Zarr file, and
+   * any other `url` as a remote OME-Zarr store. A workspace path takes
+   * precedence over a URL when a workspace is open. The store is then handed
+   * to {@link OMEZarrDataProvider.open}.
+   *
+   * @param normalizedDataSource - The normalized data source to open
+   * @param options - See `DataProviderLoadOptions`; `workspace` is required
+   * for data sources with a `path` but no `url`
+   * @returns A promise that resolves to the loaded data
+   * @throws Error if the data source has neither a URL nor a workspace path,
+   * or has only a workspace path while no workspace is open
+   */
   async load(
     normalizedDataSource: TNormalizedDataSource,
     options?: DataProviderLoadOptions,
