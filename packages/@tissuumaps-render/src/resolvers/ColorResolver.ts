@@ -410,12 +410,17 @@ export class ColorResolver extends ResolverBase {
 
   /**
    * Parses a raw numeric value into a {@link Color} by normalizing it within the
-   * given range and indexing into a color palette.
+   * given range and sampling a color palette.
+   *
+   * The normalized value is clamped to `[0, 1]` and spread over the palette, so
+   * that `0` yields its first color and `1` its last. Values falling between two
+   * colors are interpolated linearly, which keeps the palette continuous instead
+   * of quantizing it to its number of colors.
    *
    * @param value - The raw value to parse (must be a finite number)
    * @param valueRange - The data-derived value range `[min, max]`, used when no configured range is provided
    * @param configuredValueRange - An explicit value range `[min, max]` that overrides `valueRange`
-   * @param colorPalette - The palette to index into
+   * @param colorPalette - The palette to sample
    * @returns The corresponding {@link Color}, or `undefined` if `value` is not a
    * finite number, or if the palette is empty
    */
@@ -426,17 +431,28 @@ export class ColorResolver extends ResolverBase {
     colorPalette: ColorPalette,
   ): Color | undefined {
     const v = NumberUtils.tryParseFinite(value, { requireSafeBigInt: true });
-    if (v !== undefined) {
-      const [vmin, vmax] = configuredValueRange ?? valueRange ?? [0, 1];
-      const vnorm = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0;
-      const index = MathUtils.clamp(
-        Math.floor(vnorm * colorPalette.colors.length),
-        0,
-        colorPalette.colors.length - 1,
-      );
-      return colorPalette.colors[index];
+    if (v === undefined) {
+      return undefined;
     }
-    return undefined;
+    const { colors } = colorPalette;
+    const [vmin, vmax] = configuredValueRange ?? valueRange ?? [0, 1];
+    const vnorm = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0;
+    const position = MathUtils.clamp(vnorm, 0, 1) * (colors.length - 1);
+    const index = Math.floor(position);
+    const color = colors[index];
+    const nextColor = colors[index + 1];
+    if (color === undefined) {
+      return undefined;
+    }
+    if (nextColor === undefined) {
+      return color;
+    }
+    const t = position - index;
+    return {
+      r: color.r + t * (nextColor.r - color.r),
+      g: color.g + t * (nextColor.g - color.g),
+      b: color.b + t * (nextColor.b - color.b),
+    };
   }
 
   /**
