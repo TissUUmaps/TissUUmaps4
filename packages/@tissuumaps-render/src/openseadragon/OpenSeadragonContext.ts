@@ -123,8 +123,18 @@ export class OpenSeadragonContext {
         });
       }
     }
+    // OSD's home button and its "0" key binding raise "home", which hands
+    // viewport control back to the renderers just like resetViewport() does.
     this.viewer.addHandler("home", () => {
       this._viewportControlledByUser = false;
+    });
+    // OSD raises "reset-size" whenever the bounds of its world change, i.e.
+    // whenever a renderer resizes its dummy (see updateBounds). Fitting the
+    // viewport here, rather than per dummy, fits it to the whole world.
+    this.viewer.addHandler("reset-size", () => {
+      if (!this._viewportControlledByUser) {
+        this.viewer.viewport.goHome(/* immediately */ true);
+      }
     });
     this.viewer.addHandler("tile-invalidated", (event) =>
       this._transferData(event).catch((error) => {
@@ -478,25 +488,23 @@ export class OpenSeadragonContext {
   }
 
   /**
-   * Updates the world bounds spanned by a dummy tiled image and fits the viewport
-   * to them
+   * Updates the world bounds spanned by a dummy tiled image
    *
    * A dummy is a fully transparent single-tile image covering `newBounds`. As
    * OpenSeadragon derives the extent of its world from the bounds of its items,
    * such a dummy keeps the world bounds independent of which tiled images are
    * currently loaded, and it doubles as a stable index anchor for renderers.
    *
-   * If `dummy` already spans `newBounds`, it is returned unchanged and the
-   * viewport is left untouched. Otherwise, a new dummy is created at `dummyIndex`
-   * (defaulting to the index of `dummy`, or appended if neither is specified),
-   * `dummy` is removed, and the viewport is fitted to `newBounds` - unless the
-   * operation was aborted in the meantime, or the user has taken control of the
-   * viewport by panning or zooming it (see {@link resetViewport}), in which case
-   * the new dummy is still returned (see below), but the viewport is left where
-   * it is. Where possible, OpenSeadragon replaces `dummy` as part of the
-   * addition, so that the new dummy takes its place without leaving a gap.
-   * Replacing `dummy` cannot be aborted once the new dummy has been created, as
-   * that would leave the caller without a dummy.
+   * The viewport is not fitted here: it follows the bounds of the world as a
+   * whole, for as long as the renderers own it (see {@link resetViewport}).
+   *
+   * If `dummy` already spans `newBounds`, it is returned unchanged. Otherwise, a
+   * new dummy is created at `dummyIndex` (defaulting to the index of `dummy`, or
+   * appended if neither is specified) and `dummy` is removed. Where possible,
+   * OpenSeadragon replaces `dummy` as part of the addition, so that the new dummy
+   * takes its place without leaving a gap. Replacing `dummy` cannot be aborted
+   * once the new dummy has been created, as that would leave the caller without a
+   * dummy.
    *
    * @param newBounds - The new world bounds
    * @param options - Optional abort signal, dummy to replace, and index at which
@@ -543,24 +551,19 @@ export class OpenSeadragonContext {
     if (dummy !== undefined && replace !== true) {
       await this.removeTiledImage(dummy);
     }
-    if (!signal?.aborted && !this._viewportControlledByUser) {
-      const { x, y, width, height } = newBounds;
-      this.viewer.viewport.fitBounds(
-        new OpenSeadragon.Rect(x, y, width, height),
-      );
-    }
     return newDummy;
   }
 
   /**
    * Hands viewport control back to the renderers
    *
-   * Fits the viewport to the world bounds, and resumes doing so whenever they
-   * change (see {@link updateBounds}), until the user pans or zooms again. Call
-   * this when the content of the viewer is replaced, e.g. on opening a project.
+   * Fits the viewport to the bounds of the world, and resumes doing so whenever
+   * they change, until the user pans or zooms again. Call this when the content
+   * of the viewer is replaced, e.g. on opening a project.
    */
   resetViewport(): void {
-    this.viewer.viewport.goHome(); // raises "home"
+    this._viewportControlledByUser = false;
+    this.viewer.viewport.goHome();
   }
 
   /**
