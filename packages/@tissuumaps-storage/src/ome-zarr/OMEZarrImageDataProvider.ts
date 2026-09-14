@@ -5,22 +5,20 @@ import type {
   ImageDataProvider,
 } from "@tissuumaps/core";
 
-import type { OMEZarrImageData } from "./OMEZarrImageData";
+import { OMEZarrImageData } from "./OMEZarrImageData";
 import {
   type NormalizedOMEZarrImageDataSource,
   type OMEZarrImageDataSource,
   omeZarrImageDataSourceDefaults,
 } from "./OMEZarrImageDataSource";
-import { OMEZarrMultiChannelImageData } from "./OMEZarrMultiChannelImageData";
-import { OMEZarrSingleChannelImageData } from "./OMEZarrSingleChannelImageData";
 import { openOMEZarr } from "./openOMEZarr";
 
 /**
  * Data provider for OME-Zarr images
  *
- * Opens an {@link OMEZarrImageDataSource} as `OMEZarrMultiChannelImageData`
- * if the image has a channel axis (even one of length one), and as
- * `OMEZarrSingleChannelImageData` otherwise.
+ * Opens an {@link OMEZarrImageDataSource} as {@link OMEZarrImageData} with one
+ * tile source per channel if the image has a channel axis (even one of length
+ * one), and with a single tile source otherwise.
  */
 export class OMEZarrImageDataProvider implements ImageDataProvider<
   OMEZarrImageDataSource,
@@ -133,14 +131,14 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         }
         const tileSources = await Promise.all(tileSourcePromises);
         signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
-        return new OMEZarrMultiChannelImageData(image, tileSources, objectUrl);
+        return new OMEZarrImageData(image, tileSources, objectUrl);
       }
       const tileSource = await OMEZarrTileSource.open(
         { url, z, t, dataType: "ome-zarr" },
         image,
       );
       signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
-      return new OMEZarrSingleChannelImageData(tileSource, objectUrl);
+      return new OMEZarrImageData(image, tileSource, objectUrl);
     } catch (error) {
       // the image data owns the object URL only once it has been created
       if (objectUrl !== undefined) {
