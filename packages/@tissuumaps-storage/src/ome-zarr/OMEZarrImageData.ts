@@ -16,6 +16,10 @@ import { OMEZarrData } from "./OMEZarrData";
  * the renderer contrast-stretches and colorizes; subclasses provide the tile
  * source(s) (see `OMEZarrSingleChannelImageData` and
  * `OMEZarrMultiChannelImageData`).
+ *
+ * Integer chunks of up to 32 bits and floating-point chunks are passed
+ * through as they are; 64-bit integer chunks are rejected, as their values
+ * cannot be represented in a `NumericArray` without loss.
  */
 export abstract class OMEZarrImageData
   extends OMEZarrData
@@ -27,6 +31,14 @@ export abstract class OMEZarrImageData
     c?: number,
   ): string | TileSourceConfig | CustomTileSource;
 
+  /**
+   * Extracts the samples of an invalidated tile from its OME-Zarr chunk
+   *
+   * @param event - The tile invalidation event
+   * @returns The samples of the invalidated tile, one per raster pixel in
+   * row-major order, along with the width and height of the raster in pixels
+   * @throws Error if the chunk holds 64-bit integers
+   */
   async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
   ): Promise<{ values: NumericArray; width: number; height: number }> {

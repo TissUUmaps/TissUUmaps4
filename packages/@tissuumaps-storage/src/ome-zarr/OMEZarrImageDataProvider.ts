@@ -13,6 +13,13 @@ import {
 import { OMEZarrMultiChannelImageData } from "./OMEZarrMultiChannelImageData";
 import { OMEZarrSingleChannelImageData } from "./OMEZarrSingleChannelImageData";
 
+/**
+ * Data provider for OME-Zarr images
+ *
+ * Opens an {@link OMEZarrImageDataSource} as `OMEZarrMultiChannelImageData`
+ * if the image has a channel axis with more than one channel, and as
+ * `OMEZarrSingleChannelImageData` otherwise.
+ */
 export class OMEZarrImageDataProvider
   extends OMEZarrDataProvider<
     OMEZarrImageDataSource,
@@ -65,6 +72,15 @@ export class OMEZarrImageDataProvider
     ],
   };
 
+  /**
+   * Returns the data source with {@link omeZarrImageDataSourceDefaults} applied
+   * and its URL resolved
+   *
+   * @param dataSource - The data source to normalize
+   * @param projectUrl - The absolute URL of the project, or `null` for projects
+   * that were not loaded from a URL
+   * @returns The normalized data source
+   */
   normalize(
     dataSource: OMEZarrImageDataSource,
     projectUrl: string | null,
@@ -76,6 +92,22 @@ export class OMEZarrImageDataProvider
     return { ...omeZarrImageDataSourceDefaults, ...dataSource, url };
   }
 
+  /**
+   * Loads the OME-Zarr image and opens one tile source per channel, or a
+   * single tile source for images without a channel axis or with one channel
+   *
+   * All resolution levels are opened once up front, both to read the channel
+   * count from the full-resolution array and so that the tile sources share
+   * the opened arrays instead of reopening them concurrently.
+   *
+   * @param url - The absolute URL to open tile sources with
+   * @param store - The zarr store to load the OME-Zarr image from
+   * @param normalizedDataSource - The normalized data source being loaded,
+   * whose `z` and `t` select the plane to open
+   * @param objectUrl - The object URL created for a workspace file, if any
+   * @param signal - The abort signal of the load operation, if any
+   * @returns A promise that resolves to the loaded image data
+   */
   protected async open(
     url: string,
     store: Parameters<typeof NgffImage.load>[0],

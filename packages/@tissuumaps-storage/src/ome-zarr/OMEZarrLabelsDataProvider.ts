@@ -11,6 +11,13 @@ import {
   omeZarrLabelsDataSourceDefaults,
 } from "./OMEZarrLabelsDataSource";
 
+/**
+ * Data provider for OME-Zarr label images
+ *
+ * Opens an {@link OMEZarrLabelsDataSource} as {@link OMEZarrLabelsData} with a
+ * single tile source; the image's channel axis, if any, is not iterated, and
+ * `image-label` metadata is not read.
+ */
 export class OMEZarrLabelsDataProvider
   extends OMEZarrDataProvider<
     OMEZarrLabelsDataSource,
@@ -71,6 +78,15 @@ export class OMEZarrLabelsDataProvider
     ],
   };
 
+  /**
+   * Returns the data source with {@link omeZarrLabelsDataSourceDefaults}
+   * applied and its URL resolved
+   *
+   * @param dataSource - The data source to normalize
+   * @param projectUrl - The absolute URL of the project, or `null` for projects
+   * that were not loaded from a URL
+   * @returns The normalized data source
+   */
   normalize(
     dataSource: OMEZarrLabelsDataSource,
     projectUrl: string | null,
@@ -82,6 +98,17 @@ export class OMEZarrLabelsDataProvider
     return { ...omeZarrLabelsDataSourceDefaults, ...dataSource, url };
   }
 
+  /**
+   * Loads the OME-Zarr label image and opens its tile source
+   *
+   * @param url - The absolute URL to open the tile source with
+   * @param store - The zarr store to load the OME-Zarr label image from
+   * @param normalizedDataSource - The normalized data source being loaded,
+   * whose `z` and `t` select the plane to open
+   * @param objectUrl - The object URL created for a workspace file, if any
+   * @param signal - The abort signal of the load operation, if any
+   * @returns A promise that resolves to the loaded label image data
+   */
   protected async open(
     url: string,
     store: Parameters<typeof NgffImage.load>[0],
