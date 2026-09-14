@@ -1,15 +1,19 @@
 import type { LabelsDataSource } from "@tissuumaps/core";
 
-export const omeZarrLabelsDataSourceType = "ome-zarr";
+import {
+  type OMEZarrDataSource,
+  omeZarrDataSourceDefaults,
+  omeZarrDataSourceType,
+} from "./OMEZarrDataSource";
 
-export const omeZarrLabelsDataSourceDefaults = {};
+export const omeZarrLabelsDataSourceType = omeZarrDataSourceType;
 
-export interface OMEZarrLabelsDataSource extends LabelsDataSource<
-  typeof omeZarrLabelsDataSourceType
-> {
-  t?: number;
-  z?: number;
-}
+export const omeZarrLabelsDataSourceDefaults = { ...omeZarrDataSourceDefaults };
+
+export interface OMEZarrLabelsDataSource
+  extends
+    OMEZarrDataSource,
+    LabelsDataSource<typeof omeZarrLabelsDataSourceType> {}
 
 export type NormalizedOMEZarrLabelsDataSource = Required<
   Pick<OMEZarrLabelsDataSource, keyof typeof omeZarrLabelsDataSourceDefaults>

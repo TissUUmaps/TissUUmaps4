@@ -1,15 +1,19 @@
 import type { ImageDataSource } from "@tissuumaps/core";
 
-export const omeZarrImageDataSourceType = "ome-zarr";
+import {
+  type OMEZarrDataSource,
+  omeZarrDataSourceDefaults,
+  omeZarrDataSourceType,
+} from "./OMEZarrDataSource";
 
-export const omeZarrImageDataSourceDefaults = {};
+export const omeZarrImageDataSourceType = omeZarrDataSourceType;
 
-export interface OMEZarrImageDataSource extends ImageDataSource<
-  typeof omeZarrImageDataSourceType
-> {
-  t?: number;
-  z?: number;
-}
+export const omeZarrImageDataSourceDefaults = { ...omeZarrDataSourceDefaults };
+
+export interface OMEZarrImageDataSource
+  extends
+    OMEZarrDataSource,
+    ImageDataSource<typeof omeZarrImageDataSourceType> {}
 
 export type NormalizedOMEZarrImageDataSource = Required<
   Pick<OMEZarrImageDataSource, keyof typeof omeZarrImageDataSourceDefaults>
