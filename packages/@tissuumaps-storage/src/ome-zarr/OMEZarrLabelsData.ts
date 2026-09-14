@@ -1,4 +1,4 @@
-import type { OMEZarrTileData, OMEZarrTileSource } from "omezarr-tilesource";
+import type { OMEZarrTileSource } from "omezarr-tilesource";
 import type OpenSeadragon from "openseadragon";
 
 import type {
@@ -8,13 +8,14 @@ import type {
   UintArray,
 } from "@tissuumaps/core";
 
-export class OMEZarrLabelsData implements LabelsData {
+import { OMEZarrData } from "./OMEZarrData";
+
+export class OMEZarrLabelsData extends OMEZarrData implements LabelsData {
   private readonly _tileSource: OMEZarrTileSource;
-  private readonly _objectUrl?: string;
 
   constructor(tileSource: OMEZarrTileSource, objectUrl?: string) {
+    super(objectUrl);
     this._tileSource = tileSource;
-    this._objectUrl = objectUrl;
   }
 
   getTileSource(): string | TileSourceConfig | CustomTileSource {
@@ -24,29 +25,18 @@ export class OMEZarrLabelsData implements LabelsData {
   async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
   ): Promise<{ values: UintArray; width: number; height: number }> {
-    const { chunk } = (await event.getData("ome-zarr")) as OMEZarrTileData;
-    const [height, width] = chunk.shape as [number, number];
-    let values: UintArray;
+    const chunk = await OMEZarrData.getTileChunk(event);
     if (
       chunk.data instanceof Uint8Array ||
       chunk.data instanceof Uint16Array ||
       chunk.data instanceof Uint32Array
     ) {
-      values = chunk.data;
-    } else if (
-      chunk.data instanceof BigInt64Array ||
-      chunk.data instanceof BigUint64Array
-    ) {
-      values = Uint32Array.from(chunk.data, Number);
-    } else {
-      values = new Uint32Array(chunk.data);
+      return {
+        values: chunk.data,
+        width: chunk.shape[1]!,
+        height: chunk.shape[0]!,
+      };
     }
-    return { values, width, height };
-  }
-
-  close(): void {
-    if (this._objectUrl !== undefined) {
-      URL.revokeObjectURL(this._objectUrl);
-    }
+    throw new Error(`Unsupported data type: ${chunk.data.constructor.name}`);
   }
 }

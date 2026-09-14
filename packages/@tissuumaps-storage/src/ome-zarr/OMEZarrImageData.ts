@@ -1,5 +1,5 @@
 import type { NgffImage } from "ome-zarr.js";
-import type { OMEZarrTileData, OMEZarrTileSource } from "omezarr-tilesource";
+import type { OMEZarrTileSource } from "omezarr-tilesource";
 import type OpenSeadragon from "openseadragon";
 
 import {
@@ -11,11 +11,12 @@ import {
   type TileSourceConfig,
 } from "@tissuumaps/core";
 
-export class OMEZarrImageData implements ImageData {
+import { OMEZarrData } from "./OMEZarrData";
+
+export class OMEZarrImageData extends OMEZarrData implements ImageData {
   private readonly _image: NgffImage;
   private readonly _tileSource: OMEZarrTileSource | undefined;
   private readonly _tileSources: OMEZarrTileSource[] | undefined;
-  private readonly _objectUrl?: string;
 
   constructor(
     image: NgffImage,
@@ -23,10 +24,10 @@ export class OMEZarrImageData implements ImageData {
     tileSources: OMEZarrTileSource[] | undefined,
     objectUrl?: string,
   ) {
+    super(objectUrl);
     this._image = image;
     this._tileSource = tileSource;
     this._tileSources = tileSources;
-    this._objectUrl = objectUrl;
   }
 
   getSizeC(): number | undefined {
@@ -53,14 +54,18 @@ export class OMEZarrImageData implements ImageData {
   async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
   ): Promise<{ values: NumericArray; width: number; height: number }> {
-    const { chunk } = (await event.getData("ome-zarr")) as OMEZarrTileData;
-    const [height, width] = chunk.shape as [number, number];
-    const values =
+    const chunk = await OMEZarrData.getTileChunk(event);
+    if (
       chunk.data instanceof BigInt64Array ||
       chunk.data instanceof BigUint64Array
-        ? Float64Array.from(chunk.data, Number)
-        : chunk.data;
-    return { values, width, height };
+    ) {
+      throw new Error("64-bit integer data is not supported");
+    }
+    return {
+      values: chunk.data,
+      width: chunk.shape[1]!,
+      height: chunk.shape[0]!,
+    };
   }
 
   getChannelName(c: number): string | undefined {
@@ -88,11 +93,5 @@ export class OMEZarrImageData implements ImageData {
       return start < end ? [start, end] : [start, start + 1];
     }
     return undefined;
-  }
-
-  close(): void {
-    if (this._objectUrl !== undefined) {
-      URL.revokeObjectURL(this._objectUrl);
-    }
   }
 }

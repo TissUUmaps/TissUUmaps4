@@ -1,3 +1,10 @@
+export { OMEZarrData } from "./OMEZarrData";
+export { OMEZarrDataProvider } from "./OMEZarrDataProvider";
+export {
+  omeZarrDataSourceDefaults,
+  omeZarrDataSourceType,
+  type OMEZarrDataSource,
+} from "./OMEZarrDataSource";
 export { OMEZarrImageData } from "./OMEZarrImageData";
 export { OMEZarrImageDataProvider } from "./OMEZarrImageDataProvider";
 export {
