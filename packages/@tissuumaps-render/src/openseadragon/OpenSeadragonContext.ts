@@ -68,6 +68,18 @@ export type DataTransfer = {
 export class OpenSeadragonContext {
   private static readonly _isLittleEndian =
     new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
+  private static readonly _navigationKeyCodes = new Set([
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "KeyW",
+    "KeyA",
+    "KeyS",
+    "KeyD",
+    "Equal",
+    "Minus",
+  ]);
 
   readonly viewer: OpenSeadragon.Viewer;
   private readonly _tileSourceDataTransfers = new WeakMap<
@@ -103,25 +115,37 @@ export class OpenSeadragonContext {
       element: viewerElement,
     });
     this.viewer.addHandler("canvas-key", (event) => {
-      // disable key bindings for rotation and flipping
       if (["r", "R", "f"].includes(event.originalEvent.key)) {
+        // disable key bindings for rotation and flipping
         event.preventDefaultAction = true;
+      } else if (
+        OpenSeadragonContext._navigationKeyCodes.has(
+          event.originalEvent.code,
+        ) &&
+        !event.originalEvent.ctrlKey &&
+        !event.originalEvent.altKey &&
+        !event.originalEvent.metaKey
+      ) {
+        this._viewportControlledByUser = true;
       }
     });
     // "pan"/"zoom" cannot be attributed to the user - OSD raises them for its
-    // own container resizes too - so user control is taken from input events,
-    // on the canvas and on the navigator element that OSD tracks separately.
-    const onUserInput = () => {
-      this._viewportControlledByUser = true;
-    };
-    const navigator = this.viewer.navigator as OpenSeadragon.Navigator | null;
-    for (const element of [this.viewer.canvas, navigator?.element]) {
-      for (const eventType of ["pointerdown", "wheel", "keydown"] as const) {
-        element?.addEventListener(eventType, onUserInput, {
-          capture: true,
-          passive: true,
-        });
-      }
+    // own container resizes too - so viewport control is taken from the
+    // gestures that navigate it. Input events cannot be used either: they also
+    // arrive for gestures that leave the viewport where it is, e.g. drawing a
+    // shape on the overlay. Therefore, use canvas events instead. The navigator
+    // raises its own events on this viewer, too, so it needs no separate wiring.
+    for (const eventName of [
+      "canvas-drag",
+      "canvas-scroll",
+      "canvas-pinch",
+      "navigator-click",
+      "navigator-drag",
+      "navigator-scroll",
+    ] as const) {
+      this.viewer.addHandler(eventName, () => {
+        this._viewportControlledByUser = true;
+      });
     }
     // OSD's home button and its "0" key binding raise "home", which hands
     // viewport control back to the renderers just like resetViewport() does.
