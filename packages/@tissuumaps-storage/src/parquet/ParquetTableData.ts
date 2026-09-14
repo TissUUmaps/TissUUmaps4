@@ -46,27 +46,13 @@ export class ParquetTableData implements TableData {
     return this._names;
   }
 
-  suggestColumnQueries(
-    currentQuery: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string[]> {
-    const { signal } = options ?? {};
-    if (signal?.aborted) {
-      return Promise.reject(signal.reason as Error);
-    }
+  suggestColumnQueries(currentQuery: string): Promise<string[]> {
     return Promise.resolve(
       TableColumnUtils.suggestColumnQueries(this._columns, currentQuery),
     );
   }
 
-  resolveColumnQuery(
-    query: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<string | null> {
-    const { signal } = options ?? {};
-    if (signal?.aborted) {
-      return Promise.reject(signal.reason as Error);
-    }
+  resolveColumnQuery(query: string): Promise<string | null> {
     return Promise.resolve(
       TableColumnUtils.resolveColumnQuery(this._columns, query),
     );

@@ -1,11 +1,11 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { ChevronDownIcon, FolderIcon, XIcon } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
 import { Input } from "@/components/ui/input";
+import { useTableDataLoader } from "@/hooks/useDataLoader";
 import { cn } from "@/lib/utils";
-
-import { useTableColumnQueries } from "./hooks";
+import { useProjectStore } from "@/stores/project";
 
 export type TableColumnInputProps = {
   tableId: string | null;
@@ -47,14 +47,32 @@ function SuggestionText({ suggestion, query }: SuggestionTextProps) {
   );
 }
 
+/**
+ * Loads the data of the table identified by `tableId` on demand
+ *
+ * @param tableId - The ID of the table to load
+ * @returns A callback yielding the table data, or `null` if `tableId` does not
+ * identify a table of the current project
+ */
+function useLoadTableData(tableId: string | null) {
+  const table = useProjectStore(
+    (state) => state.tables.find((table) => table.id === tableId) ?? null,
+  );
+  const loadTable = useTableDataLoader();
+  return useCallback(
+    async (signal?: AbortSignal) =>
+      table !== null ? await loadTable(table, { signal }) : null,
+    [table, loadTable],
+  );
+}
+
 export function TableColumnInput({
   tableId,
   value,
   onValueChange,
   className,
 }: TableColumnInputProps) {
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnQueries(tableId);
+  const loadTableData = useLoadTableData(tableId);
 
   const [text, setText] = useState(value ?? "");
   const [invalid, setInvalid] = useState(false);
@@ -76,9 +94,11 @@ export function TableColumnInput({
     const abortController = new AbortController();
     startSuggestTransition(async () => {
       try {
-        const newSuggestions = await suggestTableColumnQueries(text, {
-          signal: abortController.signal,
-        });
+        const tableData = await loadTableData(abortController.signal);
+        const newSuggestions =
+          (await tableData?.suggestColumnQueries(text, {
+            signal: abortController.signal,
+          })) ?? [];
         if (!abortController.signal.aborted) {
           startSuggestTransition(() => setSuggestions(newSuggestions));
         }
@@ -89,7 +109,7 @@ export function TableColumnInput({
       }
     });
     return () => abortController.abort();
-  }, [open, text, suggestTableColumnQueries, startSuggestTransition]);
+  }, [open, text, loadTableData, startSuggestTransition]);
 
   const [isCommitPending, startCommitTransition] = useTransition();
   const commitAbortControllerRef = useRef<AbortController | null>(null);
@@ -110,9 +130,11 @@ export function TableColumnInput({
     commitAbortControllerRef.current = abortController;
     startCommitTransition(async () => {
       try {
-        const column = await resolveTableColumnQuery(query, {
-          signal: abortController.signal,
-        });
+        const tableData = await loadTableData(abortController.signal);
+        const column =
+          (await tableData?.resolveColumnQuery(query, {
+            signal: abortController.signal,
+          })) ?? null;
         if (!abortController.signal.aborted) {
           startCommitTransition(() => {
             if (column !== null) {
