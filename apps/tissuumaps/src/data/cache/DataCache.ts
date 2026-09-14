@@ -400,33 +400,49 @@ export class DataCache<
         return this._wrapData(data);
       }),
     };
+    // Reports inside the interval are held back and published when it ends, so
+    // the last report is never lost.
     let lastPublishTime = -Infinity;
+    let pendingPublishTimer: ReturnType<typeof setTimeout> | undefined;
+    const publishProgress = (progress: number, total: number) => {
+      lastPublishTime = performance.now();
+      newEntry.dataRef = {
+        promise: dataPromise,
+        status: "loading",
+        progress,
+        total,
+      };
+      this._notifyObjectDataRefsChanged(newEntry);
+    };
     newEntry.loadOp
       .observe({
         onProgress: (progress, total) => {
-          const now = performance.now();
-          if (
-            newEntry.dataRef.status === "loading" &&
-            now - lastPublishTime >= progressPublishIntervalMs
-          ) {
-            lastPublishTime = now;
-            newEntry.dataRef = {
-              promise: dataPromise,
-              status: "loading",
-              progress,
-              total,
-            };
-            this._notifyObjectDataRefsChanged(newEntry);
+          if (newEntry.dataRef.status !== "loading") {
+            return;
+          }
+          clearTimeout(pendingPublishTimer);
+          const remainingMs =
+            progressPublishIntervalMs - (performance.now() - lastPublishTime);
+          if (remainingMs <= 0) {
+            publishProgress(progress, total);
+          } else {
+            pendingPublishTimer = setTimeout(() => {
+              if (newEntry.dataRef.status === "loading") {
+                publishProgress(progress, total);
+              }
+            }, remainingMs);
           }
         },
       })
       .then(
         (data) => {
+          clearTimeout(pendingPublishTimer);
           newEntry.dataRef = { promise: dataPromise, status: "loaded", data };
           this._notifyObjectDataRefsChanged(newEntry);
           return data;
         },
         (error) => {
+          clearTimeout(pendingPublishTimer);
           newEntry.dataRef = { promise: dataPromise, status: "error", error };
           this._notifyObjectDataRefsChanged(newEntry);
           throw error;
