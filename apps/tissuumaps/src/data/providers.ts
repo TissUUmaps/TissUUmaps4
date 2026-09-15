@@ -4,6 +4,7 @@ import {
   OMEZarrImageDataProvider,
   OMEZarrLabelsDataProvider,
   OpenSeadragonImageDataProvider,
+  ParquetShapesDataProvider,
   ParquetTableDataProvider,
   TIFFImageDataProvider,
   TIFFLabelsDataProvider,
@@ -13,6 +14,7 @@ import {
   omeZarrImageDataSourceType,
   omeZarrLabelsDataSourceType,
   openSeadragonImageDataSourceType,
+  parquetShapesDataSourceType,
   parquetTableDataSourceType,
   tablePointsDataSourceType,
   tiffImageDataSourceType,
@@ -62,6 +64,10 @@ export function enableBuiltInDataProviders(): void {
   appStoreState.registerShapesDataProvider(
     geoJSONShapesDataSourceType,
     new GeoJSONShapesDataProvider(),
+  );
+  appStoreState.registerShapesDataProvider(
+    parquetShapesDataSourceType,
+    new ParquetShapesDataProvider(),
   );
 
   appStoreState.registerTableDataProvider(
