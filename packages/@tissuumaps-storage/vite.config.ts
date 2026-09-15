@@ -46,6 +46,7 @@ export default defineConfig(({ mode }) => ({
         "ome-zarr.js",
         "omezarr-tilesource",
         "papaparse",
+        "zarrita",
       ],
       checks: {
         pluginTimings: false,

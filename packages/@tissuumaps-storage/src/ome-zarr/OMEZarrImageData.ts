@@ -26,12 +26,19 @@ import {
  * integer chunks are rejected, as their values cannot be represented in a
  * `NumericArray` without loss.
  *
+ * Multi-channel image data carries one precomputed value histogram per
+ * channel, computed at load time from a downsampled resolution level (see
+ * `OMEZarrImageDataProvider.load`), from which the renderer derives default
+ * contrast limits for channels whose `omero` window is incomplete.
+ *
  * Owns the object URL created for images loaded from a workspace file (see
  * `openOMEZarr`), and revokes it on {@link OMEZarrImageData.close}.
  */
 export class OMEZarrImageData implements ImageData {
   private readonly _image: NgffImage;
   private readonly _tileSources: OMEZarrTileSource | OMEZarrTileSource[];
+  private readonly _histograms:
+    ({ hist: number[]; range: [number, number] } | undefined)[] | undefined;
   private readonly _objectUrl: string | undefined;
 
   /**
@@ -41,16 +48,21 @@ export class OMEZarrImageData implements ImageData {
    * opened with `dataType: "ome-zarr"` and the channel selected, for images
    * with a channel axis; the single tile source, opened with
    * `dataType: "ome-zarr"`, for images without one
+   * @param histograms - One precomputed value histogram per channel, in
+   * channel order (`undefined` for channels without one), for images with a
+   * channel axis; `undefined` for images without one
    * @param objectUrl - The object URL created for the workspace file the
    * image was loaded from, if any; revoked on {@link OMEZarrImageData.close}
    */
   constructor(
     image: NgffImage,
     tileSources: OMEZarrTileSource | OMEZarrTileSource[],
+    histograms?: ({ hist: number[]; range: [number, number] } | undefined)[],
     objectUrl?: string,
   ) {
     this._image = image;
     this._tileSources = tileSources;
+    this._histograms = histograms;
     this._objectUrl = objectUrl;
   }
 
@@ -156,6 +168,27 @@ export class OMEZarrImageData implements ImageData {
     const { color } = this._image.checkChannelIndex(c).channels[c]!;
     const match = /^#?([0-9A-Fa-f]{6})$/.exec(color);
     return match !== null ? ColorUtils.fromHex(`#${match[1]}`) : undefined;
+  }
+
+  /**
+   * Returns the precomputed value histogram of a channel
+   *
+   * The histogram is computed once at load time from a downsampled resolution
+   * level of the channel's plane (see `OMEZarrImageDataProvider.load`) and
+   * spans the channel's actual value range at that level, so that the default
+   * contrast limits the renderer derives from it are as precise as its bins.
+   *
+   * @param c - The channel index (0-based)
+   * @returns The channel's histogram, as bin counts and the value range the
+   * bins span, or `undefined` if none was computed (images without a channel
+   * axis, 64-bit integer data, or planes without finite values)
+   * @throws Error if `c` is out of bounds
+   */
+  getChannelHistogram(
+    c: number,
+  ): { hist: number[]; range: [number, number] } | undefined {
+    this._image.checkChannelIndex(c);
+    return this._histograms?.[c];
   }
 
   /**

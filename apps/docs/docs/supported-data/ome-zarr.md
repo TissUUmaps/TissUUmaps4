@@ -35,14 +35,16 @@ Images **with a channel axis**, even one holding a single channel, are opened as
 
 Per-channel rendering settings are taken from the image's `omero` metadata where present:
 
-| Setting         | `omero` source                        | Fallback                                 |
-| --------------- | ------------------------------------- | ---------------------------------------- |
-| Name            | `channels[c].label`                   | none                                     |
-| Visibility      | `channels[c].active`                  | visible                                  |
-| Color           | `channels[c].color` (6-digit hex)     | a color derived from the channel index   |
-| Contrast limits | `channels[c].window.start` and `.end` | the value range of the array's data type |
+| Setting         | `omero` source                        | Fallback                                                               |
+| --------------- | ------------------------------------- | ---------------------------------------------------------------------- |
+| Name            | `channels[c].label`                   | none                                                                   |
+| Visibility      | `channels[c].active`                  | visible                                                                |
+| Color           | `channels[c].color` (6-digit hex)     | a color derived from the channel index                                 |
+| Contrast limits | `channels[c].window.start` and `.end` | quantile-based limits derived from a histogram of the channel's values |
 
 All of these can be overridden per channel in the project file through the image's `channels` array (see the [example](#example) below).
+
+The channel histograms are computed once when the image is loaded, from the plane being shown at a downsampled resolution level (the lowest level whose longer axis still spans at least 512 pixels), so that channels without an `omero` window are stretched to their actual value distribution rather than to the full range of the array's data type (see [Rendering](../development/rendering.md#images)). Loading a multi-channel image therefore reads one downsampled plane per channel up front.
 
 Images **without a channel axis** are opened as single-channel image data with one tile source. Their tiles are rendered by the tile source itself, which applies the color and window of the `omero` channel (falling back to white and the data type's value range). The project file's `channels` array does not apply to single-channel images.
 
@@ -115,4 +117,4 @@ Both the image and the labels are OME-Zarr images served next to the project fil
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`OMEZarrImageDataProvider`](/docs/api/@tissuumaps/storage/classes/OMEZarrImageDataProvider) and [`OMEZarrLabelsDataProvider`](/docs/api/@tissuumaps/storage/classes/OMEZarrLabelsDataProvider). Reading OME-Zarr metadata and arrays is delegated to [ome-zarr.js](https://github.com/ome/ome-zarr.js), and tiling to [omezarr-tilesource](https://www.npmjs.com/package/omezarr-tilesource).
+The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`OMEZarrImageDataProvider`](/docs/api/@tissuumaps/storage/classes/OMEZarrImageDataProvider) and [`OMEZarrLabelsDataProvider`](/docs/api/@tissuumaps/storage/classes/OMEZarrLabelsDataProvider). Reading OME-Zarr metadata and arrays is delegated to [ome-zarr.js](https://github.com/biongff/ome-zarr.js) and [zarrita](https://github.com/manzt/zarrita.js), and tiling to [omezarr-tilesource](https://www.npmjs.com/package/omezarr-tilesource).
