@@ -290,18 +290,46 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
           255,
         );
       }
+      // the color of every value an 8- or 16-bit channel can hold, built once
+      // per channel state, so that a tile is recolored by a lookup per pixel
+      let colorsByValue: Uint32Array | undefined;
       return {
         getTileData: (event) => data.getTileData!(event),
         transferValues: (values, pixelBuffer) => {
           const [vmin, vmax] =
             channel.contrastLimits ?? ImageUtils.getDataTypeRange(values);
           const rampScale = vmax > vmin ? (ramp.length - 1) / (vmax - vmin) : 0;
+          const toColor = (value: number) =>
+            ramp[
+              Math.round(
+                MathUtils.clamp((value - vmin) * rampScale, 0, ramp.length - 1),
+              )
+            ]!;
+          const numValues =
+            values instanceof Uint8Array || values instanceof Int8Array
+              ? 256
+              : values instanceof Uint16Array || values instanceof Int16Array
+                ? 65536
+                : 0;
+          if (numValues > 0) {
+            if (colorsByValue === undefined) {
+              colorsByValue = new Uint32Array(numValues);
+              const signed =
+                values instanceof Int8Array || values instanceof Int16Array;
+              for (let value = 0; value < numValues; value++) {
+                colorsByValue[value] = toColor(
+                  signed && value >= numValues / 2 ? value - numValues : value,
+                );
+              }
+            }
+            const colors = colorsByValue;
+            for (let i = 0; i < values.length; i++) {
+              pixelBuffer[i] = colors[values[i]! & (numValues - 1)]!;
+            }
+            return;
+          }
           for (let i = 0; i < values.length; i++) {
-            const value = values[i]!;
-            const rampIndex = Math.round(
-              MathUtils.clamp((value - vmin) * rampScale, 0, ramp.length - 1),
-            );
-            pixelBuffer[i] = ramp[rampIndex]!;
+            pixelBuffer[i] = toColor(values[i]!);
           }
         },
       };
