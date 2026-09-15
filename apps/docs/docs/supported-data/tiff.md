@@ -32,7 +32,7 @@ Files without a pyramid open too, but slowly.
 
 ### Channels
 
-Multi-channel files are opened as **value images**: tiles carry the raw samples of the file, which are contrast-stretched and colorized at display time. TissUUmaps renders every channel itself, stretching it between its contrast limits, multiplying it with its color, and blending the channels additively. RGB files are drawn as they are.
+Multi-channel files are opened as **value images**: tiles carry the raw samples of the file, which are contrast-stretched and colorized at display time. TissUUmaps renders every channel itself, stretching it between its contrast limits, multiplying it with its color, and blending the channels additively. Files that carry their own colors (RGB, YCbCr, palette and white-is-zero) are drawn as they are.
 
 Per-channel rendering settings come from the file where it records them:
 
@@ -81,7 +81,7 @@ Channel settings that are left out fall back to the file's metadata and to the e
 - JPEG 2000 compression is not supported.
 - Multi-file OME-TIFF is not supported; the planes have to be in the file that is opened.
 - `path` needs an open workspace.
-- Palette and white-is-zero images are rejected.
+- Files with several palette or white-is-zero images are rejected; a single one is drawn in its own colors.
 
 ## API
 
