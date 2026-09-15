@@ -34,7 +34,7 @@ sidebar_position: 5
 
 - Hyparquet + hyparquet-compressors (Parquet tables; bundled into the Parquet worker)
 - PapaParse (CSV tables)
-- omezarr-tilesource (OME-Zarr images)
+- omezarr-tilesource + ome-zarr.js + zarrita (OME-Zarr images: tiling, metadata, array access for channel histograms)
 
 ## Utilities
 
