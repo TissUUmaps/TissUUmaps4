@@ -72,7 +72,7 @@ export class ImageUtils {
    */
   static getDefaultContrastLimits(
     histogram: { hist: number[]; range: [number, number] },
-    quantile: number = 0.05,
+    quantile: number = 0.01,
   ): [number, number] {
     const {
       hist,
