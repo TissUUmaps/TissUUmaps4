@@ -105,7 +105,7 @@ export class MathUtils {
   static async computeHistogram(
     values: NumericArray,
     range: [number, number],
-    n: number = 256,
+    n: number = 1024,
     options?: { signal?: AbortSignal },
   ): Promise<{ hist: number[]; range: [number, number] }> {
     const { signal } = options ?? {};

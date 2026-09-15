@@ -147,10 +147,10 @@ describe("MathUtils", () => {
       expect(hist).toEqual([2, 1, 2]);
     });
 
-    it("uses 256 bins by default", async () => {
-      const data = new Uint8Array(256).map((_, i) => i);
-      const { hist } = await MathUtils.computeHistogram(data, [0, 255]);
-      expect(hist).toHaveLength(256);
+    it("uses 1024 bins by default", async () => {
+      const data = new Uint16Array(1024).map((_, i) => i);
+      const { hist } = await MathUtils.computeHistogram(data, [0, 1023]);
+      expect(hist).toHaveLength(1024);
       expect(hist.every((count) => count === 1)).toBe(true);
     });
 

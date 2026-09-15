@@ -6,7 +6,7 @@ import type {
 
 export class OpenSeadragonImageData implements ImageData {
   private readonly _tileSource: string | TileSourceConfig;
-  private readonly _objectUrl?: string;
+  private readonly _objectUrl: string | undefined;
 
   constructor(tileSource: string | TileSourceConfig, objectUrl?: string) {
     this._tileSource = tileSource;
@@ -19,13 +19,13 @@ export class OpenSeadragonImageData implements ImageData {
 
   getTileSource(c?: number): string | TileSourceConfig | CustomTileSource {
     if (c !== undefined) {
-      throw new Error("Multi-channel images are not supported");
+      throw new Error("Not a multi-channel image");
     }
     return this._tileSource;
   }
 
   close(): void {
-    if (this._objectUrl) {
+    if (this._objectUrl !== undefined) {
       URL.revokeObjectURL(this._objectUrl);
     }
   }
