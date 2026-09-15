@@ -129,8 +129,8 @@ function parsePixels(pixels: Element, fileUUID: string | null): Pixels {
   if (!dimensionOrders.includes(dimensionOrder)) {
     throw new Error(`Invalid DimensionOrder "${dimensionOrder}".`);
   }
-  const tiffData = XMLUtils.getChildren(pixels, "TiffData").map((td) => {
-    const uuid = XMLUtils.getChildren(td, "UUID")[0];
+  const tiffData = XMLUtils.getChildren(pixels, "TiffData").map((element) => {
+    const uuid = XMLUtils.getChildren(element, "UUID")[0];
     if (uuid !== undefined && uuid.textContent?.trim() !== fileUUID) {
       const fileName =
         uuid.getAttribute("FileName") ?? uuid.textContent?.trim();
@@ -141,13 +141,17 @@ function parsePixels(pixels: Element, fileUUID: string | null): Pixels {
       );
     }
     // PlaneCount defaults to 1 if IFD is given, else to all remaining planes
-    const defaultPlaneCount = td.hasAttribute("IFD") ? 1 : Infinity;
+    const defaultPlaneCount = element.hasAttribute("IFD") ? 1 : Infinity;
     return {
-      ifd: XMLUtils.getIntAttribute(td, "IFD", 0),
-      firstC: XMLUtils.getIntAttribute(td, "FirstC", 0),
-      firstZ: XMLUtils.getIntAttribute(td, "FirstZ", 0),
-      firstT: XMLUtils.getIntAttribute(td, "FirstT", 0),
-      planeCount: XMLUtils.getIntAttribute(td, "PlaneCount", defaultPlaneCount),
+      ifd: XMLUtils.getIntAttribute(element, "IFD", 0),
+      firstC: XMLUtils.getIntAttribute(element, "FirstC", 0),
+      firstZ: XMLUtils.getIntAttribute(element, "FirstZ", 0),
+      firstT: XMLUtils.getIntAttribute(element, "FirstT", 0),
+      planeCount: XMLUtils.getIntAttribute(
+        element,
+        "PlaneCount",
+        defaultPlaneCount,
+      ),
     };
   });
   return {
@@ -194,11 +198,11 @@ function mapPlanesToIFDs(
   const order = pixels.dimensionOrder.slice(2).split("") as Dim[];
   const totalPlanes = sizes.C * sizes.Z * sizes.T;
   const map = new Map<string, number>();
-  for (const td of pixels.tiffData) {
+  for (const tiffData of pixels.tiffData) {
     const start: Record<Dim, number> = {
-      C: td.firstC,
-      Z: td.firstZ,
-      T: td.firstT,
+      C: tiffData.firstC,
+      Z: tiffData.firstZ,
+      T: tiffData.firstT,
     };
     let linear = 0;
     let stride = 1;
@@ -207,9 +211,9 @@ function mapPlanesToIFDs(
       stride *= sizes[dim];
     }
     const count = Math.min(
-      td.planeCount,
+      tiffData.planeCount,
       totalPlanes - linear,
-      imageCount - td.ifd,
+      imageCount - tiffData.ifd,
     );
     for (let i = 0; i < count; i++) {
       let rest = linear + i;
@@ -218,7 +222,7 @@ function mapPlanesToIFDs(
         coords[dim] = rest % sizes[dim];
         rest = Math.floor(rest / sizes[dim]);
       }
-      map.set(planeKey(coords.C, coords.Z, coords.T), td.ifd + i);
+      map.set(planeKey(coords.C, coords.Z, coords.T), tiffData.ifd + i);
     }
   }
   return map;

@@ -147,10 +147,13 @@ export class TIFFUtils {
       ),
     );
     signal?.throwIfAborted(); // parseFileDirectoryAt() does not throw on abort
-    const kept = levels
+    const matchingLevels = levels
       .filter((level) => TIFFUtils.hasSameAspectRatio(level[0]!, planes[0]!))
       .sort((a, b) => b[0]!.getWidth() - a[0]!.getWidth());
-    return planes.map((plane, c) => [plane, ...kept.map((level) => level[c]!)]);
+    return planes.map((plane, c) => [
+      plane,
+      ...matchingLevels.map((level) => level[c]!),
+    ]);
   }
 
   /**

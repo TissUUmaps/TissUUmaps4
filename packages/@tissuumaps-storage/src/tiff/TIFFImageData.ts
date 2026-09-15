@@ -16,9 +16,10 @@ import { tiffRasterType } from "./installTIFFTileSource";
  * The loaded image of a TIFF file
  *
  * Multi-channel files provide one tile source per channel, whose tiles carry
- * the raw samples that the renderer contrast-stretches and colorizes with the
- * channel names, colors and estimated contrast limits read by the parser. RGB
- * files provide a single tile source that is drawn as it is.
+ * the raw samples that the renderer contrast-stretches and colorizes, using the
+ * channel names and colors read from the file and the value histogram read from
+ * its pixels. Files that are drawn in their own colors (RGB, palette or
+ * white-is-zero) provide a single tile source instead.
  *
  * Channel visibility is not provided: neither OME-XML nor the QPTIFF
  * description records it.
@@ -51,7 +52,7 @@ export class TIFFImageData implements ImageData {
       return this._tileSources[0]!;
     }
     if (c === undefined) {
-      throw new Error("Not a single-channel image");
+      throw new Error("A channel index is required for multi-channel images");
     }
     if (c < 0 || c >= this._tileSources.length) {
       throw new Error(`Channel index ${c} is out of bounds`);
@@ -59,7 +60,20 @@ export class TIFFImageData implements ImageData {
     return this._tileSources[c]!;
   }
 
-  /** The values are the cached raster's own band, not a copy; do not modify them */
+  /**
+   * Extracts the samples of a channel tile from a tile invalidation event
+   *
+   * The samples are returned as they are, in the raster's own size (see
+   * {@link TiffRaster}), not cropped to the tile's bounds. They are the cached
+   * raster's own band rather than a copy (see `copyRasters` in
+   * `installTIFFTileSource`), so callers must not modify them.
+   *
+   * @param event - The tile invalidation event
+   * @returns The samples of the invalidated tile, one per raster pixel in
+   * row-major order, along with the width and height of the raster
+   * @throws Error if the file is drawn in its own colors, or if the tile's
+   * raster has no band
+   */
   async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
   ): Promise<{ values: TypedArray; width: number; height: number }> {

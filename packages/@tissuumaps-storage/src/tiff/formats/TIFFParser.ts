@@ -15,10 +15,13 @@ export type TIFFChannel = {
 
 /** The pyramid and channel metadata of a TIFF file */
 export type TIFFStructure = {
-  /** One pyramid per channel, largest image first; a single one for RGB images */
+  /**
+   * One pyramid per channel, largest image first; a single one for files that
+   * are drawn in their own colors
+   */
   pyramids: GeoTIFFImage[][];
 
-  /** `undefined` for RGB images */
+  /** `undefined` for files that are drawn in their own colors */
   channels: TIFFChannel[] | undefined;
 };
 
