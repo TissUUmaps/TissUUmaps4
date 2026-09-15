@@ -48,9 +48,11 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
       // TODO path
       z: {
         type: "integer",
+        minimum: 0,
       },
       t: {
         type: "integer",
+        minimum: 0,
       },
     },
     required: ["url"], // TODO ... or path
@@ -66,14 +68,19 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
       },
       // TODO path
       {
-        type: "Control",
-        scope: "#/properties/z",
-        label: "Z-slice",
-      },
-      {
-        type: "Control",
-        scope: "#/properties/t",
-        label: "Timepoint",
+        type: "HorizontalLayout",
+        elements: [
+          {
+            type: "Control",
+            scope: "#/properties/z",
+            label: "Z-slice",
+          },
+          {
+            type: "Control",
+            scope: "#/properties/t",
+            label: "Timepoint",
+          },
+        ],
       },
     ],
   };

@@ -36,9 +36,11 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
       // TODO path
       z: {
         type: "integer",
+        minimum: 0,
       },
       t: {
         type: "integer",
+        minimum: 0,
       },
       table: {
         type: "string",
@@ -57,14 +59,19 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
       },
       // TODO path
       {
-        type: "Control",
-        scope: "#/properties/z",
-        label: "Z-slice",
-      },
-      {
-        type: "Control",
-        scope: "#/properties/t",
-        label: "Timepoint",
+        type: "HorizontalLayout",
+        elements: [
+          {
+            type: "Control",
+            scope: "#/properties/z",
+            label: "Z-slice",
+          },
+          {
+            type: "Control",
+            scope: "#/properties/t",
+            label: "Timepoint",
+          },
+        ],
       },
       {
         type: "Control",
