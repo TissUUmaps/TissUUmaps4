@@ -30,11 +30,12 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   NormalizedOMEZarrImageDataSource
 > {
   /**
-   * The minimum length, in pixels, of the longer spatial axis of the resolution
-   * level that channel histograms are computed from (see
-   * {@link OMEZarrImageDataProvider._computeChannelHistogram})
+   * The minimum number of pixels of the resolution level that channel
+   * histograms are computed from (see
+   * {@link OMEZarrImageDataProvider._computeChannelHistogram}); more do not
+   * make the quantiles the renderer derives from them more stable
    */
-  private static readonly _histogramMinAxisLength = 512;
+  private static readonly _histogramMinPixels = 512 * 512;
 
   readonly name = "OME-Zarr";
 
@@ -182,22 +183,24 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   /**
    * Computes the value histogram of a channel from a downsampled resolution level
    *
-   * Reads the plane that the given tile source displays (its channel, z-slice
+   * 64-bit integers get no histogram, and no values are read for them, as
+   * their values cannot be represented without loss. For all other data types,
+   * reads the plane that the given tile source displays (its channel, z-slice
    * and timepoint, the latter two defaulting to the image's `omero` defaults
-   * like in the tile source itself) from the lowest resolution level whose
-   * longer axis still spans at least
-   * {@link OMEZarrImageDataProvider._histogramMinAxisLength} pixels, or from
-   * the full-resolution level of images smaller than that, and bins the plane's
-   * values over their actual range (see {@link MathUtils.computeRange} and
-   * {@link MathUtils.computeHistogram}), so that the histogram is as fine as
-   * its bins allow regardless of the data type's range. Aborting the signal
-   * rejects with its reason.
+   * like in the tile source itself) from the lowest resolution level that
+   * still holds at least {@link OMEZarrImageDataProvider._histogramMinPixels}
+   * pixels, or from the full-resolution level of images smaller than that, and
+   * bins the plane's values over their actual range (see
+   * {@link MathUtils.computeRange} and {@link MathUtils.computeHistogram}), so
+   * that the histogram is as fine as its bins allow regardless of the data
+   * type's range. Aborting the signal rejects with its reason.
    *
    * @param tileSource - The opened tile source of the channel
    * @param options - Optional abort signal
    * @returns A promise that resolves to the histogram, or to `undefined` for
-   * 64-bit integer planes (whose values cannot be represented without loss)
-   * and planes without finite values
+   * 64-bit integer planes and planes with fewer than two distinct finite
+   * values (which have no range to spread bins over; the renderer falls back
+   * to the data type range for them)
    */
   private static async _computeChannelHistogram(
     tileSource: OMEZarrTileSource,
@@ -206,14 +209,17 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const { image, arrays, c, z, t } = tileSource;
+    if (arrays[0]!.dtype === "int64" || arrays[0]!.dtype === "uint64") {
+      return undefined;
+    }
     const axisNames = image.getAxesNames();
     const xAxis = axisNames.indexOf("x");
     const yAxis = axisNames.indexOf("y");
     let level = arrays.length - 1;
     while (
       level > 0 &&
-      Math.max(arrays[level]!.shape[xAxis]!, arrays[level]!.shape[yAxis]!) <
-        OMEZarrImageDataProvider._histogramMinAxisLength
+      arrays[level]!.shape[xAxis]! * arrays[level]!.shape[yAxis]! <
+        OMEZarrImageDataProvider._histogramMinPixels
     ) {
       level--;
     }
@@ -228,11 +234,11 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
       chunk.data instanceof BigInt64Array ||
       chunk.data instanceof BigUint64Array
     ) {
-      return undefined;
+      return undefined; // not reached for the dtypes checked above; narrows the type
     }
     const [vmin, vmax] = await MathUtils.computeRange(chunk.data, { signal });
-    if (vmin > vmax) {
-      return undefined; // no finite values
+    if (vmin >= vmax) {
+      return undefined; // no finite values, or a single one
     }
     return MathUtils.computeHistogram(chunk.data, [vmin, vmax], undefined, {
       signal,
