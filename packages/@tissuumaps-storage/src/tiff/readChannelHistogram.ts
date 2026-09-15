@@ -16,6 +16,43 @@ const histogramPixels = 262144;
 const sampleFormatFloat = 3;
 
 /**
+ * Reads the value histogram of every channel of a file
+ *
+ * The channels are read `poolSize` at a time, so that a file with many
+ * channels does not start every read at once, and so that each read has a
+ * decoder worker of the pool to itself.
+ *
+ * @param pyramids - The images of every channel, largest first
+ * @param options - The decoder pool (`null` for the main thread), the number
+ * of channels to read at a time (default `1`), and an abort signal
+ * @returns One histogram per channel, in channel order, each as returned by
+ * {@link readChannelHistogram}
+ * @throws Error if a channel has no pyramid level
+ */
+export async function readChannelHistograms(
+  pyramids: GeoTIFFImage[][],
+  options?: { pool?: Pool | null; poolSize?: number; signal?: AbortSignal },
+): Promise<({ hist: number[]; range: [number, number] } | undefined)[]> {
+  const { pool = null, poolSize = 1, signal } = options ?? {};
+  signal?.throwIfAborted();
+  const histograms: (
+    { hist: number[]; range: [number, number] } | undefined
+  )[] = [];
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(poolSize, pyramids.length) }, async () => {
+      for (let c = next++; c < pyramids.length; c = next++) {
+        histograms[c] = await readChannelHistogram(pyramids[c]!, {
+          pool,
+          signal,
+        });
+      }
+    }),
+  );
+  return histograms;
+}
+
+/**
  * Reads the value histogram of a channel, which the renderer stretches the
  * channel over, since TIFF stores no display range
  *
