@@ -33,7 +33,7 @@ export class PlainTIFFParser implements TIFFParser {
       pyramids,
       channels: TIFFUtils.hasOwnColors(pyramids)
         ? undefined
-        : TIFFUtils.whitenLoneChannel(full.map(() => ({}))),
+        : full.map(() => ({})),
     };
   }
 }

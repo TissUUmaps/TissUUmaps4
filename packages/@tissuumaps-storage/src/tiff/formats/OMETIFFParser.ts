@@ -119,9 +119,7 @@ export class OMETIFFParser implements TIFFParser {
     }));
     return {
       pyramids,
-      channels: TIFFUtils.hasOwnColors(pyramids)
-        ? undefined
-        : TIFFUtils.whitenLoneChannel(channels),
+      channels: TIFFUtils.hasOwnColors(pyramids) ? undefined : channels,
     };
   }
 }
