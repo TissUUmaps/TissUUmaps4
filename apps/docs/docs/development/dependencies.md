@@ -62,7 +62,7 @@ ships the fix.
 - **geotiff-tilesource**: our fork of pearcetm/GeoTIFFTileSource, branch
   `tissuumaps` of
   [TissUUmaps/GeoTIFFTileSource](https://github.com/TissUUmaps/GeoTIFFTileSource).
-  It carries six changes we need, each also submitted upstream. Drop the fork
+  It carries several changes we need, each also submitted upstream. Drop the fork
   once they are released. The package has no types, so
   `geotiff-tilesource.d.ts` declares what we use.
 
