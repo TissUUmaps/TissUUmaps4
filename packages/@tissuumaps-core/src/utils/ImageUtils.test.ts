@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ImageUtils } from "./ImageUtils";
+import { MathUtils } from "./MathUtils";
 
 describe("ImageUtils", () => {
   describe("getDefaultChannelColor", () => {
@@ -88,6 +89,108 @@ describe("ImageUtils", () => {
           expect(v).toBeLessThanOrEqual(255);
         }
       }
+    });
+  });
+
+  describe("getDefaultContrastLimits", () => {
+    it("clips the quantiles at both ends of a uniform histogram", () => {
+      // 100 values, one per bin: 5 values are clipped at each end
+      const hist = new Array<number>(100).fill(1);
+      const [low, high] = ImageUtils.getDefaultContrastLimits(
+        { hist, range: [0, 99] },
+        0.05,
+        0.95,
+      );
+      expect(low).toBeCloseTo(4);
+      expect(high).toBeCloseTo(95);
+    });
+
+    it("clips a histogram computed by MathUtils.computeHistogram", async () => {
+      // 100 values, one per bin: 5 values are clipped at each end
+      const data = new Uint16Array(100).map((_, i) => 1000 + i);
+      const histogram = await MathUtils.computeHistogram(
+        data,
+        [1000, 1099],
+        100,
+      );
+      const [low, high] = ImageUtils.getDefaultContrastLimits(
+        histogram,
+        0.05,
+        0.95,
+      );
+      expect(low).toBeCloseTo(1004);
+      expect(high).toBeCloseTo(1095);
+    });
+
+    it("clips 1% at the bottom and 0.1% at the top by default", () => {
+      // 1000 values, one per bin: the limits are the 10th value from the
+      // bottom and the 1st value from the top
+      const hist = new Array<number>(1000).fill(1);
+      const [low, high] = ImageUtils.getDefaultContrastLimits({
+        hist,
+        range: [0, 999],
+      });
+      expect(low).toBeCloseTo(9);
+      expect(high).toBeCloseTo(999);
+    });
+
+    it("maps quantiles of zero and one to the first and last non-empty bins", () => {
+      const hist = [0, 1, 2, 3, 0];
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist, range: [10, 50] }, 0, 1),
+      ).toEqual([20, 40]);
+    });
+
+    it("maps the first and last bins to the range bounds", () => {
+      const hist = [5, 0, 0, 5];
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist, range: [-1, 1] }, 0.1, 0.9),
+      ).toEqual([-1, 1]);
+    });
+
+    it("returns the full range when the limits would collapse", () => {
+      // 98% of the values fall into bin 2: both limits would land there
+      const hist = [1, 0, 98, 0, 1];
+      expect(
+        ImageUtils.getDefaultContrastLimits(
+          { hist, range: [0, 4] },
+          0.02,
+          0.98,
+        ),
+      ).toEqual([0, 4]);
+    });
+
+    it("returns the full range when the upper quantile is below the lower", () => {
+      const hist = [1, 1, 1, 1];
+      expect(
+        ImageUtils.getDefaultContrastLimits(
+          { hist, range: [0, 3] },
+          0.75,
+          0.25,
+        ),
+      ).toEqual([0, 3]);
+    });
+
+    it("returns the full range for a lower quantile above one", () => {
+      const hist = [1, 1, 1, 1];
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist, range: [0, 3] }, 1.5),
+      ).toEqual([0, 3]);
+    });
+
+    it("returns the range as is for degenerate input", () => {
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist: [], range: [0, 255] }),
+      ).toEqual([0, 255]);
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist: [7], range: [0, 255] }),
+      ).toEqual([0, 255]);
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist: [0, 0], range: [0, 255] }),
+      ).toEqual([0, 255]);
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist: [1, 1], range: [3, 3] }),
+      ).toEqual([3, 3]);
     });
   });
 

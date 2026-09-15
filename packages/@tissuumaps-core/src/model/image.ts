@@ -52,8 +52,9 @@ export type ImageChannel = {
    *
    * Overrides the channel color provided by the image data provider, if any.
    *
-   * @defaultValue The color reported by the image data provider, or a default
-   * color for the channel index (see {@link ImageUtils.getDefaultChannelColor})
+   * @defaultValue The color reported by the image data provider, or white for
+   * single-channel image data, or a default color for the channel index
+   * otherwise (see {@link ImageUtils.getDefaultChannelColor})
    */
   color?: Color;
 
@@ -62,7 +63,10 @@ export type ImageChannel = {
    *
    * Overrides the channel contrast limits provided by the image data provider, if any.
    *
-   * @defaultValue The contrast limits reported by the image data provider, or the renderer's default range
+   * @defaultValue The contrast limits reported by the image data provider, or
+   * limits derived from the channel histogram reported by the image data
+   * provider (see {@link ImageUtils.getDefaultContrastLimits}), or the value
+   * range of the channel's data type
    */
   contrastLimits?: [number, number];
 };

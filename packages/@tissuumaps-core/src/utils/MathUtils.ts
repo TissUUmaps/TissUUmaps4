@@ -1,4 +1,7 @@
-/** Utility methods for numeric clamping and alignment */
+import type { NumericArray } from "../types/arrays";
+import { AsyncUtils } from "./AsyncUtils";
+
+/** Utility methods for numeric clamping, alignment and histograms */
 export class MathUtils {
   /**
    * Clamps a value to the range `[min, max]`
@@ -34,5 +37,92 @@ export class MathUtils {
       return n;
     }
     return Math.ceil(n / m) * m;
+  }
+
+  /**
+   * Computes the range of numeric values, as their minimum and maximum
+   *
+   * Non-finite values (`NaN`, infinities) are ignored. If no finite value is
+   * found (e.g. for empty arrays), the empty range `[Infinity, -Infinity]` is
+   * returned; callers can detect it by checking that the lower bound exceeds
+   * the upper bound.
+   *
+   * The values are traversed on the main thread, yielding to the event loop
+   * periodically so the UI stays responsive for large arrays (see
+   * {@link AsyncUtils.forEach}). Aborting the signal rejects with its reason.
+   *
+   * @param values - The values to compute the range of
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the range, as `[min, max]`
+   */
+  static async computeRange(
+    values: NumericArray,
+    options?: { signal?: AbortSignal },
+  ): Promise<[number, number]> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    let vmin = Infinity;
+    let vmax = -Infinity;
+    await AsyncUtils.forEach(
+      values,
+      (v) => {
+        if (Number.isFinite(v)) {
+          if (v < vmin) {
+            vmin = v;
+          }
+          if (v > vmax) {
+            vmax = v;
+          }
+        }
+      },
+      { signal },
+    );
+    return [vmin, vmax];
+  }
+
+  /**
+   * Computes the histogram of numeric values over a given value range
+   *
+   * `hist[i]` counts the values that are closest to bin `i`, with bins spread
+   * evenly over `range`: bin `0` maps to the range's lower bound, the last bin
+   * to its upper bound, and each bin in between to `vmin + i / (n - 1) * (vmax
+   * - vmin)`. Values outside the range are counted in the nearest edge bin,
+   * non-finite values (`NaN`, infinities) are ignored. If the range is
+   * degenerate (upper bound not above lower bound), or if `n` is `1`, all
+   * values fall into bin `0`.
+   *
+   * The values are traversed on the main thread, yielding to the event loop
+   * periodically so the UI stays responsive for large arrays (see
+   * {@link AsyncUtils.forEach}). Aborting the signal rejects with its reason.
+   *
+   * @param values - The values to compute the histogram of
+   * @param range - The value range the bins span, as `[min, max]`
+   * @param n - The number of bins, a positive integer
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the histogram, as bin counts and the
+   * given value range
+   */
+  static async computeHistogram(
+    values: NumericArray,
+    range: [number, number],
+    n: number = 256,
+    options?: { signal?: AbortSignal },
+  ): Promise<{ hist: number[]; range: [number, number] }> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const [vmin, vmax] = range;
+    const hist = new Array<number>(n).fill(0);
+    const scale = vmin < vmax ? (n - 1) / (vmax - vmin) : 0;
+    await AsyncUtils.forEach(
+      values,
+      (v) => {
+        if (Number.isFinite(v)) {
+          const bin = MathUtils.clamp(Math.round((v - vmin) * scale), 0, n - 1);
+          hist[bin]! += 1;
+        }
+      },
+      { signal },
+    );
+    return { hist, range };
   }
 }

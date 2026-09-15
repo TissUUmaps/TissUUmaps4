@@ -1,6 +1,7 @@
 import {
   type GenericArray,
-  NumberUtils,
+  MathUtils,
+  type NumericArray,
   type TableData,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -85,19 +86,11 @@ export class CSVTableData implements TableData {
     const values = await this.loadValues(column);
     signal?.throwIfAborted(); // loadValues() does not throw on abort
     if (typeof values[0] === "number") {
-      let vmin, vmax;
-      for (let i = 0; i < values.length; i++) {
-        const v = NumberUtils.tryParseFinite(values[i]);
-        if (v !== undefined) {
-          if (vmin === undefined || v < vmin) {
-            vmin = v;
-          }
-          if (vmax === undefined || v > vmax) {
-            vmax = v;
-          }
-        }
-      }
-      if (vmin !== undefined && vmax !== undefined && vmin < vmax) {
+      const [vmin, vmax] = await MathUtils.computeRange(
+        values as NumericArray,
+        { signal },
+      );
+      if (vmin < vmax) {
         return [vmin, vmax];
       }
     }

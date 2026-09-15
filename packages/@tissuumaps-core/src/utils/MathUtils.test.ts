@@ -70,4 +70,143 @@ describe("MathUtils", () => {
       expect(MathUtils.align(256, 512)).toBe(512);
     });
   });
+
+  describe("computeRange", () => {
+    it("returns the minimum and maximum of plain arrays", async () => {
+      await expect(MathUtils.computeRange([3, -1, 7, 2])).resolves.toEqual([
+        -1, 7,
+      ]);
+    });
+
+    it("returns the minimum and maximum of typed arrays", async () => {
+      await expect(
+        MathUtils.computeRange(new Float32Array([0.5, -2.5, 1.5])),
+      ).resolves.toEqual([-2.5, 1.5]);
+      await expect(
+        MathUtils.computeRange(new Uint8Array([200, 10, 255, 0])),
+      ).resolves.toEqual([0, 255]);
+    });
+
+    it("returns a degenerate range for a single value", async () => {
+      await expect(MathUtils.computeRange([4])).resolves.toEqual([4, 4]);
+      await expect(MathUtils.computeRange([4, 4, 4])).resolves.toEqual([4, 4]);
+    });
+
+    it("ignores non-finite values", async () => {
+      await expect(
+        MathUtils.computeRange(
+          new Float64Array([NaN, 2, Infinity, 4, -Infinity]),
+        ),
+      ).resolves.toEqual([2, 4]);
+    });
+
+    it("returns the empty range when no finite value is found", async () => {
+      await expect(MathUtils.computeRange([])).resolves.toEqual([
+        Infinity,
+        -Infinity,
+      ]);
+      await expect(MathUtils.computeRange([NaN, Infinity])).resolves.toEqual([
+        Infinity,
+        -Infinity,
+      ]);
+    });
+
+    it("handles large data", async () => {
+      const data = new Uint16Array(100_000).map((_, i) => (i % 1000) + 5);
+      await expect(MathUtils.computeRange(data)).resolves.toEqual([5, 1004]);
+    });
+
+    it("rejects with the reason of an aborted signal", async () => {
+      const controller = new AbortController();
+      controller.abort(new Error("aborted"));
+      await expect(
+        MathUtils.computeRange(new Uint8Array(10), {
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow("aborted");
+    });
+  });
+
+  describe("computeHistogram", () => {
+    it("assigns values to the nearest bin over the given range", async () => {
+      const { hist, range } = await MathUtils.computeHistogram(
+        [0, 1, 2, 3, 4],
+        [0, 4],
+        5,
+      );
+      expect(range).toEqual([0, 4]);
+      expect(hist).toEqual([1, 1, 1, 1, 1]);
+    });
+
+    it("maps the range bounds to the first and last bins", async () => {
+      const { hist } = await MathUtils.computeHistogram(
+        new Float32Array([-1, -0.9, 0.49, 0.51, 1]),
+        [-1, 1],
+        3,
+      );
+      expect(hist).toEqual([2, 1, 2]);
+    });
+
+    it("uses 256 bins by default", async () => {
+      const data = new Uint8Array(256).map((_, i) => i);
+      const { hist } = await MathUtils.computeHistogram(data, [0, 255]);
+      expect(hist).toHaveLength(256);
+      expect(hist.every((count) => count === 1)).toBe(true);
+    });
+
+    it("counts values outside the range in the edge bins", async () => {
+      const { hist } = await MathUtils.computeHistogram(
+        [-10, 0, 5, 10, 20],
+        [0, 10],
+        3,
+      );
+      expect(hist).toEqual([2, 1, 2]);
+    });
+
+    it("ignores non-finite values", async () => {
+      const { hist } = await MathUtils.computeHistogram(
+        new Float64Array([NaN, 2, Infinity, 4, -Infinity]),
+        [2, 4],
+        2,
+      );
+      expect(hist).toEqual([1, 1]);
+    });
+
+    it("puts all values into the first bin for a degenerate range", async () => {
+      const { hist, range } = await MathUtils.computeHistogram(
+        [6, 7, 8],
+        [7, 7],
+        4,
+      );
+      expect(range).toEqual([7, 7]);
+      expect(hist).toEqual([3, 0, 0, 0]);
+    });
+
+    it("puts all values into a single bin", async () => {
+      const { hist } = await MathUtils.computeHistogram([1, 5, 9], [1, 9], 1);
+      expect(hist).toEqual([3]);
+    });
+
+    it("returns zero counts for empty data", async () => {
+      await expect(
+        MathUtils.computeHistogram([], [0, 255], 3),
+      ).resolves.toEqual({ hist: [0, 0, 0], range: [0, 255] });
+    });
+
+    it("handles large data", async () => {
+      const data = new Uint16Array(100_000).map((_, i) => i % 1000);
+      const { hist } = await MathUtils.computeHistogram(data, [0, 999], 1000);
+      expect(hist.every((count) => count === 100)).toBe(true);
+    });
+
+    it("rejects with the reason of an aborted signal", async () => {
+      const controller = new AbortController();
+      controller.abort(new Error("aborted"));
+      await expect(
+        MathUtils.computeHistogram(new Uint8Array(10), [0, 255], 4, {
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow("aborted");
+    });
+  });
 });
