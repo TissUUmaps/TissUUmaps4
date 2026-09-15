@@ -1,6 +1,8 @@
-import type { GeoJSON, Geometry, Position } from "geojson";
+import type { GeoJSON, Geometry } from "geojson";
 
 import type { ShapesGeometry } from "@tissuumaps/core";
+
+import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
 
 export type GeoJSONRequest<TOp extends string = string> = {
   op: TOp;
@@ -33,13 +35,6 @@ export type GeoJSONWorkerResponseFor<
 
 export type GeoJSONWorkerMessage =
   GeoJSONWorkerResponse | { progress: number; total: number };
-
-type ShapesGeometryAccumulator = {
-  shapePolygonOffsets: number[];
-  polygonRingOffsets: number[];
-  ringVertexOffsets: number[];
-  coords: number[];
-};
 
 const ctx = self as unknown as {
   onmessage: ((event: MessageEvent<GeoJSONWorkerRequest>) => void) | null;
@@ -162,12 +157,7 @@ function parseGeoJSON(
 
   const ids: number[] = [];
   const names: string[] = [];
-  const accumulator: ShapesGeometryAccumulator = {
-    shapePolygonOffsets: [0],
-    polygonRingOffsets: [0],
-    ringVertexOffsets: [0],
-    coords: [],
-  };
+  const builder = new ShapesGeometryBuilder();
 
   let valid = false;
   switch (geo.type) {
@@ -178,7 +168,7 @@ function parseGeoJSON(
           console.warn("Skipping feature with null geometry.");
           continue;
         }
-        const shapeAppended = parseGeometry(feature.geometry, accumulator);
+        const shapeAppended = builder.addGeometry(feature.geometry);
         if (shapeAppended && idProperty !== undefined) {
           const id = feature.properties?.[idProperty] as unknown;
           if (id === undefined || id === "") {
@@ -204,19 +194,19 @@ function parseGeoJSON(
       break;
     case "Feature":
       if (geo.geometry !== null) {
-        valid = parseGeometry(geo.geometry, accumulator);
+        valid = builder.addGeometry(geo.geometry);
       }
       break;
     case "GeometryCollection":
       for (let i = 0; i < geo.geometries.length; i++) {
         const geometry = geo.geometries[i]!;
-        const shapeAppended = parseGeometry(geometry, accumulator);
+        const shapeAppended = builder.addGeometry(geometry);
         valid ||= shapeAppended;
         onProgress(i + 1, geo.geometries.length);
       }
       break;
     default:
-      valid = parseGeometry(geo, accumulator);
+      valid = builder.addGeometry(geo);
       break;
   }
   if (!valid) {
@@ -226,60 +216,6 @@ function parseGeoJSON(
   return {
     ids: idProperty !== undefined ? ids : undefined,
     names: nameProperty !== undefined ? names : undefined,
-    geometry: {
-      shapePolygonOffsets: new Uint32Array(accumulator.shapePolygonOffsets),
-      polygonRingOffsets: new Uint32Array(accumulator.polygonRingOffsets),
-      ringVertexOffsets: new Uint32Array(accumulator.ringVertexOffsets),
-      coords: new Float32Array(accumulator.coords),
-    },
+    geometry: builder.build(),
   };
-}
-
-function parseGeometry(
-  geometry: Geometry,
-  accumulator: ShapesGeometryAccumulator,
-): boolean {
-  let polygons: Position[][][];
-  if (geometry.type === "Polygon") {
-    polygons = [geometry.coordinates];
-  } else if (geometry.type === "MultiPolygon") {
-    polygons = geometry.coordinates;
-  } else {
-    console.warn(`Unsupported GeoJSON geometry type: ${geometry.type}`);
-    return false;
-  }
-  let polygonsAdded = false;
-  for (const rings of polygons) {
-    if (rings.length === 0 || rings[0]!.length < 3) {
-      console.warn("Skipping polygon without a valid shell.");
-      continue;
-    }
-    let ringsAdded = false;
-    for (const ring of rings) {
-      if (ring.length < 3) {
-        console.warn("Skipping invalid ring with fewer than three vertices.");
-        continue;
-      }
-      for (const pos of ring) {
-        accumulator.coords.push(pos[0]!, pos[1]!);
-      }
-      accumulator.ringVertexOffsets.push(accumulator.coords.length / 2);
-      ringsAdded = true;
-    }
-    if (!ringsAdded) {
-      console.warn("Skipping polygon without valid rings.");
-      continue;
-    }
-    accumulator.polygonRingOffsets.push(
-      accumulator.ringVertexOffsets.length - 1,
-    );
-    polygonsAdded = true;
-  }
-  if (!polygonsAdded) {
-    return false;
-  }
-  accumulator.shapePolygonOffsets.push(
-    accumulator.polygonRingOffsets.length - 1,
-  );
-  return true;
 }
