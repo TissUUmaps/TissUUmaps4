@@ -82,8 +82,10 @@ export class TIFFImageData implements ImageData {
     return this._channels?.[c]?.color;
   }
 
-  getChannelContrastLimits(c: number): [number, number] | undefined {
-    return this._channels?.[c]?.contrastLimits;
+  getChannelHistogram(
+    c: number,
+  ): { hist: number[]; range: [number, number] } | undefined {
+    return this._channels?.[c]?.histogram;
   }
 
   close(): void {

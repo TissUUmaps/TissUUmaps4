@@ -36,12 +36,12 @@ Multi-channel files are opened as **value images**: tiles carry the raw samples 
 
 Per-channel rendering settings come from the file where it records them:
 
-| Setting         | Source                                    | Fallback                                                                                                   |
-| --------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Name            | OME-XML `Channel` `Name`, QPTIFF `Name`   | none                                                                                                       |
-| Color           | OME-XML `Channel` `Color`, QPTIFF `Color` | a color derived from the channel index                                                                     |
-| Contrast limits | not recorded by TIFF                      | the full range for integers of 8 bits or fewer, otherwise the 1% and 99.9% quantiles of a sample of pixels |
-| Visibility      | not recorded by TIFF                      | visible                                                                                                    |
+| Setting         | Source                                    | Fallback                                                                                                      |
+| --------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Name            | OME-XML `Channel` `Name`, QPTIFF `Name`   | none                                                                                                          |
+| Color           | OME-XML `Channel` `Color`, QPTIFF `Color` | a color derived from the channel index                                                                        |
+| Contrast limits | not recorded by TIFF                      | the data type range for integers of 8 bits or fewer, otherwise quantiles of a histogram of a sample of pixels |
+| Visibility      | not recorded by TIFF                      | visible                                                                                                       |
 
 All of these can be overridden per channel in the project file through the image's `channels` array (see the [example](#example) below).
 
