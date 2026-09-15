@@ -12,7 +12,7 @@ import {
 import { type TIFFChannel, findTIFFParser } from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
-import { readChannelHistogram } from "./readChannelHistogram";
+import { readChannelHistograms } from "./readChannelHistogram";
 
 export class TIFFImageDataProvider implements ImageDataProvider<
   TIFFImageDataSource,
@@ -94,25 +94,11 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     const { GeoTIFFTileSource, pool, poolSize } = installTIFFTileSource();
     let channelsWithHistograms: TIFFChannel[] | undefined;
     if (channels !== undefined) {
-      // one histogram per decoder worker at a time, so that a file with many
-      // channels does not start every read at once
-      const histograms: (
-        { hist: number[]; range: [number, number] } | undefined
-      )[] = [];
-      let next = 0;
-      await Promise.all(
-        Array.from(
-          { length: Math.min(poolSize, channels.length) },
-          async () => {
-            for (let c = next++; c < channels.length; c = next++) {
-              histograms[c] = await readChannelHistogram(pyramids[c]!, {
-                pool,
-                signal,
-              });
-            }
-          },
-        ),
-      );
+      const histograms = await readChannelHistograms(pyramids, {
+        pool,
+        poolSize,
+        signal,
+      });
       channelsWithHistograms = channels.map((channel, c) => ({
         ...channel,
         histogram: histograms[c],

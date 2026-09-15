@@ -6,7 +6,10 @@ import {
 } from "geotiff";
 import { describe, expect, it, vi } from "vitest";
 
-import { readChannelHistogram } from "./readChannelHistogram";
+import {
+  readChannelHistogram,
+  readChannelHistograms,
+} from "./readChannelHistogram";
 
 function fakeRead(values: number[] = [0, 1]) {
   return vi.fn(() => Promise.resolve(Float64Array.from(values)));
@@ -194,5 +197,39 @@ describe("readChannelHistogram", () => {
     const histogram = await readChannelHistogram([await tiff.getImage(0)]);
     expect(histogram?.range).toEqual([0, 6300]);
     expect(histogram?.hist.reduce((sum, count) => sum + count, 0)).toBe(64);
+  });
+});
+
+describe("readChannelHistograms", () => {
+  it("returns one histogram per channel, in channel order", async () => {
+    const histograms = await readChannelHistograms([
+      [fakeImage(10, 10, { readRasters: fakeRead([0, 10]) })],
+      [fakeImage(10, 10, { bits: 8 })],
+      [fakeImage(10, 10, { readRasters: fakeRead([0, 20]) })],
+    ]);
+    expect(histograms.map((histogram) => histogram?.range)).toEqual([
+      [0, 10],
+      undefined,
+      [0, 20],
+    ]);
+  });
+
+  it("reads no more channels at a time than the pool has workers", async () => {
+    let reading = 0;
+    let mostAtOnce = 0;
+    const read = () => {
+      reading++;
+      mostAtOnce = Math.max(mostAtOnce, reading);
+      return Promise.resolve().then(() => {
+        reading--;
+        return Float64Array.from([0, 1]);
+      });
+    };
+    const pyramids = Array.from({ length: 9 }, () => [
+      fakeImage(10, 10, { readRasters: vi.fn(read) }),
+    ]);
+    const histograms = await readChannelHistograms(pyramids, { poolSize: 3 });
+    expect(histograms).toHaveLength(9);
+    expect(mostAtOnce).toBe(3);
   });
 });
