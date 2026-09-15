@@ -1,6 +1,7 @@
 import {
   type GenericArray,
   NumberUtils,
+  TableColumnUtils,
   type TableData,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -43,15 +44,15 @@ export class CSVTableData implements TableData {
   }
 
   suggestColumnQueries(currentQuery: string): Promise<string[]> {
-    const filteredColumns = this._columns.filter((column) =>
-      column.includes(currentQuery),
+    return Promise.resolve(
+      TableColumnUtils.suggestColumnQueries(this._columns, currentQuery),
     );
-    return Promise.resolve(filteredColumns);
   }
 
   resolveColumnQuery(query: string): Promise<string | null> {
-    const column = this._columns.includes(query) ? query : null;
-    return Promise.resolve(column);
+    return Promise.resolve(
+      TableColumnUtils.resolveColumnQuery(this._columns, query),
+    );
   }
 
   loadValues<T>(column: string): Promise<GenericArray<T>> {

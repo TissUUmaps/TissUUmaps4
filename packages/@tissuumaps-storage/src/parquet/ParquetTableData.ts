@@ -1,7 +1,8 @@
-import type {
-  GenericArray,
-  ProgressCallback,
-  TableData,
+import {
+  type GenericArray,
+  type ProgressCallback,
+  TableColumnUtils,
+  type TableData,
 } from "@tissuumaps/core";
 
 import { runParquetWorker } from "./runParquetWorker";
@@ -45,15 +46,15 @@ export class ParquetTableData implements TableData {
   }
 
   suggestColumnQueries(currentQuery: string): Promise<string[]> {
-    const filteredColumns = this._columns.filter((column) =>
-      column.includes(currentQuery),
+    return Promise.resolve(
+      TableColumnUtils.suggestColumnQueries(this._columns, currentQuery),
     );
-    return Promise.resolve(filteredColumns);
   }
 
   resolveColumnQuery(query: string): Promise<string | null> {
-    const column = this._columns.includes(query) ? query : null;
-    return Promise.resolve(column);
+    return Promise.resolve(
+      TableColumnUtils.resolveColumnQuery(this._columns, query),
+    );
   }
 
   async loadValues<T>(

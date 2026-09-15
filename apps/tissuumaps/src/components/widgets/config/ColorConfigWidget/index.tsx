@@ -9,7 +9,6 @@ import {
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
-import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,7 +17,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
+import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { useProjectStore } from "@/stores/project";
 
 import { ColorPaletteSelect } from "./ColorPaletteSelect";
@@ -156,19 +155,14 @@ function FromColorConfigWidget({
     setCurrentFromPalette: setPalette,
   } = adapter;
 
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(tableId);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
         <FieldLabel>Table column</FieldLabel>
-        <SimpleAsyncCombobox
-          suggestQueries={suggestTableColumnQueries}
-          getItem={resolveTableColumnQuery}
-          itemQuery={(column) => column}
-          selectedItem={column}
-          onSelectedItemChange={setColumn}
+        <TableColumnInput
+          tableId={tableId}
+          value={column}
+          onValueChange={setColumn}
         />
       </Field>
       <Field>
@@ -242,19 +236,14 @@ function GroupByColorConfigWidget({
 
   const colorMaps = useProjectStore((state) => state.colorMaps);
 
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(tableId);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
         <FieldLabel>Table column</FieldLabel>
-        <SimpleAsyncCombobox
-          suggestQueries={suggestTableColumnQueries}
-          getItem={resolveTableColumnQuery}
-          itemQuery={(column) => column}
-          selectedItem={column}
-          onSelectedItemChange={setColumn}
+        <TableColumnInput
+          tableId={tableId}
+          value={column}
+          onValueChange={setColumn}
         />
       </Field>
       <Field disabled={map !== null}>

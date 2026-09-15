@@ -229,6 +229,7 @@ export { ImageUtils } from "./utils/ImageUtils";
 export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { NumberUtils } from "./utils/NumberUtils";
+export { TableColumnUtils } from "./utils/TableColumnUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 
 export {
