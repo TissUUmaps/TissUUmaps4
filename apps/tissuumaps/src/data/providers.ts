@@ -4,6 +4,7 @@ import {
   OMEZarrImageDataProvider,
   OpenSeadragonImageDataProvider,
   ParquetTableDataProvider,
+  TIFFImageDataProvider,
   TablePointsDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
@@ -11,6 +12,7 @@ import {
   openSeadragonImageDataSourceType,
   parquetTableDataSourceType,
   tablePointsDataSourceType,
+  tiffImageDataSourceType,
 } from "@tissuumaps/storage";
 
 import { appStore } from "@/stores/app";
@@ -31,6 +33,11 @@ export function enableBuiltInDataProviders(): void {
   appStoreState.registerImageDataProvider(
     openSeadragonImageDataSourceType,
     new OpenSeadragonImageDataProvider(),
+  );
+
+  appStoreState.registerImageDataProvider(
+    tiffImageDataSourceType,
+    new TIFFImageDataProvider(),
   );
 
   appStoreState.registerPointsDataProvider(
