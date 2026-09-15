@@ -1,0 +1,39 @@
+import type { ShapesData, ShapesGeometry } from "@tissuumaps/core";
+
+export class ParquetShapesData implements ShapesData {
+  private readonly _geometry: ShapesGeometry;
+  private _ids: number[] | undefined;
+  private readonly _names: string[] | undefined;
+
+  constructor(
+    geometry: ShapesGeometry,
+    ids: number[] | undefined,
+    names: string[] | undefined,
+  ) {
+    this._geometry = geometry;
+    this._ids = ids;
+    this._names = names;
+  }
+
+  getIds(): number[] {
+    if (this._ids === undefined) {
+      console.warn("No ID column specified, using sequential IDs instead");
+      this._ids = Array.from({ length: this.getSize() }, (_, i) => i);
+    }
+    return this._ids;
+  }
+
+  getSize(): number {
+    return this._geometry.shapePolygonOffsets.length - 1;
+  }
+
+  getNames(): string[] | undefined {
+    return this._names;
+  }
+
+  loadGeometry(): Promise<ShapesGeometry> {
+    return Promise.resolve(this._geometry);
+  }
+
+  close(): void {}
+}
