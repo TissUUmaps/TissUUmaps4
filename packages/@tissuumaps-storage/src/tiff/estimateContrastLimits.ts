@@ -26,7 +26,7 @@ const sampleFormatFloat = 3;
  * @param pyramid - The images of the channel, largest first
  * @param options - The decoder pool (`null` for the main thread) and an abort
  * signal
- * @returns The limits, in raw pixel values; a uniform image gets a unit range
+ * @returns The limits, in raw pixel values, always a non-empty range
  * @throws Error if `pyramid` is empty
  */
 export async function estimateContrastLimits(
@@ -107,10 +107,10 @@ async function estimateFromPixels(
     }
   }
 
-  return [
-    quantile(histogram, count, lowQuantile, min, max),
-    quantile(histogram, count, highQuantile, min, max),
-  ];
+  const low = quantile(histogram, count, lowQuantile, min, max);
+  const high = quantile(histogram, count, highQuantile, min, max);
+  // the quantiles of a nearly uniform image share a bin
+  return high > low ? [low, high] : [low, low + 1];
 }
 
 /**
