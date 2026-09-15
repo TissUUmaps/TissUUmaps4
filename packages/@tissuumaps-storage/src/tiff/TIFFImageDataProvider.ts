@@ -17,9 +17,9 @@ import {
   type TIFFImageDataSource,
   tiffImageDataSourceDefaults,
 } from "./TIFFImageDataSource";
-import { estimateContrastLimits } from "./estimateContrastLimits";
 import { type TIFFChannel, findTIFFParser } from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
+import { readChannelHistogram } from "./readChannelHistogram";
 
 /**
  * Remote files are read in 64 KiB blocks, of which 256 (16 MiB) are cached per
@@ -126,18 +126,20 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     const { pyramids, channels } = await parser.load(tiff, { z, t, signal });
 
     const { GeoTIFFTileSource, pool, poolSize } = installTIFFTileSource();
-    let channelsWithLimits: TIFFChannel[] | undefined;
+    let channelsWithHistograms: TIFFChannel[] | undefined;
     if (channels !== undefined) {
-      // one estimate per decoder worker at a time, so that a file with many
+      // one histogram per decoder worker at a time, so that a file with many
       // channels does not start every read at once
-      const limits: [number, number][] = [];
+      const histograms: (
+        { hist: number[]; range: [number, number] } | undefined
+      )[] = [];
       let next = 0;
       await Promise.all(
         Array.from(
           { length: Math.min(poolSize, channels.length) },
           async () => {
             for (let c = next++; c < channels.length; c = next++) {
-              limits[c] = await estimateContrastLimits(pyramids[c]!, {
+              histograms[c] = await readChannelHistogram(pyramids[c]!, {
                 pool,
                 signal,
               });
@@ -145,15 +147,15 @@ export class TIFFImageDataProvider implements ImageDataProvider<
           },
         ),
       );
-      channelsWithLimits = channels.map((channel, c) => ({
+      channelsWithHistograms = channels.map((channel, c) => ({
         ...channel,
-        contrastLimits: limits[c]!,
+        histogram: histograms[c],
       }));
     }
     const tileSources = pyramids.map(
       (images) =>
         new GeoTIFFTileSource({ GeoTIFF: tiff, GeoTIFFImages: images }),
     );
-    return new TIFFImageData(tileSources, channelsWithLimits);
+    return new TIFFImageData(tileSources, channelsWithHistograms);
   }
 }

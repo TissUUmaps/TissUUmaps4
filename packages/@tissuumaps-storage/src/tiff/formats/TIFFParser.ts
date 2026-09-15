@@ -10,7 +10,7 @@ import { QPTIFFParser } from "./QPTIFFParser";
 export type TIFFChannel = {
   name?: string;
   color?: Color;
-  contrastLimits?: [number, number];
+  histogram?: { hist: number[]; range: [number, number] };
 };
 
 /** The pyramid and channel metadata of a TIFF file */

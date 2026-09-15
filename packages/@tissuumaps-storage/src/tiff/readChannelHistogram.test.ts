@@ -6,13 +6,13 @@ import {
 } from "geotiff";
 import { describe, expect, it, vi } from "vitest";
 
-import { estimateContrastLimits } from "./estimateContrastLimits";
+import { readChannelHistogram } from "./readChannelHistogram";
 
 function fakeRead(values: number[] = [0, 1]) {
   return vi.fn(() => Promise.resolve(Float64Array.from(values)));
 }
 
-// 16-bit unsigned by default, so that the estimate runs; a strip-stored image
+// 16-bit unsigned by default, so that the histogram is read; a strip-stored image
 // reports its full width as tile width and the rows per strip as tile height
 function fakeImage(
   width: number,
@@ -43,21 +43,19 @@ function fakeImage(
   } as unknown as GeoTIFFImage;
 }
 
-describe("estimateContrastLimits", () => {
-  it("gives integers of 8 bits or fewer their full range without reading", async () => {
+describe("readChannelHistogram", () => {
+  it("gives integers of 8 bits or fewer no histogram, without reading", async () => {
     const readRasters = fakeRead();
-    await expect(
-      estimateContrastLimits([fakeImage(10, 10, { bits: 8, readRasters })]),
-    ).resolves.toEqual([0, 255]);
-    await expect(
-      estimateContrastLimits([fakeImage(10, 10, { bits: 8, format: 2 })]),
-    ).resolves.toEqual([-128, 127]);
-    await expect(
-      estimateContrastLimits([fakeImage(10, 10, { bits: 1 })]),
-    ).resolves.toEqual([0, 1]);
-    await expect(
-      estimateContrastLimits([fakeImage(10, 10, { bits: 0 })]),
-    ).resolves.toEqual([0, 1]);
+    for (const options of [
+      { bits: 8, readRasters },
+      { bits: 8, format: 2 },
+      { bits: 1 },
+      { bits: 0 },
+    ]) {
+      await expect(
+        readChannelHistogram([fakeImage(10, 10, options)]),
+      ).resolves.toBeUndefined();
+    }
     expect(readRasters).not.toHaveBeenCalled();
   });
 
@@ -67,7 +65,7 @@ describe("estimateContrastLimits", () => {
     const pyramid = sizes.map((size, i) =>
       fakeImage(size, size, { readRasters: reads[i] }),
     );
-    await estimateContrastLimits(pyramid);
+    await readChannelHistogram(pyramid);
     expect(reads.map((read) => read.mock.calls.length)).toEqual([0, 0, 1, 0]);
   });
 
@@ -77,54 +75,55 @@ describe("estimateContrastLimits", () => {
       fakeImage(100, 100, { readRasters: reads[0] }),
       fakeImage(50, 50, { readRasters: reads[1] }),
     ];
-    await estimateContrastLimits(pyramid);
+    await readChannelHistogram(pyramid);
     expect(reads.map((read) => read.mock.calls.length)).toEqual([1, 0]);
   });
 
   it("rejects a channel without levels", async () => {
-    await expect(estimateContrastLimits([])).rejects.toThrow();
+    await expect(readChannelHistogram([])).rejects.toThrow();
   });
 
-  it("places the limits at the low and high quantiles", async () => {
+  it("spans the range of the values and counts every one of them", async () => {
     const values = Array.from({ length: 1000 }, (_, i) => i);
-    const [min, max] = await estimateContrastLimits([
+    const histogram = await readChannelHistogram([
       fakeImage(500, 400, { readRasters: fakeRead(values) }),
     ]);
-    expect(min).toBeCloseTo(9.76, 1);
-    expect(max).toBeCloseTo(998.02, 1);
+    expect(histogram?.range).toEqual([0, 999]);
+    expect(histogram?.hist.reduce((sum, count) => sum + count, 0)).toBe(1000);
   });
 
-  it("interpolates the quantile within its histogram bin", async () => {
+  it("counts the lowest and highest values in the outermost bins", async () => {
     const values = [
       ...Array.from({ length: 50 }, () => 0),
       ...Array.from({ length: 50 }, () => 100),
     ];
-    const [min, max] = await estimateContrastLimits([
+    const histogram = await readChannelHistogram([
       fakeImage(10, 10, { readRasters: fakeRead(values) }),
     ]);
-    expect(min).toBeCloseTo(0, 2);
-    expect(max).toBeCloseTo(100, 2);
+    expect(histogram?.range).toEqual([0, 100]);
+    expect(histogram?.hist[0]).toBe(50);
+    expect(histogram?.hist[histogram.hist.length - 1]).toBe(50);
   });
 
-  it("gives a uniform image a unit range", async () => {
+  it("gives a channel with fewer than two distinct values no histogram", async () => {
     await expect(
-      estimateContrastLimits([
+      readChannelHistogram([
         fakeImage(10, 10, { readRasters: fakeRead([7, 7, 7]) }),
       ]),
-    ).resolves.toEqual([7, 8]);
+    ).resolves.toBeUndefined();
   });
 
   it("ignores samples that are not finite", async () => {
-    await expect(
-      estimateContrastLimits([
-        fakeImage(10, 10, { readRasters: fakeRead([NaN, 7, 7, Infinity]) }),
-      ]),
-    ).resolves.toEqual([7, 8]);
+    const histogram = await readChannelHistogram([
+      fakeImage(10, 10, { readRasters: fakeRead([NaN, 1, 9, Infinity]) }),
+    ]);
+    expect(histogram?.range).toEqual([1, 9]);
+    expect(histogram?.hist.reduce((sum, count) => sum + count, 0)).toBe(2);
   });
 
   it("reads small images in full", async () => {
     const readRasters = fakeRead();
-    await estimateContrastLimits([fakeImage(500, 400, { readRasters })]);
+    await readChannelHistogram([fakeImage(500, 400, { readRasters })]);
     expect(readRasters).toHaveBeenCalledWith(
       expect.objectContaining({ window: [0, 0, 500, 400] }),
     );
@@ -132,7 +131,7 @@ describe("estimateContrastLimits", () => {
 
   it("samples large images through a centered crop", async () => {
     const readRasters = fakeRead();
-    await estimateContrastLimits([fakeImage(4096, 4096, { readRasters })]);
+    await readChannelHistogram([fakeImage(4096, 4096, { readRasters })]);
     expect(readRasters).toHaveBeenCalledWith(
       expect.objectContaining({ window: [1792, 1792, 2304, 2304] }),
     );
@@ -140,7 +139,7 @@ describe("estimateContrastLimits", () => {
 
   it("snaps the crop to the tile grid", async () => {
     const readRasters = fakeRead();
-    await estimateContrastLimits([
+    await readChannelHistogram([
       fakeImage(4096, 4096, { readRasters, tileWidth: 1024, tileHeight: 1024 }),
     ]);
     expect(readRasters).toHaveBeenCalledWith(
@@ -150,7 +149,7 @@ describe("estimateContrastLimits", () => {
 
   it("crops a strip-stored image to whole strips at the full width", async () => {
     const readRasters = fakeRead();
-    await estimateContrastLimits([
+    await readChannelHistogram([
       fakeImage(4096, 4096, { readRasters, tileWidth: 4096, tileHeight: 64 }),
     ]);
     expect(readRasters).toHaveBeenCalledWith(
@@ -160,7 +159,7 @@ describe("estimateContrastLimits", () => {
 
   it("reads at least one strip of a wide strip-stored image", async () => {
     const readRasters = fakeRead();
-    await estimateContrastLimits([
+    await readChannelHistogram([
       fakeImage(20000, 15000, {
         readRasters,
         tileWidth: 20000,
@@ -176,13 +175,13 @@ describe("estimateContrastLimits", () => {
     const controller = new AbortController();
     controller.abort();
     await expect(
-      estimateContrastLimits([fakeImage(10, 10)], {
+      readChannelHistogram([fakeImage(10, 10)], {
         signal: controller.signal,
       }),
     ).rejects.toThrow();
   });
 
-  it("estimates the contrast limits of a written file", async () => {
+  it("reads the histogram of a written file", async () => {
     const values = Uint16Array.from({ length: 64 }, (_, i) => i * 100);
     const buffer = writeArrayBuffer(values, {
       width: 8,
@@ -192,9 +191,8 @@ describe("estimateContrastLimits", () => {
       PhotometricInterpretation: 1,
     });
     const tiff: GeoTIFF = await fromArrayBuffer(buffer);
-    const [min, max] = await estimateContrastLimits([await tiff.getImage(0)]);
-    expect(min).toBeGreaterThanOrEqual(0);
-    expect(min).toBeLessThan(max);
-    expect(max).toBeLessThanOrEqual(6300);
+    const histogram = await readChannelHistogram([await tiff.getImage(0)]);
+    expect(histogram?.range).toEqual([0, 6300]);
+    expect(histogram?.hist.reduce((sum, count) => sum + count, 0)).toBe(64);
   });
 });
