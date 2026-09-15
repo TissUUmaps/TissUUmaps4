@@ -57,6 +57,15 @@ ships the fix.
   decoded in our own worker (`tiff.worker.ts`) so that it uses the patched
   code too.
 
+A patch is applied by this workspace's `pnpm install`, not by installing the
+packages we publish. `@tissuumaps/storage` leaves `geotiff` external, so a
+project that depends on the published package resolves its own unpatched copy
+for everything outside the inlined worker: big-endian TIFFs then read deferred
+tag values wrong, and LZW-compressed tiles decoded on the main thread corrupt
+past 4093 dictionary codes. Until both fixes are released upstream, such a
+project has to apply `patches/geotiff@3.0.5.patch` itself. The app in this
+repository is unaffected.
+
 ## Forked dependencies
 
 - **geotiff-tilesource**: our fork of pearcetm/GeoTIFFTileSource, branch
