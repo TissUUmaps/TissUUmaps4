@@ -46,60 +46,14 @@ export class ImageUtils {
   }
 
   /**
-   * Computes the value histogram of image data, for use with
-   * {@link ImageUtils.getDefaultContrastLimits}
-   *
-   * The range spans the minimum and maximum of the finite values in `data`,
-   * and `hist[i]` counts the values that are closest to bin `i`, with bins
-   * spread evenly over the range: bin `0` maps to the minimum, the last bin to
-   * the maximum, and each bin in between to `vmin + i / (n - 1) * (vmax -
-   * vmin)`. Non-finite values (`NaN`, infinities) are ignored. If all values
-   * are equal, or if `n` is `1`, they all fall into bin `0`. Data without
-   * finite values yields all-zero counts and the range `[0, 0]`.
-   *
-   * @param data - The image data to compute the histogram of
-   * @param n - The number of bins, a positive integer
-   * @returns The histogram, as bin counts and the value range the bins span
-   */
-  static computeHistogram(
-    data: NumericArray,
-    n: number = 256,
-  ): { hist: number[]; range: [number, number] } {
-    let vmin = Infinity;
-    let vmax = -Infinity;
-    for (let i = 0; i < data.length; i++) {
-      const v = data[i]!;
-      if (Number.isFinite(v)) {
-        if (v < vmin) {
-          vmin = v;
-        }
-        if (v > vmax) {
-          vmax = v;
-        }
-      }
-    }
-    const hist = new Array<number>(n).fill(0);
-    if (vmin > vmax) {
-      return { hist, range: [0, 0] };
-    }
-    const scale = vmin < vmax ? (n - 1) / (vmax - vmin) : 0;
-    for (let i = 0; i < data.length; i++) {
-      const v = data[i]!;
-      if (Number.isFinite(v)) {
-        hist[Math.round((v - vmin) * scale)]! += 1;
-      }
-    }
-    return { hist, range: [vmin, vmax] };
-  }
-
-  /**
    * Returns quantile-based contrast limits derived from a channel histogram,
    * for use as default contrast limits when no contrast limits are known
    *
    * The histogram's `hist[i]` counts the values that fall into bin `i`, with
    * bins spread evenly over `range`: bin `0` maps to the range's lower bound,
    * the last bin to its upper bound, and each bin in between to
-   * `vmin + i / (n - 1) * (vmax - vmin)`. The lower limit is the value of the
+   * `vmin + i / (n - 1) * (vmax - vmin)` (see
+   * {@link MathUtils.computeHistogram}). The lower limit is the value of the
    * first bin at which the cumulative count (from the bottom) reaches the
    * given quantile of the total count, the upper limit is the value of the
    * first bin at which the cumulative count from the top does; i.e., the
