@@ -102,6 +102,10 @@ export class TIFFImageData implements ImageData {
     return this._channels?.[c]?.histogram;
   }
 
+  getChannelContrastLimits(c: number): [number, number] | undefined {
+    return this._channels?.[c]?.contrastLimits;
+  }
+
   close(): void {
     // the decoder pool is shared, and the file is read on demand
   }

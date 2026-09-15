@@ -11,6 +11,7 @@ export type TIFFChannel = {
   name?: string;
   color?: Color;
   histogram?: { hist: number[]; range: [number, number] };
+  contrastLimits?: [number, number];
 };
 
 /** The pyramid and channel metadata of a TIFF file */
