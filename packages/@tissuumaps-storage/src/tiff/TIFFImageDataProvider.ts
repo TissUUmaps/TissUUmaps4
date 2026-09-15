@@ -5,13 +5,13 @@ import type {
   ImageDataProvider,
 } from "@tissuumaps/core";
 
-import { TIFFImageData } from "./TIFFImageData";
+import { type TIFFChannel, TIFFImageData } from "./TIFFImageData";
 import {
   type NormalizedTIFFImageDataSource,
   type TIFFImageDataSource,
   tiffImageDataSourceDefaults,
 } from "./TIFFImageDataSource";
-import { type TIFFChannel, findTIFFParser } from "./formats/TIFFParser";
+import { findTIFFParser } from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
 import { readChannelHistograms } from "./readChannelHistogram";
@@ -131,11 +131,22 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     const { GeoTIFFTileSource, pool, poolSize } = installTIFFTileSource();
     let channelsWithHistograms: TIFFChannel[] | undefined;
     if (channels !== undefined) {
-      const histograms = await readChannelHistograms(pyramids, {
-        pool,
-        poolSize,
-        signal,
-      });
+      // the histograms only seed the contrast limits, which the renderer can
+      // fall back to the data type range for, so a file whose sample crops
+      // cannot be decoded still opens
+      let histograms: (
+        { hist: number[]; range: [number, number] } | undefined
+      )[] = [];
+      try {
+        histograms = await readChannelHistograms(pyramids, {
+          pool,
+          poolSize,
+          signal,
+        });
+      } catch (error) {
+        signal?.throwIfAborted();
+        console.error("Failed to read the TIFF channel histograms:", error);
+      }
       channelsWithHistograms = channels.map((channel, c) => ({
         ...channel,
         histogram: histograms[c],

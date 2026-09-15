@@ -6,12 +6,10 @@ import { OMETIFFParser } from "./OMETIFFParser";
 import { PlainTIFFParser } from "./PlainTIFFParser";
 import { QPTIFFParser } from "./QPTIFFParser";
 
-/** A channel of a multi-channel TIFF file */
-export type TIFFChannel = {
+/** What a parser reads about a channel of a multi-channel TIFF file */
+export type TIFFChannelMetadata = {
   name?: string;
   color?: Color;
-  histogram?: { hist: number[]; range: [number, number] };
-  contrastLimits?: [number, number];
 };
 
 /** The pyramid and channel metadata of a TIFF file */
@@ -23,7 +21,7 @@ export type TIFFStructure = {
   pyramids: GeoTIFFImage[][];
 
   /** `undefined` for files that are drawn in their own colors */
-  channels: TIFFChannel[] | undefined;
+  channels: TIFFChannelMetadata[] | undefined;
 };
 
 /** Reads the structure of one TIFF flavor */
