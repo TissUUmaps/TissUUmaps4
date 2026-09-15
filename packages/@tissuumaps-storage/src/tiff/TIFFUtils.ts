@@ -1,7 +1,5 @@
 import { type GeoTIFF, GeoTIFFImage, globals } from "geotiff";
 
-import type { TIFFChannel } from "./formats/TIFFParser";
-
 const { WhiteIsZero, RGB, Palette, YCbCr } = globals.photometricInterpretations;
 
 /** Helpers shared by the TIFF parsers */
@@ -289,23 +287,5 @@ export class TIFFUtils {
         throw new Error(`Channel ${c} is a white-is-zero image.`);
       }
     });
-  }
-
-  /**
-   * Makes a lone uncolored channel white
-   *
-   * Channels of a file with several channels keep their missing colors: the
-   * renderer gives each of them the default color of its index, whether or not
-   * the file colors the others.
-   *
-   * @param channels - The channels
-   * @returns The channels
-   */
-  static whitenLoneChannel(channels: TIFFChannel[]): TIFFChannel[] {
-    const [only] = channels;
-    if (channels.length === 1 && only!.color === undefined) {
-      return [{ ...only, color: { r: 255, g: 255, b: 255 } }];
-    }
-    return channels;
   }
 }

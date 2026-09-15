@@ -39,7 +39,7 @@ Per-channel rendering settings come from the file where it records them:
 | Setting         | Source                                    | Fallback                                                                                                   |
 | --------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Name            | OME-XML `Channel` `Name`, QPTIFF `Name`   | none                                                                                                       |
-| Color           | OME-XML `Channel` `Color`, QPTIFF `Color` | white for a file with a single channel, otherwise a color derived from the channel index                   |
+| Color           | OME-XML `Channel` `Color`, QPTIFF `Color` | a color derived from the channel index                                                                     |
 | Contrast limits | not recorded by TIFF                      | the full range for integers of 8 bits or fewer, otherwise the 1% and 99.9% quantiles of a sample of pixels |
 | Visibility      | not recorded by TIFF                      | visible                                                                                                    |
 

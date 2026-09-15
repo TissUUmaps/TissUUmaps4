@@ -727,9 +727,7 @@ describe("findTIFFParser", () => {
         expect(await findTIFFParser(tiff)).toBeInstanceOf(PlainTIFFParser);
         const structure = await read(tiff);
         expect(structure.pyramids).toEqual([[expect.anything()]]);
-        expect(structure.channels).toEqual([
-          { color: { r: 255, g: 255, b: 255 } },
-        ]);
+        expect(structure.channels).toEqual([{}]);
         expect(structure.pyramids[0]![0]!.getBitsPerSample(0)).toBe(16);
       });
 

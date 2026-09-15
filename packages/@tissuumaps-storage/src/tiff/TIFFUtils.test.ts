@@ -115,25 +115,4 @@ describe("TIFFUtils", () => {
       );
     });
   });
-
-  describe("whitenLoneChannel", () => {
-    it("makes a lone uncolored channel white", () => {
-      expect(TIFFUtils.whitenLoneChannel([{}])).toEqual([
-        { color: { r: 255, g: 255, b: 255 } },
-      ]);
-      const red = { r: 255, g: 0, b: 0 };
-      expect(TIFFUtils.whitenLoneChannel([{ color: red }])).toEqual([
-        { color: red },
-      ]);
-    });
-
-    it("leaves the channels of a multi-channel file as they are", () => {
-      const red = { r: 255, g: 0, b: 0 };
-      expect(TIFFUtils.whitenLoneChannel([{}, {}])).toEqual([{}, {}]);
-      expect(TIFFUtils.whitenLoneChannel([{ color: red }, {}])).toEqual([
-        { color: red },
-        {},
-      ]);
-    });
-  });
 });
