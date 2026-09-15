@@ -346,7 +346,7 @@ describe("findTIFFParser", () => {
       ]);
     });
 
-    it("fills the missing colors of a partly colored file", async () => {
+    it("leaves the uncolored channels of a partly colored file uncolored", async () => {
       const description = omeDescription(
         omeImage({
           sizeC: 3,
@@ -357,8 +357,8 @@ describe("findTIFFParser", () => {
       const structure = await read(fakeTIFF(omePlanes(description, 3)));
       expect(structure.channels?.map((ch) => ch.color)).toEqual([
         { r: 255, g: 0, b: 0 },
-        { r: 0, g: 255, b: 0 },
-        { r: 0, g: 0, b: 255 },
+        undefined,
+        undefined,
       ]);
     });
 
@@ -378,8 +378,8 @@ describe("findTIFFParser", () => {
       const structure = await read(fakeTIFF(omePlanes(description, 3)));
       expect(structure.channels?.map((ch) => ch.color)).toEqual([
         { r: 255, g: 0, b: 0 },
-        { r: 0, g: 255, b: 0 },
-        { r: 0, g: 0, b: 255 },
+        undefined,
+        undefined,
       ]);
     });
 

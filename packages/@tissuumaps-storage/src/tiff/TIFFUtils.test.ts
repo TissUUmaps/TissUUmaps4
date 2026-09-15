@@ -116,23 +116,24 @@ describe("TIFFUtils", () => {
     });
   });
 
-  describe("fillMissingColors", () => {
+  describe("whitenLoneChannel", () => {
     it("makes a lone uncolored channel white", () => {
-      expect(TIFFUtils.fillMissingColors([{}])).toEqual([
+      expect(TIFFUtils.whitenLoneChannel([{}])).toEqual([
         { color: { r: 255, g: 255, b: 255 } },
       ]);
       const red = { r: 255, g: 0, b: 0 };
-      expect(TIFFUtils.fillMissingColors([{ color: red }])).toEqual([
+      expect(TIFFUtils.whitenLoneChannel([{ color: red }])).toEqual([
         { color: red },
       ]);
     });
 
-    it("fills the missing colors only if some channel is colored", () => {
+    it("leaves the channels of a multi-channel file as they are", () => {
       const red = { r: 255, g: 0, b: 0 };
-      expect(TIFFUtils.fillMissingColors([{}, {}])).toEqual([{}, {}]);
-      const filled = TIFFUtils.fillMissingColors([{ color: red }, {}]);
-      expect(filled[0]?.color).toEqual(red);
-      expect(filled[1]?.color).toBeDefined();
+      expect(TIFFUtils.whitenLoneChannel([{}, {}])).toEqual([{}, {}]);
+      expect(TIFFUtils.whitenLoneChannel([{ color: red }, {}])).toEqual([
+        { color: red },
+        {},
+      ]);
     });
   });
 });
