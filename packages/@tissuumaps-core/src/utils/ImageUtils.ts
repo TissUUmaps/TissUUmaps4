@@ -54,26 +54,32 @@ export class ImageUtils {
    * the last bin to its upper bound, and each bin in between to
    * `vmin + i / (n - 1) * (vmax - vmin)` (see
    * {@link MathUtils.computeHistogram}). The lower limit is the value of the
-   * first bin at which the cumulative count (from the bottom) reaches the
-   * given quantile of the total count, the upper limit is the value of the
-   * first bin at which the cumulative count from the top does; i.e., the
-   * quantile is clipped at each end. Values that fall into the same bin
-   * cannot be told apart, so the limits are only as precise as the bins.
+   * first bin at which the cumulative count from the bottom reaches the
+   * fraction `qlow` of the total count, the upper limit is the value of the
+   * first bin at which the cumulative count from the top reaches the fraction
+   * `1 - qhigh`; i.e., the fraction `qlow` of the values is clipped at the
+   * bottom and the fraction `1 - qhigh` at the top. Only non-empty bins are
+   * considered, so quantiles of `0` and `1` yield the first and last non-empty
+   * bin, respectively. Values that fall into the same bin cannot be told
+   * apart, so the limits are only as precise as the bins.
    *
    * Histograms with fewer than two bins, histograms whose counts sum to zero
-   * and degenerate ranges return `range` as is. Note that the limits collapse
-   * (upper equals lower) if more than `1 - quantile` of the values fall into a
-   * single bin, e.g. for sparse channels that are mostly background.
+   * and degenerate ranges return `range` as is. So do histograms whose clipped
+   * limits would not be ascending (upper bin at or below lower bin), which
+   * happens if more than `qhigh - qlow` of the values fall into a single bin,
+   * e.g. for sparse channels that are mostly background, or if `qhigh` is
+   * below `qlow`, and a `qlow` above `1`, which no bin can reach.
    *
    * @param histogram - The channel histogram, as bin counts and value range
-   * @param quantile - The fraction of values to clip at each end, in
-   * `[0, 0.5]`; larger fractions yield non-ascending limits
+   * @param qlow - The quantile of the lower limit, in `[0, 1]`
+   * @param qhigh - The quantile of the upper limit, in `[0, 1]`, above `qlow`
    * @returns The contrast limits, as `[low, high]` in the histogram's value
-   * range
+   * range, with `low < high` unless the range is degenerate
    */
   static getDefaultContrastLimits(
     histogram: { hist: number[]; range: [number, number] },
-    quantile: number = 0.01,
+    qlow: number = 0.01,
+    qhigh: number = 0.999,
   ): [number, number] {
     const {
       hist,
@@ -87,27 +93,41 @@ export class ImageUtils {
     if (total === 0) {
       return [vmin, vmax];
     }
-    const target = total * quantile;
-    let binLow: number | undefined;
-    let binHigh: number | undefined;
-    let cumulativeLow = 0;
-    let cumulativeHigh = 0;
+    let binLeft: number | undefined;
+    let binRight: number | undefined;
+    let cumulativeLeft = 0;
+    let cumulativeRight = 0;
+    const targetLeft = total * qlow;
+    const targetRight = total - total * qhigh; // avoid potential rounding errors of total * (1 - qhigh)
     for (let i = 0; i < n; i++) {
-      cumulativeLow += hist[i]!;
-      if (binLow === undefined && cumulativeLow >= target) {
-        binLow = i;
+      const countLeft = hist[i]!;
+      if (countLeft > 0) {
+        cumulativeLeft += countLeft;
+        if (binLeft === undefined && cumulativeLeft >= targetLeft) {
+          binLeft = i;
+        }
       }
-      cumulativeHigh += hist[n - 1 - i]!;
-      if (binHigh === undefined && cumulativeHigh >= target) {
-        binHigh = n - 1 - i;
+      const countRight = hist[n - 1 - i]!;
+      if (countRight > 0) {
+        cumulativeRight += countRight;
+        if (binRight === undefined && cumulativeRight >= targetRight) {
+          binRight = n - 1 - i;
+        }
       }
-      if (binLow !== undefined && binHigh !== undefined) {
+      if (binLeft !== undefined && binRight !== undefined) {
         break;
       }
     }
+    if (
+      binLeft === undefined ||
+      binRight === undefined ||
+      binLeft >= binRight
+    ) {
+      return [vmin, vmax];
+    }
     return [
-      vmin + (binLow! / (n - 1)) * (vmax - vmin),
-      vmin + (binHigh! / (n - 1)) * (vmax - vmin),
+      vmin + (binLeft / (n - 1)) * (vmax - vmin),
+      vmin + (binRight / (n - 1)) * (vmax - vmin),
     ];
   }
 
