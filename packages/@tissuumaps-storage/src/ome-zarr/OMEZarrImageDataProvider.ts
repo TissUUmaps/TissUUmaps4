@@ -233,8 +233,8 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     const array = arrays[level]!;
     const omero = image.checkChannelIndex(c ?? 0);
     const selection = getSlices([c ?? 0], array.shape, axisNames, {
-      z: z ?? omero.rdefs.defaultZ,
-      t: t ?? omero.rdefs.defaultT,
+      z: z ?? omero.rdefs?.defaultZ,
+      t: t ?? omero.rdefs?.defaultT,
     })[0] as (number | zarr.Slice | null)[];
     const chunk = await zarr.get(array, selection, { signal });
     if (
