@@ -12,6 +12,17 @@ import type {
 import type { TIFFChannel } from "./formats/TIFFParser";
 import { tiffRasterType } from "./installTIFFTileSource";
 
+/**
+ * The loaded image of a TIFF file
+ *
+ * Multi-channel files provide one tile source per channel, whose tiles carry
+ * the raw samples that the renderer contrast-stretches and colorizes with the
+ * channel names, colors and estimated contrast limits read by the parser. RGB
+ * files provide a single tile source that is drawn as it is.
+ *
+ * Channel visibility is not provided: neither OME-XML nor the QPTIFF
+ * description records it.
+ */
 export class TIFFImageData implements ImageData {
   private readonly _tileSources: OpenSeadragon.TileSource[];
   private readonly _channels: TIFFChannel[] | undefined;
@@ -58,7 +69,7 @@ export class TIFFImageData implements ImageData {
     const raster = (await event.getData(tiffRasterType)) as TiffRaster;
     const band = raster.bands[0];
     if (band === undefined) {
-      throw new Error("The tile raster has no bands");
+      throw new Error("The tile's raster has no bands");
     }
     return { values: band, width: raster.width, height: raster.height };
   }
