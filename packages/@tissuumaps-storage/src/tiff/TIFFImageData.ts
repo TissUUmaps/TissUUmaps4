@@ -9,8 +9,14 @@ import type {
   TypedArray,
 } from "@tissuumaps/core";
 
-import type { TIFFChannel } from "./formats/TIFFParser";
+import type { TIFFChannelMetadata } from "./formats/TIFFParser";
 import { tiffRasterType } from "./installTIFFTileSource";
+
+/** A channel of a loaded multi-channel TIFF file */
+export type TIFFChannel = TIFFChannelMetadata & {
+  histogram?: { hist: number[]; range: [number, number] };
+  contrastLimits?: [number, number];
+};
 
 /**
  * The loaded image of a TIFF file
@@ -108,7 +114,7 @@ export class TIFFImageData implements ImageData {
    * @throws Error if `c` is out of bounds
    */
   getChannelName(c: number): string | undefined {
-    return this._checkChannelIndex(c).name;
+    return this._getChannel(c).name;
   }
 
   /**
@@ -123,7 +129,7 @@ export class TIFFImageData implements ImageData {
    * @throws Error if `c` is out of bounds
    */
   getChannelColor(c: number): Color | undefined {
-    return this._checkChannelIndex(c).color;
+    return this._getChannel(c).color;
   }
 
   /**
@@ -138,7 +144,7 @@ export class TIFFImageData implements ImageData {
   getChannelHistogram(
     c: number,
   ): { hist: number[]; range: [number, number] } | undefined {
-    return this._checkChannelIndex(c).histogram;
+    return this._getChannel(c).histogram;
   }
 
   /**
@@ -155,7 +161,7 @@ export class TIFFImageData implements ImageData {
    * @throws Error if `c` is out of bounds
    */
   getChannelContrastLimits(c: number): [number, number] | undefined {
-    return this._checkChannelIndex(c).contrastLimits;
+    return this._getChannel(c).contrastLimits;
   }
 
   /** Closing does nothing: the decoder pool is shared, and the file is read on demand */
@@ -164,14 +170,14 @@ export class TIFFImageData implements ImageData {
   }
 
   /**
-   * Returns a channel by index
+   * Returns the channel at an index
    *
    * @param c - The channel index (0-based)
    * @returns The channel
    * @throws Error if the file is drawn in its own colors, or if `c` is out of
    * bounds
    */
-  private _checkChannelIndex(c: number): TIFFChannel {
+  private _getChannel(c: number): TIFFChannel {
     if (this._channels === undefined) {
       throw new Error("Not a multi-channel image");
     }

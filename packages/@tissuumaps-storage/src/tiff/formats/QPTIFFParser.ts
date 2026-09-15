@@ -4,7 +4,11 @@ import type { Color } from "@tissuumaps/core";
 
 import { TIFFUtils } from "../TIFFUtils";
 import { XMLUtils } from "../XMLUtils";
-import type { TIFFChannel, TIFFParser, TIFFStructure } from "./TIFFParser";
+import type {
+  TIFFChannelMetadata,
+  TIFFParser,
+  TIFFStructure,
+} from "./TIFFParser";
 
 /** The root element of the XML description written by PerkinElmer/Akoya scanners */
 const rootElement = "PerkinElmer-QPI-ImageDescription";
@@ -40,7 +44,7 @@ export class QPTIFFParser implements TIFFParser {
     }
     const images = await TIFFUtils.readImages(tiff, { signal });
     const descriptions = await TIFFUtils.readDescriptions(images, { signal });
-    const entries: { image: GeoTIFFImage; channel: TIFFChannel }[] = [];
+    const entries: { image: GeoTIFFImage; channel: TIFFChannelMetadata }[] = [];
     images.forEach((image, i) => {
       const root = XMLUtils.parse(descriptions[i]);
       if (root?.localName !== rootElement) {

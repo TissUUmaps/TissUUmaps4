@@ -1,4 +1,4 @@
-export { TIFFImageData } from "./TIFFImageData";
+export { TIFFImageData, type TIFFChannel } from "./TIFFImageData";
 export { TIFFImageDataProvider } from "./TIFFImageDataProvider";
 export {
   tiffImageDataSourceDefaults,
@@ -6,4 +6,4 @@ export {
   type NormalizedTIFFImageDataSource,
   type TIFFImageDataSource,
 } from "./TIFFImageDataSource";
-export { type TIFFChannel } from "./formats/TIFFParser";
+export { type TIFFChannelMetadata } from "./formats/TIFFParser";
