@@ -39,7 +39,7 @@ Per-channel rendering settings are taken from the image's `omero` metadata where
 | --------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | Name            | `channels[c].label`                   | none                                                                                                            |
 | Visibility      | `channels[c].active`                  | visible                                                                                                         |
-| Color           | `channels[c].color` (6-digit hex)     | a color derived from the channel index                                                                          |
+| Color           | `channels[c].color` (6-digit hex)     | a color derived from the channel index, or white for 1-channel images                                           |
 | Contrast limits | `channels[c].window.start` and `.end` | `[0, 255]` for `uint8` arrays, otherwise quantile-based limits derived from a histogram of the channel's values |
 
 All of these can be overridden per channel in the project file through the image's `channels` array (see the [example](#example) below).
