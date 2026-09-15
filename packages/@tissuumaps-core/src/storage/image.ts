@@ -52,13 +52,12 @@ export interface ImageData extends RasterData {
    *
    * Channels without a color (neither configured on the image nor returned
    * here) are colorized with a default color derived from the channel index
-   * (see `ImageUtils.getDefaultChannelColor`), so that multi-channel image data
+   * (see {@link ImageUtils.getDefaultChannelColor}), so that multi-channel image data
    * without any color information renders as distinguishable channels rather
-   * than as a single white blob. This fallback is data-agnostic: if colors are
-   * available for only some channels, data providers should return suitable
-   * default colors for the remaining ones themselves, so that all channels of
-   * an image are colored consistently and the index-based fallback does not
-   * mix with colors from image metadata.
+   * than as a single white blob; the only channel of single-channel image data
+   * is colorized white instead. Data providers should only return colors that
+   * their image metadata actually specifies, and `undefined` for all other
+   * channels, leaving the choice of default colors to the renderer.
    *
    * @param c - The channel index (0-based)
    * @returns The channel's color, or `undefined` if not available
@@ -66,16 +65,40 @@ export interface ImageData extends RasterData {
   getChannelColor?: (c: number) => Color | undefined;
 
   /**
+   * Returns the value histogram of a specific channel, or undefined if not available
+   *
+   * `hist[i]` counts the channel values that fall into bin `i`, with bins
+   * spread evenly over `range`: the first bin corresponds to the range's lower
+   * bound, the last bin to its upper bound. The histogram may be computed from
+   * a downsampled resolution level. The renderer derives default contrast
+   * limits from the histogram for channels without contrast limits (neither
+   * configured on the image nor returned by
+   * {@link ImageData.getChannelContrastLimits}, see
+   * {@link ImageUtils.getDefaultContrastLimits}). As the renderer calls this on every
+   * synchronization, implementations should return a precomputed histogram
+   * rather than compute one on each call.
+   *
+   * @param c - The channel index (0-based)
+   * @returns The channel's histogram, as bin counts and the value range the
+   * bins span, or `undefined` if not available
+   */
+  getChannelHistogram?: (
+    c: number,
+  ) => { hist: number[]; range: [number, number] } | undefined;
+
+  /**
    * Returns the contrast limits of a specific channel, or undefined if not available
    *
    * The renderer scales each channel value linearly between the contrast
    * limits, clamps the result to `[0, 1]` and multiplies it with the channel's
    * color. Channels without contrast limits (neither configured on the image
-   * nor returned here) are stretched over the value range that the data type
-   * of their channel data can hold, as returned by
-   * `ImageUtils.getDataTypeRange` (the full integer range for integer typed
-   * arrays, `[0, 1]` for floating-point typed arrays, `[0, 255]` for plain
-   * arrays).
+   * nor returned here) are stretched between quantile-based limits derived
+   * from the channel's histogram, if {@link ImageData.getChannelHistogram}
+   * provides one (see {@link ImageUtils.getDefaultContrastLimits}), and otherwise
+   * over the value range that the data type of their channel data can hold, as
+   * returned by {@link ImageUtils.getDataTypeRange} (the full integer range for
+   * integer typed arrays, `[0, 1]` for floating-point typed arrays, `[0, 255]`
+   * for plain arrays).
    *
    * @param c - The channel index (0-based)
    * @returns The channel's contrast limits, in the channel's value range, or

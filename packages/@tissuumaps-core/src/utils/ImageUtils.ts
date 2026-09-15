@@ -5,42 +5,6 @@ import { ColorUtils } from "./ColorUtils";
 /** Utility methods for image channel defaults */
 export class ImageUtils {
   /**
-   * Returns the value range that the type of the given array can hold, for use
-   * as default contrast limits of image channel data
-   *
-   * Integer typed arrays span their full integer range, floating-point typed
-   * arrays are taken to hold normalized values in `[0, 1]`, and plain arrays
-   * are taken to hold 8-bit values.
-   *
-   * @param values - The array whose value range to return
-   * @returns The value range, as `[min, max]`
-   */
-  static getDataTypeRange(values: NumericArray): [number, number] {
-    if (values instanceof Uint8Array) {
-      return [0, 255];
-    }
-    if (values instanceof Uint16Array) {
-      return [0, 65535];
-    }
-    if (values instanceof Uint32Array) {
-      return [0, 4294967295];
-    }
-    if (values instanceof Int8Array) {
-      return [-128, 127];
-    }
-    if (values instanceof Int16Array) {
-      return [-32768, 32767];
-    }
-    if (values instanceof Int32Array) {
-      return [-2147483648, 2147483647];
-    }
-    if (Array.isArray(values)) {
-      return [0, 255];
-    }
-    return [0, 1];
-  }
-
-  /**
    * Returns a default color for a channel, for use when no channel colors are
    * known
    *
@@ -79,5 +43,106 @@ export class ImageUtils {
         return ColorUtils.fromHSB(hue, level, level);
       }
     }
+  }
+
+  /**
+   * Returns quantile-based contrast limits derived from a channel histogram,
+   * for use as default contrast limits when no contrast limits are known
+   *
+   * The histogram's `hist[i]` counts the values that fall into bin `i`, with
+   * bins spread evenly over `range`: bin `0` maps to the range's lower bound,
+   * the last bin to its upper bound, and each bin in between to
+   * `vmin + i / (n - 1) * (vmax - vmin)`. The lower limit is the value of the
+   * first bin at which the cumulative count (from the bottom) reaches the
+   * given quantile of the total count, the upper limit is the value of the
+   * first bin at which the cumulative count from the top does; i.e., the
+   * quantile is clipped at each end. Values that fall into the same bin
+   * cannot be told apart, so the limits are only as precise as the bins.
+   *
+   * Histograms with fewer than two bins, histograms whose counts sum to zero
+   * and degenerate ranges return `range` as is. Note that the limits collapse
+   * (upper equals lower) if more than `1 - quantile` of the values fall into a
+   * single bin, e.g. for sparse channels that are mostly background.
+   *
+   * @param histogram - The channel histogram, as bin counts and value range
+   * @param quantile - The fraction of values to clip at each end, in
+   * `[0, 0.5]`; larger fractions yield non-ascending limits
+   * @returns The contrast limits, as `[low, high]` in the histogram's value
+   * range
+   */
+  static getDefaultContrastLimits(
+    histogram: { hist: number[]; range: [number, number] },
+    quantile: number = 0.05,
+  ): [number, number] {
+    const {
+      hist,
+      range: [vmin, vmax],
+    } = histogram;
+    const n = hist.length;
+    if (n < 2 || vmin === vmax) {
+      return [vmin, vmax];
+    }
+    const total = hist.reduce((sum, count) => sum + count, 0);
+    if (total === 0) {
+      return [vmin, vmax];
+    }
+    const target = total * quantile;
+    let binLow: number | undefined;
+    let binHigh: number | undefined;
+    let cumulativeLow = 0;
+    let cumulativeHigh = 0;
+    for (let i = 0; i < n; i++) {
+      cumulativeLow += hist[i]!;
+      if (binLow === undefined && cumulativeLow >= target) {
+        binLow = i;
+      }
+      cumulativeHigh += hist[n - 1 - i]!;
+      if (binHigh === undefined && cumulativeHigh >= target) {
+        binHigh = n - 1 - i;
+      }
+      if (binLow !== undefined && binHigh !== undefined) {
+        break;
+      }
+    }
+    return [
+      vmin + (binLow! / (n - 1)) * (vmax - vmin),
+      vmin + (binHigh! / (n - 1)) * (vmax - vmin),
+    ];
+  }
+
+  /**
+   * Returns the value range that the type of the given array can hold, for use
+   * as default contrast limits of image channel data
+   *
+   * Integer typed arrays span their full integer range, floating-point typed
+   * arrays are taken to hold normalized values in `[0, 1]`, and plain arrays
+   * are taken to hold 8-bit values.
+   *
+   * @param values - The array whose value range to return
+   * @returns The value range, as `[min, max]`
+   */
+  static getDataTypeRange(values: NumericArray): [number, number] {
+    if (values instanceof Uint8Array) {
+      return [0, 255];
+    }
+    if (values instanceof Uint16Array) {
+      return [0, 65535];
+    }
+    if (values instanceof Uint32Array) {
+      return [0, 4294967295];
+    }
+    if (values instanceof Int8Array) {
+      return [-128, 127];
+    }
+    if (values instanceof Int16Array) {
+      return [-32768, 32767];
+    }
+    if (values instanceof Int32Array) {
+      return [-2147483648, 2147483647];
+    }
+    if (Array.isArray(values)) {
+      return [0, 255];
+    }
+    return [0, 1];
   }
 }

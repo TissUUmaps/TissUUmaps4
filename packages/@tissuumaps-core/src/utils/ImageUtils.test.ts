@@ -91,6 +91,48 @@ describe("ImageUtils", () => {
     });
   });
 
+  describe("getDefaultContrastLimits", () => {
+    it("clips the quantile at both ends of a uniform histogram", () => {
+      // 100 values, one per bin: 5 values are clipped at each end
+      const hist = new Array<number>(100).fill(1);
+      const [low, high] = ImageUtils.getDefaultContrastLimits(
+        { hist, range: [0, 99] },
+        0.05,
+      );
+      expect(low).toBeCloseTo(4);
+      expect(high).toBeCloseTo(95);
+    });
+
+    it("returns the full range for a quantile of zero", () => {
+      const hist = [0, 1, 2, 3, 0];
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist, range: [10, 50] }, 0),
+      ).toEqual([10, 50]);
+    });
+
+    it("maps the first and last bins to the range bounds", () => {
+      const hist = [5, 0, 0, 5];
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist, range: [-1, 1] }, 0.1),
+      ).toEqual([-1, 1]);
+    });
+
+    it("returns the range as is for degenerate input", () => {
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist: [], range: [0, 255] }),
+      ).toEqual([0, 255]);
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist: [7], range: [0, 255] }),
+      ).toEqual([0, 255]);
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist: [0, 0], range: [0, 255] }),
+      ).toEqual([0, 255]);
+      expect(
+        ImageUtils.getDefaultContrastLimits({ hist: [1, 1], range: [3, 3] }),
+      ).toEqual([3, 3]);
+    });
+  });
+
   describe("getDataTypeRange", () => {
     it.each([
       [new Uint8Array(1), [0, 255]],
