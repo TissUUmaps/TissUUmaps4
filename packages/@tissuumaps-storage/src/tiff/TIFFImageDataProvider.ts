@@ -1,3 +1,5 @@
+import type { GeoTIFFImage } from "geotiff";
+
 import type {
   DataProviderLoadOptions,
   ImageDataProvider,
@@ -14,6 +16,16 @@ import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
 import { readChannelHistograms } from "./readChannelHistogram";
 
+/**
+ * Data provider for images stored in TIFF files
+ *
+ * Opens a {@link TIFFImageDataSource} as {@link TIFFImageData}, with one tile
+ * source per channel for multi-channel files and a single one for files drawn
+ * in their own colors. The format is recognized from the file's metadata (see
+ * `findTIFFParser`), which provides the channel names and colors; the
+ * histograms the renderer stretches the channels over are read from the
+ * pixels.
+ */
 export class TIFFImageDataProvider implements ImageDataProvider<
   TIFFImageDataSource,
   TIFFImageData,
@@ -67,6 +79,15 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     ],
   };
 
+  /**
+   * Returns the data source with {@link tiffImageDataSourceDefaults} applied
+   * and its URL resolved
+   *
+   * @param dataSource - The data source to normalize
+   * @param projectUrl - The absolute URL of the project, or `null` for
+   * projects that were not loaded from a URL
+   * @returns The normalized data source
+   */
   normalize(
     dataSource: TIFFImageDataSource,
     projectUrl: string | null,
@@ -78,6 +99,22 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     return { ...tiffImageDataSourceDefaults, ...dataSource, url };
   }
 
+  /**
+   * Opens a TIFF image data source and returns the loaded image data
+   *
+   * The file is opened with {@link openTIFF} and read by the parser of its
+   * format, with the `z` and `t` of the data source selecting the plane. The
+   * channel histograms are read afterwards, a few channels at a time (see
+   * {@link readChannelHistograms}).
+   *
+   * @param normalizedDataSource - The normalized data source to open
+   * @param options - See `DataProviderLoadOptions`; `workspace` is required
+   * for data sources with a `path` but no `url`
+   * @returns A promise that resolves to the loaded image data
+   * @throws Error if the data source has neither a URL nor a workspace path,
+   * has only a workspace path while no workspace is open, or holds a TIFF no
+   * parser recognizes
+   */
   async load(
     normalizedDataSource: NormalizedTIFFImageDataSource,
     options?: DataProviderLoadOptions,
@@ -102,6 +139,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
       channelsWithHistograms = channels.map((channel, c) => ({
         ...channel,
         histogram: histograms[c],
+        contrastLimits: getFullRange(pyramids[c]![0]!),
       }));
     }
     const tileSources = pyramids.map(
@@ -110,4 +148,30 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     );
     return new TIFFImageData(tileSources, channelsWithHistograms);
   }
+}
+
+/** The `SampleFormat` value of unsigned integer samples */
+const sampleFormatUnsignedInteger = 1;
+
+/**
+ * Returns the contrast limits an 8-bit channel is shown over, `undefined` for
+ * every other channel
+ *
+ * 8-bit channels are shown over their full range, like other viewers show
+ * them, rather than over the quantile-based limits the renderer would
+ * otherwise derive from their histogram. TIFF does not record the range; it is
+ * the conventional display range of 8-bit samples.
+ *
+ * @param image - The largest level of the channel
+ * @returns `[0, 255]` for an 8-bit unsigned integer channel, `undefined`
+ * otherwise
+ */
+function getFullRange(image: GeoTIFFImage): [number, number] | undefined {
+  if (
+    image.getBitsPerSample(0) === 8 &&
+    image.getSampleFormat(0) === sampleFormatUnsignedInteger
+  ) {
+    return [0, 255];
+  }
+  return undefined;
 }

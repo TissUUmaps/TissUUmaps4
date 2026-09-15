@@ -36,12 +36,12 @@ Multi-channel files are opened as **value images**: tiles carry the raw samples 
 
 Per-channel rendering settings come from the file where it records them:
 
-| Setting         | Source                                    | Fallback                                                                                                      |
-| --------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Name            | OME-XML `Channel` `Name`, QPTIFF `Name`   | none                                                                                                          |
-| Color           | OME-XML `Channel` `Color`, QPTIFF `Color` | white for a file with a single channel, otherwise a color derived from the channel index                      |
-| Contrast limits | not recorded by TIFF                      | the data type range for integers of 8 bits or fewer, otherwise quantiles of a histogram of a sample of pixels |
-| Visibility      | not recorded by TIFF                      | visible                                                                                                       |
+| Setting         | Source                                    | Fallback                                              |
+| --------------- | ----------------------------------------- | ----------------------------------------------------- |
+| Name            | OME-XML `Channel` `Name`, QPTIFF `Name`   | none                                                  |
+| Color           | OME-XML `Channel` `Color`, QPTIFF `Color` | a color chosen by the viewer                          |
+| Contrast limits | `[0, 255]` for 8-bit channels             | quantiles of a histogram read from a sample of pixels |
+| Visibility      | not recorded by TIFF                      | visible                                               |
 
 All of these can be overridden per channel in the project file through the image's `channels` array (see the [example](#example) below).
 

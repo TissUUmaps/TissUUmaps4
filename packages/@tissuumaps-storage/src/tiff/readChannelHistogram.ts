@@ -2,9 +2,6 @@ import type { GeoTIFFImage, Pool } from "geotiff";
 
 import { MathUtils, type NumericArray } from "@tissuumaps/core";
 
-/** The number of histogram bins */
-const histogramBins = 1024;
-
 /**
  * The pixels a histogram is built from; more do not make the quantiles more
  * stable. A level needs at least this many pixels to be read, and is cropped
@@ -12,9 +9,6 @@ const histogramBins = 1024;
  * {@link getCenteredWindow}).
  */
 const histogramPixels = 262144;
-
-/** The `SampleFormat` value of floating point samples */
-const sampleFormatFloat = 3;
 
 /**
  * Reads the value histogram of every channel of a file
@@ -58,17 +52,14 @@ export async function readChannelHistograms(
  * Reads the value histogram of a channel, which the renderer stretches the
  * channel over, since TIFF stores no display range
  *
- * Integers of 8 bits or fewer get no histogram, and no pixels are read for
- * them: the renderer stretches them over the range of their data type, like
- * other viewers show them. Wider integers and floats get the histogram of a
- * centered crop of the smallest pyramid level that has enough pixels.
+ * The histogram is read from a centered crop of the smallest pyramid level
+ * that has enough pixels.
  *
  * @param pyramid - The images of the channel, largest first
  * @param options - The decoder pool (`null` for the main thread) and an abort
  * signal
  * @returns The histogram, as bin counts and the value range they span, or
- * `undefined` for a channel that needs none or holds fewer than two distinct
- * values
+ * `undefined` for a channel that holds fewer than two distinct values
  * @throws Error if `pyramid` is empty
  */
 export async function readChannelHistogram(
@@ -81,19 +72,7 @@ export async function readChannelHistogram(
   if (full === undefined) {
     throw new Error("The channel has no pyramid level.");
   }
-  if (!needsHistogram(full)) {
-    return undefined;
-  }
   return await readFromPixels(pickLevel(pyramid), { pool, signal });
-}
-
-/**
- * Whether the range of the channel's data type is too wide to stretch it over,
- * which is the case for everything but integers of 8 bits or fewer
- */
-function needsHistogram(image: GeoTIFFImage): boolean {
-  const bits = image.getBitsPerSample(0) || 1; // BitsPerSample defaults to 1
-  return image.getSampleFormat(0) === sampleFormatFloat || bits > 8;
 }
 
 /** The smallest level with enough pixels for a stable histogram */
@@ -125,7 +104,7 @@ async function readFromPixels(
     return undefined;
   }
 
-  return await MathUtils.computeHistogram(values, range, histogramBins, {
+  return await MathUtils.computeHistogram(values, range, undefined, {
     signal,
   });
 }

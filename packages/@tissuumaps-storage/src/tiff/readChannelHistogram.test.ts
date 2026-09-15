@@ -47,19 +47,18 @@ function fakeImage(
 }
 
 describe("readChannelHistogram", () => {
-  it("gives integers of 8 bits or fewer no histogram, without reading", async () => {
-    const readRasters = fakeRead();
+  it("reads a histogram whatever the sample format and width", async () => {
     for (const options of [
-      { bits: 8, readRasters },
+      { bits: 8 },
       { bits: 8, format: 2 },
       { bits: 1 },
-      { bits: 0 },
+      { bits: 32, format: 3 },
     ]) {
-      await expect(
-        readChannelHistogram([fakeImage(10, 10, options)]),
-      ).resolves.toBeUndefined();
+      const histogram = await readChannelHistogram([
+        fakeImage(10, 10, { ...options, readRasters: fakeRead([0, 10]) }),
+      ]);
+      expect(histogram?.range).toEqual([0, 10]);
     }
-    expect(readRasters).not.toHaveBeenCalled();
   });
 
   it("reads the smallest level with enough pixels", async () => {
@@ -204,7 +203,7 @@ describe("readChannelHistograms", () => {
   it("returns one histogram per channel, in channel order", async () => {
     const histograms = await readChannelHistograms([
       [fakeImage(10, 10, { readRasters: fakeRead([0, 10]) })],
-      [fakeImage(10, 10, { bits: 8 })],
+      [fakeImage(10, 10, { readRasters: fakeRead([5, 5]) })],
       [fakeImage(10, 10, { readRasters: fakeRead([0, 20]) })],
     ]);
     expect(histograms.map((histogram) => histogram?.range)).toEqual([
