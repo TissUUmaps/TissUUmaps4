@@ -153,6 +153,7 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label="Show/hide"
               onClick={() =>
                 updateLayer(layer.id, { visibility: !layer.visibility })
               }
@@ -162,6 +163,7 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
             <Button
               variant="ghost"
               disabled={hasObjects}
+              aria-label="delete"
               onClick={() => {
                 void confirm({
                   title: "Delete layer",

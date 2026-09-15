@@ -144,6 +144,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label="Show/hide"
               onClick={() =>
                 updateShapes(shapes.id, { visibility: !shapes.visibility })
               }
@@ -152,6 +153,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
+              aria-label="Delete"
               onClick={() => {
                 void confirm({
                   title: "Delete shape cloud",

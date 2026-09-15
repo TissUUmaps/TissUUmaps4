@@ -81,6 +81,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
           <span className="ml-auto flex flex-row">
             <Button
               variant="ghost"
+              aria-label="Reset"
               title="Reset"
               onClick={() => setDataSourceDraft(structuredClone(dataSource))}
             >
@@ -89,6 +90,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
             <Button
               variant="ghost"
               title="Save"
+              aria-label="Save"
               disabled={hasErrors}
               onClick={() => {
                 const knownKeys = new Set([
@@ -110,6 +112,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
         ) : (
           <Button
             variant="ghost"
+            aria-label="Edit"
             className="ml-auto"
             onClick={() => {
               setDataSourceDraft(structuredClone(dataSource));

@@ -122,6 +122,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label="Show/hide"
               onClick={() =>
                 updateImage(image.id, { visibility: !image.visibility })
               }
@@ -130,6 +131,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
+              aria-label="Delete image"
               onClick={() => {
                 void confirm({
                   title: "Delete image",

@@ -162,6 +162,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label="Show/hide"
               onClick={() =>
                 updatePoints(points.id, { visibility: !points.visibility })
               }
@@ -170,6 +171,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
+              aria-label="Delete points"
               onClick={() => {
                 void confirm({
                   title: "Delete point cloud",

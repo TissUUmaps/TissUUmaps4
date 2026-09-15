@@ -141,6 +141,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label="Show/Hide"
               onClick={() =>
                 updateLabels(labels.id, { visibility: !labels.visibility })
               }
@@ -149,6 +150,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
+              aria-label="Delete labels"
               onClick={() => {
                 void confirm({
                   title: "Delete labels",
