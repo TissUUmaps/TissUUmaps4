@@ -51,7 +51,7 @@ export type TIFFParser = {
 };
 
 /** The parsers in detection order; the plain parser accepts any file */
-export const tiffParsers: TIFFParser[] = [
+const tiffParsers: TIFFParser[] = [
   new OMETIFFParser(),
   new QPTIFFParser(),
   new PlainTIFFParser(),

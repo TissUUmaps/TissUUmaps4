@@ -8,7 +8,8 @@ const histogramBins = 1024;
 /**
  * The pixels a histogram is built from; more do not make the quantiles more
  * stable. A level needs at least this many pixels to be read, and is cropped
- * to at most this many.
+ * to roughly this many, rounded out to whole tiles or strips (see
+ * {@link getCenteredWindow}).
  */
 const histogramPixels = 262144;
 
@@ -18,9 +19,10 @@ const sampleFormatFloat = 3;
 /**
  * Reads the value histogram of every channel of a file
  *
- * The channels are read `poolSize` at a time, so that a file with many
- * channels does not start every read at once, and so that each read has a
- * decoder worker of the pool to itself.
+ * At most `poolSize` channels are read at a time, so that a file with many
+ * channels does not start every read at once. The decode jobs of a read are
+ * spread over the whole pool, so this bounds the reads in flight, not the
+ * workers each of them uses.
  *
  * @param pyramids - The images of every channel, largest first
  * @param options - The decoder pool (`null` for the main thread), the number
