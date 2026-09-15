@@ -91,6 +91,71 @@ describe("ImageUtils", () => {
     });
   });
 
+  describe("computeHistogram", () => {
+    it("spans the data range and assigns values to the nearest bin", () => {
+      const { hist, range } = ImageUtils.computeHistogram([0, 1, 2, 3, 4], 5);
+      expect(range).toEqual([0, 4]);
+      expect(hist).toEqual([1, 1, 1, 1, 1]);
+    });
+
+    it("maps the minimum and maximum to the first and last bins", () => {
+      const { hist, range } = ImageUtils.computeHistogram(
+        new Float32Array([-1, -0.9, 0.49, 0.51, 1]),
+        3,
+      );
+      expect(range).toEqual([-1, 1]);
+      expect(hist).toEqual([2, 1, 2]);
+    });
+
+    it("uses 256 bins by default", () => {
+      const data = new Uint8Array(256).map((_, i) => i);
+      const { hist, range } = ImageUtils.computeHistogram(data);
+      expect(range).toEqual([0, 255]);
+      expect(hist).toHaveLength(256);
+      expect(hist.every((count) => count === 1)).toBe(true);
+    });
+
+    it("is consistent with getDefaultContrastLimits", () => {
+      // 100 values, one per bin: 5 values are clipped at each end
+      const data = new Uint16Array(100).map((_, i) => 1000 + i);
+      const histogram = ImageUtils.computeHistogram(data, 100);
+      const [low, high] = ImageUtils.getDefaultContrastLimits(histogram, 0.05);
+      expect(low).toBeCloseTo(1004);
+      expect(high).toBeCloseTo(1095);
+    });
+
+    it("ignores non-finite values", () => {
+      const { hist, range } = ImageUtils.computeHistogram(
+        new Float64Array([NaN, 2, Infinity, 4, -Infinity]),
+        2,
+      );
+      expect(range).toEqual([2, 4]);
+      expect(hist).toEqual([1, 1]);
+    });
+
+    it("puts equal values into the first bin", () => {
+      const { hist, range } = ImageUtils.computeHistogram([7, 7, 7], 4);
+      expect(range).toEqual([7, 7]);
+      expect(hist).toEqual([3, 0, 0, 0]);
+    });
+
+    it("puts all values into a single bin", () => {
+      const { hist, range } = ImageUtils.computeHistogram([1, 5, 9], 1);
+      expect(range).toEqual([1, 9]);
+      expect(hist).toEqual([3]);
+    });
+
+    it("returns zero counts and a zero range for data without values", () => {
+      expect(ImageUtils.computeHistogram([], 3)).toEqual({
+        hist: [0, 0, 0],
+        range: [0, 0],
+      });
+      expect(
+        ImageUtils.computeHistogram(new Float32Array([NaN, NaN]), 2),
+      ).toEqual({ hist: [0, 0], range: [0, 0] });
+    });
+  });
+
   describe("getDefaultContrastLimits", () => {
     it("clips the quantile at both ends of a uniform histogram", () => {
       // 100 values, one per bin: 5 values are clipped at each end
