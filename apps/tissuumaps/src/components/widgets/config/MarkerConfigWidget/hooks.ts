@@ -18,9 +18,8 @@ export function useMarkerConfigWidget(
   tableId: string | null,
 ): MarkerConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(markerConfig) ?? "constant";
-  const [currentSource, setCurrentSource] = useState<MarkerConfigSource>(
-    markerConfig.source ?? "constant",
-  );
+  const [currentSource, setCurrentSource] =
+    useState<MarkerConfigSource>(activeSource);
 
   const [currentConstantValue, setCurrentConstantValue] = useState<Marker>(
     isConstantConfig(markerConfig)
