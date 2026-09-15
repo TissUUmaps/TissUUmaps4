@@ -29,7 +29,9 @@ import {
  * Multi-channel image data carries one precomputed value histogram per
  * channel, computed at load time from a downsampled resolution level (see
  * `OMEZarrImageDataProvider.load`), from which the renderer derives default
- * contrast limits for channels whose `omero` window is incomplete.
+ * contrast limits for channels whose `omero` window is incomplete, except for
+ * `uint8` channels, which fall back to the full `[0, 255]` range instead (see
+ * {@link OMEZarrImageData.getChannelContrastLimits}).
  *
  * Owns the object URL created for images loaded from a workspace file (see
  * `openOMEZarr`), and revokes it on {@link OMEZarrImageData.close}.
@@ -181,7 +183,8 @@ export class OMEZarrImageData implements ImageData {
    * @param c - The channel index (0-based)
    * @returns The channel's histogram, as bin counts and the value range the
    * bins span, or `undefined` if none was computed (images without a channel
-   * axis, 64-bit integer data, or planes without finite values)
+   * axis, 64-bit integer data, or planes with fewer than two distinct finite
+   * values)
    * @throws Error if `c` is out of bounds
    */
   getChannelHistogram(
@@ -194,15 +197,27 @@ export class OMEZarrImageData implements ImageData {
   /**
    * Returns the rendering window of a channel from the image's `omero` metadata
    *
+   * `uint8` channels without a complete window fall back to the full
+   * `[0, 255]` range, like other viewers show them, rather than to the
+   * quantile-based limits the renderer would otherwise derive from their
+   * histogram (see {@link OMEZarrImageData.getChannelHistogram}).
+   *
    * @param c - The channel index (0-based)
    * @returns The channel's window `[start, end]` widened to a non-empty range
-   * if necessary, or `undefined` if the window has no start or no end
+   * if necessary; `[0, 255]` for `uint8` channels without a start or an end;
+   * or `undefined` for other channels without a start or an end
    * @throws Error if `c` is out of bounds
    */
   getChannelContrastLimits(c: number): [number, number] | undefined {
     const { start, end } = this._image.checkChannelIndex(c).channels[c]!.window;
     if (start !== undefined && end !== undefined) {
       return start < end ? [start, end] : [start, start + 1];
+    }
+    const tileSource = Array.isArray(this._tileSources)
+      ? this._tileSources[c]!
+      : this._tileSources;
+    if (tileSource.arrays[0]!.dtype === "uint8") {
+      return [0, 255];
     }
     return undefined;
   }
