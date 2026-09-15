@@ -8,6 +8,7 @@ import {
   type GroupValueMap,
   type Layer,
   type Marker,
+  MathUtils,
   type Points,
   type PointsData,
   type PointsGeometry,
@@ -687,7 +688,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           ys,
           { offset: bufferOffset },
         );
-        objectBounds = WebGLPointsRenderer._getObjectBounds({ xs, ys });
+        objectBounds = await WebGLPointsRenderer._getObjectBounds(
+          { xs, ys },
+          { signal },
+        );
       } else if (renderedPoints !== undefined) {
         objectBounds = renderedPoints.objectBounds;
       } else {
@@ -787,10 +791,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Computes the axis-aligned bounding box of the given points in data coordinates
    *
    * @param geometry - X and Y coordinates of the points, in data coordinates
+   * @param options - Optional abort signal
    * @returns The axis-aligned bounding box of the points in data coordinates
    * @throws Error if the coordinate arrays are empty or have different lengths
    */
-  private static _getObjectBounds(geometry: PointsGeometry): Rect {
+  private static async _getObjectBounds(
+    geometry: PointsGeometry,
+    options?: { signal?: AbortSignal },
+  ): Promise<Rect> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
     const { xs, ys } = geometry;
     if (xs.length === 0 || ys.length === 0) {
       throw new Error("Coordinate arrays must not be empty");
@@ -798,26 +808,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     if (xs.length !== ys.length) {
       throw new Error("Coordinate arrays must have the same length");
     }
-    let xMin = Infinity,
-      yMin = Infinity,
-      xMax = -Infinity,
-      yMax = -Infinity;
-    for (let i = 0; i < xs.length; i++) {
-      const x = xs[i]!;
-      const y = ys[i]!;
-      if (x < xMin) {
-        xMin = x;
-      }
-      if (y < yMin) {
-        yMin = y;
-      }
-      if (x > xMax) {
-        xMax = x;
-      }
-      if (y > yMax) {
-        yMax = y;
-      }
-    }
+    const [xMin, xMax] = await MathUtils.computeRange(xs, { signal });
+    const [yMin, yMax] = await MathUtils.computeRange(ys, { signal });
     return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
   }
 

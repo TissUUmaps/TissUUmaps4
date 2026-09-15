@@ -71,6 +71,62 @@ describe("MathUtils", () => {
     });
   });
 
+  describe("computeRange", () => {
+    it("returns the minimum and maximum of plain arrays", async () => {
+      await expect(MathUtils.computeRange([3, -1, 7, 2])).resolves.toEqual([
+        -1, 7,
+      ]);
+    });
+
+    it("returns the minimum and maximum of typed arrays", async () => {
+      await expect(
+        MathUtils.computeRange(new Float32Array([0.5, -2.5, 1.5])),
+      ).resolves.toEqual([-2.5, 1.5]);
+      await expect(
+        MathUtils.computeRange(new Uint8Array([200, 10, 255, 0])),
+      ).resolves.toEqual([0, 255]);
+    });
+
+    it("returns a degenerate range for a single value", async () => {
+      await expect(MathUtils.computeRange([4])).resolves.toEqual([4, 4]);
+      await expect(MathUtils.computeRange([4, 4, 4])).resolves.toEqual([4, 4]);
+    });
+
+    it("ignores non-finite values", async () => {
+      await expect(
+        MathUtils.computeRange(
+          new Float64Array([NaN, 2, Infinity, 4, -Infinity]),
+        ),
+      ).resolves.toEqual([2, 4]);
+    });
+
+    it("returns the empty range when no finite value is found", async () => {
+      await expect(MathUtils.computeRange([])).resolves.toEqual([
+        Infinity,
+        -Infinity,
+      ]);
+      await expect(MathUtils.computeRange([NaN, Infinity])).resolves.toEqual([
+        Infinity,
+        -Infinity,
+      ]);
+    });
+
+    it("handles large data", async () => {
+      const data = new Uint16Array(100_000).map((_, i) => (i % 1000) + 5);
+      await expect(MathUtils.computeRange(data)).resolves.toEqual([5, 1004]);
+    });
+
+    it("rejects with the reason of an aborted signal", async () => {
+      const controller = new AbortController();
+      controller.abort(new Error("aborted"));
+      await expect(
+        MathUtils.computeRange(new Uint8Array(10), {
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow("aborted");
+    });
+  });
+
   describe("computeHistogram", () => {
     it("assigns values to the nearest bin over the given range", async () => {
       const { hist, range } = await MathUtils.computeHistogram(

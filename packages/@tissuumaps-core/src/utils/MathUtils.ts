@@ -40,6 +40,47 @@ export class MathUtils {
   }
 
   /**
+   * Computes the range of numeric values, as their minimum and maximum
+   *
+   * Non-finite values (`NaN`, infinities) are ignored. If no finite value is
+   * found (e.g. for empty arrays), the empty range `[Infinity, -Infinity]` is
+   * returned; callers can detect it by checking that the lower bound exceeds
+   * the upper bound.
+   *
+   * The values are traversed on the main thread, yielding to the event loop
+   * periodically so the UI stays responsive for large arrays (see
+   * {@link AsyncUtils.forEach}). Aborting the signal rejects with its reason.
+   *
+   * @param values - The values to compute the range of
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the range, as `[min, max]`
+   */
+  static async computeRange(
+    values: NumericArray,
+    options?: { signal?: AbortSignal },
+  ): Promise<[number, number]> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    let vmin = Infinity;
+    let vmax = -Infinity;
+    await AsyncUtils.forEach(
+      values,
+      (v) => {
+        if (Number.isFinite(v)) {
+          if (v < vmin) {
+            vmin = v;
+          }
+          if (v > vmax) {
+            vmax = v;
+          }
+        }
+      },
+      { signal },
+    );
+    return [vmin, vmax];
+  }
+
+  /**
    * Computes the histogram of numeric values over a given value range
    *
    * `hist[i]` counts the values that are closest to bin `i`, with bins spread
