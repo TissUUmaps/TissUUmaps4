@@ -74,7 +74,7 @@ export class QPTIFFParser implements TIFFParser {
       pyramids,
       channels: TIFFUtils.hasOwnColors(pyramids)
         ? undefined
-        : TIFFUtils.fillMissingColors(channels),
+        : TIFFUtils.whitenLoneChannel(channels),
     };
   }
 }

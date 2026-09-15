@@ -1,7 +1,5 @@
 import { type GeoTIFF, GeoTIFFImage, globals } from "geotiff";
 
-import { ImageUtils } from "@tissuumaps/core";
-
 import type { TIFFChannel } from "./formats/TIFFParser";
 
 const { WhiteIsZero, RGB, Palette, YCbCr } = globals.photometricInterpretations;
@@ -294,27 +292,20 @@ export class TIFFUtils {
   }
 
   /**
-   * Colors the channels the file leaves uncolored
+   * Makes a lone uncolored channel white
    *
-   * A single uncolored channel is white. If the file colors some channels but
-   * not others, the others get the default color of their index, so that file
-   * colors never mix with the renderer's fallback. Channels of a file that
-   * colors none of them stay uncolored, and the renderer tells them apart.
+   * Channels of a file with several channels keep their missing colors: the
+   * renderer gives each of them the default color of its index, whether or not
+   * the file colors the others.
    *
    * @param channels - The channels
    * @returns The channels
    */
-  static fillMissingColors(channels: TIFFChannel[]): TIFFChannel[] {
+  static whitenLoneChannel(channels: TIFFChannel[]): TIFFChannel[] {
     const [only] = channels;
     if (channels.length === 1 && only!.color === undefined) {
       return [{ ...only, color: { r: 255, g: 255, b: 255 } }];
     }
-    if (!channels.some((channel) => channel.color !== undefined)) {
-      return channels;
-    }
-    return channels.map((channel, c) => ({
-      ...channel,
-      color: channel.color ?? ImageUtils.getDefaultChannelColor(c),
-    }));
+    return channels;
   }
 }

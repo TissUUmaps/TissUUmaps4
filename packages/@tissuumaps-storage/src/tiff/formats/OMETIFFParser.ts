@@ -121,7 +121,7 @@ export class OMETIFFParser implements TIFFParser {
       pyramids,
       channels: TIFFUtils.hasOwnColors(pyramids)
         ? undefined
-        : TIFFUtils.fillMissingColors(channels),
+        : TIFFUtils.whitenLoneChannel(channels),
     };
   }
 }
