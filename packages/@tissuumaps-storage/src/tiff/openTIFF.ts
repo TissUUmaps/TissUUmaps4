@@ -29,8 +29,8 @@ const remoteSourceOptions: RemoteSourceOptions & BlockedSourceOptions = {
  * Opening a file reads nothing but its header; its directories and pixels are
  * read on demand.
  *
- * @param dataSource - The `url` and/or workspace `path` of the normalized data
- * source to open
+ * @param normalizedDataSource - The `url` and/or workspace `path` of the
+ * normalized data source to open
  * @param options - See `DataProviderLoadOptions`; `workspace` is required for
  * data sources with a `path` but no `url`
  * @returns The opened file
@@ -38,22 +38,22 @@ const remoteSourceOptions: RemoteSourceOptions & BlockedSourceOptions = {
  * path while no workspace is open
  */
 export async function openTIFF(
-  dataSource: { url?: string; path?: string },
+  normalizedDataSource: { url?: string; path?: string },
   options?: DataProviderLoadOptions,
 ): Promise<GeoTIFF> {
   const { signal, workspace = null } = options ?? {};
   signal?.throwIfAborted();
-  if (dataSource.path !== undefined && workspace !== null) {
-    const fh = await workspace.getFileHandle(dataSource.path);
+  if (normalizedDataSource.path !== undefined && workspace !== null) {
+    const fh = await workspace.getFileHandle(normalizedDataSource.path);
     signal?.throwIfAborted(); // getFileHandle() does not throw on abort
     const file = await fh.getFile();
     signal?.throwIfAborted(); // getFile() does not throw on abort
     return await fromBlob(file, signal);
   }
-  if (dataSource.url !== undefined) {
-    return await fromUrl(dataSource.url, remoteSourceOptions, signal);
+  if (normalizedDataSource.url !== undefined) {
+    return await fromUrl(normalizedDataSource.url, remoteSourceOptions, signal);
   }
-  if (dataSource.path !== undefined) {
+  if (normalizedDataSource.path !== undefined) {
     throw new Error("An open workspace is required to open local-only data.");
   }
   throw new Error("A URL or workspace path is required to load data.");

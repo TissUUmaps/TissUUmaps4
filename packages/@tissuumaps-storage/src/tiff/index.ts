@@ -7,3 +7,4 @@ export {
   type TIFFImageDataSource,
 } from "./TIFFImageDataSource";
 export { type TIFFChannelMetadata } from "./formats/TIFFParser";
+export { openTIFF } from "./openTIFF";
