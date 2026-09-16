@@ -35,7 +35,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * {@link OMEZarrImageDataProvider._computeChannelHistogram}); more do not
    * make the quantiles the renderer derives from them more stable
    */
-  private static readonly _histogramMinPixels = 512 * 512;
+  private static readonly _numHistogramPixels = 512 * 512;
 
   readonly name = "OME-Zarr";
 
@@ -195,7 +195,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * reads the plane that the given tile source displays (its channel, z-slice
    * and timepoint, the latter two defaulting to the image's `omero` defaults
    * like in the tile source itself) from the lowest resolution level that
-   * still holds at least {@link OMEZarrImageDataProvider._histogramMinPixels}
+   * still holds at least {@link OMEZarrImageDataProvider._numHistogramPixels}
    * pixels, or from the full-resolution level of images smaller than that, and
    * bins the plane's values over their actual range (see
    * {@link MathUtils.computeRange} and {@link MathUtils.computeHistogram}), so
@@ -226,7 +226,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     while (
       level > 0 &&
       arrays[level]!.shape[xAxis]! * arrays[level]!.shape[yAxis]! <
-        OMEZarrImageDataProvider._histogramMinPixels
+        OMEZarrImageDataProvider._numHistogramPixels
     ) {
       level--;
     }
@@ -247,8 +247,9 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     if (vmin >= vmax) {
       return undefined; // no finite values, or a single one
     }
-    return MathUtils.computeHistogram(chunk.data, [vmin, vmax], undefined, {
+    return MathUtils.computeHistogram(chunk.data, [vmin, vmax], {
       signal,
+      sample: OMEZarrImageDataProvider._numHistogramPixels,
     });
   }
 }
