@@ -15,8 +15,8 @@ TIFF data sources have the `type` `"tiff"` and accept the following fields:
 | `type` | `string`  | Always `"tiff"`.                                                                                                            |
 | `url`  | `string`  | URL of a remote TIFF file, absolute or relative (see [Referencing data](../concepts/projects.md#referencing-data)).         |
 | `path` | `string`  | Path of a TIFF file relative to the workspace directory (see [Referencing data](../concepts/projects.md#referencing-data)). |
-| `z`    | `integer` | Z-plane to open (0-based), for OME-TIFF files with a z-stack. Defaults to `0`.                                              |
-| `t`    | `integer` | Time point to open (0-based), for OME-TIFF files with a time series. Defaults to `0`.                                       |
+| `z`    | `integer` | Z-slice to open (0-based), for OME-TIFF files with a z-stack. Defaults to `0`.                                              |
+| `t`    | `integer` | Timepoint to open (0-based), for OME-TIFF files with a time series. Defaults to `0`.                                        |
 
 Either `url` or `path` has to be given. When a workspace is open and both are given, `path` takes precedence.
 
@@ -47,7 +47,7 @@ All of these can be overridden per channel in the project file through the image
 
 ## Example
 
-A project showing a multiplexed OME-TIFF next to the project file, opening the fifth z-plane and overriding two channels:
+A project showing a multiplexed OME-TIFF next to the project file, opening the fifth z-slice and overriding two channels:
 
 ```json title="project.tmap"
 {

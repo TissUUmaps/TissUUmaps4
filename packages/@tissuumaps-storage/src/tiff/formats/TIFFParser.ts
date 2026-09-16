@@ -39,7 +39,7 @@ export type TIFFParser = {
    * Reads the structure of the file
    *
    * @param tiff - The opened file
-   * @param options - The z-plane and time point (default `0`, only OME-TIFF
+   * @param options - The z-slice and timepoint (default `0`, only OME-TIFF
    * has them), and an abort signal
    * @returns The structure
    */
