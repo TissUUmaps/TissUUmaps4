@@ -21,14 +21,14 @@ export interface TIFFLabelsDataSource extends LabelsDataSource<
   typeof tiffLabelsDataSourceType
 > {
   /**
-   * The z-plane to display, for OME-TIFF files with a z-stack
+   * The z-slice to display, for OME-TIFF files with a z-stack
    *
    * @defaultValue `0`
    */
   z?: number;
 
   /**
-   * The time point to display, for OME-TIFF files with a time series
+   * The timepoint to display, for OME-TIFF files with a time series
    *
    * @defaultValue `0`
    */
