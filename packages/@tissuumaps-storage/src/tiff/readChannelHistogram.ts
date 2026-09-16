@@ -13,7 +13,7 @@ const histogramPixels = 262144;
 /**
  * Reads the value histogram of every channel of a file
  *
- * At most `poolSize` channels are read at a time, so that a file with many
+ * At most `concurrency` channels are read at a time, so that a file with many
  * channels does not start every read at once. The decode jobs of a read are
  * spread over the whole pool, so this bounds the reads in flight, not the
  * workers each of them uses.
@@ -27,16 +27,16 @@ const histogramPixels = 262144;
  */
 export async function readChannelHistograms(
   pyramids: GeoTIFFImage[][],
-  options?: { pool?: Pool | null; poolSize?: number; signal?: AbortSignal },
+  options?: { pool?: Pool | null; concurrency?: number; signal?: AbortSignal },
 ): Promise<({ hist: number[]; range: [number, number] } | undefined)[]> {
-  const { pool = null, poolSize = 1, signal } = options ?? {};
+  const { pool = null, concurrency = 1, signal } = options ?? {};
   signal?.throwIfAborted();
   const histograms: (
     { hist: number[]; range: [number, number] } | undefined
   )[] = [];
   let next = 0;
   await Promise.all(
-    Array.from({ length: Math.min(poolSize, pyramids.length) }, async () => {
+    Array.from({ length: Math.min(concurrency, pyramids.length) }, async () => {
       for (let c = next++; c < pyramids.length; c = next++) {
         histograms[c] = await readChannelHistogram(pyramids[c]!, {
           pool,
@@ -68,8 +68,7 @@ export async function readChannelHistogram(
 ): Promise<{ hist: number[]; range: [number, number] } | undefined> {
   const { pool = null, signal } = options ?? {};
   signal?.throwIfAborted();
-  const full = pyramid[0];
-  if (full === undefined) {
+  if (pyramid.length === 0) {
     throw new Error("The channel has no pyramid level.");
   }
   return await readFromPixels(pickLevel(pyramid), { pool, signal });
@@ -104,9 +103,7 @@ async function readFromPixels(
     return undefined;
   }
 
-  return await MathUtils.computeHistogram(values, range, undefined, {
-    signal,
-  });
+  return await MathUtils.computeHistogram(values, range, { signal });
 }
 
 /**

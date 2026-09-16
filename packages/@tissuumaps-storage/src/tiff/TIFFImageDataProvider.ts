@@ -121,10 +121,12 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     const { signal } = options ?? {};
     signal?.throwIfAborted();
 
-    const { tiff, pyramids, channels } = await openTIFF(
-      normalizedDataSource,
-      options,
-    );
+    const { z, t } = normalizedDataSource;
+    const { tiff, pyramids, channels } = await openTIFF(normalizedDataSource, {
+      ...options,
+      z,
+      t,
+    });
 
     const { GeoTIFFTileSource, pool, poolSize } = installTIFFTileSource();
     let channelsWithHistograms: TIFFChannel[] | undefined;
@@ -138,7 +140,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
       try {
         histograms = await readChannelHistograms(pyramids, {
           pool,
-          poolSize,
+          concurrency: poolSize,
           signal,
         });
       } catch (error) {

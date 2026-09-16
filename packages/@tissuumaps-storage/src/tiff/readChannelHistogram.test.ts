@@ -213,7 +213,7 @@ describe("readChannelHistograms", () => {
     ]);
   });
 
-  it("reads no more channels at a time than the pool has workers", async () => {
+  it("reads no more channels at a time than the given concurrency", async () => {
     let reading = 0;
     let mostAtOnce = 0;
     const read = () => {
@@ -227,7 +227,9 @@ describe("readChannelHistograms", () => {
     const pyramids = Array.from({ length: 9 }, () => [
       fakeImage(10, 10, { readRasters: vi.fn(read) }),
     ]);
-    const histograms = await readChannelHistograms(pyramids, { poolSize: 3 });
+    const histograms = await readChannelHistograms(pyramids, {
+      concurrency: 3,
+    });
     expect(histograms).toHaveLength(9);
     expect(mostAtOnce).toBe(3);
   });
