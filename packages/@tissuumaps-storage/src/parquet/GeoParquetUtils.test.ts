@@ -79,6 +79,20 @@ describe("GeoParquetUtils", () => {
       );
       expect(GeoParquetUtils.readColumns(metadata)[0]!.bbox).toBeUndefined();
     });
+
+    it("reads the 2D bounds of a 3D bounding box", () => {
+      const metadata = fakeMetadata(
+        JSON.stringify({
+          primary_column: "geometry",
+          columns: {
+            geometry: { encoding: "WKB", bbox: [0, 1, 2, 10, 11, 12] },
+          },
+        }),
+      );
+      expect(GeoParquetUtils.readColumns(metadata)[0]!.bbox).toEqual([
+        0, 1, 10, 11,
+      ]);
+    });
   });
 
   describe("getPrimaryColumn", () => {

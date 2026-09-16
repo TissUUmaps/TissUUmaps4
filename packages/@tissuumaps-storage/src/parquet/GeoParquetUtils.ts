@@ -32,6 +32,19 @@ type GeoMetadata = {
   };
 };
 
+/** Reads the 2D bounds of a `bbox`, which lists Z bounds too for 3D columns */
+function readBBox(
+  bbox: number[] | undefined,
+): [number, number, number, number] | undefined {
+  if (bbox?.length === 4) {
+    return [bbox[0]!, bbox[1]!, bbox[2]!, bbox[3]!];
+  }
+  if (bbox?.length === 6) {
+    return [bbox[0]!, bbox[1]!, bbox[3]!, bbox[4]!];
+  }
+  return undefined;
+}
+
 /**
  * Helpers for the GeoParquet metadata of a Parquet file
  *
@@ -61,10 +74,7 @@ export class GeoParquetUtils {
         name,
         primary: name === primary_column,
         geometryTypes: column.geometry_types ?? [],
-        bbox:
-          column.bbox?.length === 4
-            ? (column.bbox as [number, number, number, number])
-            : undefined,
+        bbox: readBBox(column.bbox),
       }));
   }
 
@@ -72,7 +82,7 @@ export class GeoParquetUtils {
    * Returns the primary geometry column of a file
    *
    * @param geoColumns - The geometry columns of the file
-   * @returns The column marked as primary, the only geometry column of files
+   * @returns The column marked as primary, the first geometry column of files
    * that do not mark one, or `undefined` for files without geometry columns
    */
   static getPrimaryColumn(geoColumns: GeoColumn[]): GeoColumn | undefined {
