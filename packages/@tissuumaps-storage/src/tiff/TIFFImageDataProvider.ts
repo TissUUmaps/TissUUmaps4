@@ -1,8 +1,10 @@
-import type { GeoTIFFImage } from "geotiff";
+import type { GeoTIFFImage, Pool } from "geotiff";
 
-import type {
-  DataProviderLoadOptions,
-  ImageDataProvider,
+import {
+  type DataProviderLoadOptions,
+  type ImageDataProvider,
+  MathUtils,
+  type NumericArray,
 } from "@tissuumaps/core";
 
 import { type TIFFChannel, TIFFImageData } from "./TIFFImageData";
@@ -14,7 +16,6 @@ import {
 import { sampleFormatUnsignedInteger } from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
-import { readChannelHistograms } from "./readChannelHistogram";
 
 /**
  * Data provider for images stored in TIFF files
@@ -31,6 +32,15 @@ export class TIFFImageDataProvider implements ImageDataProvider<
   TIFFImageData,
   NormalizedTIFFImageDataSource
 > {
+  /**
+   * The pixels a histogram is built from (see
+   * {@link TIFFImageDataProvider._computeChannelHistogram}); more do not make
+   * the quantiles the renderer derives from them more stable. A level needs at
+   * least this many pixels to be read from, and this many of its values are
+   * sampled
+   */
+  private static readonly _numHistogramPixels = 512 * 512;
+
   readonly name = "TIFF";
 
   readonly schema = {
@@ -104,7 +114,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
    *
    * The file and its structure are read with {@link openTIFF}. The channel
    * histograms are read afterwards, a few channels at a time (see
-   * {@link readChannelHistograms}).
+   * {@link TIFFImageDataProvider._computeChannelHistograms}).
    *
    * @param normalizedDataSource - The normalized data source to open
    * @param options - See `DataProviderLoadOptions`; `workspace` is required
@@ -132,17 +142,16 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     let channelsWithHistograms: TIFFChannel[] | undefined;
     if (channels !== undefined) {
       // the histograms only seed the contrast limits, which the renderer can
-      // fall back to the data type range for, so a file whose sample crops
-      // cannot be decoded still opens
+      // fall back to the data type range for, so a file whose pixels cannot be
+      // decoded still opens
       let histograms: (
         { hist: number[]; range: [number, number] } | undefined
       )[] = [];
       try {
-        histograms = await readChannelHistograms(pyramids, {
-          pool,
-          concurrency: poolSize,
-          signal,
-        });
+        histograms = await TIFFImageDataProvider._computeChannelHistograms(
+          pyramids,
+          { pool, concurrency: poolSize, signal },
+        );
       } catch (error) {
         signal?.throwIfAborted();
         console.error("Failed to read the TIFF channel histograms:", error);
@@ -158,6 +167,105 @@ export class TIFFImageDataProvider implements ImageDataProvider<
         new GeoTIFFTileSource({ GeoTIFF: tiff, GeoTIFFImages: images }),
     );
     return new TIFFImageData(tileSources, channelsWithHistograms);
+  }
+
+  /**
+   * Reads the value histogram of every channel of a file
+   *
+   * At most `concurrency` channels are read at a time, so that a file with
+   * many channels does not start every read at once. The decode jobs of a read
+   * are spread over the whole pool, so this bounds the reads in flight, not
+   * the workers each of them uses.
+   *
+   * @param pyramids - The images of every channel, largest first
+   * @param options - The decoder pool (`null` for the main thread), the number
+   * of channels to read at a time (default `1`), and an abort signal
+   * @returns One histogram per channel, in channel order, each as returned by
+   * {@link TIFFImageDataProvider._computeChannelHistogram}
+   * @throws Error if a channel has no pyramid level
+   */
+  private static async _computeChannelHistograms(
+    pyramids: GeoTIFFImage[][],
+    options?: {
+      pool?: Pool | null;
+      concurrency?: number;
+      signal?: AbortSignal;
+    },
+  ): Promise<({ hist: number[]; range: [number, number] } | undefined)[]> {
+    const { pool = null, concurrency = 1, signal } = options ?? {};
+    signal?.throwIfAborted();
+    const histograms: (
+      { hist: number[]; range: [number, number] } | undefined
+    )[] = [];
+    let next = 0;
+    await Promise.all(
+      Array.from(
+        { length: Math.min(concurrency, pyramids.length) },
+        async () => {
+          for (let c = next++; c < pyramids.length; c = next++) {
+            histograms[c] =
+              await TIFFImageDataProvider._computeChannelHistogram(
+                pyramids[c]!,
+                { pool, signal },
+              );
+          }
+        },
+      ),
+    );
+    return histograms;
+  }
+
+  /**
+   * Computes the value histogram of a channel, which the renderer stretches
+   * the channel over, since TIFF stores no display range
+   *
+   * Reads the smallest pyramid level that still holds at least
+   * {@link TIFFImageDataProvider._numHistogramPixels} pixels, or the largest
+   * level of images smaller than that, and bins the level's values over their
+   * actual range (see {@link MathUtils.computeRange} and
+   * {@link MathUtils.computeHistogram}), sampled down to that many values, so
+   * that the histogram is as fine as its bins allow regardless of the data
+   * type's range.
+   *
+   * @param pyramid - The images of the channel, largest first
+   * @param options - The decoder pool (`null` for the main thread) and an
+   * abort signal
+   * @returns The histogram, as bin counts and the value range they span, or
+   * `undefined` for a channel that holds fewer than two distinct values
+   * @throws Error if `pyramid` is empty
+   */
+  private static async _computeChannelHistogram(
+    pyramid: GeoTIFFImage[],
+    options?: { pool?: Pool | null; signal?: AbortSignal },
+  ): Promise<{ hist: number[]; range: [number, number] } | undefined> {
+    const { pool = null, signal } = options ?? {};
+    signal?.throwIfAborted();
+    if (pyramid.length === 0) {
+      throw new Error("The channel has no pyramid level.");
+    }
+    const largeEnough = pyramid.filter(
+      (image) =>
+        image.getWidth() * image.getHeight() >=
+        TIFFImageDataProvider._numHistogramPixels,
+    );
+    const image = largeEnough[largeEnough.length - 1] ?? pyramid[0]!;
+    // a single sample, interleaved, is read as one typed array
+    const values = (await image.readRasters({
+      samples: [0],
+      interleave: true,
+      pool,
+      signal,
+    })) as unknown as NumericArray;
+    const range = await MathUtils.computeRange(values, { signal });
+    // a channel without finite values, or with a single one, has no range to
+    // spread bins over; the renderer falls back to its data type range
+    if (!(range[1] > range[0])) {
+      return undefined;
+    }
+    return await MathUtils.computeHistogram(values, range, {
+      signal,
+      sample: TIFFImageDataProvider._numHistogramPixels,
+    });
   }
 }
 
