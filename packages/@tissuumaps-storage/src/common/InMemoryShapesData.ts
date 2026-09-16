@@ -1,6 +1,7 @@
 import type { ShapesData, ShapesGeometry } from "@tissuumaps/core";
 
-export class GeoJSONShapesData implements ShapesData {
+/** Shapes data whose geometry, IDs and names are fully loaded up front */
+export class InMemoryShapesData implements ShapesData {
   private readonly _geometry: ShapesGeometry;
   private _ids: number[] | undefined;
   private readonly _names: string[] | undefined;
@@ -17,7 +18,7 @@ export class GeoJSONShapesData implements ShapesData {
 
   getIds(): number[] {
     if (this._ids === undefined) {
-      console.warn("No ID property specified, using sequential IDs instead");
+      console.warn("No IDs specified, using sequential IDs instead");
       this._ids = Array.from({ length: this.getSize() }, (_, i) => i);
     }
     return this._ids;
