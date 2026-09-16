@@ -27,6 +27,7 @@ export class TIFFLabelsData implements LabelsData {
     this._tileSource = tileSource;
   }
 
+  /** Returns the tile source of the label mask */
   getTileSource(): string | TileSourceConfig | CustomTileSource {
     return this._tileSource;
   }
@@ -61,7 +62,8 @@ export class TIFFLabelsData implements LabelsData {
     };
   }
 
+  /** Closing does nothing: the decoder pool is shared, and the file is read on demand */
   close(): void {
-    // the decoder pool is shared, and the file is read on demand
+    // nothing to release
   }
 }
