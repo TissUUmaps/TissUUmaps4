@@ -11,7 +11,10 @@ import {
   type TIFFLabelsDataSource,
   tiffLabelsDataSourceDefaults,
 } from "./TIFFLabelsDataSource";
-import { type TIFFStructure, findTIFFParser } from "./formats/TIFFParser";
+import {
+  type TIFFStructure,
+  sampleFormatUnsignedInteger,
+} from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
 
@@ -110,9 +113,8 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
   /**
    * Opens a TIFF labels data source and returns the loaded label mask
    *
-   * The file is opened with {@link openTIFF} and read by the parser of its
-   * format, with the `z` and `t` of the data source selecting the plane. The
-   * pixels are not read: the renderer resolves the labels as it draws them.
+   * The file and its structure are read with {@link openTIFF}. The pixels are
+   * not read: the renderer resolves the labels as it draws them.
    *
    * @param normalizedDataSource - The normalized data source to open
    * @param options - See `DataProviderLoadOptions`; `workspace` is required
@@ -129,14 +131,10 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
     const { signal } = options ?? {};
     signal?.throwIfAborted();
 
-    const tiff = await openTIFF(normalizedDataSource, options);
-
-    const parser = await findTIFFParser(tiff, { signal });
-    const structure = await parser.load(tiff, {
-      z: normalizedDataSource.z,
-      t: normalizedDataSource.t,
-      signal,
-    });
+    const { tiff, ...structure } = await openTIFF(
+      normalizedDataSource,
+      options,
+    );
     const levels = getLabelLevels(structure);
 
     const { GeoTIFFTileSource } = installTIFFTileSource();
@@ -169,7 +167,6 @@ function getLabelLevels(structure: TIFFStructure): GeoTIFFImage[] {
       `The file holds ${channels.length} channels; a label mask has a single one.`,
     );
   }
-  const sampleFormatUnsignedInteger = 1;
   const levels = pyramids[0]!;
   const image = levels[0]!;
   const format = image.getSampleFormat(0);
