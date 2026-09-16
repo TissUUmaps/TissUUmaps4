@@ -12,7 +12,7 @@ function createMockTableData(ids: number[], values: unknown[]): TableData {
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
     loadValueRange: vi.fn().mockResolvedValue(undefined),
-    loadUniqueValues: vi.fn().mockResolvedValue(Array.from(new Set(values))),
+    loadValueCounts: vi.fn(),
     suggestColumnQueries: vi.fn(),
     resolveColumnQuery: vi.fn(),
   };

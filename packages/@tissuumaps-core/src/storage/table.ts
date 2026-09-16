@@ -49,17 +49,17 @@ export interface TableData extends ItemsData {
   ): Promise<GenericArray<T>>;
 
   /**
-   * Loads a column's unique values as a typed array-like
+   * Loads the number of rows per unique value of a column
    *
-   * @typeParam T - Element type of the returned array
+   * @typeParam T - Element type of the column
    * @param column - The column name
    * @param options - Optional abort signal and progress callback
-   * @returns The unique column values
+   * @returns The row count of every unique column value, keyed by value
    */
-  loadUniqueValues<T>(
+  loadValueCounts<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<GenericArray<T>>;
+  ): Promise<Map<T, number>>;
 
   /**
    * Loads a column's minimum and maximum values

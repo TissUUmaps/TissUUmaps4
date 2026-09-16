@@ -366,4 +366,47 @@ describe("MathUtils", () => {
       });
     });
   });
+
+  describe("computeValueCounts", () => {
+    it("counts the occurrences of every distinct value", async () => {
+      const counts = await MathUtils.computeValueCounts(["b", "a", "b"]);
+      expect([...counts]).toEqual([
+        ["b", 2],
+        ["a", 1],
+      ]);
+    });
+
+    it("counts the values of typed arrays", async () => {
+      const counts = await MathUtils.computeValueCounts(
+        new Uint8Array([1, 2, 1]),
+      );
+      expect([...counts]).toEqual([
+        [1, 2],
+        [2, 1],
+      ]);
+    });
+
+    it("returns no counts for empty data", async () => {
+      await expect(MathUtils.computeValueCounts([])).resolves.toEqual(
+        new Map(),
+      );
+    });
+
+    it("handles large data", async () => {
+      const values = new Uint16Array(100_000).map((_, i) => i % 1000);
+      const counts = await MathUtils.computeValueCounts(values);
+      expect(counts.size).toBe(1000);
+      expect([...counts.values()].every((count) => count === 100)).toBe(true);
+    });
+
+    it("rejects with the reason of an aborted signal", async () => {
+      const controller = new AbortController();
+      controller.abort(new Error("aborted"));
+      await expect(
+        MathUtils.computeValueCounts(new Uint8Array(10), {
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow("aborted");
+    });
+  });
 });
