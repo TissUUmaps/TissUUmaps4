@@ -11,7 +11,10 @@ import {
   type TIFFImageDataSource,
   tiffImageDataSourceDefaults,
 } from "./TIFFImageDataSource";
-import { findTIFFParser } from "./formats/TIFFParser";
+import {
+  findTIFFParser,
+  sampleFormatUnsignedInteger,
+} from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
 import { readChannelHistograms } from "./readChannelHistogram";
@@ -160,9 +163,6 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     return new TIFFImageData(tileSources, channelsWithHistograms);
   }
 }
-
-/** The `SampleFormat` value of unsigned integer samples */
-const sampleFormatUnsignedInteger = 1;
 
 /**
  * Returns the contrast limits an 8-bit channel is shown over, `undefined` for
