@@ -292,7 +292,10 @@ export class ColorResolver extends ResolverBase {
         ids,
         config.groupBy.column,
         defaultColor,
-        (group) => HashUtils.djb2Pick(colorPalette.colors, group),
+        (group) =>
+          colorPalette.colors[
+            HashUtils.hash(group) % colorPalette.colors.length
+          ]!,
         (color) => ColorResolver.packColor(color),
         { signal },
       );
@@ -369,7 +372,7 @@ export class ColorResolver extends ResolverBase {
     seed: number,
     colorPalette: ColorPalette,
   ): Color {
-    return HashUtils.lowbias32Pick(colorPalette.colors, id, seed);
+    return colorPalette.colors[HashUtils.mix(id)]!;
   }
 
   /**

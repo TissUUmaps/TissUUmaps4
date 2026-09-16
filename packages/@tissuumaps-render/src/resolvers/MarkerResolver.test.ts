@@ -233,10 +233,14 @@ describe("MarkerResolver", () => {
       );
 
       expect(packedMarkers[0]).toBe(
-        HashUtils.djb2Pick(markerPalette, JSON.stringify("groupA")),
+        markerPalette[
+          HashUtils.hash(JSON.stringify("groupA")) % markerPalette.length
+        ],
       );
       expect(packedMarkers[1]).toBe(
-        HashUtils.djb2Pick(markerPalette, JSON.stringify("groupB")),
+        markerPalette[
+          HashUtils.hash(JSON.stringify("groupB")) % markerPalette.length
+        ],
       );
     });
   });

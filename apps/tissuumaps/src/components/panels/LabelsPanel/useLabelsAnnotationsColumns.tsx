@@ -61,7 +61,10 @@ export function useLabelsAnnotationsColumns(
             if (groupColors !== undefined) {
               color = groupColors.get(group) ?? defaultLabelColor;
             } else if (colorPalette !== undefined) {
-              color = HashUtils.djb2Pick(colorPalette.colors, group);
+              color =
+                colorPalette.colors[
+                  HashUtils.hash(group) % colorPalette.colors.length
+                ]!;
             } else {
               color = defaultLabelColor;
             }

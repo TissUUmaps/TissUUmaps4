@@ -1,76 +1,76 @@
-/** Utility methods for non-cryptographic hashing */
+/**
+ * Utility methods for non-cryptographic hashing
+ *
+ * Hashing a string is split into two steps: {@link hashRaw} reduces the
+ * string to a 32-bit integer, and {@link mix} scrambles that integer together
+ * with a seed. Callers that hash the same key repeatedly with different seeds
+ * can cache the raw hash and only re-run the cheap mixing step. {@link hash}
+ * does both in one call.
+ */
 export class HashUtils {
   /**
-   * Computes the djb2 hash of a string
+   * Computes the 32-bit FNV-1a hash of a string
    *
-   * @see http://www.cse.yorku.ca/~oz/hash.html
-   * @param str - The string to hash
-   * @param seed - The seed to use for the hash
+   * The hash is fast and deterministic, but only weakly mixed: similar keys
+   * yield correlated hashes, and the hash of an empty string is the FNV offset
+   * basis rather than zero. Pass the result through {@link mix} before using
+   * it to select from a small range.
+   *
+   * @see http://www.isthe.com/chongo/tech/comp/fnv/
+   * @param key - The string to hash; hashed by UTF-16 code unit
+   * @returns The raw hash, as a non-negative 32-bit integer
+   */
+  static hashRaw(key: string): number {
+    return HashUtils._fnv1a(key);
+  }
+
+  /**
+   * Scrambles a 32-bit integer with a seed
+   *
+   * The seed is XOR-ed into the value, which is then passed through the
+   * MurmurHash3 finalizer. Consecutive inputs map to unrelated outputs, so the
+   * result is suitable for scattering sequential IDs or raw string hashes over
+   * a small range, e.g. `mix(id, seed) % palette.length`. Different seeds
+   * yield different outputs for the same input.
+   *
+   * @see https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
+   * @param h - The integer to mix; only its lower 32 bits are used
+   * @param seed - The seed; only its lower 32 bits are used
+   * @returns The mixed value, as a non-negative 32-bit integer
+   */
+  static mix(h: number, seed: number = 0): number {
+    return HashUtils._fmix32(h ^ seed);
+  }
+
+  /**
+   * Computes a seeded 32-bit hash of a string
+   *
+   * Equivalent to `mix(hashRaw(key), seed)`.
+   *
+   * @param key - The string to hash; hashed by UTF-16 code unit
+   * @param seed - The seed; only its lower 32 bits are used
    * @returns The hash, as a non-negative 32-bit integer
    */
-  static djb2(str: string, seed: number = 5381): number {
-    let hash = seed;
+  static hash(key: string, seed: number = 0): number {
+    return HashUtils.mix(HashUtils.hashRaw(key), seed);
+  }
+
+  /** 32-bit FNV-1a over the UTF-16 code units of a string */
+  private static _fnv1a(str: string): number {
+    let h = 0x811c9dc5 >>> 0;
     for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) + hash + str.charCodeAt(i);
+      h = Math.imul(h ^ str.charCodeAt(i), 0x01000193);
     }
-    return hash >>> 0; // ensure non-negative
+    return h >>> 0;
   }
 
-  /**
-   * Deterministically selects a value from an array based on the djb2 hash of a key string
-   *
-   * @param values - The array of values to select from
-   * @param key - The string key to hash and use for selection
-   * @param seed - The seed to use for the hash
-   * @returns The value corresponding to the hashed key
-   * @throws Error if the array is empty
-   */
-  static djb2Pick<T>(values: T[], key: string, seed: number = 5381): T {
-    if (values.length === 0) {
-      throw new Error("Cannot pick from an empty array");
-    }
-    const index = HashUtils.djb2(key, seed) % values.length;
-    return values[index]!;
-  }
-
-  /**
-   * Computes the lowbias32 hash of a 32-bit integer
-   *
-   * Unlike {@link djb2} over the decimal string of a number, consecutive
-   * integers map to unrelated hashes, so the hash is suitable for scattering
-   * sequential IDs over a small range. Different seeds yield different
-   * hashes for the same value.
-   *
-   * @see https://github.com/skeeto/hash-prospector
-   * @param value - The integer to hash; only its lower 32 bits are used
-   * @param seed - The seed, XOR-ed into the value before hashing; only its
-   * lower 32 bits are used
-   * @returns The hash, as a non-negative 32-bit integer
-   */
-  static lowbias32(value: number, seed: number = 0): number {
-    let hash = (value ^ seed) >>> 0;
-    hash ^= hash >>> 16;
-    hash = Math.imul(hash, 0x7feb352d);
-    hash ^= hash >>> 15;
-    hash = Math.imul(hash, 0x846ca68b);
-    hash ^= hash >>> 16;
-    return hash >>> 0; // ensure non-negative
-  }
-
-  /**
-   * Deterministically selects a value from an array based on the lowbias32 hash of an integer key
-   *
-   * @param values - The array of values to select from
-   * @param key - The integer key to hash and use for selection
-   * @param seed - The seed (see {@link lowbias32})
-   * @returns The value corresponding to the hashed key
-   * @throws Error if the array is empty
-   */
-  static lowbias32Pick<T>(values: T[], key: number, seed: number = 0): T {
-    if (values.length === 0) {
-      throw new Error("Cannot pick from an empty array");
-    }
-    const index = HashUtils.lowbias32(key, seed) % values.length;
-    return values[index]!;
+  /** MurmurHash3 32-bit finalizer (avalanche step) */
+  private static _fmix32(h: number): number {
+    h ^= h >>> 16;
+    h = Math.imul(h, 0x85ebca6b);
+    h ^= h >>> 13;
+    h = Math.imul(h, 0xc2b2ae35);
+    h ^= h >>> 16;
+    return h >>> 0;
   }
 }

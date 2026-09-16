@@ -64,7 +64,10 @@ export function useShapesAnnotationsColumns(
             if (groupFillColors !== undefined) {
               fillColor = groupFillColors.get(group) ?? defaultShapeFillColor;
             } else if (fillColorPalette !== undefined) {
-              fillColor = HashUtils.djb2Pick(fillColorPalette.colors, group);
+              fillColor =
+                fillColorPalette.colors[
+                  HashUtils.hash(group) % fillColorPalette.colors.length
+                ]!;
             } else {
               fillColor = defaultShapeFillColor;
             }
@@ -182,10 +185,10 @@ export function useShapesAnnotationsColumns(
               strokeColor =
                 groupStrokeColors.get(group) ?? defaultShapeStrokeColor;
             } else if (strokeColorPalette !== undefined) {
-              strokeColor = HashUtils.djb2Pick(
-                strokeColorPalette.colors,
-                group,
-              );
+              strokeColor =
+                strokeColorPalette.colors[
+                  HashUtils.hash(group) % strokeColorPalette.colors.length
+                ]!;
             } else {
               strokeColor = defaultShapeStrokeColor;
             }

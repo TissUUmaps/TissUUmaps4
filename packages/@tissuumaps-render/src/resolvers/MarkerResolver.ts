@@ -230,7 +230,7 @@ export class MarkerResolver extends ResolverBase {
       ids,
       config.groupBy.column,
       defaultMarker,
-      (group) => HashUtils.djb2Pick(markerPalette, group),
+      (group) => markerPalette[HashUtils.hash(group) % markerPalette.length]!,
       (marker) => MarkerResolver.packMarker(marker),
       { signal },
     );
