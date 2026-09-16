@@ -106,8 +106,8 @@ export class MathUtils {
    *
    * @param values - The values to compute the histogram of
    * @param range - The value range the bins span, as `[min, max]`
-   * @param bins - The number of bins, a positive integer
-   * @param options - Optional abort signal (`signal`), number of values to
+   * @param options - Optional abort signal (`signal`), number of bins
+   *   (`bins`, a positive integer, defaults to `1024`), number of values to
    *   sample (`sample`; omitting it, `0`, or at least the number of values
    *   disables sampling), and seed for sampling (`seed`, defaults to `0`)
    * @returns A promise that resolves to the histogram, as bin counts and the
@@ -116,16 +116,20 @@ export class MathUtils {
   static async computeHistogram(
     values: NumericArray,
     range: [number, number],
-    bins: number = 1024,
-    options?: { signal?: AbortSignal; sample?: number; seed?: number },
+    options?: {
+      signal?: AbortSignal;
+      bins?: number;
+      sample?: number;
+      seed?: number;
+    },
   ): Promise<{ hist: number[]; range: [number, number] }> {
-    const { signal, sample, seed = 0 } = options ?? {};
+    const { signal, bins = 1024, sample, seed = 0 } = options ?? {};
     signal?.throwIfAborted();
     const [vmin, vmax] = range;
     const hist = new Array<number>(bins).fill(0);
     const scale = vmin < vmax ? (bins - 1) / (vmax - vmin) : 0;
     const rng =
-      sample && sample < values.length
+      sample !== undefined && sample > 0 && sample < values.length
         ? RandomUtils.createUint32RNG(seed)
         : undefined;
     await AsyncUtils.forEach(

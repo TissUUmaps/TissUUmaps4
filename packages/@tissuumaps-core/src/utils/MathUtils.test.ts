@@ -132,7 +132,7 @@ describe("MathUtils", () => {
       const { hist, range } = await MathUtils.computeHistogram(
         [0, 1, 2, 3, 4],
         [0, 4],
-        5,
+        { bins: 5 },
       );
       expect(range).toEqual([0, 4]);
       expect(hist).toEqual([1, 1, 1, 1, 1]);
@@ -142,7 +142,7 @@ describe("MathUtils", () => {
       const { hist } = await MathUtils.computeHistogram(
         new Float32Array([-1, -0.9, 0.49, 0.51, 1]),
         [-1, 1],
-        3,
+        { bins: 3 },
       );
       expect(hist).toEqual([2, 1, 2]);
     });
@@ -158,7 +158,7 @@ describe("MathUtils", () => {
       const { hist } = await MathUtils.computeHistogram(
         [-10, 0, 5, 10, 20],
         [0, 10],
-        3,
+        { bins: 3 },
       );
       expect(hist).toEqual([2, 1, 2]);
     });
@@ -167,7 +167,7 @@ describe("MathUtils", () => {
       const { hist } = await MathUtils.computeHistogram(
         new Float64Array([NaN, 2, Infinity, 4, -Infinity]),
         [2, 4],
-        2,
+        { bins: 2 },
       );
       expect(hist).toEqual([1, 1]);
     });
@@ -176,26 +176,30 @@ describe("MathUtils", () => {
       const { hist, range } = await MathUtils.computeHistogram(
         [6, 7, 8],
         [7, 7],
-        4,
+        { bins: 4 },
       );
       expect(range).toEqual([7, 7]);
       expect(hist).toEqual([3, 0, 0, 0]);
     });
 
     it("puts all values into a single bin", async () => {
-      const { hist } = await MathUtils.computeHistogram([1, 5, 9], [1, 9], 1);
+      const { hist } = await MathUtils.computeHistogram([1, 5, 9], [1, 9], {
+        bins: 1,
+      });
       expect(hist).toEqual([3]);
     });
 
     it("returns zero counts for empty data", async () => {
       await expect(
-        MathUtils.computeHistogram([], [0, 255], 3),
+        MathUtils.computeHistogram([], [0, 255], { bins: 3 }),
       ).resolves.toEqual({ hist: [0, 0, 0], range: [0, 255] });
     });
 
     it("handles large data", async () => {
       const data = new Uint16Array(100_000).map((_, i) => i % 1000);
-      const { hist } = await MathUtils.computeHistogram(data, [0, 999], 1000);
+      const { hist } = await MathUtils.computeHistogram(data, [0, 999], {
+        bins: 1000,
+      });
       expect(hist.every((count) => count === 100)).toBe(true);
     });
 
@@ -203,7 +207,8 @@ describe("MathUtils", () => {
       const controller = new AbortController();
       controller.abort(new Error("aborted"));
       await expect(
-        MathUtils.computeHistogram(new Uint8Array(10), [0, 255], 4, {
+        MathUtils.computeHistogram(new Uint8Array(10), [0, 255], {
+          bins: 4,
           signal: controller.signal,
         }),
       ).rejects.toThrow("aborted");
@@ -212,7 +217,8 @@ describe("MathUtils", () => {
     describe("with sample", () => {
       it("counts exactly sample sampled values", async () => {
         const data = new Float32Array(10_000).map(() => Math.random());
-        const { hist } = await MathUtils.computeHistogram(data, [0, 1], 16, {
+        const { hist } = await MathUtils.computeHistogram(data, [0, 1], {
+          bins: 16,
           sample: 1000,
         });
         expect(hist.reduce((a, b) => a + b, 0)).toBe(1000);
@@ -220,15 +226,18 @@ describe("MathUtils", () => {
 
       it("is deterministic for the same seed", async () => {
         const data = new Float32Array(10_000).map(() => Math.random());
-        const a = await MathUtils.computeHistogram(data, [0, 1], 16, {
+        const a = await MathUtils.computeHistogram(data, [0, 1], {
+          bins: 16,
           sample: 1000,
           seed: 7,
         });
-        const b = await MathUtils.computeHistogram(data, [0, 1], 16, {
+        const b = await MathUtils.computeHistogram(data, [0, 1], {
+          bins: 16,
           sample: 1000,
           seed: 7,
         });
-        const c = await MathUtils.computeHistogram(data, [0, 1], 16, {
+        const c = await MathUtils.computeHistogram(data, [0, 1], {
+          bins: 16,
           sample: 1000,
           seed: 8,
         });
@@ -238,10 +247,12 @@ describe("MathUtils", () => {
 
       it("defaults to seed 0", async () => {
         const data = new Float32Array(10_000).map(() => Math.random());
-        const a = await MathUtils.computeHistogram(data, [0, 1], 16, {
+        const a = await MathUtils.computeHistogram(data, [0, 1], {
+          bins: 16,
           sample: 1000,
         });
-        const b = await MathUtils.computeHistogram(data, [0, 1], 16, {
+        const b = await MathUtils.computeHistogram(data, [0, 1], {
+          bins: 16,
           sample: 1000,
           seed: 0,
         });
@@ -253,7 +264,8 @@ describe("MathUtils", () => {
         const data = new Uint16Array(10_000).map((_, i) =>
           Math.floor(i / 1000),
         );
-        const { hist } = await MathUtils.computeHistogram(data, [0, 9], 10, {
+        const { hist } = await MathUtils.computeHistogram(data, [0, 9], {
+          bins: 10,
           sample: 1000,
         });
         expect(hist.every((count) => count > 50)).toBe(true);
@@ -261,7 +273,8 @@ describe("MathUtils", () => {
 
       it("bins fractional and negative values without truncation", async () => {
         const data = new Float64Array(1000).map((_, i) => (i % 2 ? -0.5 : 0.5));
-        const { hist } = await MathUtils.computeHistogram(data, [-1, 1], 5, {
+        const { hist } = await MathUtils.computeHistogram(data, [-1, 1], {
+          bins: 5,
           sample: 100,
         });
         // -0.5 -> bin 1, 0.5 -> bin 3; truncation to integers would hit bin 2
@@ -273,7 +286,8 @@ describe("MathUtils", () => {
 
       it("ignores non-finite values", async () => {
         const data = new Float64Array(1000).map((_, i) => (i % 2 ? NaN : 3));
-        const { hist } = await MathUtils.computeHistogram(data, [2, 4], 3, {
+        const { hist } = await MathUtils.computeHistogram(data, [2, 4], {
+          bins: 3,
           sample: 100,
         });
         expect(hist[0]).toBe(0);
@@ -284,9 +298,12 @@ describe("MathUtils", () => {
 
       it("counts every value once when sample is 0 or not below the length", async () => {
         const data = [0, 1, 2, 3, 4];
-        const full = await MathUtils.computeHistogram(data, [0, 4], 5);
+        const full = await MathUtils.computeHistogram(data, [0, 4], {
+          bins: 5,
+        });
         for (const sample of [0, 5, 6, 1000]) {
-          const { hist } = await MathUtils.computeHistogram(data, [0, 4], 5, {
+          const { hist } = await MathUtils.computeHistogram(data, [0, 4], {
+            bins: 5,
             sample,
           });
           expect(hist).toEqual(full.hist);
@@ -295,7 +312,7 @@ describe("MathUtils", () => {
 
       it("returns zero counts for empty data", async () => {
         await expect(
-          MathUtils.computeHistogram([], [0, 255], 3, { sample: 10 }),
+          MathUtils.computeHistogram([], [0, 255], { bins: 3, sample: 10 }),
         ).resolves.toEqual({ hist: [0, 0, 0], range: [0, 255] });
       });
 
@@ -303,7 +320,8 @@ describe("MathUtils", () => {
         const controller = new AbortController();
         controller.abort(new Error("aborted"));
         await expect(
-          MathUtils.computeHistogram(new Uint8Array(10), [0, 255], 4, {
+          MathUtils.computeHistogram(new Uint8Array(10), [0, 255], {
+            bins: 4,
             signal: controller.signal,
             sample: 5,
           }),
