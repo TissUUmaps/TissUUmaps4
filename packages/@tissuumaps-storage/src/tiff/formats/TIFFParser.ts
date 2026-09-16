@@ -52,7 +52,13 @@ export type TIFFParser = {
   ): Promise<TIFFStructure>;
 };
 
-/** The parsers in detection order; the plain parser accepts any file */
+/**
+ * The parsers in detection order
+ *
+ * The plain parser accepts any file, so it has to stay last: ahead of another
+ * parser it would claim that parser's files and drop their channel names and
+ * colors, without failing.
+ */
 const tiffParsers: TIFFParser[] = [
   new OMETIFFParser(),
   new QPTIFFParser(),

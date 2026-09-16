@@ -12,6 +12,10 @@ import { PlainTIFFParser } from "./PlainTIFFParser";
 import { QPTIFFParser } from "./QPTIFFParser";
 import { type TIFFStructure, findTIFFParser } from "./TIFFParser";
 
+// The three parsers are tested together, rather than one file each, because
+// they share the fake-TIFF fixtures below: the same directories have to be
+// read as OME-TIFF, QPTIFF and plain TIFF to tell the formats apart.
+
 type FakeImageOptions = {
   width: number;
   height: number;
