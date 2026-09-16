@@ -132,58 +132,79 @@ describe("RandomUtils", () => {
         expectUint32(RandomUtils.randUint32(seed));
       }
     });
+
+    it("draws the next value from a given rng", () => {
+      const rng = RandomUtils.createUint32RNG(42);
+      const expected = RandomUtils.createUint32RNG(42);
+      expect(RandomUtils.randUint32(rng)).toBe(expected());
+      expect(RandomUtils.randUint32(rng)).toBe(expected());
+      expect(RandomUtils.randUint32(rng)).toBe(expected());
+    });
   });
 
-  describe("fillUint32Array", () => {
-    it("fills the array with the stream for the seed", () => {
+  describe("randUint32Array", () => {
+    it("returns a new array of length n filled with the stream for the seed", () => {
       for (const [seed, expected] of splitmix32Vectors) {
-        const array = new Uint32Array(expected.length);
-        RandomUtils.fillUint32Array(array, seed);
+        const array = RandomUtils.randUint32Array(expected.length, seed);
+        expect(array).toBeInstanceOf(Uint32Array);
+        expect(array.length).toBe(expected.length);
         expect(Array.from(array)).toEqual(expected);
       }
     });
 
     it("starts with randUint32(seed)", () => {
-      const array = new Uint32Array(1);
-      RandomUtils.fillUint32Array(array, 42);
+      const array = RandomUtils.randUint32Array(1, 42);
       expect(array[0]).toBe(RandomUtils.randUint32(42));
     });
 
     it("defaults to seed 0", () => {
-      const a = new Uint32Array(8);
-      const b = new Uint32Array(8);
-      RandomUtils.fillUint32Array(a);
-      RandomUtils.fillUint32Array(b, 0);
-      expect(a).toEqual(b);
+      expect(RandomUtils.randUint32Array(8)).toEqual(
+        RandomUtils.randUint32Array(8, 0),
+      );
     });
 
     it("fills the whole array", () => {
-      const array = new Uint32Array(100);
-      RandomUtils.fillUint32Array(array, 7);
+      const array = RandomUtils.randUint32Array(100, 7);
       expect(array.every((v) => v !== 0)).toBe(true);
     });
 
-    it("leaves an empty array untouched", () => {
-      const array = new Uint32Array(0);
-      expect(() => RandomUtils.fillUint32Array(array, 7)).not.toThrow();
+    it("returns an empty array for n = 0", () => {
+      expect(RandomUtils.randUint32Array(0, 7).length).toBe(0);
     });
 
-    it("yields shorter fills as prefixes of longer fills", () => {
-      const short = new Uint32Array(10);
-      const long = new Uint32Array(100);
-      RandomUtils.fillUint32Array(short, 42);
-      RandomUtils.fillUint32Array(long, 42);
+    it("yields shorter arrays as prefixes of longer arrays", () => {
+      const short = RandomUtils.randUint32Array(10, 42);
+      const long = RandomUtils.randUint32Array(100, 42);
       expect(long.subarray(0, 10)).toEqual(short);
     });
 
-    it("draws from the given rng and ignores the seed", () => {
+    it("fills the given array in place and returns it", () => {
+      const array = new Uint32Array(5);
+      const result = RandomUtils.randUint32Array(5, 42, array);
+      expect(result).toBe(array);
+      expect(array).toEqual(RandomUtils.randUint32Array(5, 42));
+    });
+
+    it("fills only the first n elements of the given array", () => {
+      const array = new Uint32Array(10).fill(0xffffffff);
+      RandomUtils.randUint32Array(5, 42, array);
+      expect(array.subarray(0, 5)).toEqual(RandomUtils.randUint32Array(5, 42));
+      expect(Array.from(array.subarray(5))).toEqual(
+        new Array<number>(5).fill(0xffffffff),
+      );
+    });
+
+    it("throws if the given array holds fewer than n elements", () => {
+      expect(() =>
+        RandomUtils.randUint32Array(6, 42, new Uint32Array(5)),
+      ).toThrow(RangeError);
+    });
+
+    it("draws consecutive values from a given rng", () => {
       const rng = RandomUtils.createUint32RNG(42);
-      const a = new Uint32Array(5);
-      const b = new Uint32Array(5);
-      RandomUtils.fillUint32Array(a, 0, rng);
-      RandomUtils.fillUint32Array(b, 99, rng);
-      const expected = new Uint32Array(10);
-      RandomUtils.fillUint32Array(expected, 42);
+      const a = RandomUtils.randUint32Array(5, rng);
+      const b = RandomUtils.randUint32Array(5, rng, new Uint32Array(5));
+      const expected = RandomUtils.randUint32Array(10, 42);
       expect(a).toEqual(expected.subarray(0, 5));
       expect(b).toEqual(expected.subarray(5, 10));
     });
@@ -259,13 +280,25 @@ describe("RandomUtils", () => {
         expectUnitFloat32(RandomUtils.randUnitFloat32(seed));
       }
     });
+
+    it("draws the next value from a given rng", () => {
+      const rng = RandomUtils.createUint32RNG(42);
+      const expected = RandomUtils.createUint32RNG(42);
+      expect(RandomUtils.randUnitFloat32(rng)).toBe(
+        RandomUtils.toUnitFloat32(expected()),
+      );
+      expect(RandomUtils.randUnitFloat32(rng)).toBe(
+        RandomUtils.toUnitFloat32(expected()),
+      );
+    });
   });
 
-  describe("fillUnitFloat32Array", () => {
-    it("maps the stream for the seed through toUnitFloat32", () => {
+  describe("randUnitFloat32Array", () => {
+    it("returns a new array of length n mapped through toUnitFloat32", () => {
       for (const [seed, expected] of splitmix32Vectors) {
-        const array = new Float32Array(expected.length);
-        RandomUtils.fillUnitFloat32Array(array, seed);
+        const array = RandomUtils.randUnitFloat32Array(expected.length, seed);
+        expect(array).toBeInstanceOf(Float32Array);
+        expect(array.length).toBe(expected.length);
         expect(Array.from(array)).toEqual(
           expected.map((v) => RandomUtils.toUnitFloat32(v)),
         );
@@ -273,50 +306,63 @@ describe("RandomUtils", () => {
     });
 
     it("starts with randUnitFloat32(seed)", () => {
-      const array = new Float32Array(1);
-      RandomUtils.fillUnitFloat32Array(array, 42);
+      const array = RandomUtils.randUnitFloat32Array(1, 42);
       expect(array[0]).toBe(RandomUtils.randUnitFloat32(42));
     });
 
     it("stores values without rounding", () => {
-      const uints = new Uint32Array(100);
-      const floats = new Float32Array(100);
-      RandomUtils.fillUint32Array(uints, 7);
-      RandomUtils.fillUnitFloat32Array(floats, 7);
+      const uints = RandomUtils.randUint32Array(100, 7);
+      const floats = RandomUtils.randUnitFloat32Array(100, 7);
       for (let i = 0; i < 100; i++) {
         expect(floats[i]).toBe(RandomUtils.toUnitFloat32(uints[i]!));
       }
     });
 
     it("defaults to seed 0", () => {
-      const a = new Float32Array(8);
-      const b = new Float32Array(8);
-      RandomUtils.fillUnitFloat32Array(a);
-      RandomUtils.fillUnitFloat32Array(b, 0);
-      expect(a).toEqual(b);
+      expect(RandomUtils.randUnitFloat32Array(8)).toEqual(
+        RandomUtils.randUnitFloat32Array(8, 0),
+      );
     });
 
-    it("leaves an empty array untouched", () => {
-      const array = new Float32Array(0);
-      expect(() => RandomUtils.fillUnitFloat32Array(array, 7)).not.toThrow();
+    it("returns an empty array for n = 0", () => {
+      expect(RandomUtils.randUnitFloat32Array(0, 7).length).toBe(0);
     });
 
-    it("yields shorter fills as prefixes of longer fills", () => {
-      const short = new Float32Array(10);
-      const long = new Float32Array(100);
-      RandomUtils.fillUnitFloat32Array(short, 42);
-      RandomUtils.fillUnitFloat32Array(long, 42);
+    it("yields shorter arrays as prefixes of longer arrays", () => {
+      const short = RandomUtils.randUnitFloat32Array(10, 42);
+      const long = RandomUtils.randUnitFloat32Array(100, 42);
       expect(long.subarray(0, 10)).toEqual(short);
     });
 
-    it("draws from the given rng and ignores the seed", () => {
+    it("fills the given array in place and returns it", () => {
+      const array = new Float32Array(5);
+      const result = RandomUtils.randUnitFloat32Array(5, 42, array);
+      expect(result).toBe(array);
+      expect(array).toEqual(RandomUtils.randUnitFloat32Array(5, 42));
+    });
+
+    it("fills only the first n elements of the given array", () => {
+      const array = new Float32Array(10).fill(-1);
+      RandomUtils.randUnitFloat32Array(5, 42, array);
+      expect(array.subarray(0, 5)).toEqual(
+        RandomUtils.randUnitFloat32Array(5, 42),
+      );
+      expect(Array.from(array.subarray(5))).toEqual(
+        new Array<number>(5).fill(-1),
+      );
+    });
+
+    it("throws if the given array holds fewer than n elements", () => {
+      expect(() =>
+        RandomUtils.randUnitFloat32Array(6, 42, new Float32Array(5)),
+      ).toThrow(RangeError);
+    });
+
+    it("draws consecutive values from a given rng", () => {
       const rng = RandomUtils.createUint32RNG(42);
-      const a = new Float32Array(5);
-      const b = new Float32Array(5);
-      RandomUtils.fillUnitFloat32Array(a, 0, rng);
-      RandomUtils.fillUnitFloat32Array(b, 99, rng);
-      const expected = new Float32Array(10);
-      RandomUtils.fillUnitFloat32Array(expected, 42);
+      const a = RandomUtils.randUnitFloat32Array(5, rng);
+      const b = RandomUtils.randUnitFloat32Array(5, rng, new Float32Array(5));
+      const expected = RandomUtils.randUnitFloat32Array(10, 42);
       expect(a).toEqual(expected.subarray(0, 5));
       expect(b).toEqual(expected.subarray(5, 10));
     });
