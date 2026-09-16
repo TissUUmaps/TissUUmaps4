@@ -1,5 +1,6 @@
 import type { NumericArray } from "../types/arrays";
 import { AsyncUtils } from "./AsyncUtils";
+import { RandomUtils } from "./RandomUtils";
 
 /** Utility methods for numeric clamping, alignment and histograms */
 export class MathUtils {
@@ -85,11 +86,19 @@ export class MathUtils {
    *
    * `hist[i]` counts the values that are closest to bin `i`, with bins spread
    * evenly over `range`: bin `0` maps to the range's lower bound, the last bin
-   * to its upper bound, and each bin in between to `vmin + i / (n - 1) * (vmax
-   * - vmin)`. Values outside the range are counted in the nearest edge bin,
-   * non-finite values (`NaN`, infinities) are ignored. If the range is
-   * degenerate (upper bound not above lower bound), or if `n` is `1`, all
+   * to its upper bound, and each bin in between to `vmin + i / (bins - 1) *
+   * (vmax - vmin)`. Values outside the range are counted in the nearest edge
+   * bin, non-finite values (`NaN`, infinities) are ignored. If the range is
+   * degenerate (upper bound not above lower bound), or if `bins` is `1`, all
    * values fall into bin `0`.
+   *
+   * If `sample` is positive and smaller than the number of values, the
+   * histogram is estimated from `sample` values drawn uniformly with
+   * replacement, using the seeded generator of
+   * {@link RandomUtils.createUint32RNG}; the counts then sum to `sample`
+   * (minus ignored non-finite values) rather than to the number of values.
+   * Sampling is deterministic for a given `seed`. Otherwise, every value is
+   * counted exactly once.
    *
    * The values are traversed on the main thread, yielding to the event loop
    * periodically so the UI stays responsive for large arrays (see
@@ -97,27 +106,38 @@ export class MathUtils {
    *
    * @param values - The values to compute the histogram of
    * @param range - The value range the bins span, as `[min, max]`
-   * @param n - The number of bins, a positive integer
-   * @param options - Optional abort signal
+   * @param bins - The number of bins, a positive integer
+   * @param options - Optional abort signal (`signal`), number of values to
+   *   sample (`sample`; omitting it, `0`, or at least the number of values
+   *   disables sampling), and seed for sampling (`seed`, defaults to `0`)
    * @returns A promise that resolves to the histogram, as bin counts and the
    * given value range
    */
   static async computeHistogram(
     values: NumericArray,
     range: [number, number],
-    n: number = 256,
-    options?: { signal?: AbortSignal },
+    bins: number = 1024,
+    options?: { signal?: AbortSignal; sample?: number; seed?: number },
   ): Promise<{ hist: number[]; range: [number, number] }> {
-    const { signal } = options ?? {};
+    const { signal, sample, seed = 0 } = options ?? {};
     signal?.throwIfAborted();
     const [vmin, vmax] = range;
-    const hist = new Array<number>(n).fill(0);
-    const scale = vmin < vmax ? (n - 1) / (vmax - vmin) : 0;
+    const hist = new Array<number>(bins).fill(0);
+    const scale = vmin < vmax ? (bins - 1) / (vmax - vmin) : 0;
+    const rng =
+      sample && sample < values.length
+        ? RandomUtils.createUint32RNG(seed)
+        : undefined;
     await AsyncUtils.forEach(
-      values,
-      (v) => {
+      { length: Math.min(sample || values.length, values.length) },
+      (_, i) => {
+        const v = values[rng ? rng() % values.length : i]!;
         if (Number.isFinite(v)) {
-          const bin = MathUtils.clamp(Math.round((v - vmin) * scale), 0, n - 1);
+          const bin = MathUtils.clamp(
+            Math.round((v - vmin) * scale),
+            0,
+            bins - 1,
+          );
           hist[bin]! += 1;
         }
       },

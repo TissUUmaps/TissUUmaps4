@@ -10,10 +10,11 @@ import { type Fmix32Config, HashUtils } from "./HashUtils";
  *
  * {@link createUint32RNG} returns a generator that draws one 32-bit integer
  * per call; {@link toUnitFloat32} maps such a draw to `[0, 1)`. The scalar
- * `rand*` methods take the first draw of a fresh generator, and the `rand*Array`
- * methods write consecutive draws of a fresh generator into a typed array.
- * Because they all consume the same stream, `randUint32Array(n, seed)` starts
- * with `randUint32(seed)`, and a longer array has the shorter one as a prefix.
+ * `rand*` methods take the first draw of a fresh generator, and the
+ * `rand*Array` methods write consecutive draws of a fresh generator into a
+ * typed array. Because they all consume the same stream,
+ * `randUint32Array(n, seed)` starts with `randUint32(seed)`, and a longer
+ * array has the shorter one as a prefix.
  *
  * Every `rand*` method takes either a seed or a generator as `seedOrRng`. A
  * seed creates a fresh generator; passing a generator draws from it instead,
