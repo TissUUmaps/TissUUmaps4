@@ -8,6 +8,8 @@ import {
 
 import type { DataProviderLoadOptions } from "@tissuumaps/core";
 
+import { type TIFFStructure, findTIFFParser } from "./formats/TIFFParser";
+
 /**
  * Remote files are read in 64 KiB blocks, of which 256 (16 MiB) are cached per
  * open file. Without blocks, geotiff.js sends one range request per tag value
@@ -19,15 +21,44 @@ const remoteSourceOptions: RemoteSourceOptions & BlockedSourceOptions = {
 };
 
 /**
- * Opens the TIFF file a data source points to
+ * Opens the TIFF file a data source points to and reads its structure
  *
  * Files in the open workspace are read through their file handle, remote files
  * over HTTP range requests (see {@link remoteSourceOptions}). A data source
  * that has both is read from the workspace, and falls back to its URL when no
  * workspace is open.
  *
- * Opening a file reads nothing but its header; its directories and pixels are
- * read on demand.
+ * Opening a file reads nothing but its header. Its structure is then read by
+ * the parser of its format (see `findTIFFParser`), with the `z` and `t` of the
+ * data source selecting the plane; its pixels are read on demand.
+ *
+ * @param normalizedDataSource - The `url` and/or workspace `path` of the
+ * normalized data source to open, and the plane to read
+ * @param options - See `DataProviderLoadOptions`; `workspace` is required for
+ * data sources with a `path` but no `url`
+ * @returns The opened file and its structure
+ * @throws Error if the data source has neither a URL nor a path, has only a
+ * path while no workspace is open, or holds a TIFF no parser recognizes
+ */
+export async function openTIFF(
+  normalizedDataSource: {
+    url?: string;
+    path?: string;
+    z?: number;
+    t?: number;
+  },
+  options?: DataProviderLoadOptions,
+): Promise<TIFFStructure & { tiff: GeoTIFF }> {
+  const { signal } = options ?? {};
+  const tiff = await openFile(normalizedDataSource, options);
+  const { z, t } = normalizedDataSource;
+  const parser = await findTIFFParser(tiff, { signal });
+  const structure = await parser.load(tiff, { z, t, signal });
+  return { ...structure, tiff };
+}
+
+/**
+ * Opens the TIFF file a data source points to
  *
  * @param normalizedDataSource - The `url` and/or workspace `path` of the
  * normalized data source to open
@@ -37,7 +68,7 @@ const remoteSourceOptions: RemoteSourceOptions & BlockedSourceOptions = {
  * @throws Error if the data source has neither a URL nor a path, or has only a
  * path while no workspace is open
  */
-export async function openTIFF(
+async function openFile(
   normalizedDataSource: { url?: string; path?: string },
   options?: DataProviderLoadOptions,
 ): Promise<GeoTIFF> {

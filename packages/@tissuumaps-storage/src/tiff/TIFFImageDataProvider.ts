@@ -11,10 +11,7 @@ import {
   type TIFFImageDataSource,
   tiffImageDataSourceDefaults,
 } from "./TIFFImageDataSource";
-import {
-  findTIFFParser,
-  sampleFormatUnsignedInteger,
-} from "./formats/TIFFParser";
+import { sampleFormatUnsignedInteger } from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
 import { readChannelHistograms } from "./readChannelHistogram";
@@ -105,9 +102,8 @@ export class TIFFImageDataProvider implements ImageDataProvider<
   /**
    * Opens a TIFF image data source and returns the loaded image data
    *
-   * The file is opened with {@link openTIFF} and read by the parser of its
-   * format, with the `z` and `t` of the data source selecting the plane. The
-   * channel histograms are read afterwards, a few channels at a time (see
+   * The file and its structure are read with {@link openTIFF}. The channel
+   * histograms are read afterwards, a few channels at a time (see
    * {@link readChannelHistograms}).
    *
    * @param normalizedDataSource - The normalized data source to open
@@ -125,11 +121,10 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     const { signal } = options ?? {};
     signal?.throwIfAborted();
 
-    const tiff = await openTIFF(normalizedDataSource, options);
-
-    const { z, t } = normalizedDataSource;
-    const parser = await findTIFFParser(tiff, { signal });
-    const { pyramids, channels } = await parser.load(tiff, { z, t, signal });
+    const { tiff, pyramids, channels } = await openTIFF(
+      normalizedDataSource,
+      options,
+    );
 
     const { GeoTIFFTileSource, pool, poolSize } = installTIFFTileSource();
     let channelsWithHistograms: TIFFChannel[] | undefined;
