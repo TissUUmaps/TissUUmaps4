@@ -61,7 +61,8 @@ export function usePointsAnnotationsColumns(
             if (groupMarkers !== undefined) {
               marker = groupMarkers.get(group) ?? defaultPointMarker;
             } else {
-              marker = HashUtils.djb2Pick(markerPalette, group);
+              marker =
+                markerPalette[HashUtils.hash(group) % markerPalette.length]!;
             }
             return markers.find((m) => m.value === marker)!.icon;
           },
@@ -132,7 +133,10 @@ export function usePointsAnnotationsColumns(
             if (groupColors !== undefined) {
               color = groupColors.get(group) ?? defaultPointColor;
             } else if (colorPalette !== undefined) {
-              color = HashUtils.djb2Pick(colorPalette.colors, group);
+              color =
+                colorPalette.colors[
+                  HashUtils.hash(group) % colorPalette.colors.length
+                ]!;
             } else {
               color = defaultPointColor;
             }

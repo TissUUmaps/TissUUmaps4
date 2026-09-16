@@ -108,11 +108,9 @@ describe("ImageUtils", () => {
     it("clips a histogram computed by MathUtils.computeHistogram", async () => {
       // 100 values, one per bin: 5 values are clipped at each end
       const data = new Uint16Array(100).map((_, i) => 1000 + i);
-      const histogram = await MathUtils.computeHistogram(
-        data,
-        [1000, 1099],
-        100,
-      );
+      const histogram = await MathUtils.computeHistogram(data, [1000, 1099], {
+        bins: 100,
+      });
       const [low, high] = ImageUtils.getDefaultContrastLimits(
         histogram,
         0.05,

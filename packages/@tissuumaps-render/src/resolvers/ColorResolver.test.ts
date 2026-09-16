@@ -342,12 +342,18 @@ describe("ColorResolver", () => {
       // Colors are deterministically hash-picked from the palette
       expect(packedColors[0]).toBe(
         ColorResolver.packColor(
-          HashUtils.djb2Pick(builtInPalette.colors, JSON.stringify("groupA")),
+          builtInPalette.colors[
+            HashUtils.hash(JSON.stringify("groupA")) %
+              builtInPalette.colors.length
+          ]!,
         ),
       );
       expect(packedColors[1]).toBe(
         ColorResolver.packColor(
-          HashUtils.djb2Pick(builtInPalette.colors, JSON.stringify("groupB")),
+          builtInPalette.colors[
+            HashUtils.hash(JSON.stringify("groupB")) %
+              builtInPalette.colors.length
+          ]!,
         ),
       );
     });
@@ -676,7 +682,7 @@ describe("ColorResolver", () => {
   describe("pickRandomColor", () => {
     it("picks the color selected by the seeded hash of the ID", () => {
       expect(ColorResolver.pickRandomColor(42, 3, testPalette)).toBe(
-        HashUtils.lowbias32Pick(testPalette.colors, 42, 3),
+        testPalette.colors[HashUtils.mix(42, 3) % testPalette.colors.length],
       );
     });
 

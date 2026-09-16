@@ -2,6 +2,7 @@ import { RefreshCwIcon, Square } from "lucide-react";
 
 import {
   MathUtils,
+  RandomUtils,
   categoricalColorPalettes,
   continuousColorPalettes,
   defaultRandomSeed,
@@ -330,7 +331,7 @@ function RandomColorConfigWidget({
               size="icon-xs"
               aria-label="Shuffle seed"
               title="Shuffle seed"
-              onClick={() => setSeed(Math.floor(Math.random() * 0x100000000))}
+              onClick={() => setSeed(RandomUtils.seed())}
             >
               <RefreshCwIcon />
             </InputGroupButton>
