@@ -224,11 +224,12 @@ export { AsyncUtils } from "./utils/AsyncUtils";
 export { BitUtils } from "./utils/BitUtils";
 export { ColorUtils } from "./utils/ColorUtils";
 export { GeometryUtils } from "./utils/GeometryUtils";
-export { HashUtils } from "./utils/HashUtils";
+export { type Fmix32Config, HashUtils } from "./utils/HashUtils";
 export { ImageUtils } from "./utils/ImageUtils";
 export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { NumberUtils } from "./utils/NumberUtils";
+export { RandomUtils } from "./utils/RandomUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 
 export {

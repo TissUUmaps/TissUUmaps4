@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { HashUtils } from "./HashUtils";
+import { type Fmix32Config, HashUtils } from "./HashUtils";
 
 describe("HashUtils", () => {
   describe("hashRaw", () => {
@@ -94,6 +94,101 @@ describe("HashUtils", () => {
       const cycled = Array.from({ length: 2 * n }, (_, i) => i % n);
       expect(indices).not.toEqual(cycled);
       expect(new Set(indices).size).toBeGreaterThan(1);
+    });
+  });
+
+  describe("fnv1a", () => {
+    it("returns the FNV offset basis for an empty string", () => {
+      expect(HashUtils.fnv1a("")).toBe(0x811c9dc5);
+    });
+
+    it("returns known FNV-1a hash values", () => {
+      expect(HashUtils.fnv1a("a")).toBe(0xe40c292c);
+      expect(HashUtils.fnv1a("foobar")).toBe(0xbf9cf968);
+      expect(HashUtils.fnv1a("hello")).toBe(0x4f9f2cab);
+    });
+
+    it("hashes by UTF-16 code unit", () => {
+      // 你 is U+4F60; a single code unit is XOR-ed in whole, not byte-wise
+      const expected = Math.imul(0x811c9dc5 ^ 0x4f60, 0x01000193) >>> 0;
+      expect(HashUtils.fnv1a("你")).toBe(expected);
+    });
+
+    it("backs hashRaw", () => {
+      for (const key of ["", "hello", "你好", "a".repeat(1000)]) {
+        expect(HashUtils.hashRaw(key)).toBe(HashUtils.fnv1a(key));
+      }
+    });
+
+    it("always returns a non-negative 32-bit integer", () => {
+      for (const key of ["", "hello", "你好", "a".repeat(1000), "!@#$%^&*()"]) {
+        const hash = HashUtils.fnv1a(key);
+        expect(Number.isInteger(hash)).toBe(true);
+        expect(hash).toBeGreaterThanOrEqual(0);
+        expect(hash).toBeLessThanOrEqual(0xffffffff);
+      }
+    });
+  });
+
+  describe("fmix32", () => {
+    const splitmix32Config: Fmix32Config = {
+      s1: 16,
+      m1: 0x21f0aaad,
+      s2: 15,
+      m2: 0x735a2d97,
+      s3: 15,
+    };
+
+    it("maps zero to zero", () => {
+      expect(HashUtils.fmix32(0)).toBe(0);
+      expect(HashUtils.fmix32(0, splitmix32Config)).toBe(0);
+    });
+
+    it("returns known MurmurHash3 finalizer values by default", () => {
+      expect(HashUtils.fmix32(1)).toBe(1364076727);
+      expect(HashUtils.fmix32(42)).toBe(142593372);
+      expect(HashUtils.fmix32(0xdeadbeef)).toBe(233162409);
+    });
+
+    it("backs mix", () => {
+      for (const h of [0, 1, 42, 0xdeadbeef]) {
+        expect(HashUtils.mix(h)).toBe(HashUtils.fmix32(h));
+        expect(HashUtils.mix(h, 7)).toBe(HashUtils.fmix32(h ^ 7));
+      }
+    });
+
+    it("uses the given constants", () => {
+      // first SplitMix32 output for seed 0, per the reference implementation
+      expect(HashUtils.fmix32(0x9e3779b9, splitmix32Config)).toBe(1684164658);
+      expect(HashUtils.fmix32(42, splitmix32Config)).not.toBe(
+        HashUtils.fmix32(42),
+      );
+    });
+
+    it("only uses the lower 32 bits of the value", () => {
+      expect(HashUtils.fmix32(2 ** 32 + 7)).toBe(HashUtils.fmix32(7));
+      expect(HashUtils.fmix32(-1)).toBe(HashUtils.fmix32(0xffffffff));
+    });
+
+    it("always returns a non-negative 32-bit integer", () => {
+      for (const h of [0, 1, 42, 0x7fffffff, 0xffffffff, -1, 2 ** 40]) {
+        for (const c of [undefined, splitmix32Config]) {
+          const mixed = HashUtils.fmix32(h, c);
+          expect(Number.isInteger(mixed)).toBe(true);
+          expect(mixed).toBeGreaterThanOrEqual(0);
+          expect(mixed).toBeLessThanOrEqual(0xffffffff);
+        }
+      }
+    });
+
+    it("is injective on a range of inputs", () => {
+      const n = 10000;
+      for (const c of [undefined, splitmix32Config]) {
+        const mixed = new Set(
+          Array.from({ length: n }, (_, i) => HashUtils.fmix32(i, c)),
+        );
+        expect(mixed.size).toBe(n);
+      }
     });
   });
 
