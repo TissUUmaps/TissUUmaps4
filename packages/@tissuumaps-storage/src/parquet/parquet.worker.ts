@@ -449,12 +449,13 @@ async function handleShapesRequest(
         `the "${geoColumn.name}.x" and "${geoColumn.name}.y" columns of a table`,
     );
   }
+  // Progress only tracks the geometry, which dwarfs the ID and name columns
   const { ids: rowIds, names: rowNames } = await readIdsAndNames(
     buffer,
     metadata,
     request.idColumn,
     request.nameColumn,
-    onProgress,
+    () => {},
   );
   const builder = new ShapesGeometryBuilder();
   const ids: number[] = [];
