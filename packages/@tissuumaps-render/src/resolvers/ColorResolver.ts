@@ -372,7 +372,9 @@ export class ColorResolver extends ResolverBase {
     seed: number,
     colorPalette: ColorPalette,
   ): Color {
-    return colorPalette.colors[HashUtils.mix(id)]!;
+    return colorPalette.colors[
+      HashUtils.mix(id, seed) % colorPalette.colors.length
+    ]!;
   }
 
   /**
