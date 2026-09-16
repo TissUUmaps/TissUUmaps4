@@ -131,10 +131,12 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
     const { signal } = options ?? {};
     signal?.throwIfAborted();
 
-    const { tiff, ...structure } = await openTIFF(
-      normalizedDataSource,
-      options,
-    );
+    const { z, t } = normalizedDataSource;
+    const { tiff, ...structure } = await openTIFF(normalizedDataSource, {
+      ...options,
+      z,
+      t,
+    });
     const levels = getLabelLevels(structure);
 
     const { GeoTIFFTileSource } = installTIFFTileSource();
