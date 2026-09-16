@@ -58,7 +58,7 @@ export type ParquetShapesRequest = ParquetRequest<"shapes"> & {
 
 export type ParquetShapesResponse = ParquetResponse<ParquetShapesRequest> & {
   geometry: ShapesGeometry;
-  ids: number[] | undefined;
+  ids: number[];
   names: string[] | undefined;
 };
 
@@ -470,9 +470,7 @@ async function handleShapesRequest(
         return;
       }
       if (builder.addGeometry(geometry)) {
-        if (rowIds !== undefined) {
-          ids.push(rowIds[row]!);
-        }
+        ids.push(rowIds !== undefined ? rowIds[row]! : row);
         if (rowNames !== undefined) {
           names.push(rowNames[row]!);
         }
@@ -488,7 +486,7 @@ async function handleShapesRequest(
     response: {
       op: "shapes",
       geometry,
-      ids: rowIds !== undefined ? ids : undefined,
+      ids,
       names: rowNames !== undefined ? names : undefined,
     },
     transfer: [
