@@ -1,0 +1,1 @@
+export { InMemoryShapesData } from "./InMemoryShapesData";
