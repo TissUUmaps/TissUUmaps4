@@ -1,5 +1,5 @@
 import { deepEqual } from "fast-equals";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   type Color,
@@ -73,18 +73,22 @@ export function useColorConfigWidget(
 
   // min/max values provided by the config or entered by the user must not be
   // overwritten by the table column's value range
-  const currentFromRangeMinEditedRef = useRef(currentFromRangeMin !== null);
-  const currentFromRangeMaxEditedRef = useRef(currentFromRangeMax !== null);
+  const [currentFromRangeMinEdited, setCurrentFromRangeMinEdited] = useState(
+    currentFromRangeMin !== null,
+  );
+  const [currentFromRangeMaxEdited, setCurrentFromRangeMaxEdited] = useState(
+    currentFromRangeMax !== null,
+  );
   const setEditedCurrentFromRangeMin = useCallback(
     (newCurrentFromRangeMin: number | null) => {
-      currentFromRangeMinEditedRef.current = true;
+      setCurrentFromRangeMinEdited(true);
       setCurrentFromRangeMin(newCurrentFromRangeMin);
     },
     [],
   );
   const setEditedCurrentFromRangeMax = useCallback(
     (newCurrentFromRangeMax: number | null) => {
-      currentFromRangeMaxEditedRef.current = true;
+      setCurrentFromRangeMaxEdited(true);
       setCurrentFromRangeMax(newCurrentFromRangeMax);
     },
     [],
@@ -94,34 +98,46 @@ export function useColorConfigWidget(
   const setCurrentFromColumnResettingRange = useCallback(
     (newCurrentFromColumn: string | null) => {
       if (newCurrentFromColumn !== currentFromColumn) {
-        if (!currentFromRangeMinEditedRef.current) {
+        if (!currentFromRangeMinEdited) {
           setCurrentFromRangeMin(null);
         }
-        if (!currentFromRangeMaxEditedRef.current) {
+        if (!currentFromRangeMaxEdited) {
           setCurrentFromRangeMax(null);
         }
       }
       setCurrentFromColumn(newCurrentFromColumn);
     },
-    [currentFromColumn],
+    [currentFromColumn, currentFromRangeMinEdited, currentFromRangeMaxEdited],
   );
+  // tableId is a prop, so reset while rendering rather than in an effect
+  const [previousTableId, setPreviousTableId] = useState(tableId);
+  if (tableId !== previousTableId) {
+    setPreviousTableId(tableId);
+    if (!currentFromRangeMinEdited) {
+      setCurrentFromRangeMin(null);
+    }
+    if (!currentFromRangeMaxEdited) {
+      setCurrentFromRangeMax(null);
+    }
+  }
 
   const tableData = useTableData(tableId);
   useEffect(() => {
     if (
       currentSource === "from" &&
       currentFromColumn !== null &&
-      tableData !== null
+      tableData !== null &&
+      !(currentFromRangeMinEdited && currentFromRangeMaxEdited)
     ) {
       const abortController = new AbortController();
       tableData
         .loadValueRange(currentFromColumn, { signal: abortController.signal })
         .then((valueRange) => {
           if (!abortController.signal.aborted) {
-            if (!currentFromRangeMinEditedRef.current) {
+            if (!currentFromRangeMinEdited) {
               setCurrentFromRangeMin(valueRange?.[0] ?? null);
             }
-            if (!currentFromRangeMaxEditedRef.current) {
+            if (!currentFromRangeMaxEdited) {
               setCurrentFromRangeMax(valueRange?.[1] ?? null);
             }
           }
@@ -133,7 +149,13 @@ export function useColorConfigWidget(
         });
       return () => abortController.abort();
     }
-  }, [tableData, currentSource, currentFromColumn]);
+  }, [
+    tableData,
+    currentSource,
+    currentFromColumn,
+    currentFromRangeMinEdited,
+    currentFromRangeMaxEdited,
+  ]);
 
   useEffect(() => {
     const currentFromRange: [number, number] | null =
