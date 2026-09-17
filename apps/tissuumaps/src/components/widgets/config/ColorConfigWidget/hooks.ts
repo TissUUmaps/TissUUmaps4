@@ -92,30 +92,35 @@ export function useColorConfigWidget(
 
   const tableData = useTableData(tableId);
   useEffect(() => {
-    if (
-      currentSource === "from" &&
-      currentFromColumn !== null &&
-      tableData !== null
-    ) {
-      const abortController = new AbortController();
-      tableData
-        .loadValueRange(currentFromColumn, { signal: abortController.signal })
-        .then((valueRange) => {
-          if (!abortController.signal.aborted && valueRange !== undefined) {
-            if (!currentFromRangeMinEditedRef.current) {
-              setCurrentFromRangeMin(valueRange[0]);
+    const fillUneditedCurrentFromRange = (
+      valueRange: [number, number] | undefined,
+    ) => {
+      if (!currentFromRangeMinEditedRef.current) {
+        setCurrentFromRangeMin(valueRange?.[0] ?? null);
+      }
+      if (!currentFromRangeMaxEditedRef.current) {
+        setCurrentFromRangeMax(valueRange?.[1] ?? null);
+      }
+    };
+    if (currentSource === "from" && currentFromColumn !== null) {
+      // do not keep another column's value range while this one is loading
+      fillUneditedCurrentFromRange(undefined);
+      if (tableData !== null) {
+        const abortController = new AbortController();
+        tableData
+          .loadValueRange(currentFromColumn, { signal: abortController.signal })
+          .then((valueRange) => {
+            if (!abortController.signal.aborted) {
+              fillUneditedCurrentFromRange(valueRange);
             }
-            if (!currentFromRangeMaxEditedRef.current) {
-              setCurrentFromRangeMax(valueRange[1]);
+          })
+          .catch((error) => {
+            if (!abortController.signal.aborted) {
+              console.error("Error loading table value range", error);
             }
-          }
-        })
-        .catch((error) => {
-          if (!abortController.signal.aborted) {
-            console.error("Error loading table value range", error);
-          }
-        });
-      return () => abortController.abort();
+          });
+        return () => abortController.abort();
+      }
     }
   }, [tableData, currentSource, currentFromColumn]);
 
