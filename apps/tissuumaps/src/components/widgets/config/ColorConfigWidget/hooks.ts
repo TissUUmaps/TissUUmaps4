@@ -89,38 +89,49 @@ export function useColorConfigWidget(
     },
     [],
   );
+  // reset in the same update as the column, so that the new column is never
+  // written to the config together with the previous column's value range
+  const setCurrentFromColumnResettingRange = useCallback(
+    (newCurrentFromColumn: string | null) => {
+      if (newCurrentFromColumn !== currentFromColumn) {
+        if (!currentFromRangeMinEditedRef.current) {
+          setCurrentFromRangeMin(null);
+        }
+        if (!currentFromRangeMaxEditedRef.current) {
+          setCurrentFromRangeMax(null);
+        }
+      }
+      setCurrentFromColumn(newCurrentFromColumn);
+    },
+    [currentFromColumn],
+  );
 
   const tableData = useTableData(tableId);
   useEffect(() => {
-    const fillUneditedCurrentFromRange = (
-      valueRange: [number, number] | undefined,
-    ) => {
-      if (!currentFromRangeMinEditedRef.current) {
-        setCurrentFromRangeMin(valueRange?.[0] ?? null);
-      }
-      if (!currentFromRangeMaxEditedRef.current) {
-        setCurrentFromRangeMax(valueRange?.[1] ?? null);
-      }
-    };
-    if (currentSource === "from" && currentFromColumn !== null) {
-      // do not keep another column's value range while this one is loading
-      fillUneditedCurrentFromRange(undefined);
-      if (tableData !== null) {
-        const abortController = new AbortController();
-        tableData
-          .loadValueRange(currentFromColumn, { signal: abortController.signal })
-          .then((valueRange) => {
-            if (!abortController.signal.aborted) {
-              fillUneditedCurrentFromRange(valueRange);
+    if (
+      currentSource === "from" &&
+      currentFromColumn !== null &&
+      tableData !== null
+    ) {
+      const abortController = new AbortController();
+      tableData
+        .loadValueRange(currentFromColumn, { signal: abortController.signal })
+        .then((valueRange) => {
+          if (!abortController.signal.aborted) {
+            if (!currentFromRangeMinEditedRef.current) {
+              setCurrentFromRangeMin(valueRange?.[0] ?? null);
             }
-          })
-          .catch((error) => {
-            if (!abortController.signal.aborted) {
-              console.error("Error loading table value range", error);
+            if (!currentFromRangeMaxEditedRef.current) {
+              setCurrentFromRangeMax(valueRange?.[1] ?? null);
             }
-          });
-        return () => abortController.abort();
-      }
+          }
+        })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error loading table value range", error);
+          }
+        });
+      return () => abortController.abort();
     }
   }, [tableData, currentSource, currentFromColumn]);
 
@@ -238,7 +249,7 @@ export function useColorConfigWidget(
     currentRandomSeed,
     setCurrentSource,
     setCurrentConstantValue,
-    setCurrentFromColumn,
+    setCurrentFromColumn: setCurrentFromColumnResettingRange,
     setCurrentFromRangeMin: setEditedCurrentFromRangeMin,
     setCurrentFromRangeMax: setEditedCurrentFromRangeMax,
     setCurrentFromPalette,
