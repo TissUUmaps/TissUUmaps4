@@ -1,5 +1,5 @@
 import { deepEqual } from "fast-equals";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   type Color,
@@ -10,6 +10,8 @@ import {
   isGroupByConfig,
   isRandomConfig,
 } from "@tissuumaps/core";
+
+import { useTableData } from "@/hooks/useData";
 
 import type { ColorConfigSource, ColorConfigWidgetAdapter } from "./adapter";
 
@@ -68,6 +70,54 @@ export function useColorConfigWidget(
       ? colorConfig.random.seed
       : null,
   );
+
+  // min/max values provided by the config or entered by the user must not be
+  // overwritten by the table column's value range
+  const currentFromRangeMinEditedRef = useRef(currentFromRangeMin !== null);
+  const currentFromRangeMaxEditedRef = useRef(currentFromRangeMax !== null);
+  const setEditedCurrentFromRangeMin = useCallback(
+    (newCurrentFromRangeMin: number | null) => {
+      currentFromRangeMinEditedRef.current = true;
+      setCurrentFromRangeMin(newCurrentFromRangeMin);
+    },
+    [],
+  );
+  const setEditedCurrentFromRangeMax = useCallback(
+    (newCurrentFromRangeMax: number | null) => {
+      currentFromRangeMaxEditedRef.current = true;
+      setCurrentFromRangeMax(newCurrentFromRangeMax);
+    },
+    [],
+  );
+
+  const tableData = useTableData(tableId);
+  useEffect(() => {
+    if (
+      currentSource === "from" &&
+      currentFromColumn !== null &&
+      tableData !== null
+    ) {
+      const abortController = new AbortController();
+      tableData
+        .loadValueRange(currentFromColumn, { signal: abortController.signal })
+        .then((valueRange) => {
+          if (!abortController.signal.aborted && valueRange !== undefined) {
+            if (!currentFromRangeMinEditedRef.current) {
+              setCurrentFromRangeMin(valueRange[0]);
+            }
+            if (!currentFromRangeMaxEditedRef.current) {
+              setCurrentFromRangeMax(valueRange[1]);
+            }
+          }
+        })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error loading table value range", error);
+          }
+        });
+      return () => abortController.abort();
+    }
+  }, [tableData, currentSource, currentFromColumn]);
 
   useEffect(() => {
     const currentFromRange: [number, number] | null =
@@ -184,8 +234,8 @@ export function useColorConfigWidget(
     setCurrentSource,
     setCurrentConstantValue,
     setCurrentFromColumn,
-    setCurrentFromRangeMin,
-    setCurrentFromRangeMax,
+    setCurrentFromRangeMin: setEditedCurrentFromRangeMin,
+    setCurrentFromRangeMax: setEditedCurrentFromRangeMax,
     setCurrentFromPalette,
     setCurrentGroupByColumn,
     setCurrentGroupByPalette,
