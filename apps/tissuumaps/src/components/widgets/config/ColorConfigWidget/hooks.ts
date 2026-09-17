@@ -109,10 +109,13 @@ export function useColorConfigWidget(
     },
     [currentFromColumn, currentFromRangeMinEdited, currentFromRangeMaxEdited],
   );
-  // tableId is a prop, so reset while rendering rather than in an effect
-  const [previousTableId, setPreviousTableId] = useState(tableId);
-  if (tableId !== previousTableId) {
-    setPreviousTableId(tableId);
+
+  const tableData = useTableData(tableId);
+  // the table data is not changed through a setter, so reset while rendering
+  // rather than in an effect; tables sharing a data source share their data
+  const [previousTableData, setPreviousTableData] = useState(tableData);
+  if (tableData !== previousTableData) {
+    setPreviousTableData(tableData);
     if (!currentFromRangeMinEdited) {
       setCurrentFromRangeMin(null);
     }
@@ -120,8 +123,6 @@ export function useColorConfigWidget(
       setCurrentFromRangeMax(null);
     }
   }
-
-  const tableData = useTableData(tableId);
   useEffect(() => {
     if (
       currentSource === "from" &&
