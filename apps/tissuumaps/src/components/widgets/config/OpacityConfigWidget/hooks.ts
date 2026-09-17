@@ -20,9 +20,8 @@ export function useOpacityConfigWidget(
   tableId: string | null,
 ): OpacityConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(opacityConfig) ?? "constant";
-  const [currentSource, setCurrentSource] = useState<OpacityConfigSource>(
-    opacityConfig.source ?? "constant",
-  );
+  const [currentSource, setCurrentSource] =
+    useState<OpacityConfigSource>(activeSource);
 
   const [currentConstantValue, setCurrentConstantValue] = useState<number>(
     isConstantConfig(opacityConfig)

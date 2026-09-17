@@ -20,9 +20,8 @@ export function useVisibilityConfigWidget(
   tableId: string | null,
 ): VisibilityConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(visibilityConfig) ?? "constant";
-  const [currentSource, setCurrentSource] = useState<VisibilityConfigSource>(
-    visibilityConfig.source ?? "constant",
-  );
+  const [currentSource, setCurrentSource] =
+    useState<VisibilityConfigSource>(activeSource);
 
   const [currentConstantValue, setCurrentConstantValue] = useState<boolean>(
     isConstantConfig(visibilityConfig)

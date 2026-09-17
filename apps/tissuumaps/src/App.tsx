@@ -8,7 +8,7 @@ import {
   type IDockviewPanelProps,
 } from "dockview-react";
 import { Moon, Sun } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { usePluginPanels } from "@/hooks/usePluginPanels";
@@ -38,17 +38,59 @@ const dockviewTheme: DockviewTheme = {
  */
 const projectPanelId = "projectPanel";
 
+/**
+ * Scrolls a panel's content within the panel, rather than letting it overflow
+ *
+ * The spacing around the content is padding rather than the content's own
+ * margin, which a scroll container would cut off at its bottom end. Scrolling
+ * one axis makes the browser scroll the other one too unless it is hidden, and
+ * the widgets that are too wide for a panel scroll horizontally by themselves.
+ */
+function ScrollablePanelContent({ children }: { children: ReactNode }) {
+  return (
+    <div className="size-full overflow-x-hidden overflow-y-auto p-2">
+      {children}
+    </div>
+  );
+}
+
 /** The panels that can be shown in the dockview layout, by component name */
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
-  ProjectPanel: () => <ProjectPanel className="m-2" />,
-  ImagesPanel: () => <ImagesPanel className="m-2" />,
-  LabelsPanel: () => <LabelsPanel className="m-2" />,
-  PointsPanel: () => <PointsPanel className="m-2" />,
-  ShapesPanel: () => <ShapesPanel className="m-2" />,
-  TablesPanel: () => <TablesPanel className="m-2" />,
+  ProjectPanel: () => (
+    <ScrollablePanelContent>
+      <ProjectPanel />
+    </ScrollablePanelContent>
+  ),
+  ImagesPanel: () => (
+    <ScrollablePanelContent>
+      <ImagesPanel />
+    </ScrollablePanelContent>
+  ),
+  LabelsPanel: () => (
+    <ScrollablePanelContent>
+      <LabelsPanel />
+    </ScrollablePanelContent>
+  ),
+  PointsPanel: () => (
+    <ScrollablePanelContent>
+      <PointsPanel />
+    </ScrollablePanelContent>
+  ),
+  ShapesPanel: () => (
+    <ScrollablePanelContent>
+      <ShapesPanel />
+    </ScrollablePanelContent>
+  ),
+  TablesPanel: () => (
+    <ScrollablePanelContent>
+      <TablesPanel />
+    </ScrollablePanelContent>
+  ),
   PluginPanel: (props: IDockviewPanelProps<{ pluginId: string }>) => (
-    <PluginPanel pluginId={props.params.pluginId} className="m-2" />
+    <ScrollablePanelContent>
+      <PluginPanel pluginId={props.params.pluginId} />
+    </ScrollablePanelContent>
   ),
 };
 
