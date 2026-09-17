@@ -20,9 +20,8 @@ export function useColorConfigWidget(
   tableId: string | null,
 ): ColorConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(colorConfig) ?? "constant";
-  const [currentSource, setCurrentSource] = useState<ColorConfigSource>(
-    colorConfig.source ?? "constant",
-  );
+  const [currentSource, setCurrentSource] =
+    useState<ColorConfigSource>(activeSource);
 
   const [currentConstantValue, setCurrentConstantValue] = useState<Color>(
     isConstantConfig(colorConfig) ? colorConfig.constant.value : defaultColor,

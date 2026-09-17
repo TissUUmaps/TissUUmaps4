@@ -19,9 +19,8 @@ export function useSizeConfigWidget(
   tableId: string | null,
 ): SizeConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(sizeConfig) ?? "constant";
-  const [currentSource, setCurrentSource] = useState<SizeConfigSource>(
-    sizeConfig.source ?? "constant",
-  );
+  const [currentSource, setCurrentSource] =
+    useState<SizeConfigSource>(activeSource);
 
   const [currentConstantValue, setCurrentConstantValue] = useState<number>(
     isConstantConfig(sizeConfig) ? sizeConfig.constant.value : defaultSize,
