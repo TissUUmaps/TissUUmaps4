@@ -154,11 +154,11 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
  *
  * @param structure - The structure of the file
  * @returns The images of the mask, one per level, largest first
- * @throws Error if the file holds an RGB image, more than one channel, or
- * samples that are not signed or unsigned integers of at most 32 bits, none of
- * which can be read as label IDs
+ * @throws Error if the file is drawn in its own colors, holds more than one
+ * channel, or holds samples that are not signed or unsigned integers of at
+ * most 32 bits, none of which can be read as label IDs
  */
-function getLabelLevels(structure: TIFFStructure): GeoTIFFImage[] {
+export function getLabelLevels(structure: TIFFStructure): GeoTIFFImage[] {
   const { channels, pyramids } = structure;
   if (channels === undefined) {
     throw new Error(
@@ -173,15 +173,14 @@ function getLabelLevels(structure: TIFFStructure): GeoTIFFImage[] {
   const levels = pyramids[0]!;
   const image = levels[0]!;
   const format = image.getSampleFormat(0);
-  // BitsPerSample defaults to 1 (bilevel images) when the tag is absent
-  const bits = image.getBitsPerSample(0) || 1;
+  const bits = image.getBitsPerSample(0);
   if (
     (format !== sampleFormatUnsignedInteger &&
       format !== sampleFormatSignedInteger) ||
     bits > 32
   ) {
     throw new Error(
-      "The image does not hold integers of at most 32 bits, which label IDs are.",
+      `The image holds ${bits}-bit samples of TIFF sample format ${format}; label IDs are integers of at most 32 bits.`,
     );
   }
   return levels;
