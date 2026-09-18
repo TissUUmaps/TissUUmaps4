@@ -14,8 +14,8 @@ export const tiffLabelsDataSourceDefaults = {
  *
  * The file is read from a URL (`url`) or from the open workspace (`path`), and
  * its formats are recognized as for TIFF images. It has to hold a single
- * channel of unsigned integers of at most 32 bits, which are the label IDs (see
- * `LabelsDataSource` for the annotation table reference).
+ * channel of signed or unsigned integers of at most 32 bits, which are the
+ * label IDs (see `LabelsDataSource` for the annotation table reference).
  */
 export interface TIFFLabelsDataSource extends LabelsDataSource<
   typeof tiffLabelsDataSourceType
