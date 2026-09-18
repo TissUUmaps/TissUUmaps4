@@ -90,7 +90,7 @@ A project showing a multiplexed OME-TIFF with a segmentation on top of it, where
         "z": 4,
         "table": "cell-table"
       },
-      "labelColor": { "type": "from", "from": { "column": "cell_type" } }
+      "labelColor": { "from": { "column": "area", "palette": "batlow" } }
     }
   ],
   "tables": [
