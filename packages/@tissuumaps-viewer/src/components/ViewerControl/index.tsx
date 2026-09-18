@@ -20,6 +20,7 @@ export function ViewerControl({
   children,
 }: ViewerControlProps) {
   const [container] = useState(() => document.createElement("div"));
+  const [isAttached, setIsAttached] = useState(false);
 
   const context = useOpenSeadragonContext();
 
@@ -30,6 +31,10 @@ export function ViewerControl({
         attachToViewer,
         autoFade,
       });
+      // the container can only be attached after mount, and the children
+      // must not render before that (see below)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsAttached(true);
     }
     return () => {
       if (context !== null) {
@@ -39,5 +44,8 @@ export function ViewerControl({
     };
   }, [context, container, anchor, attachToViewer, autoFade]);
 
-  return createPortal(children, container);
+  // Base UI lists composite items (slider thumbs, toggle group items) in a
+  // layout effect and ignores nodes that are not yet in the document, so the
+  // children must not render before the container is attached to the viewer.
+  return createPortal(isAttached ? children : null, container);
 }

@@ -2,7 +2,7 @@ import type { NumericArray } from "../types/arrays";
 import { AsyncUtils } from "./AsyncUtils";
 import { RandomUtils } from "./RandomUtils";
 
-/** Utility methods for numeric clamping, alignment and histograms */
+/** Utility methods for numeric clamping, remapping, alignment and histograms */
 export class MathUtils {
   /**
    * Clamps a value to the range `[min, max]`
@@ -14,6 +14,32 @@ export class MathUtils {
    */
   static clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(min, value), max);
+  }
+
+  /**
+   * Linearly maps a value from one range to another
+   *
+   * Values outside `from` are extrapolated, not clamped; clamp at the call
+   * site where the domain is known. Swapping `from` and `to` yields the
+   * inverse mapping.
+   *
+   * @param value - The value to map
+   * @param from - The source range, as `[min, max]`, with `min !== max`
+   * @param to - The target range, as `[min, max]`
+   * @returns The mapped value
+   * @throws Error if `from` is degenerate
+   */
+  static remap(
+    value: number,
+    from: [number, number],
+    to: [number, number],
+  ): number {
+    const [fromMin, fromMax] = from;
+    const [toMin, toMax] = to;
+    if (fromMin === fromMax) {
+      throw new Error("from must not be degenerate");
+    }
+    return toMin + ((value - fromMin) / (fromMax - fromMin)) * (toMax - toMin);
   }
 
   /**
