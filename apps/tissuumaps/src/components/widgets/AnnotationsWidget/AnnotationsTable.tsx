@@ -1,27 +1,12 @@
-import {
-  type ColumnDef,
-  columnSizingFeature,
-  flexRender,
-  tableFeatures,
-  useTable,
-} from "@tanstack/react-table";
-import { observeElementOffset, useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { GenericArray, ItemsData } from "@tissuumaps/core";
+import type { GenericArray, ItemsData, TableData } from "@tissuumaps/core";
 
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  VirtualTable,
+  type VirtualTableColumnDef,
+} from "@/components/common/virtual-table";
 import { useTableData } from "@/hooks/useData";
-import { cn } from "@/lib/utils";
-
-import { compressScrollRange } from "./scrollCompression";
 
 /**
  * Height of a table row in pixels
@@ -32,24 +17,11 @@ import { compressScrollRange } from "./scrollCompression";
  */
 const rowHeight = 36;
 
-/**
- * The tallest scroll content that is laid out, in pixels
- *
- * Browsers cap the height of an element at a few ten million pixels, Chrome
- * at about 33 million divided by the page zoom, and clamp anything taller, so
- * that a longer list could not be scrolled past the cap. Content beyond this
- * height is compressed instead, see {@link compressScrollRange}.
- */
-const maxScrollContentHeight = 10_000_000;
-
-/**
- * The table features the annotations table uses
- *
- * A table only has the APIs of the features registered here. Column sizing
- * gives every cell the width of its column; nothing else is needed, as the
- * rows are windowed and the columns are neither sorted, filtered nor hidden.
- */
-const features = tableFeatures({ columnSizingFeature });
+type LoadedGroups = {
+  tableData: TableData;
+  groupByColumn: string;
+  tableGroups: GenericArray<string>;
+};
 
 export type AnnotationsTableRowData = {
   id: number;
@@ -61,15 +33,11 @@ export type AnnotationsTableGroupRowData = {
   group: string;
 };
 
-export type AnnotationsTableColumnDef = ColumnDef<
-  typeof features,
-  AnnotationsTableRowData
->;
+export type AnnotationsTableColumnDef =
+  VirtualTableColumnDef<AnnotationsTableRowData>;
 
-export type AnnotationsTableGroupColumnDef = ColumnDef<
-  typeof features,
-  AnnotationsTableGroupRowData
->;
+export type AnnotationsTableGroupColumnDef =
+  VirtualTableColumnDef<AnnotationsTableGroupRowData>;
 
 export type AnnotationsTableProps = {
   data?: ItemsData;
@@ -88,22 +56,20 @@ export function AnnotationsTable({
   extraColumnDefs,
   extraGroupColumnDefs,
 }: AnnotationsTableProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLTableSectionElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(height);
-  const compressionRef = useRef(1);
-  const [, rerender] = useReducer((x: number) => x + 1, 0);
-
-  const [tableGroups, setTableGroups] = useState<GenericArray<string> | null>(
-    null,
-  );
+  // the groups are kept with what they were loaded from, so that the ones of
+  // a previous table or column are not shown as the current ones
+  const [loadedGroups, setLoadedGroups] = useState<LoadedGroups | null>(null);
 
   const tableData = useTableData(table);
 
+  const tableGroups =
+    loadedGroups?.tableData === tableData &&
+    loadedGroups.groupByColumn === groupByColumn
+      ? loadedGroups.tableGroups
+      : null;
+
   useEffect(() => {
     const abortController = new AbortController();
-    setTableGroups(null);
     if (tableData && groupByColumn) {
       tableData
         .loadUniqueValueCounts<string>(groupByColumn, {
@@ -111,7 +77,11 @@ export function AnnotationsTable({
         })
         .then((uniqueValueCounts) => {
           if (!abortController.signal.aborted) {
-            setTableGroups(Array.from(uniqueValueCounts.keys()));
+            setLoadedGroups({
+              tableData,
+              groupByColumn,
+              tableGroups: Array.from(uniqueValueCounts.keys()),
+            });
           }
         })
         .catch((error) => {
@@ -183,97 +153,27 @@ export function AnnotationsTable({
     return { ids, getName, annotatedIds };
   }, [data, table, tableData]);
 
-  useEffect(() => {
-    const header = headerRef.current;
-    if (header === null) {
-      return;
-    }
-    const resizeObserver = new ResizeObserver(() =>
-      setHeaderHeight(header.offsetHeight),
-    );
-    resizeObserver.observe(header);
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const rowVirtualizer = useVirtualizer({
-    count: grouped ? groupRows.length : ids.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => rowHeight,
-    // the virtualizer works in content positions while the element scrolls in
-    // layout positions, which differ once the content is compressed
-    observeElementOffset: (instance, onOffsetChange) =>
-      observeElementOffset(instance, (layoutOffset, isScrolling) => {
-        onOffsetChange(layoutOffset * compressionRef.current, isScrolling);
-        if (compressionRef.current > 1) {
-          rerender(); // the rows shift against the layout while scrolling
-        }
-      }),
-  });
-
-  const { layoutSize: layoutContentHeight, factor: compression } =
-    compressScrollRange(
-      headerHeight + rowVirtualizer.getTotalSize(),
-      viewportHeight,
-      maxScrollContentHeight,
-    );
-  useEffect(() => {
-    compressionRef.current = compression;
-  }, [compression]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (container === null) {
-      return;
-    }
-    // a hidden panel loses its scroll offset without raising a scroll event,
-    // which would leave the rendered rows outside of the visible range
-    const resizeObserver = new ResizeObserver(() => {
-      if (container.clientHeight === 0) {
-        return;
+  const getRows = useCallback(
+    (
+      startIndex: number,
+      endIndex: number,
+    ): (AnnotationsTableRowData | AnnotationsTableGroupRowData)[] => {
+      if (grouped) {
+        return groupRows.slice(startIndex, endIndex);
       }
-      setViewportHeight(container.clientHeight);
-      const layoutOffset = Math.round(
-        (rowVirtualizer.scrollOffset ?? 0) / compressionRef.current,
-      );
-      if (container.scrollTop !== layoutOffset) {
-        container.scrollTop = layoutOffset;
+      const rows: AnnotationsTableRowData[] = [];
+      for (let index = startIndex; index < endIndex; index++) {
+        const id = ids[index]!;
+        rows.push({
+          id,
+          name: getName?.(index),
+          annotated: annotatedIds?.has(id),
+        });
       }
-    });
-    resizeObserver.observe(container);
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [rowVirtualizer]);
-
-  // only the rows within the virtualizer's range are materialized, so that the
-  // cost of the table does not depend on the number of items
-  const virtualRows = rowVirtualizer.getVirtualItems();
-
-  // Rows are placed at their content position, less how far the content has
-  // run ahead of the layout at the current scroll position, which is nothing
-  // while the content fits.
-  const rowShift = (rowVirtualizer.scrollOffset ?? 0) * (1 - 1 / compression);
-  const firstIndex = virtualRows[0]?.index ?? 0;
-  const lastIndex = (virtualRows[virtualRows.length - 1]?.index ?? -1) + 1;
-
-  const rowData = useMemo(() => {
-    if (grouped) {
-      return groupRows.slice(firstIndex, lastIndex);
-    }
-    const rowData: AnnotationsTableRowData[] = [];
-    for (let index = firstIndex; index < lastIndex; index++) {
-      const id = ids[index]!;
-      rowData.push({
-        id,
-        name: getName?.(index),
-        annotated: annotatedIds?.has(id),
-      });
-    }
-    return rowData;
-  }, [grouped, groupRows, ids, getName, annotatedIds, firstIndex, lastIndex]);
+      return rows;
+    },
+    [grouped, groupRows, ids, getName, annotatedIds],
+  );
 
   const columnDefs = useMemo(() => {
     if (grouped) {
@@ -307,88 +207,23 @@ export function AnnotationsTable({
     extraGroupColumnDefs,
   ]);
 
-  const reactTable = useTable<
-    typeof features,
-    AnnotationsTableRowData | AnnotationsTableGroupRowData
-  >({
-    features,
-    data: rowData,
-    columns: columnDefs as ColumnDef<
-      typeof features,
-      AnnotationsTableRowData | AnnotationsTableGroupRowData
-    >[],
-    getRowId: (row) => ("group" in row ? row.group : String(row.id)),
-  });
-
-  const reactTableRows = reactTable.getRowModel().rows;
-
   return (
-    <div
-      ref={containerRef}
-      className="overflow-auto relative"
-      style={{ height: `${height}px` }}
-    >
-      <Table className="grid w-max min-w-full">
-        <TableHeader
-          ref={headerRef}
-          className="grid sticky top-0 z-10 bg-background"
-        >
-          {reactTable.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="flex w-full">
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className="flex h-auto p-0"
-                  style={{ width: `${header.getSize()}px` }}
-                  colSpan={header.colSpan}
-                >
-                  {!header.isPlaceholder &&
-                    flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody
-          className="grid relative"
-          style={{ height: `${layoutContentHeight - headerHeight}px` }}
-        >
-          {virtualRows.map((virtualRow) => {
-            const row = reactTableRows[virtualRow.index - firstIndex];
-            if (row === undefined) {
-              return null;
-            }
-            const unannotated =
-              !("group" in row.original) && row.original.annotated === false;
-            return (
-              <TableRow
-                key={row.id}
-                className={cn(
-                  "flex absolute w-full border-0 items-center overflow-hidden",
-                  unannotated && "text-muted-foreground",
-                )}
-                style={{
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start - rowShift}px)`,
-                }}
-              >
-                {row.getAllCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className="flex p-0 pt-1"
-                    style={{ width: `${cell.column.getSize()}px` }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+    <VirtualTable<AnnotationsTableRowData | AnnotationsTableGroupRowData>
+      rowCount={grouped ? groupRows.length : ids.length}
+      getRows={getRows}
+      getRowId={(row) => ("group" in row ? row.group : String(row.id))}
+      columnDefs={
+        columnDefs as VirtualTableColumnDef<
+          AnnotationsTableRowData | AnnotationsTableGroupRowData
+        >[]
+      }
+      rowHeight={rowHeight}
+      height={height}
+      rowClassName={(row) =>
+        !("group" in row) && row.annotated === false
+          ? "text-muted-foreground"
+          : undefined
+      }
+    />
   );
 }
