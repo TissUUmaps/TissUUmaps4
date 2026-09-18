@@ -1,9 +1,7 @@
 import type {
   CustomTileSource,
-  IntArray,
   LabelsData,
   TileSourceConfig,
-  UintArray,
 } from "@tissuumaps/core";
 
 import { DataWrapperBase } from "./DataWrapperBase";
@@ -20,11 +18,9 @@ export class LabelsDataWrapper
     return this.data.getTileSource();
   }
 
-  getTileData(event: Parameters<LabelsData["getTileData"]>[0]): Promise<{
-    values: number[] | IntArray | UintArray;
-    width: number;
-    height: number;
-  }> {
+  getTileData(
+    event: Parameters<LabelsData["getTileData"]>[0],
+  ): ReturnType<LabelsData["getTileData"]> {
     return this.data.getTileData(event);
   }
 }
