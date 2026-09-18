@@ -2,6 +2,7 @@ import { ChartScatterIcon } from "lucide-react";
 
 import { MathUtils } from "@tissuumaps/core";
 
+import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
@@ -65,15 +66,17 @@ export function PointSizeViewerControl({
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
 
   return (
-    <div
+    <InputGroup
       className={cn(
-        "m-2 flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 shadow-lg",
+        "m-2 w-auto rounded-xl border-border bg-background shadow-lg",
         className,
       )}
     >
-      <ChartScatterIcon className="size-4 shrink-0 text-muted-foreground" />
+      <InputGroupAddon className="cursor-default">
+        <ChartScatterIcon />
+      </InputGroupAddon>
       <Slider
-        className="w-32"
+        className="mx-2 w-32"
         aria-label="Global point size"
         min={-1}
         max={1}
@@ -89,9 +92,12 @@ export function PointSizeViewerControl({
           });
         }}
       />
-      <span className="w-12 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+      <InputGroupAddon
+        align="inline-end"
+        className="w-11 cursor-default justify-end text-xs tabular-nums"
+      >
         {pointSizeFormat.format(globalPointSizeFactor)}
-      </span>
-    </div>
+      </InputGroupAddon>
+    </InputGroup>
   );
 }
