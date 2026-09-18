@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 
-import type { Dims, Rect } from "@tissuumaps/core";
+import { type Color, ColorUtils, type Dims, type Rect } from "@tissuumaps/core";
 import type { OpenSeadragonContext } from "@tissuumaps/render";
 
 import type { ViewerAdapter } from "../../adapter";
@@ -11,15 +11,23 @@ import { useWebGL } from "../../hooks/useWebGL";
 
 export type ViewerProps = {
   adapter: ViewerAdapter;
+  backgroundColor: Color;
   children?: ReactNode;
   className?: string;
 };
 
-export function Viewer({ adapter, children, className }: ViewerProps) {
+export function Viewer({
+  adapter,
+  backgroundColor,
+  children,
+  className,
+}: ViewerProps) {
   const [osContext, setOSContext] = useState<OpenSeadragonContext | null>(null);
 
-  const { initOS, osRef, osReady, updateOSExternalBounds } =
-    useOpenSeadragon(adapter);
+  const { initOS, osRef, osReady, updateOSContentBounds } = useOpenSeadragon(
+    adapter,
+    backgroundColor,
+  );
   const {
     initGL,
     setGLViewport,
@@ -86,18 +94,22 @@ export function Viewer({ adapter, children, className }: ViewerProps) {
   ]);
 
   useEffect(() => {
-    const osExternalBounds = [];
+    const osContentBounds = [];
     if (glPointsBounds !== null) {
-      osExternalBounds.push(glPointsBounds);
+      osContentBounds.push(glPointsBounds);
     }
     if (glShapesBounds !== null) {
-      osExternalBounds.push(glShapesBounds);
+      osContentBounds.push(glShapesBounds);
     }
-    return updateOSExternalBounds(osExternalBounds);
-  }, [updateOSExternalBounds, glPointsBounds, glShapesBounds]);
+    return updateOSContentBounds(osContentBounds);
+  }, [updateOSContentBounds, glPointsBounds, glShapesBounds]);
 
   return (
-    <div ref={initOS} className={className}>
+    <div
+      ref={initOS}
+      className={className}
+      style={{ backgroundColor: ColorUtils.toHex(backgroundColor) }}
+    >
       <OpenSeadragonContextProvider context={osContext}>
         {children}
       </OpenSeadragonContextProvider>

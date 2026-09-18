@@ -13,13 +13,21 @@ import {
  * geometry of OpenSeadragon tiled images
  */
 export class OpenSeadragonUtils {
-  /** A single fully transparent pixel, as a PNG data URL */
-  static readonly transparentPixelUrl =
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR4AQEFAPr/AAAAAAAABQABZHiVOAAAAABJRU5ErkJggg==";
+  /** A single transparent pixel, as a PNG data URL */
+  static readonly transparentBlackPixelUrl = OpenSeadragonUtils.createPixelUrl(
+    0,
+    0,
+    0,
+    0,
+  );
 
   /** A single opaque black pixel, as a PNG data URL */
-  static readonly blackPixelUrl =
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAcCBlCwAAAABJRU5ErkJggg==";
+  static readonly opaqueBlackPixelUrl = OpenSeadragonUtils.createPixelUrl(
+    0,
+    0,
+    0,
+    1,
+  );
 
   /**
    * Creates a tile source that fills the given size with a single tile
@@ -84,5 +92,33 @@ export class OpenSeadragonUtils {
       rotation,
       position: new OpenSeadragon.Point(translation.x, translation.y),
     };
+  }
+
+  /**
+   * Creates a PNG data URL of a single pixel in the given color
+   *
+   * The pixel is drawn onto a 1x1 canvas and exported as PNG, so this requires
+   * a DOM with canvas support. As canvases store premultiplied colors, the
+   * color components of a translucent pixel may not round-trip exactly; fully
+   * transparent and fully opaque pixels do.
+   *
+   * @param r - Red component, between 0 and 255
+   * @param g - Green component, between 0 and 255
+   * @param b - Blue component, between 0 and 255
+   * @param a - Alpha component, between 0 (transparent) and 1 (opaque)
+   * @returns The PNG data URL
+   * @throws Error if no 2D canvas context could be created
+   */
+  static createPixelUrl(r: number, g: number, b: number, a: number): string {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext("2d");
+    if (ctx === null) {
+      throw new Error("Failed to create canvas context");
+    }
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+    ctx.fillRect(0, 0, 1, 1);
+    return canvas.toDataURL("image/png");
   }
 }

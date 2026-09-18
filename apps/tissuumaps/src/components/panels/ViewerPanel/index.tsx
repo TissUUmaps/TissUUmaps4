@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/shallow";
 
+import type { Color } from "@tissuumaps/core";
 import {
   Viewer,
   type ViewerAdapter,
@@ -23,6 +24,9 @@ import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
 export type ViewerPanelProps = {
   className?: string;
 };
+
+/** The background color of the viewer, behind all rendered content */
+const viewerBackgroundColor: Color = { r: 0, g: 0, b: 0 };
 
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const interactionMode = useAppStore((state) => state.interactionMode);
@@ -74,7 +78,11 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   );
 
   return (
-    <Viewer adapter={viewerAdapter} className={className}>
+    <Viewer
+      adapter={viewerAdapter}
+      backgroundColor={viewerBackgroundColor}
+      className={className}
+    >
       <ViewerControl anchor={ViewerControlAnchor.TOP_LEFT}>
         <InteractionModeViewerControls />
       </ViewerControl>
