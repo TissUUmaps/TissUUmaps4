@@ -19,7 +19,7 @@ import {
 } from "@tissuumaps/core";
 
 import { markers } from "@/components/markers";
-import type { AnnotationsTableGroupColumnDef } from "@/components/widgets/AnnotationsWidget/AnnotationsTable";
+import type { AnnotationsTableGroupColumnDef } from "@/components/widgets/AnnotationsWidget/AnnotationsGroupTable";
 import { useProjectStore } from "@/stores/project";
 
 export function usePointsAnnotationsColumns(
