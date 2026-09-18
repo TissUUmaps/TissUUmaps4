@@ -11,10 +11,11 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
 
   // the ids and the per-index accessors the rows are built from, so that only
   // the rows within the visible range have to be materialized
-  const { ids, getName, annotatedIds } = useMemo(() => {
+  const { ids, getName, annotatedIds, allAnnotated } = useMemo(() => {
     let ids: number[] = [];
     let getName: ((index: number) => string | undefined) | undefined;
     let annotatedIds: Set<number> | undefined;
+    let allAnnotated = false;
     if (data !== undefined) {
       ids = data.getIds();
       if (table !== null) {
@@ -23,11 +24,17 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
         // different column for a moment and then be replaced
         if (tableData !== null) {
           const tableIds = tableData.getIds();
-          annotatedIds = new Set(tableIds);
+          // table-backed items hand out the table's own ids array, so every
+          // item has a row in the table and no lookup structure is needed
+          if (tableIds === ids) {
+            allAnnotated = true;
+          } else {
+            annotatedIds = new Set(tableIds);
+          }
           const tableNames = tableData.getNames?.();
           if (tableNames !== undefined) {
-            // table-backed items hand out the table's own ids array, so names
-            // align by index; only other item types need the id lookup
+            // the shared ids array aligns the names by index; only other item
+            // types need the id lookup
             if (tableIds === ids) {
               getName = (index) => tableNames[index];
             } else {
@@ -51,7 +58,7 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
         getName = (index) => names[index];
       }
     }
-    return { ids, getName, annotatedIds };
+    return { ids, getName, annotatedIds, allAnnotated };
   }, [data, table, tableData]);
 
   const getRows = useCallback(
@@ -62,12 +69,12 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
         rows.push({
           id,
           name: getName?.(index),
-          annotated: annotatedIds?.has(id),
+          annotated: allAnnotated ? true : annotatedIds?.has(id),
         });
       }
       return rows;
     },
-    [ids, getName, annotatedIds],
+    [ids, getName, annotatedIds, allAnnotated],
   );
 
   return { rowCount: ids.length, getRows, named: getName !== undefined };
