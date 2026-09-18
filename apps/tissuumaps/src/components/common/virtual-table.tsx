@@ -159,6 +159,16 @@ function useCompressedVirtualizer(
   // laid out before the browser can raise a scroll event against a stale factor
   useLayoutEffect(() => {
     compressionRef.current = compression;
+    const container = containerRef.current;
+    if (container === null) {
+      return;
+    }
+    // the same content offset lies at a different layout offset under the new
+    // factor, and no scroll event announces the change
+    const layoutOffset = Math.round(scrollOffsetRef.current / compression);
+    if (container.scrollTop !== layoutOffset) {
+      container.scrollTop = layoutOffset;
+    }
   }, [compression]);
 
   useLayoutEffect(() => {
