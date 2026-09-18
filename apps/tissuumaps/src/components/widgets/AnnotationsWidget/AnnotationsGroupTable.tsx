@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 
 import {
   VirtualTable,
@@ -28,16 +28,10 @@ export function AnnotationsGroupTable({
   groupByColumn,
   extraGroupColumnDefs,
 }: AnnotationsGroupTableProps) {
-  const groupRows = useGroupRows(table, groupByColumn);
-
-  const getRows = useCallback(
-    (startIndex: number, endIndex: number) =>
-      groupRows?.slice(startIndex, endIndex) ?? [],
-    [groupRows],
-  );
+  const { rowCount, getRows, loaded } = useGroupRows(table, groupByColumn);
 
   const columnDefs = useMemo(() => {
-    if (groupRows === null) {
+    if (!loaded) {
       return [];
     }
     const columnDefs: AnnotationsTableGroupColumnDef[] = [
@@ -47,11 +41,11 @@ export function AnnotationsGroupTable({
       columnDefs.push(...extraGroupColumnDefs);
     }
     return columnDefs;
-  }, [groupRows, groupByColumn, extraGroupColumnDefs]);
+  }, [loaded, groupByColumn, extraGroupColumnDefs]);
 
   return (
     <VirtualTable
-      rowCount={groupRows?.length ?? 0}
+      rowCount={rowCount}
       getRows={getRows}
       getRowId={(row) => row.group}
       columnDefs={columnDefs}
