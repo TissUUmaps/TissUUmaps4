@@ -9,7 +9,6 @@ import {
   type Labels,
   type LabelsData,
   type Layer,
-  type Rect,
   type TileSourceConfig,
 } from "@tissuumaps/core";
 
@@ -22,12 +21,17 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
 /**
  * Base class for OpenSeadragon renderers that manage tiled images for objects (images or labels)
  *
- * Each renderer owns an anchor, an invisible tiled image spanning everything the
- * renderer contributes to the world (see
- * {@link OpenSeadragonContext.updateBounds}). Renderers share a viewer, so the
- * anchor also marks where the renderer's own tiled images belong: they directly
- * follow the anchor, in the order of {@link _renderedObjects}, with one tiled
- * image per channel of each object.
+ * Each renderer owns an anchor, a tiled image spanning everything the renderer
+ * contributes to the world (see {@link OpenSeadragonContext.updateDummy}).
+ * Renderers share a viewer, so the anchor also marks where the renderer's own
+ * tiled images belong: they directly follow the anchor, in the order of
+ * {@link _renderedObjects}, with one tiled image per channel of each object.
+ *
+ * The anchor is invisible and spans just the renderer's own tiled images: every
+ * tiled image contributes to the bounds of the world, and this keeps the anchor
+ * from extending them. The same bounds are registered with the context (see
+ * {@link OpenSeadragonContext.setContentBounds}), whose world background covers the
+ * content of all renderers from below.
  *
  * The tiled images of an object that uses additive blending are preceded by one
  * more tiled image, its backdrop (see {@link usesAdditiveBlending}).
@@ -66,7 +70,6 @@ export abstract class OpenSeadragonRendererBase<
   private _renderedObjects: RenderedObject<TObject, TObjectData>[] = [];
   private _anchorTaskPromise: Promise<unknown> = Promise.resolve();
   private _destroyed: boolean = false;
-  private _extraBounds: Rect[] = [];
 
   /**
    * Creates a new OpenSeadragonRendererBase instance and asynchronously adds its anchor
@@ -77,7 +80,8 @@ export abstract class OpenSeadragonRendererBase<
    * @param context - The OpenSeadragon context that provides access to the viewer and other shared state
    * @param onInitialized - Called once the anchor has been added to the world
    * @param onError - Called if the anchor could not be added
-   * @param options - Optional abort signal and world index at which to insert the anchor
+   * @param options - Optional abort signal and world index at which to insert
+   * the anchor, behind the context's world background (i.e. `1` or higher)
    */
   constructor(
     context: OpenSeadragonContext,
@@ -89,7 +93,7 @@ export abstract class OpenSeadragonRendererBase<
     this._enqueueAnchorTask(async () => {
       const { signal, anchorIndex } = options ?? {};
       signal?.throwIfAborted();
-      this._anchor = await this.context.updateBounds(
+      this._anchor = await this.context.updateDummy(
         OpenSeadragonRendererBase._defaultBounds,
         { signal, dummyIndex: anchorIndex },
       );
@@ -227,12 +231,14 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Resizes the anchor to the bounding box of all tiled images and extra bounds
+   * Resizes the anchor to the bounding box of all tiled images, and registers it with the context
    *
    * Rendered objects whose tiled images have not been added to the world yet are
    * ignored; they update the anchor themselves upon arrival (see
-   * {@link _createRenderedObject}). Does nothing once the renderer has been
-   * destroyed, as there is no anchor to resize anymore.
+   * {@link _createRenderedObject}). Resolves once the context's world
+   * background covers the bounds, too (see
+   * {@link OpenSeadragonContext.setContentBounds}). Does nothing once the renderer has
+   * been destroyed, as there is no anchor to resize anymore.
    *
    * @param options - Optional abort signal
    */
@@ -254,31 +260,21 @@ export abstract class OpenSeadragonRendererBase<
           }
         }
       }
-      const bounds =
-        GeometryUtils.union(...tiledImageBounds, ...this._extraBounds) ??
-        OpenSeadragonRendererBase._defaultBounds;
-      this._anchor = await this.context.updateBounds(bounds, {
-        signal,
-        dummy: this._anchor,
-      });
+      const bounds = GeometryUtils.union(...tiledImageBounds);
+      this._anchor = await this.context.updateDummy(
+        bounds ?? OpenSeadragonRendererBase._defaultBounds,
+        { signal, dummy: this._anchor },
+      );
+      await this.context.setContentBounds(
+        this,
+        bounds !== null ? [bounds] : [],
+        { signal },
+      );
     });
   }
 
   /**
-   * Sets additional bounds to be covered by the anchor
-   *
-   * Used to include content that is not rendered by OpenSeadragon (e.g. points
-   * and shapes rendered with WebGL) in the viewer's world bounds. Takes effect on
-   * the next {@link updateBounds} call.
-   *
-   * @param bounds - Additional bounds, in world coordinates
-   */
-  setExtraBounds(bounds: Rect[]): void {
-    this._extraBounds = bounds;
-  }
-
-  /**
-   * Destroys the renderer by removing the anchor tiled image and all rendered objects from the OpenSeadragon viewer
+   * Destroys the renderer by removing the anchor tiled image and all rendered objects from the OpenSeadragon viewer, and its bounds from the context
    *
    * Rendered objects whose tiled images have not been added to the world yet are
    * only marked for deletion, and are removed as soon as they arrive.
@@ -301,6 +297,7 @@ export abstract class OpenSeadragonRendererBase<
         this._anchor = undefined;
         await this.context.removeTiledImage(anchor);
       }
+      await this.context.setContentBounds(this, []);
     });
   }
 
@@ -450,6 +447,14 @@ export abstract class OpenSeadragonRendererBase<
    * it. Objects that do not blend additively have no backdrop and keep
    * OpenSeadragon's default composite operation, i.e. each of their channels is
    * composited over the one below it.
+   *
+   * This only composites correctly onto an opaque canvas: "lighter" adds alpha
+   * as well as color, so onto the transparent canvas that OpenSeadragon clears
+   * to, an object with opacity below one would accumulate alpha from each
+   * channel and fade out to the wrong color, in wrong proportions, instead of
+   * fading out to the background behind the viewer. The context's world
+   * background (see {@link OpenSeadragonContext.setContentBounds}) therefore makes the
+   * canvas opaque wherever objects are.
    *
    * @param _data - The object data (image or labels) to check
    * @returns Whether the object's channels are blended additively. Defaults to `false`.
@@ -767,7 +772,7 @@ export abstract class OpenSeadragonRendererBase<
       }
       return OpenSeadragonUtils.createPixelTileSource(
         { width: 1, height: 1 },
-        OpenSeadragonUtils.transparentPixelUrl,
+        OpenSeadragonUtils.transparentBlackPixelUrl,
       );
     };
     const backdropTileSourcePromise = useBackdrop
@@ -778,7 +783,7 @@ export abstract class OpenSeadragonRendererBase<
                 width: firstTileSource.dimensions.x,
                 height: firstTileSource.dimensions.y,
               },
-              OpenSeadragonUtils.blackPixelUrl,
+              OpenSeadragonUtils.opaqueBlackPixelUrl,
             ),
           getPlaceholderTileSource,
         )
@@ -892,8 +897,13 @@ export abstract class OpenSeadragonRendererBase<
         } else {
           newRenderedObject.backdrop = backdrop;
           newRenderedObject.tiledImages = tiledImages;
-          this._updateRenderedObject(newRenderedObject);
+          // transform first, while still hidden, so that the context's world
+          // background covers the tiled images by the time they are drawn
+          this._updateRenderedObject(newRenderedObject, undefined, {
+            hidden: true,
+          });
           await this.updateBounds({ signal });
+          this._updateRenderedObject(newRenderedObject);
         }
         return tiledImages;
       })
@@ -929,11 +939,14 @@ export abstract class OpenSeadragonRendererBase<
    * @param renderedObject - The rendered object to update
    * @param newRef - The reference to store, addressing the same layer, object
    * and data source as the current one; defaults to the current one
+   * @param options - Whether to keep the backdrop and TiledImages hidden, i.e.
+   * apply everything but their opacity
    * @throws Error if the TiledImages have not been created yet
    */
   private _updateRenderedObject(
     renderedObject: RenderedObject<TObject, TObjectData>,
     newRef: ObjectRef<TObject, TObjectData> = renderedObject.ref,
+    options?: { hidden?: boolean },
   ): void {
     if (renderedObject.tiledImages === undefined) {
       throw new Error("Rendered object not loaded");
@@ -955,11 +968,16 @@ export abstract class OpenSeadragonRendererBase<
     }
     const currentRef = { layer, object, data: newRef.data };
     if (renderedObject.backdrop !== undefined) {
-      this._updateTiledImage(renderedObject.backdrop, currentRef, null);
+      this._updateTiledImage(
+        renderedObject.backdrop,
+        currentRef,
+        null,
+        options,
+      );
     }
     for (let index = 0; index < renderedObject.tiledImages.length; index++) {
       const tiledImage = renderedObject.tiledImages[index]!;
-      this._updateTiledImage(tiledImage, currentRef, index);
+      this._updateTiledImage(tiledImage, currentRef, index, options);
     }
   }
 
@@ -1002,12 +1020,15 @@ export abstract class OpenSeadragonRendererBase<
    * @param tiledImage - The TiledImage to update
    * @param ref - The object reference whose transform to apply
    * @param index - The index of the tiled image (e.g. channel), or `null` for the object's backdrop
+   * @param options - Whether to keep the TiledImage hidden, i.e. at opacity `0`
    */
   private _updateTiledImage(
     tiledImage: OpenSeadragon.TiledImage,
     ref: ObjectRef<TObject, TObjectData>,
     index: number | null,
+    options?: { hidden?: boolean },
   ): void {
+    const { hidden = false } = options ?? {};
     // transform --> flip, width, rotation, position
     // The bounds are taken without rotation, as OpenSeadragon rotates them
     // around the image center, which would offset the position of any rotated
@@ -1034,7 +1055,7 @@ export abstract class OpenSeadragonRendererBase<
       tiledImage.setPosition(transform.position, true);
     }
     // visibility & opacity --> opacity
-    const opacity = this.getTiledImageOpacity(ref, index);
+    const opacity = hidden ? 0 : this.getTiledImageOpacity(ref, index);
     const oldOpacity = tiledImage.getOpacity();
     if (opacity !== oldOpacity) {
       tiledImage.setOpacity(opacity);
