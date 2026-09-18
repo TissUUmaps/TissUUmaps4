@@ -232,6 +232,7 @@ export type VirtualTableColumnDef<TRowData extends RowData> = ColumnDef<
 
 export type VirtualTableProps<TRowData extends RowData> = {
   rowCount: number;
+  /** Returns the rows within `[startIndex, endIndex)` */
   getRows: (startIndex: number, endIndex: number) => TRowData[];
   getRowId: (row: TRowData) => string;
   columnDefs: VirtualTableColumnDef<TRowData>[];
