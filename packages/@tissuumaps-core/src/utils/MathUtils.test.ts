@@ -27,6 +27,43 @@ describe("MathUtils", () => {
     });
   });
 
+  describe("remap", () => {
+    it("maps the range bounds onto each other", () => {
+      expect(MathUtils.remap(0, [0, 1], [10, 20])).toBe(10);
+      expect(MathUtils.remap(1, [0, 1], [10, 20])).toBe(20);
+    });
+
+    it("maps values linearly", () => {
+      expect(MathUtils.remap(0.25, [0, 1], [10, 20])).toBeCloseTo(12.5);
+      expect(MathUtils.remap(5, [0, 10], [-1, 1])).toBeCloseTo(0);
+    });
+
+    it("is the identity for equal ranges", () => {
+      expect(MathUtils.remap(3.7, [1, 5], [1, 5])).toBeCloseTo(3.7);
+    });
+
+    it("supports inverted ranges", () => {
+      expect(MathUtils.remap(0.25, [0, 1], [1, 0])).toBeCloseTo(0.75);
+      expect(MathUtils.remap(0.75, [1, 0], [0, 1])).toBeCloseTo(0.25);
+    });
+
+    it("extrapolates outside the source range", () => {
+      expect(MathUtils.remap(2, [0, 1], [10, 20])).toBeCloseTo(30);
+      expect(MathUtils.remap(-1, [0, 1], [10, 20])).toBeCloseTo(0);
+    });
+
+    it("is inverted by swapping the ranges", () => {
+      const mapped = MathUtils.remap(0.3, [-0.9, -0.1], [-2, 0]);
+      expect(MathUtils.remap(mapped, [-2, 0], [-0.9, -0.1])).toBeCloseTo(0.3);
+    });
+
+    it("throws error when the source range is degenerate", () => {
+      expect(() => MathUtils.remap(1, [2, 2], [0, 1])).toThrow(
+        "from must not be degenerate",
+      );
+    });
+  });
+
   describe("align", () => {
     it("returns n when n is already a multiple of m", () => {
       expect(MathUtils.align(10, 5)).toBe(10);

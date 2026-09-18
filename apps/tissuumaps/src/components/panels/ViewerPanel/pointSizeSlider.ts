@@ -1,38 +1,33 @@
 import { MathUtils } from "@tissuumaps/core";
 
-const minPointSizePercentage = 1;
-const maxPointSizePercentage = 500;
-const zeroSliderPositionRange = 0.05;
-const snapSliderPositionRange = 0.1;
+const minPointSizeFactor = 0.01;
+const maxPointSizeFactor = 5;
+const zeroZoneWidth = 0.05; // positions in [-1, -1 + zeroZoneWidth) map to 0
+const snapZoneWidth = 0.1; // positions in [-snapZoneWidth, snapZoneWidth] map to 1
 
-const decadesBelowHundred = Math.log10(100 / minPointSizePercentage);
-const decadesAboveHundred = Math.log10(maxPointSizePercentage / 100);
-const sliderPositionRangeBelowHundred =
-  1 - zeroSliderPositionRange - snapSliderPositionRange;
-const sliderPositionRangeAboveHundred = 1 - snapSliderPositionRange;
+// Log-linear segments on either side of the snap zone, as [min, max] ranges
+const lowerPositions: [number, number] = [-1 + zeroZoneWidth, -snapZoneWidth];
+const lowerDecades: [number, number] = [Math.log10(minPointSizeFactor), 0];
+const upperPositions: [number, number] = [snapZoneWidth, 1];
+const upperDecades: [number, number] = [0, Math.log10(maxPointSizeFactor)];
 
 /**
  * Maps a slider position in [-1, 1] to a point size factor.
  *
  * The far left is 0, the centre snaps to 1, and each side scales
- * logarithmically up to the minimum and maximum percentage.
+ * logarithmically up to the minimum and maximum factor.
  */
 export function sliderPositionToPointSizeFactor(position: number): number {
-  if (position < -1 + zeroSliderPositionRange) {
+  if (position < lowerPositions[0]) {
     return 0;
   }
-  if (Math.abs(position) <= snapSliderPositionRange) {
+  if (Math.abs(position) <= snapZoneWidth) {
     return 1;
   }
-  const decadeRange = position < 0 ? decadesBelowHundred : decadesAboveHundred;
-  const positionRange =
-    position < 0
-      ? sliderPositionRangeBelowHundred
-      : sliderPositionRangeAboveHundred;
   const decades =
-    Math.sign(position) *
-    ((Math.abs(position) - snapSliderPositionRange) / positionRange) *
-    decadeRange;
+    position < 0
+      ? MathUtils.remap(position, lowerPositions, lowerDecades)
+      : MathUtils.remap(position, upperPositions, upperDecades);
   return Math.round(1000 * 10 ** decades) / 1000;
 }
 
@@ -43,23 +38,13 @@ export function pointSizeFactorToSliderPosition(
   if (pointSizeFactor <= 0) {
     return -1;
   }
-  const percentage = MathUtils.clamp(
-    pointSizeFactor * 100,
-    minPointSizePercentage,
-    maxPointSizePercentage,
+  const decades = Math.log10(
+    MathUtils.clamp(pointSizeFactor, minPointSizeFactor, maxPointSizeFactor),
   );
-  const decades = Math.log10(percentage / 100);
   if (decades === 0) {
     return 0;
   }
-  const decadeRange = decades < 0 ? decadesBelowHundred : decadesAboveHundred;
-  const positionRange =
-    decades < 0
-      ? sliderPositionRangeBelowHundred
-      : sliderPositionRangeAboveHundred;
-  return (
-    Math.sign(decades) *
-    (snapSliderPositionRange +
-      (Math.abs(decades) / decadeRange) * positionRange)
-  );
+  return decades < 0
+    ? MathUtils.remap(decades, lowerDecades, lowerPositions)
+    : MathUtils.remap(decades, upperDecades, upperPositions);
 }
