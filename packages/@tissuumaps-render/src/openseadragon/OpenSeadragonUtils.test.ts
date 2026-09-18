@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // OpenSeadragon touches the DOM when imported
+import { createCanvas, loadImage } from "canvas";
 import { vec2 } from "gl-matrix";
 import { describe, expect, it } from "vitest";
 
@@ -90,7 +91,87 @@ function webglCorners(
   });
 }
 
+/**
+ * Decodes a single-pixel image data URL into its RGBA bytes
+ *
+ * Uses the `canvas` package directly, as jsdom does not load images; it is the
+ * same library that backs jsdom's canvas, and thus `createPixelUrl`, here.
+ */
+async function decodePixel(url: string): Promise<number[]> {
+  expect(url.startsWith("data:image/png;base64,")).toBe(true);
+  const image = await loadImage(url);
+  const ctx = createCanvas(1, 1).getContext("2d");
+  ctx.drawImage(image, 0, 0);
+  return [...ctx.getImageData(0, 0, 1, 1).data];
+}
+
 describe("OpenSeadragonUtils", () => {
+  describe("createPixelTileSource", () => {
+    it("declares a single level holding a single tile of the given size", () => {
+      expect(
+        OpenSeadragonUtils.createPixelTileSource(
+          { width: 300, height: 120 },
+          "pixel-url",
+        ),
+      ).toMatchObject({
+        width: 300,
+        height: 120,
+        tileSize: 300,
+        minLevel: 0,
+        maxLevel: 0,
+      });
+    });
+
+    it("sizes the tile to the larger side", () => {
+      expect(
+        OpenSeadragonUtils.createPixelTileSource(
+          { width: 40, height: 90 },
+          "pixel-url",
+        ),
+      ).toMatchObject({ tileSize: 90 });
+    });
+
+    it("serves the pixel URL for every tile", () => {
+      // TileSourceConfig is an opaque object type, so narrow it to what the
+      // pixel tile source is known to provide
+      const { getTileUrl } = OpenSeadragonUtils.createPixelTileSource(
+        { width: 40, height: 90 },
+        "pixel-url",
+      ) as { getTileUrl: (level: number, x: number, y: number) => string };
+      expect(getTileUrl(0, 0, 0)).toBe("pixel-url");
+      expect(getTileUrl(3, 2, 1)).toBe("pixel-url");
+    });
+  });
+
+  describe("createPixelUrl", () => {
+    it("encodes an opaque color", async () => {
+      const url = OpenSeadragonUtils.createPixelUrl(12, 200, 255, 1);
+      await expect(decodePixel(url)).resolves.toEqual([12, 200, 255, 255]);
+    });
+
+    it("encodes a fully transparent pixel", async () => {
+      const url = OpenSeadragonUtils.createPixelUrl(12, 200, 255, 0);
+      const pixel = await decodePixel(url);
+      expect(pixel[3]).toBe(0);
+    });
+
+    it("encodes the alpha of a translucent pixel", async () => {
+      const url = OpenSeadragonUtils.createPixelUrl(255, 255, 255, 0.5);
+      const pixel = await decodePixel(url);
+      expect(pixel[3]).toBeGreaterThanOrEqual(127);
+      expect(pixel[3]).toBeLessThanOrEqual(128);
+    });
+
+    it("provides the transparent and the opaque black pixel", async () => {
+      await expect(
+        decodePixel(OpenSeadragonUtils.transparentBlackPixelUrl),
+      ).resolves.toEqual([0, 0, 0, 0]);
+      await expect(
+        decodePixel(OpenSeadragonUtils.opaqueBlackPixelUrl),
+      ).resolves.toEqual([0, 0, 0, 255]);
+    });
+  });
+
   describe("getTiledImageTransform", () => {
     it("returns the content size at the origin for identity transforms", () => {
       const geom = OpenSeadragonUtils.getTiledImageTransform(
