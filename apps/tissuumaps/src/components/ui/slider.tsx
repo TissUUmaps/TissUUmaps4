@@ -38,7 +38,7 @@ function Slider<Value extends number | readonly number[]>({
             data-slot="slider-thumb"
             aria-label={ariaLabel}
             // the thumb renders a nested input, which takes the focus
-            className="border-primary bg-background has-[:focus-visible]:ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] outline-none has-[:focus-visible]:ring-[3px] data-disabled:pointer-events-none data-disabled:opacity-50"
+            className="border-primary bg-background has-[:focus-visible]:ring-ring/50 block size-4 cursor-pointer shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] outline-none has-[:focus-visible]:ring-[3px] data-disabled:pointer-events-none data-disabled:opacity-50"
           />
         ))}
       </SliderPrimitive.Control>
