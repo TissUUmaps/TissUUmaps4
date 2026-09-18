@@ -4,7 +4,7 @@ import type { ItemsData } from "@tissuumaps/core";
 
 import { useTableData } from "@/hooks/useData";
 
-import type { AnnotationsTableRowData } from "./AnnotationsItemTable";
+import type { AnnotationsItemTableRowData } from "./AnnotationsItemTable";
 
 export function useItemRows(data: ItemsData | undefined, table: string | null) {
   const tableData = useTableData(table);
@@ -63,7 +63,7 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
 
   const getRows = useCallback(
     (startIndex: number, endIndex: number) => {
-      const rows: AnnotationsTableRowData[] = [];
+      const rows: AnnotationsItemTableRowData[] = [];
       for (let index = startIndex; index < endIndex; index++) {
         const id = ids[index]!;
         rows.push({

@@ -2,11 +2,11 @@ import type { ItemsData } from "@tissuumaps/core";
 
 import {
   AnnotationsGroupTable,
-  type AnnotationsTableGroupColumnDef,
+  type AnnotationsGroupTableColumnDef,
 } from "./AnnotationsGroupTable";
 import {
   AnnotationsItemTable,
-  type AnnotationsTableColumnDef,
+  type AnnotationsItemTableColumnDef,
 } from "./AnnotationsItemTable";
 
 export type AnnotationsTableProps = {
@@ -14,8 +14,8 @@ export type AnnotationsTableProps = {
   height: number;
   table: string | null;
   groupByColumn?: string | null;
-  extraColumnDefs?: AnnotationsTableColumnDef[];
-  extraGroupColumnDefs?: AnnotationsTableGroupColumnDef[];
+  extraColumnDefs?: AnnotationsItemTableColumnDef[];
+  extraGroupColumnDefs?: AnnotationsGroupTableColumnDef[];
 };
 
 export function AnnotationsTable({

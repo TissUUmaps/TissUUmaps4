@@ -14,7 +14,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import type { AnnotationsTableGroupColumnDef } from "@/components/widgets/AnnotationsWidget/AnnotationsGroupTable";
+import type { AnnotationsGroupTableColumnDef } from "@/components/widgets/AnnotationsWidget/AnnotationsGroupTable";
 import { useProjectStore } from "@/stores/project";
 
 export function useLabelsAnnotationsColumns(
@@ -25,9 +25,9 @@ export function useLabelsAnnotationsColumns(
   const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
-  const extraTableGroupColumnDefs: AnnotationsTableGroupColumnDef[] =
+  const extraTableGroupColumnDefs: AnnotationsGroupTableColumnDef[] =
     useMemo(() => {
-      const columnDefs: AnnotationsTableGroupColumnDef[] = [];
+      const columnDefs: AnnotationsGroupTableColumnDef[] = [];
 
       // color
       if (

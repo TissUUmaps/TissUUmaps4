@@ -8,18 +8,18 @@ import {
 import { rowHeight } from "./rowHeight";
 import { useGroupRows } from "./useGroupRows";
 
-export type AnnotationsTableGroupRowData = {
+export type AnnotationsGroupTableRowData = {
   group: string;
 };
 
-export type AnnotationsTableGroupColumnDef =
-  VirtualTableColumnDef<AnnotationsTableGroupRowData>;
+export type AnnotationsGroupTableColumnDef =
+  VirtualTableColumnDef<AnnotationsGroupTableRowData>;
 
 export type AnnotationsGroupTableProps = {
   height: number;
   table: string;
   groupByColumn: string;
-  extraGroupColumnDefs?: AnnotationsTableGroupColumnDef[];
+  extraGroupColumnDefs?: AnnotationsGroupTableColumnDef[];
 };
 
 export function AnnotationsGroupTable({
@@ -34,7 +34,7 @@ export function AnnotationsGroupTable({
     if (!loaded) {
       return [];
     }
-    const columnDefs: AnnotationsTableGroupColumnDef[] = [
+    const columnDefs: AnnotationsGroupTableColumnDef[] = [
       { id: "group", header: groupByColumn, accessorKey: "group" },
     ];
     if (extraGroupColumnDefs !== undefined) {

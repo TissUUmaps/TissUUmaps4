@@ -19,7 +19,7 @@ import {
 } from "@tissuumaps/core";
 
 import { markers } from "@/components/markers";
-import type { AnnotationsTableGroupColumnDef } from "@/components/widgets/AnnotationsWidget/AnnotationsGroupTable";
+import type { AnnotationsGroupTableColumnDef } from "@/components/widgets/AnnotationsWidget/AnnotationsGroupTable";
 import { useProjectStore } from "@/stores/project";
 
 export function usePointsAnnotationsColumns(
@@ -32,9 +32,9 @@ export function usePointsAnnotationsColumns(
   const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
-  const extraTableGroupColumnDefs: AnnotationsTableGroupColumnDef[] =
+  const extraTableGroupColumnDefs: AnnotationsGroupTableColumnDef[] =
     useMemo(() => {
-      const columnDefs: AnnotationsTableGroupColumnDef[] = [];
+      const columnDefs: AnnotationsGroupTableColumnDef[] = [];
 
       // marker
       if (
