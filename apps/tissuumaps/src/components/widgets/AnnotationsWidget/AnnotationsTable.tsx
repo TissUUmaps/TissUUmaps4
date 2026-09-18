@@ -5,8 +5,8 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { observeElementOffset, useVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import type { GenericArray, ItemsData } from "@tissuumaps/core";
 
@@ -21,6 +21,8 @@ import {
 import { useTableData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 
+import { compressScrollRange } from "./scrollCompression";
+
 /**
  * Height of a table row in pixels
  *
@@ -29,6 +31,16 @@ import { cn } from "@/lib/utils";
  * clipped.
  */
 const rowHeight = 36;
+
+/**
+ * The tallest scroll content that is laid out, in pixels
+ *
+ * Browsers cap the height of an element at a few ten million pixels, Chrome
+ * at about 33 million divided by the page zoom, and clamp anything taller, so
+ * that a longer list could not be scrolled past the cap. Content beyond this
+ * height is compressed instead, see {@link compressScrollRange}.
+ */
+const maxScrollContentHeight = 10_000_000;
 
 export type AnnotationsTableRowData = {
   id: number;
@@ -58,6 +70,11 @@ export function AnnotationsTable({
   extraGroupColumnDefs,
 }: AnnotationsTableProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLTableSectionElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(height);
+  const compressionRef = useRef(1);
+  const [, rerender] = useReducer((x: number) => x + 1, 0);
 
   const [tableGroups, setTableGroups] = useState<GenericArray<string> | null>(
     null,
@@ -147,12 +164,45 @@ export function AnnotationsTable({
     return { ids, getName, annotatedIds };
   }, [data, table, tableData]);
 
+  useEffect(() => {
+    const header = headerRef.current;
+    if (header === null) {
+      return;
+    }
+    const resizeObserver = new ResizeObserver(() =>
+      setHeaderHeight(header.offsetHeight),
+    );
+    resizeObserver.observe(header);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: grouped ? groupRows.length : ids.length,
     getScrollElement: () => containerRef.current,
     estimateSize: () => rowHeight,
+    // the virtualizer works in content positions while the element scrolls in
+    // layout positions, which differ once the content is compressed
+    observeElementOffset: (instance, onOffsetChange) =>
+      observeElementOffset(instance, (layoutOffset, isScrolling) => {
+        onOffsetChange(layoutOffset * compressionRef.current, isScrolling);
+        if (compressionRef.current > 1) {
+          rerender(); // the rows shift against the layout while scrolling
+        }
+      }),
   });
+
+  const { layoutSize: layoutContentHeight, factor: compression } =
+    compressScrollRange(
+      headerHeight + rowVirtualizer.getTotalSize(),
+      viewportHeight,
+      maxScrollContentHeight,
+    );
+  useEffect(() => {
+    compressionRef.current = compression;
+  }, [compression]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -162,9 +212,15 @@ export function AnnotationsTable({
     // a hidden panel loses its scroll offset without raising a scroll event,
     // which would leave the rendered rows outside of the visible range
     const resizeObserver = new ResizeObserver(() => {
-      const scrollOffset = rowVirtualizer.scrollOffset ?? 0;
-      if (container.clientHeight > 0 && container.scrollTop !== scrollOffset) {
-        container.scrollTop = scrollOffset;
+      if (container.clientHeight === 0) {
+        return;
+      }
+      setViewportHeight(container.clientHeight);
+      const layoutOffset = Math.round(
+        (rowVirtualizer.scrollOffset ?? 0) / compressionRef.current,
+      );
+      if (container.scrollTop !== layoutOffset) {
+        container.scrollTop = layoutOffset;
       }
     });
     resizeObserver.observe(container);
@@ -176,6 +232,11 @@ export function AnnotationsTable({
   // only the rows within the virtualizer's range are materialized, so that the
   // cost of the table does not depend on the number of items
   const virtualRows = rowVirtualizer.getVirtualItems();
+
+  // Rows are placed at their content position, less how far the content has
+  // run ahead of the layout at the current scroll position, which is nothing
+  // while the content fits.
+  const rowShift = (rowVirtualizer.scrollOffset ?? 0) * (1 - 1 / compression);
   const firstIndex = virtualRows[0]?.index ?? 0;
   const lastIndex = (virtualRows[virtualRows.length - 1]?.index ?? -1) + 1;
 
@@ -193,15 +254,7 @@ export function AnnotationsTable({
       });
     }
     return rowData;
-  }, [
-    grouped,
-    groupRows,
-    ids,
-    getName,
-    annotatedIds,
-    firstIndex,
-    lastIndex,
-  ]);
+  }, [grouped, groupRows, ids, getName, annotatedIds, firstIndex, lastIndex]);
 
   const columnDefs = useMemo(() => {
     if (grouped) {
@@ -256,7 +309,10 @@ export function AnnotationsTable({
       style={{ height: `${height}px` }}
     >
       <Table className="grid w-max min-w-full">
-        <TableHeader className="grid sticky top-0 z-10 bg-background">
+        <TableHeader
+          ref={headerRef}
+          className="grid sticky top-0 z-10 bg-background"
+        >
           {reactTable.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="flex w-full">
               {headerGroup.headers.map((header) => (
@@ -278,7 +334,7 @@ export function AnnotationsTable({
         </TableHeader>
         <TableBody
           className="grid relative"
-          style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+          style={{ height: `${layoutContentHeight - headerHeight}px` }}
         >
           {virtualRows.map((virtualRow) => {
             const row = reactTableRows[virtualRow.index - firstIndex];
@@ -296,7 +352,7 @@ export function AnnotationsTable({
                 )}
                 style={{
                   height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start}px)`,
+                  transform: `translateY(${virtualRow.start - rowShift}px)`,
                 }}
               >
                 {row.getVisibleCells().map((cell) => (
