@@ -17,8 +17,8 @@ import { openOMEZarr } from "./openOMEZarr";
  * Data provider for OME-Zarr label images
  *
  * Opens an {@link OMEZarrLabelsDataSource} as {@link OMEZarrLabelsData} with a
- * single tile source; the image's channel axis, if any, is not iterated, and
- * `image-label` metadata is not read.
+ * single tile source rendering the first channel; the image's channel axis, if
+ * any, is not iterated, and `image-label` metadata is not read.
  */
 export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
   OMEZarrLabelsDataSource,
@@ -105,8 +105,9 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
    * Opens an OME-Zarr labels data source and returns the loaded label image
    * data
    *
-   * The OME-Zarr label image is loaded with {@link openOMEZarr} and its tile
-   * source is opened, with the `z` and `t` of the data source selecting the
+   * The OME-Zarr label image and its arrays are loaded with
+   * {@link openOMEZarr} and a tile source rendering its first channel is
+   * opened for them, with the `z` and `t` of the data source selecting the
    * plane to open.
    *
    * @param normalizedDataSource - The normalized data source to open
@@ -122,17 +123,18 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
   ): Promise<OMEZarrLabelsData> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { image, url, objectUrl } = await openOMEZarr(
-      normalizedDataSource,
+    const { loaded, url, zip, objectUrl } = await openOMEZarr(
+      normalizedDataSource.url,
+      normalizedDataSource.path,
       options,
     );
     try {
-      const { z, t } = normalizedDataSource;
+      const { t, z } = normalizedDataSource;
       const tileSource = await OMEZarrTileSource.open(
-        { url, z, t, dataType: "ome-zarr" },
-        image,
+        { url, zip, t, z, c: 0 },
+        loaded,
+        { signal },
       );
-      signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
       return new OMEZarrLabelsData(tileSource, objectUrl);
     } catch (error) {
       // the label image data owns the object URL only once it has been created

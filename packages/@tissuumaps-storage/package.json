@@ -57,11 +57,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@zarrita/storage": "^0.2.0",
-    "ome-zarr.js": "^0.0.20",
-    "omezarr-tilesource": "^0.5.0",
-    "papaparse": "^5.5.4",
-    "zarrita": "^0.7.5"
+    "omezarr-tilesource": "^0.7.0",
+    "papaparse": "^5.5.4"
   },
   "devDependencies": {
     "@tissuumaps/core": "workspace:^",

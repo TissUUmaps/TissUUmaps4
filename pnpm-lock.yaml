@@ -269,21 +269,12 @@ importers:
 
   packages/@tissuumaps-storage:
     dependencies:
-      "@zarrita/storage":
-        specifier: ^0.2.0
-        version: 0.2.0
-      ome-zarr.js:
-        specifier: ^0.0.20
-        version: 0.0.20
       omezarr-tilesource:
-        specifier: ^0.5.0
-        version: 0.5.0(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.0)(zarrita@0.7.5)
+        specifier: ^0.7.0
+        version: 0.7.0(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.0)(zarrita@0.7.5)
       papaparse:
         specifier: ^5.5.4
         version: 5.6.0
-      zarrita:
-        specifier: ^0.7.5
-        version: 0.7.5
     devDependencies:
       "@tissuumaps/core":
         specifier: workspace:^
@@ -9499,10 +9490,10 @@ packages:
         integrity: sha512-CvKZykEKILCXjtBYFwTiddw6eS2l2T1CA3nHH1QLure/HbBBD6e2uN/nJSMNP9m661EWWHNPKr8ggaDBxLDvzw==,
       }
 
-  omezarr-tilesource@0.5.0:
+  omezarr-tilesource@0.7.0:
     resolution:
       {
-        integrity: sha512-psEF4PQvQWChG6t2xGVcgSokHRWy3KPwYnvQWiK4kzDAbs7nd/bUtu8DlE1OXAnVjs7pq5KBj0IP31yv8bS9Lg==,
+        integrity: sha512-BOwiAOoOoUA8of/dd4OgPyJ6xPZ+ml6UXhHVfsSCS4a2PbemwGhSBbeCoV6QnROQwEeWeeh5M/ZV+vgXFRd/nQ==,
       }
     engines: { node: ">=22.22.1" }
     peerDependencies:
@@ -19647,7 +19638,7 @@ snapshots:
     dependencies:
       zarrita: 0.7.5
 
-  omezarr-tilesource@0.5.0(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.0)(zarrita@0.7.5):
+  omezarr-tilesource@0.7.0(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.0)(zarrita@0.7.5):
     dependencies:
       "@zarrita/storage": 0.2.0
       ome-zarr.js: 0.0.20

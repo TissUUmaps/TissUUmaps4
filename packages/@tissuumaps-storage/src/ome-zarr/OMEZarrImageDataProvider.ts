@@ -1,6 +1,4 @@
-import { getSlices } from "ome-zarr.js";
 import { OMEZarrTileSource } from "omezarr-tilesource";
-import * as zarr from "zarrita";
 
 import {
   type DataProviderLoadOptions,
@@ -108,12 +106,13 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   /**
    * Opens an OME-Zarr image data source and returns the loaded image data
    *
-   * The OME-Zarr image is loaded with {@link openOMEZarr} and one tile source
-   * per channel is opened for images with a channel axis, or a single tile
-   * source for images without one. All resolution levels are opened once up
-   * front, both to read the channel count from the full-resolution array and
-   * so that the tile sources share the opened arrays instead of reopening them
-   * concurrently. The `z` and `t` of the data source select the plane to open.
+   * The OME-Zarr image and its arrays are loaded once with {@link openOMEZarr}
+   * and shared between the tile sources opened for it: one per channel for
+   * images with a channel axis, or a single one for images without one. Every
+   * tile source renders exactly one channel (`c`), so that its tiles carry a
+   * single chunk (see {@link OMEZarrImageData.getTileData}) and its resolved
+   * `omero` metadata is that channel's. The `z` and `t` of the data source
+   * select the plane to open.
    *
    * For images with a channel axis, the channels are opened concurrently, each
    * computing the value histogram of its plane from a downsampled resolution
@@ -135,49 +134,56 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   ): Promise<OMEZarrImageData> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { image, url, objectUrl } = await openOMEZarr(
-      normalizedDataSource,
+    const { loaded, url, zip, objectUrl } = await openOMEZarr(
+      normalizedDataSource.url,
+      normalizedDataSource.path,
       options,
     );
     try {
-      const arrays = await Promise.all(
-        image.paths.map((path) => image.openArray(path, { signal })),
-      ); // pre-open all resolution levels once to avoid concurrent reopening
-      const cIndex = image.getAxesNames().indexOf("c");
-      const { z, t } = normalizedDataSource;
-      if (cIndex >= 0) {
-        const sizeC = arrays[0]!.shape[cIndex]!;
-        const channelPromises = [];
-        for (let c = 0; c < sizeC; c++) {
-          const channelPromise = OMEZarrTileSource.open(
-            { url, c, z, t, dataType: "ome-zarr" },
-            image,
-          ).then(async (tileSource) => {
-            signal?.throwIfAborted();
-            const histogram =
-              await OMEZarrImageDataProvider._computeChannelHistogram(
-                tileSource,
-                { signal },
+      const { t, z } = normalizedDataSource;
+      const cAxis = loaded.image.getAxesNames().indexOf("c");
+      if (cAxis >= 0) {
+        const sizeC = loaded.arrays[0]!.shape[cAxis]!;
+        const channels = await Promise.all(
+          Array.from({ length: sizeC }, async (_, c) => {
+            const tileSource = await OMEZarrTileSource.open(
+              { url, zip, t, z, c },
+              loaded,
+              { signal },
+            );
+            let histogram;
+            try {
+              histogram =
+                await OMEZarrImageDataProvider._computeChannelHistogram(
+                  tileSource,
+                  { signal },
+                );
+            } catch (error) {
+              if (signal?.aborted) {
+                throw error;
+              }
+              console.warn(
+                `Failed to compute histogram for channel ${c}:`,
+                error,
               );
+            }
             return { tileSource, histogram };
-          });
-          channelPromises.push(channelPromise);
-        }
-        const channels = await Promise.all(channelPromises);
-        signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
+          }),
+        );
         return new OMEZarrImageData(
-          image,
           channels.map((channel) => channel.tileSource),
           channels.map((channel) => channel.histogram),
           objectUrl,
         );
       }
       const tileSource = await OMEZarrTileSource.open(
-        { url, z, t, dataType: "ome-zarr" },
-        image,
+        // c: 0 selects the only (implicit) channel: one chunk per tile, and no
+        // "active channels" default (which would reject an inactive sole channel)
+        { url, zip, t, z, c: 0 },
+        loaded,
+        { signal },
       );
-      signal?.throwIfAborted(); // OMEZarrTileSource.open() does not throw on abort
-      return new OMEZarrImageData(image, tileSource, undefined, objectUrl);
+      return new OMEZarrImageData(tileSource, undefined, objectUrl);
     } catch (error) {
       // the image data owns the object URL only once it has been created
       if (objectUrl !== undefined) {
@@ -191,16 +197,17 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * Computes the value histogram of a channel from a downsampled resolution level
    *
    * 64-bit integers get no histogram, and no values are read for them, as
-   * their values cannot be represented without loss. For all other data types,
-   * reads the plane that the given tile source displays (its channel, z-slice
-   * and timepoint, the latter two defaulting to the image's `omero` defaults
-   * like in the tile source itself) from the lowest resolution level that
-   * still holds at least {@link OMEZarrImageDataProvider._numHistogramPixels}
-   * pixels, or from the full-resolution level of images smaller than that, and
-   * bins the plane's values over their actual range (see
-   * {@link MathUtils.computeRange} and {@link MathUtils.computeHistogram}), so
-   * that the histogram is as fine as its bins allow regardless of the data
-   * type's range. Aborting the signal rejects with its reason.
+   * {@link OMEZarrImageData.getTileData} rejects their chunks anyway. For all
+   * other data types, loads the plane that the given tile source displays (its
+   * channel, z-slice and timepoint, see `OMEZarrTileSource.loadChunks`) from
+   * the lowest resolution level that still holds at least
+   * {@link OMEZarrImageDataProvider._numHistogramPixels} pixels, or from the
+   * full-resolution level if no level does (images smaller than that, and
+   * images without a multiscale pyramid), and bins the plane's values over
+   * their actual range (see {@link MathUtils.computeRange} and
+   * {@link MathUtils.computeHistogram}), so that the histogram is as fine as
+   * its bins allow regardless of the data type's range. Aborting the signal
+   * rejects with its reason.
    *
    * @param tileSource - The opened tile source of the channel
    * @param options - Optional abort signal
@@ -208,6 +215,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * 64-bit integer planes and planes with fewer than two distinct finite
    * values (which have no range to spread bins over; the renderer falls back
    * to the data type range for them)
+   * @throws Error if the loaded plane does not consist of exactly one chunk
    */
   private static async _computeChannelHistogram(
     tileSource: OMEZarrTileSource,
@@ -215,28 +223,23 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   ): Promise<{ hist: number[]; range: [number, number] } | undefined> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { image, arrays, c, z, t } = tileSource;
-    if (arrays[0]!.dtype === "int64" || arrays[0]!.dtype === "uint64") {
+    const { dtype } = tileSource.loaded.arrays[0]!;
+    if (dtype === "int64" || dtype === "uint64") {
       return undefined;
     }
-    const axisNames = image.getAxesNames();
-    const xAxis = axisNames.indexOf("x");
-    const yAxis = axisNames.indexOf("y");
-    let level = arrays.length - 1;
+    let level = 0; // OpenSeadragon level 0 is the lowest resolution
     while (
-      level > 0 &&
-      arrays[level]!.shape[xAxis]! * arrays[level]!.shape[yAxis]! <
+      level < tileSource.maxLevel &&
+      tileSource.getWidth(level) * tileSource.getHeight(level) <
         OMEZarrImageDataProvider._numHistogramPixels
     ) {
-      level--;
+      level++;
     }
-    const array = arrays[level]!;
-    const omero = image.checkChannelIndex(c ?? 0);
-    const selection = getSlices([c ?? 0], array.shape, axisNames, {
-      z: z ?? omero.rdefs?.defaultZ,
-      t: t ?? omero.rdefs?.defaultT,
-    })[0] as (number | zarr.Slice | null)[];
-    const chunk = await zarr.get(array, selection, { signal });
+    const chunks = await tileSource.loadChunks(level, undefined, { signal });
+    if (chunks.length !== 1) {
+      throw new Error(`Expected a single chunk, got ${chunks.length}`);
+    }
+    const chunk = chunks[0]!;
     if (
       chunk.data instanceof BigInt64Array ||
       chunk.data instanceof BigUint64Array
