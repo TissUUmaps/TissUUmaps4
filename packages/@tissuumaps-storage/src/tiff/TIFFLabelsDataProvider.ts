@@ -13,6 +13,7 @@ import {
 } from "./TIFFLabelsDataSource";
 import {
   type TIFFStructure,
+  sampleFormatSignedInteger,
   sampleFormatUnsignedInteger,
 } from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
@@ -23,7 +24,7 @@ import { openTIFF } from "./openTIFF";
  *
  * The file is read like any other TIFF (see `TIFFImageDataProvider`), but its
  * pixels are label IDs rather than intensities: it has to hold a single
- * channel of unsigned integers, which the renderer colors per ID instead of
+ * channel of integers, which the renderer colors per ID instead of
  * contrast-stretching them.
  *
  * Which labels the mask holds is not recorded in the file, and is not read
@@ -122,7 +123,7 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
    * @returns A promise that resolves to the loaded label mask
    * @throws Error if the data source has neither a URL nor a workspace path,
    * has only a workspace path while no workspace is open, or holds a file that
-   * is not a single channel of unsigned integers of at most 32 bits
+   * is not a single channel of integers of at most 32 bits
    */
   async load(
     normalizedDataSource: NormalizedTIFFLabelsDataSource,
@@ -154,8 +155,8 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
  * @param structure - The structure of the file
  * @returns The images of the mask, one per level, largest first
  * @throws Error if the file holds an RGB image, more than one channel, or
- * samples that are not unsigned integers of at most 32 bits, none of which can
- * be read as label IDs
+ * samples that are not signed or unsigned integers of at most 32 bits, none of
+ * which can be read as label IDs
  */
 function getLabelLevels(structure: TIFFStructure): GeoTIFFImage[] {
   const { channels, pyramids } = structure;
@@ -174,9 +175,13 @@ function getLabelLevels(structure: TIFFStructure): GeoTIFFImage[] {
   const format = image.getSampleFormat(0);
   // BitsPerSample defaults to 1 (bilevel images) when the tag is absent
   const bits = image.getBitsPerSample(0) || 1;
-  if (format !== sampleFormatUnsignedInteger || bits > 32) {
+  if (
+    (format !== sampleFormatUnsignedInteger &&
+      format !== sampleFormatSignedInteger) ||
+    bits > 32
+  ) {
     throw new Error(
-      "The image does not hold unsigned integers of at most 32 bits, which label IDs are.",
+      "The image does not hold integers of at most 32 bits, which label IDs are.",
     );
   }
   return levels;

@@ -3,6 +3,7 @@ import type OpenSeadragon from "openseadragon";
 
 import type {
   CustomTileSource,
+  IntArray,
   LabelsData,
   TileSourceConfig,
   UintArray,
@@ -45,18 +46,20 @@ export class TIFFLabelsData implements LabelsData {
    * row-major order, along with the width and height of the raster
    * @throws Error if the tile's raster has no band
    */
-  async getTileData(
-    event: OpenSeadragon.TileInvalidatedEvent,
-  ): Promise<{ values: UintArray; width: number; height: number }> {
+  async getTileData(event: OpenSeadragon.TileInvalidatedEvent): Promise<{
+    values: IntArray | UintArray;
+    width: number;
+    height: number;
+  }> {
     const raster = (await event.getData(tiffRasterType)) as TiffRaster;
     const band = raster.bands[0];
     if (band === undefined) {
       throw new Error("The tile's raster has no bands");
     }
-    // the provider opens unsigned integer files only, whose bands geotiff.js
-    // decodes into an unsigned integer array
+    // the provider opens integer files of at most 32 bits only, whose bands
+    // geotiff.js decodes into a signed or unsigned integer array
     return {
-      values: band as UintArray,
+      values: band as IntArray | UintArray,
       width: raster.width,
       height: raster.height,
     };

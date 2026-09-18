@@ -50,7 +50,7 @@ All of these can be overridden per channel in the project file through the image
 
 ## Labels
 
-TIFF files are also opened as **labels**, where every pixel value is a label (segment) ID and `0` is background. The formats and the pyramid are read as for images, with two restrictions: the file has to hold a **single channel** (an RGB file, or a multi-channel file, is rejected), and its samples have to be **unsigned integers of at most 32 bits**.
+TIFF files are also opened as **labels**, where every pixel value is a label (segment) ID and `0` is background. The formats and the pyramid are read as for images, with two restrictions: the file has to hold a **single channel** (an RGB file, or a multi-channel file, is rejected), and its samples have to be **integers of at most 32 bits** (signed or unsigned).
 
 Label IDs are read per tile as the tiles are drawn, so arbitrarily large label masks can be opened without scanning them first. TIFF records no label colors; they are configured in the project file instead, optionally through an annotating `table`.
 
@@ -111,7 +111,7 @@ Both the image and the labels are TIFF files served next to the project file, an
 - Multi-file OME-TIFF is not supported; the planes have to be in the file that is opened.
 - `path` needs an open workspace.
 - Files with several palette or white-is-zero images are rejected; a single one is drawn in its own colors.
-- RGB, multi-channel, signed and floating point files are not opened as labels. Convert them to a single unsigned integer channel of at most 32 bits.
+- RGB, multi-channel and floating point files are not opened as labels. Convert them to a single integer channel of at most 32 bits.
 
 ## API
 
