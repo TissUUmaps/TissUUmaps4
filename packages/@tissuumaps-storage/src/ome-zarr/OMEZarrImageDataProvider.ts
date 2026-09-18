@@ -1,8 +1,9 @@
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
-import type {
-  DataProviderLoadOptions,
-  ImageDataProvider,
+import {
+  type DataProviderLoadOptions,
+  type ImageDataProvider,
+  MathUtils,
 } from "@tissuumaps/core";
 
 import { OMEZarrImageData } from "./OMEZarrImageData";
@@ -11,12 +12,29 @@ import {
   type OMEZarrImageDataSource,
   omeZarrImageDataSourceDefaults,
 } from "./OMEZarrImageDataSource";
+import { openOMEZarr } from "./openOMEZarr";
 
+/**
+ * Data provider for OME-Zarr images
+ *
+ * Opens an {@link OMEZarrImageDataSource} as {@link OMEZarrImageData} with one
+ * tile source and one precomputed value histogram per channel if the image has
+ * a channel axis (even one of length one), and with a single tile source
+ * otherwise.
+ */
 export class OMEZarrImageDataProvider implements ImageDataProvider<
   OMEZarrImageDataSource,
   OMEZarrImageData,
   NormalizedOMEZarrImageDataSource
 > {
+  /**
+   * The minimum number of pixels of the resolution level that channel
+   * histograms are computed from (see
+   * {@link OMEZarrImageDataProvider._computeChannelHistogram}); more do not
+   * make the quantiles the renderer derives from them more stable
+   */
+  private static readonly _numHistogramPixels = 512 * 512;
+
   readonly name = "OME-Zarr";
 
   readonly schema = {
@@ -26,14 +44,13 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         type: "string",
       },
       // TODO path
-      sizeC: {
-        type: "integer",
-      },
       z: {
         type: "integer",
+        minimum: 0,
       },
       t: {
         type: "integer",
+        minimum: 0,
       },
     },
     required: ["url"], // TODO ... or path
@@ -49,23 +66,32 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
       },
       // TODO path
       {
-        type: "Control",
-        scope: "#/properties/sizeC",
-        label: "Number of channels",
-      },
-      {
-        type: "Control",
-        scope: "#/properties/z",
-        label: "Z-slice",
-      },
-      {
-        type: "Control",
-        scope: "#/properties/t",
-        label: "Timepoint",
+        type: "HorizontalLayout",
+        elements: [
+          {
+            type: "Control",
+            scope: "#/properties/z",
+            label: "Z-slice",
+          },
+          {
+            type: "Control",
+            scope: "#/properties/t",
+            label: "Timepoint",
+          },
+        ],
       },
     ],
   };
 
+  /**
+   * Returns the data source with {@link omeZarrImageDataSourceDefaults} applied
+   * and its URL resolved
+   *
+   * @param dataSource - The data source to normalize
+   * @param projectUrl - The absolute URL of the project, or `null` for projects
+   * that were not loaded from a URL
+   * @returns The normalized data source
+   */
   normalize(
     dataSource: OMEZarrImageDataSource,
     projectUrl: string | null,
@@ -77,58 +103,156 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     return { ...omeZarrImageDataSourceDefaults, ...dataSource, url };
   }
 
+  /**
+   * Opens an OME-Zarr image data source and returns the loaded image data
+   *
+   * The OME-Zarr image and its arrays are loaded once with {@link openOMEZarr}
+   * and shared between the tile sources opened for it: one per channel for
+   * images with a channel axis, or a single one for images without one. Every
+   * tile source renders exactly one channel (`c`), so that its tiles carry a
+   * single chunk (see {@link OMEZarrImageData.getTileData}) and its resolved
+   * `omero` metadata is that channel's. The `z` and `t` of the data source
+   * select the plane to open.
+   *
+   * For images with a channel axis, the channels are opened concurrently, each
+   * computing the value histogram of its plane from a downsampled resolution
+   * level as soon as its tile source has opened (see
+   * {@link OMEZarrImageDataProvider._computeChannelHistogram}), so that
+   * {@link OMEZarrImageData.getChannelHistogram} can return it without
+   * computing anything.
+   *
+   * @param normalizedDataSource - The normalized data source to open
+   * @param options - See `DataProviderLoadOptions`; `workspace` is required
+   * for data sources with a `path` but no `url`
+   * @returns A promise that resolves to the loaded image data
+   * @throws Error if the data source has neither a URL nor a workspace path,
+   * or has only a workspace path while no workspace is open
+   */
   async load(
     normalizedDataSource: NormalizedOMEZarrImageDataSource,
     options?: DataProviderLoadOptions,
   ): Promise<OMEZarrImageData> {
-    const { signal, workspace = null } = options ?? {};
+    const { signal } = options ?? {};
     signal?.throwIfAborted();
-
-    // validate before any file handling, so that no object URL is leaked
-    if (
-      normalizedDataSource.sizeC !== undefined &&
-      normalizedDataSource.sizeC <= 0
-    ) {
-      throw new Error("Number of channels must be a positive integer.");
-    }
-
-    let url: string;
-    let objectUrl: string | undefined = undefined;
-    if (normalizedDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(normalizedDataSource.path);
-      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
-      const file = await fh.getFile();
-      signal?.throwIfAborted(); // getFile() does not throw on abort
-      objectUrl = URL.createObjectURL(file);
-      url = objectUrl;
-    } else if (normalizedDataSource.url !== undefined) {
-      url = normalizedDataSource.url;
-    } else if (normalizedDataSource.path !== undefined) {
-      throw new Error("An open workspace is required to open local-only data.");
-    } else {
-      throw new Error("A URL or workspace path is required to load data.");
-    }
-    let tileSource: OMEZarrTileSource | undefined;
-    let tileSources: OMEZarrTileSource[] | undefined;
-    if (normalizedDataSource.sizeC === undefined) {
-      tileSource = new OMEZarrTileSource({
-        url,
-        z: normalizedDataSource.z,
-        t: normalizedDataSource.t,
-      });
-    } else {
-      tileSources = [];
-      for (let c = 0; c < normalizedDataSource.sizeC; c++) {
-        tileSources.push(
-          new OMEZarrTileSource({
-            url,
-            c,
-            z: normalizedDataSource.z,
-            t: normalizedDataSource.t,
+    const { loaded, url, zip, objectUrl } = await openOMEZarr(
+      normalizedDataSource.url,
+      normalizedDataSource.path,
+      options,
+    );
+    try {
+      const { t, z } = normalizedDataSource;
+      const cAxis = loaded.image.getAxesNames().indexOf("c");
+      if (cAxis >= 0) {
+        const sizeC = loaded.arrays[0]!.shape[cAxis]!;
+        const channels = await Promise.all(
+          Array.from({ length: sizeC }, async (_, c) => {
+            const tileSource = await OMEZarrTileSource.open(
+              { url, zip, t, z, c },
+              loaded,
+              { signal },
+            );
+            let histogram;
+            try {
+              histogram =
+                await OMEZarrImageDataProvider._computeChannelHistogram(
+                  tileSource,
+                  { signal },
+                );
+            } catch (error) {
+              if (signal?.aborted) {
+                throw error;
+              }
+              console.warn(
+                `Failed to compute histogram for channel ${c}:`,
+                error,
+              );
+            }
+            return { tileSource, histogram };
           }),
         );
+        return new OMEZarrImageData(
+          channels.map((channel) => channel.tileSource),
+          channels.map((channel) => channel.histogram),
+          objectUrl,
+        );
       }
+      const tileSource = await OMEZarrTileSource.open(
+        // c: 0 selects the only (implicit) channel: one chunk per tile, and no
+        // "active channels" default (which would reject an inactive sole channel)
+        { url, zip, t, z, c: 0 },
+        loaded,
+        { signal },
+      );
+      return new OMEZarrImageData(tileSource, undefined, objectUrl);
+    } catch (error) {
+      // the image data owns the object URL only once it has been created
+      if (objectUrl !== undefined) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      throw error;
     }
-    return new OMEZarrImageData(tileSource, tileSources, objectUrl);
+  }
+
+  /**
+   * Computes the value histogram of a channel from a downsampled resolution level
+   *
+   * 64-bit integers get no histogram, and no values are read for them, as
+   * {@link OMEZarrImageData.getTileData} rejects their chunks anyway. For all
+   * other data types, loads the plane that the given tile source displays (its
+   * channel, z-slice and timepoint, see `OMEZarrTileSource.loadChunks`) from
+   * the lowest resolution level that still holds at least
+   * {@link OMEZarrImageDataProvider._numHistogramPixels} pixels, or from the
+   * full-resolution level if no level does (images smaller than that, and
+   * images without a multiscale pyramid), and bins the plane's values over
+   * their actual range (see {@link MathUtils.computeRange} and
+   * {@link MathUtils.computeHistogram}), so that the histogram is as fine as
+   * its bins allow regardless of the data type's range. Aborting the signal
+   * rejects with its reason.
+   *
+   * @param tileSource - The opened tile source of the channel
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the histogram, or to `undefined` for
+   * 64-bit integer planes and planes with fewer than two distinct finite
+   * values (which have no range to spread bins over; the renderer falls back
+   * to the data type range for them)
+   * @throws Error if the loaded plane does not consist of exactly one chunk
+   */
+  private static async _computeChannelHistogram(
+    tileSource: OMEZarrTileSource,
+    options?: { signal?: AbortSignal },
+  ): Promise<{ hist: number[]; range: [number, number] } | undefined> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const { dtype } = tileSource.loaded.arrays[0]!;
+    if (dtype === "int64" || dtype === "uint64") {
+      return undefined;
+    }
+    let level = 0; // OpenSeadragon level 0 is the lowest resolution
+    while (
+      level < tileSource.maxLevel &&
+      tileSource.getWidth(level) * tileSource.getHeight(level) <
+        OMEZarrImageDataProvider._numHistogramPixels
+    ) {
+      level++;
+    }
+    const chunks = await tileSource.loadChunks(level, undefined, { signal });
+    if (chunks.length !== 1) {
+      throw new Error(`Expected a single chunk, got ${chunks.length}`);
+    }
+    const chunk = chunks[0]!;
+    if (
+      chunk.data instanceof BigInt64Array ||
+      chunk.data instanceof BigUint64Array
+    ) {
+      return undefined; // not reached for the dtypes checked above; narrows the type
+    }
+    const [vmin, vmax] = await MathUtils.computeRange(chunk.data, { signal });
+    if (vmin >= vmax) {
+      return undefined; // no finite values, or a single one
+    }
+    return MathUtils.computeHistogram(chunk.data, [vmin, vmax], {
+      signal,
+      sample: OMEZarrImageDataProvider._numHistogramPixels,
+    });
   }
 }

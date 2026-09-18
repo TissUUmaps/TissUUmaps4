@@ -2,12 +2,14 @@ import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
   OMEZarrImageDataProvider,
+  OMEZarrLabelsDataProvider,
   OpenSeadragonImageDataProvider,
   ParquetTableDataProvider,
   TablePointsDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
   omeZarrImageDataSourceType,
+  omeZarrLabelsDataSourceType,
   openSeadragonImageDataSourceType,
   parquetTableDataSourceType,
   tablePointsDataSourceType,
@@ -24,13 +26,18 @@ export function enableBuiltInDataProviders(): void {
   const appStoreState = appStore.getState();
 
   appStoreState.registerImageDataProvider(
+    openSeadragonImageDataSourceType,
+    new OpenSeadragonImageDataProvider(),
+  );
+
+  appStoreState.registerImageDataProvider(
     omeZarrImageDataSourceType,
     new OMEZarrImageDataProvider(),
   );
 
-  appStoreState.registerImageDataProvider(
-    openSeadragonImageDataSourceType,
-    new OpenSeadragonImageDataProvider(),
+  appStoreState.registerLabelsDataProvider(
+    omeZarrLabelsDataSourceType,
+    new OMEZarrLabelsDataProvider(),
   );
 
   appStoreState.registerPointsDataProvider(

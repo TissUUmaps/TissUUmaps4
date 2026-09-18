@@ -20,7 +20,7 @@ Colors and contrast limits are taken from the image's channel settings, falling 
 
 ## Labels
 
-Custom tile sources are used to enable loading of 8/16/32-bit unsigned integer label masks (TIFF/Zarr).
+Custom tile sources are used to enable loading of 8/16/32-bit signed or unsigned integer label masks (TIFF/Zarr).
 
 Label tiles carry label IDs rather than colors. They are recolored by a data transfer that looks each ID up in a color table resolved per object from the label color, visibility and opacity configurations, with visibility and opacity folded into the alpha channel; ID `0` is transparent. A label image does not enumerate its labels (which would require scanning it), so the color table is resolved for the labels listed in the referenced table, if a configuration reads from it; every other label is resolved as it is first drawn - from the configurations that need no table (constant values, and random colors hashed from the ID), or with the default appearance - and memoized. Transfers are kept per tile source, so the navigator is recolored as well, and are only rebuilt when the data or a configuration changes.
 

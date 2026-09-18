@@ -1,5 +1,6 @@
 import type {
   CustomTileSource,
+  IntArray,
   LabelsData,
   TileSourceConfig,
   UintArray,
@@ -19,9 +20,11 @@ export class LabelsDataWrapper
     return this.data.getTileSource();
   }
 
-  getTileData(
-    event: Parameters<LabelsData["getTileData"]>[0],
-  ): Promise<{ values: number[] | UintArray; width: number; height: number }> {
+  getTileData(event: Parameters<LabelsData["getTileData"]>[0]): Promise<{
+    values: number[] | IntArray | UintArray;
+    width: number;
+    height: number;
+  }> {
     return this.data.getTileData(event);
   }
 }
