@@ -11,11 +11,10 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
 
   // the ids and the per-index accessors the rows are built from, so that only
   // the rows within the visible range have to be materialized
-  const { ids, getName, annotatedIds, allAnnotated } = useMemo(() => {
+  const { ids, getName, isAnnotated } = useMemo(() => {
     let ids: number[] = [];
     let getName: ((index: number) => string | undefined) | undefined;
-    let annotatedIds: Set<number> | undefined;
-    let allAnnotated = false;
+    let isAnnotated: ((id: number) => boolean) | undefined;
     if (data !== undefined) {
       ids = data.getIds();
       if (table !== null) {
@@ -27,9 +26,10 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
           // table-backed items hand out the table's own ids array, so every
           // item has a row in the table and no lookup structure is needed
           if (tableIds === ids) {
-            allAnnotated = true;
+            isAnnotated = () => true;
           } else {
-            annotatedIds = new Set(tableIds);
+            const annotatedIds = new Set(tableIds);
+            isAnnotated = (id) => annotatedIds.has(id);
           }
           const tableNames = tableData.getNames?.();
           if (tableNames !== undefined) {
@@ -58,7 +58,7 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
         getName = (index) => names[index];
       }
     }
-    return { ids, getName, annotatedIds, allAnnotated };
+    return { ids, getName, isAnnotated };
   }, [data, table, tableData]);
 
   const getRows = useCallback(
@@ -69,12 +69,12 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
         rows.push({
           id,
           name: getName?.(index),
-          annotated: allAnnotated ? true : annotatedIds?.has(id),
+          annotated: isAnnotated?.(id),
         });
       }
       return rows;
     },
-    [ids, getName, annotatedIds, allAnnotated],
+    [ids, getName, isAnnotated],
   );
 
   return { rowCount: ids.length, getRows, named: getName !== undefined };
