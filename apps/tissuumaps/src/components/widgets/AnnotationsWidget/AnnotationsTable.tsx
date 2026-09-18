@@ -1,9 +1,9 @@
-"use no memo"; // https://github.com/TanStack/table/issues/5567
 import {
   type ColumnDef,
+  columnSizingFeature,
   flexRender,
-  getCoreRowModel,
-  useReactTable,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 import { observeElementOffset, useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -42,6 +42,15 @@ const rowHeight = 36;
  */
 const maxScrollContentHeight = 10_000_000;
 
+/**
+ * The table features the annotations table uses
+ *
+ * A table only has the APIs of the features registered here. Column sizing
+ * gives every cell the width of its column; nothing else is needed, as the
+ * rows are windowed and the columns are neither sorted, filtered nor hidden.
+ */
+const features = tableFeatures({ columnSizingFeature });
+
 export type AnnotationsTableRowData = {
   id: number;
   name?: string;
@@ -52,13 +61,23 @@ export type AnnotationsTableGroupRowData = {
   group: string;
 };
 
+export type AnnotationsTableColumnDef = ColumnDef<
+  typeof features,
+  AnnotationsTableRowData
+>;
+
+export type AnnotationsTableGroupColumnDef = ColumnDef<
+  typeof features,
+  AnnotationsTableGroupRowData
+>;
+
 export type AnnotationsTableProps = {
   data?: ItemsData;
   height: number;
   table: string | null;
   groupByColumn?: string | null;
-  extraColumnDefs?: ColumnDef<AnnotationsTableRowData>[];
-  extraGroupColumnDefs?: ColumnDef<AnnotationsTableGroupRowData>[];
+  extraColumnDefs?: AnnotationsTableColumnDef[];
+  extraGroupColumnDefs?: AnnotationsTableGroupColumnDef[];
 };
 
 export function AnnotationsTable({
@@ -261,7 +280,7 @@ export function AnnotationsTable({
       if (tableGroups === null) {
         return [];
       }
-      const columnDefs: ColumnDef<AnnotationsTableGroupRowData>[] = [
+      const columnDefs: AnnotationsTableGroupColumnDef[] = [
         { id: "group", header: groupByColumn!, accessorKey: "group" },
       ];
       if (extraGroupColumnDefs !== undefined) {
@@ -269,7 +288,7 @@ export function AnnotationsTable({
       }
       return columnDefs;
     }
-    const columnDefs: ColumnDef<AnnotationsTableRowData>[] = [
+    const columnDefs: AnnotationsTableColumnDef[] = [
       { id: "id", header: "ID", accessorKey: "id" },
     ];
     if (getName !== undefined) {
@@ -288,16 +307,17 @@ export function AnnotationsTable({
     extraGroupColumnDefs,
   ]);
 
-  const reactTable = useReactTable<
+  const reactTable = useTable<
+    typeof features,
     AnnotationsTableRowData | AnnotationsTableGroupRowData
   >({
+    features,
     data: rowData,
     columns: columnDefs as ColumnDef<
+      typeof features,
       AnnotationsTableRowData | AnnotationsTableGroupRowData
     >[],
     getRowId: (row) => ("group" in row ? row.group : String(row.id)),
-    getCoreRowModel: getCoreRowModel(),
-    columnResizeMode: "onChange",
   });
 
   const reactTableRows = reactTable.getRowModel().rows;
@@ -355,18 +375,13 @@ export function AnnotationsTable({
                   transform: `translateY(${virtualRow.start - rowShift}px)`,
                 }}
               >
-                {row.getVisibleCells().map((cell) => (
+                {row.getAllCells().map((cell) => (
                   <TableCell
                     key={cell.id}
                     className="flex p-0 pt-1"
                     style={{ width: `${cell.column.getSize()}px` }}
                   >
-                    {cell.getIsPlaceholder()
-                      ? null
-                      : flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
               </TableRow>

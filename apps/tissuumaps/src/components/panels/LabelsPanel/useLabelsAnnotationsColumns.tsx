@@ -1,4 +1,3 @@
-import type { ColumnDef } from "@tanstack/react-table";
 import { EyeIcon, EyeOffIcon, Square } from "lucide-react";
 import { useMemo } from "react";
 
@@ -15,7 +14,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import type { AnnotationsTableGroupRowData } from "@/components/widgets/AnnotationsWidget/AnnotationsTable";
+import type { AnnotationsTableGroupColumnDef } from "@/components/widgets/AnnotationsWidget/AnnotationsTable";
 import { useProjectStore } from "@/stores/project";
 
 export function useLabelsAnnotationsColumns(
@@ -26,9 +25,9 @@ export function useLabelsAnnotationsColumns(
   const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
-  const extraTableGroupColumnDefs: ColumnDef<AnnotationsTableGroupRowData>[] =
+  const extraTableGroupColumnDefs: AnnotationsTableGroupColumnDef[] =
     useMemo(() => {
-      const columnDefs: ColumnDef<AnnotationsTableGroupRowData>[] = [];
+      const columnDefs: AnnotationsTableGroupColumnDef[] = [];
 
       // color
       if (
