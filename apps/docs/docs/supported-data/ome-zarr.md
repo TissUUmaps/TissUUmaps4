@@ -52,7 +52,7 @@ Images **without a channel axis** are opened as single-channel image data with o
 
 ## Labels
 
-OME-Zarr label images are opened as **labels**, where every pixel value is a label (segment) ID and `0` is background. The label array has to hold **unsigned integers of up to 32 bits** (`uint8`, `uint16` or `uint32`); signed and 64-bit arrays are rejected.
+OME-Zarr label images are opened as **labels**, where every pixel value is a label (segment) ID and `0` is background. The label array has to hold **integers of up to 32 bits** (`int8`, `int16`, `int32`, `uint8`, `uint16` or `uint32`); 64-bit and floating-point arrays are rejected.
 
 Label IDs are read per tile as the tiles are drawn, so arbitrarily large label images can be opened without scanning them first. The `image-label` metadata of the group (color and property tables) is not used; label colors are configured in the project file instead, optionally through an annotating `table`.
 
@@ -112,7 +112,7 @@ Both the image and the labels are OME-Zarr images served next to the project fil
 ## Limitations
 
 - Only one plane (`z`, `t`) of an image is shown; there is no in-app plane selection yet.
-- 64-bit integer image arrays and signed or 64-bit label arrays are not supported. Convert them to a narrower or unsigned type when writing the OME-Zarr.
+- 64-bit integer image arrays and 64-bit or floating-point label arrays are not supported. Convert them to a narrower integer type when writing the OME-Zarr.
 - `path` needs an open workspace.
 - Plate and `bioformats2raw.layout` groups have to be referenced by one of their contained images.
 - `image-label` metadata is not read.

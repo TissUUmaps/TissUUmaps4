@@ -1,7 +1,7 @@
 import type OpenSeadragon from "openseadragon";
 
 import type { LabelsDataSource } from "../model/labels";
-import type { UintArray } from "../types/arrays";
+import type { IntArray, UintArray } from "../types/arrays";
 import type { AnnotatedDataProvider, RasterData } from "./base";
 
 /**
@@ -18,16 +18,18 @@ export interface LabelsData extends RasterData {
    *
    * Label images always carry values rather than colors, so unlike for
    * {@link RasterData.getTileData} this is not optional, and the values are
-   * unsigned integers.
+   * integers (signed or unsigned, of up to 32 bits).
    *
    * @param event - The tile invalidation event
    * @returns The label IDs of the invalidated tile, one per raster pixel in
    * row-major order, along with the width and height of the raster in pixels
    * @throws Error if the event does not contain label image data
    */
-  getTileData(
-    event: OpenSeadragon.TileInvalidatedEvent,
-  ): Promise<{ values: number[] | UintArray; width: number; height: number }>;
+  getTileData(event: OpenSeadragon.TileInvalidatedEvent): Promise<{
+    values: number[] | IntArray | UintArray;
+    width: number;
+    height: number;
+  }>;
 }
 
 /**

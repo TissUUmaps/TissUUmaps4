@@ -11,8 +11,9 @@ export const omeZarrLabelsDataSourceDefaults = {};
  *
  * The label image is loaded from a remote OME-Zarr store (`url`), a remote
  * zipped OME-Zarr file (`url` ending in `.ozx`), or a zipped OME-Zarr file in
- * the open workspace (`path`). It is expected to hold unsigned integers of up
- * to 32 bits; `image-label` metadata is not read (see `LabelsDataSource` for
+ * the open workspace (`path`). It is expected to hold signed or unsigned
+ * integers of up to 32 bits; `image-label` metadata is not read (see
+ * `LabelsDataSource` for
  * the annotation table reference).
  *
  * Label images with more than two spatial dimensions are opened as a single
