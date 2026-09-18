@@ -7,8 +7,8 @@ import { useControlled } from "@/hooks/useControlled";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 
-import type { AnnotationsTableGroupColumnDef } from "./AnnotationsGroupTable";
-import type { AnnotationsTableColumnDef } from "./AnnotationsItemTable";
+import type { AnnotationsGroupTableColumnDef } from "./AnnotationsGroupTable";
+import type { AnnotationsItemTableColumnDef } from "./AnnotationsItemTable";
 import { AnnotationsTable } from "./AnnotationsTable";
 
 export type AnnotationsWidgetProps = {
@@ -17,8 +17,8 @@ export type AnnotationsWidgetProps = {
   table: string | null;
   selectedGroupByColumn?: string | null;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
-  extraTableColumnDefs?: AnnotationsTableColumnDef[];
-  extraTableGroupColumnDefs?: AnnotationsTableGroupColumnDef[];
+  extraTableColumnDefs?: AnnotationsItemTableColumnDef[];
+  extraTableGroupColumnDefs?: AnnotationsGroupTableColumnDef[];
   className?: string;
 };
 

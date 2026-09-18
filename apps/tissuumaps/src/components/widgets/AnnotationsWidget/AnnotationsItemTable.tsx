@@ -10,20 +10,20 @@ import {
 import { rowHeight } from "./rowHeight";
 import { useItemRows } from "./useItemRows";
 
-export type AnnotationsTableRowData = {
+export type AnnotationsItemTableRowData = {
   id: number;
   name?: string;
   annotated?: boolean;
 };
 
-export type AnnotationsTableColumnDef =
-  VirtualTableColumnDef<AnnotationsTableRowData>;
+export type AnnotationsItemTableColumnDef =
+  VirtualTableColumnDef<AnnotationsItemTableRowData>;
 
 export type AnnotationsItemTableProps = {
   data?: ItemsData;
   height: number;
   table: string | null;
-  extraColumnDefs?: AnnotationsTableColumnDef[];
+  extraColumnDefs?: AnnotationsItemTableColumnDef[];
 };
 
 export function AnnotationsItemTable({
@@ -35,7 +35,7 @@ export function AnnotationsItemTable({
   const { rowCount, getRows, named } = useItemRows(data, table);
 
   const columnDefs = useMemo(() => {
-    const columnDefs: AnnotationsTableColumnDef[] = [
+    const columnDefs: AnnotationsItemTableColumnDef[] = [
       { id: "id", header: "ID", accessorKey: "id" },
     ];
     if (named) {

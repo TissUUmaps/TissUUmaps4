@@ -4,7 +4,7 @@ import type { GenericArray, TableData } from "@tissuumaps/core";
 
 import { useTableData } from "@/hooks/useData";
 
-import type { AnnotationsTableGroupRowData } from "./AnnotationsGroupTable";
+import type { AnnotationsGroupTableRowData } from "./AnnotationsGroupTable";
 
 type LoadedGroups = {
   tableData: TableData;
@@ -64,7 +64,7 @@ export function useGroupRows(table: string, groupByColumn: string) {
   }, [groups]);
 
   const getRows = useCallback(
-    (startIndex: number, endIndex: number): AnnotationsTableGroupRowData[] =>
+    (startIndex: number, endIndex: number): AnnotationsGroupTableRowData[] =>
       sortedGroups?.slice(startIndex, endIndex).map((group) => ({ group })) ??
       [],
     [sortedGroups],
