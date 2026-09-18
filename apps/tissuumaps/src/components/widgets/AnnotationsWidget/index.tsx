@@ -7,11 +7,9 @@ import { useControlled } from "@/hooks/useControlled";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 
-import {
-  AnnotationsTable,
-  type AnnotationsTableColumnDef,
-  type AnnotationsTableGroupColumnDef,
-} from "./AnnotationsTable";
+import type { AnnotationsTableGroupColumnDef } from "./AnnotationsGroupTable";
+import type { AnnotationsTableColumnDef } from "./AnnotationsItemTable";
+import { AnnotationsTable } from "./AnnotationsTable";
 
 export type AnnotationsWidgetProps = {
   data?: ItemsData;
