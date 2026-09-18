@@ -7,15 +7,9 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import {
-  type VirtualItem,
-  observeElementOffset,
-  useVirtualizer,
-} from "@tanstack/react-virtual";
-import {
   type RefObject,
   useLayoutEffect,
   useMemo,
-  useReducer,
   useRef,
   useState,
 } from "react";
@@ -70,6 +64,14 @@ function compressScrollRange(
 const maxScrollContentHeight = 10_000_000;
 
 /**
+ * How many rows are rendered beyond each end of the visible range
+ *
+ * Rows outside of it are not rendered, so scrolling reveals blank space until
+ * the next render; the overscan covers a scroll of up to this many rows.
+ */
+const overscan = 2;
+
+/**
  * The layout of a compressed virtualized list
  */
 type CompressedVirtualizer = {
@@ -77,8 +79,10 @@ type CompressedVirtualizer = {
   containerRef: RefObject<HTMLDivElement | null>;
   /** Attached to the header that sticks to the top of the scroll container */
   headerRef: RefObject<HTMLTableSectionElement | null>;
-  /** The rows within the visible range */
-  virtualRows: VirtualItem[];
+  /** The first row within the visible range */
+  firstIndex: number;
+  /** The row past the last one within the visible range */
+  lastIndex: number;
   /** The height to lay the rows out at, in pixels */
   rowsHeight: number;
   /** How far the rows have run ahead of the layout, in pixels */
@@ -96,7 +100,7 @@ type CompressedVirtualizer = {
  * @param rowCount - The number of rows in the list
  * @param rowHeight - The height of every row, in pixels
  * @param height - The height of the scroll container, in pixels
- * @returns The refs to attach, the visible rows and their layout
+ * @returns The refs to attach, the visible range of rows and their layout
  */
 function useCompressedVirtualizer(
   rowCount: number,
@@ -108,7 +112,6 @@ function useCompressedVirtualizer(
   const [headerHeight, setHeaderHeight] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(height);
   const compressionRef = useRef(1);
-  const [, rerender] = useReducer((x: number) => x + 1, 0);
 
   useLayoutEffect(() => {
     const header = headerRef.current;
@@ -124,25 +127,32 @@ function useCompressedVirtualizer(
     };
   }, []);
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const rowVirtualizer = useVirtualizer({
-    count: rowCount,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => rowHeight,
-    // the virtualizer works in content positions while the element scrolls in
-    // layout positions, which differ once the content is compressed
-    observeElementOffset: (instance, onOffsetChange) =>
-      observeElementOffset(instance, (layoutOffset, isScrolling) => {
-        onOffsetChange(layoutOffset * compressionRef.current, isScrolling);
-        if (compressionRef.current > 1) {
-          rerender(); // the rows shift against the layout while scrolling
-        }
-      }),
-  });
+  const [scrollOffset, setScrollOffset] = useState(0);
+  // the offset is also kept in a ref, so that restoring it after a resize does
+  // not have to re-subscribe on every scroll
+  const scrollOffsetRef = useRef(0);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (container === null) {
+      return;
+    }
+    const onScroll = () => {
+      // the element scrolls in layout positions, the rows are laid out in
+      // content positions, which differ once the content is compressed
+      const offset = container.scrollTop * compressionRef.current;
+      scrollOffsetRef.current = offset;
+      setScrollOffset(offset);
+    };
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   const { layoutSize: layoutContentHeight, factor: compression } =
     compressScrollRange(
-      headerHeight + rowVirtualizer.getTotalSize(),
+      headerHeight + rowCount * rowHeight,
       viewportHeight,
       maxScrollContentHeight,
     );
@@ -164,7 +174,7 @@ function useCompressedVirtualizer(
       }
       setViewportHeight(container.clientHeight);
       const layoutOffset = Math.round(
-        (rowVirtualizer.scrollOffset ?? 0) / compressionRef.current,
+        scrollOffsetRef.current / compressionRef.current,
       );
       if (container.scrollTop !== layoutOffset) {
         container.scrollTop = layoutOffset;
@@ -174,14 +184,25 @@ function useCompressedVirtualizer(
     return () => {
       resizeObserver.disconnect();
     };
-  }, [rowVirtualizer]);
+  }, []);
+
+  // the rows follow the header in the scroll content, so the offset into them
+  // is the scroll offset less the header
+  const rowsScrollOffset = Math.max(0, scrollOffset - headerHeight);
 
   return {
     containerRef,
     headerRef,
-    virtualRows: rowVirtualizer.getVirtualItems(),
+    firstIndex: Math.max(
+      0,
+      Math.floor(rowsScrollOffset / rowHeight) - overscan,
+    ),
+    lastIndex: Math.min(
+      rowCount,
+      Math.ceil((rowsScrollOffset + viewportHeight) / rowHeight) + overscan,
+    ),
     rowsHeight: layoutContentHeight - headerHeight,
-    rowShift: (rowVirtualizer.scrollOffset ?? 0) * (1 - 1 / compression),
+    rowShift: scrollOffset * (1 - 1 / compression),
   };
 }
 
@@ -220,11 +241,14 @@ export function VirtualTable<TRowData extends RowData>({
   rowClassName,
   className,
 }: VirtualTableProps<TRowData>) {
-  const { containerRef, headerRef, virtualRows, rowsHeight, rowShift } =
-    useCompressedVirtualizer(rowCount, rowHeight, height);
-
-  const firstIndex = virtualRows[0]?.index ?? 0;
-  const lastIndex = (virtualRows[virtualRows.length - 1]?.index ?? -1) + 1;
+  const {
+    containerRef,
+    headerRef,
+    firstIndex,
+    lastIndex,
+    rowsHeight,
+    rowShift,
+  } = useCompressedVirtualizer(rowCount, rowHeight, height);
 
   // only the rows within the visible range are materialized, so that the cost
   // of the table does not depend on the number of rows
@@ -276,35 +300,29 @@ export function VirtualTable<TRowData extends RowData>({
           className="grid relative"
           style={{ height: `${rowsHeight}px` }}
         >
-          {virtualRows.map((virtualRow) => {
-            const row = tableRows[virtualRow.index - firstIndex];
-            if (row === undefined) {
-              return null;
-            }
-            return (
-              <TableRow
-                key={row.id}
-                className={cn(
-                  "flex absolute w-full border-0 items-center overflow-hidden",
-                  rowClassName?.(row.original),
-                )}
-                style={{
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start - rowShift}px)`,
-                }}
-              >
-                {row.getAllCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className="flex p-0 pt-1"
-                    style={{ width: `${cell.column.getSize()}px` }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            );
-          })}
+          {tableRows.map((row, index) => (
+            <TableRow
+              key={row.id}
+              className={cn(
+                "flex absolute w-full border-0 items-center overflow-hidden",
+                rowClassName?.(row.original),
+              )}
+              style={{
+                height: `${rowHeight}px`,
+                transform: `translateY(${(firstIndex + index) * rowHeight - rowShift}px)`,
+              }}
+            >
+              {row.getAllCells().map((cell) => (
+                <TableCell
+                  key={cell.id}
+                  className="flex p-0 pt-1"
+                  style={{ width: `${cell.column.getSize()}px` }}
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>
