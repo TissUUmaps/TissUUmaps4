@@ -10,6 +10,7 @@ import {
   AsyncUtils,
   type DataProviderLoadOptions,
   NumberUtils,
+  SourceUtils,
   type TableDataProvider,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -31,10 +32,9 @@ export class CSVTableDataProvider implements TableDataProvider<
   readonly schema = {
     type: "object",
     properties: {
-      url: {
+      source: {
         type: "string",
       },
-      // TODO path
       // TODO columns
       idColumn: {
         type: "string",
@@ -45,7 +45,7 @@ export class CSVTableDataProvider implements TableDataProvider<
       // TODO loadColumns
       // TODO parseConfig
     },
-    required: ["url"], // TODO ... or path
+    required: ["source"],
   };
 
   readonly uischema = {
@@ -53,10 +53,9 @@ export class CSVTableDataProvider implements TableDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/url",
-        label: "URL",
+        scope: "#/properties/source",
+        label: "Source",
       },
-      // TODO path
       // TODO columns
       {
         type: "Control",
@@ -75,13 +74,18 @@ export class CSVTableDataProvider implements TableDataProvider<
 
   normalize(
     dataSource: CSVTableDataSource,
-    projectUrl: string | null,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
   ): NormalizedCSVTableDataSource {
-    let { url } = dataSource;
-    if (url !== undefined) {
-      url = new URL(url, projectUrl ?? document.baseURI).href;
-    }
-    return { ...csvTableDataSourceDefaults, ...dataSource, url };
+    return {
+      ...csvTableDataSourceDefaults,
+      ...dataSource,
+      source: SourceUtils.normalizeSource(
+        dataSource.source,
+        workspace,
+        projectSource,
+      ),
+    };
   }
 
   async load(
@@ -234,25 +238,14 @@ export class CSVTableDataProvider implements TableDataProvider<
       resolve(columnValues);
     };
 
+    const resolvedSource = await SourceUtils.resolveSource(
+      normalizedDataSource.source,
+      workspace,
+      { signal },
+    );
     let columnValues: Map<string, string[] | TypedArray>;
-    if (normalizedDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(normalizedDataSource.path);
-      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
-      const file = await fh.getFile();
-      signal?.throwIfAborted(); // getFile() does not throw on abort
-      byteLength = file.size;
-      columnValues = await AsyncUtils.raceSignal(
-        new Promise<Map<string, string[] | TypedArray>>((resolve, reject) =>
-          parse(file, {
-            ...parseConfig,
-            error: reject,
-            complete: () => completeParse(resolve, reject),
-          }),
-        ),
-        { signal },
-      );
-    } else if (normalizedDataSource.url !== undefined) {
-      const url = normalizedDataSource.url;
+    if (typeof resolvedSource === "string") {
+      const url = resolvedSource;
       if (onProgress !== undefined) {
         try {
           const headResponse = await fetch(url, { method: "HEAD", signal });
@@ -277,10 +270,20 @@ export class CSVTableDataProvider implements TableDataProvider<
         ),
         { signal },
       );
-    } else if (normalizedDataSource.path !== undefined) {
-      throw new Error("An open workspace is required to open local-only data.");
     } else {
-      throw new Error("A URL or workspace path is required to load data.");
+      const file = await resolvedSource.getFile();
+      signal?.throwIfAborted(); // getFile() does not throw on abort
+      byteLength = file.size;
+      columnValues = await AsyncUtils.raceSignal(
+        new Promise<Map<string, string[] | TypedArray>>((resolve, reject) =>
+          parse(file, {
+            ...parseConfig,
+            error: reject,
+            complete: () => completeParse(resolve, reject),
+          }),
+        ),
+        { signal },
+      );
     }
 
     if (columnMetas === undefined || columnMetas.length === 0) {

@@ -10,6 +10,7 @@ import {
   type DataSource,
   JSONUtils,
   type ProgressCallback,
+  SourceUtils,
   type TableData,
   type TableDataSource,
 } from "@tissuumaps/core";
@@ -55,8 +56,11 @@ export type DataCacheEntry<
  * What an entry's data depends on, besides its data source
  *
  * A cache entry is destroyed and reloaded whenever any of these changes. The
- * project URL is not among them: it only affects the entry through the
- * normalized data source, and hence through the entry key itself.
+ * project source is not among them: it only affects the entry through the
+ * normalized data source, and hence through the entry key itself. The
+ * workspace is a dependency only of entries that read from it; where it merely
+ * changes how a data source normalizes, it too reaches the entry through the
+ * key.
  */
 export type DataCacheEntryDependencies<
   TDataSource extends DataSource,
@@ -67,8 +71,8 @@ export type DataCacheEntryDependencies<
   >,
 > = {
   /**
-   * The open workspace, if the entry's data source refers to a path within it,
-   * and `null` otherwise
+   * The open workspace, if the entry's normalized data source refers to a file
+   * within it, and `null` otherwise
    */
   workspace: FileSystemDirectoryHandle | null;
 
@@ -110,10 +114,11 @@ export type DataCacheContext<
   workspace: FileSystemDirectoryHandle | null;
 
   /**
-   * The absolute URL the open project was loaded from, if any, against which
-   * relative data source URLs are resolved
+   * Where the open project was loaded from, if anywhere, against which
+   * project-relative data sources are resolved (see
+   * `ProjectStoreState.source`)
    */
-  projectUrl: string | null;
+  projectSource: string | null;
 
   /** The registered data providers, by data source type */
   dataProviders: Map<string, TDataProvider>;
@@ -170,7 +175,8 @@ export class DataCache<
     TDataSource,
     {
       dataProvider: TDataProvider | undefined;
-      projectUrl: string | null;
+      workspace: FileSystemDirectoryHandle | null;
+      projectSource: string | null;
       normalizedDataSource: TDataSource;
       entryKey: string;
     }
@@ -291,7 +297,11 @@ export class DataCache<
     _options?: { peek?: boolean },
   ): TEntryDependencies {
     return {
-      workspace: dataSource.path !== undefined ? context.workspace : null,
+      workspace:
+        dataSource.source !== undefined &&
+        SourceUtils.isWorkspacePath(dataSource.source)
+          ? context.workspace
+          : null,
       dataProvider: context.dataProviders.get(dataSource.type),
     } as TEntryDependencies;
   }
@@ -490,18 +500,24 @@ export class DataCache<
     if (
       cached !== undefined &&
       cached.dataProvider === dataProvider &&
-      cached.projectUrl === context.projectUrl
+      cached.workspace === context.workspace &&
+      cached.projectSource === context.projectSource
     ) {
       return cached;
     }
     const normalizedDataSource =
-      dataProvider?.normalize(dataSource, context.projectUrl) ?? dataSource;
+      dataProvider?.normalize(
+        dataSource,
+        context.workspace,
+        context.projectSource,
+      ) ?? dataSource;
     const entryKey = JSONUtils.stringify(normalizedDataSource, {
       stable: true,
     });
     const resolved = {
       dataProvider,
-      projectUrl: context.projectUrl,
+      workspace: context.workspace,
+      projectSource: context.projectSource,
       normalizedDataSource,
       entryKey,
     };
@@ -734,7 +750,7 @@ export class AnnotatedDataCache<
     }
     const tableDataCacheContext = {
       workspace: context.workspace,
-      projectUrl: context.projectUrl,
+      projectSource: context.projectSource,
       dataProviders: context.tableDataProviders,
     };
     const tableCacheEntry = DataCache.getEntry(

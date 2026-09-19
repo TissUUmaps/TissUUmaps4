@@ -286,18 +286,11 @@ export interface RawDataSource<TType extends string = string> extends RawModel {
   type: TType;
 
   /**
-   * Remote URL, absolute or relative
-   *
-   * Relative URLs are resolved against the URL the project was loaded from,
-   * and against the TissUUmaps root for projects without one (i.e. projects
-   * opened from a local file).
+   * Where the data is loaded from: a URL, an app-relative path (`//` prefix),
+   * a workspace-relative path (`/` prefix), or a project-relative path (no
+   * prefix); see `SourceUtils` for the syntax and how paths are resolved
    */
-  url?: string;
-
-  /**
-   * Local path (relative to workspace root)
-   */
-  path?: string;
+  source?: string;
 }
 
 /**

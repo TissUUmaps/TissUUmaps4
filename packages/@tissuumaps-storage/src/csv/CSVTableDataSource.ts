@@ -17,6 +17,7 @@ export const csvTableDataSourceDefaults = {
 export interface CSVTableDataSource extends TableDataSource<
   typeof csvTableDataSourceType
 > {
+  source: string;
   columns?: string[];
   idColumn?: string;
   nameColumn?: string;

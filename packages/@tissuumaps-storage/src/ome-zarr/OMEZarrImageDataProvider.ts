@@ -4,6 +4,7 @@ import {
   type DataProviderLoadOptions,
   type ImageDataProvider,
   MathUtils,
+  SourceUtils,
 } from "@tissuumaps/core";
 
 import { OMEZarrImageData } from "./OMEZarrImageData";
@@ -40,10 +41,9 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   readonly schema = {
     type: "object",
     properties: {
-      url: {
+      source: {
         type: "string",
       },
-      // TODO path
       z: {
         type: "integer",
         minimum: 0,
@@ -53,7 +53,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         minimum: 0,
       },
     },
-    required: ["url"], // TODO ... or path
+    required: ["source"],
   };
 
   readonly uischema = {
@@ -61,10 +61,9 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/url",
-        label: "URL",
+        scope: "#/properties/source",
+        label: "Source",
       },
-      // TODO path
       {
         type: "HorizontalLayout",
         elements: [
@@ -85,22 +84,27 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
 
   /**
    * Returns the data source with {@link omeZarrImageDataSourceDefaults} applied
-   * and its URL resolved
+   * and its source normalized (see `SourceUtils.normalizeSource`)
    *
    * @param dataSource - The data source to normalize
-   * @param projectUrl - The absolute URL of the project, or `null` for projects
-   * that were not loaded from a URL
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param projectSource - Where the project was loaded from, if anywhere
    * @returns The normalized data source
    */
   normalize(
     dataSource: OMEZarrImageDataSource,
-    projectUrl: string | null,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
   ): NormalizedOMEZarrImageDataSource {
-    let { url } = dataSource;
-    if (url !== undefined) {
-      url = new URL(url, projectUrl ?? document.baseURI).href;
-    }
-    return { ...omeZarrImageDataSourceDefaults, ...dataSource, url };
+    return {
+      ...omeZarrImageDataSourceDefaults,
+      ...dataSource,
+      source: SourceUtils.normalizeSource(
+        dataSource.source,
+        workspace,
+        projectSource,
+      ),
+    };
   }
 
   /**
@@ -123,10 +127,10 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    *
    * @param normalizedDataSource - The normalized data source to open
    * @param options - See `DataProviderLoadOptions`; `workspace` is required
-   * for data sources with a `path` but no `url`
+   * for workspace-relative sources
    * @returns A promise that resolves to the loaded image data
-   * @throws Error if the data source has neither a URL nor a workspace path,
-   * or has only a workspace path while no workspace is open
+   * @throws Error if the source is workspace-relative while no workspace is
+   * open
    */
   async load(
     normalizedDataSource: NormalizedOMEZarrImageDataSource,
@@ -135,8 +139,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const { loaded, url, zip, objectUrl } = await openOMEZarr(
-      normalizedDataSource.url,
-      normalizedDataSource.path,
+      normalizedDataSource.source,
       options,
     );
     try {

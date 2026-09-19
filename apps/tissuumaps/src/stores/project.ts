@@ -159,7 +159,7 @@ function createInitialProjectStoreState(): ProjectStoreState {
     points: [],
     shapes: [],
     tables: [],
-    url: null,
+    source: null,
     instanceId: crypto.randomUUID(),
   };
 }
