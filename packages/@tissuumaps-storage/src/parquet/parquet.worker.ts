@@ -370,7 +370,9 @@ async function handleFileRequest(
       op: "file",
       numRows: getNumRows(metadata),
       columns: [
-        ...getColumns(metadata),
+        ...getColumns(metadata).filter(
+          (column) => !geoColumns.some(({ name }) => name === column),
+        ),
         ...GeoParquetUtils.getCoordinateColumns(geoColumns),
       ],
       ids,
