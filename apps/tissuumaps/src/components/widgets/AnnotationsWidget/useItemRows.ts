@@ -77,5 +77,5 @@ export function useItemRows(data: ItemsData | undefined, table: string | null) {
     [ids, getName, isAnnotated],
   );
 
-  return { rowCount: ids.length, getRows, named: getName !== undefined };
+  return { rowCount: ids.length, getRows, hasNames: getName !== undefined };
 }
