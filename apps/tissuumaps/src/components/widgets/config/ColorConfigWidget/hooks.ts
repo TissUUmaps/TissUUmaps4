@@ -1,5 +1,5 @@
 import { deepEqual } from "fast-equals";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   type Color,
@@ -10,6 +10,8 @@ import {
   isGroupByConfig,
   isRandomConfig,
 } from "@tissuumaps/core";
+
+import { useTableData } from "@/hooks/useData";
 
 import type { ColorConfigSource, ColorConfigWidgetAdapter } from "./adapter";
 
@@ -68,6 +70,93 @@ export function useColorConfigWidget(
       ? colorConfig.random.seed
       : null,
   );
+
+  // min/max values provided by the config or entered by the user must not be
+  // overwritten by the table column's value range
+  const [currentFromRangeMinEdited, setCurrentFromRangeMinEdited] = useState(
+    currentFromRangeMin !== null,
+  );
+  const [currentFromRangeMaxEdited, setCurrentFromRangeMaxEdited] = useState(
+    currentFromRangeMax !== null,
+  );
+  const setEditedCurrentFromRangeMin = useCallback(
+    (newCurrentFromRangeMin: number | null) => {
+      setCurrentFromRangeMinEdited(true);
+      setCurrentFromRangeMin(newCurrentFromRangeMin);
+    },
+    [],
+  );
+  const setEditedCurrentFromRangeMax = useCallback(
+    (newCurrentFromRangeMax: number | null) => {
+      setCurrentFromRangeMaxEdited(true);
+      setCurrentFromRangeMax(newCurrentFromRangeMax);
+    },
+    [],
+  );
+  // reset in the same update as the column, so that the new column is never
+  // written to the config together with the previous column's value range
+  const setCurrentFromColumnResettingRange = useCallback(
+    (newCurrentFromColumn: string | null) => {
+      if (newCurrentFromColumn !== currentFromColumn) {
+        if (!currentFromRangeMinEdited) {
+          setCurrentFromRangeMin(null);
+        }
+        if (!currentFromRangeMaxEdited) {
+          setCurrentFromRangeMax(null);
+        }
+      }
+      setCurrentFromColumn(newCurrentFromColumn);
+    },
+    [currentFromColumn, currentFromRangeMinEdited, currentFromRangeMaxEdited],
+  );
+
+  const tableData = useTableData(tableId);
+  // the table data is not changed through a setter, so reset while rendering
+  // rather than in an effect; tables sharing a data source share their data
+  const [previousTableData, setPreviousTableData] = useState(tableData);
+  if (tableData !== previousTableData) {
+    setPreviousTableData(tableData);
+    if (!currentFromRangeMinEdited) {
+      setCurrentFromRangeMin(null);
+    }
+    if (!currentFromRangeMaxEdited) {
+      setCurrentFromRangeMax(null);
+    }
+  }
+  useEffect(() => {
+    if (
+      currentSource === "from" &&
+      currentFromColumn !== null &&
+      tableData !== null &&
+      !(currentFromRangeMinEdited && currentFromRangeMaxEdited)
+    ) {
+      const abortController = new AbortController();
+      tableData
+        .loadValueRange(currentFromColumn, { signal: abortController.signal })
+        .then((valueRange) => {
+          if (!abortController.signal.aborted) {
+            if (!currentFromRangeMinEdited) {
+              setCurrentFromRangeMin(valueRange?.[0] ?? null);
+            }
+            if (!currentFromRangeMaxEdited) {
+              setCurrentFromRangeMax(valueRange?.[1] ?? null);
+            }
+          }
+        })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error loading table value range", error);
+          }
+        });
+      return () => abortController.abort();
+    }
+  }, [
+    tableData,
+    currentSource,
+    currentFromColumn,
+    currentFromRangeMinEdited,
+    currentFromRangeMaxEdited,
+  ]);
 
   useEffect(() => {
     const currentFromRange: [number, number] | null =
@@ -183,9 +272,9 @@ export function useColorConfigWidget(
     currentRandomSeed,
     setCurrentSource,
     setCurrentConstantValue,
-    setCurrentFromColumn,
-    setCurrentFromRangeMin,
-    setCurrentFromRangeMax,
+    setCurrentFromColumn: setCurrentFromColumnResettingRange,
+    setCurrentFromRangeMin: setEditedCurrentFromRangeMin,
+    setCurrentFromRangeMax: setEditedCurrentFromRangeMax,
     setCurrentFromPalette,
     setCurrentGroupByColumn,
     setCurrentGroupByPalette,
