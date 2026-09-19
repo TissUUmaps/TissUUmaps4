@@ -1,3 +1,4 @@
+import type { Geometry } from "geojson";
 import {
   type AsyncBuffer,
   type FileMetaData,
@@ -8,9 +9,34 @@ import {
 } from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 
-import type { GenericArray, TypedArray } from "@tissuumaps/core";
+import {
+  type GenericArray,
+  type ShapesAppender,
+  type ShapesGeometry,
+  ShapesUtils,
+  type TypedArray,
+} from "@tissuumaps/core";
 
+import { GeoParquetUtils } from "./GeoParquetUtils";
 import type { ParquetSource } from "./types";
+
+/**
+ * Appends a GeoJSON geometry, as decoded from a WKB column, as one shape
+ *
+ * @param append - The appender of the shapes geometry under construction
+ * @param geometry - The geometry to append
+ * @returns Whether a shape was appended
+ */
+function appendGeometry(append: ShapesAppender, geometry: Geometry): boolean {
+  if (geometry.type === "Polygon") {
+    return append([geometry.coordinates]);
+  }
+  if (geometry.type === "MultiPolygon") {
+    return append(geometry.coordinates);
+  }
+  console.warn(`Unsupported geometry type: ${geometry.type}`);
+  return false;
+}
 
 export type ParquetRequest<TOp extends string = string> = {
   op: TOp;
@@ -42,6 +68,19 @@ export type ParquetColumnResponse = ParquetResponse<ParquetColumnRequest> & {
   data: GenericArray<unknown>;
 };
 
+export type ParquetShapesRequest = ParquetRequest<"shapes"> & {
+  source: ParquetSource;
+  geometryColumn: string | undefined;
+  idColumn: string | undefined;
+  nameColumn: string | undefined;
+};
+
+export type ParquetShapesResponse = ParquetResponse<ParquetShapesRequest> & {
+  geometry: ShapesGeometry;
+  ids: number[];
+  names: string[] | undefined;
+};
+
 export type ParquetRangeRequest = ParquetRequest<"range"> & {
   source: ParquetSource;
   column: string;
@@ -52,11 +91,15 @@ export type ParquetRangeResponse = ParquetResponse<ParquetRangeRequest> & {
 };
 
 export type ParquetWorkerRequest =
-  ParquetFileRequest | ParquetColumnRequest | ParquetRangeRequest;
+  | ParquetFileRequest
+  | ParquetColumnRequest
+  | ParquetShapesRequest
+  | ParquetRangeRequest;
 
 export type ParquetWorkerResponse =
   | ParquetFileResponse
   | ParquetColumnResponse
+  | ParquetShapesResponse
   | ParquetRangeResponse
   | { error: string };
 
@@ -87,6 +130,11 @@ ctx.onmessage = (event) => {
           break;
         case "column":
           result = await handleColumnRequest(event.data, (progress, total) =>
+            ctx.postMessage({ progress, total }),
+          );
+          break;
+        case "shapes":
+          result = await handleShapesRequest(event.data, (progress, total) =>
             ctx.postMessage({ progress, total }),
           );
           break;
@@ -138,15 +186,15 @@ function getColumns(metadata: FileMetaData): string[] {
   );
 }
 
-async function readParquetColumn(
+function readColumnChunks(
   buffer: AsyncBuffer,
   metadata: FileMetaData,
   column: string,
+  onChunk: (columnData: unknown, rowStart: number) => void,
   onProgress: (progress: number, total: number) => void,
-): Promise<GenericArray<unknown>> {
+): Promise<void> {
   let bytesRead = 0;
-  let result: GenericArray<unknown> | undefined;
-  await parquetRead({
+  return parquetRead({
     file: {
       byteLength: buffer.byteLength,
       async slice(start, end) {
@@ -159,7 +207,22 @@ async function readParquetColumn(
     metadata,
     compressors,
     columns: [column],
-    onChunk: ({ columnData, rowStart }) => {
+    onChunk: ({ columnData, rowStart }) => onChunk(columnData, rowStart),
+  });
+}
+
+async function readParquetColumn(
+  buffer: AsyncBuffer,
+  metadata: FileMetaData,
+  column: string,
+  onProgress: (progress: number, total: number) => void,
+): Promise<GenericArray<unknown>> {
+  let result: GenericArray<unknown> | undefined;
+  await readColumnChunks(
+    buffer,
+    metadata,
+    column,
+    (columnData, rowStart) => {
       if (ArrayBuffer.isView(columnData)) {
         const chunk = columnData as TypedArray;
         if (result === undefined) {
@@ -180,11 +243,83 @@ async function readParquetColumn(
         }
       }
     },
-  });
+    onProgress,
+  );
   if (result === undefined) {
     throw new Error(`Column "${column}" not found in Parquet file`);
   }
   return result;
+}
+
+function readGeometryColumn(
+  buffer: AsyncBuffer,
+  metadata: FileMetaData,
+  column: string,
+  onGeometry: (geometry: Geometry | null, row: number) => void,
+  onProgress: (progress: number, total: number) => void,
+): Promise<void> {
+  return readColumnChunks(
+    buffer,
+    metadata,
+    column,
+    (columnData, rowStart) => {
+      // WKB columns are decoded to GeoJSON geometries by the Parquet reader
+      const geometries = columnData as (Geometry | null | undefined)[];
+      for (let i = 0; i < geometries.length; i++) {
+        onGeometry(geometries[i] ?? null, rowStart + i);
+      }
+    },
+    onProgress,
+  );
+}
+
+async function readIdsAndNames(
+  buffer: AsyncBuffer,
+  metadata: FileMetaData,
+  idColumn: string | undefined,
+  nameColumn: string | undefined,
+  onProgress: (progress: number, total: number) => void,
+): Promise<{ ids: number[] | undefined; names: string[] | undefined }> {
+  let idTotal = 0,
+    nameTotal = 0,
+    idProgress = 0,
+    nameProgress = 0;
+  const idDataPromise =
+    idColumn !== undefined
+      ? readParquetColumn(buffer, metadata, idColumn, (progress, total) => {
+          idTotal = total;
+          idProgress = progress;
+          onProgress(idProgress + nameProgress, idTotal + nameTotal);
+        })
+      : undefined;
+  const nameDataPromise =
+    nameColumn !== undefined
+      ? readParquetColumn(buffer, metadata, nameColumn, (progress, total) => {
+          nameTotal = total;
+          nameProgress = progress;
+          onProgress(idProgress + nameProgress, idTotal + nameTotal);
+        })
+      : undefined;
+  const [idData, nameData] = await Promise.all([
+    idDataPromise,
+    nameDataPromise,
+  ]);
+  const ids =
+    idData !== undefined
+      ? Array.from(idData, (id) => {
+          if (id === undefined || id === "") {
+            throw new Error(`Missing ID in column '${idColumn}'`);
+          }
+          const numericId = Number(id);
+          if (!Number.isSafeInteger(numericId)) {
+            throw new Error(`Invalid ID in column '${idColumn}'`);
+          }
+          return numericId;
+        })
+      : undefined;
+  const names =
+    nameData !== undefined ? Array.from(nameData, String) : undefined;
+  return { ids, names };
 }
 
 async function handleFileRequest(
@@ -196,64 +331,55 @@ async function handleFileRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  let idTotal = 0,
-    nameTotal = 0,
-    idProgress = 0,
-    nameProgress = 0;
-  const idDataPromise =
-    request.idColumn !== undefined
-      ? readParquetColumn(
-          buffer,
-          metadata,
-          request.idColumn,
-          (progress, total) => {
-            idTotal = total;
-            idProgress = progress;
-            onProgress(idProgress + nameProgress, idTotal + nameTotal);
-          },
-        )
-      : undefined;
-  const nameDataPromise =
-    request.nameColumn !== undefined
-      ? readParquetColumn(
-          buffer,
-          metadata,
-          request.nameColumn,
-          (progress, total) => {
-            nameTotal = total;
-            nameProgress = progress;
-            onProgress(idProgress + nameProgress, idTotal + nameTotal);
-          },
-        )
-      : undefined;
-  const [idData, nameData] = await Promise.all([
-    idDataPromise,
-    nameDataPromise,
-  ]);
-  const ids =
-    idData !== undefined
-      ? Array.from(idData, (id) => {
-          if (id === undefined || id === "") {
-            throw new Error(`Missing ID in column '${request.idColumn}'`);
-          }
-          const numericId = Number(id);
-          if (!Number.isSafeInteger(numericId)) {
-            throw new Error(`Invalid ID in column '${request.idColumn}'`);
-          }
-          return numericId;
-        })
-      : undefined;
-  const names =
-    nameData !== undefined ? Array.from(nameData, String) : undefined;
+  const { ids, names } = await readIdsAndNames(
+    buffer,
+    metadata,
+    request.idColumn,
+    request.nameColumn,
+    onProgress,
+  );
+  const geoColumns = GeoParquetUtils.readColumns(metadata);
   return {
     response: {
       op: "file",
       numRows: getNumRows(metadata),
-      columns: getColumns(metadata),
+      columns: [
+        ...getColumns(metadata),
+        ...GeoParquetUtils.getCoordinateColumns(geoColumns),
+      ],
       ids,
       names,
     },
   };
+}
+
+async function readCoordinateColumn(
+  buffer: AsyncBuffer,
+  metadata: FileMetaData,
+  column: string,
+  axis: "x" | "y",
+  onProgress: (progress: number, total: number) => void,
+): Promise<Float64Array> {
+  const coordinateIndex = axis === "x" ? 0 : 1;
+  const coordinates = new Float64Array(getNumRows(metadata));
+  await readGeometryColumn(
+    buffer,
+    metadata,
+    column,
+    (geometry, row) => {
+      if (geometry === null) {
+        throw new Error(`Missing geometry in column "${column}"`);
+      }
+      if (geometry.type !== "Point") {
+        throw new Error(
+          `Column "${column}" contains a ${geometry.type} geometry`,
+        );
+      }
+      coordinates[row] = geometry.coordinates[coordinateIndex]!;
+    },
+    onProgress,
+  );
+  return coordinates;
 }
 
 async function handleColumnRequest(
@@ -265,6 +391,23 @@ async function handleColumnRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
+  const coordinates = GeoParquetUtils.resolveCoordinateColumn(
+    GeoParquetUtils.readColumns(metadata),
+    request.column,
+  );
+  if (coordinates !== undefined) {
+    const data = await readCoordinateColumn(
+      buffer,
+      metadata,
+      coordinates.geoColumn.name,
+      coordinates.axis,
+      onProgress,
+    );
+    return {
+      response: { op: "column", data },
+      transfer: [data.buffer],
+    };
+  }
   const columnMetadata = parquetSchema(metadata).children.find(
     (columnMetadata) => columnMetadata.element.name === request.column,
   );
@@ -298,6 +441,82 @@ async function handleColumnRequest(
   };
 }
 
+async function handleShapesRequest(
+  request: ParquetShapesRequest,
+  onProgress: (progress: number, total: number) => void,
+): Promise<{
+  response: ParquetShapesResponse;
+  transfer?: Transferable[];
+}> {
+  const buffer = await openParquet(request.source);
+  const metadata = await parquetMetadataAsync(buffer);
+  const geoColumns = GeoParquetUtils.readColumns(metadata);
+  const geoColumn =
+    request.geometryColumn !== undefined
+      ? geoColumns.find(({ name }) => name === request.geometryColumn)
+      : GeoParquetUtils.getPrimaryColumn(geoColumns);
+  if (geoColumn === undefined) {
+    throw new Error(
+      request.geometryColumn !== undefined
+        ? `Geometry column "${request.geometryColumn}" not found in Parquet file`
+        : "Parquet file has no GeoParquet geometry column",
+    );
+  }
+  if (GeoParquetUtils.isPointColumn(geoColumn)) {
+    throw new Error(
+      `Geometry column "${geoColumn.name}" holds points, which are read as ` +
+        `the "${geoColumn.name}.x" and "${geoColumn.name}.y" columns of a table`,
+    );
+  }
+  // Progress only tracks the geometry, which dwarfs the ID and name columns
+  const { ids: rowIds, names: rowNames } = await readIdsAndNames(
+    buffer,
+    metadata,
+    request.idColumn,
+    request.nameColumn,
+    () => {},
+  );
+  const ids: number[] = [];
+  const names: string[] = [];
+  const geometry = await ShapesUtils.buildGeometry(async (append) => {
+    await readGeometryColumn(
+      buffer,
+      metadata,
+      geoColumn.name,
+      (rowGeometry, row) => {
+        if (rowGeometry === null) {
+          console.warn("Skipping row without geometry.");
+          return;
+        }
+        if (appendGeometry(append, rowGeometry)) {
+          ids.push(rowIds !== undefined ? rowIds[row]! : row);
+          if (rowNames !== undefined) {
+            names.push(rowNames[row]!);
+          }
+        }
+      },
+      onProgress,
+    );
+  });
+  if (geometry.shapePolygonOffsets.length === 1) {
+    throw new Error(`No valid geometries found in column "${geoColumn.name}"`);
+  }
+  return {
+    response: {
+      op: "shapes",
+      geometry,
+      ids,
+      names: rowNames !== undefined ? names : undefined,
+    },
+    transfer: [
+      geometry.shapePolygonOffsets.buffer,
+      geometry.polygonRingOffsets.buffer,
+      geometry.ringVertexOffsets.buffer,
+      geometry.coords.buffer,
+    ],
+  };
+}
+
 async function handleRangeRequest(
   request: ParquetRangeRequest,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -308,6 +527,24 @@ async function handleRangeRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
+  const coordinates = GeoParquetUtils.resolveCoordinateColumn(
+    GeoParquetUtils.readColumns(metadata),
+    request.column,
+  );
+  if (coordinates !== undefined) {
+    const { bbox } = coordinates.geoColumn;
+    return {
+      response: {
+        op: "range",
+        range:
+          bbox !== undefined
+            ? coordinates.axis === "x"
+              ? [bbox[0], bbox[2]]
+              : [bbox[1], bbox[3]]
+            : undefined,
+      },
+    };
+  }
   let vmin = Infinity;
   let vmax = -Infinity;
   for (const rowGroup of metadata.row_groups) {

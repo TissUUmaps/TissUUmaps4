@@ -1,7 +1,7 @@
 import type { ShapesData, ShapesGeometry } from "@tissuumaps/core";
 
-/** Shapes data of a GeoJSON file, fully loaded up front */
-export class GeoJSONShapesData implements ShapesData {
+/** Shapes data of a GeoParquet file, fully loaded up front */
+export class GeoParquetShapesData implements ShapesData {
   private readonly _geometry: ShapesGeometry;
   private readonly _ids: number[];
   private readonly _names: string[] | undefined;
