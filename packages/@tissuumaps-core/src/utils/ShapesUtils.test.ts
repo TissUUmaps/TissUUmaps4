@@ -18,20 +18,22 @@ const hole: ShapesRing = [
 describe("ShapesUtils", () => {
   describe("buildGeometry", () => {
     it("appends a polygon as one shape with one ring", async () => {
-      let appended;
-      const geometry = await ShapesUtils.buildGeometry((append) => {
-        appended = append([[square]]);
-      });
-      expect(appended).toBe(true);
+      const { geometry, ids, names } = await ShapesUtils.buildGeometry(
+        (append) => {
+          append([[square]], 7);
+        },
+      );
       expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0, 1]);
       expect(Array.from(geometry.polygonRingOffsets)).toEqual([0, 1]);
       expect(Array.from(geometry.ringVertexOffsets)).toEqual([0, 4]);
       expect(Array.from(geometry.coords)).toEqual([0, 0, 4, 0, 4, 4, 0, 4]);
+      expect(ids).toEqual([7]);
+      expect(names).toBeUndefined();
     });
 
     it("appends the holes of a polygon as further rings", async () => {
-      const geometry = await ShapesUtils.buildGeometry((append) => {
-        append([[square, hole]]);
+      const { geometry } = await ShapesUtils.buildGeometry((append) => {
+        append([[square, hole]], 0);
       });
       expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0, 1]);
       expect(Array.from(geometry.polygonRingOffsets)).toEqual([0, 2]);
@@ -39,54 +41,81 @@ describe("ShapesUtils", () => {
     });
 
     it("appends several polygons as one shape", async () => {
-      const geometry = await ShapesUtils.buildGeometry((append) => {
-        append([[square], [square, hole]]);
+      const { geometry } = await ShapesUtils.buildGeometry((append) => {
+        append([[square], [square, hole]], 0);
       });
       expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0, 2]);
       expect(Array.from(geometry.polygonRingOffsets)).toEqual([0, 1, 3]);
       expect(Array.from(geometry.ringVertexOffsets)).toEqual([0, 4, 8, 11]);
     });
 
-    it("appends several shapes", async () => {
-      const geometry = await ShapesUtils.buildGeometry((append) => {
-        append([[square]]);
-        append([[square]]);
-      });
+    it("appends several shapes with their IDs and names", async () => {
+      const { geometry, ids, names } = await ShapesUtils.buildGeometry(
+        (append) => {
+          append([[square]], 10, "first");
+          append([[square]], 20, "second");
+        },
+      );
       expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0, 1, 2]);
       expect(Array.from(geometry.polygonRingOffsets)).toEqual([0, 1, 2]);
+      expect(ids).toEqual([10, 20]);
+      expect(names).toEqual(["first", "second"]);
     });
 
     it("awaits an asynchronous callback", async () => {
-      const geometry = await ShapesUtils.buildGeometry(async (append) => {
+      const { geometry } = await ShapesUtils.buildGeometry(async (append) => {
         await Promise.resolve();
-        append([[square]]);
+        append([[square]], 0);
       });
       expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0, 1]);
     });
 
     it("skips a polygon without a valid shell", async () => {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-      let appended;
-      const geometry = await ShapesUtils.buildGeometry((append) => {
-        appended = append([
+      const { geometry, ids } = await ShapesUtils.buildGeometry((append) => {
+        append(
           [
             [
-              [0, 0],
-              [1, 1],
+              [
+                [0, 0],
+                [1, 1],
+              ],
             ],
           ],
-        ]);
+          7,
+        );
       });
-      expect(appended).toBe(false);
       expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0]);
+      expect(ids).toEqual([]);
       warn.mockRestore();
     });
 
     it("skips a shape without polygons", async () => {
-      const geometry = await ShapesUtils.buildGeometry((append) => {
-        expect(append([])).toBe(false);
+      const { geometry, ids } = await ShapesUtils.buildGeometry((append) => {
+        append([], 7);
       });
       expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0]);
+      expect(ids).toEqual([]);
+    });
+
+    it("keeps the IDs aligned with the geometry when a shape is skipped", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { geometry, ids } = await ShapesUtils.buildGeometry((append) => {
+        append([[square]], 10);
+        append([], 20);
+        append([[square]], 30);
+      });
+      expect(geometry.shapePolygonOffsets.length - 1).toBe(2);
+      expect(ids).toEqual([10, 30]);
+      warn.mockRestore();
+    });
+
+    it("reads no names when only some shapes are named", async () => {
+      const { names } = await ShapesUtils.buildGeometry((append) => {
+        append([[square]], 10, "first");
+        append([[square]], 20);
+      });
+      expect(names).toBeUndefined();
     });
 
     it("rejects when the callback throws", async () => {

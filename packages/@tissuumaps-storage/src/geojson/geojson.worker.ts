@@ -178,17 +178,24 @@ async function handleFileRequest(
  *
  * @param append - The appender of the shapes geometry under construction
  * @param geometry - The geometry to append
- * @returns Whether a shape was appended
+ * @param id - The ID of the shape
+ * @param name - The name of the shape, if any
  */
-function appendGeometry(append: ShapesAppender, geometry: Geometry): boolean {
+function appendGeometry(
+  append: ShapesAppender,
+  geometry: Geometry,
+  id: number,
+  name?: string,
+): void {
   if (geometry.type === "Polygon") {
-    return append([geometry.coordinates]);
+    append([geometry.coordinates], id, name);
+    return;
   }
   if (geometry.type === "MultiPolygon") {
-    return append(geometry.coordinates);
+    append(geometry.coordinates, id, name);
+    return;
   }
   console.warn(`Unsupported geometry type: ${geometry.type}`);
-  return false;
 }
 
 function readFeatureId(
@@ -242,9 +249,7 @@ async function parseGeoJSON(
     );
   }
 
-  const ids: number[] = [];
-  const names: string[] = [];
-  const geometry = await ShapesUtils.buildGeometry((append) => {
+  const { geometry, ids, names } = await ShapesUtils.buildGeometry((append) => {
     switch (geo.type) {
       case "FeatureCollection":
         for (let i = 0; i < geo.features.length; i++) {
@@ -253,34 +258,30 @@ async function parseGeoJSON(
             console.warn("Skipping feature with null geometry.");
             continue;
           }
-          if (appendGeometry(append, feature.geometry)) {
-            ids.push(
-              idProperty !== undefined ? readFeatureId(feature, idProperty) : i,
-            );
-            if (nameProperty !== undefined) {
-              names.push(readFeatureName(feature, nameProperty));
-            }
-          }
+          appendGeometry(
+            append,
+            feature.geometry,
+            idProperty !== undefined ? readFeatureId(feature, idProperty) : i,
+            nameProperty !== undefined
+              ? readFeatureName(feature, nameProperty)
+              : undefined,
+          );
           onProgress(i + 1, geo.features.length);
         }
         break;
       case "Feature":
-        if (geo.geometry !== null && appendGeometry(append, geo.geometry)) {
-          ids.push(0);
+        if (geo.geometry !== null) {
+          appendGeometry(append, geo.geometry, 0);
         }
         break;
       case "GeometryCollection":
         for (let i = 0; i < geo.geometries.length; i++) {
-          if (appendGeometry(append, geo.geometries[i]!)) {
-            ids.push(i);
-          }
+          appendGeometry(append, geo.geometries[i]!, i);
           onProgress(i + 1, geo.geometries.length);
         }
         break;
       default:
-        if (appendGeometry(append, geo)) {
-          ids.push(0);
-        }
+        appendGeometry(append, geo, 0);
         break;
     }
   });
@@ -288,9 +289,5 @@ async function parseGeoJSON(
     throw new Error("No valid geometries found in GeoJSON data.");
   }
 
-  return {
-    ids,
-    names: nameProperty !== undefined ? names : undefined,
-    geometry,
-  };
+  return { ids, names, geometry };
 }

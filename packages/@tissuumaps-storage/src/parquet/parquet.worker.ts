@@ -25,17 +25,24 @@ import type { ParquetSource } from "./types";
  *
  * @param append - The appender of the shapes geometry under construction
  * @param geometry - The geometry to append
- * @returns Whether a shape was appended
+ * @param id - The ID of the shape
+ * @param name - The name of the shape, if any
  */
-function appendGeometry(append: ShapesAppender, geometry: Geometry): boolean {
+function appendGeometry(
+  append: ShapesAppender,
+  geometry: Geometry,
+  id: number,
+  name?: string,
+): void {
   if (geometry.type === "Polygon") {
-    return append([geometry.coordinates]);
+    append([geometry.coordinates], id, name);
+    return;
   }
   if (geometry.type === "MultiPolygon") {
-    return append(geometry.coordinates);
+    append(geometry.coordinates, id, name);
+    return;
   }
   console.warn(`Unsupported geometry type: ${geometry.type}`);
-  return false;
 }
 
 export type ParquetRequest<TOp extends string = string> = {
@@ -476,28 +483,28 @@ async function handleShapesRequest(
     request.nameColumn,
     () => {},
   );
-  const ids: number[] = [];
-  const names: string[] = [];
-  const geometry = await ShapesUtils.buildGeometry(async (append) => {
-    await readGeometryColumn(
-      buffer,
-      metadata,
-      geoColumn.name,
-      (rowGeometry, row) => {
-        if (rowGeometry === null) {
-          console.warn("Skipping row without geometry.");
-          return;
-        }
-        if (appendGeometry(append, rowGeometry)) {
-          ids.push(rowIds !== undefined ? rowIds[row]! : row);
-          if (rowNames !== undefined) {
-            names.push(rowNames[row]!);
+  const { geometry, ids, names } = await ShapesUtils.buildGeometry(
+    async (append) => {
+      await readGeometryColumn(
+        buffer,
+        metadata,
+        geoColumn.name,
+        (rowGeometry, row) => {
+          if (rowGeometry === null) {
+            console.warn("Skipping row without geometry.");
+            return;
           }
-        }
-      },
-      onProgress,
-    );
-  });
+          appendGeometry(
+            append,
+            rowGeometry,
+            rowIds !== undefined ? rowIds[row]! : row,
+            rowNames?.[row],
+          );
+        },
+        onProgress,
+      );
+    },
+  );
   if (geometry.shapePolygonOffsets.length === 1) {
     throw new Error(`No valid geometries found in column "${geoColumn.name}"`);
   }
@@ -506,7 +513,7 @@ async function handleShapesRequest(
       op: "shapes",
       geometry,
       ids,
-      names: rowNames !== undefined ? names : undefined,
+      names,
     },
     transfer: [
       geometry.shapePolygonOffsets.buffer,
