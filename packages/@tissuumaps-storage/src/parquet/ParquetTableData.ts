@@ -6,6 +6,7 @@ import {
   type TableData,
 } from "@tissuumaps/core";
 
+import { GeoParquetUtils } from "./GeoParquetUtils";
 import { runParquetWorker } from "./runParquetWorker";
 import type { ParquetSource } from "./types";
 
@@ -15,6 +16,12 @@ export class ParquetTableData implements TableData {
   private readonly _columns: string[];
   private _ids: number[] | undefined;
   private readonly _names: string[] | undefined;
+  // Both axes of a point geometry column are decoded in one pass, so the
+  // second axis a point cloud reads does not decode the column again.
+  private readonly _coordinates = new Map<
+    string,
+    Promise<{ x: Float32Array; y: Float32Array }>
+  >();
 
   constructor(
     source: ParquetSource,
@@ -81,11 +88,38 @@ export class ParquetTableData implements TableData {
   ): Promise<GenericArray<T>> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
+    const coordinates = this._columns.includes(column)
+      ? GeoParquetUtils.parseCoordinateColumn(column)
+      : undefined;
+    if (coordinates !== undefined) {
+      const { x, y } = await this._loadCoordinates(coordinates.geometryColumn, {
+        signal,
+        onProgress,
+      });
+      return (coordinates.axis === "x" ? x : y) as GenericArray<T>;
+    }
     const { data } = await runParquetWorker(
       { op: "column", source: this._source, column },
       { signal, onProgress },
     );
     return data as GenericArray<T>;
+  }
+
+  private _loadCoordinates(
+    geometryColumn: string,
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+  ): Promise<{ x: Float32Array; y: Float32Array }> {
+    const { signal, onProgress } = options ?? {};
+    let coordinates = this._coordinates.get(geometryColumn);
+    if (coordinates === undefined) {
+      coordinates = runParquetWorker(
+        { op: "coordinates", source: this._source, geometryColumn },
+        { signal, onProgress },
+      ).then(({ x, y }) => ({ x, y }));
+      coordinates.catch(() => this._coordinates.delete(geometryColumn));
+      this._coordinates.set(geometryColumn, coordinates);
+    }
+    return coordinates;
   }
 
   async loadUniqueValueCounts<T>(

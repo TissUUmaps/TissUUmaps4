@@ -75,6 +75,17 @@ export type ParquetColumnResponse = ParquetResponse<ParquetColumnRequest> & {
   data: GenericArray<unknown>;
 };
 
+export type ParquetCoordinatesRequest = ParquetRequest<"coordinates"> & {
+  source: ParquetSource;
+  geometryColumn: string;
+};
+
+export type ParquetCoordinatesResponse =
+  ParquetResponse<ParquetCoordinatesRequest> & {
+    x: Float32Array;
+    y: Float32Array;
+  };
+
 export type ParquetShapesRequest = ParquetRequest<"shapes"> & {
   source: ParquetSource;
   geometryColumn: string | undefined;
@@ -100,12 +111,14 @@ export type ParquetRangeResponse = ParquetResponse<ParquetRangeRequest> & {
 export type ParquetWorkerRequest =
   | ParquetFileRequest
   | ParquetColumnRequest
+  | ParquetCoordinatesRequest
   | ParquetShapesRequest
   | ParquetRangeRequest;
 
 export type ParquetWorkerResponse =
   | ParquetFileResponse
   | ParquetColumnResponse
+  | ParquetCoordinatesResponse
   | ParquetShapesResponse
   | ParquetRangeResponse
   | { error: string };
@@ -138,6 +151,12 @@ ctx.onmessage = (event) => {
         case "column":
           result = await handleColumnRequest(event.data, (progress, total) =>
             ctx.postMessage({ progress, total }),
+          );
+          break;
+        case "coordinates":
+          result = await handleCoordinatesRequest(
+            event.data,
+            (progress, total) => ctx.postMessage({ progress, total }),
           );
           break;
         case "shapes":
@@ -360,15 +379,28 @@ async function handleFileRequest(
   };
 }
 
-async function readCoordinateColumn(
+/**
+ * Reads both coordinate axes of a point geometry column in one pass
+ *
+ * The WKB column is decoded once for both axes, so that a point cloud reading
+ * its x and y from the same column does not decode it twice.
+ *
+ * @param buffer - The file to read from
+ * @param metadata - The file metadata
+ * @param column - The point geometry column to read
+ * @param onProgress - Callback reporting the read progress
+ * @returns The x and y coordinates of every row
+ * @throws Error if a row holds no geometry, or one that is not a point
+ */
+async function readCoordinateColumns(
   buffer: AsyncBuffer,
   metadata: FileMetaData,
   column: string,
-  axis: "x" | "y",
   onProgress: (progress: number, total: number) => void,
-): Promise<Float64Array> {
-  const coordinateIndex = axis === "x" ? 0 : 1;
-  const coordinates = new Float64Array(getNumRows(metadata));
+): Promise<{ x: Float32Array; y: Float32Array }> {
+  const numRows = getNumRows(metadata);
+  const x = new Float32Array(numRows);
+  const y = new Float32Array(numRows);
   await readGeometryColumn(
     buffer,
     metadata,
@@ -382,11 +414,33 @@ async function readCoordinateColumn(
           `Column "${column}" contains a ${geometry.type} geometry`,
         );
       }
-      coordinates[row] = geometry.coordinates[coordinateIndex]!;
+      x[row] = geometry.coordinates[0]!;
+      y[row] = geometry.coordinates[1]!;
     },
     onProgress,
   );
-  return coordinates;
+  return { x, y };
+}
+
+async function handleCoordinatesRequest(
+  request: ParquetCoordinatesRequest,
+  onProgress: (progress: number, total: number) => void,
+): Promise<{
+  response: ParquetCoordinatesResponse;
+  transfer?: Transferable[];
+}> {
+  const buffer = await openParquet(request.source);
+  const metadata = await parquetMetadataAsync(buffer);
+  const { x, y } = await readCoordinateColumns(
+    buffer,
+    metadata,
+    request.geometryColumn,
+    onProgress,
+  );
+  return {
+    response: { op: "coordinates", x, y },
+    transfer: [x.buffer, y.buffer],
+  };
 }
 
 async function handleColumnRequest(
@@ -398,23 +452,6 @@ async function handleColumnRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  const coordinates = GeoParquetUtils.resolveCoordinateColumn(
-    GeoParquetUtils.readColumns(metadata),
-    request.column,
-  );
-  if (coordinates !== undefined) {
-    const data = await readCoordinateColumn(
-      buffer,
-      metadata,
-      coordinates.geoColumn.name,
-      coordinates.axis,
-      onProgress,
-    );
-    return {
-      response: { op: "column", data },
-      transfer: [data.buffer],
-    };
-  }
   const columnMetadata = parquetSchema(metadata).children.find(
     (columnMetadata) => columnMetadata.element.name === request.column,
   );
