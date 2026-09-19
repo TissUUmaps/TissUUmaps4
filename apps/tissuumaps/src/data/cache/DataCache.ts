@@ -18,6 +18,14 @@ import { SharedOperation } from "./SharedOperation";
 import type { DataWrapperBase } from "./wrappers/DataWrapperBase";
 
 /**
+ * Minimum delay between progress-driven data ref publications, in milliseconds
+ *
+ * Providers may report progress per chunk or per feature; publishing every
+ * report would re-render all subscribers of the data ref for each one.
+ */
+const progressPublishIntervalMs = 100;
+
+/**
  * Loaded data as handed out by a data cache: the data's own interface, plus the
  * lifetime controls of {@link DataWrapperBase}
  */
@@ -392,27 +400,49 @@ export class DataCache<
         return this._wrapData(data);
       }),
     };
+    // Reports inside the interval are held back and published when it ends, so
+    // the last report is never lost.
+    let lastPublishTime = -Infinity;
+    let pendingPublishTimer: ReturnType<typeof setTimeout> | undefined;
+    const publishProgress = (progress: number, total: number) => {
+      lastPublishTime = performance.now();
+      newEntry.dataRef = {
+        promise: dataPromise,
+        status: "loading",
+        progress,
+        total,
+      };
+      this._notifyObjectDataRefsChanged(newEntry);
+    };
     newEntry.loadOp
       .observe({
         onProgress: (progress, total) => {
-          if (newEntry.dataRef.status === "loading") {
-            newEntry.dataRef = {
-              promise: dataPromise,
-              status: "loading",
-              progress,
-              total,
-            };
-            this._notifyObjectDataRefsChanged(newEntry);
+          if (newEntry.dataRef.status !== "loading") {
+            return;
+          }
+          clearTimeout(pendingPublishTimer);
+          const remainingMs =
+            progressPublishIntervalMs - (performance.now() - lastPublishTime);
+          if (remainingMs <= 0) {
+            publishProgress(progress, total);
+          } else {
+            pendingPublishTimer = setTimeout(() => {
+              if (newEntry.dataRef.status === "loading") {
+                publishProgress(progress, total);
+              }
+            }, remainingMs);
           }
         },
       })
       .then(
         (data) => {
+          clearTimeout(pendingPublishTimer);
           newEntry.dataRef = { promise: dataPromise, status: "loaded", data };
           this._notifyObjectDataRefsChanged(newEntry);
           return data;
         },
         (error) => {
+          clearTimeout(pendingPublishTimer);
           newEntry.dataRef = { promise: dataPromise, status: "error", error };
           this._notifyObjectDataRefsChanged(newEntry);
           throw error;

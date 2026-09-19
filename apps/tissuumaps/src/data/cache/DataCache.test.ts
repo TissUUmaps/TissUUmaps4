@@ -606,6 +606,57 @@ describe("DataCache", () => {
       });
     });
 
+    it("publishes at most one progress report per interval, keeping the last", () => {
+      vi.useFakeTimers();
+      try {
+        const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
+        const { dataProvider, calls } = createTestDataProvider();
+        const object = createObject("a", { type: "test", url: "a.test" });
+
+        void dataCache.load(object, createContext(dataProvider));
+        onObjectDataRefsChanged.mockClear();
+        const onProgress = calls.at(-1)!.options!.onProgress!;
+
+        onProgress(1, 5);
+        onProgress(2, 5);
+        onProgress(3, 5);
+        expect(onObjectDataRefsChanged).toHaveBeenCalledOnce();
+        expect(
+          onObjectDataRefsChanged.mock.lastCall![0].get("a"),
+        ).toMatchObject({ status: "loading", progress: 1, total: 5 });
+
+        vi.advanceTimersByTime(100);
+        expect(onObjectDataRefsChanged).toHaveBeenCalledTimes(2);
+        expect(
+          onObjectDataRefsChanged.mock.lastCall![0].get("a"),
+        ).toMatchObject({ status: "loading", progress: 3, total: 5 });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("drops a held-back progress report once the load settled", async () => {
+      vi.useFakeTimers();
+      try {
+        const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
+        const { dataProvider, calls } = createTestDataProvider();
+        const object = createObject("a", { type: "test", url: "a.test" });
+
+        const promise = dataCache.load(object, createContext(dataProvider));
+        const onProgress = calls.at(-1)!.options!.onProgress!;
+        onProgress(1, 5);
+        onProgress(2, 5);
+        calls.at(-1)!.deferred.resolve(createTestData().data);
+        await promise;
+        onObjectDataRefsChanged.mockClear();
+
+        vi.advanceTimersByTime(100);
+        expect(onObjectDataRefsChanged).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("ignores progress reported after the load settled", async () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
