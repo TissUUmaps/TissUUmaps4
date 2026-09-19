@@ -3,7 +3,7 @@ import type {
   ShapesDataProvider,
 } from "@tissuumaps/core";
 
-import { InMemoryShapesData } from "../common/InMemoryShapesData";
+import { GeoJSONShapesData } from "./GeoJSONShapesData";
 import {
   type GeoJSONShapesDataSource,
   type NormalizedGeoJSONShapesDataSource,
@@ -13,7 +13,7 @@ import { runGeoJSONWorker } from "./runGeoJSONWorker";
 
 export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   GeoJSONShapesDataSource,
-  InMemoryShapesData,
+  GeoJSONShapesData,
   NormalizedGeoJSONShapesDataSource
 > {
   readonly name = "GeoJSON";
@@ -79,7 +79,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   async load(
     normalizedDataSource: NormalizedGeoJSONShapesDataSource,
     options?: DataProviderLoadOptions,
-  ): Promise<InMemoryShapesData> {
+  ): Promise<GeoJSONShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
     let file, url;
@@ -100,6 +100,6 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       { op: "file", file, url, idProperty, nameProperty },
       { signal, onProgress },
     );
-    return new InMemoryShapesData(geometry, ids, names);
+    return new GeoJSONShapesData(geometry, ids, names);
   }
 }

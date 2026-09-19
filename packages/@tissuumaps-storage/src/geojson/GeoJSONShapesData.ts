@@ -1,14 +1,14 @@
 import type { ShapesData, ShapesGeometry } from "@tissuumaps/core";
 
-/** Shapes data whose geometry, IDs and names are fully loaded up front */
-export class InMemoryShapesData implements ShapesData {
+/** Shapes data of a GeoJSON file, fully loaded up front */
+export class GeoJSONShapesData implements ShapesData {
   private readonly _geometry: ShapesGeometry;
-  private _ids: number[] | undefined;
+  private readonly _ids: number[];
   private readonly _names: string[] | undefined;
 
   constructor(
     geometry: ShapesGeometry,
-    ids: number[] | undefined,
+    ids: number[],
     names: string[] | undefined,
   ) {
     this._geometry = geometry;
@@ -17,10 +17,6 @@ export class InMemoryShapesData implements ShapesData {
   }
 
   getIds(): number[] {
-    if (this._ids === undefined) {
-      console.warn("No IDs specified, using sequential IDs instead");
-      this._ids = Array.from({ length: this.getSize() }, (_, i) => i);
-    }
     return this._ids;
   }
 

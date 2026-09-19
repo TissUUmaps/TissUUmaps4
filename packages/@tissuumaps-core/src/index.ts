@@ -230,6 +230,12 @@ export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { NumberUtils } from "./utils/NumberUtils";
 export { RandomUtils } from "./utils/RandomUtils";
+export {
+  type ShapesAppender,
+  type ShapesPolygon,
+  type ShapesRing,
+  ShapesUtils,
+} from "./utils/ShapesUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 
 export {
