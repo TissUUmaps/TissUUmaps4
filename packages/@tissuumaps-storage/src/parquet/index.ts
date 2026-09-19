@@ -1,10 +1,10 @@
-export { ParquetShapesDataProvider } from "./ParquetShapesDataProvider";
+export { GeoParquetShapesDataProvider } from "./GeoParquetShapesDataProvider";
 export {
-  parquetShapesDataSourceDefaults,
-  parquetShapesDataSourceType,
-  type NormalizedParquetShapesDataSource,
-  type ParquetShapesDataSource,
-} from "./ParquetShapesDataSource";
+  geoParquetShapesDataSourceDefaults,
+  geoParquetShapesDataSourceType,
+  type NormalizedGeoParquetShapesDataSource,
+  type GeoParquetShapesDataSource,
+} from "./GeoParquetShapesDataSource";
 export { ParquetTableData } from "./ParquetTableData";
 export { ParquetTableDataProvider } from "./ParquetTableDataProvider";
 export {

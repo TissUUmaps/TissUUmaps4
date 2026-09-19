@@ -5,16 +5,16 @@ import type {
 
 import { InMemoryShapesData } from "../common/InMemoryShapesData";
 import {
-  type NormalizedParquetShapesDataSource,
-  type ParquetShapesDataSource,
-  parquetShapesDataSourceDefaults,
-} from "./ParquetShapesDataSource";
+  type GeoParquetShapesDataSource,
+  type NormalizedGeoParquetShapesDataSource,
+  geoParquetShapesDataSourceDefaults,
+} from "./GeoParquetShapesDataSource";
 import { runParquetWorker } from "./runParquetWorker";
 
-export class ParquetShapesDataProvider implements ShapesDataProvider<
-  ParquetShapesDataSource,
+export class GeoParquetShapesDataProvider implements ShapesDataProvider<
+  GeoParquetShapesDataSource,
   InMemoryShapesData,
-  NormalizedParquetShapesDataSource
+  NormalizedGeoParquetShapesDataSource
 > {
   readonly name = "GeoParquet";
 
@@ -74,18 +74,18 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
   };
 
   normalize(
-    dataSource: ParquetShapesDataSource,
+    dataSource: GeoParquetShapesDataSource,
     projectUrl: string | null,
-  ): NormalizedParquetShapesDataSource {
+  ): NormalizedGeoParquetShapesDataSource {
     let { url } = dataSource;
     if (url !== undefined) {
       url = new URL(url, projectUrl ?? document.baseURI).href;
     }
-    return { ...parquetShapesDataSourceDefaults, ...dataSource, url };
+    return { ...geoParquetShapesDataSourceDefaults, ...dataSource, url };
   }
 
   async load(
-    normalizedDataSource: NormalizedParquetShapesDataSource,
+    normalizedDataSource: NormalizedGeoParquetShapesDataSource,
     options?: DataProviderLoadOptions,
   ): Promise<InMemoryShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};

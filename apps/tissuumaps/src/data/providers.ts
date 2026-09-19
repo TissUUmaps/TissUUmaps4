@@ -1,18 +1,18 @@
 import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
+  GeoParquetShapesDataProvider,
   OMEZarrImageDataProvider,
   OMEZarrLabelsDataProvider,
   OpenSeadragonImageDataProvider,
-  ParquetShapesDataProvider,
   ParquetTableDataProvider,
   TablePointsDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
+  geoParquetShapesDataSourceType,
   omeZarrImageDataSourceType,
   omeZarrLabelsDataSourceType,
   openSeadragonImageDataSourceType,
-  parquetShapesDataSourceType,
   parquetTableDataSourceType,
   tablePointsDataSourceType,
 } from "@tissuumaps/storage";
@@ -52,8 +52,8 @@ export function enableBuiltInDataProviders(): void {
     new GeoJSONShapesDataProvider(),
   );
   appStoreState.registerShapesDataProvider(
-    parquetShapesDataSourceType,
-    new ParquetShapesDataProvider(),
+    geoParquetShapesDataSourceType,
+    new GeoParquetShapesDataProvider(),
   );
 
   appStoreState.registerTableDataProvider(

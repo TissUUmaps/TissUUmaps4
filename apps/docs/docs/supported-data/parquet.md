@@ -24,11 +24,11 @@ Columns of 64-bit integers are not supported, as their values do not fit a JavaS
 
 ## Shapes data source
 
-Parquet shapes data sources have the `type` `"parquet"` and accept the following fields:
+GeoParquet shapes data sources have the `type` `"geoparquet"` and accept the following fields:
 
 | Field            | Type     | Description                                                                          |
 | ---------------- | -------- | ------------------------------------------------------------------------------------ |
-| `type`           | `string` | Always `"parquet"`.                                                                  |
+| `type`           | `string` | Always `"geoparquet"`.                                                               |
 | `url`            | `string` | URL of a remote GeoParquet file, absolute or relative.                               |
 | `path`           | `string` | Path of a GeoParquet file relative to the workspace directory.                       |
 | `geometryColumn` | `string` | Geometry column to read. Defaults to the primary geometry column of the file.        |
@@ -81,7 +81,7 @@ A project showing the circles and the polygons of a [SpatialData](https://spatia
       "name": "Cell outlines",
       "layer": "layer",
       "dataSource": {
-        "type": "parquet",
+        "type": "geoparquet",
         "url": "shapes/cells/shapes.parquet",
         "idColumn": "instance_id"
       }
