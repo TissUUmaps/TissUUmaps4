@@ -32,6 +32,9 @@ type GeoMetadata = {
   };
 };
 
+/** Matches a coordinate column, capturing its geometry column and its axis */
+const coordinateColumnPattern = /^(.*)\[([xy])\]$/;
+
 /** Reads the 2D bounds of a `bbox`, which lists Z bounds too for 3D columns */
 function readBBox(
   bbox: number[] | undefined,
@@ -48,8 +51,8 @@ function readBBox(
 /**
  * Helpers for the GeoParquet metadata of a Parquet file
  *
- * Point geometry columns are read as a pair of coordinate columns named after
- * the geometry column, e.g. `geometry.x` and `geometry.y`, so that point
+ * Point geometry columns are read as a pair of coordinate columns selected from
+ * the geometry column, e.g. `geometry[x]` and `geometry[y]`, so that point
  * geometries can be used wherever a numeric column is expected.
  */
 export class GeoParquetUtils {
@@ -113,7 +116,26 @@ export class GeoParquetUtils {
   static getCoordinateColumns(geoColumns: GeoColumn[]): string[] {
     return geoColumns
       .filter((geoColumn) => GeoParquetUtils.isPointColumn(geoColumn))
-      .flatMap(({ name }) => [`${name}.x`, `${name}.y`]);
+      .flatMap(({ name }) => [`${name}[x]`, `${name}[y]`]);
+  }
+
+  /**
+   * Parses the name of a derived coordinate column
+   *
+   * The name is not checked against the geometry columns of any file.
+   *
+   * @param column - The column name to parse
+   * @returns The geometry column the coordinates are read from and the axis
+   * they are read on, or `undefined` if the name is not a coordinate column
+   */
+  static parseCoordinateColumn(
+    column: string,
+  ): { geometryColumn: string; axis: "x" | "y" } | undefined {
+    const match = coordinateColumnPattern.exec(column);
+    if (match === null) {
+      return undefined;
+    }
+    return { geometryColumn: match[1]!, axis: match[2] === "x" ? "x" : "y" };
   }
 
   /**
@@ -123,24 +145,23 @@ export class GeoParquetUtils {
    * @param column - The column name to resolve
    * @returns The geometry column the coordinates are read from and the axis
    * they are read on, or `undefined` if the name is not a coordinate column
+   * of one of the given geometry columns
    */
   static resolveCoordinateColumn(
     geoColumns: GeoColumn[],
     column: string,
   ): { geoColumn: GeoColumn; axis: "x" | "y" } | undefined {
-    const axis = column.endsWith(".x")
-      ? "x"
-      : column.endsWith(".y")
-        ? "y"
-        : null;
-    if (axis === null) {
+    const coordinates = GeoParquetUtils.parseCoordinateColumn(column);
+    if (coordinates === undefined) {
       return undefined;
     }
-    const name = column.slice(0, -2);
     const geoColumn = geoColumns.find(
       (geoColumn) =>
-        geoColumn.name === name && GeoParquetUtils.isPointColumn(geoColumn),
+        geoColumn.name === coordinates.geometryColumn &&
+        GeoParquetUtils.isPointColumn(geoColumn),
     );
-    return geoColumn !== undefined ? { geoColumn, axis } : undefined;
+    return geoColumn !== undefined
+      ? { geoColumn, axis: coordinates.axis }
+      : undefined;
   }
 }

@@ -472,7 +472,8 @@ async function handleShapesRequest(
   if (GeoParquetUtils.isPointColumn(geoColumn)) {
     throw new Error(
       `Geometry column "${geoColumn.name}" holds points, which are read as ` +
-        `the "${geoColumn.name}.x" and "${geoColumn.name}.y" columns of a table`,
+        `the "${geoColumn.name}[x]" and "${geoColumn.name}[y]" columns of a ` +
+        `table`,
     );
   }
   // Progress only tracks the geometry, which dwarfs the ID and name columns

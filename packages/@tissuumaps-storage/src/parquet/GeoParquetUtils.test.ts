@@ -122,8 +122,8 @@ describe("GeoParquetUtils", () => {
     it("derives a coordinate column pair per point geometry column", () => {
       const geoColumns = GeoParquetUtils.readColumns(points);
       expect(GeoParquetUtils.getCoordinateColumns(geoColumns)).toEqual([
-        "geometry.x",
-        "geometry.y",
+        "geometry[x]",
+        "geometry[y]",
       ]);
     });
 
@@ -133,12 +133,28 @@ describe("GeoParquetUtils", () => {
     });
   });
 
+  describe("parseCoordinateColumn", () => {
+    it("parses a coordinate column", () => {
+      expect(GeoParquetUtils.parseCoordinateColumn("geometry[y]")).toEqual({
+        geometryColumn: "geometry",
+        axis: "y",
+      });
+    });
+
+    it("parses no column that is not a coordinate column", () => {
+      expect(GeoParquetUtils.parseCoordinateColumn("geometry")).toBeUndefined();
+      expect(
+        GeoParquetUtils.parseCoordinateColumn("geometry[z]"),
+      ).toBeUndefined();
+    });
+  });
+
   describe("resolveCoordinateColumn", () => {
     it("resolves a coordinate column to its geometry column and axis", () => {
       const geoColumns = GeoParquetUtils.readColumns(points);
       const coordinates = GeoParquetUtils.resolveCoordinateColumn(
         geoColumns,
-        "geometry.y",
+        "geometry[y]",
       );
       expect(coordinates?.geoColumn.name).toBe("geometry");
       expect(coordinates?.axis).toBe("y");
@@ -150,14 +166,14 @@ describe("GeoParquetUtils", () => {
         GeoParquetUtils.resolveCoordinateColumn(geoColumns, "geometry"),
       ).toBeUndefined();
       expect(
-        GeoParquetUtils.resolveCoordinateColumn(geoColumns, "centroid.x"),
+        GeoParquetUtils.resolveCoordinateColumn(geoColumns, "centroid[x]"),
       ).toBeUndefined();
     });
 
     it("resolves no coordinate column of a polygon column", () => {
       const geoColumns = GeoParquetUtils.readColumns(polygons);
       expect(
-        GeoParquetUtils.resolveCoordinateColumn(geoColumns, "geometry.x"),
+        GeoParquetUtils.resolveCoordinateColumn(geoColumns, "geometry[x]"),
       ).toBeUndefined();
     });
   });
