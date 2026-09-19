@@ -329,7 +329,9 @@ export class SourceUtils {
       dir = await dir.getDirectoryHandle(dirName);
       signal?.throwIfAborted();
     }
-    return dir.getFileHandle(fileName);
+    const file = await dir.getFileHandle(fileName);
+    signal?.throwIfAborted();
+    return file;
   }
 
   /**
