@@ -1,5 +1,3 @@
-import type { ColumnDef } from "@tanstack/react-table";
-
 import type { ItemsData } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
@@ -9,11 +7,9 @@ import { useControlled } from "@/hooks/useControlled";
 import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 
-import {
-  AnnotationsTable,
-  type AnnotationsTableGroupRowData,
-  type AnnotationsTableRowData,
-} from "./AnnotationsTable";
+import type { AnnotationsGroupTableColumnDef } from "./AnnotationsGroupTable";
+import type { AnnotationsItemTableColumnDef } from "./AnnotationsItemTable";
+import { AnnotationsTable } from "./AnnotationsTable";
 
 export type AnnotationsWidgetProps = {
   data?: ItemsData;
@@ -21,8 +17,8 @@ export type AnnotationsWidgetProps = {
   table: string | null;
   selectedGroupByColumn?: string | null;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
-  extraTableColumnDefs?: ColumnDef<AnnotationsTableRowData>[];
-  extraTableGroupColumnDefs?: ColumnDef<AnnotationsTableGroupRowData>[];
+  extraTableColumnDefs?: AnnotationsItemTableColumnDef[];
+  extraTableGroupColumnDefs?: AnnotationsGroupTableColumnDef[];
   className?: string;
 };
 

@@ -1,4 +1,3 @@
-import type { ColumnDef } from "@tanstack/react-table";
 import { EyeIcon, EyeOffIcon, Square } from "lucide-react";
 import { useMemo } from "react";
 
@@ -20,7 +19,7 @@ import {
 } from "@tissuumaps/core";
 
 import { markers } from "@/components/markers";
-import type { AnnotationsTableGroupRowData } from "@/components/widgets/AnnotationsWidget/AnnotationsTable";
+import type { AnnotationsGroupTableColumnDef } from "@/components/widgets/AnnotationsWidget/AnnotationsGroupTable";
 import { useProjectStore } from "@/stores/project";
 
 export function usePointsAnnotationsColumns(
@@ -33,9 +32,9 @@ export function usePointsAnnotationsColumns(
   const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
 
-  const extraTableGroupColumnDefs: ColumnDef<AnnotationsTableGroupRowData>[] =
+  const extraTableGroupColumnDefs: AnnotationsGroupTableColumnDef[] =
     useMemo(() => {
-      const columnDefs: ColumnDef<AnnotationsTableGroupRowData>[] = [];
+      const columnDefs: AnnotationsGroupTableColumnDef[] = [];
 
       // marker
       if (
