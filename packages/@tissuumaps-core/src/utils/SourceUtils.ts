@@ -51,8 +51,7 @@ export class SourceUtils {
    * @param workspace - The directory handle of the open workspace, if any
    * @param projectSource - Where the project was loaded from: its absolute URL,
    *   the workspace-relative path of the project file (with `/` prefix), or
-   *   `undefined` for projects that were loaded from neither (e.g. uploaded
-   *   ones)
+   *   `null` for projects that were loaded from neither (e.g. uploaded ones)
    * @param options - Optional base URL that app-relative paths are resolved
    *   against (default `document.baseURI`)
    * @returns The absolute URL for URLs, app-relative paths, and paths that fall
@@ -68,8 +67,8 @@ export class SourceUtils {
    */
   static normalizeSource(
     source: string,
-    workspace: FileSystemDirectoryHandle | undefined,
-    projectSource: string | undefined,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
     options?: { baseUrl?: string },
   ): string {
     if (source === "") {
@@ -109,8 +108,7 @@ export class SourceUtils {
    * @param workspace - The directory handle of the open workspace, if any
    * @param projectSource - Where the project was loaded from: its absolute URL,
    *   the workspace-relative path of the project file (with `/` prefix), or
-   *   `undefined` for projects that were loaded from neither (e.g. uploaded
-   *   ones)
+   *   `null` for projects that were loaded from neither (e.g. uploaded ones)
    * @param options - Optional base URL that the path is resolved against when
    *   falling back to being app-relative (default `document.baseURI`)
    * @returns The absolute URL, or the normalized workspace-relative path
@@ -122,18 +120,18 @@ export class SourceUtils {
    */
   static normalizeProjectPath(
     projectPath: string,
-    workspace: FileSystemDirectoryHandle | undefined,
-    projectSource: string | undefined,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
     options?: { baseUrl?: string },
   ): string {
-    if (projectSource !== undefined) {
+    if (projectSource !== null) {
       if (SourceUtils._urlSchemePattern.test(projectSource)) {
         if (!URL.canParse(projectPath, projectSource)) {
           throw new Error(`Invalid project-relative path: ${projectPath}`);
         }
         return new URL(projectPath, projectSource).toString();
       }
-      if (workspace === undefined) {
+      if (workspace === null) {
         throw new Error(
           `Cannot normalize project-relative path without workspace: ${projectPath}`,
         );
@@ -146,7 +144,7 @@ export class SourceUtils {
         projectDirSegments,
       );
       return SourceUtils.normalizeWorkspacePath(
-        SourceUtils._workspacePathPrefix + segments.join(SourceUtils._pathSep),
+        SourceUtils.makeWorkspacePath(segments),
         workspace,
         options,
       );
@@ -179,7 +177,7 @@ export class SourceUtils {
    */
   static normalizeWorkspacePath(
     workspacePath: string,
-    workspace: FileSystemDirectoryHandle | undefined,
+    workspace: FileSystemDirectoryHandle | null,
     options?: { baseUrl?: string },
   ): string {
     if (!workspacePath.startsWith(SourceUtils._workspacePathPrefix)) {
@@ -188,16 +186,14 @@ export class SourceUtils {
     const path = workspacePath.substring(
       SourceUtils._workspacePathPrefix.length,
     );
-    if (workspace !== undefined) {
+    if (workspace !== null) {
       const segments = SourceUtils._collapseSegments(path);
       if (segments.length === 0) {
         throw new Error(
           `Workspace-relative path does not name a file: ${workspacePath}`,
         );
       }
-      return (
-        SourceUtils._workspacePathPrefix + segments.join(SourceUtils._pathSep)
-      );
+      return SourceUtils.makeWorkspacePath(segments);
     }
     return SourceUtils.normalizeAppPath(
       SourceUtils._appPathPrefix + path,
@@ -233,6 +229,31 @@ export class SourceUtils {
   }
 
   /**
+   * Returns whether a normalized source refers to a file within the workspace
+   *
+   * @param normalizedSource - The normalized source (see
+   *   {@link SourceUtils.normalizeSource})
+   * @returns `true` for workspace-relative paths, `false` for URLs
+   */
+  static isWorkspacePath(normalizedSource: string): boolean {
+    return normalizedSource.startsWith(SourceUtils._workspacePathPrefix);
+  }
+
+  /**
+   * Builds a workspace-relative path from the segments of a path within the
+   * workspace, as returned by `FileSystemDirectoryHandle.resolve`
+   *
+   * @param segments - The path segments, from the workspace root down to the
+   *   file
+   * @returns The workspace-relative path (with `/` prefix)
+   */
+  static makeWorkspacePath(segments: readonly string[]): string {
+    return (
+      SourceUtils._workspacePathPrefix + segments.join(SourceUtils._pathSep)
+    );
+  }
+
+  /**
    * Resolves a normalized source to an absolute URL or a file handle
    *
    * URLs are returned as is, and a workspace-relative path is opened within
@@ -255,13 +276,13 @@ export class SourceUtils {
    */
   static resolveSource(
     normalizedSource: string,
-    workspace: FileSystemDirectoryHandle | undefined,
+    workspace: FileSystemDirectoryHandle | null,
     options?: { signal?: AbortSignal },
   ): Promise<string | FileSystemFileHandle> {
-    if (SourceUtils._urlSchemePattern.test(normalizedSource)) {
+    if (!SourceUtils.isWorkspacePath(normalizedSource)) {
       return Promise.resolve(normalizedSource);
     }
-    if (workspace === undefined) {
+    if (workspace === null) {
       return Promise.reject(
         new Error(
           `Cannot resolve workspace-relative path without workspace: ${normalizedSource}`,

@@ -10,8 +10,7 @@ export const tablePointsDataSourceDefaults = {
 export interface TablePointsDataSource extends PointsDataSource<
   typeof tablePointsDataSourceType
 > {
-  url: undefined; // Table data does not use a URL
-  path: undefined; // Table data does not use a path
+  source: undefined; // Table data does not use a source
   table: string;
   x?: string;
   y?: string;

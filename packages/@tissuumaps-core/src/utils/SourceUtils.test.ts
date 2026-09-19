@@ -94,14 +94,9 @@ describe("SourceUtils", () => {
           ),
         ).toBe("https://x.example/f.csv");
         expect(
-          SourceUtils.normalizeSource(
-            "HTTPS://X.example",
-            undefined,
-            undefined,
-            {
-              baseUrl,
-            },
-          ),
+          SourceUtils.normalizeSource("HTTPS://X.example", null, null, {
+            baseUrl,
+          }),
         ).toBe("https://x.example/");
       });
 
@@ -159,12 +154,12 @@ describe("SourceUtils", () => {
 
       it("follows URL semantics for .. and a leading /", () => {
         expect(
-          SourceUtils.normalizeSource("//../points.csv", undefined, undefined, {
+          SourceUtils.normalizeSource("//../points.csv", null, null, {
             baseUrl,
           }),
         ).toBe("https://app.example/points.csv");
         expect(
-          SourceUtils.normalizeSource("///points.csv", undefined, undefined, {
+          SourceUtils.normalizeSource("///points.csv", null, null, {
             baseUrl,
           }),
         ).toBe("https://app.example/points.csv");
@@ -174,14 +169,14 @@ describe("SourceUtils", () => {
         vi.stubGlobal("document", {
           baseURI: "https://other.example/x/y.html",
         });
-        expect(
-          SourceUtils.normalizeSource("//points.csv", undefined, undefined),
-        ).toBe("https://other.example/x/points.csv");
+        expect(SourceUtils.normalizeSource("//points.csv", null, null)).toBe(
+          "https://other.example/x/points.csv",
+        );
       });
 
       it("throws for an invalid base URL", () => {
         expect(() =>
-          SourceUtils.normalizeSource("//points.csv", undefined, undefined, {
+          SourceUtils.normalizeSource("//points.csv", null, null, {
             baseUrl: "not a url",
           }),
         ).toThrow(TypeError);
@@ -199,7 +194,7 @@ describe("SourceUtils", () => {
           ),
         ).toBe("/shared/x.csv");
         expect(
-          SourceUtils.normalizeSource("/a//b/", workspace, undefined, {
+          SourceUtils.normalizeSource("/a//b/", workspace, null, {
             baseUrl,
           }),
         ).toBe("/a/b");
@@ -207,12 +202,12 @@ describe("SourceUtils", () => {
 
       it("throws if the path leaves the workspace", () => {
         expect(() =>
-          SourceUtils.normalizeSource("/../x.csv", workspace, undefined, {
+          SourceUtils.normalizeSource("/../x.csv", workspace, null, {
             baseUrl,
           }),
         ).toThrow("Path escapes workspace");
         expect(() =>
-          SourceUtils.normalizeSource("/a/../../x.csv", workspace, undefined, {
+          SourceUtils.normalizeSource("/a/../../x.csv", workspace, null, {
             baseUrl,
           }),
         ).toThrow("Path escapes workspace");
@@ -220,10 +215,10 @@ describe("SourceUtils", () => {
 
       it("throws if the path names the workspace root", () => {
         expect(() =>
-          SourceUtils.normalizeSource("/", workspace, undefined, { baseUrl }),
+          SourceUtils.normalizeSource("/", workspace, null, { baseUrl }),
         ).toThrow("does not name a file");
         expect(() =>
-          SourceUtils.normalizeSource("/./a/..", workspace, undefined, {
+          SourceUtils.normalizeSource("/./a/..", workspace, null, {
             baseUrl,
           }),
         ).toThrow("does not name a file");
@@ -231,14 +226,9 @@ describe("SourceUtils", () => {
 
       it("falls back to being app-relative without a workspace", () => {
         expect(
-          SourceUtils.normalizeSource(
-            "/data/points.csv",
-            undefined,
-            projectUrl,
-            {
-              baseUrl,
-            },
-          ),
+          SourceUtils.normalizeSource("/data/points.csv", null, projectUrl, {
+            baseUrl,
+          }),
         ).toBe("https://app.example/tm/data/points.csv");
       });
     });
@@ -251,38 +241,28 @@ describe("SourceUtils", () => {
           }),
         ).toBe("https://data.example/projects/p1/points.csv");
         expect(
-          SourceUtils.normalizeSource("./points.csv", undefined, projectUrl, {
+          SourceUtils.normalizeSource("./points.csv", null, projectUrl, {
             baseUrl,
           }),
         ).toBe("https://data.example/projects/p1/points.csv");
         expect(
-          SourceUtils.normalizeSource(
-            "../shared/x.csv",
-            undefined,
-            projectUrl,
-            {
-              baseUrl,
-            },
-          ),
+          SourceUtils.normalizeSource("../shared/x.csv", null, projectUrl, {
+            baseUrl,
+          }),
         ).toBe("https://data.example/projects/shared/x.csv");
       });
 
       it("drops .. segments beyond the root of a project URL silently", () => {
         expect(
-          SourceUtils.normalizeSource(
-            "../../../../x.csv",
-            undefined,
-            projectUrl,
-            {
-              baseUrl,
-            },
-          ),
+          SourceUtils.normalizeSource("../../../../x.csv", null, projectUrl, {
+            baseUrl,
+          }),
         ).toBe("https://data.example/x.csv");
       });
 
       it("keeps a colon in the first segment relative when prefixed with ./", () => {
         expect(
-          SourceUtils.normalizeSource("./s:c.tif", undefined, projectUrl, {
+          SourceUtils.normalizeSource("./s:c.tif", null, projectUrl, {
             baseUrl,
           }),
         ).toBe("https://data.example/projects/p1/s:c.tif");
@@ -336,7 +316,7 @@ describe("SourceUtils", () => {
 
       it("throws for a workspace project without an open workspace", () => {
         expect(() =>
-          SourceUtils.normalizeSource("points.csv", undefined, projectPath, {
+          SourceUtils.normalizeSource("points.csv", null, projectPath, {
             baseUrl,
           }),
         ).toThrow("without workspace");
@@ -344,7 +324,7 @@ describe("SourceUtils", () => {
 
       it("throws if the path does not form a valid URL with the project URL", () => {
         expect(() =>
-          SourceUtils.normalizeSource("points.csv", undefined, "http://", {
+          SourceUtils.normalizeSource("points.csv", null, "http://", {
             baseUrl,
           }),
         ).toThrow("Invalid project-relative path");
@@ -352,7 +332,7 @@ describe("SourceUtils", () => {
 
       it("falls back to being workspace-relative without a project source", () => {
         expect(
-          SourceUtils.normalizeSource("shared/x.csv", workspace, undefined, {
+          SourceUtils.normalizeSource("shared/x.csv", workspace, null, {
             baseUrl,
           }),
         ).toBe("/shared/x.csv");
@@ -360,31 +340,24 @@ describe("SourceUtils", () => {
 
       it("falls back to being app-relative without a project source and workspace", () => {
         expect(
-          SourceUtils.normalizeSource(
-            "./data/points.csv",
-            undefined,
-            undefined,
-            {
-              baseUrl,
-            },
-          ),
+          SourceUtils.normalizeSource("./data/points.csv", null, null, {
+            baseUrl,
+          }),
         ).toBe("https://app.example/tm/data/points.csv");
       });
     });
 
     describe("idempotence", () => {
-      it.each<
-        [string, FileSystemDirectoryHandle | undefined, string | undefined]
-      >([
+      it.each<[string, FileSystemDirectoryHandle | null, string | null]>([
         ["https://x.example/a/../f.csv", workspace, projectPath],
         ["//data/points.csv", workspace, projectPath],
         ["/shared/./x.csv", workspace, projectPath],
-        ["/shared/x.csv", undefined, projectPath],
+        ["/shared/x.csv", null, projectPath],
         ["./sub/../points.csv", workspace, projectPath],
         ["../shared/x.csv", workspace, projectPath],
-        ["points.csv", undefined, projectUrl],
-        ["shared/x.csv", workspace, undefined],
-        ["points.csv", undefined, undefined],
+        ["points.csv", null, projectUrl],
+        ["shared/x.csv", workspace, null],
+        ["points.csv", null, null],
       ])(
         "normalizes the normalized form of %s unchanged",
         (source, ws, projectSource) => {
@@ -414,6 +387,24 @@ describe("SourceUtils", () => {
     });
   });
 
+  describe("makeWorkspacePath", () => {
+    it("joins the segments with the workspace prefix", () => {
+      expect(SourceUtils.makeWorkspacePath(["proj", "points.csv"])).toBe(
+        "/proj/points.csv",
+      );
+      expect(SourceUtils.makeWorkspacePath(["points.csv"])).toBe("/points.csv");
+    });
+
+    it("normalizes to itself", () => {
+      const workspacePath = SourceUtils.makeWorkspacePath(["proj", "a.csv"]);
+      expect(
+        SourceUtils.normalizeSource(workspacePath, workspace, null, {
+          baseUrl,
+        }),
+      ).toBe(workspacePath);
+    });
+  });
+
   describe("normalizeAppPath", () => {
     it("throws if the prefix is missing", () => {
       expect(() => SourceUtils.normalizeAppPath("/x.csv", { baseUrl })).toThrow(
@@ -428,7 +419,7 @@ describe("SourceUtils", () => {
         SourceUtils.resolveSource("https://x.example/f.csv", workspace),
       ).resolves.toBe("https://x.example/f.csv");
       await expect(
-        SourceUtils.resolveSource("blob:https://app.example/123", undefined),
+        SourceUtils.resolveSource("blob:https://app.example/123", null),
       ).resolves.toBe("blob:https://app.example/123");
     });
 
@@ -449,7 +440,7 @@ describe("SourceUtils", () => {
 
     it("rejects a workspace-relative path without a workspace", async () => {
       await expect(
-        SourceUtils.resolveSource("/proj/points.csv", undefined),
+        SourceUtils.resolveSource("/proj/points.csv", null),
       ).rejects.toThrow("without workspace");
     });
 
@@ -508,7 +499,7 @@ describe("SourceUtils", () => {
       const controller = new AbortController();
       controller.abort();
       const promises = [
-        SourceUtils.resolveSource("/proj/points.csv", undefined),
+        SourceUtils.resolveSource("/proj/points.csv", null),
         SourceUtils.resolveSource("/proj/points.csv", workspace, {
           signal: controller.signal,
         }),

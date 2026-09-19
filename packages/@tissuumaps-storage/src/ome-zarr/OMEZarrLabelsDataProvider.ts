@@ -1,8 +1,9 @@
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
-import type {
-  DataProviderLoadOptions,
-  LabelsDataProvider,
+import {
+  type DataProviderLoadOptions,
+  type LabelsDataProvider,
+  SourceUtils,
 } from "@tissuumaps/core";
 
 import { OMEZarrLabelsData } from "./OMEZarrLabelsData";
@@ -30,10 +31,9 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
   readonly schema = {
     type: "object",
     properties: {
-      url: {
+      source: {
         type: "string",
       },
-      // TODO path
       z: {
         type: "integer",
         minimum: 0,
@@ -46,7 +46,7 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
         type: "string",
       },
     },
-    required: ["url"], // TODO ... or path
+    required: ["source"],
   };
 
   readonly uischema = {
@@ -54,10 +54,9 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/url",
-        label: "URL",
+        scope: "#/properties/source",
+        label: "Source",
       },
-      // TODO path
       {
         type: "HorizontalLayout",
         elements: [
@@ -83,22 +82,27 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
 
   /**
    * Returns the data source with {@link omeZarrLabelsDataSourceDefaults}
-   * applied and its URL resolved
+   * applied and its source normalized (see `SourceUtils.normalizeSource`)
    *
    * @param dataSource - The data source to normalize
-   * @param projectUrl - The absolute URL of the project, or `null` for projects
-   * that were not loaded from a URL
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param projectSource - Where the project was loaded from, if anywhere
    * @returns The normalized data source
    */
   normalize(
     dataSource: OMEZarrLabelsDataSource,
-    projectUrl: string | null,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
   ): NormalizedOMEZarrLabelsDataSource {
-    let { url } = dataSource;
-    if (url !== undefined) {
-      url = new URL(url, projectUrl ?? document.baseURI).href;
-    }
-    return { ...omeZarrLabelsDataSourceDefaults, ...dataSource, url };
+    return {
+      ...omeZarrLabelsDataSourceDefaults,
+      ...dataSource,
+      source: SourceUtils.normalizeSource(
+        dataSource.source,
+        workspace,
+        projectSource,
+      ),
+    };
   }
 
   /**
@@ -112,10 +116,10 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
    *
    * @param normalizedDataSource - The normalized data source to open
    * @param options - See `DataProviderLoadOptions`; `workspace` is required
-   * for data sources with a `path` but no `url`
+   * for workspace-relative sources
    * @returns A promise that resolves to the loaded label image data
-   * @throws Error if the data source has neither a URL nor a workspace path,
-   * or has only a workspace path while no workspace is open
+   * @throws Error if the source is workspace-relative while no workspace is
+   * open
    */
   async load(
     normalizedDataSource: NormalizedOMEZarrLabelsDataSource,
@@ -124,8 +128,7 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const { loaded, url, zip, objectUrl } = await openOMEZarr(
-      normalizedDataSource.url,
-      normalizedDataSource.path,
+      normalizedDataSource.source,
       options,
     );
     try {

@@ -4,6 +4,7 @@ import {
   JSONUtils,
   type Project,
   type RawProject,
+  SourceUtils,
   createProject,
 } from "@tissuumaps/core";
 
@@ -17,7 +18,7 @@ export const projectURLParam = "project";
  *
  * This detaches the copy from the project store, and drops the store's actions
  * as well as any other state that is not part of the project itself, such as
- * the URL the project was loaded from.
+ * where the project was loaded from.
  *
  * @param project - The project to copy
  * @returns The copied project
@@ -45,24 +46,26 @@ function cleanProject(project: Project): Project {
  * Loads a project into the project store, replacing the currently open project
  *
  * The loaded project is deeply frozen, so that it can only be changed through
- * the project store's actions. The project, the URL it was loaded from and its
+ * the project store's actions. The project, where it was loaded from and its
  * fresh instance ID are written in a single update, so that they are never out
- * of sync for the data caches, which resolve relative data source URLs against
- * the URL, and for the viewer, which resets its viewport on a new instance ID.
+ * of sync for the data caches, which resolve project-relative data sources
+ * against the project source, and for the viewer, which resets its viewport on
+ * a new instance ID.
  *
  * @param project - The project to load
- * @param projectUrl - The URL the project was loaded from, absolute or relative
- * to the document base URL, or `null` if it was not loaded from a URL
- * @throws Error if `projectUrl` is not a valid URL
+ * @param projectSource - Where the project was loaded from: its absolute URL,
+ * the workspace-relative path of the project file (with `/` prefix), or `null`
+ * if it was loaded from neither
  */
-export function loadProject(project: Project, projectUrl: string | null): void {
-  const absoluteProjectUrl =
-    projectUrl !== null ? new URL(projectUrl, document.baseURI).href : null;
+export function loadProject(
+  project: Project,
+  projectSource: string | null,
+): void {
   projectStore.setState(
     freeze(
       {
         ...cleanProject(project),
-        url: absoluteProjectUrl,
+        source: projectSource,
         instanceId: crypto.randomUUID(),
       },
       true,
@@ -74,8 +77,8 @@ export function loadProject(project: Project, projectUrl: string | null): void {
  * Fetches a project from a URL and loads it into the project store
  *
  * The project is loaded with the URL it was actually fetched from, which is the
- * one it was redirected to, if any - so that its relative data source URLs are
- * resolved against where the project file really is.
+ * one it was redirected to, if any - so that its project-relative data sources
+ * are resolved against where the project file really is.
  *
  * @param projectUrl - The URL to fetch the project from
  * @param options - Optional abort signal
@@ -95,9 +98,12 @@ export async function loadProjectFromURL(
 /**
  * Reads a project from a file and loads it into the project store
  *
- * The project is loaded without a URL: the object URL through which the file is
- * read is revoked immediately afterwards, and `blob:` URLs cannot serve as a
- * base URL for the project's relative data source URLs anyway.
+ * The project is loaded without a source: a `File` cannot be located, the
+ * object URL through which it is read is revoked immediately afterwards, and
+ * `blob:` URLs cannot serve as a base for project-relative data sources anyway.
+ * Its project-relative data sources hence fall back to being
+ * workspace-relative, and without an open workspace, to being app-relative
+ * (see `SourceUtils`).
  *
  * @param projectFile - The file to read the project from
  * @param options - Optional abort signal
@@ -107,10 +113,61 @@ export async function loadProjectFromFile(
   projectFile: File,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
-  const objectUrl = URL.createObjectURL(projectFile);
+  loadProject(await readProjectFile(projectFile, options), null);
+}
+
+/**
+ * Reads a project from a file within the open workspace and loads it into the
+ * project store
+ *
+ * The project is loaded with the workspace-relative path of the file as its
+ * source, so that its project-relative data sources are resolved within the
+ * file's directory.
+ *
+ * @param projectFile - The handle of the file to read the project from
+ * @param workspace - The directory handle of the open workspace
+ * @param options - Optional abort signal
+ * @throws Error if the file is not within the workspace, or if the project
+ * cannot be read or parsed
+ */
+export async function loadProjectFromWorkspace(
+  projectFile: FileSystemFileHandle,
+  workspace: FileSystemDirectoryHandle,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const segments = await workspace.resolve(projectFile);
+  signal?.throwIfAborted(); // resolve() does not throw on abort
+  if (segments === null) {
+    throw new Error(`Project file not in workspace: ${projectFile.name}`);
+  }
+  const file = await projectFile.getFile();
+  signal?.throwIfAborted(); // getFile() does not throw on abort
+  loadProject(
+    await readProjectFile(file, options),
+    SourceUtils.makeWorkspacePath(segments),
+  );
+}
+
+/**
+ * Reads a project from a file, without loading it into the project store
+ *
+ * The file is read through an object URL, which is revoked afterwards.
+ *
+ * @param file - The file to read the project from
+ * @param options - Optional abort signal
+ * @returns The project read from the file
+ * @throws Error if the project cannot be read or parsed
+ */
+async function readProjectFile(
+  file: File,
+  options?: { signal?: AbortSignal },
+): Promise<Project> {
+  const objectUrl = URL.createObjectURL(file);
   try {
     const { project } = await fetchProject(objectUrl, options);
-    loadProject(project, null);
+    return project;
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -119,11 +176,13 @@ export async function loadProjectFromFile(
 /**
  * Fetches a project from a URL, without loading it into the project store
  *
- * @param projectUrl - The URL to fetch the project from
+ * @param projectUrl - The URL to fetch the project from, absolute or relative
+ * to the document base URL
  * @param options - Optional abort signal
- * @returns The fetched project, and the URL it was fetched from after following
- * any redirects
- * @throws Error if the project cannot be fetched or parsed
+ * @returns The fetched project, and the absolute URL it was fetched from after
+ * following any redirects
+ * @throws Error if `projectUrl` is not a valid URL, or if the project cannot be
+ * fetched or parsed
  */
 async function fetchProject(
   projectUrl: string,
@@ -131,7 +190,8 @@ async function fetchProject(
 ): Promise<{ project: Project; resolvedProjectUrl: string }> {
   const { signal } = options ?? {};
   signal?.throwIfAborted();
-  const response = await fetch(projectUrl, { signal });
+  const absoluteProjectUrl = new URL(projectUrl, document.baseURI).href;
+  const response = await fetch(absoluteProjectUrl, { signal });
   if (!response.ok) {
     throw new Error(
       `Failed to load project from ${projectUrl}: ${response.status} ${response.statusText}`,
@@ -142,7 +202,7 @@ async function fetchProject(
   // response.url is empty for responses that are not the result of a request
   return {
     project: createProject(rawProject),
-    resolvedProjectUrl: response.url || projectUrl,
+    resolvedProjectUrl: response.url || absoluteProjectUrl,
   };
 }
 
@@ -150,7 +210,7 @@ async function fetchProject(
  * Saves a project
  *
  * The project is cleaned, which detaches it from the project store and drops
- * everything that is not part of the project itself - most notably the URL it
+ * everything that is not part of the project itself - most notably where it
  * was loaded from, which must never be saved. Every save path goes through
  * here, so that no such state can escape into a saved project.
  *
