@@ -11,6 +11,9 @@ export class GeoJSONShapesData implements ShapesData {
     ids: number[],
     names: string[] | undefined,
   ) {
+    if (ids.length !== geometry.shapePolygonOffsets.length - 1) {
+      throw new Error("Shapes geometry and IDs have inconsistent sizes");
+    }
     this._geometry = geometry;
     this._ids = ids;
     this._names = names;
