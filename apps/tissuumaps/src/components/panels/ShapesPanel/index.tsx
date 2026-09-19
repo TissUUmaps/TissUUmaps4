@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerUpDownIcon,
+  AccordionTriggerDownUpIcon,
 } from "@/components/common/accordion";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
@@ -144,6 +144,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label="Show/hide"
               onClick={() =>
                 updateShapes(shapes.id, { visibility: !shapes.visibility })
               }
@@ -152,6 +153,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
+              aria-label="Delete"
               onClick={() => {
                 void confirm({
                   title: "Delete shape cloud",
@@ -167,7 +169,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
               <Trash2Icon />
             </Button>
           </div>
-          <AccordionTriggerUpDownIcon />
+          <AccordionTriggerDownUpIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
           <DataSourceWidget

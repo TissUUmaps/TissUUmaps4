@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerUpDownIcon,
+  AccordionTriggerDownUpIcon,
 } from "@/components/common/accordion";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
@@ -162,6 +162,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label="Show/hide"
               onClick={() =>
                 updatePoints(points.id, { visibility: !points.visibility })
               }
@@ -170,6 +171,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
+              aria-label="Delete points"
               onClick={() => {
                 void confirm({
                   title: "Delete point cloud",
@@ -185,7 +187,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               <Trash2Icon />
             </Button>
           </div>
-          <AccordionTriggerUpDownIcon />
+          <AccordionTriggerDownUpIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
           <DataSourceWidget

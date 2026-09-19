@@ -70,11 +70,12 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
     <div className={className}>
       <div>
         <Field>
-          <FieldLabel>Project name</FieldLabel>
+          <FieldLabel htmlFor="project-name">Project name</FieldLabel>
           <FieldControl
             render={
               <Input
                 type="text"
+                id="project-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
@@ -99,6 +100,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
         <Field>
           <Input
             ref={loadProjectFileInputRef}
+            aria-label="File failure message field"
             type="file"
             onChange={(event) => {
               const files = event.target.files;

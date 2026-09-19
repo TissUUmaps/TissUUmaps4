@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerUpDownIcon,
+  AccordionTriggerDownUpIcon,
 } from "@/components/common/accordion";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
@@ -141,6 +141,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label="Show/Hide"
               onClick={() =>
                 updateLabels(labels.id, { visibility: !labels.visibility })
               }
@@ -149,6 +150,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
+              aria-label="Delete labels"
               onClick={() => {
                 void confirm({
                   title: "Delete labels",
@@ -164,7 +166,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
               <Trash2Icon />
             </Button>
           </div>
-          <AccordionTriggerUpDownIcon />
+          <AccordionTriggerDownUpIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
           <DataSourceWidget

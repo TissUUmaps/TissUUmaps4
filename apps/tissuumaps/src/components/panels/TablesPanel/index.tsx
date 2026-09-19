@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerUpDownIcon,
+  AccordionTriggerDownUpIcon,
 } from "@/components/common/accordion";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
@@ -94,6 +94,7 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
           <div className="ml-auto flex flex-row items-center gap-x-2">
             <Button
               variant="ghost"
+              aria-label="Delete"
               onClick={() => {
                 void confirm({
                   title: "Delete table",
@@ -109,7 +110,7 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
               <Trash2Icon />
             </Button>
           </div>
-          <AccordionTriggerUpDownIcon />
+          <AccordionTriggerDownUpIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
           <DataSourceWidget
