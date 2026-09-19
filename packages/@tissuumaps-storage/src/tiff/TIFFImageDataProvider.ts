@@ -5,6 +5,7 @@ import {
   type ImageDataProvider,
   MathUtils,
   type NumericArray,
+  SourceUtils,
 } from "@tissuumaps/core";
 
 import { type TIFFChannel, TIFFImageData } from "./TIFFImageData";
@@ -46,10 +47,9 @@ export class TIFFImageDataProvider implements ImageDataProvider<
   readonly schema = {
     type: "object",
     properties: {
-      url: {
+      source: {
         type: "string",
       },
-      // TODO path
       z: {
         type: "integer",
         minimum: 0,
@@ -59,7 +59,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
         minimum: 0,
       },
     },
-    required: ["url"], // TODO ... or path
+    required: ["source"],
   };
 
   readonly uischema = {
@@ -67,10 +67,9 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/url",
-        label: "URL",
+        scope: "#/properties/source",
+        label: "Source",
       },
-      // TODO path
       {
         type: "HorizontalLayout",
         elements: [
@@ -91,22 +90,27 @@ export class TIFFImageDataProvider implements ImageDataProvider<
 
   /**
    * Returns the data source with {@link tiffImageDataSourceDefaults} applied
-   * and its URL resolved
+   * and its source normalized (see `SourceUtils.normalizeSource`)
    *
    * @param dataSource - The data source to normalize
-   * @param projectUrl - The absolute URL of the project, or `null` for
-   * projects that were not loaded from a URL
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param projectSource - Where the project was loaded from, if anywhere
    * @returns The normalized data source
    */
   normalize(
     dataSource: TIFFImageDataSource,
-    projectUrl: string | null,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
   ): NormalizedTIFFImageDataSource {
-    let { url } = dataSource;
-    if (url !== undefined) {
-      url = new URL(url, projectUrl ?? document.baseURI).href;
-    }
-    return { ...tiffImageDataSourceDefaults, ...dataSource, url };
+    return {
+      ...tiffImageDataSourceDefaults,
+      ...dataSource,
+      source: SourceUtils.normalizeSource(
+        dataSource.source,
+        workspace,
+        projectSource,
+      ),
+    };
   }
 
   /**
@@ -118,11 +122,10 @@ export class TIFFImageDataProvider implements ImageDataProvider<
    *
    * @param normalizedDataSource - The normalized data source to open
    * @param options - See `DataProviderLoadOptions`; `workspace` is required
-   * for data sources with a `path` but no `url`
+   * for workspace-relative sources
    * @returns A promise that resolves to the loaded image data
-   * @throws Error if the data source has neither a URL nor a workspace path,
-   * has only a workspace path while no workspace is open, or holds a TIFF no
-   * parser recognizes
+   * @throws Error if the source is workspace-relative while no workspace is
+   * open, or if the file holds a TIFF no parser recognizes
    */
   async load(
     normalizedDataSource: NormalizedTIFFImageDataSource,
@@ -132,11 +135,10 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     signal?.throwIfAborted();
 
     const { z, t } = normalizedDataSource;
-    const { tiff, pyramids, channels } = await openTIFF(normalizedDataSource, {
-      ...options,
-      z,
-      t,
-    });
+    const { tiff, pyramids, channels } = await openTIFF(
+      normalizedDataSource.source,
+      { ...options, z, t },
+    );
 
     const { GeoTIFFTileSource, pool, poolSize } = installTIFFTileSource();
     let channelsWithHistograms: TIFFChannel[] | undefined;

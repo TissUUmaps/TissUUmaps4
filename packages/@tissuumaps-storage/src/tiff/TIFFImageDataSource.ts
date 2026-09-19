@@ -12,12 +12,16 @@ export const tiffImageDataSourceDefaults = {
 /**
  * Data source for TIFF images
  *
- * The file is read from a URL (`url`) or from the open workspace (`path`).
- * OME-TIFF, QPTIFF and plain pyramidal TIFF are recognized by their metadata.
+ * The `source` refers to a remote TIFF file (a URL) or to a TIFF file in the
+ * open workspace (a workspace-relative or project-relative path). OME-TIFF,
+ * QPTIFF and plain pyramidal TIFF are recognized by their metadata.
  */
 export interface TIFFImageDataSource extends ImageDataSource<
   typeof tiffImageDataSourceType
 > {
+  /** URL or path of the TIFF file (see `SourceUtils`) */
+  source: string;
+
   /**
    * The z-slice to display, for OME-TIFF files with a z-stack
    *
@@ -35,7 +39,7 @@ export interface TIFFImageDataSource extends ImageDataSource<
 
 /**
  * A {@link TIFFImageDataSource} with {@link tiffImageDataSourceDefaults}
- * applied and its URL resolved
+ * applied and its source normalized
  */
 export type NormalizedTIFFImageDataSource = Required<
   Pick<TIFFImageDataSource, keyof typeof tiffImageDataSourceDefaults>

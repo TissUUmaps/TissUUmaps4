@@ -1,6 +1,7 @@
-import type {
-  DataProviderLoadOptions,
-  ShapesDataProvider,
+import {
+  type DataProviderLoadOptions,
+  type ShapesDataProvider,
+  SourceUtils,
 } from "@tissuumaps/core";
 
 import { GeoJSONShapesData } from "./GeoJSONShapesData";
@@ -21,10 +22,9 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   readonly schema = {
     type: "object",
     properties: {
-      url: {
+      source: {
         type: "string",
       },
-      // TODO path
       idProperty: {
         type: "string",
       },
@@ -35,7 +35,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
         type: "string",
       },
     },
-    required: ["url"], // TODO ... or path
+    required: ["source"],
   };
 
   readonly uischema = {
@@ -43,10 +43,9 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/url",
-        label: "URL",
+        scope: "#/properties/source",
+        label: "Source",
       },
-      // TODO path
       {
         type: "Control",
         scope: "#/properties/idProperty",
@@ -67,13 +66,18 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
 
   normalize(
     dataSource: GeoJSONShapesDataSource,
-    projectUrl: string | null,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
   ): NormalizedGeoJSONShapesDataSource {
-    let { url } = dataSource;
-    if (url !== undefined) {
-      url = new URL(url, projectUrl ?? document.baseURI).href;
-    }
-    return { ...geoJSONShapesDataSourceDefaults, ...dataSource, url };
+    return {
+      ...geoJSONShapesDataSourceDefaults,
+      ...dataSource,
+      source: SourceUtils.normalizeSource(
+        dataSource.source,
+        workspace,
+        projectSource,
+      ),
+    };
   }
 
   async load(
@@ -82,18 +86,17 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   ): Promise<GeoJSONShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
+    const resolvedSource = await SourceUtils.resolveSource(
+      normalizedDataSource.source,
+      workspace,
+      { signal },
+    );
     let file, url;
-    if (normalizedDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(normalizedDataSource.path);
-      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
-      file = await fh.getFile();
-      signal?.throwIfAborted(); // getFile() does not throw on abort
-    } else if (normalizedDataSource.url !== undefined) {
-      url = normalizedDataSource.url;
-    } else if (normalizedDataSource.path !== undefined) {
-      throw new Error("An open workspace is required to open local-only data.");
+    if (typeof resolvedSource === "string") {
+      url = resolvedSource;
     } else {
-      throw new Error("A URL or workspace path is required to load data.");
+      file = await resolvedSource.getFile();
+      signal?.throwIfAborted(); // getFile() does not throw on abort
     }
     const { idProperty, nameProperty } = normalizedDataSource;
     const { ids, names, geometry } = await runGeoJSONWorker(

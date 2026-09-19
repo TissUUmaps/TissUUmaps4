@@ -1,6 +1,7 @@
-import type {
-  DataProviderLoadOptions,
-  ImageDataProvider,
+import {
+  type DataProviderLoadOptions,
+  type ImageDataProvider,
+  SourceUtils,
 } from "@tissuumaps/core";
 
 import { OpenSeadragonImageData } from "./OpenSeadragonImageData";
@@ -20,13 +21,12 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
   readonly schema = {
     type: "object",
     properties: {
-      url: {
+      source: {
         type: "string",
       },
-      // TODO path
       // TODO tileSourceConfig
     },
-    required: ["url"], // TODO ... or path/tileSourceConfig
+    required: ["source"], // TODO ... or tileSourceConfig
   };
 
   readonly uischema = {
@@ -34,26 +34,26 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/url",
-        label: "URL",
+        scope: "#/properties/source",
+        label: "Source",
       },
-      // TODO path
       // TODO tileSourceConfig
     ],
   };
 
   normalize(
     dataSource: OpenSeadragonImageDataSource,
-    projectUrl: string | null,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
   ): NormalizedOpenSeadragonImageDataSource {
-    let { url } = dataSource;
-    if (url !== undefined) {
-      url = new URL(url, projectUrl ?? document.baseURI).href;
+    let { source } = dataSource;
+    if (source !== undefined) {
+      source = SourceUtils.normalizeSource(source, workspace, projectSource);
     }
     return {
       ...openSeadragonImageDataSourceDefaults,
       ...dataSource,
-      url,
+      source,
     };
   }
 
@@ -65,36 +65,29 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     signal?.throwIfAborted();
 
     if (normalizedDataSource.tileSourceConfig !== undefined) {
-      if (
-        normalizedDataSource.url !== undefined ||
-        normalizedDataSource.path !== undefined
-      ) {
+      if (normalizedDataSource.source !== undefined) {
         throw new Error(
-          "Specify either a tile source configuration or a URL/workspace path, not both.",
+          "Specify either a tile source configuration or a source, not both.",
         );
       }
       return new OpenSeadragonImageData(normalizedDataSource.tileSourceConfig);
     }
-
-    if (normalizedDataSource.path !== undefined && workspace !== null) {
-      const fh = await workspace.getFileHandle(normalizedDataSource.path);
-      signal?.throwIfAborted(); // getFileHandle() does not throw on abort
-      const file = await fh.getFile();
-      signal?.throwIfAborted(); // getFile() does not throw on abort
-      const objectUrl = URL.createObjectURL(file);
-      return new OpenSeadragonImageData(objectUrl, objectUrl);
+    if (normalizedDataSource.source === undefined) {
+      throw new Error(
+        "A tile source configuration or a source is required to load data.",
+      );
     }
-
-    if (normalizedDataSource.url !== undefined) {
-      return new OpenSeadragonImageData(normalizedDataSource.url);
-    }
-
-    if (normalizedDataSource.path !== undefined) {
-      throw new Error("An open workspace is required to open local-only data.");
-    }
-
-    throw new Error(
-      "A tile source configuration or a URL/workspace path is required to load data.",
+    const resolvedSource = await SourceUtils.resolveSource(
+      normalizedDataSource.source,
+      workspace,
+      { signal },
     );
+    if (typeof resolvedSource === "string") {
+      return new OpenSeadragonImageData(resolvedSource);
+    }
+    const file = await resolvedSource.getFile();
+    signal?.throwIfAborted(); // getFile() does not throw on abort
+    const objectUrl = URL.createObjectURL(file);
+    return new OpenSeadragonImageData(objectUrl, objectUrl);
   }
 }

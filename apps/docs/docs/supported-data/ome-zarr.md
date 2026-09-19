@@ -10,18 +10,17 @@ The built-in **OME-Zarr data provider** opens [OME-NGFF](https://ngff.openmicros
 
 OME-Zarr data sources have the `type` `"ome-zarr"` and accept the following fields:
 
-| Field   | Type      | Description                                                                                                                                                         |
-| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`  | `string`  | Always `"ome-zarr"`.                                                                                                                                                |
-| `url`   | `string`  | URL of a remote OME-Zarr image, absolute or relative (see [Referencing data](../concepts/projects.md#referencing-data)).                                            |
-| `path`  | `string`  | Path of an OME-Zarr image relative to the workspace directory (see [Referencing data](../concepts/projects.md#referencing-data)).                                   |
-| `z`     | `integer` | Z-slice to open (0-based), for images with a `z` axis. Defaults to the `defaultZ` of the image's `omero` metadata, or to the middle of the axis if there is none.   |
-| `t`     | `integer` | Timepoint to open (0-based), for images with a `t` axis. Defaults to the `defaultT` of the image's `omero` metadata, or to the middle of the axis if there is none. |
-| `table` | `string`  | _Labels only._ ID of the table annotating the labels (see [Data model](../concepts/data-model.md)).                                                                 |
+| Field    | Type      | Description                                                                                                                                                         |
+| -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`   | `string`  | Always `"ome-zarr"`.                                                                                                                                                |
+| `source` | `string`  | URL or path of the OME-Zarr image (see [Referencing data](../concepts/projects.md#referencing-data)).                                                               |
+| `z`      | `integer` | Z-slice to open (0-based), for images with a `z` axis. Defaults to the `defaultZ` of the image's `omero` metadata, or to the middle of the axis if there is none.   |
+| `t`      | `integer` | Timepoint to open (0-based), for images with a `t` axis. Defaults to the `defaultT` of the image's `omero` metadata, or to the middle of the axis if there is none. |
+| `table`  | `string`  | _Labels only._ ID of the table annotating the labels (see [Data model](../concepts/data-model.md)).                                                                 |
 
-Either `url` or `path` has to be given. When a workspace is open and both are given, `path` takes precedence.
+A URL `source` refers to a remote OME-Zarr store, or to a remote zipped OME-Zarr file if it ends in `.ozx`. A `source` that resolves to a file in the open workspace has to be a zipped OME-Zarr file.
 
-The `url` or `path` has to point to a **multiscales image**, i.e. the Zarr group holding the `multiscales` metadata. Plate (HCS) groups and `bioformats2raw.layout` groups are not opened directly; point to one of the images they contain instead.
+The `source` has to point to a **multiscales image**, i.e. the Zarr group holding the `multiscales` metadata. Plate (HCS) groups and `bioformats2raw.layout` groups are not opened directly; point to one of the images they contain instead.
 
 ## Images
 
@@ -73,7 +72,7 @@ A project showing a multi-channel OME-Zarr image with a segmentation on top of i
       "layer": "layer",
       "dataSource": {
         "type": "ome-zarr",
-        "url": "images/sample.ome.zarr",
+        "source": "images/sample.ome.zarr",
         "z": 4
       },
       "channels": [
@@ -90,7 +89,7 @@ A project showing a multi-channel OME-Zarr image with a segmentation on top of i
       "layer": "layer",
       "dataSource": {
         "type": "ome-zarr",
-        "url": "labels/cells.ome.zarr",
+        "source": "labels/cells.ome.zarr",
         "z": 4,
         "table": "cell-table"
       },
@@ -101,7 +100,7 @@ A project showing a multi-channel OME-Zarr image with a segmentation on top of i
     {
       "id": "cell-table",
       "name": "Cells",
-      "dataSource": { "type": "csv", "url": "tables/cells.csv" }
+      "dataSource": { "type": "csv", "source": "tables/cells.csv" }
     }
   ]
 }
@@ -112,7 +111,7 @@ Both the image and the labels are OME-Zarr images served next to the project fil
 ## Limitations
 
 - 64-bit integer image arrays and 64-bit or floating-point label arrays are not supported. Convert them to a narrower integer type when writing the OME-Zarr.
-- `path` needs an open workspace.
+- Workspace files have to be zipped OME-Zarr files, and need an open workspace.
 - Plate and `bioformats2raw.layout` groups have to be referenced by one of their contained images.
 - `image-label` metadata is not read.
 

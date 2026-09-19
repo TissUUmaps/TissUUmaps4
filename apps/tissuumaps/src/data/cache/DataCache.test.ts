@@ -122,7 +122,8 @@ type LoadCall<TDataSource extends DataSource, TData extends Data, TOptions> = {
 function createTestDataProvider(options?: {
   normalize?: (
     dataSource: TestDataSource,
-    projectUrl: string | null,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
   ) => TestDataSource;
 }): {
   dataProvider: DataProvider<TestDataSource, TestData>;
@@ -255,10 +256,10 @@ function createContext(
   dataProvider: DataProvider<TestDataSource, TestData> | undefined,
   options?: {
     workspace?: FileSystemDirectoryHandle | null;
-    projectUrl?: string | null;
+    projectSource?: string | null;
   },
 ): DataCacheContext<TestDataSource, TestData> {
-  const { workspace = null, projectUrl = null } = options ?? {};
+  const { workspace = null, projectSource = null } = options ?? {};
   const dataProviders = new Map<
     string,
     DataProvider<TestDataSource, TestData>
@@ -266,7 +267,7 @@ function createContext(
   if (dataProvider !== undefined) {
     dataProviders.set("test", dataProvider);
   }
-  return { workspace, projectUrl, dataProviders };
+  return { workspace, projectSource, dataProviders };
 }
 
 function createWorkspace(): FileSystemDirectoryHandle {
@@ -278,7 +279,7 @@ describe("DataCache", () => {
     it("loads the data through the data provider and wraps it", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const { data } = createTestData("value");
 
       const promise = dataCache.load(object, createContext(dataProvider));
@@ -286,7 +287,10 @@ describe("DataCache", () => {
       const loadedData = await promise;
 
       expect(load).toHaveBeenCalledOnce();
-      expect(calls.at(-1)!.dataSource).toEqual({ type: "test", url: "a.test" });
+      expect(calls.at(-1)!.dataSource).toEqual({
+        type: "test",
+        source: "a.test",
+      });
       expect(loadedData).toBeInstanceOf(TestDataWrapper);
       expect(loadedData.value).toBe("value");
     });
@@ -295,7 +299,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const workspace = createWorkspace();
-      const object = createObject("a", { type: "test", path: "a.test" });
+      const object = createObject("a", { type: "test", source: "/a.test" });
 
       void dataCache.load(object, createContext(dataProvider, { workspace }));
 
@@ -305,7 +309,7 @@ describe("DataCache", () => {
     it("passes no workspace to the data provider for remote data sources", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       void dataCache.load(
         object,
@@ -318,7 +322,7 @@ describe("DataCache", () => {
     it("passes a pending signal and a progress callback to the data provider", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       void dataCache.load(object, createContext(dataProvider));
 
@@ -329,7 +333,7 @@ describe("DataCache", () => {
     it("forwards the progress reported by the data provider", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const onProgress = vi.fn();
 
       const promise = dataCache.load(object, createContext(dataProvider), {
@@ -347,7 +351,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const first = dataCache.load(object, context);
       const second = dataCache.load(object, context);
@@ -364,8 +368,8 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const first = createObject("a", { type: "test", url: "shared.test" });
-      const second = createObject("b", { type: "test", url: "shared.test" });
+      const first = createObject("a", { type: "test", source: "shared.test" });
+      const second = createObject("b", { type: "test", source: "shared.test" });
 
       const firstPromise = dataCache.load(first, context);
       const secondPromise = dataCache.load(second, context);
@@ -380,12 +384,15 @@ describe("DataCache", () => {
       const { dataProvider, load, calls } = createTestDataProvider({
         normalize: (dataSource) => ({
           ...dataSource,
-          url: dataSource.url ?? "default.test",
+          source: dataSource.source ?? "default.test",
         }),
       });
       const context = createContext(dataProvider);
       const first = createObject("a", { type: "test" });
-      const second = createObject("b", { type: "test", url: "default.test" });
+      const second = createObject("b", {
+        type: "test",
+        source: "default.test",
+      });
 
       const firstPromise = dataCache.load(first, context);
       const secondPromise = dataCache.load(second, context);
@@ -395,7 +402,7 @@ describe("DataCache", () => {
       expect(load).toHaveBeenCalledOnce();
       expect(calls.at(-1)!.dataSource).toEqual({
         type: "test",
-        url: "default.test",
+        source: "default.test",
       });
     });
 
@@ -403,8 +410,8 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const first = createObject("a", { type: "test", url: "a.test" });
-      const second = createObject("b", { type: "test", url: "b.test" });
+      const first = createObject("a", { type: "test", source: "a.test" });
+      const second = createObject("b", { type: "test", source: "b.test" });
 
       const firstPromise = dataCache.load(first, context);
       const secondPromise = dataCache.load(second, context);
@@ -418,7 +425,7 @@ describe("DataCache", () => {
 
     it("rejects when no data provider is registered for the data source type", async () => {
       const { dataCache } = createTestDataCache();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       await expect(
         dataCache.load(object, createContext(undefined)),
@@ -428,7 +435,7 @@ describe("DataCache", () => {
     it("rejects with the data provider failure unchanged", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const failure = new Error("boom");
 
       const promise = dataCache.load(object, createContext(dataProvider));
@@ -441,7 +448,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const failure = new Error("boom");
 
       const failing = dataCache.load(object, context);
@@ -457,7 +464,7 @@ describe("DataCache", () => {
     it("loads again after a failed attempt once a dependency changes", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const failing = dataCache.load(object, createContext(dataProvider));
       calls.at(-1)!.deferred.reject(new Error("boom"));
@@ -478,7 +485,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const controller = new AbortController();
 
       const aborted = dataCache.load(object, context, {
@@ -496,7 +503,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const controller = new AbortController();
 
       const aborted = dataCache.load(object, context, {
@@ -518,7 +525,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const controller = new AbortController();
 
       const aborted = dataCache.load(object, context, {
@@ -538,7 +545,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const controller = new AbortController();
 
       const aborted = dataCache.load(object, context, {
@@ -560,7 +567,7 @@ describe("DataCache", () => {
     it("destroys the data of an abandoned load that still resolves", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const { data, close } = createTestData();
       const controller = new AbortController();
 
@@ -581,7 +588,7 @@ describe("DataCache", () => {
     it("notifies a loading data ref when an entry is created", () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       void dataCache.load(object, createContext(dataProvider));
 
@@ -594,7 +601,7 @@ describe("DataCache", () => {
     it("notifies the reported progress while loading", () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       void dataCache.load(object, createContext(dataProvider));
       calls.at(-1)!.options?.onProgress?.(2, 5);
@@ -609,7 +616,7 @@ describe("DataCache", () => {
     it("ignores progress reported after the load settled", async () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(object, createContext(dataProvider));
       calls.at(-1)!.deferred.resolve(createTestData().data);
@@ -623,7 +630,7 @@ describe("DataCache", () => {
     it("notifies a loaded data ref holding the wrapped data", async () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(object, createContext(dataProvider));
       calls.at(-1)!.deferred.resolve(createTestData("value").data);
@@ -637,7 +644,7 @@ describe("DataCache", () => {
     it("notifies an error data ref when the load fails", async () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const failure = new Error("boom");
 
       const promise = dataCache.load(object, createContext(dataProvider));
@@ -653,7 +660,7 @@ describe("DataCache", () => {
     it("keeps the data ref promise stable across status changes", async () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(object, createContext(dataProvider));
       const loadingPromise =
@@ -670,8 +677,8 @@ describe("DataCache", () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const first = createObject("a", { type: "test", url: "shared.test" });
-      const second = createObject("b", { type: "test", url: "shared.test" });
+      const first = createObject("a", { type: "test", source: "shared.test" });
+      const second = createObject("b", { type: "test", source: "shared.test" });
 
       const promise = dataCache.load(first, context);
       calls.at(-1)!.deferred.resolve(createTestData().data);
@@ -689,8 +696,8 @@ describe("DataCache", () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const first = createObject("a", { type: "test", url: "shared.test" });
-      const second = createObject("b", { type: "test", url: "shared.test" });
+      const first = createObject("a", { type: "test", source: "shared.test" });
+      const second = createObject("b", { type: "test", source: "shared.test" });
 
       const firstPromise = dataCache.load(first, context);
       const secondPromise = dataCache.load(second, context);
@@ -705,7 +712,7 @@ describe("DataCache", () => {
     it("removes the data refs of an abandoned load", async () => {
       const { dataCache, onObjectDataRefsRemoved } = createTestDataCache();
       const { dataProvider } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const controller = new AbortController();
 
       const aborted = dataCache.load(object, createContext(dataProvider), {
@@ -723,8 +730,8 @@ describe("DataCache", () => {
       const { dataCache, onObjectDataRefsRemoved } = createTestDataCache();
       const { dataProvider } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const first = createObject("a", { type: "test", url: "shared.test" });
-      const second = createObject("b", { type: "test", url: "shared.test" });
+      const first = createObject("a", { type: "test", source: "shared.test" });
+      const second = createObject("b", { type: "test", source: "shared.test" });
       const controller = new AbortController();
 
       const abortedFirst = dataCache.load(first, context, {
@@ -745,7 +752,7 @@ describe("DataCache", () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       void dataCache.load(object, context);
       void dataCache.load(object, context);
@@ -758,7 +765,7 @@ describe("DataCache", () => {
     it("reloads the data when the workspace changes", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", path: "a.test" });
+      const object = createObject("a", { type: "test", source: "/a.test" });
       const { data, close } = createTestData();
 
       const promise = dataCache.load(
@@ -780,7 +787,7 @@ describe("DataCache", () => {
     it("keeps the data of remote data sources when the workspace changes", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const { data, close } = createTestData();
 
       const promise = dataCache.load(
@@ -803,7 +810,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const first = createTestDataProvider();
       const second = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(object, createContext(first.dataProvider));
       first.calls.at(-1)!.deferred.resolve(createTestData("first").data);
@@ -819,42 +826,77 @@ describe("DataCache", () => {
       expect(second.load).toHaveBeenCalledOnce();
     });
 
-    it("re-normalizes the data source when the project URL changes", async () => {
+    it("re-normalizes the data source when the project source changes", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider({
-        normalize: (dataSource, projectUrl) => ({
+        normalize: (dataSource, _workspace, projectSource) => ({
           ...dataSource,
-          url: new URL(dataSource.url!, projectUrl ?? "https://base/").href,
+          source: new URL(dataSource.source!, projectSource ?? "https://base/")
+            .href,
         }),
       });
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(
         object,
-        createContext(dataProvider, { projectUrl: "https://first/dir/p.json" }),
+        createContext(dataProvider, {
+          projectSource: "https://first/dir/p.json",
+        }),
       );
       calls.at(-1)!.deferred.resolve(createTestData("first").data);
       await promise;
       const reloaded = dataCache.load(
         object,
         createContext(dataProvider, {
-          projectUrl: "https://second/dir/p.json",
+          projectSource: "https://second/dir/p.json",
         }),
       );
       calls.at(-1)!.deferred.resolve(createTestData("second").data);
 
       expect((await reloaded).value).toBe("second");
       expect(load).toHaveBeenCalledTimes(2);
-      expect(calls.map((call) => call.dataSource.url)).toEqual([
+      expect(calls.map((call) => call.dataSource.source)).toEqual([
         "https://first/dir/a.test",
         "https://second/dir/a.test",
+      ]);
+    });
+
+    it("re-normalizes the data source when the workspace changes", async () => {
+      const { dataCache } = createTestDataCache();
+      const { dataProvider, load, calls } = createTestDataProvider({
+        normalize: (dataSource, workspace) => ({
+          ...dataSource,
+          source: workspace !== null ? "/a.test" : "https://base/a.test",
+        }),
+      });
+      const object = createObject("a", { type: "test", source: "a.test" });
+      const workspace = createWorkspace();
+
+      const promise = dataCache.load(object, createContext(dataProvider));
+      calls.at(-1)!.deferred.resolve(createTestData("remote").data);
+      await promise;
+      const reloaded = dataCache.load(
+        object,
+        createContext(dataProvider, { workspace }),
+      );
+      calls.at(-1)!.deferred.resolve(createTestData("local").data);
+
+      expect((await reloaded).value).toBe("local");
+      expect(load).toHaveBeenCalledTimes(2);
+      expect(calls.map((call) => call.dataSource.source)).toEqual([
+        "https://base/a.test",
+        "/a.test",
+      ]);
+      expect(calls.map((call) => call.options?.workspace)).toEqual([
+        null,
+        workspace,
       ]);
     });
 
     it("keeps the data when only the data provider map identity changes", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(object, createContext(dataProvider));
       calls.at(-1)!.deferred.resolve(createTestData("value").data);
@@ -871,7 +913,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(object, context);
       calls.at(-1)!.deferred.resolve(createTestData().data);
@@ -889,7 +931,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const { data, close } = createTestData();
 
       const promise = dataCache.load(object, context);
@@ -905,7 +947,7 @@ describe("DataCache", () => {
     it("omits objects without an entry from the returned data refs", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider } = createTestDataProvider();
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const objectDataRefs = dataCache.retainOnly(
         [object],
@@ -919,7 +961,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const { data, close } = createTestData();
 
       const promise = dataCache.load(object, context);
@@ -935,7 +977,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(object, context);
       dataCache.retainOnly([], context);
@@ -953,7 +995,7 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
       const { data, close } = createTestData();
 
       const promise = dataCache.load(object, context);
@@ -969,7 +1011,7 @@ describe("DataCache", () => {
       const { dataCache, onObjectDataRefsRemoved } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(object, context);
       calls.at(-1)!.deferred.resolve(createTestData().data);
@@ -983,7 +1025,7 @@ describe("DataCache", () => {
       const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const object = createObject("a", { type: "test", url: "a.test" });
+      const object = createObject("a", { type: "test", source: "a.test" });
 
       const promise = dataCache.load(object, context);
       dataCache.retainOnly([], context);
@@ -999,8 +1041,8 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const first = createObject("a", { type: "test", url: "shared.test" });
-      const second = createObject("b", { type: "test", url: "shared.test" });
+      const first = createObject("a", { type: "test", source: "shared.test" });
+      const second = createObject("b", { type: "test", source: "shared.test" });
 
       const firstPromise = dataCache.load(first, context);
       const secondPromise = dataCache.load(second, context);
@@ -1016,8 +1058,8 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, load, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const first = createObject("a", { type: "test", url: "shared.test" });
-      const second = createObject("b", { type: "test", url: "shared.test" });
+      const first = createObject("a", { type: "test", source: "shared.test" });
+      const second = createObject("b", { type: "test", source: "shared.test" });
       const { data, close } = createTestData();
 
       const firstPromise = dataCache.load(first, context);
@@ -1034,7 +1076,7 @@ describe("DataCache", () => {
     it("destroys entries whose dependencies changed", async () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
-      const object = createObject("a", { type: "test", path: "a.test" });
+      const object = createObject("a", { type: "test", source: "/a.test" });
       const { data, close } = createTestData();
 
       const promise = dataCache.load(
@@ -1056,8 +1098,8 @@ describe("DataCache", () => {
       const { dataCache } = createTestDataCache();
       const { dataProvider, calls } = createTestDataProvider();
       const context = createContext(dataProvider);
-      const first = createObject("a", { type: "test", url: "a.test" });
-      const second = createObject("b", { type: "test", url: "b.test" });
+      const first = createObject("a", { type: "test", source: "a.test" });
+      const second = createObject("b", { type: "test", source: "b.test" });
       const { data: firstData, close: closeFirstData } = createTestData();
       const { data: secondData, close: closeSecondData } = createTestData();
 
@@ -1083,7 +1125,7 @@ function createAnnotatedObject(
 }
 
 function createTableObject(id: string): DataObject<TableDataSource> {
-  return { id, name: id, dataSource: { type: "table", url: `${id}.table` } };
+  return { id, name: id, dataSource: { type: "table", source: `${id}.table` } };
 }
 
 function createAnnotatedContext(options: {
@@ -1094,14 +1136,14 @@ function createAnnotatedContext(options: {
   tableDataProvider?: DataProvider<TableDataSource, TableData>;
   tables?: DataObject<TableDataSource>[];
   workspace?: FileSystemDirectoryHandle | null;
-  projectUrl?: string | null;
+  projectSource?: string | null;
 }): AnnotatedDataCacheContext<TestAnnotatedDataSource, TestAnnotatedData> {
   const {
     dataProvider,
     tableDataProvider,
     tables = [],
     workspace = null,
-    projectUrl = null,
+    projectSource = null,
   } = options;
   const dataProviders = new Map<
     string,
@@ -1116,7 +1158,7 @@ function createAnnotatedContext(options: {
   }
   return {
     workspace,
-    projectUrl,
+    projectSource,
     dataProviders,
     tables,
     tableDataProviders,
@@ -1133,7 +1175,10 @@ describe("AnnotatedDataCache", () => {
       TestAnnotatedData
     >((data) => new TestAnnotatedDataWrapper(data), tableDataCache);
     const { dataProvider, calls } = createTestAnnotatedDataProvider();
-    const object = createAnnotatedObject("a", { type: "test", url: "a.test" });
+    const object = createAnnotatedObject("a", {
+      type: "test",
+      source: "a.test",
+    });
 
     void annotatedDataCache.load(
       object,
@@ -1156,7 +1201,7 @@ describe("AnnotatedDataCache", () => {
     const tableDataProvider = createTestTableDataProvider();
     const object = createAnnotatedObject("a", {
       type: "test",
-      url: "a.test",
+      source: "a.test",
       table: "t",
     });
 
@@ -1189,7 +1234,7 @@ describe("AnnotatedDataCache", () => {
     const { dataProvider, load } = createTestAnnotatedDataProvider();
     const object = createAnnotatedObject("a", {
       type: "test",
-      url: "a.test",
+      source: "a.test",
       table: "missing",
     });
 
@@ -1213,7 +1258,7 @@ describe("AnnotatedDataCache", () => {
     const second = createTestTableDataProvider();
     const object = createAnnotatedObject("a", {
       type: "test",
-      url: "a.test",
+      source: "a.test",
       table: "t",
     });
 
@@ -1257,7 +1302,7 @@ describe("AnnotatedDataCache", () => {
     const tableDataProvider = createTestTableDataProvider();
     const object = createAnnotatedObject("a", {
       type: "test",
-      url: "a.test",
+      source: "a.test",
       table: "t",
     });
     const annotatedContext = createAnnotatedContext({
@@ -1274,7 +1319,7 @@ describe("AnnotatedDataCache", () => {
     await promise;
     tableDataCache.retainOnly([table], {
       workspace: null,
-      projectUrl: null,
+      projectSource: null,
       dataProviders: annotatedContext.tableDataProviders,
     });
     const objectDataRefs = annotatedDataCache.retainOnly(
@@ -1299,7 +1344,7 @@ describe("AnnotatedDataCache", () => {
     const tableDataProvider = createTestTableDataProvider();
     const object = createAnnotatedObject("a", {
       type: "test",
-      url: "a.test",
+      source: "a.test",
       table: "t",
     });
     const annotatedContext = createAnnotatedContext({
@@ -1318,7 +1363,7 @@ describe("AnnotatedDataCache", () => {
     await promise;
     tableDataCache.retainOnly([], {
       workspace: null,
-      projectUrl: null,
+      projectSource: null,
       dataProviders: annotatedContext.tableDataProviders,
     });
     const objectDataRefs = annotatedDataCache.retainOnly(
@@ -1344,7 +1389,7 @@ describe("AnnotatedDataCache", () => {
     const tableDataProvider = createTestTableDataProvider();
     const object = createAnnotatedObject("a", {
       type: "test",
-      url: "a.test",
+      source: "a.test",
       table: "t",
     });
     const annotatedContext = createAnnotatedContext({
@@ -1354,7 +1399,7 @@ describe("AnnotatedDataCache", () => {
     });
     const tableContext = {
       workspace: null,
-      projectUrl: null,
+      projectSource: null,
       dataProviders: annotatedContext.tableDataProviders,
     };
     const tableController = new AbortController();
@@ -1385,7 +1430,7 @@ describe("AnnotatedDataCache", () => {
     const tableDataProvider = createTestTableDataProvider();
     const object = createAnnotatedObject("a", {
       type: "test",
-      url: "a.test",
+      source: "a.test",
       table: "t",
     });
     const annotatedContext = createAnnotatedContext({

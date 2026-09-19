@@ -141,24 +141,28 @@ export interface DataProvider<
 
   /**
    * Returns the data source with all of this data provider's defaults applied
-   * and all of its relative URLs resolved
+   * and its source normalized
    *
    * Data sources that normalize to the same value are considered equal, and
    * their data is loaded only once and shared between all referencing objects.
    * Normalization has to be idempotent: normalizing an already normalized data
    * source must return the same value again.
    *
-   * Relative URLs are resolved against the URL the project was loaded from,
-   * and against the document base URL for projects without one.
+   * The source is normalized with `SourceUtils.normalizeSource`, which resolves
+   * it against the project source and the open workspace, so the result has to
+   * be recomputed when either changes.
    *
    * @param dataSource - The data source to normalize
-   * @param projectUrl - The absolute URL of the project, or `null` for projects
-   * that were not loaded from a URL
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param projectSource - Where the project was loaded from: its absolute URL,
+   * the workspace-relative path of the project file, or `null` for projects
+   * that were loaded from neither
    * @returns The normalized data source
    */
   normalize(
     dataSource: TDataSource,
-    projectUrl: string | null,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
   ): TNormalizedDataSource;
 
   /**
