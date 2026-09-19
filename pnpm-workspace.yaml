@@ -12,3 +12,6 @@ minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
   - omezarr-tilesource@0.7.0
+
+patchedDependencies:
+  geotiff@3.0.5: patches/geotiff@3.0.5.patch

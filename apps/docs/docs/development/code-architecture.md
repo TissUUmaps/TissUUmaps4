@@ -125,6 +125,8 @@ Each data provider has its own dedicated directory and is separately exported in
 
 Heavy parsing and decoding runs off the main thread: Parquet and GeoJSON in dedicated web workers (`parquet.worker.ts`, `geojson.worker.ts`, inlined into the bundle), CSV via PapaParse's worker mode.
 
+Format metadata belongs in the data provider: channel count, names, colors and contrast limits come from the file, not from the viewer. How the provider reads it is up to it. `OMEZarrImageDataProvider` goes through `OMEZarrTileSource`, `TIFFImageDataProvider` parses the IFDs itself.
+
 ## @tissuumaps/plugins
 
 Each plugin has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files. The plugin contract itself lives in `@tissuumaps/core` (see [Plugins](./plugins.md)).

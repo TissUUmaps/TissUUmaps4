@@ -1,0 +1,293 @@
+import type { GeoTIFFImage, Pool } from "geotiff";
+
+import {
+  type DataProviderLoadOptions,
+  type ImageDataProvider,
+  MathUtils,
+  type NumericArray,
+} from "@tissuumaps/core";
+
+import { type TIFFChannel, TIFFImageData } from "./TIFFImageData";
+import {
+  type NormalizedTIFFImageDataSource,
+  type TIFFImageDataSource,
+  tiffImageDataSourceDefaults,
+} from "./TIFFImageDataSource";
+import { sampleFormatUnsignedInteger } from "./formats/TIFFParser";
+import { installTIFFTileSource } from "./installTIFFTileSource";
+import { openTIFF } from "./openTIFF";
+
+/**
+ * Data provider for images stored in TIFF files
+ *
+ * Opens a {@link TIFFImageDataSource} as {@link TIFFImageData}, with one tile
+ * source per channel for multi-channel files and a single one for files drawn
+ * in their own colors. The format is recognized from the file's metadata (see
+ * `findTIFFParser`), which provides the channel names and colors; the
+ * histograms the renderer stretches the channels over are read from the
+ * pixels.
+ */
+export class TIFFImageDataProvider implements ImageDataProvider<
+  TIFFImageDataSource,
+  TIFFImageData,
+  NormalizedTIFFImageDataSource
+> {
+  /**
+   * The pixels a histogram is built from (see
+   * {@link TIFFImageDataProvider._computeChannelHistogram}); more do not make
+   * the quantiles the renderer derives from them more stable. A level needs at
+   * least this many pixels to be read from, and this many of its values are
+   * sampled
+   */
+  private static readonly _numHistogramPixels = 512 * 512;
+
+  readonly name = "TIFF";
+
+  readonly schema = {
+    type: "object",
+    properties: {
+      url: {
+        type: "string",
+      },
+      // TODO path
+      z: {
+        type: "integer",
+        minimum: 0,
+      },
+      t: {
+        type: "integer",
+        minimum: 0,
+      },
+    },
+    required: ["url"], // TODO ... or path
+  };
+
+  readonly uischema = {
+    type: "VerticalLayout",
+    elements: [
+      {
+        type: "Control",
+        scope: "#/properties/url",
+        label: "URL",
+      },
+      // TODO path
+      {
+        type: "HorizontalLayout",
+        elements: [
+          {
+            type: "Control",
+            scope: "#/properties/z",
+            label: "Z-slice",
+          },
+          {
+            type: "Control",
+            scope: "#/properties/t",
+            label: "Timepoint",
+          },
+        ],
+      },
+    ],
+  };
+
+  /**
+   * Returns the data source with {@link tiffImageDataSourceDefaults} applied
+   * and its URL resolved
+   *
+   * @param dataSource - The data source to normalize
+   * @param projectUrl - The absolute URL of the project, or `null` for
+   * projects that were not loaded from a URL
+   * @returns The normalized data source
+   */
+  normalize(
+    dataSource: TIFFImageDataSource,
+    projectUrl: string | null,
+  ): NormalizedTIFFImageDataSource {
+    let { url } = dataSource;
+    if (url !== undefined) {
+      url = new URL(url, projectUrl ?? document.baseURI).href;
+    }
+    return { ...tiffImageDataSourceDefaults, ...dataSource, url };
+  }
+
+  /**
+   * Opens a TIFF image data source and returns the loaded image data
+   *
+   * The file and its structure are read with {@link openTIFF}. The channel
+   * histograms are read afterwards, a few channels at a time (see
+   * {@link TIFFImageDataProvider._computeChannelHistograms}).
+   *
+   * @param normalizedDataSource - The normalized data source to open
+   * @param options - See `DataProviderLoadOptions`; `workspace` is required
+   * for data sources with a `path` but no `url`
+   * @returns A promise that resolves to the loaded image data
+   * @throws Error if the data source has neither a URL nor a workspace path,
+   * has only a workspace path while no workspace is open, or holds a TIFF no
+   * parser recognizes
+   */
+  async load(
+    normalizedDataSource: NormalizedTIFFImageDataSource,
+    options?: DataProviderLoadOptions,
+  ): Promise<TIFFImageData> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+
+    const { z, t } = normalizedDataSource;
+    const { tiff, pyramids, channels } = await openTIFF(normalizedDataSource, {
+      ...options,
+      z,
+      t,
+    });
+
+    const { GeoTIFFTileSource, pool, poolSize } = installTIFFTileSource();
+    let channelsWithHistograms: TIFFChannel[] | undefined;
+    if (channels !== undefined) {
+      // the histograms only seed the contrast limits, which the renderer can
+      // fall back to the data type range for, so a file whose pixels cannot be
+      // decoded still opens
+      let histograms: (
+        { hist: number[]; range: [number, number] } | undefined
+      )[] = [];
+      try {
+        histograms = await TIFFImageDataProvider._computeChannelHistograms(
+          pyramids,
+          { pool, concurrency: poolSize, signal },
+        );
+      } catch (error) {
+        signal?.throwIfAborted();
+        console.error("Failed to read the TIFF channel histograms:", error);
+      }
+      channelsWithHistograms = channels.map((channel, c) => ({
+        ...channel,
+        histogram: histograms[c],
+        contrastLimits: getFullRange(pyramids[c]![0]!),
+      }));
+    }
+    const tileSources = pyramids.map(
+      (images) =>
+        new GeoTIFFTileSource({ GeoTIFF: tiff, GeoTIFFImages: images }),
+    );
+    return new TIFFImageData(tileSources, channelsWithHistograms);
+  }
+
+  /**
+   * Reads the value histogram of every channel of a file
+   *
+   * At most `concurrency` channels are read at a time, so that a file with
+   * many channels does not start every read at once. The decode jobs of a read
+   * are spread over the whole pool, so this bounds the reads in flight, not
+   * the workers each of them uses.
+   *
+   * @param pyramids - The images of every channel, largest first
+   * @param options - The decoder pool (`null` for the main thread), the number
+   * of channels to read at a time (default `1`), and an abort signal
+   * @returns One histogram per channel, in channel order, each as returned by
+   * {@link TIFFImageDataProvider._computeChannelHistogram}
+   * @throws Error if a channel has no pyramid level
+   */
+  private static async _computeChannelHistograms(
+    pyramids: GeoTIFFImage[][],
+    options?: {
+      pool?: Pool | null;
+      concurrency?: number;
+      signal?: AbortSignal;
+    },
+  ): Promise<({ hist: number[]; range: [number, number] } | undefined)[]> {
+    const { pool = null, concurrency = 1, signal } = options ?? {};
+    signal?.throwIfAborted();
+    const histograms: (
+      { hist: number[]; range: [number, number] } | undefined
+    )[] = [];
+    let next = 0;
+    await Promise.all(
+      Array.from(
+        { length: Math.min(concurrency, pyramids.length) },
+        async () => {
+          for (let c = next++; c < pyramids.length; c = next++) {
+            histograms[c] =
+              await TIFFImageDataProvider._computeChannelHistogram(
+                pyramids[c]!,
+                { pool, signal },
+              );
+          }
+        },
+      ),
+    );
+    return histograms;
+  }
+
+  /**
+   * Computes the value histogram of a channel, which the renderer stretches
+   * the channel over, since TIFF stores no display range
+   *
+   * Reads the smallest pyramid level that still holds at least
+   * {@link TIFFImageDataProvider._numHistogramPixels} pixels, or the largest
+   * level of images smaller than that, and bins the level's values over their
+   * actual range (see {@link MathUtils.computeRange} and
+   * {@link MathUtils.computeHistogram}), sampled down to that many values, so
+   * that the histogram is as fine as its bins allow regardless of the data
+   * type's range.
+   *
+   * @param pyramid - The images of the channel, largest first
+   * @param options - The decoder pool (`null` for the main thread) and an
+   * abort signal
+   * @returns The histogram, as bin counts and the value range they span, or
+   * `undefined` for a channel that holds fewer than two distinct values
+   * @throws Error if `pyramid` is empty
+   */
+  private static async _computeChannelHistogram(
+    pyramid: GeoTIFFImage[],
+    options?: { pool?: Pool | null; signal?: AbortSignal },
+  ): Promise<{ hist: number[]; range: [number, number] } | undefined> {
+    const { pool = null, signal } = options ?? {};
+    signal?.throwIfAborted();
+    if (pyramid.length === 0) {
+      throw new Error("The channel has no pyramid level.");
+    }
+    const largeEnough = pyramid.filter(
+      (image) =>
+        image.getWidth() * image.getHeight() >=
+        TIFFImageDataProvider._numHistogramPixels,
+    );
+    const image = largeEnough[largeEnough.length - 1] ?? pyramid[0]!;
+    // a single sample, interleaved, is read as one typed array
+    const values = (await image.readRasters({
+      samples: [0],
+      interleave: true,
+      pool,
+      signal,
+    })) as unknown as NumericArray;
+    const range = await MathUtils.computeRange(values, { signal });
+    // a channel without finite values, or with a single one, has no range to
+    // spread bins over; the renderer falls back to its data type range
+    if (!(range[1] > range[0])) {
+      return undefined;
+    }
+    return await MathUtils.computeHistogram(values, range, {
+      signal,
+      sample: TIFFImageDataProvider._numHistogramPixels,
+    });
+  }
+}
+
+/**
+ * Returns the contrast limits an 8-bit channel is shown over, `undefined` for
+ * every other channel
+ *
+ * 8-bit channels are shown over their full range, like other viewers show
+ * them, rather than over the quantile-based limits the renderer would
+ * otherwise derive from their histogram. TIFF does not record the range; it is
+ * the conventional display range of 8-bit samples.
+ *
+ * @param image - The largest level of the channel
+ * @returns `[0, 255]` for an 8-bit unsigned integer channel, `undefined`
+ * otherwise
+ */
+function getFullRange(image: GeoTIFFImage): [number, number] | undefined {
+  if (
+    image.getBitsPerSample(0) === 8 &&
+    image.getSampleFormat(0) === sampleFormatUnsignedInteger
+  ) {
+    return [0, 255];
+  }
+  return undefined;
+}

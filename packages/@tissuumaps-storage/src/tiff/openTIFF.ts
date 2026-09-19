@@ -1,0 +1,86 @@
+import {
+  type BlockedSourceOptions,
+  type GeoTIFF,
+  type RemoteSourceOptions,
+  fromBlob,
+  fromUrl,
+} from "geotiff";
+
+import type { DataProviderLoadOptions } from "@tissuumaps/core";
+
+import { type TIFFStructure, findTIFFParser } from "./formats/TIFFParser";
+
+/**
+ * Remote files are read in 64 KiB blocks, of which 256 (16 MiB) are cached per
+ * open file. Without blocks, geotiff.js sends one range request per tag value
+ * and per strip.
+ */
+const remoteSourceOptions: RemoteSourceOptions & BlockedSourceOptions = {
+  blockSize: 65536,
+  cacheSize: 256,
+};
+
+/**
+ * Opens the TIFF file a data source points to and reads its structure
+ *
+ * Files in the open workspace are read through their file handle, remote files
+ * over HTTP range requests (see {@link remoteSourceOptions}). A data source
+ * that has both is read from the workspace, and falls back to its URL when no
+ * workspace is open.
+ *
+ * Opening a file reads nothing but its header. Its structure is then read by
+ * the parser of its format (see `findTIFFParser`), with `z` and `t` selecting
+ * the plane; its pixels are read on demand.
+ *
+ * @param normalizedDataSource - The `url` and/or workspace `path` of the
+ * normalized data source to open
+ * @param options - The plane to read (`z` and `t`, default `0`, only OME-TIFF
+ * has them), and `DataProviderLoadOptions`; `workspace` is required for data
+ * sources with a `path` but no `url`
+ * @returns The opened file and its structure
+ * @throws Error if the data source has neither a URL nor a path, has only a
+ * path while no workspace is open, or holds a TIFF no parser recognizes
+ */
+export async function openTIFF(
+  normalizedDataSource: { url?: string; path?: string },
+  options?: DataProviderLoadOptions & { z?: number; t?: number },
+): Promise<TIFFStructure & { tiff: GeoTIFF }> {
+  const { z, t, signal } = options ?? {};
+  const tiff = await openFile(normalizedDataSource, options);
+  const parser = await findTIFFParser(tiff, { signal });
+  const structure = await parser.load(tiff, { z, t, signal });
+  return { ...structure, tiff };
+}
+
+/**
+ * Opens the TIFF file a data source points to
+ *
+ * @param normalizedDataSource - The `url` and/or workspace `path` of the
+ * normalized data source to open
+ * @param options - See `DataProviderLoadOptions`; `workspace` is required for
+ * data sources with a `path` but no `url`
+ * @returns The opened file
+ * @throws Error if the data source has neither a URL nor a path, or has only a
+ * path while no workspace is open
+ */
+async function openFile(
+  normalizedDataSource: { url?: string; path?: string },
+  options?: DataProviderLoadOptions,
+): Promise<GeoTIFF> {
+  const { signal, workspace = null } = options ?? {};
+  signal?.throwIfAborted();
+  if (normalizedDataSource.path !== undefined && workspace !== null) {
+    const fh = await workspace.getFileHandle(normalizedDataSource.path);
+    signal?.throwIfAborted(); // getFileHandle() does not throw on abort
+    const file = await fh.getFile();
+    signal?.throwIfAborted(); // getFile() does not throw on abort
+    return await fromBlob(file, signal);
+  }
+  if (normalizedDataSource.url !== undefined) {
+    return await fromUrl(normalizedDataSource.url, remoteSourceOptions, signal);
+  }
+  if (normalizedDataSource.path !== undefined) {
+    throw new Error("An open workspace is required to open local-only data.");
+  }
+  throw new Error("A URL or workspace path is required to load data.");
+}

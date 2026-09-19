@@ -111,7 +111,6 @@ Both the image and the labels are OME-Zarr images served next to the project fil
 
 ## Limitations
 
-- Only one plane (`z`, `t`) of an image is shown; there is no in-app plane selection yet.
 - 64-bit integer image arrays and 64-bit or floating-point label arrays are not supported. Convert them to a narrower integer type when writing the OME-Zarr.
 - `path` needs an open workspace.
 - Plate and `bioformats2raw.layout` groups have to be referenced by one of their contained images.
