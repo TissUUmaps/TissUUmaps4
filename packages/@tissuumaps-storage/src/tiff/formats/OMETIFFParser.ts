@@ -31,6 +31,9 @@ type Pixels = {
 
 type Dim = "C" | "Z" | "T";
 
+/** The root element of the OME-XML description */
+const rootElement = "OME";
+
 /** The values OME-XML allows for `DimensionOrder` */
 const dimensionOrders = ["XYZCT", "XYZTC", "XYCTZ", "XYCZT", "XYTCZ", "XYTZC"];
 
@@ -50,7 +53,7 @@ export class OMETIFFParser implements TIFFParser {
       signal,
     });
     const root = XMLUtils.parse(description);
-    return root?.localName === "OME";
+    return root?.localName === rootElement;
   }
 
   /**
@@ -68,7 +71,7 @@ export class OMETIFFParser implements TIFFParser {
       signal,
     });
     const root = XMLUtils.parse(description);
-    if (root?.localName !== "OME") {
+    if (root?.localName !== rootElement) {
       throw new Error("The file has no OME-XML.");
     }
     const images = await TIFFUtils.readImages(tiff, { signal });
@@ -95,11 +98,10 @@ export class OMETIFFParser implements TIFFParser {
     const ifdByPlane = mapPlanesToIFDs(pixels, images.length);
     const planes = Array.from({ length: getPlaneCountC(pixels) }, (_, c) => {
       const ifd = ifdByPlane.get(planeKey(c, z, t));
-      const image = ifd !== undefined ? images[ifd] : undefined;
-      if (image === undefined) {
+      if (ifd === undefined) {
         throw new Error(`No IFD for plane c=${c}, z=${z}, t=${t}.`);
       }
-      return image;
+      return images[ifd]!; // mapPlanesToIFDs() only maps IFDs the file has
     });
     // IFDs of any image (overviews, labels) are not reduced copies of this one
     const claimed = new Set(

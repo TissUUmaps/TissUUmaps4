@@ -1,4 +1,5 @@
-// geotiff-tilesource ships no types; only the parts used here are declared
+// geotiff-tilesource ships no types. These declarations were auto-generated
+// from our fork, pinned in package.json, and cover only the parts used here.
 declare module "geotiff-tilesource" {
   import type { GeoTIFF, GeoTIFFImage, Pool } from "geotiff";
   import type OpenSeadragon from "openseadragon";

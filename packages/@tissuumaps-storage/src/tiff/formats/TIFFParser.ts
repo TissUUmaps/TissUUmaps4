@@ -23,12 +23,15 @@ export type TIFFStructure = {
    */
   pyramids: GeoTIFFImage[][];
 
-  /** `undefined` for files that are drawn in their own colors */
+  /**
+   * One entry per pyramid, empty if the file has no name or color for it.
+   * `undefined` for files that are drawn in their own colors.
+   */
   channels: TIFFChannelMetadata[] | undefined;
 };
 
 /** Reads the structure of one TIFF flavor */
-export type TIFFParser = {
+export interface TIFFParser {
   /**
    * Whether this parser reads the file
    *
@@ -50,7 +53,7 @@ export type TIFFParser = {
     tiff: GeoTIFF,
     options?: { z?: number; t?: number; signal?: AbortSignal },
   ): Promise<TIFFStructure>;
-};
+}
 
 /**
  * The parsers in detection order
@@ -59,7 +62,7 @@ export type TIFFParser = {
  * parser it would claim that parser's files and drop their channel names and
  * colors, without failing.
  */
-const tiffParsers: TIFFParser[] = [
+export const tiffParsers: TIFFParser[] = [
   new OMETIFFParser(),
   new QPTIFFParser(),
   new PlainTIFFParser(),

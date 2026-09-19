@@ -31,6 +31,8 @@ export class PlainTIFFParser implements TIFFParser {
     TIFFUtils.validatePyramids(pyramids);
     return {
       pyramids,
+      // files drawn in their own colors have no channels; the others get one
+      // empty entry per channel, as plain TIFF records no name or color
       channels: TIFFUtils.hasOwnColors(pyramids)
         ? undefined
         : full.map(() => ({})),

@@ -49,26 +49,6 @@ export class TIFFUtils {
   }
 
   /**
-   * Reads the `ImageDescription` of every image
-   *
-   * @param images - The images
-   * @param options - An abort signal
-   * @returns One description per image
-   */
-  static readDescriptions(
-    images: GeoTIFFImage[],
-    options?: { signal?: AbortSignal },
-  ): Promise<(string | undefined)[]> {
-    const { signal } = options ?? {};
-    if (signal?.aborted) {
-      return Promise.reject(signal.reason as Error);
-    }
-    return Promise.all(
-      images.map((image) => TIFFUtils.readDescription(image, { signal })),
-    );
-  }
-
-  /**
    * Reads the `ImageDescription` of the first IFD, in which OME-TIFF and
    * QPTIFF identify themselves
    *

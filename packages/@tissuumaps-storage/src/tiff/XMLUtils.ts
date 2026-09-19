@@ -1,3 +1,5 @@
+import { NumberUtils } from "@tissuumaps/core";
+
 /** Helpers for the XML image descriptions of OME-TIFF and QPTIFF */
 export class XMLUtils {
   /**
@@ -34,7 +36,7 @@ export class XMLUtils {
    *
    * @param element - The parent
    * @param tagName - The child's local name
-   * @returns The text, or `undefined` if there is no such child or it is empty
+   * @returns The trimmed text, or `undefined` if there is no such child or it is empty
    */
   static getChildText(element: Element, tagName: string): string | undefined {
     return (
@@ -56,7 +58,8 @@ export class XMLUtils {
     name: string,
     defaultValue: number,
   ): number {
-    const value = Number.parseInt(element.getAttribute(name) ?? "", 10);
-    return Number.isFinite(value) ? value : defaultValue;
+    return (
+      NumberUtils.tryParseSafeInt(element.getAttribute(name)) ?? defaultValue
+    );
   }
 }

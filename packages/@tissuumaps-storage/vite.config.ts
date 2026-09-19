@@ -17,7 +17,8 @@ export default defineConfig(({ mode }) => ({
   ],
   worker: {
     format: "es",
-    // inlined workers cannot load chunks, so they get no code splitting
+    // geotiff.js's worker imports its decoders dynamically; an inlined worker
+    // cannot fetch chunks, so workers are built as a single file
     rolldownOptions: {
       output: {
         codeSplitting: false,

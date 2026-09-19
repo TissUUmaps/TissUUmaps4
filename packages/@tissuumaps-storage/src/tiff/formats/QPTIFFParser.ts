@@ -43,7 +43,9 @@ export class QPTIFFParser implements TIFFParser {
       throw new Error("z and t require an OME-TIFF file.");
     }
     const images = await TIFFUtils.readImages(tiff, { signal });
-    const descriptions = await TIFFUtils.readDescriptions(images, { signal });
+    const descriptions = await Promise.all(
+      images.map((image) => TIFFUtils.readDescription(image, { signal })),
+    );
     const entries: { image: GeoTIFFImage; channel: TIFFChannelMetadata }[] = [];
     images.forEach((image, i) => {
       const root = XMLUtils.parse(descriptions[i]);
