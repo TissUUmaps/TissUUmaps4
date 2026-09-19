@@ -1,3 +1,4 @@
+export { GeoJSONShapesData } from "./GeoJSONShapesData";
 export { GeoJSONShapesDataProvider } from "./GeoJSONShapesDataProvider";
 export {
   geoJSONShapesDataSourceDefaults,

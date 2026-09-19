@@ -4,7 +4,7 @@ import {
   SourceUtils,
 } from "@tissuumaps/core";
 
-import { InMemoryShapesData } from "../common/InMemoryShapesData";
+import { GeoParquetShapesData } from "./GeoParquetShapesData";
 import {
   type GeoParquetShapesDataSource,
   type NormalizedGeoParquetShapesDataSource,
@@ -14,7 +14,7 @@ import { runParquetWorker } from "./runParquetWorker";
 
 export class GeoParquetShapesDataProvider implements ShapesDataProvider<
   GeoParquetShapesDataSource,
-  InMemoryShapesData,
+  GeoParquetShapesData,
   NormalizedGeoParquetShapesDataSource
 > {
   readonly name = "GeoParquet";
@@ -91,7 +91,7 @@ export class GeoParquetShapesDataProvider implements ShapesDataProvider<
   async load(
     normalizedDataSource: NormalizedGeoParquetShapesDataSource,
     options?: DataProviderLoadOptions,
-  ): Promise<InMemoryShapesData> {
+  ): Promise<GeoParquetShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
     const resolvedSource = await SourceUtils.resolveSource(
@@ -119,6 +119,6 @@ export class GeoParquetShapesDataProvider implements ShapesDataProvider<
       },
       { signal, onProgress },
     );
-    return new InMemoryShapesData(geometry, ids, names);
+    return new GeoParquetShapesData(geometry, ids, names);
   }
 }

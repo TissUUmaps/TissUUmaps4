@@ -9,15 +9,34 @@ import {
 } from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 
-import type {
-  GenericArray,
-  ShapesGeometry,
-  TypedArray,
+import {
+  type GenericArray,
+  type ShapesAppender,
+  type ShapesGeometry,
+  ShapesUtils,
+  type TypedArray,
 } from "@tissuumaps/core";
 
-import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
 import { GeoParquetUtils } from "./GeoParquetUtils";
 import type { ParquetSource } from "./types";
+
+/**
+ * Appends a GeoJSON geometry, as decoded from a WKB column, as one shape
+ *
+ * @param append - The appender of the shapes geometry under construction
+ * @param geometry - The geometry to append
+ * @returns Whether a shape was appended
+ */
+function appendGeometry(append: ShapesAppender, geometry: Geometry): boolean {
+  if (geometry.type === "Polygon") {
+    return append([geometry.coordinates]);
+  }
+  if (geometry.type === "MultiPolygon") {
+    return append(geometry.coordinates);
+  }
+  console.warn(`Unsupported geometry type: ${geometry.type}`);
+  return false;
+}
 
 export type ParquetRequest<TOp extends string = string> = {
   op: TOp;
@@ -457,28 +476,28 @@ async function handleShapesRequest(
     request.nameColumn,
     () => {},
   );
-  const builder = new ShapesGeometryBuilder();
   const ids: number[] = [];
   const names: string[] = [];
-  await readGeometryColumn(
-    buffer,
-    metadata,
-    geoColumn.name,
-    (geometry, row) => {
-      if (geometry === null) {
-        console.warn("Skipping row without geometry.");
-        return;
-      }
-      if (builder.addGeometry(geometry)) {
-        ids.push(rowIds !== undefined ? rowIds[row]! : row);
-        if (rowNames !== undefined) {
-          names.push(rowNames[row]!);
+  const geometry = await ShapesUtils.buildGeometry(async (append) => {
+    await readGeometryColumn(
+      buffer,
+      metadata,
+      geoColumn.name,
+      (rowGeometry, row) => {
+        if (rowGeometry === null) {
+          console.warn("Skipping row without geometry.");
+          return;
         }
-      }
-    },
-    onProgress,
-  );
-  const geometry = builder.build();
+        if (appendGeometry(append, rowGeometry)) {
+          ids.push(rowIds !== undefined ? rowIds[row]! : row);
+          if (rowNames !== undefined) {
+            names.push(rowNames[row]!);
+          }
+        }
+      },
+      onProgress,
+    );
+  });
   if (geometry.shapePolygonOffsets.length === 1) {
     throw new Error(`No valid geometries found in column "${geoColumn.name}"`);
   }
