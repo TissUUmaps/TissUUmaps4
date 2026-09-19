@@ -6,5 +6,13 @@ export {
   type NormalizedTIFFImageDataSource,
   type TIFFImageDataSource,
 } from "./TIFFImageDataSource";
+export { TIFFLabelsData } from "./TIFFLabelsData";
+export { TIFFLabelsDataProvider } from "./TIFFLabelsDataProvider";
+export {
+  tiffLabelsDataSourceDefaults,
+  tiffLabelsDataSourceType,
+  type NormalizedTIFFLabelsDataSource,
+  type TIFFLabelsDataSource,
+} from "./TIFFLabelsDataSource";
 export { type TIFFChannelMetadata } from "./formats/TIFFParser";
 export { openTIFF } from "./openTIFF";
