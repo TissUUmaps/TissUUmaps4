@@ -50,7 +50,9 @@ All of these can be overridden per channel in the project file through the image
 
 ## Labels
 
-TIFF files are also opened as **labels**, where every pixel value is a label (segment) ID and `0` is background. The formats and the pyramid are read as for images, with two restrictions: the file has to hold a **single channel** (an RGB file, or a multi-channel file, is rejected), and its samples have to be **integers of at most 32 bits** (signed or unsigned).
+TIFF files can also be opened as **labels**, where every pixel value is a label (segment) ID and `0` is background. The formats and the pyramid are read as for images, with two restrictions: the file has to hold a **single channel** (an RGB file, or a multi-channel file, is rejected), and its samples have to be **integers of at most 32 bits** (signed or unsigned).
+
+Pyramid levels of a label mask have to be downsampled with nearest-neighbor sampling. Averaging or interpolating label IDs invents IDs that are not in the mask, and those show up as wrong labels at lower zoom levels.
 
 Label IDs are read per tile as the tiles are drawn, so arbitrarily large label masks can be opened without scanning them first. TIFF records no label colors; they are configured in the project file instead, optionally through an annotating `table`.
 
