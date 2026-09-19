@@ -20,7 +20,7 @@ Parquet table data sources have the `type` `"parquet"` and accept the following 
 
 Either `url` or `path` has to be given. When a workspace is open and both are given, `path` takes precedence.
 
-Columns of 64-bit integers are not supported, as their values do not fit a JavaScript number.
+Columns of 64-bit integers are not supported, as TissUUmaps does not handle bigint values.
 
 ## Shapes data source
 
