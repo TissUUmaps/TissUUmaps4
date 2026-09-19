@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # TIFF
 
-The built-in **TIFF data provider** opens OME-TIFF, QPTIFF and plain pyramidal TIFF files as **images**. Tiles are decoded in the browser with [geotiff.js](https://geotiffjs.github.io/), so no server-side tiling is needed; remote files need a server that supports HTTP range requests.
+The built-in **TIFF data provider** opens OME-TIFF, QPTIFF and plain TIFF files as **images**. Tiles are decoded in the browser with [geotiff.js](https://geotiffjs.github.io/), so no server-side tiling is needed; remote files need a server that supports HTTP range requests.
 
 ## Data source
 
@@ -36,12 +36,14 @@ Multi-channel files are opened as **value images**: tiles carry the raw samples 
 
 Per-channel rendering settings come from the file where it records them:
 
-| Setting         | Source                                    | Fallback                                              |
-| --------------- | ----------------------------------------- | ----------------------------------------------------- |
-| Name            | OME-XML `Channel` `Name`, QPTIFF `Name`   | none                                                  |
-| Color           | OME-XML `Channel` `Color`, QPTIFF `Color` | a color chosen by the viewer                          |
-| Contrast limits | `[0, 255]` for 8-bit channels             | quantiles of a histogram read from a sample of pixels |
-| Visibility      | not recorded by TIFF                      | visible                                               |
+| Setting         | Source                                    | Fallback                      |
+| --------------- | ----------------------------------------- | ----------------------------- |
+| Name            | OME-XML `Channel` `Name`, QPTIFF `Name`   | none                          |
+| Color           | OME-XML `Channel` `Color`, QPTIFF `Color` | none                          |
+| Contrast limits | not recorded by TIFF                      | `[0, 255]` for 8-bit channels |
+| Visibility      | not recorded by TIFF                      | none                          |
+
+Settings without a fallback are reported as unset, leaving the renderer's defaults to apply: channels without a visibility are shown, channels without a color are colorized with a color derived from the channel index (white for single-channel images), and channels without contrast limits are stretched between quantile-based limits derived from their histogram (see [Rendering](../development/rendering.md#images)).
 
 All of these can be overridden per channel in the project file through the image's `channels` array (see the [example](#example) below).
 
@@ -77,7 +79,6 @@ Channel settings that are left out fall back to the file's metadata and to the e
 
 ## Limitations
 
-- Only one plane (`z`, `t`) of an OME-TIFF is shown; there is no in-app plane selection yet.
 - JPEG 2000 compression is not supported.
 - Multi-file OME-TIFF is not supported; the planes have to be in the file that is opened.
 - `path` needs an open workspace.
