@@ -17,7 +17,7 @@ Parquet table data sources have the `type` `"parquet"` and accept the following 
 | `idColumn`   | `string` | Column holding the ID of each row (see [Data model](../concepts/data-model.md)). Row numbers are used when it is not given.    |
 | `nameColumn` | `string` | Column holding the name of each row.                                                                                           |
 
-Columns of 64-bit integers are not supported, as their values do not fit a JavaScript number.
+Columns of 64-bit integers are not supported, as TissUUmaps does not handle bigint values.
 
 ## Shapes data source
 
