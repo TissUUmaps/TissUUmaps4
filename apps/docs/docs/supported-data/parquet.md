@@ -21,16 +21,16 @@ Columns of 64-bit integers are not supported, as their values do not fit a JavaS
 
 ## Shapes data source
 
-Parquet shapes data sources have the `type` `"parquet"` and accept the following fields:
+GeoParquet shapes data sources have the `type` `"geoparquet"` and accept the following fields:
 
-| Field            | Type     | Description                                                                                        |
-| ---------------- | -------- | --------------------------------------------------------------------------------------------------- |
-| `type`           | `string` | Always `"parquet"`.                                                                                  |
-| `source`         | `string` | URL or path of the GeoParquet file (see [Referencing data](../concepts/projects.md#referencing-data)). |
-| `geometryColumn` | `string` | Geometry column to read. Defaults to the primary geometry column of the file.                        |
-| `idColumn`       | `string` | Column holding the ID of each shape. Row numbers are used when it is not given.                      |
-| `nameColumn`     | `string` | Column holding the name of each shape.                                                               |
-| `table`          | `string` | ID of the table annotating the shapes (see [Data model](../concepts/data-model.md)).                 |
+| Field            | Type     | Description                                                                                             |
+| ---------------- | -------- | --------------------------------------------------------------------------------------------------------- |
+| `type`           | `string` | Always `"geoparquet"`.                                                                                    |
+| `source`         | `string` | URL or path of the GeoParquet file (see [Referencing data](../concepts/projects.md#referencing-data)).   |
+| `geometryColumn` | `string` | Geometry column to read. Defaults to the primary geometry column of the file.                            |
+| `idColumn`       | `string` | Column holding the ID of each shape. Row numbers are used when it is not given.                          |
+| `nameColumn`     | `string` | Column holding the name of each shape.                                                                    |
+| `table`          | `string` | ID of the table annotating the shapes (see [Data model](../concepts/data-model.md)).                      |
 
 Polygons and multi-polygons are read as shapes; rows holding another geometry are skipped.
 
@@ -77,7 +77,7 @@ A project showing the circles and the polygons of a [SpatialData](https://spatia
       "name": "Cell outlines",
       "layer": "layer",
       "dataSource": {
-        "type": "parquet",
+        "type": "geoparquet",
         "source": "shapes/cells/shapes.parquet",
         "idColumn": "instance_id"
       }

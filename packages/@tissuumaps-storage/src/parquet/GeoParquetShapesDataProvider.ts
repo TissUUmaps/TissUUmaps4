@@ -6,16 +6,16 @@ import {
 
 import { InMemoryShapesData } from "../common/InMemoryShapesData";
 import {
-  type NormalizedParquetShapesDataSource,
-  type ParquetShapesDataSource,
-  parquetShapesDataSourceDefaults,
-} from "./ParquetShapesDataSource";
+  type GeoParquetShapesDataSource,
+  type NormalizedGeoParquetShapesDataSource,
+  geoParquetShapesDataSourceDefaults,
+} from "./GeoParquetShapesDataSource";
 import { runParquetWorker } from "./runParquetWorker";
 
-export class ParquetShapesDataProvider implements ShapesDataProvider<
-  ParquetShapesDataSource,
+export class GeoParquetShapesDataProvider implements ShapesDataProvider<
+  GeoParquetShapesDataSource,
   InMemoryShapesData,
-  NormalizedParquetShapesDataSource
+  NormalizedGeoParquetShapesDataSource
 > {
   readonly name = "GeoParquet";
 
@@ -73,12 +73,12 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
   };
 
   normalize(
-    dataSource: ParquetShapesDataSource,
+    dataSource: GeoParquetShapesDataSource,
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,
-  ): NormalizedParquetShapesDataSource {
+  ): NormalizedGeoParquetShapesDataSource {
     return {
-      ...parquetShapesDataSourceDefaults,
+      ...geoParquetShapesDataSourceDefaults,
       ...dataSource,
       source: SourceUtils.normalizeSource(
         dataSource.source,
@@ -89,7 +89,7 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
   }
 
   async load(
-    normalizedDataSource: NormalizedParquetShapesDataSource,
+    normalizedDataSource: NormalizedGeoParquetShapesDataSource,
     options?: DataProviderLoadOptions,
   ): Promise<InMemoryShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
