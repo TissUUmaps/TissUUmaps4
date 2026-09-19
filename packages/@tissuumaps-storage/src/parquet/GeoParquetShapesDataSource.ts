@@ -1,6 +1,6 @@
 import type { ShapesDataSource } from "@tissuumaps/core";
 
-export const geoParquetShapesDataSourceType = "geoparquet";
+export const geoParquetShapesDataSourceType = "parquet";
 
 export const geoParquetShapesDataSourceDefaults = {};
 
