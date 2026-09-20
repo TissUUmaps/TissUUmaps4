@@ -126,4 +126,36 @@ describe("ShapesUtils", () => {
       ).rejects.toThrow("decode failed");
     });
   });
+
+  describe("createShapesData", () => {
+    const geometry = {
+      shapePolygonOffsets: new Uint32Array([0, 1, 2]),
+      polygonRingOffsets: new Uint32Array([0, 1, 2]),
+      ringVertexOffsets: new Uint32Array([0, 4, 8]),
+      coords: new Float32Array(16),
+    };
+
+    it("reads back the IDs, the names and the size", () => {
+      const data = ShapesUtils.createShapesData(geometry, [3, 4], ["a", "b"]);
+      expect(data.getIds()).toEqual([3, 4]);
+      expect(data.getNames?.()).toEqual(["a", "b"]);
+      expect(data.getSize()).toBe(2);
+    });
+
+    it("reads no names when the shapes have none", () => {
+      const data = ShapesUtils.createShapesData(geometry, [3, 4], undefined);
+      expect(data.getNames?.()).toBeUndefined();
+    });
+
+    it("resolves the geometry it was created with", async () => {
+      const data = ShapesUtils.createShapesData(geometry, [3, 4], undefined);
+      await expect(data.loadGeometry()).resolves.toBe(geometry);
+    });
+
+    it("throws when the IDs do not match the geometry", () => {
+      expect(() =>
+        ShapesUtils.createShapesData(geometry, [3], undefined),
+      ).toThrow("inconsistent sizes");
+    });
+  });
 });

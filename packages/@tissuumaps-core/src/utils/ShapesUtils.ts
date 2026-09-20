@@ -1,4 +1,4 @@
-import type { ShapesGeometry } from "../storage/shapes";
+import type { ShapesData, ShapesGeometry } from "../storage/shapes";
 
 /** A ring of a polygon, as a sequence of positions holding x and y first */
 export type ShapesRing = readonly (readonly number[])[];
@@ -96,6 +96,33 @@ export class ShapesUtils {
       },
       ids,
       names: names.length === ids.length ? names : undefined,
+    };
+  }
+
+  /**
+   * Creates shapes data from a geometry that is already fully loaded
+   *
+   * @param geometry - The geometry of the shapes
+   * @param ids - The ID of every shape, in geometry order
+   * @param names - The name of every shape, if the shapes have names
+   * @returns The shapes data, holding the geometry in memory
+   * @throws Error if the IDs do not match the geometry
+   */
+  static createShapesData(
+    geometry: ShapesGeometry,
+    ids: number[],
+    names: string[] | undefined,
+  ): ShapesData {
+    const size = geometry.shapePolygonOffsets.length - 1;
+    if (ids.length !== size) {
+      throw new Error("Shapes geometry and IDs have inconsistent sizes");
+    }
+    return {
+      getIds: () => ids,
+      getSize: () => size,
+      getNames: () => names,
+      loadGeometry: () => Promise.resolve(geometry),
+      close: () => {},
     };
   }
 }

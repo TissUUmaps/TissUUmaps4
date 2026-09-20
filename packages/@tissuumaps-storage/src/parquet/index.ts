@@ -1,4 +1,3 @@
-export { GeoParquetShapesData } from "./GeoParquetShapesData";
 export { GeoParquetShapesDataProvider } from "./GeoParquetShapesDataProvider";
 export {
   geoParquetShapesDataSourceDefaults,
