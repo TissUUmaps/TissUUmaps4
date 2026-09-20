@@ -123,7 +123,7 @@ export const shapesDataCache = new AnnotatedDataCache<
 /**
  * Starts keeping the data caches in sync with the app and the project store
  *
- * Whenever the workspace, the project URL, a data provider or one of the
+ * Whenever the workspace, the project source, a data provider or one of the
  * project's objects changes, the caches release the data that is no longer
  * referenced or no longer valid, and the data store is updated accordingly.
  *
@@ -181,15 +181,16 @@ function sanitizeDataCaches(options?: {
 
   const workspaceChanged =
     prevAppState !== undefined && appState.workspace !== prevAppState.workspace;
-  const projectUrlChanged =
-    prevProjectState !== undefined && projectState.url !== prevProjectState.url;
+  const projectSourceChanged =
+    prevProjectState !== undefined &&
+    projectState.source !== prevProjectState.source;
 
   let newTableDataRefs: Map<string, DataRef<TableData>> | undefined;
   if (
     init ||
     cleanup ||
     workspaceChanged ||
-    projectUrlChanged ||
+    projectSourceChanged ||
     (prevProjectState !== undefined &&
       projectState.tables !== prevProjectState.tables) ||
     (prevAppState !== undefined &&
@@ -199,7 +200,7 @@ function sanitizeDataCaches(options?: {
       cleanup ? [] : projectState.tables,
       {
         workspace: appState.workspace,
-        projectUrl: projectState.url,
+        projectSource: projectState.source,
         dataProviders: appState.tableDataProviders,
       },
     );
@@ -210,7 +211,7 @@ function sanitizeDataCaches(options?: {
     init ||
     cleanup ||
     workspaceChanged ||
-    projectUrlChanged ||
+    projectSourceChanged ||
     (prevProjectState !== undefined &&
       projectState.images !== prevProjectState.images) ||
     (prevAppState !== undefined &&
@@ -220,7 +221,7 @@ function sanitizeDataCaches(options?: {
       cleanup ? [] : projectState.images,
       {
         workspace: appState.workspace,
-        projectUrl: projectState.url,
+        projectSource: projectState.source,
         dataProviders: appState.imageDataProviders,
       },
     );
@@ -231,7 +232,7 @@ function sanitizeDataCaches(options?: {
     init ||
     cleanup ||
     workspaceChanged ||
-    projectUrlChanged ||
+    projectSourceChanged ||
     newTableDataRefs !== undefined ||
     (prevProjectState !== undefined &&
       projectState.labels !== prevProjectState.labels) ||
@@ -242,7 +243,7 @@ function sanitizeDataCaches(options?: {
       cleanup ? [] : projectState.labels,
       {
         workspace: appState.workspace,
-        projectUrl: projectState.url,
+        projectSource: projectState.source,
         dataProviders: appState.labelsDataProviders,
         tables: projectState.tables,
         tableDataProviders: appState.tableDataProviders,
@@ -255,7 +256,7 @@ function sanitizeDataCaches(options?: {
     init ||
     cleanup ||
     workspaceChanged ||
-    projectUrlChanged ||
+    projectSourceChanged ||
     newTableDataRefs !== undefined ||
     (prevProjectState !== undefined &&
       projectState.points !== prevProjectState.points) ||
@@ -266,7 +267,7 @@ function sanitizeDataCaches(options?: {
       cleanup ? [] : projectState.points,
       {
         workspace: appState.workspace,
-        projectUrl: projectState.url,
+        projectSource: projectState.source,
         dataProviders: appState.pointsDataProviders,
         tables: projectState.tables,
         tableDataProviders: appState.tableDataProviders,
@@ -279,7 +280,7 @@ function sanitizeDataCaches(options?: {
     init ||
     cleanup ||
     workspaceChanged ||
-    projectUrlChanged ||
+    projectSourceChanged ||
     newTableDataRefs !== undefined ||
     (prevProjectState !== undefined &&
       projectState.shapes !== prevProjectState.shapes) ||
@@ -290,7 +291,7 @@ function sanitizeDataCaches(options?: {
       cleanup ? [] : projectState.shapes,
       {
         workspace: appState.workspace,
-        projectUrl: projectState.url,
+        projectSource: projectState.source,
         dataProviders: appState.shapesDataProviders,
         tables: projectState.tables,
         tableDataProviders: appState.tableDataProviders,

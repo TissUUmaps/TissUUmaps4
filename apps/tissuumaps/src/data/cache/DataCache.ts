@@ -10,6 +10,7 @@ import {
   type DataSource,
   JSONUtils,
   type ProgressCallback,
+  SourceUtils,
   type TableData,
   type TableDataSource,
 } from "@tissuumaps/core";
@@ -32,7 +33,11 @@ export type DataCacheEntry<
   TData extends Data,
   TEntryDependencies extends DataCacheEntryDependencies<TDataSource, TData>,
 > = {
-  /** The normalized data source the entry's data is loaded from */
+  /**
+   * The normalized data source the entry's data is loaded from, or the data
+   * source as authored if normalizing it threw, in which case the entry fails
+   * to load
+   */
   dataSource: TDataSource;
 
   /** The dependencies the entry's data was loaded with */
@@ -55,8 +60,11 @@ export type DataCacheEntry<
  * What an entry's data depends on, besides its data source
  *
  * A cache entry is destroyed and reloaded whenever any of these changes. The
- * project URL is not among them: it only affects the entry through the
- * normalized data source, and hence through the entry key itself.
+ * project source is not among them: it only affects the entry through the
+ * normalized data source, and hence through the entry key itself. The
+ * workspace is a dependency only of entries that read from it; where it merely
+ * changes how a data source normalizes, it too reaches the entry through the
+ * key.
  */
 export type DataCacheEntryDependencies<
   TDataSource extends DataSource,
@@ -67,8 +75,8 @@ export type DataCacheEntryDependencies<
   >,
 > = {
   /**
-   * The open workspace, if the entry's data source refers to a path within it,
-   * and `null` otherwise
+   * The open workspace, if the entry's normalized data source refers to a file
+   * within it, and `null` otherwise
    */
   workspace: FileSystemDirectoryHandle | null;
 
@@ -110,10 +118,11 @@ export type DataCacheContext<
   workspace: FileSystemDirectoryHandle | null;
 
   /**
-   * The absolute URL the open project was loaded from, if any, against which
-   * relative data source URLs are resolved
+   * Where the open project was loaded from, if anywhere, against which
+   * project-relative data sources are resolved (see
+   * `ProjectStoreState.source`)
    */
-  projectUrl: string | null;
+  projectSource: string | null;
 
   /** The registered data providers, by data source type */
   dataProviders: Map<string, TDataProvider>;
@@ -170,8 +179,10 @@ export class DataCache<
     TDataSource,
     {
       dataProvider: TDataProvider | undefined;
-      projectUrl: string | null;
+      workspace: FileSystemDirectoryHandle | null;
+      projectSource: string | null;
       normalizedDataSource: TDataSource;
+      normalizeError: { error: unknown } | undefined;
       entryKey: string;
     }
   >();
@@ -234,6 +245,10 @@ export class DataCache<
    * Entries whose dependencies have changed are destroyed as well, so that the
    * next {@link DataCache.load} reloads their data.
    *
+   * This runs while the caches are reconciled against the stores and does not
+   * throw for data sources that cannot be normalized; those fail their entry's
+   * load operation instead (see {@link DataCache._resolveDataSource}).
+   *
    * @param objects - The objects whose data to keep cached
    * @param context - See {@link DataCacheContext}
    * @returns The data references of the retained objects, by object ID
@@ -279,7 +294,8 @@ export class DataCache<
   /**
    * Collects the values that an entry for the given data source depends on
    *
-   * @param dataSource - The normalized data source of the entry
+   * @param dataSource - The entry's data source, normalized unless
+   * normalizing it threw
    * @param context - See {@link DataCacheContext}
    * @param _options - Set `peek` to not create anything that does not exist yet
    * @returns The entry's dependencies
@@ -291,7 +307,11 @@ export class DataCache<
     _options?: { peek?: boolean },
   ): TEntryDependencies {
     return {
-      workspace: dataSource.path !== undefined ? context.workspace : null,
+      workspace:
+        dataSource.source !== undefined &&
+        SourceUtils.isWorkspacePath(dataSource.source)
+          ? context.workspace
+          : null,
       dataProvider: context.dataProviders.get(dataSource.type),
     } as TEntryDependencies;
   }
@@ -335,7 +355,9 @@ export class DataCache<
    *
    * A newly created entry starts loading right away, takes over the objects
    * referencing the entry it replaces, and removes itself from the cache once
-   * its load operation is aborted.
+   * its load operation is aborted. An entry whose data source could not be
+   * normalized is created like any other, but its load operation fails with the
+   * error that normalizing it threw.
    *
    * @param object - The object whose data source to return the entry for
    * @param context - See {@link DataCacheContext}
@@ -345,10 +367,8 @@ export class DataCache<
     object: DataObject<TDataSource>,
     context: TContext,
   ): DataCacheEntry<TDataSource, TData, TEntryDependencies> {
-    const { normalizedDataSource, entryKey } = this._resolveDataSource(
-      object.dataSource,
-      context,
-    );
+    const { normalizedDataSource, normalizeError, entryKey } =
+      this._resolveDataSource(object.dataSource, context);
     const newEntryDeps = this.makeEntryDependencies(
       normalizedDataSource,
       context,
@@ -381,6 +401,9 @@ export class DataCache<
       dataRef: { promise: dataPromise, status: "loading" },
       destroyed: false,
       loadOp: new SharedOperation<DataWrapper<TData>>(async (opts) => {
+        if (normalizeError !== undefined) {
+          throw normalizeError.error;
+        }
         const resolvedDataProvider = this.resolveDataProvider(
           normalizedDataSource,
           newEntryDeps,
@@ -469,13 +492,20 @@ export class DataCache<
    * Normalizes a data source and derives the key of its cache entry
    *
    * The result is memoized per data source object, and recomputed whenever the
-   * data provider registered for the data source's type or the project URL
-   * changes - both of which normalization depends on.
+   * data provider registered for the data source's type, the workspace or the
+   * project source changes - the three inputs of normalization.
+   *
+   * Normalization must not make this call fail: this runs while the caches
+   * are reconciled against the stores, where a throw would leave the stores
+   * updated but the caches only half reconciled. A data source whose
+   * normalization throws therefore keeps its un-normalized form, and the error
+   * is reported alongside it for {@link DataCache._getOrCreateEntry} to fail
+   * the entry's load operation with.
    *
    * @param dataSource - The data source to resolve
    * @param context - See {@link DataCacheContext}
    * @returns The responsible data provider, if any, the normalized data source,
-   * and the key of its cache entry
+   * the error that normalizing it threw, if any, and the key of its cache entry
    */
   private _resolveDataSource(
     dataSource: TDataSource,
@@ -483,6 +513,7 @@ export class DataCache<
   ): {
     dataProvider: TDataProvider | undefined;
     normalizedDataSource: TDataSource;
+    normalizeError: { error: unknown } | undefined;
     entryKey: string;
   } {
     const cached = this._resolvedDataSources.get(dataSource);
@@ -490,19 +521,32 @@ export class DataCache<
     if (
       cached !== undefined &&
       cached.dataProvider === dataProvider &&
-      cached.projectUrl === context.projectUrl
+      cached.workspace === context.workspace &&
+      cached.projectSource === context.projectSource
     ) {
       return cached;
     }
-    const normalizedDataSource =
-      dataProvider?.normalize(dataSource, context.projectUrl) ?? dataSource;
+    let normalizedDataSource = dataSource;
+    let normalizeError: { error: unknown } | undefined;
+    try {
+      normalizedDataSource =
+        dataProvider?.normalize(
+          dataSource,
+          context.workspace,
+          context.projectSource,
+        ) ?? dataSource;
+    } catch (error) {
+      normalizeError = { error };
+    }
     const entryKey = JSONUtils.stringify(normalizedDataSource, {
       stable: true,
     });
     const resolved = {
       dataProvider,
-      projectUrl: context.projectUrl,
+      workspace: context.workspace,
+      projectSource: context.projectSource,
       normalizedDataSource,
+      normalizeError,
       entryKey,
     };
     this._resolvedDataSources.set(dataSource, resolved);
@@ -647,7 +691,8 @@ export class AnnotatedDataCache<
    * Collects the values that an entry for the given data source depends on,
    * including the load operation of the table it references, if any
    *
-   * @param dataSource - The normalized data source of the entry
+   * @param dataSource - The entry's data source, normalized unless
+   * normalizing it threw
    * @param context - See {@link AnnotatedDataCacheContext}
    * @param options - Set `peek` to not start loading a table that is not being
    * loaded yet
@@ -734,7 +779,7 @@ export class AnnotatedDataCache<
     }
     const tableDataCacheContext = {
       workspace: context.workspace,
-      projectUrl: context.projectUrl,
+      projectSource: context.projectSource,
       dataProviders: context.tableDataProviders,
     };
     const tableCacheEntry = DataCache.getEntry(

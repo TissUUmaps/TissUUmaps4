@@ -7,6 +7,7 @@ export const geoJSONShapesDataSourceDefaults = {};
 export interface GeoJSONShapesDataSource extends ShapesDataSource<
   typeof geoJSONShapesDataSourceType
 > {
+  source: string;
   idProperty?: string;
   nameProperty?: string;
 }

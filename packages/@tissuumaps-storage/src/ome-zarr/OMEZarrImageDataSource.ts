@@ -9,9 +9,9 @@ export const omeZarrImageDataSourceDefaults = {};
 /**
  * Data source for OME-Zarr images
  *
- * The image is loaded from a remote OME-Zarr store (`url`), a remote zipped
- * OME-Zarr file (`url` ending in `.ozx`), or a zipped OME-Zarr file in the
- * open workspace (`path`).
+ * The `source` refers to a remote OME-Zarr store (a URL), a remote zipped
+ * OME-Zarr file (a URL ending in `.ozx`), or a zipped OME-Zarr file in the
+ * open workspace (a workspace-relative or project-relative path).
  *
  * Images with a channel axis (even one of length one) are opened as
  * multi-channel image data with one tile source per channel; images without
@@ -24,6 +24,9 @@ export const omeZarrImageDataSourceDefaults = {};
 export interface OMEZarrImageDataSource extends ImageDataSource<
   typeof omeZarrImageDataSourceType
 > {
+  /** URL or path of the OME-Zarr image (see `SourceUtils`) */
+  source: string;
+
   /** Timepoint index (0-based) to open, for images with a `t` axis */
   t?: number;
 
@@ -33,7 +36,7 @@ export interface OMEZarrImageDataSource extends ImageDataSource<
 
 /**
  * An {@link OMEZarrImageDataSource} with {@link omeZarrImageDataSourceDefaults}
- * applied and its URL resolved
+ * applied and its source normalized
  */
 export type NormalizedOMEZarrImageDataSource = Required<
   Pick<OMEZarrImageDataSource, keyof typeof omeZarrImageDataSourceDefaults>

@@ -10,16 +10,13 @@ The built-in **TIFF data provider** opens OME-TIFF, QPTIFF and plain TIFF files 
 
 TIFF data sources have the `type` `"tiff"` and accept the following fields:
 
-| Field   | Type      | Description                                                                                                                 |
-| ------- | --------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `type`  | `string`  | Always `"tiff"`.                                                                                                            |
-| `url`   | `string`  | URL of a remote TIFF file, absolute or relative (see [Referencing data](../concepts/projects.md#referencing-data)).         |
-| `path`  | `string`  | Path of a TIFF file relative to the workspace directory (see [Referencing data](../concepts/projects.md#referencing-data)). |
-| `z`     | `integer` | Z-slice to open (0-based), for OME-TIFF files with a z-stack. Defaults to `0`.                                              |
-| `t`     | `integer` | Timepoint to open (0-based), for OME-TIFF files with a time series. Defaults to `0`.                                        |
-| `table` | `string`  | _Labels only._ ID of the table annotating the labels (see [Data model](../concepts/data-model.md)).                         |
-
-Either `url` or `path` has to be given. When a workspace is open and both are given, `path` takes precedence.
+| Field    | Type      | Description                                                                                         |
+| -------- | --------- | --------------------------------------------------------------------------------------------------- |
+| `type`   | `string`  | Always `"tiff"`.                                                                                    |
+| `source` | `string`  | URL or path of the TIFF file (see [Referencing data](../concepts/projects.md#referencing-data)).    |
+| `z`      | `integer` | Z-slice to open (0-based), for OME-TIFF files with a z-stack. Defaults to `0`.                      |
+| `t`      | `integer` | Timepoint to open (0-based), for OME-TIFF files with a time series. Defaults to `0`.                |
+| `table`  | `string`  | _Labels only._ ID of the table annotating the labels (see [Data model](../concepts/data-model.md)). |
 
 ## Images
 
@@ -71,7 +68,7 @@ A project showing a multiplexed OME-TIFF with a segmentation on top of it, where
       "layer": "layer",
       "dataSource": {
         "type": "tiff",
-        "url": "images/sample.ome.tif",
+        "source": "images/sample.ome.tif",
         "z": 4
       },
       "channels": [
@@ -88,7 +85,7 @@ A project showing a multiplexed OME-TIFF with a segmentation on top of it, where
       "layer": "layer",
       "dataSource": {
         "type": "tiff",
-        "url": "labels/cells.ome.tif",
+        "source": "labels/cells.ome.tif",
         "z": 4,
         "table": "cell-table"
       },
@@ -99,7 +96,7 @@ A project showing a multiplexed OME-TIFF with a segmentation on top of it, where
     {
       "id": "cell-table",
       "name": "Cells",
-      "dataSource": { "type": "csv", "url": "tables/cells.csv" }
+      "dataSource": { "type": "csv", "source": "tables/cells.csv" }
     }
   ]
 }
@@ -111,7 +108,7 @@ Both the image and the labels are TIFF files served next to the project file, an
 
 - JPEG 2000 compression is not supported.
 - Multi-file OME-TIFF is not supported; the planes have to be in the file that is opened.
-- `path` needs an open workspace.
+- Workspace files need an open workspace.
 - Files with several palette or white-is-zero images are rejected; a single one is drawn in its own colors.
 - RGB, multi-channel and floating point files are not opened as labels. Convert them to a single integer channel of at most 32 bits.
 
