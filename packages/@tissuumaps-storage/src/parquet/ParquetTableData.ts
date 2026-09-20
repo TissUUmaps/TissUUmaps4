@@ -1,4 +1,5 @@
 import {
+  AsyncUtils,
   type GenericArray,
   MathUtils,
   type ProgressCallback,
@@ -92,10 +93,10 @@ export class ParquetTableData implements TableData {
       ? GeoParquetUtils.parseCoordinateColumn(column)
       : undefined;
     if (coordinates !== undefined) {
-      const { x, y } = await this._loadCoordinates(coordinates.geometryColumn, {
-        signal,
-        onProgress,
-      });
+      const { x, y } = await AsyncUtils.raceSignal(
+        this._loadCoordinates(coordinates.geometryColumn, { onProgress }),
+        { signal },
+      );
       return (coordinates.axis === "x" ? x : y) as GenericArray<T>;
     }
     const { data } = await runParquetWorker(
@@ -105,16 +106,19 @@ export class ParquetTableData implements TableData {
     return data as GenericArray<T>;
   }
 
+  // No signal option: the read is shared by both axes, so one caller must not
+  // be able to abort it for the other. Callers race it against their own
+  // signal instead, and the progress goes to whoever starts the read.
   private _loadCoordinates(
     geometryColumn: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+    options?: { onProgress?: ProgressCallback },
   ): Promise<{ x: Float32Array; y: Float32Array }> {
-    const { signal, onProgress } = options ?? {};
+    const { onProgress } = options ?? {};
     let coordinates = this._coordinates.get(geometryColumn);
     if (coordinates === undefined) {
       coordinates = runParquetWorker(
         { op: "coordinates", source: this._source, geometryColumn },
-        { signal, onProgress },
+        { onProgress },
       ).then(({ x, y }) => ({ x, y }));
       coordinates.catch(() => this._coordinates.delete(geometryColumn));
       this._coordinates.set(geometryColumn, coordinates);
@@ -145,5 +149,7 @@ export class ParquetTableData implements TableData {
     return range;
   }
 
-  close(): void {}
+  close(): void {
+    this._coordinates.clear();
+  }
 }
