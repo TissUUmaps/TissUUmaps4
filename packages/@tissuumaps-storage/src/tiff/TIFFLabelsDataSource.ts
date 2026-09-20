@@ -12,14 +12,18 @@ export const tiffLabelsDataSourceDefaults = {
 /**
  * Data source for label masks stored in TIFF files
  *
- * The file is read from a URL (`url`) or from the open workspace (`path`), and
- * its formats are recognized as for TIFF images. It has to hold a single
- * channel of signed or unsigned integers of at most 32 bits, which are the
- * label IDs (see `LabelsDataSource` for the annotation table reference).
+ * The `source` refers to a remote TIFF file (a URL) or to a TIFF file in the
+ * open workspace (a workspace-relative or project-relative path), and its
+ * formats are recognized as for TIFF images. It has to hold a single channel
+ * of signed or unsigned integers of at most 32 bits, which are the label IDs
+ * (see `LabelsDataSource` for the annotation table reference).
  */
 export interface TIFFLabelsDataSource extends LabelsDataSource<
   typeof tiffLabelsDataSourceType
 > {
+  /** URL or path of the TIFF file (see `SourceUtils`) */
+  source: string;
+
   /**
    * The z-slice to display, for OME-TIFF files with a z-stack
    *
@@ -37,7 +41,7 @@ export interface TIFFLabelsDataSource extends LabelsDataSource<
 
 /**
  * A {@link TIFFLabelsDataSource} with {@link tiffLabelsDataSourceDefaults}
- * applied and its URL resolved
+ * applied and its source normalized
  */
 export type NormalizedTIFFLabelsDataSource = Required<
   Pick<TIFFLabelsDataSource, keyof typeof tiffLabelsDataSourceDefaults>

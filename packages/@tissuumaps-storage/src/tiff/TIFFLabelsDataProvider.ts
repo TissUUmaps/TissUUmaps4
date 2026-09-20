@@ -1,8 +1,9 @@
 import type { GeoTIFFImage } from "geotiff";
 
-import type {
-  DataProviderLoadOptions,
-  LabelsDataProvider,
+import {
+  type DataProviderLoadOptions,
+  type LabelsDataProvider,
+  SourceUtils,
 } from "@tissuumaps/core";
 
 import { TIFFLabelsData } from "./TIFFLabelsData";
@@ -40,10 +41,9 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
   readonly schema = {
     type: "object",
     properties: {
-      url: {
+      source: {
         type: "string",
       },
-      // TODO path
       z: {
         type: "integer",
         minimum: 0,
@@ -56,7 +56,7 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
         type: "string",
       },
     },
-    required: ["url"], // TODO ... or path
+    required: ["source"],
   };
 
   readonly uischema = {
@@ -64,10 +64,9 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/url",
-        label: "URL",
+        scope: "#/properties/source",
+        label: "Source",
       },
-      // TODO path
       {
         type: "HorizontalLayout",
         elements: [
@@ -93,22 +92,27 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
 
   /**
    * Returns the data source with {@link tiffLabelsDataSourceDefaults} applied
-   * and its URL resolved
+   * and its source normalized (see `SourceUtils.normalizeSource`)
    *
    * @param dataSource - The data source to normalize
-   * @param projectUrl - The absolute URL of the project, or `null` for
-   * projects that were not loaded from a URL
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param projectSource - Where the project was loaded from, if anywhere
    * @returns The normalized data source
    */
   normalize(
     dataSource: TIFFLabelsDataSource,
-    projectUrl: string | null,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
   ): NormalizedTIFFLabelsDataSource {
-    let { url } = dataSource;
-    if (url !== undefined) {
-      url = new URL(url, projectUrl ?? document.baseURI).href;
-    }
-    return { ...tiffLabelsDataSourceDefaults, ...dataSource, url };
+    return {
+      ...tiffLabelsDataSourceDefaults,
+      ...dataSource,
+      source: SourceUtils.normalizeSource(
+        dataSource.source,
+        workspace,
+        projectSource,
+      ),
+    };
   }
 
   /**
@@ -119,11 +123,11 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
    *
    * @param normalizedDataSource - The normalized data source to open
    * @param options - See `DataProviderLoadOptions`; `workspace` is required
-   * for data sources with a `path` but no `url`
+   * for workspace-relative sources
    * @returns A promise that resolves to the loaded label mask
-   * @throws Error if the data source has neither a URL nor a workspace path,
-   * has only a workspace path while no workspace is open, or holds a file that
-   * is not a single channel of integers of at most 32 bits
+   * @throws Error if the source is workspace-relative while no workspace is
+   * open, or if the file is not a single channel of integers of at most 32
+   * bits
    */
   async load(
     normalizedDataSource: NormalizedTIFFLabelsDataSource,
@@ -133,7 +137,7 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
     signal?.throwIfAborted();
 
     const { z, t } = normalizedDataSource;
-    const { tiff, ...structure } = await openTIFF(normalizedDataSource, {
+    const { tiff, ...structure } = await openTIFF(normalizedDataSource.source, {
       ...options,
       z,
       t,
