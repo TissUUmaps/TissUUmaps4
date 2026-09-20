@@ -17,8 +17,12 @@ Data sources reference their data by a single `source` string, which is one of t
 - A **URL** with a scheme (e.g. `https://example.org/data/he.dzi`) refers to remote data and is used as is.
 - An **app-relative path**, prefixed with `//` (e.g. `//data/he.dzi`), is resolved against the URL of the TissUUmaps application.
 - A **workspace-relative path**, prefixed with `/` (e.g. `/data/he.dzi`), refers to local data within the **TissUUmaps workspace directory** the user has opened. Without an open workspace, it falls back to being app-relative.
-- A **project-relative path**, without prefix (e.g. `images/he.dzi`, `./images/he.dzi` or `../shared/he.dzi`), is resolved **against where the project file itself was loaded from**: a project served at `https://example.org/studies/liver/project.tmap` resolves `images/he.dzi` to `https://example.org/studies/liver/images/he.dzi`, and a project opened from a workspace resolves it within the project file's directory. This lets a project directory be moved or copied to another host or workspace without touching the project file.
+- A **project-relative path**, without prefix (e.g. `images/he.dzi`, `./images/he.dzi` or `../shared/he.dzi`), is resolved **against where the project file itself was loaded from**, so that a project directory can be moved or copied to another host or workspace without touching the project file:
 
-  Projects that were loaded from neither - those opened from a local file through the project panel - have no such base. Their project-relative paths fall back to being workspace-relative, and thus, without an open workspace, to being app-relative.
+  - A project served at `https://example.org/studies/liver/project.tmap` resolves `images/he.dzi` to `https://example.org/studies/liver/images/he.dzi`.
+  - A project opened from a workspace resolves it within the project file's directory: at `/studies/project.tmap`, `he.dzi` becomes `/studies/he.dzi`.
+  - A project opened from a local file through the project panel has no such base; the path is taken as workspace-relative from the workspace root, so `he.dzi` becomes `/he.dzi`.
+
+  The latter two yield a workspace-relative path, which, as above, falls back to being app-relative without an open workspace.
 
 Paths use `/` as separator and may contain `.` and `..` segments. A path cannot leave the workspace; against a project URL, `..` segments that would lead above the root of the URL's path are dropped, as in any URL. A project-relative path whose first segment contains a colon (e.g. `sample1:ch2.tif`) would be taken for a URL with the scheme `sample1:`; write it as `./sample1:ch2.tif` instead. For consistency, it is recommended to store the TissUUmaps project file in the root of the workspace. Conventionally, locally stored TissUUmaps projects are named `project.tmap`, and the TissUUmaps workspace directory name is used to identify the project.

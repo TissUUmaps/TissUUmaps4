@@ -72,6 +72,56 @@ const workspace = makeDir("", {
 }) as unknown as FileSystemDirectoryHandle;
 
 describe("SourceUtils", () => {
+  describe("isWorkspacePath", () => {
+    it("returns true for workspace-relative paths", () => {
+      expect(SourceUtils.isWorkspacePath("/proj/points.csv")).toBe(true);
+      expect(SourceUtils.isWorkspacePath("/points.csv")).toBe(true);
+    });
+
+    it("returns false for URLs", () => {
+      expect(SourceUtils.isWorkspacePath("https://x.example/f.csv")).toBe(
+        false,
+      );
+      expect(SourceUtils.isWorkspacePath("blob:https://app.example/123")).toBe(
+        false,
+      );
+      expect(SourceUtils.isWorkspacePath("file:///proj/points.csv")).toBe(
+        false,
+      );
+    });
+
+    it("returns false for app-relative paths", () => {
+      expect(SourceUtils.isWorkspacePath("//data/points.csv")).toBe(false);
+      expect(SourceUtils.isWorkspacePath("///data/points.csv")).toBe(false);
+    });
+  });
+
+  describe("makeWorkspacePath", () => {
+    it("joins the segments with the workspace prefix", () => {
+      expect(SourceUtils.makeWorkspacePath(["proj", "points.csv"])).toBe(
+        "/proj/points.csv",
+      );
+      expect(SourceUtils.makeWorkspacePath(["points.csv"])).toBe("/points.csv");
+    });
+
+    it("builds a workspace-relative path", () => {
+      expect(
+        SourceUtils.isWorkspacePath(
+          SourceUtils.makeWorkspacePath(["proj", "points.csv"]),
+        ),
+      ).toBe(true);
+    });
+
+    it("normalizes to itself", () => {
+      const workspacePath = SourceUtils.makeWorkspacePath(["proj", "a.csv"]);
+      expect(
+        SourceUtils.normalizeSource(workspacePath, workspace, null, {
+          baseUrl,
+        }),
+      ).toBe(workspacePath);
+    });
+  });
+
   describe("normalizeSource", () => {
     afterEach(() => {
       vi.unstubAllGlobals();
@@ -273,7 +323,7 @@ describe("SourceUtils", () => {
         ).toBe("/proj/s:c.tif");
       });
 
-      it("resolves within the project file's directory of a workspace project", () => {
+      it("resolves within the project file's directory for a project loaded from the workspace", () => {
         expect(
           SourceUtils.normalizeSource("points.csv", workspace, projectPath, {
             baseUrl,
@@ -306,7 +356,7 @@ describe("SourceUtils", () => {
         ).toBe("/shared/x.csv");
       });
 
-      it("throws if the path leaves the workspace of a workspace project", () => {
+      it("throws if the path leaves the workspace for a project loaded from the workspace", () => {
         expect(() =>
           SourceUtils.normalizeSource("../../x.csv", workspace, projectPath, {
             baseUrl,
@@ -314,12 +364,17 @@ describe("SourceUtils", () => {
         ).toThrow("Path escapes workspace");
       });
 
-      it("throws for a workspace project without an open workspace", () => {
-        expect(() =>
+      it("falls back to being app-relative for a project loaded from the workspace without an open workspace", () => {
+        expect(
           SourceUtils.normalizeSource("points.csv", null, projectPath, {
             baseUrl,
           }),
-        ).toThrow("without workspace");
+        ).toBe("https://app.example/tm/proj/points.csv");
+        expect(
+          SourceUtils.normalizeSource("../shared/x.csv", null, projectPath, {
+            baseUrl,
+          }),
+        ).toBe("https://app.example/tm/shared/x.csv");
       });
 
       it("throws if the path does not form a valid URL with the project URL", () => {
@@ -355,6 +410,7 @@ describe("SourceUtils", () => {
         ["/shared/x.csv", null, projectPath],
         ["./sub/../points.csv", workspace, projectPath],
         ["../shared/x.csv", workspace, projectPath],
+        ["points.csv", null, projectPath],
         ["points.csv", null, projectUrl],
         ["shared/x.csv", workspace, null],
         ["points.csv", null, null],
@@ -379,40 +435,6 @@ describe("SourceUtils", () => {
     });
   });
 
-  describe("normalizeWorkspacePath", () => {
-    it("throws if the prefix is missing", () => {
-      expect(() =>
-        SourceUtils.normalizeWorkspacePath("x.csv", workspace, { baseUrl }),
-      ).toThrow("Invalid workspace-relative path: x.csv");
-    });
-  });
-
-  describe("makeWorkspacePath", () => {
-    it("joins the segments with the workspace prefix", () => {
-      expect(SourceUtils.makeWorkspacePath(["proj", "points.csv"])).toBe(
-        "/proj/points.csv",
-      );
-      expect(SourceUtils.makeWorkspacePath(["points.csv"])).toBe("/points.csv");
-    });
-
-    it("normalizes to itself", () => {
-      const workspacePath = SourceUtils.makeWorkspacePath(["proj", "a.csv"]);
-      expect(
-        SourceUtils.normalizeSource(workspacePath, workspace, null, {
-          baseUrl,
-        }),
-      ).toBe(workspacePath);
-    });
-  });
-
-  describe("normalizeAppPath", () => {
-    it("throws if the prefix is missing", () => {
-      expect(() => SourceUtils.normalizeAppPath("/x.csv", { baseUrl })).toThrow(
-        "Invalid app-relative path: /x.csv",
-      );
-    });
-  });
-
   describe("resolveSource", () => {
     it("returns URLs as is", async () => {
       await expect(
@@ -421,6 +443,16 @@ describe("SourceUtils", () => {
       await expect(
         SourceUtils.resolveSource("blob:https://app.example/123", null),
       ).resolves.toBe("blob:https://app.example/123");
+    });
+
+    it("rejects URLs too if already aborted", async () => {
+      const controller = new AbortController();
+      controller.abort();
+      await expect(
+        SourceUtils.resolveSource("https://x.example/f.csv", workspace, {
+          signal: controller.signal,
+        }),
+      ).rejects.toMatchObject({ name: "AbortError" });
     });
 
     it("opens a file in the workspace root", async () => {
@@ -467,7 +499,7 @@ describe("SourceUtils", () => {
         SourceUtils.resolveSource("/../x.csv", workspace),
       ).rejects.toThrow("Path escapes workspace");
       await expect(SourceUtils.resolveSource("/", workspace)).rejects.toThrow(
-        "does not name a file",
+        "Cannot resolve workspace-relative path that does not name a file: /",
       );
     });
 

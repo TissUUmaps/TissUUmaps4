@@ -152,6 +152,11 @@ export interface DataProvider<
    * it against the project source and the open workspace, so the result has to
    * be recomputed when either changes.
    *
+   * Normalizing may throw, e.g. for a source that cannot be resolved against
+   * the given workspace and project source. The data cache catches it, so only
+   * the objects referencing that data source fail to load; the data of all
+   * other objects is unaffected.
+   *
    * @param dataSource - The data source to normalize
    * @param workspace - The directory handle of the open workspace, if any
    * @param projectSource - Where the project was loaded from: its absolute URL,

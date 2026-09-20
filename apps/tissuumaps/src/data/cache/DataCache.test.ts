@@ -908,6 +908,131 @@ describe("DataCache", () => {
     });
   });
 
+  describe("failing normalization", () => {
+    it("fails the entry's load operation with the normalization error", async () => {
+      const { dataCache } = createTestDataCache();
+      const error = new Error("Cannot normalize");
+      const { dataProvider, load } = createTestDataProvider({
+        normalize: () => {
+          throw error;
+        },
+      });
+      const object = createObject("a", { type: "test", source: "a.test" });
+
+      const promise = dataCache.load(object, createContext(dataProvider));
+
+      expect(await captureRejection(promise)).toBe(error);
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it("reports an error data ref for the object", async () => {
+      const { dataCache, onObjectDataRefsChanged } = createTestDataCache();
+      const error = new Error("Cannot normalize");
+      const { dataProvider } = createTestDataProvider({
+        normalize: () => {
+          throw error;
+        },
+      });
+      const object = createObject("a", { type: "test", source: "a.test" });
+
+      await captureRejection(
+        dataCache.load(object, createContext(dataProvider)),
+      );
+      await flushAsync();
+
+      expect(
+        onObjectDataRefsChanged.mock.calls.at(-1)![0].get("a"),
+      ).toMatchObject({ status: "error", error });
+    });
+
+    it("does not throw from retainOnly", async () => {
+      const { dataCache } = createTestDataCache();
+      const { dataProvider, calls } = createTestDataProvider({
+        normalize: (dataSource, workspace) => {
+          if (workspace === null) {
+            throw new Error("Cannot normalize without workspace");
+          }
+          return { ...dataSource, source: "/a.test" };
+        },
+      });
+      const workspace = createWorkspace();
+      const object = createObject("a", { type: "test", source: "a.test" });
+
+      const promise = dataCache.load(
+        object,
+        createContext(dataProvider, { workspace }),
+      );
+      calls.at(-1)!.deferred.resolve(createTestData().data);
+      await promise;
+
+      expect(() =>
+        dataCache.retainOnly([object], createContext(dataProvider)),
+      ).not.toThrow();
+    });
+
+    it("reconciles the other objects when normalizing one fails", async () => {
+      const { dataCache } = createTestDataCache();
+      const { dataProvider, calls } = createTestDataProvider({
+        normalize: (dataSource, workspace) => {
+          if (dataSource.source === "bad.test") {
+            if (workspace === null) {
+              throw new Error("Cannot normalize without workspace");
+            }
+            return { ...dataSource, source: "/bad.test" };
+          }
+          return dataSource;
+        },
+      });
+      const workspace = createWorkspace();
+      const context = createContext(dataProvider, { workspace });
+      const good = createObject("good", { type: "test", source: "good.test" });
+      const bad = createObject("bad", { type: "test", source: "bad.test" });
+      const { data: goodData } = createTestData("good");
+      const { data: badData, close: closeBad } = createTestData("bad");
+
+      const goodPromise = dataCache.load(good, context);
+      calls.at(-1)!.deferred.resolve(goodData);
+      const badPromise = dataCache.load(bad, context);
+      calls.at(-1)!.deferred.resolve(badData);
+      await Promise.all([goodPromise, badPromise]);
+      const objectDataRefs = dataCache.retainOnly(
+        [good, bad],
+        createContext(dataProvider),
+      );
+
+      expect([...objectDataRefs.keys()]).toEqual(["good"]);
+      expect(objectDataRefs.get("good")).toMatchObject({ status: "loaded" });
+      expect(closeBad).toHaveBeenCalledOnce();
+    });
+
+    it("loads the data once normalization succeeds again", async () => {
+      const { dataCache } = createTestDataCache();
+      const { dataProvider, load, calls } = createTestDataProvider({
+        normalize: (dataSource, workspace) => {
+          if (workspace === null) {
+            throw new Error("Cannot normalize without workspace");
+          }
+          return { ...dataSource, source: "/a.test" };
+        },
+      });
+      const workspace = createWorkspace();
+      const object = createObject("a", { type: "test", source: "a.test" });
+
+      await captureRejection(
+        dataCache.load(object, createContext(dataProvider)),
+      );
+      const reloaded = dataCache.load(
+        object,
+        createContext(dataProvider, { workspace }),
+      );
+      calls.at(-1)!.deferred.resolve(createTestData("value").data);
+
+      expect((await reloaded).value).toBe("value");
+      expect(load).toHaveBeenCalledOnce();
+      expect(calls.at(-1)!.dataSource.source).toBe("/a.test");
+    });
+  });
+
   describe("retainOnly", () => {
     it("returns the current data refs of the retained objects", async () => {
       const { dataCache } = createTestDataCache();
