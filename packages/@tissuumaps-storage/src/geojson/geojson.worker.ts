@@ -3,6 +3,7 @@ import type { Feature, GeoJSON, Geometry } from "geojson";
 import {
   type ShapesAppender,
   type ShapesGeometry,
+  type ShapesPolygon,
   ShapesUtils,
 } from "@tissuumaps/core";
 
@@ -174,28 +175,38 @@ async function handleFileRequest(
 }
 
 /**
- * Appends a GeoJSON geometry as one shape
+ * Reads the polygons of a GeoJSON geometry
+ *
+ * @param geometry - The geometry to read
+ * @returns The polygons of the geometry, or `undefined` if it holds none
+ */
+function toPolygons(geometry: Geometry): readonly ShapesPolygon[] | undefined {
+  if (geometry.type === "Polygon") {
+    return [geometry.coordinates];
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates;
+  }
+  console.warn(`Unsupported geometry type: ${geometry.type}`);
+  return undefined;
+}
+
+/**
+ * Appends the polygons of a GeoJSON geometry as one shape, if it holds any
  *
  * @param append - The appender of the shapes geometry under construction
  * @param geometry - The geometry to append
  * @param id - The ID of the shape
- * @param name - The name of the shape, if any
  */
-function appendGeometry(
+function appendPolygons(
   append: ShapesAppender,
   geometry: Geometry,
   id: number,
-  name?: string,
 ): void {
-  if (geometry.type === "Polygon") {
-    append([geometry.coordinates], id, name);
-    return;
+  const polygons = toPolygons(geometry);
+  if (polygons !== undefined) {
+    append(polygons, id);
   }
-  if (geometry.type === "MultiPolygon") {
-    append(geometry.coordinates, id, name);
-    return;
-  }
-  console.warn(`Unsupported geometry type: ${geometry.type}`);
 }
 
 function readFeatureId(
@@ -258,30 +269,32 @@ async function parseGeoJSON(
             console.warn("Skipping feature with null geometry.");
             continue;
           }
-          appendGeometry(
-            append,
-            feature.geometry,
-            idProperty !== undefined ? readFeatureId(feature, idProperty) : i,
-            nameProperty !== undefined
-              ? readFeatureName(feature, nameProperty)
-              : undefined,
-          );
+          const polygons = toPolygons(feature.geometry);
+          if (polygons !== undefined) {
+            append(
+              polygons,
+              idProperty !== undefined ? readFeatureId(feature, idProperty) : i,
+              nameProperty !== undefined
+                ? readFeatureName(feature, nameProperty)
+                : undefined,
+            );
+          }
           onProgress(i + 1, geo.features.length);
         }
         break;
       case "Feature":
         if (geo.geometry !== null) {
-          appendGeometry(append, geo.geometry, 0);
+          appendPolygons(append, geo.geometry, 0);
         }
         break;
       case "GeometryCollection":
         for (let i = 0; i < geo.geometries.length; i++) {
-          appendGeometry(append, geo.geometries[i]!, i);
+          appendPolygons(append, geo.geometries[i]!, i);
           onProgress(i + 1, geo.geometries.length);
         }
         break;
       default:
-        appendGeometry(append, geo, 0);
+        appendPolygons(append, geo, 0);
         break;
     }
   });
