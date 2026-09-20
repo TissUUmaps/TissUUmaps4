@@ -1,7 +1,9 @@
+import type { ColumnQuerySuggestion } from "../storage/table";
+
 /**
  * Column query suggestion and resolution for tables with a flat list of columns
  *
- * A column query is the column name itself.
+ * A column query is the column name itself, so every suggestion is terminal.
  */
 export class TableColumnUtils {
   /**
@@ -19,7 +21,7 @@ export class TableColumnUtils {
   static suggestColumnQueries(
     columns: string[],
     currentQuery: string,
-  ): string[] {
+  ): ColumnQuerySuggestion[] {
     const lowerCaseQuery = currentQuery.toLowerCase();
     const matches: string[] = [];
     const others: string[] = [];
@@ -34,7 +36,7 @@ export class TableColumnUtils {
     if (exactMatchIndex > 0) {
       matches.unshift(...matches.splice(exactMatchIndex, 1));
     }
-    return [...matches, ...others];
+    return [...matches, ...others].map((query) => ({ query, terminal: true }));
   }
 
   /**

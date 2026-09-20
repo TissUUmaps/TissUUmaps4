@@ -1,4 +1,5 @@
 import type {
+  ColumnQuerySuggestion,
   GenericArray,
   ProgressCallback,
   TableData,
@@ -52,7 +53,7 @@ export class TableDataWrapper
   suggestColumnQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },
-  ): Promise<string[]> {
+  ): Promise<ColumnQuerySuggestion[]> {
     return this.data.suggestColumnQueries(currentQuery, options);
   }
 

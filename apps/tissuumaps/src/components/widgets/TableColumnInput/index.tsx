@@ -2,6 +2,8 @@ import { Autocomplete } from "@base-ui/react/autocomplete";
 import { ChevronDownIcon, FolderIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
+import type { ColumnQuerySuggestion } from "@tissuumaps/core";
+
 import { Input } from "@/components/ui/input";
 import { useTableDataLoader } from "@/hooks/useDataLoader";
 import { cn } from "@/lib/utils";
@@ -16,10 +18,6 @@ export type TableColumnInputProps = {
 
 /** Maximum number of suggestions shown in the popup, which is not virtualized */
 const maxSuggestions = 100;
-
-function isGroupQuery(query: string): boolean {
-  return query.endsWith("/");
-}
 
 function isMatch(suggestion: string, query: string): boolean {
   return suggestion.toLowerCase().includes(query.toLowerCase());
@@ -76,7 +74,9 @@ export function TableColumnInput({
 
   const [text, setText] = useState(value ?? "");
   const [invalid, setInvalid] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[] | null>(null);
+  const [suggestions, setSuggestions] = useState<
+    ColumnQuerySuggestion[] | null
+  >(null);
   const [open, setOpen] = useState(false);
 
   const [syncedValue, setSyncedValue] = useState(value);
@@ -154,10 +154,13 @@ export function TableColumnInput({
     });
   }
 
-  const highlightedSuggestionRef = useRef<string | undefined>(undefined);
+  const highlightedSuggestionRef = useRef<ColumnQuerySuggestion | undefined>(
+    undefined,
+  );
   // base-ui closes the popup after any item press and only resets the
   // highlighted index on unmount, so cancelling the close would leave a stale
-  // highlight on the group's children; a pressed group reopens the popup instead
+  // highlight on the children; a pressed non-terminal suggestion reopens the
+  // popup instead
   const reopenRef = useRef(false);
 
   function handleTextChange(
@@ -173,7 +176,8 @@ export function TableColumnInput({
     setText(newText);
     setInvalid(false);
     if (details.reason === "item-press") {
-      if (isGroupQuery(newText)) {
+      const pressed = suggestions?.find((s) => s.query === newText);
+      if (pressed?.terminal === false) {
         reopenRef.current = true;
       } else {
         commit(newText);
@@ -210,7 +214,7 @@ export function TableColumnInput({
       return "No columns";
     }
     // matching suggestions are listed first, so the first one decides
-    if (!isMatch(suggestions[0]!, text)) {
+    if (!isMatch(suggestions[0]!.query, text)) {
       return `No matches for "${text}", showing all columns`;
     }
     if (suggestions.length > maxSuggestions) {
@@ -225,6 +229,7 @@ export function TableColumnInput({
       onValueChange={handleTextChange}
       mode="none"
       items={shownSuggestions ?? []}
+      itemToStringValue={(suggestion) => suggestion.query}
       openOnInputClick
       open={open}
       onOpenChange={handleOpenChange}
@@ -276,14 +281,14 @@ export function TableColumnInput({
             <Autocomplete.List>
               {shownSuggestions?.map((suggestion) => (
                 <Autocomplete.Item
-                  key={suggestion}
+                  key={suggestion.query}
                   value={suggestion}
                   className="flex cursor-default select-none items-center gap-2 px-3 py-1.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                 >
-                  {isGroupQuery(suggestion) && (
+                  {!suggestion.terminal && (
                     <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
                   )}
-                  <SuggestionText suggestion={suggestion} query={text} />
+                  <SuggestionText suggestion={suggestion.query} query={text} />
                 </Autocomplete.Item>
               ))}
             </Autocomplete.List>

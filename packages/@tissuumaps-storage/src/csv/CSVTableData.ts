@@ -1,4 +1,5 @@
 import {
+  type ColumnQuerySuggestion,
   type GenericArray,
   MathUtils,
   type NumericArray,
@@ -44,7 +45,7 @@ export class CSVTableData implements TableData {
     return this._names;
   }
 
-  suggestColumnQueries(currentQuery: string): Promise<string[]> {
+  suggestColumnQueries(currentQuery: string): Promise<ColumnQuerySuggestion[]> {
     return Promise.resolve(
       TableColumnUtils.suggestColumnQueries(this._columns, currentQuery),
     );

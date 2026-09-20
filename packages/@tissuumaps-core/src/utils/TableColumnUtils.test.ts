@@ -5,32 +5,32 @@ import { TableColumnUtils } from "./TableColumnUtils";
 describe("TableColumnUtils", () => {
   const columns = ["area", "Area_um2", "cell_type", "x", "y"];
 
+  function terminal(...queries: string[]) {
+    return queries.map((query) => ({ query, terminal: true }));
+  }
+
   describe("suggestColumnQueries", () => {
     it("lists all columns for an empty query", () => {
       expect(TableColumnUtils.suggestColumnQueries(columns, "")).toEqual(
-        columns,
+        terminal(...columns),
       );
     });
 
     it("lists case-insensitive matches first", () => {
-      expect(TableColumnUtils.suggestColumnQueries(columns, "AREA")).toEqual([
-        "area",
-        "Area_um2",
-        "cell_type",
-        "x",
-        "y",
-      ]);
+      expect(TableColumnUtils.suggestColumnQueries(columns, "AREA")).toEqual(
+        terminal("area", "Area_um2", "cell_type", "x", "y"),
+      );
     });
 
     it("lists an exact match first", () => {
       expect(
         TableColumnUtils.suggestColumnQueries(["Area_um2", "area"], "area"),
-      ).toEqual(["area", "Area_um2"]);
+      ).toEqual(terminal("area", "Area_um2"));
     });
 
     it("lists all columns in table order when nothing matches", () => {
       expect(TableColumnUtils.suggestColumnQueries(columns, "z")).toEqual(
-        columns,
+        terminal(...columns),
       );
     });
   });

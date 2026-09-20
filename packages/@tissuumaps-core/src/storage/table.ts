@@ -3,6 +3,19 @@ import type { GenericArray } from "../types/arrays";
 import type { ProgressCallback } from "../types/callbacks";
 import type { DataProvider, ItemsData } from "./base";
 
+/** A column query suggested by `TableData.suggestColumnQueries` */
+export type ColumnQuerySuggestion = {
+  /** The suggested query, in the provider's own format */
+  query: string;
+  /**
+   * Whether the query resolves to a column
+   *
+   * A non-terminal suggestion continues the query, e.g. into a group of
+   * columns.
+   */
+  terminal: boolean;
+};
+
 /**
  * Loaded tabular data providing column-wise access
  *
@@ -14,12 +27,8 @@ export interface TableData extends ItemsData {
   /**
    * Returns column query suggestions for the current query
    *
-   * Suggestions matching the current query come first, the remaining ones
-   * follow.
-   *
-   * A suggestion ending in `/` is a group: it does not resolve to a column,
-   * but continues the query into the group. Columns whose name ends in `/`
-   * can therefore not be picked from the suggestions.
+   * The query format is up to the provider. Suggestions matching the current
+   * query come first, the remaining ones follow.
    *
    * @param currentQuery - The partial column query to autocomplete
    * @param options - Optional abort signal
@@ -28,7 +37,7 @@ export interface TableData extends ItemsData {
   suggestColumnQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },
-  ): Promise<string[]>;
+  ): Promise<ColumnQuerySuggestion[]>;
 
   /**
    * Resolves a query to an exact column name
