@@ -18,7 +18,7 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
   ShapesData,
   NormalizedParquetShapesDataSource
 > {
-  readonly name = "GeoParquet";
+  readonly name = "Parquet";
 
   readonly schema = {
     type: "object",
