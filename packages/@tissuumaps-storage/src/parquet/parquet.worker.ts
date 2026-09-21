@@ -17,7 +17,7 @@ import {
   type TypedArray,
 } from "@tissuumaps/core";
 
-import { GeoParquetUtils } from "./GeoParquetUtils";
+import { ParquetMetadataUtils } from "./ParquetMetadataUtils";
 import type { ParquetSource } from "./types";
 
 /**
@@ -364,7 +364,7 @@ async function handleFileRequest(
     request.nameColumn,
     onProgress,
   );
-  const geoColumns = GeoParquetUtils.readColumns(metadata);
+  const geoColumns = ParquetMetadataUtils.readGeoColumns(metadata);
   return {
     response: {
       op: "file",
@@ -373,7 +373,7 @@ async function handleFileRequest(
         ...getColumns(metadata).filter(
           (column) => !geoColumns.some(({ name }) => name === column),
         ),
-        ...GeoParquetUtils.getCoordinateColumns(geoColumns),
+        ...ParquetMetadataUtils.getCoordinateColumns(geoColumns),
       ],
       ids,
       names,
@@ -496,11 +496,11 @@ async function handleShapesRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  const geoColumns = GeoParquetUtils.readColumns(metadata);
+  const geoColumns = ParquetMetadataUtils.readGeoColumns(metadata);
   const geoColumn =
     request.geometryColumn !== undefined
       ? geoColumns.find(({ name }) => name === request.geometryColumn)
-      : GeoParquetUtils.getPrimaryColumn(geoColumns);
+      : ParquetMetadataUtils.getPrimaryColumn(geoColumns);
   if (geoColumn === undefined) {
     throw new Error(
       request.geometryColumn !== undefined
@@ -508,7 +508,7 @@ async function handleShapesRequest(
         : "Parquet file has no GeoParquet geometry column",
     );
   }
-  if (GeoParquetUtils.isPointColumn(geoColumn)) {
+  if (ParquetMetadataUtils.isPointColumn(geoColumn)) {
     throw new Error(
       `Geometry column "${geoColumn.name}" holds points, which are read as ` +
         `the "${geoColumn.name}[x]" and "${geoColumn.name}[y]" columns of a ` +
@@ -574,8 +574,8 @@ async function handleRangeRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  const coordinates = GeoParquetUtils.resolveCoordinateColumn(
-    GeoParquetUtils.readColumns(metadata),
+  const coordinates = ParquetMetadataUtils.resolveCoordinateColumn(
+    ParquetMetadataUtils.readGeoColumns(metadata),
     request.column,
   );
   if (coordinates !== undefined) {

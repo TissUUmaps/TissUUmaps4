@@ -7,7 +7,7 @@ import {
   type TableData,
 } from "@tissuumaps/core";
 
-import { GeoParquetUtils } from "./GeoParquetUtils";
+import { ParquetMetadataUtils } from "./ParquetMetadataUtils";
 import { runParquetWorker } from "./runParquetWorker";
 import type { ParquetSource } from "./types";
 
@@ -90,7 +90,7 @@ export class ParquetTableData implements TableData {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const coordinates = this._columns.includes(column)
-      ? GeoParquetUtils.parseCoordinateColumn(column)
+      ? ParquetMetadataUtils.parseCoordinateColumn(column)
       : undefined;
     if (coordinates !== undefined) {
       const { x, y } = await AsyncUtils.raceSignal(

@@ -32,30 +32,31 @@ type GeoMetadata = {
   };
 };
 
-/** Matches a coordinate column, capturing its geometry column and its axis */
-const coordinateColumnPattern = /^(.*)\[([xy])\]$/;
-
-/** Reads the 2D bounds of a `bbox`, which lists Z bounds too for 3D columns */
-function readBBox(
-  bbox: number[] | undefined,
-): [number, number, number, number] | undefined {
-  if (bbox?.length === 4) {
-    return [bbox[0]!, bbox[1]!, bbox[2]!, bbox[3]!];
-  }
-  if (bbox?.length === 6) {
-    return [bbox[0]!, bbox[1]!, bbox[3]!, bbox[4]!];
-  }
-  return undefined;
-}
-
 /**
- * Helpers for the GeoParquet metadata of a Parquet file
+ * Helpers for the metadata a Parquet file carries in its footer
  *
- * Point geometry columns are read as a pair of coordinate columns selected from
- * the geometry column, e.g. `geometry[x]` and `geometry[y]`, so that point
+ * GeoParquet describes its geometry columns in the `geo` metadata. Point
+ * geometry columns are read as a pair of coordinate columns selected from the
+ * geometry column, e.g. `geometry[x]` and `geometry[y]`, so that point
  * geometries can be used wherever a numeric column is expected.
  */
-export class GeoParquetUtils {
+export class ParquetMetadataUtils {
+  /** Matches a coordinate column, capturing its geometry column and its axis */
+  private static readonly _coordinateColumnPattern = /^(.*)\[([xy])\]$/;
+
+  /** Reads the 2D bounds of a `bbox`, which lists Z bounds too for 3D columns */
+  private static _readBBox(
+    bbox: number[] | undefined,
+  ): [number, number, number, number] | undefined {
+    if (bbox?.length === 4) {
+      return [bbox[0]!, bbox[1]!, bbox[2]!, bbox[3]!];
+    }
+    if (bbox?.length === 6) {
+      return [bbox[0]!, bbox[1]!, bbox[3]!, bbox[4]!];
+    }
+    return undefined;
+  }
+
   /**
    * Reads the geometry columns of a file
    *
@@ -63,7 +64,7 @@ export class GeoParquetUtils {
    * @returns The geometry columns, in metadata order, or an empty array for
    * files without GeoParquet metadata
    */
-  static readColumns(metadata: FileMetaData): GeoColumn[] {
+  static readGeoColumns(metadata: FileMetaData): GeoColumn[] {
     const geo = metadata.key_value_metadata?.find(({ key }) => key === "geo");
     if (geo?.value === undefined) {
       return [];
@@ -77,7 +78,7 @@ export class GeoParquetUtils {
         name,
         primary: name === primary_column,
         geometryTypes: column.geometry_types ?? [],
-        bbox: readBBox(column.bbox),
+        bbox: ParquetMetadataUtils._readBBox(column.bbox),
       }));
   }
 
@@ -115,7 +116,7 @@ export class GeoParquetUtils {
    */
   static getCoordinateColumns(geoColumns: GeoColumn[]): string[] {
     return geoColumns
-      .filter((geoColumn) => GeoParquetUtils.isPointColumn(geoColumn))
+      .filter((geoColumn) => ParquetMetadataUtils.isPointColumn(geoColumn))
       .flatMap(({ name }) => [`${name}[x]`, `${name}[y]`]);
   }
 
@@ -131,7 +132,7 @@ export class GeoParquetUtils {
   static parseCoordinateColumn(
     column: string,
   ): { geometryColumn: string; axis: "x" | "y" } | undefined {
-    const match = coordinateColumnPattern.exec(column);
+    const match = ParquetMetadataUtils._coordinateColumnPattern.exec(column);
     if (match === null) {
       return undefined;
     }
@@ -151,14 +152,14 @@ export class GeoParquetUtils {
     geoColumns: GeoColumn[],
     column: string,
   ): { geoColumn: GeoColumn; axis: "x" | "y" } | undefined {
-    const coordinates = GeoParquetUtils.parseCoordinateColumn(column);
+    const coordinates = ParquetMetadataUtils.parseCoordinateColumn(column);
     if (coordinates === undefined) {
       return undefined;
     }
     const geoColumn = geoColumns.find(
       (geoColumn) =>
         geoColumn.name === coordinates.geometryColumn &&
-        GeoParquetUtils.isPointColumn(geoColumn),
+        ParquetMetadataUtils.isPointColumn(geoColumn),
     );
     return geoColumn !== undefined
       ? { geoColumn, axis: coordinates.axis }
