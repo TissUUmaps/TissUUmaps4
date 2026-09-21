@@ -122,7 +122,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
-              aria-label="Show/hide"
+              aria-label={image.visibility ? "Hide image" : "Show image"}
               onClick={() =>
                 updateImage(image.id, { visibility: !image.visibility })
               }

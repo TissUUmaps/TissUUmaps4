@@ -153,7 +153,7 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
-              aria-label="Show/hide"
+              aria-label={layer.visibility ? "Hide layer" : "Show layer"}
               onClick={() =>
                 updateLayer(layer.id, { visibility: !layer.visibility })
               }

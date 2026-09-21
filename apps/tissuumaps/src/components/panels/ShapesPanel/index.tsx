@@ -144,7 +144,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
-              aria-label="Show/hide"
+              aria-label={shapes.visibility ? "Hide shapes" : "Show shapes"}
               onClick={() =>
                 updateShapes(shapes.id, { visibility: !shapes.visibility })
               }

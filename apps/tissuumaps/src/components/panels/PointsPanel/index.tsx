@@ -162,7 +162,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
-              aria-label="Show/hide"
+              aria-label={points.visibility ? "Hide points" : "Show points"}
               onClick={() =>
                 updatePoints(points.id, { visibility: !points.visibility })
               }
