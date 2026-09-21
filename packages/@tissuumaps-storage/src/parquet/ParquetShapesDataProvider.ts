@@ -38,6 +38,10 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
       table: {
         type: "string",
       },
+      requestHeaders: {
+        type: "object",
+        additionalProperties: { type: "string" },
+      },
     },
     required: ["source"],
   };

@@ -31,6 +31,10 @@ export class ParquetTableDataProvider implements TableDataProvider<
       nameColumn: {
         type: "string",
       },
+      requestHeaders: {
+        type: "object",
+        additionalProperties: { type: "string" },
+      },
     },
     required: ["source"],
   };
