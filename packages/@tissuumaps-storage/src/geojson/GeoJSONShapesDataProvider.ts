@@ -1,6 +1,5 @@
 import {
   type DataProviderLoadOptions,
-  type ShapesData,
   type ShapesDataProvider,
   SourceUtils,
 } from "@tissuumaps/core";
@@ -15,7 +14,7 @@ import { runGeoJSONWorker } from "./runGeoJSONWorker";
 
 export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   GeoJSONShapesDataSource,
-  ShapesData,
+  GeoJSONShapesData,
   NormalizedGeoJSONShapesDataSource
 > {
   readonly name = "GeoJSON";
@@ -84,7 +83,7 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   async load(
     normalizedDataSource: NormalizedGeoJSONShapesDataSource,
     options?: DataProviderLoadOptions,
-  ): Promise<ShapesData> {
+  ): Promise<GeoJSONShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
     const resolvedSource = await SourceUtils.resolveSourceFile(
