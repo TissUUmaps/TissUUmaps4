@@ -430,21 +430,22 @@ export class WebGLContext {
   }
 
   /**
-   * Allocates (or re-allocates) storage for a buffer, discarding previous contents
+   * Allocates (or re-allocates) storage for a buffer and fills it with the
+   * given data, discarding previous contents
    *
    * @param target - Buffer binding target (e.g. `gl.ARRAY_BUFFER`)
-   * @param buffer - The buffer to resize
-   * @param size - New size in bytes
+   * @param buffer - The buffer to allocate
+   * @param data - The data to fill the buffer with; sets its size
    * @param usage - Usage hint (e.g. `gl.STATIC_DRAW`)
    */
-  resizeBuffer(
+  allocateBuffer(
     target: GLenum,
     buffer: WebGLBuffer,
-    size: GLsizeiptr,
+    data: Exclude<TypedArray, Float64Array>,
     usage: GLenum,
   ): void {
     this.gl.bindBuffer(target, buffer);
-    this.gl.bufferData(target, size, usage);
+    this.gl.bufferData(target, data, usage);
     this.gl.bindBuffer(target, null);
   }
 

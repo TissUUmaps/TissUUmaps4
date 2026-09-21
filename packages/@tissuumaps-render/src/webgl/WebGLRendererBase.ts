@@ -1,3 +1,5 @@
+import { deepEqual } from "fast-equals";
+
 import {
   AsyncUtils,
   GeometryUtils,
@@ -31,6 +33,15 @@ type ItemsInfo = { itemIds: number[]; itemsMask: Uint8Array };
  * identity of the loaded data: the data returned by the loaders passed to
  * {@link loadObjects} has to be immutable, and has to keep its identity for as
  * long as its content is unchanged.
+ *
+ * The rendered objects, each owning the GPU resources of one reference, are
+ * kept in {@link renderedObjects}, always in the order of the references they
+ * were last synchronized against, which is the draw order.
+ * {@link cleanRenderedObjects} matches them to the references of a new
+ * synchronization, {@link insertRenderedObject} and
+ * {@link removeRenderedObject} maintain the list as objects are created and
+ * dropped, and {@link destroyRenderedObject} releases the GPU resources of one
+ * object.
  */
 export abstract class WebGLRendererBase<
   TObject extends Points | Shapes,
@@ -270,6 +281,102 @@ export abstract class WebGLRendererBase<
   }
 
   /**
+   * Removes the GPU resources of objects that are no longer referenced, and
+   * reorders the remaining ones
+   *
+   * Matches the rendered objects to the new set of references, by layer,
+   * object, contributed items and data source. Every reference is matched at
+   * most once, so that duplicates are destroyed rather than orphaned. A matched
+   * object adopts the new reference, as the layer- and object-level properties
+   * are read from it when drawing, and is returned for reuse; the rest are
+   * destroyed. The remaining objects are then reordered to the order of the
+   * references, so that a changed draw order takes effect immediately.
+   *
+   * @param newRefs - The object references to match against
+   * @returns The reusable rendered objects, by object reference
+   */
+  protected cleanRenderedObjects(
+    newRefs: ObjectRef<TObject, TObjectData>[],
+  ): Map<ObjectRef<TObject, TObjectData>, TRenderedObject> {
+    const renderedObjectsByNewRef = new Map<
+      ObjectRef<TObject, TObjectData>,
+      TRenderedObject
+    >();
+    for (let i = 0; i < this.renderedObjects.length; i++) {
+      const renderedObject = this.renderedObjects[i]!;
+      const newRef = newRefs.find(
+        (newRef) =>
+          !renderedObjectsByNewRef.has(newRef) &&
+          renderedObject.ref.layer.id === newRef.layer.id &&
+          renderedObject.ref.object.id === newRef.object.id &&
+          renderedObject.ref.itemIds === newRef.itemIds &&
+          renderedObject.ref.itemsMask === newRef.itemsMask &&
+          // check data source configuration instead of data
+          deepEqual(renderedObject.state.dataSource, newRef.object.dataSource),
+      );
+      if (newRef !== undefined) {
+        renderedObject.ref = newRef;
+        renderedObjectsByNewRef.set(newRef, renderedObject);
+      } else {
+        this.renderedObjects.splice(i, 1);
+        this.destroyRenderedObject(renderedObject);
+        i--;
+      }
+    }
+    const newRefIndices = new Map(
+      newRefs.map((newRef, index) => [newRef, index] as const),
+    );
+    this.renderedObjects.sort(
+      (a, b) => newRefIndices.get(a.ref)! - newRefIndices.get(b.ref)!,
+    );
+    return renderedObjectsByNewRef;
+  }
+
+  /**
+   * Adds a newly created rendered object at its position in the draw order
+   *
+   * @param renderedObject - The rendered object to add
+   * @param newRefs - The references of the current synchronization, in draw
+   * order; the object's reference has to be one of them
+   */
+  protected insertRenderedObject(
+    renderedObject: TRenderedObject,
+    newRefs: ObjectRef<TObject, TObjectData>[],
+  ): void {
+    const index = newRefs.indexOf(renderedObject.ref);
+    let insertionIndex = this.renderedObjects.findIndex(
+      (other) => newRefs.indexOf(other.ref) > index,
+    );
+    if (insertionIndex === -1) {
+      insertionIndex = this.renderedObjects.length;
+    }
+    this.renderedObjects.splice(insertionIndex, 0, renderedObject);
+  }
+
+  /**
+   * Removes a rendered object from the draw order and releases its GPU resources
+   *
+   * @param renderedObject - The rendered object to remove
+   */
+  protected removeRenderedObject(renderedObject: TRenderedObject): void {
+    const index = this.renderedObjects.indexOf(renderedObject);
+    if (index !== -1) {
+      this.renderedObjects.splice(index, 1);
+    }
+    this.destroyRenderedObject(renderedObject);
+  }
+
+  /**
+   * Releases the GPU resources owned by a single rendered object
+   *
+   * Does not remove the object from {@link renderedObjects}, see
+   * {@link removeRenderedObject}.
+   */
+  protected abstract destroyRenderedObject(
+    renderedObject: TRenderedObject,
+  ): void;
+
+  /**
    * Gets the bounding box of all rendered objects, in world coordinates
    *
    * @returns The bounds, or null if no objects are rendered
@@ -285,6 +392,53 @@ export abstract class WebGLRendererBase<
       );
       return union !== null ? GeometryUtils.boundingBox(union, bounds) : bounds;
     }, null);
+  }
+
+  /**
+   * Computes the factor that the alpha of every item of an object is
+   * multiplied with when drawing
+   *
+   * @returns The product of the layer and object opacities, or `0` if the
+   * layer or the object is invisible
+   */
+  protected static computeOpacityFactor(
+    ref: ObjectRef<Points | Shapes, PointsData | ShapesData>,
+  ): number {
+    if (ref.layer.visibility === false || ref.object.visibility === false) {
+      return 0;
+    }
+    return ref.layer.opacity * ref.object.opacity;
+  }
+
+  /**
+   * Creates the loader for the table that an object resolves its properties
+   * from
+   *
+   * @param ref - The object reference
+   * @param tables - The tables to look the object's table up in
+   * @param loadTable - A function to load the data of a table
+   * @returns The loader, or `undefined` if the object has no table, or its
+   * table was not found (which is logged)
+   */
+  protected static createObjectTableLoader(
+    ref: ObjectRef<Points | Shapes, PointsData | ShapesData>,
+    tables: Table[],
+    loadTable: (
+      table: Table,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
+  ): ((options?: { signal?: AbortSignal }) => Promise<TableData>) | undefined {
+    if (ref.object.dataSource.table === undefined) {
+      return undefined;
+    }
+    const table = tables.find(
+      (table) => table.id === ref.object.dataSource.table,
+    );
+    if (table === undefined) {
+      console.warn(`Table with ID '${ref.object.dataSource.table}' not found`);
+      return undefined;
+    }
+    return (options?: { signal?: AbortSignal }) => loadTable(table, options);
   }
 
   /**
@@ -394,12 +548,19 @@ export type ObjectRef<
  * The rendered state of one {@link ObjectRef}
  *
  * Extended by the renderers with the GPU resources they own, and with the model
- * state their change detection compares against.
+ * state their change detection compares against. Rendered objects are mutated
+ * in place across synchronizations: {@link WebGLRendererBase.cleanRenderedObjects}
+ * replaces the reference of a matched object, and the renderers replace the
+ * bounds, the state and the GPU resources of an object as they are rebuilt.
  */
 export type RenderedObjectBase<
   TObject extends Points | Shapes,
   TObjectData extends PointsData | ShapesData,
 > = {
+  /** The reference the object was last matched to; its layer- and object-level properties are read when drawing */
   ref: ObjectRef<TObject, TObjectData>;
+  /** The bounds of the object's items, in data coordinates */
   objectBounds: Rect;
+  /** The model state the GPU resources were built from; the data source is what {@link WebGLRendererBase.cleanRenderedObjects} matches on */
+  state: Pick<TObject, "dataSource">;
 };
