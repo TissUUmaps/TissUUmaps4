@@ -1,5 +1,7 @@
 import {
   ChartScatterIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   CircleAlertIcon,
   CircleCheckIcon,
   ImageIcon,
@@ -202,6 +204,7 @@ function NotificationCard({
   dataRef,
   onDismiss,
 }: NotificationCardProps) {
+  const [expanded, setExpanded] = useState(false);
   const fraction =
     dataRef.status === "loaded"
       ? 1
@@ -230,7 +233,20 @@ function NotificationCard({
         ) : error !== undefined ? (
           <>
             <CircleAlertIcon className="size-3.5 shrink-0 text-destructive" />
-            <span className="max-w-1/2 truncate text-destructive">{error}</span>
+            {!expanded && (
+              <span className="max-w-1/2 truncate text-destructive">
+                {error}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="size-5"
+              onClick={() => setExpanded((prev) => !prev)}
+              title={expanded ? "Hide the error" : "Show the whole error"}
+            >
+              {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+            </Button>
           </>
         ) : fraction !== undefined ? (
           <span className="tabular-nums text-muted-foreground">
@@ -251,6 +267,11 @@ function NotificationCard({
           </Button>
         )}
       </div>
+      {expanded && error !== undefined && (
+        <p className="mt-1 max-h-32 overflow-y-auto break-words whitespace-pre-wrap text-destructive">
+          {error}
+        </p>
+      )}
       {fraction !== undefined && (
         <div
           className="absolute inset-x-0 bottom-0 h-0.5 bg-primary transition-[width] duration-200"
