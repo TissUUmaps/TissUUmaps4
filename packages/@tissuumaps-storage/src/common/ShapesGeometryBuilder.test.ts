@@ -107,6 +107,19 @@ describe("ShapesGeometryBuilder", () => {
     expect(builder.build().names).toBeUndefined();
   });
 
+  it("refuses to add a shape once the geometry is built", () => {
+    const builder = new ShapesGeometryBuilder();
+    builder.addShape([[square]], 10);
+    const { ids } = builder.build();
+    expect(() => builder.addShape([[square]], 20)).toThrow(
+      "Shapes cannot be added once the geometry is built.",
+    );
+    expect(() => builder.build()).toThrow(
+      "The geometry has already been built.",
+    );
+    expect(ids).toEqual([10]);
+  });
+
   it("counts the shapes added so far", () => {
     const builder = new ShapesGeometryBuilder();
     expect(builder.size).toBe(0);

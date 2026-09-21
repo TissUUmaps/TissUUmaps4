@@ -21,6 +21,7 @@ export class ShapesGeometryBuilder {
   private readonly _coords: number[] = [];
   private readonly _ids: number[] = [];
   private readonly _names: string[] = [];
+  private _built = false;
 
   /**
    * Adds one shape
@@ -32,12 +33,16 @@ export class ShapesGeometryBuilder {
    * @param polygons - The polygons the shape is made of
    * @param id - The ID of the shape
    * @param name - The name of the shape, if any
+   * @throws Error if the geometry has already been built
    */
   addShape(
     polygons: readonly ShapesPolygon[],
     id: number,
     name?: string,
   ): void {
+    if (this._built) {
+      throw new Error("Shapes cannot be added once the geometry is built.");
+    }
     let polygonsAdded = false;
     for (const rings of polygons) {
       if (rings.length === 0 || rings[0]!.length < 3) {
@@ -75,15 +80,23 @@ export class ShapesGeometryBuilder {
   /**
    * Builds the geometry of the shapes added so far
    *
+   * The builder is spent afterwards, so that nothing can change a result it
+   * has already handed out.
+   *
    * @returns The shapes geometry, in typed arrays ready to be transferred,
    * along with the IDs and the names of the added shapes. Names are returned
    * only if every added shape was given one.
+   * @throws Error if the geometry has already been built
    */
   build(): {
     geometry: ShapesGeometry;
     ids: number[];
     names: string[] | undefined;
   } {
+    if (this._built) {
+      throw new Error("The geometry has already been built.");
+    }
+    this._built = true;
     return {
       geometry: {
         shapePolygonOffsets: new Uint32Array(this._shapePolygonOffsets),
