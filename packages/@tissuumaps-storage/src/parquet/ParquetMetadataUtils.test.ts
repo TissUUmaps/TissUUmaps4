@@ -206,6 +206,19 @@ describe("ParquetMetadataUtils", () => {
       expect(ParquetMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
     });
 
+    it("reads no column for a multi-level index", () => {
+      const metadata = fakePandasMetadata(
+        JSON.stringify({
+          index_columns: ["region", "cell_id"],
+          columns: [
+            { field_name: "region", pandas_type: "int64" },
+            { field_name: "cell_id", pandas_type: "int64" },
+          ],
+        }),
+      );
+      expect(ParquetMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
+    });
+
     it("reads no column for an index missing from the column metadata", () => {
       const metadata = fakePandasMetadata(
         JSON.stringify({ index_columns: ["cell_id"] }),
