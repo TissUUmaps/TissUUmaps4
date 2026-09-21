@@ -2,10 +2,10 @@ import {
   type DataProviderLoadOptions,
   type ShapesData,
   type ShapesDataProvider,
-  ShapesUtils,
   SourceUtils,
 } from "@tissuumaps/core";
 
+import { ParquetShapesData } from "./ParquetShapesData";
 import {
   type NormalizedParquetShapesDataSource,
   type ParquetShapesDataSource,
@@ -120,6 +120,6 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
       },
       { signal, onProgress },
     );
-    return ShapesUtils.createShapesData(geometry, ids, names);
+    return new ParquetShapesData(geometry, ids, names);
   }
 }

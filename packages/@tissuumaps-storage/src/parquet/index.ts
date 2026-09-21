@@ -1,3 +1,4 @@
+export { ParquetShapesData } from "./ParquetShapesData";
 export { ParquetShapesDataProvider } from "./ParquetShapesDataProvider";
 export {
   parquetShapesDataSourceDefaults,

@@ -2,10 +2,10 @@ import {
   type DataProviderLoadOptions,
   type ShapesData,
   type ShapesDataProvider,
-  ShapesUtils,
   SourceUtils,
 } from "@tissuumaps/core";
 
+import { GeoJSONShapesData } from "./GeoJSONShapesData";
 import {
   type GeoJSONShapesDataSource,
   type NormalizedGeoJSONShapesDataSource,
@@ -104,6 +104,6 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
       { op: "file", file, url, idProperty, nameProperty },
       { signal, onProgress },
     );
-    return ShapesUtils.createShapesData(geometry, ids, names);
+    return new GeoJSONShapesData(geometry, ids, names);
   }
 }
