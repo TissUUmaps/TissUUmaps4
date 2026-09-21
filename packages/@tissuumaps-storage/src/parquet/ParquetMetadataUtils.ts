@@ -20,6 +20,18 @@ export type GeoColumn = {
   bbox: [number, number, number, number] | undefined;
 };
 
+/** A column of point coordinates derived from a point geometry column */
+export type CoordinateColumn = {
+  /** Name of the derived column, e.g. `geometry[x]` */
+  column: string;
+
+  /** Name of the geometry column the coordinates are read from */
+  geometryColumn: string;
+
+  /** The axis the coordinates are read on */
+  axis: "x" | "y";
+};
+
 /** The `geo` metadata of a GeoParquet file, as written by the GeoParquet spec */
 type GeoMetadata = {
   primary_column?: string;
@@ -58,9 +70,6 @@ const integerPandasType = /^u?int(8|16|32|64)?$/i;
  * geometries can be used wherever a numeric column is expected.
  */
 export class ParquetMetadataUtils {
-  /** Matches a coordinate column, capturing its geometry column and its axis */
-  private static readonly _coordinateColumnPattern = /^(.*)\[([xy])\]$/;
-
   /** Reads the 2D bounds of a `bbox`, which lists Z bounds too for 3D columns */
   private static _readBBox(
     bbox: number[] | undefined,
@@ -128,59 +137,21 @@ export class ParquetMetadataUtils {
   /**
    * Returns the coordinate columns derived from the point geometry columns
    *
+   * This is the only place a coordinate column name is built. The name is
+   * never parsed back: the mapping travels with the column list, so that a
+   * real column whose name looks like one is not mistaken for one.
+   *
    * @param geoColumns - The geometry columns of the file
-   * @returns The names of the derived coordinate columns
+   * @returns The derived coordinate columns, each with the geometry column it
+   * reads and the axis it reads on
    */
-  static getCoordinateColumns(geoColumns: GeoColumn[]): string[] {
+  static getCoordinateColumns(geoColumns: GeoColumn[]): CoordinateColumn[] {
     return geoColumns
       .filter((geoColumn) => ParquetMetadataUtils.isPointColumn(geoColumn))
-      .flatMap(({ name }) => [`${name}[x]`, `${name}[y]`]);
-  }
-
-  /**
-   * Parses the name of a derived coordinate column
-   *
-   * The name is not checked against the geometry columns of any file.
-   *
-   * @param column - The column name to parse
-   * @returns The geometry column the coordinates are read from and the axis
-   * they are read on, or `undefined` if the name is not a coordinate column
-   */
-  static parseCoordinateColumn(
-    column: string,
-  ): { geometryColumn: string; axis: "x" | "y" } | undefined {
-    const match = ParquetMetadataUtils._coordinateColumnPattern.exec(column);
-    if (match === null) {
-      return undefined;
-    }
-    return { geometryColumn: match[1]!, axis: match[2] === "x" ? "x" : "y" };
-  }
-
-  /**
-   * Resolves a derived coordinate column to its geometry column and axis
-   *
-   * @param geoColumns - The geometry columns of the file
-   * @param column - The column name to resolve
-   * @returns The geometry column the coordinates are read from and the axis
-   * they are read on, or `undefined` if the name is not a coordinate column
-   * of one of the given geometry columns
-   */
-  static resolveCoordinateColumn(
-    geoColumns: GeoColumn[],
-    column: string,
-  ): { geoColumn: GeoColumn; axis: "x" | "y" } | undefined {
-    const coordinates = ParquetMetadataUtils.parseCoordinateColumn(column);
-    if (coordinates === undefined) {
-      return undefined;
-    }
-    const geoColumn = geoColumns.find(
-      (geoColumn) =>
-        geoColumn.name === coordinates.geometryColumn &&
-        ParquetMetadataUtils.isPointColumn(geoColumn),
-    );
-    return geoColumn !== undefined
-      ? { geoColumn, axis: coordinates.axis }
-      : undefined;
+      .flatMap(({ name }) => [
+        { column: `${name}[x]`, geometryColumn: name, axis: "x" as const },
+        { column: `${name}[y]`, geometryColumn: name, axis: "y" as const },
+      ]);
   }
 
   /**

@@ -97,10 +97,18 @@ export class ParquetTableDataProvider implements TableDataProvider<
     }
     const parquetSource = { file, url, headers };
     const { idColumn, nameColumn } = normalizedDataSource;
-    const { numRows, columns, ids, names } = await runParquetWorker(
-      { op: "file", source: parquetSource, idColumn, nameColumn },
-      { signal, onProgress },
+    const { numRows, columns, coordinateColumns, ids, names } =
+      await runParquetWorker(
+        { op: "file", source: parquetSource, idColumn, nameColumn },
+        { signal, onProgress },
+      );
+    return new ParquetTableData(
+      parquetSource,
+      numRows,
+      columns,
+      coordinateColumns,
+      ids,
+      names,
     );
-    return new ParquetTableData(parquetSource, numRows, columns, ids, names);
   }
 }

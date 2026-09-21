@@ -131,63 +131,14 @@ describe("ParquetMetadataUtils", () => {
     it("derives a coordinate column pair per point geometry column", () => {
       const geoColumns = ParquetMetadataUtils.readGeoColumns(points);
       expect(ParquetMetadataUtils.getCoordinateColumns(geoColumns)).toEqual([
-        "geometry[x]",
-        "geometry[y]",
+        { column: "geometry[x]", geometryColumn: "geometry", axis: "x" },
+        { column: "geometry[y]", geometryColumn: "geometry", axis: "y" },
       ]);
     });
 
     it("derives no coordinate columns from polygons", () => {
       const geoColumns = ParquetMetadataUtils.readGeoColumns(polygons);
       expect(ParquetMetadataUtils.getCoordinateColumns(geoColumns)).toEqual([]);
-    });
-  });
-
-  describe("parseCoordinateColumn", () => {
-    it("parses a coordinate column", () => {
-      expect(ParquetMetadataUtils.parseCoordinateColumn("geometry[y]")).toEqual(
-        {
-          geometryColumn: "geometry",
-          axis: "y",
-        },
-      );
-    });
-
-    it("parses no column that is not a coordinate column", () => {
-      expect(
-        ParquetMetadataUtils.parseCoordinateColumn("geometry"),
-      ).toBeUndefined();
-      expect(
-        ParquetMetadataUtils.parseCoordinateColumn("geometry[z]"),
-      ).toBeUndefined();
-    });
-  });
-
-  describe("resolveCoordinateColumn", () => {
-    it("resolves a coordinate column to its geometry column and axis", () => {
-      const geoColumns = ParquetMetadataUtils.readGeoColumns(points);
-      const coordinates = ParquetMetadataUtils.resolveCoordinateColumn(
-        geoColumns,
-        "geometry[y]",
-      );
-      expect(coordinates?.geoColumn.name).toBe("geometry");
-      expect(coordinates?.axis).toBe("y");
-    });
-
-    it("resolves neither the geometry column itself nor an unknown one", () => {
-      const geoColumns = ParquetMetadataUtils.readGeoColumns(points);
-      expect(
-        ParquetMetadataUtils.resolveCoordinateColumn(geoColumns, "geometry"),
-      ).toBeUndefined();
-      expect(
-        ParquetMetadataUtils.resolveCoordinateColumn(geoColumns, "centroid[x]"),
-      ).toBeUndefined();
-    });
-
-    it("resolves no coordinate column of a polygon column", () => {
-      const geoColumns = ParquetMetadataUtils.readGeoColumns(polygons);
-      expect(
-        ParquetMetadataUtils.resolveCoordinateColumn(geoColumns, "geometry[x]"),
-      ).toBeUndefined();
     });
   });
 

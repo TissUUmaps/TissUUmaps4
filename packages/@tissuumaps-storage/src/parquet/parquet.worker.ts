@@ -16,7 +16,10 @@ import type {
 } from "@tissuumaps/core";
 
 import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
-import { ParquetMetadataUtils } from "./ParquetMetadataUtils";
+import {
+  type CoordinateColumn,
+  ParquetMetadataUtils,
+} from "./ParquetMetadataUtils";
 import type { ParquetSource } from "./types";
 
 /**
@@ -61,6 +64,7 @@ export type ParquetFileRequest = ParquetRequest<"file"> & {
 export type ParquetFileResponse = ParquetResponse<ParquetFileRequest> & {
   numRows: number;
   columns: string[];
+  coordinateColumns: CoordinateColumn[];
   ids: number[] | undefined;
   names: string[] | undefined;
 };
@@ -100,7 +104,10 @@ export type ParquetShapesResponse = ParquetResponse<ParquetShapesRequest> & {
 
 export type ParquetRangeRequest = ParquetRequest<"range"> & {
   source: ParquetSource;
+  /** The column to read, or the geometry column when an axis is given */
   column: string;
+  /** Set to read the range of one axis of a point geometry column */
+  axis?: "x" | "y";
 };
 
 export type ParquetRangeResponse = ParquetResponse<ParquetRangeRequest> & {
@@ -364,6 +371,8 @@ async function handleFileRequest(
     onProgress,
   );
   const geoColumns = ParquetMetadataUtils.readGeoColumns(metadata);
+  const coordinateColumns =
+    ParquetMetadataUtils.getCoordinateColumns(geoColumns);
   return {
     response: {
       op: "file",
@@ -372,8 +381,9 @@ async function handleFileRequest(
         ...getColumns(metadata).filter(
           (column) => !geoColumns.some(({ name }) => name === column),
         ),
-        ...ParquetMetadataUtils.getCoordinateColumns(geoColumns),
+        ...coordinateColumns.map(({ column }) => column),
       ],
+      coordinateColumns,
       ids,
       names,
     },
@@ -571,18 +581,16 @@ async function handleRangeRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  const coordinates = ParquetMetadataUtils.resolveCoordinateColumn(
-    ParquetMetadataUtils.readGeoColumns(metadata),
-    request.column,
-  );
-  if (coordinates !== undefined) {
-    const { bbox } = coordinates.geoColumn;
+  if (request.axis !== undefined) {
+    const { bbox } = ParquetMetadataUtils.readGeoColumns(metadata).find(
+      ({ name }) => name === request.column,
+    ) ?? { bbox: undefined };
     return {
       response: {
         op: "range",
         range:
           bbox !== undefined
-            ? coordinates.axis === "x"
+            ? request.axis === "x"
               ? [bbox[0], bbox[2]]
               : [bbox[1], bbox[3]]
             : undefined,

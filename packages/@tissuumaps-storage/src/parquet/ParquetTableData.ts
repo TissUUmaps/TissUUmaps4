@@ -7,7 +7,7 @@ import {
   type TableData,
 } from "@tissuumaps/core";
 
-import { ParquetMetadataUtils } from "./ParquetMetadataUtils";
+import type { CoordinateColumn } from "./ParquetMetadataUtils";
 import { runParquetWorker } from "./runParquetWorker";
 import type { ParquetSource } from "./types";
 
@@ -15,6 +15,9 @@ export class ParquetTableData implements TableData {
   private readonly _source: ParquetSource;
   private readonly _numRows: number;
   private readonly _columns: string[];
+  // The coordinate columns of the file, by name: a column is derived only if
+  // the reader said so, never because its name looks derived.
+  private readonly _coordinateColumns: Map<string, CoordinateColumn>;
   private _ids: number[] | undefined;
   private readonly _names: string[] | undefined;
   // Both axes of a point geometry column are decoded in one pass, so the
@@ -28,12 +31,19 @@ export class ParquetTableData implements TableData {
     source: ParquetSource,
     numRows: number,
     columns: string[],
+    coordinateColumns: CoordinateColumn[],
     ids: number[] | undefined,
     names: string[] | undefined,
   ) {
     this._source = source;
     this._numRows = numRows;
     this._columns = columns;
+    this._coordinateColumns = new Map(
+      coordinateColumns.map((coordinateColumn) => [
+        coordinateColumn.column,
+        coordinateColumn,
+      ]),
+    );
     this._ids = ids;
     this._names = names;
   }
@@ -89,9 +99,7 @@ export class ParquetTableData implements TableData {
   ): Promise<GenericArray<T>> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
-    const coordinates = this._columns.includes(column)
-      ? ParquetMetadataUtils.parseCoordinateColumn(column)
-      : undefined;
+    const coordinates = this._coordinateColumns.get(column);
     if (coordinates !== undefined) {
       const { x, y } = await AsyncUtils.raceSignal(
         this._loadCoordinates(coordinates.geometryColumn, { onProgress }),
@@ -142,8 +150,14 @@ export class ParquetTableData implements TableData {
   ): Promise<[number, number] | undefined> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
+    const coordinates = this._coordinateColumns.get(column);
     const { range } = await runParquetWorker(
-      { op: "range", source: this._source, column },
+      {
+        op: "range",
+        source: this._source,
+        column: coordinates?.geometryColumn ?? column,
+        axis: coordinates?.axis,
+      },
       { signal, onProgress },
     );
     return range;
