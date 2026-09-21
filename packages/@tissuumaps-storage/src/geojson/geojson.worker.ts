@@ -1,10 +1,9 @@
 import type { Feature, GeoJSON, Geometry } from "geojson";
 
 import {
-  type ShapesAppender,
   type ShapesGeometry,
+  ShapesGeometryBuilder,
   type ShapesPolygon,
-  ShapesUtils,
 } from "@tissuumaps/core";
 
 export type GeoJSONRequest<TOp extends string = string> = {
@@ -165,7 +164,7 @@ async function handleFileRequest(
     throw new Error("A URL or file is required to load data.");
   }
   const geo = JSON.parse(text) as GeoJSON; // TODO Validate GeoJSON
-  const { ids, names, geometry } = await parseGeoJSON(
+  const { ids, names, geometry } = parseGeoJSON(
     geo,
     request.idProperty,
     request.nameProperty,
@@ -192,20 +191,20 @@ function toPolygons(geometry: Geometry): readonly ShapesPolygon[] | undefined {
 }
 
 /**
- * Appends the polygons of a GeoJSON geometry as one shape, if it holds any
+ * Adds the polygons of a GeoJSON geometry as one shape, if it holds any
  *
- * @param append - The appender of the shapes geometry under construction
- * @param geometry - The geometry to append
+ * @param builder - The builder of the shapes geometry under construction
+ * @param geometry - The geometry to add
  * @param id - The ID of the shape
  */
-function appendPolygons(
-  append: ShapesAppender,
+function addPolygons(
+  builder: ShapesGeometryBuilder,
   geometry: Geometry,
   id: number,
 ): void {
   const polygons = toPolygons(geometry);
   if (polygons !== undefined) {
-    append(polygons, id);
+    builder.addShape(polygons, id);
   }
 }
 
@@ -236,16 +235,16 @@ function readFeatureName(
   return String(name);
 }
 
-async function parseGeoJSON(
+function parseGeoJSON(
   geo: GeoJSON<Geometry | null>,
   idProperty: string | undefined,
   nameProperty: string | undefined,
   onProgress: (progress: number, total: number) => void,
-): Promise<{
+): {
   ids: number[];
   names: string[] | undefined;
   geometry: ShapesGeometry;
-}> {
+} {
   if (geo === null) {
     throw new Error("GeoJSON data must not be null.");
   }
@@ -260,47 +259,47 @@ async function parseGeoJSON(
     );
   }
 
-  const { geometry, ids, names } = await ShapesUtils.buildGeometry((append) => {
-    switch (geo.type) {
-      case "FeatureCollection":
-        for (let i = 0; i < geo.features.length; i++) {
-          const feature = geo.features[i]!;
-          if (feature.geometry === null) {
-            console.warn("Skipping feature with null geometry.");
-            continue;
-          }
-          const polygons = toPolygons(feature.geometry);
-          if (polygons !== undefined) {
-            append(
-              polygons,
-              idProperty !== undefined ? readFeatureId(feature, idProperty) : i,
-              nameProperty !== undefined
-                ? readFeatureName(feature, nameProperty)
-                : undefined,
-            );
-          }
-          onProgress(i + 1, geo.features.length);
+  const builder = new ShapesGeometryBuilder();
+  switch (geo.type) {
+    case "FeatureCollection":
+      for (let i = 0; i < geo.features.length; i++) {
+        const feature = geo.features[i]!;
+        if (feature.geometry === null) {
+          console.warn("Skipping feature with null geometry.");
+          continue;
         }
-        break;
-      case "Feature":
-        if (geo.geometry !== null) {
-          appendPolygons(append, geo.geometry, 0);
+        const polygons = toPolygons(feature.geometry);
+        if (polygons !== undefined) {
+          builder.addShape(
+            polygons,
+            idProperty !== undefined ? readFeatureId(feature, idProperty) : i,
+            nameProperty !== undefined
+              ? readFeatureName(feature, nameProperty)
+              : undefined,
+          );
         }
-        break;
-      case "GeometryCollection":
-        for (let i = 0; i < geo.geometries.length; i++) {
-          appendPolygons(append, geo.geometries[i]!, i);
-          onProgress(i + 1, geo.geometries.length);
-        }
-        break;
-      default:
-        appendPolygons(append, geo, 0);
-        break;
-    }
-  });
-  if (geometry.shapePolygonOffsets.length === 1) {
+        onProgress(i + 1, geo.features.length);
+      }
+      break;
+    case "Feature":
+      if (geo.geometry !== null) {
+        addPolygons(builder, geo.geometry, 0);
+      }
+      break;
+    case "GeometryCollection":
+      for (let i = 0; i < geo.geometries.length; i++) {
+        addPolygons(builder, geo.geometries[i]!, i);
+        onProgress(i + 1, geo.geometries.length);
+      }
+      break;
+    default:
+      addPolygons(builder, geo, 0);
+      break;
+  }
+  if (builder.size === 0) {
     throw new Error("No valid geometries found in GeoJSON data.");
   }
 
+  const { geometry, ids, names } = builder.build();
   return { ids, names, geometry };
 }

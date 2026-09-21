@@ -11,9 +11,8 @@ import { compressors } from "hyparquet-compressors";
 
 import {
   type GenericArray,
-  type ShapesAppender,
   type ShapesGeometry,
-  ShapesUtils,
+  ShapesGeometryBuilder,
   type TypedArray,
 } from "@tissuumaps/core";
 
@@ -23,23 +22,23 @@ import type { ParquetSource } from "./types";
 /**
  * Appends a GeoJSON geometry, as decoded from a WKB column, as one shape
  *
- * @param append - The appender of the shapes geometry under construction
- * @param geometry - The geometry to append
+ * @param builder - The builder of the shapes geometry under construction
+ * @param geometry - The geometry to add
  * @param id - The ID of the shape
  * @param name - The name of the shape, if any
  */
-function appendGeometry(
-  append: ShapesAppender,
+function addGeometry(
+  builder: ShapesGeometryBuilder,
   geometry: Geometry,
   id: number,
   name?: string,
 ): void {
   if (geometry.type === "Polygon") {
-    append([geometry.coordinates], id, name);
+    builder.addShape([geometry.coordinates], id, name);
     return;
   }
   if (geometry.type === "MultiPolygon") {
-    append(geometry.coordinates, id, name);
+    builder.addShape(geometry.coordinates, id, name);
     return;
   }
   console.warn(`Unsupported geometry type: ${geometry.type}`);
@@ -523,31 +522,29 @@ async function handleShapesRequest(
     request.nameColumn,
     () => {},
   );
-  const { geometry, ids, names } = await ShapesUtils.buildGeometry(
-    async (append) => {
-      await readGeometryColumn(
-        buffer,
-        metadata,
-        geoColumn.name,
-        (rowGeometry, row) => {
-          if (rowGeometry === null) {
-            console.warn("Skipping row without geometry.");
-            return;
-          }
-          appendGeometry(
-            append,
-            rowGeometry,
-            rowIds !== undefined ? rowIds[row]! : row,
-            rowNames?.[row],
-          );
-        },
-        onProgress,
+  const builder = new ShapesGeometryBuilder();
+  await readGeometryColumn(
+    buffer,
+    metadata,
+    geoColumn.name,
+    (rowGeometry, row) => {
+      if (rowGeometry === null) {
+        console.warn("Skipping row without geometry.");
+        return;
+      }
+      addGeometry(
+        builder,
+        rowGeometry,
+        rowIds !== undefined ? rowIds[row]! : row,
+        rowNames?.[row],
       );
     },
+    onProgress,
   );
-  if (geometry.shapePolygonOffsets.length === 1) {
+  if (builder.size === 0) {
     throw new Error(`No valid geometries found in column "${geoColumn.name}"`);
   }
+  const { geometry, ids, names } = builder.build();
   return {
     response: {
       op: "shapes",
