@@ -47,6 +47,14 @@ function addGeometry(
   console.warn(`Unsupported geometry type: ${geometry.type}`);
 }
 
+/** Why a point geometry column cannot be read as shapes */
+function pointColumnMessage(column: string): string {
+  return (
+    `Geometry column "${column}" holds points, which are read as the ` +
+    `"${column}[x]" and "${column}[y]" columns of a table`
+  );
+}
+
 export type ParquetRequest<TOp extends string = string> = {
   op: TOp;
 };
@@ -518,11 +526,7 @@ async function handleShapesRequest(
     );
   }
   if (ParquetMetadataUtils.isPointColumn(geoColumn)) {
-    throw new Error(
-      `Geometry column "${geoColumn.name}" holds points, which are read as ` +
-        `the "${geoColumn.name}[x]" and "${geoColumn.name}[y]" columns of a ` +
-        `table`,
-    );
+    throw new Error(pointColumnMessage(geoColumn.name));
   }
   // Progress only tracks the geometry, which dwarfs the ID and name columns
   const { ids: rowIds, names: rowNames } = await readIdsAndNames(
@@ -533,6 +537,9 @@ async function handleShapesRequest(
     () => {},
   );
   const builder = new ShapesGeometryBuilder();
+  // A column whose "geo" metadata lists no geometry types is only found to
+  // hold points while decoding it
+  let numPoints = 0;
   await readGeometryColumn(
     buffer,
     metadata,
@@ -540,6 +547,10 @@ async function handleShapesRequest(
     (rowGeometry, row) => {
       if (rowGeometry === null) {
         console.warn("Skipping row without geometry.");
+        return;
+      }
+      if (rowGeometry.type === "Point") {
+        numPoints++;
         return;
       }
       addGeometry(
@@ -552,7 +563,17 @@ async function handleShapesRequest(
     onProgress,
   );
   if (builder.size === 0) {
-    throw new Error(`No valid geometries found in column "${geoColumn.name}"`);
+    throw new Error(
+      numPoints > 0
+        ? pointColumnMessage(geoColumn.name)
+        : `No valid geometries found in column "${geoColumn.name}"`,
+    );
+  }
+  if (numPoints > 0) {
+    console.warn(
+      `Skipped ${numPoints} points in column "${geoColumn.name}", which are ` +
+        `not shapes.`,
+    );
   }
   const { geometry, ids, names } = builder.build();
   return {
