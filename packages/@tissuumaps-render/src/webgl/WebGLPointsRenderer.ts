@@ -47,30 +47,28 @@ import { WebGLUtils } from "./WebGLUtils";
 /**
  * WebGL renderer for two-dimensional point clouds
  *
- * Manages GPU buffers, shaders, a marker atlas texture, and per-object
- * uniform block data. Points are rendered as `gl.POINTS` using per-vertex
- * attributes (x, y, size, color, marker, object index).
+ * Manages a shader program, a marker atlas texture, and per-object GPU
+ * buffers. Points are rendered as `gl.POINTS` using per-vertex attributes (x,
+ * y, size, color, marker), one draw call per object.
  *
- * All objects share one set of buffers, each object owning the slice that starts
- * at its buffer offset. Synchronizing compares the current model state against
- * the state each slice was last loaded from, and re-uploads only what changed.
+ * Every object owns its vertex array and attribute buffers. Synchronizing
+ * compares the current model state against the state those buffers were
+ * loaded from, and re-uploads only the attributes whose inputs changed.
+ * Layer- and object-level properties (transforms, point size factors,
+ * visibility and opacity) are shader uniforms, so changing them never touches
+ * the buffers.
  */
 export class WebGLPointsRenderer extends WebGLRendererBase<
   Points,
   PointsData,
   RenderedPoints
 > {
-  private static readonly _maxNumObjects = 512; // see vertex shader
   private static readonly _attribLocations = {
     X: 0,
     Y: 1,
     SIZE: 2,
     COLOR: 3,
     MARKER: 4,
-    OBJECT: 5,
-  };
-  private static readonly _bindingPoints = {
-    OBJECTS_UBO: 0,
   };
 
   private readonly _program: WebGLProgram;
@@ -80,28 +78,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     viewportSize: WebGLUniformLocation;
     canvasSize: WebGLUniformLocation;
     devicePixelRatio: WebGLUniformLocation;
+    dataToWorldMatrix: WebGLUniformLocation;
+    pointSizeFactor: WebGLUniformLocation;
+    opacityFactor: WebGLUniformLocation;
     markerAtlas: WebGLUniformLocation;
   };
-  private readonly _uniformBlockIndices: {
-    objectsUBO: number;
-  };
-  private readonly _buffers: {
-    x: WebGLBuffer;
-    y: WebGLBuffer;
-    size: WebGLBuffer;
-    color: WebGLBuffer;
-    marker: WebGLBuffer;
-    object: WebGLBuffer;
-    objectsUBO: WebGLBuffer;
-  };
-  private readonly _vao: WebGLVertexArrayObject;
   private _globalPointSizeFactor: number;
   private _markerAtlasTexture: WebGLTexture | undefined;
-  private _currentBufferSize: number = 0;
 
   /**
-   * Creates the shader program, uniform locations, GPU buffers, and vertex
-   * array object for point rendering
+   * Creates the shader program and retrieves uniform locations
    *
    * The marker atlas texture is loaded asynchronously, so the renderer must not
    * be drawn before `onInitialized` has been called; `onError` is called instead
@@ -125,12 +111,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     const { signal, renderOptions } = options ?? {};
     const { globalPointSizeFactor } = renderOptions ?? {};
     this._globalPointSizeFactor = globalPointSizeFactor ?? 1.0;
-    // load program
     this._program = context.createProgram(
       pointsVertexShader,
       pointsFragmentShader,
     );
-    // get uniform locations
     this._uniformLocations = {
       globalPointSizeFactor: context.getUniformLocation(
         this._program,
@@ -146,74 +130,20 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         this._program,
         "u_devicePixelRatio",
       ),
+      dataToWorldMatrix: context.getUniformLocation(
+        this._program,
+        "u_dataToWorldMatrix",
+      ),
+      pointSizeFactor: context.getUniformLocation(
+        this._program,
+        "u_pointSizeFactor",
+      ),
+      opacityFactor: context.getUniformLocation(
+        this._program,
+        "u_opacityFactor",
+      ),
       markerAtlas: context.getUniformLocation(this._program, "u_markerAtlas"),
     };
-    // get block indices
-    this._uniformBlockIndices = {
-      objectsUBO: context.getUniformBlockIndex(this._program, "ObjectsUBO"),
-    };
-    // create buffers and allocate space for UBOs
-    this._buffers = {
-      x: context.createBuffer(),
-      y: context.createBuffer(),
-      size: context.createBuffer(),
-      color: context.createBuffer(),
-      marker: context.createBuffer(),
-      object: context.createBuffer(),
-      objectsUBO: context.createBuffer(),
-    };
-    context.resizeBuffer(
-      WebGL2RenderingContext.UNIFORM_BUFFER,
-      this._buffers.objectsUBO,
-      WebGLPointsRenderer._maxNumObjects * 8 * Float32Array.BYTES_PER_ELEMENT,
-      WebGL2RenderingContext.DYNAMIC_DRAW,
-    );
-    // create and configure VAO
-    this._vao = context.createVertexArray();
-    context.gl.bindVertexArray(this._vao);
-    context.configureVertexFloatAttribute(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.x,
-      WebGLPointsRenderer._attribLocations.X,
-      1,
-      WebGL2RenderingContext.FLOAT,
-    );
-    context.configureVertexFloatAttribute(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.y,
-      WebGLPointsRenderer._attribLocations.Y,
-      1,
-      WebGL2RenderingContext.FLOAT,
-    );
-    context.configureVertexFloatAttribute(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.size,
-      WebGLPointsRenderer._attribLocations.SIZE,
-      1,
-      WebGL2RenderingContext.FLOAT,
-    );
-    context.configureVertexIntAttribute(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.color,
-      WebGLPointsRenderer._attribLocations.COLOR,
-      1,
-      WebGL2RenderingContext.UNSIGNED_INT,
-    );
-    context.configureVertexIntAttribute(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.marker,
-      WebGLPointsRenderer._attribLocations.MARKER,
-      1,
-      WebGL2RenderingContext.UNSIGNED_BYTE,
-    );
-    context.configureVertexIntAttribute(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.object,
-      WebGLPointsRenderer._attribLocations.OBJECT,
-      1,
-      WebGL2RenderingContext.UNSIGNED_SHORT,
-    );
-    context.gl.bindVertexArray(null);
     const initialize = async () => {
       signal?.throwIfAborted();
       this._markerAtlasTexture = await context.loadImageTextureFromUrl(
@@ -248,12 +178,12 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Synchronizes GPU buffers with the current model state
    *
-   * Loads all points data for the given layers, resolves configuration-driven
-   * properties (marker, size, color, visibility, opacity) via the provided maps
-   * and table loader, and uploads the results into GPU buffers. Only the
-   * properties whose configuration actually changed are resolved again.
-   *
-   * Objects beyond the shader's per-object limit are dropped, with a warning.
+   * Loads all points data for the given layers, removes GPU resources for
+   * points that are no longer needed, and creates or updates the attribute
+   * buffers of the remaining ones. Configuration-driven properties (marker,
+   * size, color, visibility, opacity) are resolved via the provided maps and
+   * table loader; only the properties whose configuration actually changed are
+   * resolved again.
    *
    * @param layers - Layers to render
    * @param points - Points data objects
@@ -298,30 +228,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       loadTable,
       { signal },
     );
-    if (newRefs.length > WebGLPointsRenderer._maxNumObjects) {
-      console.warn(
-        `Only rendering the first ${WebGLPointsRenderer._maxNumObjects} out of ${newRefs.length} objects`,
-      );
-      newRefs.length = WebGLPointsRenderer._maxNumObjects;
-    }
-    let buffersResized = false;
-    const numPoints = newRefs.reduce(
-      (n, newRef) => n + newRef.itemIds.length,
-      0,
-    );
-    if (this._currentBufferSize !== numPoints) {
-      this._resizeBuffers(numPoints);
-      buffersResized = true;
-    }
-    this.renderedObjects = await this._loadBuffers(
+    const renderedPointsByNewRef = this._cleanRenderedPoints(newRefs);
+    this.renderedObjects = await this._createOrUpdateRenderedPoints(
       newRefs,
+      renderedPointsByNewRef,
       tables,
       markerMaps,
       sizeMaps,
       colorMaps,
       visibilityMaps,
       opacityMaps,
-      buffersResized,
       loadTable,
       { signal },
     );
@@ -329,33 +245,24 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Issues the WebGL draw call for all synchronized points
+   * Issues the WebGL draw calls for all synchronized points
    *
-   * Binds the shader program, configures uniforms (transform, viewport,
-   * canvas size, device pixel ratio), binds the marker atlas texture, and
-   * draws all points in a single `gl.POINTS` call with alpha blending.
+   * Binds the shader program, configures the global uniforms (transform,
+   * viewport, canvas size, device pixel ratio), binds the marker atlas texture,
+   * and then draws every object in its own `gl.POINTS` call with alpha
+   * blending, with its data → world matrix, point size factor and opacity
+   * factor as uniforms. Objects whose layer or object is invisible are skipped.
    *
    * @throws Error if the renderer has not been initialized
    */
   draw(): void {
-    if (this.viewport === undefined || this._markerAtlasTexture === undefined) {
+    if (this._markerAtlasTexture === undefined) {
       throw new Error("Not initialized");
     }
-    if (this._currentBufferSize === 0) {
+    if (this.renderedObjects.length === 0) {
       return;
     }
     this.context.gl.useProgram(this._program);
-    this.context.gl.bindVertexArray(this._vao);
-    this.context.gl.bindBufferBase(
-      WebGL2RenderingContext.UNIFORM_BUFFER,
-      WebGLPointsRenderer._bindingPoints.OBJECTS_UBO,
-      this._buffers.objectsUBO,
-    );
-    this.context.gl.uniformBlockBinding(
-      this._program,
-      this._uniformBlockIndices.objectsUBO,
-      WebGLPointsRenderer._bindingPoints.OBJECTS_UBO,
-    );
     this.context.gl.uniform1f(
       this._uniformLocations.globalPointSizeFactor,
       this._globalPointSizeFactor,
@@ -388,91 +295,117 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     );
     this.context.gl.uniform1i(this._uniformLocations.markerAtlas, 0);
     this.context.enableAlphaBlending();
-    this.context.gl.drawArrays(
-      WebGL2RenderingContext.POINTS,
-      0,
-      this._currentBufferSize,
-    );
-    this.context.disableAlphaBlending();
+    for (const renderedPoints of this.renderedObjects) {
+      const opacityFactor = WebGLPointsRenderer._computeOpacityFactor(
+        renderedPoints.ref,
+      );
+      if (opacityFactor === 0) {
+        continue;
+      }
+      this.context.gl.uniformMatrix3x2fv(
+        this._uniformLocations.dataToWorldMatrix,
+        false,
+        WebGLUtils.convertMatrixToGLMat3x2(
+          WebGLUtils.createDataToWorldMatrix(
+            renderedPoints.ref.object.transform,
+            renderedPoints.ref.layer.transform,
+          ),
+        ),
+      );
+      this.context.gl.uniform1f(
+        this._uniformLocations.pointSizeFactor,
+        WebGLPointsRenderer._computePointSizeFactor(renderedPoints.ref),
+      );
+      this.context.gl.uniform1f(
+        this._uniformLocations.opacityFactor,
+        opacityFactor,
+      );
+      this.context.gl.bindVertexArray(renderedPoints.vao);
+      this.context.gl.drawArrays(
+        WebGL2RenderingContext.POINTS,
+        0,
+        renderedPoints.ref.itemIds.length,
+      );
+    }
     this.context.gl.bindVertexArray(null);
+    this.context.disableAlphaBlending();
     this.context.gl.useProgram(null);
   }
 
   /**
-   * Releases the shader program, VAO, marker atlas texture, and all GPU buffers
+   * Releases the shader program, the marker atlas texture, and all per-object
+   * GPU resources
    */
   destroy(): void {
     this.context.gl.deleteProgram(this._program);
-    for (const buffer of Object.values(this._buffers)) {
-      this.context.gl.deleteBuffer(buffer);
+    for (const renderedPoints of this.renderedObjects) {
+      this._destroyRenderedPoints(renderedPoints);
     }
-    this.context.gl.deleteVertexArray(this._vao);
     if (this._markerAtlasTexture !== undefined) {
       this.context.gl.deleteTexture(this._markerAtlasTexture);
       this._markerAtlasTexture = undefined;
     }
-    this._currentBufferSize = 0;
     this.renderedObjects = [];
   }
 
   /**
-   * Resizes all per-vertex GPU buffers to accommodate `n` points
+   * Removes the GPU resources of points objects that are no longer referenced
    *
-   * Existing buffer contents are discarded.
+   * Matches the rendered objects to the new set of references, by layer,
+   * object, contributed items and data source. Those that still match are
+   * returned for reuse, and adopt the new reference, as the uniforms are read
+   * from it when drawing; the rest have their buffers destroyed. Every
+   * reference is matched at most once, so that duplicates are destroyed rather
+   * than orphaned.
    *
-   * @param n - Total number of points across all objects
+   * @param newRefs - The object references to match against
+   * @returns The reusable rendered objects, by object reference
    */
-  private _resizeBuffers(n: number): void {
-    this.context.resizeBuffer(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.x,
-      n * Float32Array.BYTES_PER_ELEMENT,
-      WebGL2RenderingContext.STATIC_DRAW,
-    );
-    this.context.resizeBuffer(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.y,
-      n * Float32Array.BYTES_PER_ELEMENT,
-      WebGL2RenderingContext.STATIC_DRAW,
-    );
-    this.context.resizeBuffer(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.size,
-      n * Float32Array.BYTES_PER_ELEMENT,
-      WebGL2RenderingContext.STATIC_DRAW,
-    );
-    this.context.resizeBuffer(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.color,
-      n * Uint32Array.BYTES_PER_ELEMENT,
-      WebGL2RenderingContext.STATIC_DRAW,
-    );
-    this.context.resizeBuffer(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.marker,
-      n * Uint8Array.BYTES_PER_ELEMENT,
-      WebGL2RenderingContext.STATIC_DRAW,
-    );
-    this.context.resizeBuffer(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.object,
-      n * Uint16Array.BYTES_PER_ELEMENT,
-      WebGL2RenderingContext.STATIC_DRAW,
-    );
-    this._currentBufferSize = n;
+  private _cleanRenderedPoints(
+    newRefs: PointsRef[],
+  ): Map<PointsRef, RenderedPoints> {
+    const renderedPointsByNewRef = new Map<PointsRef, RenderedPoints>();
+    for (let i = 0; i < this.renderedObjects.length; i++) {
+      const renderedPoints = this.renderedObjects[i]!;
+      const newRef = newRefs.find(
+        (newRef) =>
+          !renderedPointsByNewRef.has(newRef) &&
+          renderedPoints.ref.layer.id === newRef.layer.id &&
+          renderedPoints.ref.object.id === newRef.object.id &&
+          renderedPoints.ref.itemIds === newRef.itemIds &&
+          renderedPoints.ref.itemsMask === newRef.itemsMask &&
+          // check data source configuration instead of data
+          deepEqual(renderedPoints.state.dataSource, newRef.object.dataSource),
+      );
+      if (newRef !== undefined) {
+        renderedPoints.ref = newRef;
+        renderedPointsByNewRef.set(newRef, renderedPoints);
+      } else {
+        const [renderedPoints] = this.renderedObjects.splice(i, 1);
+        this._destroyRenderedPoints(renderedPoints!);
+        i--;
+      }
+    }
+    return renderedPointsByNewRef;
   }
 
   /**
-   * Loads per-point attribute data into GPU buffers, performing incremental
-   * updates where possible by comparing each buffer slice's current state
-   * against the new model values
+   * Creates new GPU resources for points that have no existing render pass, or
+   * updates existing ones when the model state has changed
    *
-   * Also populates the per-object UBO with data → world transform matrices.
+   * The geometry is loaded for new objects only: a reused object is known to
+   * have the same items and data source (see {@link _cleanRenderedPoints}).
+   * Marker, size and color buffers are re-uploaded when their configurations
+   * change. Whatever has to be resolved is resolved concurrently, and every
+   * object's buffers are uploaded in one synchronous block once all of its
+   * inputs are available, so a draw in between never sees a partially updated
+   * object. New objects are added to the rendered objects as soon as their
+   * buffers exist, so an aborted synchronization leaves no orphaned resources.
    *
-   * Runs in two passes. The first decides for every object what its buffer
-   * slice needs and requests all of it - the geometry, and the resolved marker,
-   * size and color buffers - while the second awaits those requests in slice
-   * order and uploads them.
+   * Runs in two passes. The first decides for every object what has to be
+   * loaded and requests all of it - the geometry, and the resolved marker,
+   * size and color buffers - while the second awaits those requests in order
+   * and uploads them.
    *
    * Requests resolve through operations that are shared between their callers
    * and cancelled once the last of them has given up, unless it is reclaimed
@@ -486,28 +419,27 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * of holding every object's resolved buffers until the second pass has
    * uploaded them.
    *
-   * @param newRefs - The objects to load, in the order of their buffer slices
+   * @param newRefs - The objects to create or update GPU resources for
+   * @param renderedPointsByNewRef - The reusable GPU resources, by object
    * @param tables - Tables that the objects resolve their properties from
    * @param markerMaps - Project-global marker maps
    * @param sizeMaps - Project-global size maps
    * @param colorMaps - Project-global color maps
    * @param visibilityMaps - Project-global visibility maps
    * @param opacityMaps - Project-global opacity maps
-   * @param buffersResized - Whether the buffers were reallocated, which
-   * invalidates every slice and forces a full reload
    * @param loadTable - Async getter for table data
    * @param options - Optional abort signal
-   * @returns An updated list of buffer slice states for the next synchronization cycle
+   * @returns The new ordered list of rendered objects
    */
-  private async _loadBuffers(
+  private async _createOrUpdateRenderedPoints(
     newRefs: PointsRef[],
+    renderedPointsByNewRef: Map<PointsRef, RenderedPoints>,
     tables: Table[],
     markerMaps: GroupValueMap<Marker>[],
     sizeMaps: GroupValueMap<number>[],
     colorMaps: GroupValueMap<Color>[],
     visibilityMaps: GroupValueMap<boolean>[],
     opacityMaps: GroupValueMap<number>[],
-    buffersResized: boolean,
     loadTable: (
       table: Table,
       options?: { signal?: AbortSignal },
@@ -519,19 +451,15 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     const objectPreloads: {
       newRef: PointsRef;
       renderedPoints: RenderedPoints | undefined;
-      bufferOffset: number;
-      dataChanged: boolean;
-      geometryPromise?: Promise<PointsGeometry>;
-      packedPointMarkersPromise?: Promise<Uint8Array>;
-      packedPointSizesPromise?: Promise<Float32Array>;
-      packedPointColorsPromise?: Promise<Uint32Array>;
-      packedPointVisibilitiesPromise?: Promise<Uint8Array>;
-      packedPointOpacitiesPromise?: Promise<Uint8Array>;
+      geometryPromise: Promise<PointsGeometry> | undefined;
+      packedPointMarkersPromise: Promise<Uint8Array> | undefined;
+      packedPointSizesPromise: Promise<Float32Array> | undefined;
+      packedPointColorsPromise: Promise<Uint32Array> | undefined;
+      packedPointVisibilitiesPromise: Promise<Uint8Array> | undefined;
+      packedPointOpacitiesPromise: Promise<Uint8Array> | undefined;
     }[] = [];
-    let nextBufferOffset = 0;
-    for (let objectIndex = 0; objectIndex < newRefs.length; objectIndex++) {
-      const newRef = newRefs[objectIndex]!;
-      const renderedPoints = this.renderedObjects[objectIndex];
+    for (const newRef of newRefs) {
+      const renderedPoints = renderedPointsByNewRef.get(newRef);
       let loadObjectTable;
       if (newRef.object.dataSource.table !== undefined) {
         const objectTable = tables.find(
@@ -546,18 +474,12 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           );
         }
       }
-      const dataChanged = WebGLPointsRenderer._checkDataChanged(
-        renderedPoints,
-        newRef,
-        nextBufferOffset,
-        buffersResized,
-      );
-      const geometryPromise = dataChanged
-        ? newRef.data.loadGeometry({ signal })
-        : undefined;
+      const geometryPromise =
+        renderedPoints === undefined
+          ? newRef.data.loadGeometry({ signal })
+          : undefined;
       geometryPromise?.catch(() => {}); // prevent unhandled rejections in console
       const packedPointMarkersPromise =
-        dataChanged ||
         WebGLPointsRenderer._checkPointMarkerBufferChanged(
           renderedPoints,
           newRef,
@@ -569,7 +491,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           : undefined;
       packedPointMarkersPromise?.catch(() => {}); // prevent unhandled rejections in console
       const packedPointSizesPromise =
-        dataChanged ||
         WebGLPointsRenderer._checkPointSizeBufferChanged(renderedPoints, newRef)
           ? WebGLPointsRenderer._resolvePointSizes(newRef, sizeMaps, {
               signal,
@@ -578,7 +499,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           : undefined;
       packedPointSizesPromise?.catch(() => {}); // prevent unhandled rejections in console
       const packedPointColorsPromise =
-        dataChanged ||
         WebGLPointsRenderer._checkPointColorBufferChanged(
           renderedPoints,
           newRef,
@@ -590,7 +510,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           : undefined;
       packedPointColorsPromise?.catch(() => {}); // prevent unhandled rejections in console
       const packedPointVisibilitiesPromise =
-        dataChanged ||
         WebGLPointsRenderer._checkPointColorBufferChanged(
           renderedPoints,
           newRef,
@@ -606,7 +525,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           : undefined;
       packedPointVisibilitiesPromise?.catch(() => {}); // prevent unhandled rejections in console
       const packedPointOpacitiesPromise =
-        dataChanged ||
         WebGLPointsRenderer._checkPointColorBufferChanged(
           renderedPoints,
           newRef,
@@ -620,8 +538,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       objectPreloads.push({
         newRef,
         renderedPoints,
-        bufferOffset: nextBufferOffset,
-        dataChanged,
         geometryPromise,
         packedPointMarkersPromise,
         packedPointSizesPromise,
@@ -629,29 +545,18 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         packedPointVisibilitiesPromise,
         packedPointOpacitiesPromise,
       });
-      nextBufferOffset += newRef.itemIds.length;
     }
     const newRenderedPoints: RenderedPoints[] = [];
-    const objectsUBOBuffer = new Float32Array(
-      WebGLPointsRenderer._maxNumObjects * 8,
-    );
-    for (
-      let objectIndex = 0;
-      objectIndex < objectPreloads.length;
-      objectIndex++
-    ) {
-      const {
-        newRef,
-        renderedPoints,
-        bufferOffset,
-        dataChanged,
-        geometryPromise,
-        packedPointMarkersPromise,
-        packedPointSizesPromise,
-        packedPointColorsPromise,
-        packedPointVisibilitiesPromise,
-        packedPointOpacitiesPromise,
-      } = objectPreloads[objectIndex]!;
+    for (const {
+      newRef,
+      renderedPoints,
+      geometryPromise,
+      packedPointMarkersPromise,
+      packedPointSizesPromise,
+      packedPointColorsPromise,
+      packedPointVisibilitiesPromise,
+      packedPointOpacitiesPromise,
+    } of objectPreloads) {
       const [
         geometry,
         packedPointMarkers,
@@ -668,6 +573,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         packedPointOpacitiesPromise,
       ]);
       signal?.throwIfAborted();
+      let maskedGeometry: PointsGeometry | undefined;
       let objectBounds: Rect;
       if (geometry !== undefined) {
         let { xs, ys } = geometry;
@@ -676,42 +582,15 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           xs = xs.filter((_, j) => pointsMask[j]! > 0);
           ys = ys.filter((_, j) => pointsMask[j]! > 0);
         }
-        this.context.loadBuffer(
-          WebGL2RenderingContext.ARRAY_BUFFER,
-          this._buffers.x,
-          xs,
-          { offset: bufferOffset },
-        );
-        this.context.loadBuffer(
-          WebGL2RenderingContext.ARRAY_BUFFER,
-          this._buffers.y,
-          ys,
-          { offset: bufferOffset },
-        );
+        maskedGeometry = { xs, ys };
         objectBounds = await WebGLPointsRenderer._getObjectBounds(
-          { xs, ys },
+          maskedGeometry,
           { signal },
         );
       } else if (renderedPoints !== undefined) {
         objectBounds = renderedPoints.objectBounds;
       } else {
         throw new Error("Geometry must be loaded for new points object");
-      }
-      if (packedPointMarkers !== undefined) {
-        this.context.loadBuffer(
-          WebGL2RenderingContext.ARRAY_BUFFER,
-          this._buffers.marker,
-          packedPointMarkers,
-          { offset: bufferOffset },
-        );
-      }
-      if (packedPointSizes !== undefined) {
-        this.context.loadBuffer(
-          WebGL2RenderingContext.ARRAY_BUFFER,
-          this._buffers.size,
-          packedPointSizes,
-          { offset: bufferOffset },
-        );
       }
       if (
         packedPointColors !== undefined &&
@@ -729,62 +608,171 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           },
           { signal },
         );
+      }
+      // no awaits from here on, so that the object is uploaded atomically
+      const state = {
+        dataSource: structuredClone(newRef.object.dataSource),
+        pointMarker: structuredClone(newRef.object.pointMarker),
+        pointSize: structuredClone(newRef.object.pointSize),
+        pointColor: structuredClone(newRef.object.pointColor),
+        pointVisibility: structuredClone(newRef.object.pointVisibility),
+        pointOpacity: structuredClone(newRef.object.pointOpacity),
+      };
+      let currentRenderedPoints: RenderedPoints;
+      if (renderedPoints === undefined) {
+        if (
+          maskedGeometry === undefined ||
+          packedPointMarkers === undefined ||
+          packedPointSizes === undefined ||
+          packedPointColors === undefined
+        ) {
+          throw new Error(
+            "All attributes must be resolved for new points object",
+          );
+        }
+        currentRenderedPoints = {
+          ref: newRef,
+          state,
+          objectBounds,
+          ...this._createBuffers(newRef.itemIds.length),
+        };
         this.context.loadBuffer(
           WebGL2RenderingContext.ARRAY_BUFFER,
-          this._buffers.color,
+          currentRenderedPoints.buffers.x,
+          maskedGeometry.xs,
+        );
+        this.context.loadBuffer(
+          WebGL2RenderingContext.ARRAY_BUFFER,
+          currentRenderedPoints.buffers.y,
+          maskedGeometry.ys,
+        );
+        this.renderedObjects.push(currentRenderedPoints);
+      } else {
+        currentRenderedPoints = renderedPoints;
+        currentRenderedPoints.state = state;
+      }
+      if (packedPointMarkers !== undefined) {
+        this.context.loadBuffer(
+          WebGL2RenderingContext.ARRAY_BUFFER,
+          currentRenderedPoints.buffers.marker,
+          packedPointMarkers,
+        );
+      }
+      if (packedPointSizes !== undefined) {
+        this.context.loadBuffer(
+          WebGL2RenderingContext.ARRAY_BUFFER,
+          currentRenderedPoints.buffers.size,
+          packedPointSizes,
+        );
+      }
+      if (packedPointColors !== undefined) {
+        this.context.loadBuffer(
+          WebGL2RenderingContext.ARRAY_BUFFER,
+          currentRenderedPoints.buffers.color,
           packedPointColors,
-          { offset: bufferOffset },
         );
       }
-      if (dataChanged) {
-        this.context.loadBuffer(
-          WebGL2RenderingContext.ARRAY_BUFFER,
-          this._buffers.object,
-          new Uint16Array(newRef.itemIds.length).fill(objectIndex),
-          { offset: bufferOffset },
-        );
-      }
-      objectsUBOBuffer.set(
-        WebGLUtils.transposeAndConvertMatrixToGLMat2x4(
-          WebGLUtils.createDataToWorldMatrix(
-            newRef.object.transform,
-            newRef.layer.transform,
-          ),
-        ),
-        objectIndex * 8,
-      );
-      newRenderedPoints.push({
-        ref: newRef,
-        bufferOffset,
-        state: {
-          layer: {
-            visibility: newRef.layer.visibility,
-            opacity: newRef.layer.opacity,
-            pointSizeFactor: newRef.layer.pointSizeFactor,
-            transform: structuredClone(newRef.layer.transform),
-          },
-          points: {
-            dataSource: structuredClone(newRef.object.dataSource),
-            visibility: newRef.object.visibility,
-            opacity: newRef.object.opacity,
-            pointMarker: structuredClone(newRef.object.pointMarker),
-            pointSize: structuredClone(newRef.object.pointSize),
-            pointColor: structuredClone(newRef.object.pointColor),
-            pointVisibility: structuredClone(newRef.object.pointVisibility),
-            pointOpacity: structuredClone(newRef.object.pointOpacity),
-            pointSizeFactor: newRef.object.pointSizeFactor,
-            transform: structuredClone(newRef.object.transform),
-          },
-        },
-        objectBounds,
-      });
+      newRenderedPoints.push(currentRenderedPoints);
     }
-    this.context.loadBuffer(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      this._buffers.objectsUBO,
-      objectsUBOBuffer,
-    );
     return newRenderedPoints;
+  }
+
+  /**
+   * Creates the vertex array and attribute buffers for an object of `n` points
+   *
+   * The buffers are allocated but not filled.
+   *
+   * @param n - Number of points of the object
+   * @returns The vertex array and the attribute buffers it is configured with
+   */
+  private _createBuffers(n: number): Pick<RenderedPoints, "vao" | "buffers"> {
+    const buffers = {
+      x: this.context.createBuffer(),
+      y: this.context.createBuffer(),
+      size: this.context.createBuffer(),
+      color: this.context.createBuffer(),
+      marker: this.context.createBuffer(),
+    };
+    const vao = this.context.createVertexArray();
+    this.context.gl.bindVertexArray(vao);
+    this.context.configureVertexFloatAttribute(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.x,
+      WebGLPointsRenderer._attribLocations.X,
+      1,
+      WebGL2RenderingContext.FLOAT,
+    );
+    this.context.configureVertexFloatAttribute(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.y,
+      WebGLPointsRenderer._attribLocations.Y,
+      1,
+      WebGL2RenderingContext.FLOAT,
+    );
+    this.context.configureVertexFloatAttribute(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.size,
+      WebGLPointsRenderer._attribLocations.SIZE,
+      1,
+      WebGL2RenderingContext.FLOAT,
+    );
+    this.context.configureVertexIntAttribute(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.color,
+      WebGLPointsRenderer._attribLocations.COLOR,
+      1,
+      WebGL2RenderingContext.UNSIGNED_INT,
+    );
+    this.context.configureVertexIntAttribute(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.marker,
+      WebGLPointsRenderer._attribLocations.MARKER,
+      1,
+      WebGL2RenderingContext.UNSIGNED_BYTE,
+    );
+    this.context.gl.bindVertexArray(null);
+    this.context.resizeBuffer(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.x,
+      n * Float32Array.BYTES_PER_ELEMENT,
+      WebGL2RenderingContext.STATIC_DRAW,
+    );
+    this.context.resizeBuffer(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.y,
+      n * Float32Array.BYTES_PER_ELEMENT,
+      WebGL2RenderingContext.STATIC_DRAW,
+    );
+    this.context.resizeBuffer(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.size,
+      n * Float32Array.BYTES_PER_ELEMENT,
+      WebGL2RenderingContext.STATIC_DRAW,
+    );
+    this.context.resizeBuffer(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.color,
+      n * Uint32Array.BYTES_PER_ELEMENT,
+      WebGL2RenderingContext.STATIC_DRAW,
+    );
+    this.context.resizeBuffer(
+      WebGL2RenderingContext.ARRAY_BUFFER,
+      buffers.marker,
+      n * Uint8Array.BYTES_PER_ELEMENT,
+      WebGL2RenderingContext.STATIC_DRAW,
+    );
+    return { vao, buffers };
+  }
+
+  /**
+   * Deletes the vertex array and all attribute buffers owned by a single
+   * rendered object
+   */
+  private _destroyRenderedPoints(renderedPoints: RenderedPoints): void {
+    this.context.gl.deleteVertexArray(renderedPoints.vao);
+    for (const buffer of Object.values(renderedPoints.buffers)) {
+      this.context.gl.deleteBuffer(buffer);
+    }
   }
 
   /**
@@ -814,38 +802,58 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Returns whether the point data of an object has to be reloaded entirely
+   * Computes the factor that converts the sizes of an object to world units
    *
-   * True whenever the buffers were reallocated, the object's slice moved to a
-   * different offset, the object itself was replaced, the items it contributes
-   * to the layer changed, or its data source changed. It is also true for an
-   * object that has not been rendered yet, which is why the other predicates do
-   * not have to check for that.
+   * Multiplies the object- and layer-level point size factors with the
+   * transform scales that the unit of the size configuration is subject to:
+   * sizes in data units scale with the object and layer transforms, sizes in
+   * layer units with the layer transform only, and sizes in world units with
+   * neither.
    */
-  private static _checkDataChanged(
-    renderedPoints: RenderedPoints | undefined,
-    newRef: PointsRef,
-    bufferOffset: number,
-    buffersResized: boolean,
-  ): boolean {
-    return (
-      buffersResized ||
-      renderedPoints === undefined ||
-      renderedPoints.bufferOffset !== bufferOffset ||
-      renderedPoints.ref.layer.id !== newRef.layer.id ||
-      renderedPoints.ref.object.id !== newRef.object.id ||
-      renderedPoints.ref.itemIds !== newRef.itemIds ||
-      renderedPoints.ref.itemsMask !== newRef.itemsMask ||
-      // check data source configuration instead of data
-      !deepEqual(
-        renderedPoints.state.points.dataSource,
-        newRef.object.dataSource,
-      )
-    );
+  private static _computePointSizeFactor(ref: PointsRef): number {
+    let activeUnit: CoordinateSpace;
+    const activeSource = getActiveConfigSource(ref.object.pointSize);
+    if (activeSource === "constant" && isConstantConfig(ref.object.pointSize)) {
+      activeUnit = ref.object.pointSize.constant.unit ?? defaultPointSizeUnit;
+    } else if (activeSource === "from" && isFromConfig(ref.object.pointSize)) {
+      activeUnit = ref.object.pointSize.from.unit ?? defaultPointSizeUnit;
+    } else if (
+      activeSource === "groupBy" &&
+      isGroupByConfig(ref.object.pointSize)
+    ) {
+      activeUnit = ref.object.pointSize.groupBy.unit ?? defaultPointSizeUnit;
+    } else {
+      activeUnit = defaultPointSizeUnit;
+    }
+    let sizeFactor = ref.object.pointSizeFactor * ref.layer.pointSizeFactor;
+    if (activeUnit === "data") {
+      sizeFactor *= ref.object.transform.scale;
+    }
+    if (activeUnit === "data" || activeUnit === "layer") {
+      sizeFactor *= ref.layer.transform.scale;
+    }
+    return sizeFactor;
+  }
+
+  /**
+   * Computes the factor that the alpha of every point of an object is
+   * multiplied with
+   *
+   * @returns The product of the layer and object opacities, or `0` if the
+   * layer or the object is invisible
+   */
+  private static _computeOpacityFactor(ref: PointsRef): number {
+    if (ref.layer.visibility === false || ref.object.visibility === false) {
+      return 0;
+    }
+    return ref.layer.opacity * ref.object.opacity;
   }
 
   /**
    * Returns whether the markers of an object have to be resolved again
+   *
+   * Also true for an object that has not been rendered yet, like the other
+   * predicates.
    */
   private static _checkPointMarkerBufferChanged(
     renderedPoints: RenderedPoints | undefined,
@@ -853,18 +861,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedPoints === undefined ||
-      !deepEqual(
-        renderedPoints.state.points.pointMarker,
-        newRef.object.pointMarker,
-      )
+      !deepEqual(renderedPoints.state.pointMarker, newRef.object.pointMarker)
     );
   }
 
   /**
    * Returns whether the sizes of an object have to be resolved again
    *
-   * Besides the point size configuration itself, sizes depend on the scaling
-   * factors and transforms that {@link _resolvePointSizes} multiplies into them.
+   * The point size factors and transform scales are shader uniforms (see
+   * {@link _computePointSizeFactor}), so only the point size configuration
+   * matters here.
    */
   private static _checkPointSizeBufferChanged(
     renderedPoints: RenderedPoints | undefined,
@@ -872,23 +878,17 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedPoints === undefined ||
-      renderedPoints.state.layer.pointSizeFactor !==
-        newRef.layer.pointSizeFactor ||
-      renderedPoints.state.layer.transform.scale !==
-        newRef.layer.transform.scale ||
-      renderedPoints.state.points.pointSizeFactor !==
-        newRef.object.pointSizeFactor ||
-      renderedPoints.state.points.transform.scale !==
-        newRef.object.transform.scale ||
-      !deepEqual(renderedPoints.state.points.pointSize, newRef.object.pointSize)
+      !deepEqual(renderedPoints.state.pointSize, newRef.object.pointSize)
     );
   }
 
   /**
    * Returns whether the colors of an object have to be resolved again
    *
-   * Colors carry the resolved visibilities and opacities in their alpha channel,
-   * so they also depend on the layer- and object-level visibility and opacity.
+   * Colors carry the resolved point visibilities and opacities in their alpha
+   * channel, so they also depend on those configurations. The layer- and
+   * object-level visibility and opacity are shader uniforms (see
+   * {@link _computeOpacityFactor}) and do not matter here.
    *
    * @todo Changes to the color, visibility and opacity maps themselves are not
    * detected; they are only re-read when a configuration referencing them
@@ -900,22 +900,15 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedPoints === undefined ||
-      renderedPoints.state.layer.visibility !== newRef.layer.visibility ||
-      renderedPoints.state.layer.opacity !== newRef.layer.opacity ||
-      renderedPoints.state.points.visibility !== newRef.object.visibility ||
-      renderedPoints.state.points.opacity !== newRef.object.opacity ||
       !deepEqual(
-        renderedPoints.state.points.pointVisibility,
+        renderedPoints.state.pointVisibility,
         newRef.object.pointVisibility,
       ) ||
       !deepEqual(
-        renderedPoints.state.points.pointOpacity,
+        renderedPoints.state.pointOpacity,
         newRef.object.pointOpacity,
       ) ||
-      !deepEqual(
-        renderedPoints.state.points.pointColor,
-        newRef.object.pointColor,
-      )
+      !deepEqual(renderedPoints.state.pointColor, newRef.object.pointColor)
     );
   }
 
@@ -944,6 +937,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Resolves the size of every point of an object
    *
+   * The sizes are resolved as configured, in the unit of the size
+   * configuration; {@link _computePointSizeFactor} converts them to world units
+   * in the shader.
+   *
    * @param options - Optional abort signal and table loader
    */
   private static _resolvePointSizes(
@@ -954,33 +951,12 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
     },
   ): Promise<Float32Array> {
-    let activeUnit: CoordinateSpace;
-    const activeSource = getActiveConfigSource(ref.object.pointSize);
-    if (activeSource === "constant" && isConstantConfig(ref.object.pointSize)) {
-      activeUnit = ref.object.pointSize.constant.unit ?? defaultPointSizeUnit;
-    } else if (activeSource === "from" && isFromConfig(ref.object.pointSize)) {
-      activeUnit = ref.object.pointSize.from.unit ?? defaultPointSizeUnit;
-    } else if (
-      activeSource === "groupBy" &&
-      isGroupByConfig(ref.object.pointSize)
-    ) {
-      activeUnit = ref.object.pointSize.groupBy.unit ?? defaultPointSizeUnit;
-    } else {
-      activeUnit = defaultPointSizeUnit;
-    }
-    let sizeFactor = ref.object.pointSizeFactor * ref.layer.pointSizeFactor;
-    if (activeUnit === "data") {
-      sizeFactor *= ref.object.transform.scale;
-    }
-    if (activeUnit === "data" || activeUnit === "layer") {
-      sizeFactor *= ref.layer.transform.scale;
-    }
     return SizeResolver.resolveSizes(
       ref.itemIds,
       ref.object.pointSize,
       sizeMaps,
       defaultPointSize,
-      { ...options, sizeFactor },
+      options,
     );
   }
 
@@ -1002,14 +978,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
     },
   ): Promise<Uint32Array> {
-    if (
-      ref.layer.visibility === false ||
-      ref.layer.opacity === 0 ||
-      ref.object.visibility === false ||
-      ref.object.opacity === 0
-    ) {
-      return Promise.resolve(new Uint32Array(ref.itemIds.length));
-    }
     return ColorResolver.resolveColors(
       ref.itemIds,
       ref.object.pointColor,
@@ -1033,14 +1001,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
     },
   ): Promise<Uint8Array> {
-    if (
-      ref.layer.visibility === false ||
-      ref.layer.opacity === 0 ||
-      ref.object.visibility === false ||
-      ref.object.opacity === 0
-    ) {
-      return Promise.resolve(new Uint8Array(ref.itemIds.length));
-    }
     return VisibilityResolver.resolveVisibilities(
       ref.itemIds,
       ref.object.pointVisibility,
@@ -1053,8 +1013,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Resolves the alpha of every point of an object
    *
-   * The layer- and object-level opacities are multiplied into the resolved
-   * per-point opacities, as the shader only sees the alpha channel.
+   * The layer- and object-level opacities are not multiplied in here, they are
+   * a shader uniform (see {@link _computeOpacityFactor}).
    *
    * @param options - Optional abort signal and table loader
    * @returns The alpha values, one per point
@@ -1067,21 +1027,12 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
     },
   ): Promise<Uint8Array> {
-    if (
-      ref.layer.visibility === false ||
-      ref.layer.opacity === 0 ||
-      ref.object.visibility === false ||
-      ref.object.opacity === 0
-    ) {
-      return Promise.resolve(new Uint8Array(ref.itemIds.length));
-    }
-    const opacityFactor = ref.layer.opacity * ref.object.opacity;
     return OpacityResolver.resolveOpacities(
       ref.itemIds,
       ref.object.pointOpacity,
       opacityMaps,
       defaultPointOpacity,
-      { ...options, opacityFactor },
+      options,
     );
   }
 }
@@ -1092,32 +1043,30 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
 type PointsRef = ObjectRef<Points, PointsData>;
 
 /**
- * Tracks the current GPU buffer state for a single object's slice
- * within the shared vertex buffers
+ * GPU state for a single points object
  *
- * Used for incremental updates: the `state` snapshot is what the change
- * predicates compare the new model values against, so every property they read
- * has to be captured in it.
+ * Holds the vertex array and the attribute buffers it is configured with, plus
+ * a snapshot of the model values the buffers were loaded from, which the change
+ * predicates compare against: every property they read has to be captured in
+ * it. Layer- and object-level properties are read from the reference when
+ * drawing, and are not part of the snapshot.
  */
 type RenderedPoints = RenderedObjectBase<Points, PointsData> & {
-  bufferOffset: number;
-  state: {
-    layer: Pick<
-      Layer,
-      "visibility" | "opacity" | "pointSizeFactor" | "transform"
-    >;
-    points: Pick<
-      Points,
-      | "dataSource"
-      | "visibility"
-      | "opacity"
-      | "pointMarker"
-      | "pointSize"
-      | "pointColor"
-      | "pointVisibility"
-      | "pointOpacity"
-      | "pointSizeFactor"
-      | "transform"
-    >;
+  state: Pick<
+    Points,
+    | "dataSource"
+    | "pointMarker"
+    | "pointSize"
+    | "pointColor"
+    | "pointVisibility"
+    | "pointOpacity"
+  >;
+  vao: WebGLVertexArrayObject;
+  buffers: {
+    x: WebGLBuffer;
+    y: WebGLBuffer;
+    size: WebGLBuffer;
+    color: WebGLBuffer;
+    marker: WebGLBuffer;
   };
 };

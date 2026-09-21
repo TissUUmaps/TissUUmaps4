@@ -182,13 +182,4 @@ describe("WebGLUtils", () => {
       ]);
     });
   });
-
-  describe("transposeAndConvertMatrixToGLMat2x4", () => {
-    it("transposes and extracts a column-major mat2x4 zero-padded in the fourth row", () => {
-      const matrix = mat3.fromValues(0, 1, 2, 3, 4, 5, 6, 7, 8);
-      expect(WebGLUtils.transposeAndConvertMatrixToGLMat2x4(matrix)).toEqual([
-        0, 3, 6, 0, 1, 4, 7, 0,
-      ]);
-    });
-  });
 });

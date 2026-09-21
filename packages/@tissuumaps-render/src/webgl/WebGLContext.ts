@@ -157,29 +157,6 @@ export class WebGLContext {
   }
 
   /**
-   * Returns the index of a uniform block in a shader program
-   *
-   * @param program - The shader program
-   * @param uniformBlockName - The name of the uniform block as declared in the shader
-   * @throws If the uniform block is not found
-   */
-  getUniformBlockIndex(
-    program: WebGLProgram,
-    uniformBlockName: string,
-  ): number {
-    const uniformBlockIndex = this.gl.getUniformBlockIndex(
-      program,
-      uniformBlockName,
-    );
-    if (uniformBlockIndex === WebGL2RenderingContext.INVALID_INDEX) {
-      throw new Error(
-        `Failed to get uniform block index for ${uniformBlockName}`,
-      );
-    }
-    return uniformBlockIndex;
-  }
-
-  /**
    * Creates a new vertex array object (VAO)
    *
    * @throws If VAO creation fails
