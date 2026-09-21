@@ -141,13 +141,20 @@ export class ParquetMetadataUtils {
    * never parsed back: the mapping travels with the column list, so that a
    * real column whose name looks like one is not mistaken for one.
    *
+   * A column that declares no geometry types may hold points too, so it gets
+   * the pair as well: reading it fails on the first row that is not a point.
+   *
    * @param geoColumns - The geometry columns of the file
    * @returns The derived coordinate columns, each with the geometry column it
    * reads and the axis it reads on
    */
   static getCoordinateColumns(geoColumns: GeoColumn[]): CoordinateColumn[] {
     return geoColumns
-      .filter((geoColumn) => ParquetMetadataUtils.isPointColumn(geoColumn))
+      .filter(
+        (geoColumn) =>
+          geoColumn.geometryTypes.length === 0 ||
+          ParquetMetadataUtils.isPointColumn(geoColumn),
+      )
       .flatMap(({ name }) => [
         { column: `${name}[x]`, geometryColumn: name, axis: "x" as const },
         { column: `${name}[y]`, geometryColumn: name, axis: "y" as const },

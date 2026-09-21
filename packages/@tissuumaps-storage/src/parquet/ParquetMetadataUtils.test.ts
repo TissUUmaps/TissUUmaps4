@@ -136,6 +136,21 @@ describe("ParquetMetadataUtils", () => {
       ]);
     });
 
+    it("derives a pair from a column that declares no geometry types", () => {
+      const geoColumns = ParquetMetadataUtils.readGeoColumns(
+        fakeMetadata(
+          JSON.stringify({
+            primary_column: "geometry",
+            columns: { geometry: { encoding: "WKB", geometry_types: [] } },
+          }),
+        ),
+      );
+      expect(ParquetMetadataUtils.getCoordinateColumns(geoColumns)).toEqual([
+        { column: "geometry[x]", geometryColumn: "geometry", axis: "x" },
+        { column: "geometry[y]", geometryColumn: "geometry", axis: "y" },
+      ]);
+    });
+
     it("derives no coordinate columns from polygons", () => {
       const geoColumns = ParquetMetadataUtils.readGeoColumns(polygons);
       expect(ParquetMetadataUtils.getCoordinateColumns(geoColumns)).toEqual([]);
