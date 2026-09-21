@@ -9,6 +9,14 @@ describe("TableColumnUtils", () => {
     return queries.map((query) => ({ query, terminal: true }));
   }
 
+  describe("matchColumnQuery", () => {
+    it("matches case-insensitively on containment", () => {
+      expect(TableColumnUtils.matchColumnQuery("Area_um2", "area")).toBe(0);
+      expect(TableColumnUtils.matchColumnQuery("cell_type", "TYPE")).toBe(5);
+      expect(TableColumnUtils.matchColumnQuery("x", "y")).toBe(-1);
+    });
+  });
+
   describe("suggestColumnQueries", () => {
     it("lists all columns for an empty query", () => {
       expect(TableColumnUtils.suggestColumnQueries(columns, "")).toEqual(

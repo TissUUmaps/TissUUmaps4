@@ -7,6 +7,18 @@ import type { ColumnQuerySuggestion } from "../storage/table";
  */
 export class TableColumnUtils {
   /**
+   * Matches a column against a query, case-insensitively
+   *
+   * @param column - The column name
+   * @param query - The column query
+   * @returns The index at which the query occurs in the column name, or `-1`
+   * if the column does not match
+   */
+  static matchColumnQuery(column: string, query: string): number {
+    return column.toLowerCase().indexOf(query.toLowerCase());
+  }
+
+  /**
    * Suggests column queries for the current query
    *
    * All columns are suggested. Columns matching the current query
@@ -22,19 +34,18 @@ export class TableColumnUtils {
     columns: string[],
     currentQuery: string,
   ): ColumnQuerySuggestion[] {
-    const lowerCaseQuery = currentQuery.toLowerCase();
     const matches: string[] = [];
     const others: string[] = [];
     for (const column of columns) {
-      if (column.toLowerCase().includes(lowerCaseQuery)) {
+      if (column === currentQuery) {
+        matches.unshift(column);
+      } else if (
+        TableColumnUtils.matchColumnQuery(column, currentQuery) !== -1
+      ) {
         matches.push(column);
       } else {
         others.push(column);
       }
-    }
-    const exactMatchIndex = matches.indexOf(currentQuery);
-    if (exactMatchIndex > 0) {
-      matches.unshift(...matches.splice(exactMatchIndex, 1));
     }
     return [...matches, ...others].map((query) => ({ query, terminal: true }));
   }

@@ -2,7 +2,7 @@ import { Autocomplete } from "@base-ui/react/autocomplete";
 import { ChevronDownIcon, FolderIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
-import type { ColumnQuerySuggestion } from "@tissuumaps/core";
+import { type ColumnQuerySuggestion, TableColumnUtils } from "@tissuumaps/core";
 
 import { Input } from "@/components/ui/input";
 import { useTableDataLoader } from "@/hooks/useDataLoader";
@@ -13,15 +13,9 @@ export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
   onValueChange: (column: string | null) => void;
+  maxSuggestions?: number;
   className?: string;
 };
-
-/** Maximum number of suggestions shown in the popup, which is not virtualized */
-const maxSuggestions = 100;
-
-function isMatch(suggestion: string, query: string): boolean {
-  return suggestion.toLowerCase().includes(query.toLowerCase());
-}
 
 type SuggestionTextProps = {
   suggestion: string;
@@ -30,7 +24,7 @@ type SuggestionTextProps = {
 
 function SuggestionText({ suggestion, query }: SuggestionTextProps) {
   const index =
-    query !== "" ? suggestion.toLowerCase().indexOf(query.toLowerCase()) : -1;
+    query !== "" ? TableColumnUtils.matchColumnQuery(suggestion, query) : -1;
   if (index === -1) {
     return <span className="truncate">{suggestion}</span>;
   }
@@ -68,6 +62,7 @@ export function TableColumnInput({
   tableId,
   value,
   onValueChange,
+  maxSuggestions = 100,
   className,
 }: TableColumnInputProps) {
   const loadTableData = useLoadTableData(tableId);
@@ -214,7 +209,7 @@ export function TableColumnInput({
       return "No columns";
     }
     // matching suggestions are listed first, so the first one decides
-    if (!isMatch(suggestions[0]!.query, text)) {
+    if (TableColumnUtils.matchColumnQuery(suggestions[0]!.query, text) === -1) {
       return `No matches for "${text}", showing all columns`;
     }
     if (suggestions.length > maxSuggestions) {
@@ -257,12 +252,14 @@ export function TableColumnInput({
         <div className="absolute inset-y-0 right-1 flex items-center text-muted-foreground">
           <Autocomplete.Clear
             title="Clear"
+            aria-label="Clear"
             className="flex size-6 items-center justify-center rounded hover:text-foreground"
           >
             <XIcon className="size-4" />
           </Autocomplete.Clear>
           <Autocomplete.Trigger
             title="Show columns"
+            aria-label="Show columns"
             className="flex size-6 items-center justify-center rounded hover:text-foreground"
           >
             <ChevronDownIcon className="size-4" />
