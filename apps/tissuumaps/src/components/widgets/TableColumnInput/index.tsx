@@ -39,25 +39,6 @@ function SuggestionText({ suggestion, query }: SuggestionTextProps) {
   );
 }
 
-/**
- * Loads the data of the table identified by `tableId` on demand
- *
- * @param tableId - The ID of the table to load
- * @returns A callback yielding the table data, or `null` if `tableId` does not
- * identify a table of the current project
- */
-function useLoadTableData(tableId: string | null) {
-  const table = useProjectStore(
-    (state) => state.tables.find((table) => table.id === tableId) ?? null,
-  );
-  const loadTable = useTableDataLoader();
-  return useCallback(
-    async (signal?: AbortSignal) =>
-      table !== null ? await loadTable(table, { signal }) : null,
-    [table, loadTable],
-  );
-}
-
 export function TableColumnInput({
   tableId,
   value,
@@ -65,7 +46,15 @@ export function TableColumnInput({
   maxSuggestions = 100,
   className,
 }: TableColumnInputProps) {
-  const loadTableData = useLoadTableData(tableId);
+  const table = useProjectStore(
+    (state) => state.tables.find((table) => table.id === tableId) ?? null,
+  );
+  const loadTable = useTableDataLoader();
+  const loadTableData = useCallback(
+    async (signal?: AbortSignal) =>
+      table !== null ? await loadTable(table, { signal }) : null,
+    [table, loadTable],
+  );
 
   const [text, setText] = useState(value ?? "");
   const [invalid, setInvalid] = useState(false);
@@ -213,7 +202,7 @@ export function TableColumnInput({
       return `No matches for "${text}", showing all columns`;
     }
     if (suggestions.length > maxSuggestions) {
-      return `Showing ${maxSuggestions} of ${suggestions.length} columns, keep typing to narrow down`;
+      return `Showing the first ${maxSuggestions} suggestions, keep typing to narrow down`;
     }
     return null;
   }
@@ -252,14 +241,12 @@ export function TableColumnInput({
         <div className="absolute inset-y-0 right-1 flex items-center text-muted-foreground">
           <Autocomplete.Clear
             title="Clear"
-            aria-label="Clear"
             className="flex size-6 items-center justify-center rounded hover:text-foreground"
           >
             <XIcon className="size-4" />
           </Autocomplete.Clear>
           <Autocomplete.Trigger
             title="Show columns"
-            aria-label="Show columns"
             className="flex size-6 items-center justify-center rounded hover:text-foreground"
           >
             <ChevronDownIcon className="size-4" />
