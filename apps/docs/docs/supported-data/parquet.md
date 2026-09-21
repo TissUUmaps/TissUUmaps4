@@ -18,8 +18,6 @@ Parquet table data sources have the `type` `"parquet"` and accept the following 
 | `nameColumn`     | `string` | Column holding the name of each row.                                                                                                                 |
 | `requestHeaders` | `object` | Extra HTTP headers sent with the request for a remote file.                                                                                          |
 
-Columns of 64-bit integers are not supported, as TissUUmaps does not handle bigint values.
-
 ### Point geometries as coordinate columns
 
 A geometry is not a value a table column can hold, and point geometries are not shapes. A [GeoParquet](https://geoparquet.org/) geometry column holding points is therefore read as a **pair of coordinate columns** selected from it: a `geometry` column of points adds the columns `geometry[x]` and `geometry[y]`, which are used like any other numeric column, including as the coordinates of a [table](./table.md) point cloud. Their value range is read from the bounds in the `geo` metadata, without decoding the column.
@@ -95,3 +93,14 @@ A project showing the circles and the polygons of a [SpatialData](https://spatia
   ]
 }
 ```
+
+## Limitations
+
+- Columns of 64-bit integers are not supported, as TissUUmaps does not handle bigint values. An integer ID column is the exception: its values are read as numbers, and have to be below 2^53.
+- Geometries are read from WKB columns only. Other GeoParquet encodings are read as their raw values.
+- A geometry column that declares no geometry types is offered as coordinate columns; reading them fails if a row is not a point.
+- Workspace files need an open workspace.
+
+## API
+
+The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`ParquetTableDataProvider`](/docs/api/@tissuumaps/storage/classes/ParquetTableDataProvider) and [`ParquetShapesDataProvider`](/docs/api/@tissuumaps/storage/classes/ParquetShapesDataProvider). Reading the file is delegated to [hyparquet](https://hyparquet.com/), in a worker.
