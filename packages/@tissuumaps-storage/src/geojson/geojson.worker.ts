@@ -49,6 +49,43 @@ const ctx = self as unknown as {
   ) => void;
 };
 
+/**
+ * Minimum share of the total between two progress reports
+ *
+ * Progress is reported per downloaded chunk and per parsed feature. Reporting
+ * every percent keeps the number of messages bounded whatever the data size.
+ */
+const progressReportFraction = 0.01;
+
+/**
+ * Wraps a progress callback so that it is only called every
+ * {@link progressReportFraction} of the total, and on completion
+ *
+ * A report below the previous one starts a new phase, e.g. parsing after
+ * downloading.
+ *
+ * @param onProgress - The callback to wrap
+ * @returns The wrapped callback
+ */
+function stepProgress(
+  onProgress: (progress: number, total: number) => void,
+): (progress: number, total: number) => void {
+  let lastReportedFraction = -Infinity;
+  return (progress, total) => {
+    const fraction = total > 0 ? progress / total : 1;
+    if (fraction < lastReportedFraction) {
+      lastReportedFraction = -Infinity;
+    }
+    if (
+      fraction >= 1 ||
+      fraction - lastReportedFraction >= progressReportFraction
+    ) {
+      lastReportedFraction = fraction;
+      onProgress(progress, total);
+    }
+  };
+}
+
 ctx.onmessage = (event) => {
   const request = event.data;
   void (async () => {
@@ -56,8 +93,11 @@ ctx.onmessage = (event) => {
       let result;
       switch (request.op) {
         case "file":
-          result = await handleFileRequest(request, (progress, total) =>
-            ctx.postMessage({ progress, total }),
+          result = await handleFileRequest(
+            request,
+            stepProgress((progress, total) =>
+              ctx.postMessage({ progress, total }),
+            ),
           );
           break;
         default:
