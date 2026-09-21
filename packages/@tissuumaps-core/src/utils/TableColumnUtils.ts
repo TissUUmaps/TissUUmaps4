@@ -4,6 +4,8 @@ import type { ColumnQuerySuggestion } from "../storage/table";
  * Column query suggestion and resolution for tables with a flat list of columns
  *
  * A column query is the column name itself, so every suggestion is terminal.
+ * `matchColumnQuery` is also the default match rule for highlighting and
+ * status messages until suggestions carry their own match.
  */
 export class TableColumnUtils {
   /**
