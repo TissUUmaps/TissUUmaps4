@@ -360,7 +360,7 @@ async function handleFileRequest(
   const { ids, names } = await readIdsAndNames(
     buffer,
     metadata,
-    request.idColumn,
+    request.idColumn ?? ParquetMetadataUtils.readIndexColumn(metadata),
     request.nameColumn,
     onProgress,
   );
@@ -519,7 +519,7 @@ async function handleShapesRequest(
   const { ids: rowIds, names: rowNames } = await readIdsAndNames(
     buffer,
     metadata,
-    request.idColumn,
+    request.idColumn ?? ParquetMetadataUtils.readIndexColumn(metadata),
     request.nameColumn,
     () => {},
   );

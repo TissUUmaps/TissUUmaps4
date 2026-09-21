@@ -10,13 +10,13 @@ The built-in **Parquet data provider** opens Parquet files as **tables**, and [G
 
 Parquet table data sources have the `type` `"parquet"` and accept the following fields:
 
-| Field            | Type     | Description                                                                                                                 |
-| ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `type`           | `string` | Always `"parquet"`.                                                                                                         |
-| `source`         | `string` | URL or path of the Parquet file (see [Referencing data](../concepts/projects.md#referencing-data)).                         |
-| `idColumn`       | `string` | Column holding the ID of each row (see [Data model](../concepts/data-model.md)). Row numbers are used when it is not given. |
-| `nameColumn`     | `string` | Column holding the name of each row.                                                                                        |
-| `requestHeaders` | `object` | Extra HTTP headers sent with the request for a remote file.                                                                 |
+| Field            | Type     | Description                                                                                                                                          |
+| ---------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`           | `string` | Always `"parquet"`.                                                                                                                                  |
+| `source`         | `string` | URL or path of the Parquet file (see [Referencing data](../concepts/projects.md#referencing-data)).                                                  |
+| `idColumn`       | `string` | Column holding the ID of each row (see [Data model](../concepts/data-model.md)). Defaults to the [pandas index](#pandas-index), else to row numbers. |
+| `nameColumn`     | `string` | Column holding the name of each row.                                                                                                                 |
+| `requestHeaders` | `object` | Extra HTTP headers sent with the request for a remote file.                                                                                          |
 
 Columns of 64-bit integers are not supported, as TissUUmaps does not handle bigint values.
 
@@ -24,15 +24,15 @@ Columns of 64-bit integers are not supported, as TissUUmaps does not handle bigi
 
 Parquet shapes data sources have the `type` `"parquet"` and accept the following fields:
 
-| Field            | Type     | Description                                                                                            |
-| ---------------- | -------- | ------------------------------------------------------------------------------------------------------ |
-| `type`           | `string` | Always `"parquet"`.                                                                                    |
-| `source`         | `string` | URL or path of the GeoParquet file (see [Referencing data](../concepts/projects.md#referencing-data)). |
-| `geometryColumn` | `string` | Geometry column to read. Defaults to the primary geometry column of the file.                          |
-| `idColumn`       | `string` | Column holding the ID of each shape. Row numbers are used when it is not given.                        |
-| `nameColumn`     | `string` | Column holding the name of each shape.                                                                 |
-| `requestHeaders` | `object` | Extra HTTP headers sent with the request for a remote file.                                            |
-| `table`          | `string` | ID of the table annotating the shapes (see [Data model](../concepts/data-model.md)).                   |
+| Field            | Type     | Description                                                                                              |
+| ---------------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `type`           | `string` | Always `"parquet"`.                                                                                      |
+| `source`         | `string` | URL or path of the GeoParquet file (see [Referencing data](../concepts/projects.md#referencing-data)).   |
+| `geometryColumn` | `string` | Geometry column to read. Defaults to the primary geometry column of the file.                            |
+| `idColumn`       | `string` | Column holding the ID of each shape. Defaults to the [pandas index](#pandas-index), else to row numbers. |
+| `nameColumn`     | `string` | Column holding the name of each shape.                                                                   |
+| `requestHeaders` | `object` | Extra HTTP headers sent with the request for a remote file.                                              |
+| `table`          | `string` | ID of the table annotating the shapes (see [Data model](../concepts/data-model.md)).                     |
 
 Polygons and multi-polygons are read as shapes; rows holding another geometry are skipped.
 
@@ -41,6 +41,10 @@ Polygons and multi-polygons are read as shapes; rows holding another geometry ar
 A GeoParquet file describes its geometry columns in the `geo` metadata of the file, and stores their geometries as [WKB](https://libgeos.org/specifications/wkb/). Geometry columns in other encodings are read as their raw values.
 
 Point geometries are not shapes, and a geometry is not a value a table column can hold. A geometry column holding points is therefore read as a **pair of coordinate columns** selected from it: a `geometry` column of points adds the columns `geometry[x]` and `geometry[y]`, which are used like any other numeric column — including as the coordinates of a [table](./table.md) point cloud. Their value range is read from the bounds in the `geo` metadata, without decoding the column.
+
+## Pandas index
+
+Parquet has no index, so a file written by [pandas](https://pandas.pydata.org/docs/development/developer.html) or [GeoPandas](https://geopandas.org/) records in its `pandas` metadata which column its DataFrame index was written as. That column is the default `idColumn`, so that a [SpatialData](https://spatialdata.scverse.org/) element, whose index is the key its tables refer to, is keyed without configuration. A `RangeIndex` is not written as a column and leaves the default at row numbers.
 
 ## Example
 

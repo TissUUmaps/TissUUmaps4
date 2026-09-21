@@ -9,6 +9,13 @@ function fakeMetadata(geo?: string): FileMetaData {
   } as unknown as FileMetaData;
 }
 
+function fakePandasMetadata(pandas?: string): FileMetaData {
+  return {
+    key_value_metadata:
+      pandas !== undefined ? [{ key: "pandas", value: pandas }] : [],
+  } as unknown as FileMetaData;
+}
+
 // As written by geopandas 1.1.1 for a SpatialData circles element
 const points = fakeMetadata(
   JSON.stringify({
@@ -180,6 +187,48 @@ describe("ParquetMetadataUtils", () => {
       const geoColumns = ParquetMetadataUtils.readGeoColumns(polygons);
       expect(
         ParquetMetadataUtils.resolveCoordinateColumn(geoColumns, "geometry[x]"),
+      ).toBeUndefined();
+    });
+  });
+
+  describe("readIndexColumn", () => {
+    it("reads the column an unnamed index was written as", () => {
+      // As written by geopandas 1.0.1 for a SpatialData Xenium element
+      const metadata = fakePandasMetadata(
+        JSON.stringify({
+          index_columns: ["__index_level_0__"],
+          columns: [
+            { name: "geometry", field_name: "geometry" },
+            { name: null, field_name: "__index_level_0__" },
+          ],
+        }),
+      );
+      expect(ParquetMetadataUtils.readIndexColumn(metadata)).toBe(
+        "__index_level_0__",
+      );
+    });
+
+    it("reads the column a named index was written as", () => {
+      const metadata = fakePandasMetadata(
+        JSON.stringify({ index_columns: ["cell_id"] }),
+      );
+      expect(ParquetMetadataUtils.readIndexColumn(metadata)).toBe("cell_id");
+    });
+
+    it("reads no column for a range index", () => {
+      const metadata = fakePandasMetadata(
+        JSON.stringify({
+          index_columns: [
+            { kind: "range", name: null, start: 0, stop: 355, step: 1 },
+          ],
+        }),
+      );
+      expect(ParquetMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
+    });
+
+    it("reads no column from a file without pandas metadata", () => {
+      expect(
+        ParquetMetadataUtils.readIndexColumn(fakePandasMetadata()),
       ).toBeUndefined();
     });
   });

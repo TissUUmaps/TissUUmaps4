@@ -33,9 +33,21 @@ type GeoMetadata = {
 };
 
 /**
+ * The `pandas` metadata of a Parquet file written by pandas
+ *
+ * `index_columns` lists where the DataFrame index went: an entry is the name
+ * of the column it was written as, or a description of a `RangeIndex` that was
+ * not written at all.
+ */
+type PandasMetadata = {
+  index_columns?: (string | { kind: string })[];
+};
+
+/**
  * Helpers for the metadata a Parquet file carries in its footer
  *
- * GeoParquet describes its geometry columns in the `geo` metadata. Point
+ * GeoParquet describes its geometry columns in the `geo` metadata, and pandas
+ * records its DataFrame index in the `pandas` metadata. Point
  * geometry columns are read as a pair of coordinate columns selected from the
  * geometry column, e.g. `geometry[x]` and `geometry[y]`, so that point
  * geometries can be used wherever a numeric column is expected.
@@ -164,5 +176,27 @@ export class ParquetMetadataUtils {
     return geoColumn !== undefined
       ? { geoColumn, axis: coordinates.axis }
       : undefined;
+  }
+
+  /**
+   * Reads the column a pandas DataFrame index was written as
+   *
+   * Parquet has no index, so pandas either writes the index as an ordinary
+   * column, named in the `pandas` metadata, or, for a `RangeIndex`, writes
+   * nothing and records the range instead.
+   *
+   * @param metadata - The file metadata
+   * @returns The name of the index column, or `undefined` for files without
+   * pandas metadata, and for files whose index was not written
+   */
+  static readIndexColumn(metadata: FileMetaData): string | undefined {
+    const pandas = metadata.key_value_metadata?.find(
+      ({ key }) => key === "pandas",
+    );
+    if (pandas?.value === undefined) {
+      return undefined;
+    }
+    const { index_columns = [] } = JSON.parse(pandas.value) as PandasMetadata;
+    return index_columns.find((column) => typeof column === "string");
   }
 }
