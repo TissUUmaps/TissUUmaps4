@@ -305,7 +305,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    *
    * Matches the rendered objects to the new set of references, by layer,
    * object, contributed items and data source. Those that still match are
-   * returned for reuse; the rest have their textures destroyed.
+   * returned for reuse; the rest have their textures destroyed. Every
+   * reference is matched at most once, so that duplicates are destroyed rather
+   * than orphaned.
    *
    * @param newRefs - The object references to match against
    * @returns The reusable rendered objects, by object reference
@@ -318,6 +320,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       const renderedShapes = this.renderedObjects[i]!;
       const newRef = newRefs.find(
         (newRef) =>
+          !renderedShapesByNewRef.has(newRef) &&
           renderedShapes.ref.layer.id === newRef.layer.id &&
           renderedShapes.ref.object.id === newRef.object.id &&
           renderedShapes.ref.itemIds === newRef.itemIds &&
