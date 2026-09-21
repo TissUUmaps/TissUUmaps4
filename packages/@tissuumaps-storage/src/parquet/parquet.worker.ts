@@ -9,13 +9,13 @@ import {
 } from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 
-import {
-  type GenericArray,
-  type ShapesGeometry,
-  ShapesGeometryBuilder,
-  type TypedArray,
+import type {
+  GenericArray,
+  ShapesGeometry,
+  TypedArray,
 } from "@tissuumaps/core";
 
+import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
 import { ParquetMetadataUtils } from "./ParquetMetadataUtils";
 import type { ParquetSource } from "./types";
 

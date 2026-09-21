@@ -241,11 +241,6 @@ export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { NumberUtils } from "./utils/NumberUtils";
 export { RandomUtils } from "./utils/RandomUtils";
-export {
-  ShapesGeometryBuilder,
-  type ShapesPolygon,
-  type ShapesRing,
-} from "./utils/ShapesGeometryBuilder";
 export { SourceUtils } from "./utils/SourceUtils";
 export { TableUtils } from "./utils/TableUtils";
 export { TransformUtils } from "./utils/TransformUtils";

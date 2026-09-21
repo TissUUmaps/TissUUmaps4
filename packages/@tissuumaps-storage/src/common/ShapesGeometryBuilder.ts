@@ -1,4 +1,4 @@
-import type { ShapesGeometry } from "../storage/shapes";
+import type { ShapesGeometry } from "@tissuumaps/core";
 
 /** A ring of a polygon, as a sequence of positions holding x and y first */
 export type ShapesRing = readonly (readonly number[])[];

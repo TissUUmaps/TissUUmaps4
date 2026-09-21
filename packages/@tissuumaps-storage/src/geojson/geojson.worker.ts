@@ -1,10 +1,11 @@
 import type { Feature, GeoJSON, Geometry } from "geojson";
 
+import type { ShapesGeometry } from "@tissuumaps/core";
+
 import {
-  type ShapesGeometry,
   ShapesGeometryBuilder,
   type ShapesPolygon,
-} from "@tissuumaps/core";
+} from "../common/ShapesGeometryBuilder";
 
 export type GeoJSONRequest<TOp extends string = string> = {
   op: TOp;
