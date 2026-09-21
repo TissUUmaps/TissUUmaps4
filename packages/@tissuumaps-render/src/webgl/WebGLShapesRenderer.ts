@@ -121,8 +121,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    *
    * The stroke width is a shader uniform, so changing it only requires a
    * redraw. The number of scanlines is not: the scanline data textures are
-   * rasterized for a fixed number of scanlines, so they are discarded here and
-   * rebuilt by the requested resynchronization.
+   * rasterized for a fixed number of scanlines, so the requested
+   * resynchronization rebuilds them, while every object keeps being drawn with
+   * the number of scanlines its texture was built for until then.
    *
    * @param options - The options to set for the renderer
    * @returns Whether the renderer has to be resynchronized and/or redrawn
@@ -139,13 +140,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       redraw = true;
     }
     if (numScanlines !== this._numScanlines) {
-      // invalidate scanline data textures
-      for (const renderedShapes of this.renderedObjects) {
-        if (renderedShapes.scanlineDataTexture !== undefined) {
-          this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
-        }
-        renderedShapes.scanlineDataTexture = undefined;
-      }
       this._numScanlines = numScanlines;
       resync = true;
     }
@@ -217,7 +211,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    *
    * Renders each shapes object as a full-screen quad whose fragment shader
    * performs scanline-based polygon rasterization using the per-object
-   * scanline data texture.
+   * scanline data texture, drawn with the number of scanlines it was built for.
    *
    * @throws Error if the renderer has not been initialized
    */
@@ -236,10 +230,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         WebGLUtils.createViewportToWorldMatrix(this.viewport),
       ),
     );
-    this.context.gl.uniform1ui(
-      this._uniformLocations.numScanlines,
-      this._numScanlines,
-    );
     this.context.gl.uniform1f(
       this._uniformLocations.strokeWidth,
       this._strokeWidth,
@@ -249,9 +239,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     this.context.gl.uniform1i(this._uniformLocations.shapeStrokeColors, 3);
     this.context.enableAlphaBlending();
     for (const renderedShapes of this.renderedObjects) {
-      if (renderedShapes.scanlineDataTexture === undefined) {
-        continue; // scanline data texture is currently being regenerated
-      }
       const worldToDataMatrix = WebGLUtils.createWorldToDataMatrix(
         renderedShapes.ref.object.transform,
         renderedShapes.ref.layer.transform,
@@ -267,6 +254,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         renderedShapes.objectBounds.y,
         renderedShapes.objectBounds.width,
         renderedShapes.objectBounds.height,
+      );
+      this.context.gl.uniform1ui(
+        this._uniformLocations.numScanlines,
+        renderedShapes.numScanlines,
       );
       this.context.gl.activeTexture(WebGL2RenderingContext.TEXTURE1);
       this.context.gl.bindTexture(
@@ -404,6 +395,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     const objectPreloads: {
       newRef: ShapesRef;
       renderedShapes: RenderedShapes | undefined;
+      numScanlines: number;
       geometryPromise: Promise<ShapesGeometry> | undefined;
       packedShapeFillColorsPromise: Promise<Uint32Array> | undefined;
       packedShapeFillVisibilitiesPromise: Promise<Uint8Array> | undefined;
@@ -414,6 +406,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     }[] = [];
     for (const newRef of newRefs) {
       const renderedShapes = renderedShapesByNewRef.get(newRef);
+      const numScanlines = this._numScanlines;
       let loadObjectTable;
       if (newRef.object.dataSource.table !== undefined) {
         const objectTable = tables.find(
@@ -430,7 +423,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       }
       const geometryPromise =
         renderedShapes === undefined ||
-        renderedShapes.scanlineDataTexture === undefined
+        renderedShapes.numScanlines !== numScanlines
           ? newRef.data.loadGeometry({ signal })
           : undefined;
       geometryPromise?.catch(() => {}); // prevent unhandled rejections in console
@@ -521,6 +514,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       objectPreloads.push({
         newRef,
         renderedShapes,
+        numScanlines,
         geometryPromise,
         packedShapeFillColorsPromise,
         packedShapeFillVisibilitiesPromise,
@@ -534,6 +528,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     for (const {
       newRef,
       renderedShapes,
+      numScanlines,
       geometryPromise,
       packedShapeFillColorsPromise,
       packedShapeFillVisibilitiesPromise,
@@ -582,7 +577,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           continue;
         }
         objectBounds = newObjectBounds;
-        scanlineBuffer = await this._createScanlineBuffer(
+        scanlineBuffer = await WebGLShapesRenderer._createScanlineBuffer(
+          numScanlines,
           geometry,
           newRef.itemsMask,
           objectBounds,
@@ -676,6 +672,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           ref: newRef,
           state,
           objectBounds,
+          numScanlines,
           scanlineDataTexture,
           shapeFillColorsTexture,
           shapeStrokeColorsTexture,
@@ -686,12 +683,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         currentRenderedShapes.state = state;
         currentRenderedShapes.objectBounds = objectBounds;
         if (scanlineDataTexture !== undefined) {
-          if (currentRenderedShapes.scanlineDataTexture !== undefined) {
-            this.context.gl.deleteTexture(
-              currentRenderedShapes.scanlineDataTexture,
-            );
-          }
+          this.context.gl.deleteTexture(
+            currentRenderedShapes.scanlineDataTexture,
+          );
           currentRenderedShapes.scanlineDataTexture = scanlineDataTexture;
+          currentRenderedShapes.numScanlines = numScanlines;
         }
         if (shapeFillColorsTexture !== undefined) {
           this.context.gl.deleteTexture(
@@ -716,9 +712,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Deletes all GPU textures owned by a single rendered object
    */
   private _destroyRenderedShapes(renderedShapes: RenderedShapes): void {
-    if (renderedShapes.scanlineDataTexture !== undefined) {
-      this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
-    }
+    this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
     this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
     this.context.gl.deleteTexture(renderedShapes.shapeStrokeColorsTexture);
   }
@@ -730,13 +724,15 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * a float buffer, aligned to the lines of the scanline data texture that
    * {@link _createScanlineDataTexture} creates from it.
    *
+   * @param numScanlines - Number of scanlines to rasterize into
    * @param geometry - Geometry for all shapes in the object
    * @param shapesMask - Per-shape inclusion mask, or `undefined` if all shapes are included
    * @param objectBounds - Axis-aligned bounding box of all shapes
    * @param options - Optional abort signal
    * @returns The packed scanline data
    */
-  private async _createScanlineBuffer(
+  private static async _createScanlineBuffer(
+    numScanlines: number,
     geometry: ShapesGeometry,
     shapesMask: Uint8Array | undefined,
     objectBounds: Rect,
@@ -746,7 +742,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     signal?.throwIfAborted();
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
       await WebGLShapesRasterizer.createScanlines(
-        this._numScanlines,
+        numScanlines,
         geometry,
         shapesMask,
         objectBounds,
@@ -1075,8 +1071,9 @@ type ShapesRef = ObjectRef<Shapes, ShapesData>;
  *
  * Holds the texture handles for scanline data, fill colors and stroke colors,
  * plus a snapshot of the model values they were built from, which the change
- * predicates compare against. A missing scanline data texture marks the
- * scanlines as invalidated, see {@link WebGLShapesRenderer.setRenderOptions}.
+ * predicates compare against. The number of scanlines is the one the scanline
+ * data texture was rasterized for, which is also the one the object is drawn
+ * with.
  */
 type RenderedShapes = RenderedObjectBase<Shapes, ShapesData> & {
   state: {
@@ -1095,7 +1092,8 @@ type RenderedShapes = RenderedObjectBase<Shapes, ShapesData> & {
       | "transform"
     >;
   };
-  scanlineDataTexture?: WebGLTexture;
+  numScanlines: number;
+  scanlineDataTexture: WebGLTexture;
   shapeFillColorsTexture: WebGLTexture;
   shapeStrokeColorsTexture: WebGLTexture;
 };
