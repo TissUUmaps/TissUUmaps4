@@ -199,7 +199,11 @@ describe("ParquetMetadataUtils", () => {
           index_columns: ["__index_level_0__"],
           columns: [
             { name: "geometry", field_name: "geometry" },
-            { name: null, field_name: "__index_level_0__" },
+            {
+              name: null,
+              field_name: "__index_level_0__",
+              pandas_type: "int64",
+            },
           ],
         }),
       );
@@ -210,9 +214,37 @@ describe("ParquetMetadataUtils", () => {
 
     it("reads the column a named index was written as", () => {
       const metadata = fakePandasMetadata(
-        JSON.stringify({ index_columns: ["cell_id"] }),
+        JSON.stringify({
+          index_columns: ["cell_id"],
+          columns: [{ field_name: "cell_id", pandas_type: "int32" }],
+        }),
       );
       expect(ParquetMetadataUtils.readIndexColumn(metadata)).toBe("cell_id");
+    });
+
+    it("reads no column for an index that is not an integer", () => {
+      // As written by geopandas for a SpatialData Xenium element with string
+      // cell IDs, which item IDs cannot hold
+      const metadata = fakePandasMetadata(
+        JSON.stringify({
+          index_columns: ["__index_level_0__"],
+          columns: [
+            {
+              name: null,
+              field_name: "__index_level_0__",
+              pandas_type: "unicode",
+            },
+          ],
+        }),
+      );
+      expect(ParquetMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
+    });
+
+    it("reads no column for an index missing from the column metadata", () => {
+      const metadata = fakePandasMetadata(
+        JSON.stringify({ index_columns: ["cell_id"] }),
+      );
+      expect(ParquetMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
     });
 
     it("reads no column for a range index", () => {

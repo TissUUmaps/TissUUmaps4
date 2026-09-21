@@ -46,7 +46,9 @@ A [GeoParquet](https://geoparquet.org/) file describes its geometry columns in t
 
 ## Pandas index
 
-Parquet has no index, so a file written by [pandas](https://pandas.pydata.org/docs/development/developer.html) or [GeoPandas](https://geopandas.org/) records in its `pandas` metadata which column its DataFrame index was written as. That column is the default `idColumn`, so that a [SpatialData](https://spatialdata.scverse.org/) element, whose index is the key its tables refer to, is keyed without configuration. A `RangeIndex` is not written as a column and leaves the default at row numbers.
+Parquet has no index, so a file written by [pandas](https://pandas.pydata.org/docs/development/developer.html) or [GeoPandas](https://geopandas.org/) records in its `pandas` metadata which column its DataFrame index was written as. That column is the default `idColumn`, so that a [SpatialData](https://spatialdata.scverse.org/) element, whose index is the key its tables refer to, is keyed without configuration.
+
+Only an integer index is used: IDs are numbers, so a string index leaves the default at row numbers, as does a `RangeIndex`, which is not written as a column at all.
 
 ## Example
 

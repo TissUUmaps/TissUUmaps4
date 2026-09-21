@@ -37,11 +37,16 @@ type GeoMetadata = {
  *
  * `index_columns` lists where the DataFrame index went: an entry is the name
  * of the column it was written as, or a description of a `RangeIndex` that was
- * not written at all.
+ * not written at all. `columns` describes every column, the index ones
+ * included, and gives the pandas dtype each was written from.
  */
 type PandasMetadata = {
   index_columns?: (string | { kind: string })[];
+  columns?: { field_name?: string; pandas_type?: string }[];
 };
+
+/** Matches the pandas dtype of a column TissUUmaps can key its rows by */
+const integerPandasType = /^u?int(8|16|32|64)?$/i;
 
 /**
  * Helpers for the metadata a Parquet file carries in its footer
@@ -185,9 +190,14 @@ export class ParquetMetadataUtils {
    * column, named in the `pandas` metadata, or, for a `RangeIndex`, writes
    * nothing and records the range instead.
    *
+   * Only an integer index is returned: item IDs are numbers, so keying rows
+   * by a string index would fail the read of a file that is otherwise
+   * readable.
+   *
    * @param metadata - The file metadata
    * @returns The name of the index column, or `undefined` for files without
-   * pandas metadata, and for files whose index was not written
+   * pandas metadata, for files whose index was not written, and for files
+   * whose index is not an integer
    */
   static readIndexColumn(metadata: FileMetaData): string | undefined {
     const pandas = metadata.key_value_metadata?.find(
@@ -196,7 +206,19 @@ export class ParquetMetadataUtils {
     if (pandas?.value === undefined) {
       return undefined;
     }
-    const { index_columns = [] } = JSON.parse(pandas.value) as PandasMetadata;
-    return index_columns.find((column) => typeof column === "string");
+    const { index_columns = [], columns = [] } = JSON.parse(
+      pandas.value,
+    ) as PandasMetadata;
+    const indexColumn = index_columns.find(
+      (column) => typeof column === "string",
+    );
+    if (indexColumn === undefined) {
+      return undefined;
+    }
+    const { pandas_type } =
+      columns.find(({ field_name }) => field_name === indexColumn) ?? {};
+    return pandas_type !== undefined && integerPandasType.test(pandas_type)
+      ? indexColumn
+      : undefined;
   }
 }
