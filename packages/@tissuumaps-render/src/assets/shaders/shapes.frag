@@ -11,6 +11,7 @@ precision highp usampler2D; // no default otherwise
 
 uniform uint u_numScanlines;
 uniform vec4 u_objectBounds; // (x, y, width, height), in data dimensions
+uniform float u_opacityFactor; // layer and object opacity, 0 if the layer or object is invisible
 
 /*
  * Scanline data (RGBA32F texture)
@@ -178,4 +179,6 @@ void main() {
         }
         shapeOffset += 1u + numEdges;
     }
+    // apply the layer and object opacity to the composited shapes (premultiplied)
+    fragColor *= u_opacityFactor;
 }

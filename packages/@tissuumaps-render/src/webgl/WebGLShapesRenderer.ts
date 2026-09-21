@@ -7,7 +7,6 @@ import {
   ColorUtils,
   type GroupValueMap,
   type Layer,
-  MathUtils,
   type OpacityConfig,
   type Rect,
   type Shapes,
@@ -49,7 +48,9 @@ import { WebGLUtils } from "./WebGLUtils";
  *
  * Every object owns its textures. Synchronizing compares the current model
  * state against the state those textures were built from, and rebuilds only the
- * ones whose inputs changed.
+ * ones whose inputs changed. Layer- and object-level properties (transforms,
+ * visibility and opacity) are shader uniforms, so changing them never touches
+ * the textures.
  */
 export class WebGLShapesRenderer extends WebGLRendererBase<
   Shapes,
@@ -66,6 +67,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     strokeWidth: WebGLUniformLocation;
     numScanlines: WebGLUniformLocation;
     objectBounds: WebGLUniformLocation;
+    opacityFactor: WebGLUniformLocation;
     scanlineData: WebGLUniformLocation;
     shapeFillColors: WebGLUniformLocation;
     shapeStrokeColors: WebGLUniformLocation;
@@ -104,6 +106,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       strokeWidth: context.getUniformLocation(this._program, "u_strokeWidth"),
       numScanlines: context.getUniformLocation(this._program, "u_numScanlines"),
       objectBounds: context.getUniformLocation(this._program, "u_objectBounds"),
+      opacityFactor: context.getUniformLocation(
+        this._program,
+        "u_opacityFactor",
+      ),
       scanlineData: context.getUniformLocation(this._program, "u_scanlineData"),
       shapeFillColors: context.getUniformLocation(
         this._program,
@@ -211,7 +217,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    *
    * Renders each shapes object as a full-screen quad whose fragment shader
    * performs scanline-based polygon rasterization using the per-object
-   * scanline data texture, drawn with the number of scanlines it was built for.
+   * scanline data texture, drawn with the number of scanlines it was built for,
+   * and with its opacity factor as a uniform. Objects whose layer or object is
+   * invisible are skipped.
    *
    * @throws Error if the renderer has not been initialized
    */
@@ -239,6 +247,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     this.context.gl.uniform1i(this._uniformLocations.shapeStrokeColors, 3);
     this.context.enableAlphaBlending();
     for (const renderedShapes of this.renderedObjects) {
+      const opacityFactor = WebGLShapesRenderer._computeOpacityFactor(
+        renderedShapes.ref,
+      );
+      if (opacityFactor === 0) {
+        continue;
+      }
       const worldToDataMatrix = WebGLUtils.createWorldToDataMatrix(
         renderedShapes.ref.object.transform,
         renderedShapes.ref.layer.transform,
@@ -258,6 +272,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       this.context.gl.uniform1ui(
         this._uniformLocations.numScanlines,
         renderedShapes.numScanlines,
+      );
+      this.context.gl.uniform1f(
+        this._uniformLocations.opacityFactor,
+        opacityFactor,
       );
       this.context.gl.activeTexture(WebGL2RenderingContext.TEXTURE1);
       this.context.gl.bindTexture(
@@ -318,10 +336,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           renderedShapes.ref.itemIds === newRef.itemIds &&
           renderedShapes.ref.itemsMask === newRef.itemsMask &&
           // check data source configuration instead of data
-          deepEqual(
-            renderedShapes.state.shapes.dataSource,
-            newRef.object.dataSource,
-          ),
+          deepEqual(renderedShapes.state.dataSource, newRef.object.dataSource),
       );
       if (newRef !== undefined) {
         renderedShapes.ref = newRef;
@@ -625,27 +640,15 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       }
       // no awaits from here on, so that the object is updated atomically
       const state = {
-        layer: {
-          visibility: newRef.layer.visibility,
-          opacity: newRef.layer.opacity,
-          transform: structuredClone(newRef.layer.transform),
-        },
-        shapes: {
-          dataSource: structuredClone(newRef.object.dataSource),
-          visibility: newRef.object.visibility,
-          opacity: newRef.object.opacity,
-          shapeFillColor: structuredClone(newRef.object.shapeFillColor),
-          shapeFillVisibility: structuredClone(
-            newRef.object.shapeFillVisibility,
-          ),
-          shapeFillOpacity: structuredClone(newRef.object.shapeFillOpacity),
-          shapeStrokeColor: structuredClone(newRef.object.shapeStrokeColor),
-          shapeStrokeVisibility: structuredClone(
-            newRef.object.shapeStrokeVisibility,
-          ),
-          shapeStrokeOpacity: structuredClone(newRef.object.shapeStrokeOpacity),
-          transform: structuredClone(newRef.object.transform),
-        },
+        dataSource: structuredClone(newRef.object.dataSource),
+        shapeFillColor: structuredClone(newRef.object.shapeFillColor),
+        shapeFillVisibility: structuredClone(newRef.object.shapeFillVisibility),
+        shapeFillOpacity: structuredClone(newRef.object.shapeFillOpacity),
+        shapeStrokeColor: structuredClone(newRef.object.shapeStrokeColor),
+        shapeStrokeVisibility: structuredClone(
+          newRef.object.shapeStrokeVisibility,
+        ),
+        shapeStrokeOpacity: structuredClone(newRef.object.shapeStrokeOpacity),
       };
       const scanlineDataTexture =
         scanlineBuffer !== undefined
@@ -872,7 +875,26 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
+   * Computes the factor that the alpha of every shape of an object is
+   * multiplied with
+   *
+   * @returns The product of the layer and object opacities, or `0` if the
+   * layer or the object is invisible
+   */
+  private static _computeOpacityFactor(ref: ShapesRef): number {
+    if (ref.layer.visibility === false || ref.object.visibility === false) {
+      return 0;
+    }
+    return ref.layer.opacity * ref.object.opacity;
+  }
+
+  /**
    * Returns whether the fill colors of an object have to be resolved again
+   *
+   * Colors carry the resolved shape visibilities and opacities in their alpha
+   * channel, so they also depend on those configurations. The layer- and
+   * object-level visibility and opacity are shader uniforms (see
+   * {@link _computeOpacityFactor}) and do not matter here.
    *
    * @todo Changes to the color, visibility and opacity maps themselves are not
    * detected; they are only re-read when a configuration referencing them
@@ -884,20 +906,16 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedShapes === undefined ||
-      renderedShapes.state.layer.visibility !== newRef.layer.visibility ||
-      renderedShapes.state.layer.opacity !== newRef.layer.opacity ||
-      renderedShapes.state.shapes.visibility !== newRef.object.visibility ||
-      renderedShapes.state.shapes.opacity !== newRef.object.opacity ||
       !deepEqual(
-        renderedShapes.state.shapes.shapeFillVisibility,
+        renderedShapes.state.shapeFillVisibility,
         newRef.object.shapeFillVisibility,
       ) ||
       !deepEqual(
-        renderedShapes.state.shapes.shapeFillOpacity,
+        renderedShapes.state.shapeFillOpacity,
         newRef.object.shapeFillOpacity,
       ) ||
       !deepEqual(
-        renderedShapes.state.shapes.shapeFillColor,
+        renderedShapes.state.shapeFillColor,
         newRef.object.shapeFillColor,
       )
     );
@@ -905,6 +923,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
 
   /**
    * Returns whether the stroke colors of an object have to be resolved again
+   *
+   * See {@link _checkShapeFillColorsTextureChanged}.
    *
    * @todo Changes to the color, visibility and opacity maps themselves are not
    * detected; they are only re-read when a configuration referencing them
@@ -916,20 +936,16 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedShapes === undefined ||
-      renderedShapes.state.layer.visibility !== newRef.layer.visibility ||
-      renderedShapes.state.layer.opacity !== newRef.layer.opacity ||
-      renderedShapes.state.shapes.visibility !== newRef.object.visibility ||
-      renderedShapes.state.shapes.opacity !== newRef.object.opacity ||
       !deepEqual(
-        renderedShapes.state.shapes.shapeStrokeVisibility,
+        renderedShapes.state.shapeStrokeVisibility,
         newRef.object.shapeStrokeVisibility,
       ) ||
       !deepEqual(
-        renderedShapes.state.shapes.shapeStrokeOpacity,
+        renderedShapes.state.shapeStrokeOpacity,
         newRef.object.shapeStrokeOpacity,
       ) ||
       !deepEqual(
-        renderedShapes.state.shapes.shapeStrokeColor,
+        renderedShapes.state.shapeStrokeColor,
         newRef.object.shapeStrokeColor,
       )
     );
@@ -957,18 +973,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): Promise<Uint32Array> {
     const numValuesPerTextureLine =
       1 * WebGLShapesRenderer._shapeColorsTextureWidth; // 1 value per R32UI texel
-    if (
-      ref.layer.visibility === false ||
-      ref.layer.opacity === 0 ||
-      ref.object.visibility === false ||
-      ref.object.opacity === 0
-    ) {
-      return Promise.resolve(
-        new Uint32Array(
-          MathUtils.align(ref.itemIds.length, numValuesPerTextureLine),
-        ),
-      );
-    }
     return ColorResolver.resolveColors(
       ref.itemIds,
       shapeColor,
@@ -996,18 +1000,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): Promise<Uint8Array> {
     const numValuesPerTextureLine =
       1 * WebGLShapesRenderer._shapeColorsTextureWidth; // 1 value per R32UI texel
-    if (
-      ref.layer.visibility === false ||
-      ref.layer.opacity === 0 ||
-      ref.object.visibility === false ||
-      ref.object.opacity === 0
-    ) {
-      return Promise.resolve(
-        new Uint8Array(
-          MathUtils.align(ref.itemIds.length, numValuesPerTextureLine),
-        ),
-      );
-    }
     return VisibilityResolver.resolveVisibilities(
       ref.itemIds,
       shapeVisibility,
@@ -1020,8 +1012,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Resolves the fill or stroke alpha of every shape of an object
    *
-   * The layer- and object-level opacities are multiplied into the resolved
-   * per-shape opacities, as the shader only sees the alpha channel.
+   * The layer- and object-level opacities are not multiplied in here, they are
+   * a shader uniform (see {@link _computeOpacityFactor}).
    *
    * @param options - Optional abort signal and table loader
    * @returns The alpha values, one per shape
@@ -1038,25 +1030,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): Promise<Uint8Array> {
     const numValuesPerTextureLine =
       1 * WebGLShapesRenderer._shapeColorsTextureWidth; // 1 value per R32UI texel
-    if (
-      ref.layer.visibility === false ||
-      ref.layer.opacity === 0 ||
-      ref.object.visibility === false ||
-      ref.object.opacity === 0
-    ) {
-      return Promise.resolve(
-        new Uint8Array(
-          MathUtils.align(ref.itemIds.length, numValuesPerTextureLine),
-        ),
-      );
-    }
-    const opacityFactor = ref.layer.opacity * ref.object.opacity;
     return OpacityResolver.resolveOpacities(
       ref.itemIds,
       shapeOpacity,
       opacityMaps,
       defaultShapeOpacity,
-      { ...options, align: numValuesPerTextureLine, opacityFactor },
+      { ...options, align: numValuesPerTextureLine },
     );
   }
 }
@@ -1071,27 +1050,23 @@ type ShapesRef = ObjectRef<Shapes, ShapesData>;
  *
  * Holds the texture handles for scanline data, fill colors and stroke colors,
  * plus a snapshot of the model values they were built from, which the change
- * predicates compare against. The number of scanlines is the one the scanline
+ * predicates compare against: every property they read has to be captured in
+ * it. Layer- and object-level properties are read from the reference when
+ * drawing, and are not part of the snapshot. The number of scanlines is the one the scanline
  * data texture was rasterized for, which is also the one the object is drawn
  * with.
  */
 type RenderedShapes = RenderedObjectBase<Shapes, ShapesData> & {
-  state: {
-    layer: Pick<Layer, "visibility" | "opacity" | "transform">;
-    shapes: Pick<
-      Shapes,
-      | "dataSource"
-      | "visibility"
-      | "opacity"
-      | "shapeFillColor"
-      | "shapeFillVisibility"
-      | "shapeFillOpacity"
-      | "shapeStrokeColor"
-      | "shapeStrokeVisibility"
-      | "shapeStrokeOpacity"
-      | "transform"
-    >;
-  };
+  state: Pick<
+    Shapes,
+    | "dataSource"
+    | "shapeFillColor"
+    | "shapeFillVisibility"
+    | "shapeFillOpacity"
+    | "shapeStrokeColor"
+    | "shapeStrokeVisibility"
+    | "shapeStrokeOpacity"
+  >;
   numScanlines: number;
   scanlineDataTexture: WebGLTexture;
   shapeFillColorsTexture: WebGLTexture;
