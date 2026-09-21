@@ -20,6 +20,10 @@ Parquet table data sources have the `type` `"parquet"` and accept the following 
 
 Columns of 64-bit integers are not supported, as TissUUmaps does not handle bigint values.
 
+### Point geometries as coordinate columns
+
+A geometry is not a value a table column can hold, and point geometries are not shapes. A [GeoParquet](https://geoparquet.org/) geometry column holding points is therefore read as a **pair of coordinate columns** selected from it: a `geometry` column of points adds the columns `geometry[x]` and `geometry[y]`, which are used like any other numeric column, including as the coordinates of a [table](./table.md) point cloud. Their value range is read from the bounds in the `geo` metadata, without decoding the column.
+
 ## Shapes data source
 
 Parquet shapes data sources have the `type` `"parquet"` and accept the following fields:
@@ -36,11 +40,9 @@ Parquet shapes data sources have the `type` `"parquet"` and accept the following
 
 Polygons and multi-polygons are read as shapes; rows holding another geometry are skipped.
 
-## GeoParquet
+### GeoParquet geometries
 
-A GeoParquet file describes its geometry columns in the `geo` metadata of the file, and stores their geometries as [WKB](https://libgeos.org/specifications/wkb/). Geometry columns in other encodings are read as their raw values.
-
-Point geometries are not shapes, and a geometry is not a value a table column can hold. A geometry column holding points is therefore read as a **pair of coordinate columns** selected from it: a `geometry` column of points adds the columns `geometry[x]` and `geometry[y]`, which are used like any other numeric column — including as the coordinates of a [table](./table.md) point cloud. Their value range is read from the bounds in the `geo` metadata, without decoding the column.
+A [GeoParquet](https://geoparquet.org/) file describes its geometry columns in the `geo` metadata of the file, and stores their geometries as [WKB](https://libgeos.org/specifications/wkb/). Geometry columns in other encodings are read as their raw values. A column holding points is not read as shapes but as a pair of columns of the table data source, see [Point geometries as coordinate columns](#point-geometries-as-coordinate-columns).
 
 ## Pandas index
 
