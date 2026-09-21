@@ -12,6 +12,7 @@ export type ColorConfigWidgetAdapter = {
   currentFromColumn: string | null;
   currentFromRangeMin: number | null;
   currentFromRangeMax: number | null;
+  currentFromColumnValueRange: [number, number] | null;
   currentFromPalette: string | null;
   currentGroupByColumn: string | null;
   currentGroupByPalette: string | null;

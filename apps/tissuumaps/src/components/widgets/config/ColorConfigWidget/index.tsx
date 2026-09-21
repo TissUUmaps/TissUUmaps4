@@ -150,6 +150,7 @@ function FromColorConfigWidget({
     currentFromColumn: column,
     currentFromRangeMin: rangeMin,
     currentFromRangeMax: rangeMax,
+    currentFromColumnValueRange: columnValueRange,
     currentFromPalette: palette,
     setCurrentFromColumn: setColumn,
     setCurrentFromRangeMin: setRangeMin,
@@ -186,6 +187,11 @@ function FromColorConfigWidget({
           <Input
             type="number"
             inputMode="decimal"
+            placeholder={
+              columnValueRange !== null
+                ? String(columnValueRange[0])
+                : undefined
+            }
             value={rangeMin ?? ""}
             onChange={(event) => {
               if (event.target.value === "") {
@@ -204,6 +210,11 @@ function FromColorConfigWidget({
           <Input
             type="number"
             inputMode="decimal"
+            placeholder={
+              columnValueRange !== null
+                ? String(columnValueRange[1])
+                : undefined
+            }
             value={rangeMax ?? ""}
             onChange={(event) => {
               if (event.target.value === "") {

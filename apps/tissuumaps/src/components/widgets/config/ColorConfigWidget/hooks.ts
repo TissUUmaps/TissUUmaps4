@@ -1,9 +1,10 @@
 import { deepEqual } from "fast-equals";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   type Color,
   type ColorConfig,
+  type TableData,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -71,76 +72,30 @@ export function useColorConfigWidget(
       : null,
   );
 
-  // min/max values provided by the config or entered by the user must not be
-  // overwritten by the table column's value range
-  const [currentFromRangeMinEdited, setCurrentFromRangeMinEdited] = useState(
-    currentFromRangeMin !== null,
-  );
-  const [currentFromRangeMaxEdited, setCurrentFromRangeMaxEdited] = useState(
-    currentFromRangeMax !== null,
-  );
-  const setEditedCurrentFromRangeMin = useCallback(
-    (newCurrentFromRangeMin: number | null) => {
-      setCurrentFromRangeMinEdited(true);
-      setCurrentFromRangeMin(newCurrentFromRangeMin);
-    },
-    [],
-  );
-  const setEditedCurrentFromRangeMax = useCallback(
-    (newCurrentFromRangeMax: number | null) => {
-      setCurrentFromRangeMaxEdited(true);
-      setCurrentFromRangeMax(newCurrentFromRangeMax);
-    },
-    [],
-  );
-  // reset in the same update as the column, so that the new column is never
-  // written to the config together with the previous column's value range
-  const setCurrentFromColumnResettingRange = useCallback(
-    (newCurrentFromColumn: string | null) => {
-      if (newCurrentFromColumn !== currentFromColumn) {
-        if (!currentFromRangeMinEdited) {
-          setCurrentFromRangeMin(null);
-        }
-        if (!currentFromRangeMaxEdited) {
-          setCurrentFromRangeMax(null);
-        }
-      }
-      setCurrentFromColumn(newCurrentFromColumn);
-    },
-    [currentFromColumn, currentFromRangeMinEdited, currentFromRangeMaxEdited],
-  );
-
+  // keep the loaded value range with its origin, so that another column's
+  // range is never shown
   const tableData = useTableData(tableId);
-  // the table data is not changed through a setter, so reset while rendering
-  // rather than in an effect; tables sharing a data source share their data
-  const [previousTableData, setPreviousTableData] = useState(tableData);
-  if (tableData !== previousTableData) {
-    setPreviousTableData(tableData);
-    if (!currentFromRangeMinEdited) {
-      setCurrentFromRangeMin(null);
-    }
-    if (!currentFromRangeMaxEdited) {
-      setCurrentFromRangeMax(null);
-    }
-  }
+  const [loadedFromColumnValueRange, setLoadedFromColumnValueRange] = useState<{
+    tableData: TableData;
+    column: string;
+    valueRange: [number, number] | undefined;
+  } | null>(null);
   useEffect(() => {
     if (
       currentSource === "from" &&
       currentFromColumn !== null &&
-      tableData !== null &&
-      !(currentFromRangeMinEdited && currentFromRangeMaxEdited)
+      tableData !== null
     ) {
       const abortController = new AbortController();
       tableData
         .loadValueRange(currentFromColumn, { signal: abortController.signal })
         .then((valueRange) => {
           if (!abortController.signal.aborted) {
-            if (!currentFromRangeMinEdited) {
-              setCurrentFromRangeMin(valueRange?.[0] ?? null);
-            }
-            if (!currentFromRangeMaxEdited) {
-              setCurrentFromRangeMax(valueRange?.[1] ?? null);
-            }
+            setLoadedFromColumnValueRange({
+              tableData,
+              column: currentFromColumn,
+              valueRange,
+            });
           }
         })
         .catch((error) => {
@@ -150,13 +105,13 @@ export function useColorConfigWidget(
         });
       return () => abortController.abort();
     }
-  }, [
-    tableData,
-    currentSource,
-    currentFromColumn,
-    currentFromRangeMinEdited,
-    currentFromRangeMaxEdited,
-  ]);
+  }, [tableData, currentSource, currentFromColumn]);
+  const currentFromColumnValueRange =
+    loadedFromColumnValueRange !== null &&
+    loadedFromColumnValueRange.tableData === tableData &&
+    loadedFromColumnValueRange.column === currentFromColumn
+      ? (loadedFromColumnValueRange.valueRange ?? null)
+      : null;
 
   useEffect(() => {
     const currentFromRange: [number, number] | null =
@@ -264,6 +219,7 @@ export function useColorConfigWidget(
     currentFromColumn,
     currentFromRangeMin,
     currentFromRangeMax,
+    currentFromColumnValueRange,
     currentFromPalette,
     currentGroupByColumn,
     currentGroupByPalette,
@@ -272,9 +228,9 @@ export function useColorConfigWidget(
     currentRandomSeed,
     setCurrentSource,
     setCurrentConstantValue,
-    setCurrentFromColumn: setCurrentFromColumnResettingRange,
-    setCurrentFromRangeMin: setEditedCurrentFromRangeMin,
-    setCurrentFromRangeMax: setEditedCurrentFromRangeMax,
+    setCurrentFromColumn,
+    setCurrentFromRangeMin,
+    setCurrentFromRangeMax,
     setCurrentFromPalette,
     setCurrentGroupByColumn,
     setCurrentGroupByPalette,
