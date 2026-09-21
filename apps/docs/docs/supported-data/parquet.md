@@ -22,7 +22,7 @@ Columns of 64-bit integers are not supported, as TissUUmaps does not handle bigi
 
 ## Shapes data source
 
-GeoParquet shapes data sources have the `type` `"parquet"` and accept the following fields:
+Parquet shapes data sources have the `type` `"parquet"` and accept the following fields:
 
 | Field            | Type     | Description                                                                                            |
 | ---------------- | -------- | ------------------------------------------------------------------------------------------------------ |

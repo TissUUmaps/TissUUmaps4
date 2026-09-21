@@ -7,16 +7,16 @@ import {
 } from "@tissuumaps/core";
 
 import {
-  type GeoParquetShapesDataSource,
-  type NormalizedGeoParquetShapesDataSource,
-  geoParquetShapesDataSourceDefaults,
-} from "./GeoParquetShapesDataSource";
+  type NormalizedParquetShapesDataSource,
+  type ParquetShapesDataSource,
+  parquetShapesDataSourceDefaults,
+} from "./ParquetShapesDataSource";
 import { runParquetWorker } from "./runParquetWorker";
 
-export class GeoParquetShapesDataProvider implements ShapesDataProvider<
-  GeoParquetShapesDataSource,
+export class ParquetShapesDataProvider implements ShapesDataProvider<
+  ParquetShapesDataSource,
   ShapesData,
-  NormalizedGeoParquetShapesDataSource
+  NormalizedParquetShapesDataSource
 > {
   readonly name = "GeoParquet";
 
@@ -74,12 +74,12 @@ export class GeoParquetShapesDataProvider implements ShapesDataProvider<
   };
 
   normalize(
-    dataSource: GeoParquetShapesDataSource,
+    dataSource: ParquetShapesDataSource,
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,
-  ): NormalizedGeoParquetShapesDataSource {
+  ): NormalizedParquetShapesDataSource {
     return {
-      ...geoParquetShapesDataSourceDefaults,
+      ...parquetShapesDataSourceDefaults,
       ...dataSource,
       source: SourceUtils.normalizeSource(
         dataSource.source,
@@ -90,7 +90,7 @@ export class GeoParquetShapesDataProvider implements ShapesDataProvider<
   }
 
   async load(
-    normalizedDataSource: NormalizedGeoParquetShapesDataSource,
+    normalizedDataSource: NormalizedParquetShapesDataSource,
     options?: DataProviderLoadOptions,
   ): Promise<ShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};

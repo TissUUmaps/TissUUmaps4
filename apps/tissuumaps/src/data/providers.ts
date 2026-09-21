@@ -1,20 +1,20 @@
 import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
-  GeoParquetShapesDataProvider,
   OMEZarrImageDataProvider,
   OMEZarrLabelsDataProvider,
   OpenSeadragonImageDataProvider,
+  ParquetShapesDataProvider,
   ParquetTableDataProvider,
   TIFFImageDataProvider,
   TIFFLabelsDataProvider,
   TablePointsDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
-  geoParquetShapesDataSourceType,
   omeZarrImageDataSourceType,
   omeZarrLabelsDataSourceType,
   openSeadragonImageDataSourceType,
+  parquetShapesDataSourceType,
   parquetTableDataSourceType,
   tablePointsDataSourceType,
   tiffImageDataSourceType,
@@ -66,8 +66,8 @@ export function enableBuiltInDataProviders(): void {
     new GeoJSONShapesDataProvider(),
   );
   appStoreState.registerShapesDataProvider(
-    geoParquetShapesDataSourceType,
-    new GeoParquetShapesDataProvider(),
+    parquetShapesDataSourceType,
+    new ParquetShapesDataProvider(),
   );
 
   appStoreState.registerTableDataProvider(
