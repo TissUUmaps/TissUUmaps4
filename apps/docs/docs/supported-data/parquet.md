@@ -98,6 +98,7 @@ A project showing the circles and the polygons of a [SpatialData](https://spatia
 
 - Columns of 64-bit integers are read as numbers, so their values have to be below 2^53. A column with a larger value fails to load rather than losing precision.
 - Geometries are read from WKB columns only. Other GeoParquet encodings are read as their raw values.
+- The primary geometry column is the primary one of the WKB columns: a file whose primary column is in another encoding falls back to its first WKB column.
 - A geometry column that declares no geometry types is offered as coordinate columns; reading them fails if a row is not a point.
 - Workspace files need an open workspace.
 
