@@ -279,8 +279,8 @@ importers:
         specifier: github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28
         version: https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.0)
       omezarr-tilesource:
-        specifier: ^0.7.0
-        version: 0.7.0(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.0)(zarrita@0.7.5)
+        specifier: ^0.7.1
+        version: 0.7.1(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.0)(zarrita@0.7.5)
       papaparse:
         specifier: ^5.5.4
         version: 5.6.0
@@ -9530,10 +9530,10 @@ packages:
         integrity: sha512-CvKZykEKILCXjtBYFwTiddw6eS2l2T1CA3nHH1QLure/HbBBD6e2uN/nJSMNP9m661EWWHNPKr8ggaDBxLDvzw==,
       }
 
-  omezarr-tilesource@0.7.0:
+  omezarr-tilesource@0.7.1:
     resolution:
       {
-        integrity: sha512-BOwiAOoOoUA8of/dd4OgPyJ6xPZ+ml6UXhHVfsSCS4a2PbemwGhSBbeCoV6QnROQwEeWeeh5M/ZV+vgXFRd/nQ==,
+        integrity: sha512-TR3obBcnY1dF1z+V0+LRGZSEKYR7pIDLX6Ni5eICwJy2erfzCugPPW5cjT1QYNMr2vk24nsetgx4lV98erH97Q==,
       }
     engines: { node: ">=22.22.1" }
     peerDependencies:
@@ -19735,7 +19735,7 @@ snapshots:
     dependencies:
       zarrita: 0.7.5
 
-  omezarr-tilesource@0.7.0(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.0)(zarrita@0.7.5):
+  omezarr-tilesource@0.7.1(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.0)(zarrita@0.7.5):
     dependencies:
       "@zarrita/storage": 0.2.0
       ome-zarr.js: 0.0.20
