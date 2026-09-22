@@ -7,6 +7,7 @@ import {
   MathUtils,
   NumberUtils,
   type TableData,
+  TableUtils,
   type VisibilityConfig,
   getActiveConfigSource,
   isConstantConfig,
@@ -14,12 +15,10 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { ResolverBase } from "./ResolverBase";
-
 /**
  * Resolves the visibility of every item, packed as `0` or `1`
  */
-export class VisibilityResolver extends ResolverBase {
+export class VisibilityResolver {
   /**
    * Loads visibility data for a set of IDs based on the active visibility configuration source
    *
@@ -158,7 +157,7 @@ export class VisibilityResolver extends ResolverBase {
       ids.length,
       { align },
     );
-    await VisibilityResolver.fillFromTableValues(
+    await TableUtils.fillFromTableValues(
       packedVisibilities,
       data,
       ids,
@@ -212,7 +211,7 @@ export class VisibilityResolver extends ResolverBase {
       { align },
     );
     const groupVisibilities = new Map(Object.entries(visibilityMap.values));
-    await VisibilityResolver.fillFromTableGroups(
+    await TableUtils.fillFromTableGroups(
       packedVisibilities,
       data,
       ids,

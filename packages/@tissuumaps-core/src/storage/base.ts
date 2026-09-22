@@ -37,7 +37,9 @@ export interface ItemsData extends Data {
    * Returns an array of item IDs
    *
    * The returned array is owned by this data object: callers must not modify it,
-   * and every call returns the very same array (see {@link ItemsData}).
+   * and every call returns the very same array (see {@link ItemsData}). IDs are
+   * expected to be unique; consumers that look items up by ID (see
+   * `TableUtils`) resolve a duplicated ID to its last row and warn about it.
    *
    * @returns The item IDs
    */

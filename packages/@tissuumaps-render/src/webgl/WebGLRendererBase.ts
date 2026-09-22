@@ -1,7 +1,6 @@
 import { deepEqual } from "fast-equals";
 
 import {
-  AsyncUtils,
   GeometryUtils,
   type Layer,
   type Points,
@@ -11,6 +10,7 @@ import {
   type ShapesData,
   type Table,
   type TableData,
+  TableUtils,
   TransformUtils,
 } from "@tissuumaps/core";
 
@@ -200,7 +200,7 @@ export abstract class WebGLRendererBase<
     }
     const dataPromises = new Map<string, Promise<TObjectData>>();
     const tableDataPromises = new Map<string, Promise<TableData>>();
-    const loadedTableLayersPromises = new Map<string, Promise<string[]>>();
+    const tableLayersPromises = new Map<string, Promise<string[]>>();
     const layerItemsInfosPromises = new Map<
       string,
       Promise<Map<string, ItemsInfo | null>>
@@ -264,23 +264,21 @@ export abstract class WebGLRendererBase<
           const tableId = currentObject.dataSource.table;
           const tableLayersColumn = currentObject.layer.column;
           const tableLayersPromiseKey = `${tableId}:${tableLayersColumn}`;
-          let loadedTableLayersPromise = loadedTableLayersPromises.get(
+          let tableLayersPromise = tableLayersPromises.get(
             tableLayersPromiseKey,
           );
-          if (loadedTableLayersPromise === undefined) {
-            loadedTableLayersPromise = tableDataPromise.then(
-              async (tableData) => {
-                const loadedTableLayers =
-                  await tableData.loadValues<string>(tableLayersColumn);
-                if (loadedTableLayers.length !== tableData.getSize()) {
-                  throw new Error(
-                    `Table with ID '${currentObject.dataSource.table}' has inconsistent size for column '${tableLayersColumn}'`,
-                  );
-                }
-                return loadedTableLayers;
-              },
-            );
-            loadedTableLayersPromise.catch((error) => {
+          if (tableLayersPromise === undefined) {
+            tableLayersPromise = tableDataPromise.then(async (tableData) => {
+              const tableLayers =
+                await tableData.loadValues<string>(tableLayersColumn);
+              if (tableLayers.length !== tableData.getSize()) {
+                throw new Error(
+                  `Table with ID '${currentObject.dataSource.table}' has inconsistent size for column '${tableLayersColumn}'`,
+                );
+              }
+              return tableLayers;
+            });
+            tableLayersPromise.catch((error) => {
               if (!signal?.aborted) {
                 console.error(
                   `Failed to load layers from table with ID '${currentObject.dataSource.table}' (column '${tableLayersColumn}')`,
@@ -288,10 +286,7 @@ export abstract class WebGLRendererBase<
                 );
               }
             });
-            loadedTableLayersPromises.set(
-              tableLayersPromiseKey,
-              loadedTableLayersPromise,
-            );
+            tableLayersPromises.set(tableLayersPromiseKey, tableLayersPromise);
           }
           layerItemsInfosPromise = layerItemsInfosPromises.get(
             currentObject.id,
@@ -300,13 +295,13 @@ export abstract class WebGLRendererBase<
             layerItemsInfosPromise = Promise.all([
               dataPromise,
               tableDataPromise,
-              loadedTableLayersPromise,
-            ]).then(([data, tableData, loadedTableLayers]) =>
+              tableLayersPromise,
+            ]).then(([data, tableData, tableLayers]) =>
               this._getLayerItemsInfos(
                 data,
                 tableData,
                 tableLayersColumn,
-                loadedTableLayers,
+                tableLayers,
                 model.layers,
                 { signal },
               ),
@@ -658,8 +653,9 @@ export abstract class WebGLRendererBase<
    * Returns the items of an object that belong to each of the given layers
    *
    * Layers that are missing from {@link _layerItemsInfosCache} are computed in a
-   * single pass over the items of the object, sharing one lookup from item ID to
-   * layer ID, and are added to the cache. Layers that are already cached for the
+   * single pass over the items of the object, looking each item's row up in the
+   * table (see {@link TableUtils.forEachRow}), and are added to the cache.
+   * Layers that are already cached for the
    * same object data, table data and layer column are re-used as they are. Item
    * IDs and masks are only allocated for layers that turn out to contain items,
    * layers without items are cached as `null`.
@@ -667,8 +663,8 @@ export abstract class WebGLRendererBase<
    * @param data - The data of the object to compute the item masks for
    * @param tableData - The data of the table holding the item layers
    * @param tableLayersColumn - The name of the table column holding the layer IDs
-   * @param loadedTableLayers - The values of the table column, in table item order
-   * @param currentLayers - The layers to compute the item masks for
+   * @param tableLayers - The values of the table column, in table item order
+   * @param layers - The layers to compute the item masks for
    * @param options - Optional abort signal
    * @returns A promise that resolves to the item IDs and mask of each layer, by
    * layer ID, or to `null` for layers without items
@@ -677,8 +673,8 @@ export abstract class WebGLRendererBase<
     data: TObjectData,
     tableData: TableData,
     tableLayersColumn: string,
-    loadedTableLayers: string[],
-    currentLayers: Layer[],
+    tableLayers: string[],
+    layers: Layer[],
     options?: { signal?: AbortSignal },
   ): Promise<Map<string, ItemsInfo | null>> {
     const { signal } = options ?? {};
@@ -693,27 +689,24 @@ export abstract class WebGLRendererBase<
       this._layerItemsInfosCache.set(data, entry);
     }
     const newLayerIds = new Set<string>();
-    for (const layer of currentLayers) {
+    for (const layer of layers) {
       if (!entry.layerItemsInfos.has(layer.id)) {
         newLayerIds.add(layer.id);
       }
     }
     if (newLayerIds.size > 0) {
       const itemIds = data.getIds();
-      const itemLayerIds = new Map<number, string>();
-      await AsyncUtils.forEach(
-        tableData.getIds(),
-        (id, i) => {
-          itemLayerIds.set(id, loadedTableLayers[i]!);
-        },
-        { signal },
-      );
       const newLayerItemsInfos = new Map<string, ItemsInfo>();
-      await AsyncUtils.forEach(
+      await TableUtils.forEachRow(
         itemIds,
-        (itemId, i) => {
-          const layerId = itemLayerIds.get(itemId);
-          if (layerId !== undefined && newLayerIds.has(layerId)) {
+        tableData,
+        (rowIndex, i) => {
+          if (rowIndex === undefined) {
+            return;
+          }
+          const itemId = itemIds[i]!;
+          const layerId = tableLayers[rowIndex]!;
+          if (newLayerIds.has(layerId)) {
             let newItemsInfo = newLayerItemsInfos.get(layerId);
             if (newItemsInfo === undefined) {
               newItemsInfo = {

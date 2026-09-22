@@ -9,6 +9,7 @@ import {
   MathUtils,
   NumberUtils,
   type TableData,
+  TableUtils,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -16,12 +17,10 @@ import {
   markerPalette,
 } from "@tissuumaps/core";
 
-import { ResolverBase } from "./ResolverBase";
-
 /**
  * Resolves the marker of every item, packed as a {@link Marker} index
  */
-export class MarkerResolver extends ResolverBase {
+export class MarkerResolver {
   /**
    * Loads marker data for a set of IDs based on the active marker configuration source
    *
@@ -156,7 +155,7 @@ export class MarkerResolver extends ResolverBase {
     const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
       align,
     });
-    await MarkerResolver.fillFromTableValues(
+    await TableUtils.fillFromTableValues(
       packedMarkers,
       data,
       ids,
@@ -208,7 +207,7 @@ export class MarkerResolver extends ResolverBase {
         align,
       });
       const groupMarkers = new Map(Object.entries(markerMap.values));
-      await MarkerResolver.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         packedMarkers,
         data,
         ids,
@@ -224,7 +223,7 @@ export class MarkerResolver extends ResolverBase {
     const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
       align,
     });
-    await MarkerResolver.fillFromTableGroups(
+    await TableUtils.fillFromTableGroups(
       packedMarkers,
       data,
       ids,

@@ -13,6 +13,7 @@ import {
   NumberUtils,
   type RandomConfig,
   type TableData,
+  TableUtils,
   colorPalettes,
   defaultRandomSeed,
   getActiveConfigSource,
@@ -22,15 +23,13 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { ResolverBase } from "./ResolverBase";
-
 /**
  * Resolves the color of every item, as a packed RGB value
  *
  * The alpha channel is left to the caller, which resolves visibilities and
  * opacities separately and folds them in afterwards.
  */
-export class ColorResolver extends ResolverBase {
+export class ColorResolver {
   /**
    * Loads color data for a set of IDs based on the active color configuration source
    *
@@ -199,20 +198,17 @@ export class ColorResolver extends ResolverBase {
       });
     }
     const data = await loadTable({ signal });
+    const valueRange =
+      config.from.range ??
+      (await data.loadValueRange(config.from.column, { signal }));
     const packedColors = ColorResolver.createColorBuffer(ids.length, { align });
-    await ColorResolver.fillFromTableValues(
+    await TableUtils.fillFromTableValues(
       packedColors,
       data,
       ids,
       config.from.column,
       defaultColor,
-      (value, valueRange) =>
-        ColorResolver.parseColor(
-          value,
-          valueRange,
-          config.from.range,
-          colorPalette,
-        ),
+      (value) => ColorResolver.parseColor(value, valueRange, colorPalette),
       (color) => ColorResolver.packColor(color),
       { signal },
     );
@@ -258,7 +254,7 @@ export class ColorResolver extends ResolverBase {
         align,
       });
       const groupColors = new Map(Object.entries(colorMap.values));
-      await ColorResolver.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         packedColors,
         data,
         ids,
@@ -286,7 +282,7 @@ export class ColorResolver extends ResolverBase {
       const packedColors = ColorResolver.createColorBuffer(ids.length, {
         align,
       });
-      await ColorResolver.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         packedColors,
         data,
         ids,
@@ -423,8 +419,8 @@ export class ColorResolver extends ResolverBase {
    * of quantizing it to its number of colors.
    *
    * @param value - The raw value to parse (must be a finite number)
-   * @param valueRange - The data-derived value range `[min, max]`, used when no configured range is provided
-   * @param configuredValueRange - An explicit value range `[min, max]` that overrides `valueRange`
+   * @param valueRange - The value range `[min, max]` to normalize within,
+   * `[0, 1]` if `undefined`
    * @param colorPalette - The palette to sample
    * @returns The corresponding {@link Color}, or `undefined` if `value` is not a
    * finite number, or if the palette is empty
@@ -432,7 +428,6 @@ export class ColorResolver extends ResolverBase {
   static parseColor(
     value: unknown,
     valueRange: [number, number] | undefined,
-    configuredValueRange: [number, number] | undefined,
     colorPalette: ColorPalette,
   ): Color | undefined {
     const v = NumberUtils.tryParseFinite(value, { requireSafeBigInt: true });
@@ -440,7 +435,7 @@ export class ColorResolver extends ResolverBase {
       return undefined;
     }
     const { colors } = colorPalette;
-    const [vmin, vmax] = configuredValueRange ?? valueRange ?? [0, 1];
+    const [vmin, vmax] = valueRange ?? [0, 1];
     const vnorm = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0;
     const position = MathUtils.clamp(vnorm, 0, 1) * (colors.length - 1);
     const index = Math.floor(position);

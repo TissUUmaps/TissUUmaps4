@@ -8,18 +8,17 @@ import {
   NumberUtils,
   type OpacityConfig,
   type TableData,
+  TableUtils,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { ResolverBase } from "./ResolverBase";
-
 /**
  * Resolves the opacity of every item, packed as a byte in `[0, 255]`
  */
-export class OpacityResolver extends ResolverBase {
+export class OpacityResolver {
   /**
    * Loads opacity data for a set of IDs based on the active opacity configuration source
    *
@@ -163,7 +162,7 @@ export class OpacityResolver extends ResolverBase {
     const packedOpacities = OpacityResolver.createOpacityBuffer(ids.length, {
       align,
     });
-    await OpacityResolver.fillFromTableValues(
+    await TableUtils.fillFromTableValues(
       packedOpacities,
       data,
       ids,
@@ -216,7 +215,7 @@ export class OpacityResolver extends ResolverBase {
       align,
     });
     const groupOpacities = new Map(Object.entries(opacityMap.values));
-    await OpacityResolver.fillFromTableGroups(
+    await TableUtils.fillFromTableGroups(
       packedOpacities,
       data,
       ids,

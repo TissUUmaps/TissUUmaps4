@@ -7,18 +7,17 @@ import {
   NumberUtils,
   type SizeConfig,
   type TableData,
+  TableUtils,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { ResolverBase } from "./ResolverBase";
-
 /**
  * Resolves the size of every item, scaled by the configured size factor
  */
-export class SizeResolver extends ResolverBase {
+export class SizeResolver {
   /**
    * Loads size data for a set of IDs based on the active size configuration source
    *
@@ -158,7 +157,7 @@ export class SizeResolver extends ResolverBase {
     signal?.throwIfAborted();
     const data = await loadTable({ signal });
     const packedSizes = SizeResolver.createSizeBuffer(ids.length, { align });
-    await SizeResolver.fillFromTableValues(
+    await TableUtils.fillFromTableValues(
       packedSizes,
       data,
       ids,
@@ -208,7 +207,7 @@ export class SizeResolver extends ResolverBase {
     const data = await loadTable({ signal });
     const packedSizes = SizeResolver.createSizeBuffer(ids.length, { align });
     const groupSizes = new Map(Object.entries(sizeMap.values));
-    await SizeResolver.fillFromTableGroups(
+    await TableUtils.fillFromTableGroups(
       packedSizes,
       data,
       ids,
