@@ -496,13 +496,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       }
       signal?.throwIfAborted();
       // no awaits from here on, so that the object is uploaded atomically
-      const renderConfigSnapshot = {
-        pointMarker: newRef.object.pointMarker,
-        pointSize: WebGLPointsRenderer._stripSizeUnit(newRef.object.pointSize),
-        pointColor: newRef.object.pointColor,
-        pointVisibility: newRef.object.pointVisibility,
-        pointOpacity: newRef.object.pointOpacity,
-      };
       if (renderedPoints === undefined) {
         if (
           prepared.maskedGeometry === undefined ||
@@ -516,7 +509,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         }
         this.addRenderedObject({
           ref: newRef,
-          renderConfigSnapshot,
+          renderConfigSnapshot: prepared.renderConfigSnapshot,
           objectBounds: prepared.objectBounds,
           ...this._createVertexArray(
             prepared.maskedGeometry,
@@ -526,7 +519,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           ),
         });
       } else {
-        renderedPoints.renderConfigSnapshot = renderConfigSnapshot;
+        renderedPoints.renderConfigSnapshot = prepared.renderConfigSnapshot;
         const { vao, attributes } = renderedPoints;
         if (prepared.packedPointMarkers !== undefined) {
           attributes.marker = this._backAttribute(
@@ -563,9 +556,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Prepares everything that has to be uploaded for an object
    *
    * Decides what the object's buffers need - the geometry for a new object,
-   * and the markers, sizes and colors whose configurations changed - requests
-   * all of it before the first `await`, and then computes the bounds and folds
-   * the resolved visibilities and opacities into the colors. An attribute whose
+   * and the markers, sizes and colors whose configurations or referenced maps
+   * changed (see {@link _createRenderConfigSnapshot}) - requests all of it
+   * before the first `await`, and then computes the bounds and folds the
+   * resolved visibilities and opacities into the colors. An attribute whose
    * configuration is a constant is not resolved per point: it is prepared as
    * the one packed value all points share (see {@link _backAttribute}).
    *
@@ -581,9 +575,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param opacityMaps - Project-global opacity maps
    * @param loadTable - Loader for the object's table, if any
    * @param options - Optional abort signal
-   * @returns The masked geometry (new objects only), the bounds, and the
-   * attributes that have to be uploaded, each resolved per point or as a
-   * constant
+   * @returns The snapshot the decisions were based on, the masked geometry
+   * (new objects only), the bounds, and the attributes that have to be
+   * uploaded, each resolved per point or as a constant
    */
   private static async _prepareRenderedPoints(
     newRef: PointsRef,
@@ -602,18 +596,34 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     packedPointMarkers: Uint8Array | number | undefined;
     packedPointSizes: Float32Array | number | undefined;
     packedPointColors: Uint32Array | number | undefined;
+    renderConfigSnapshot: RenderedPoints["renderConfigSnapshot"];
   }> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
+    const renderConfigSnapshot =
+      WebGLPointsRenderer._createRenderConfigSnapshot(
+        newRef,
+        markerMaps,
+        sizeMaps,
+        colorMaps,
+        visibilityMaps,
+        opacityMaps,
+      );
     const pointMarkerBufferChanged =
       WebGLPointsRenderer._checkPointMarkerBufferChanged(
         renderedPoints,
-        newRef,
+        renderConfigSnapshot,
       );
     const pointSizeBufferChanged =
-      WebGLPointsRenderer._checkPointSizeBufferChanged(renderedPoints, newRef);
+      WebGLPointsRenderer._checkPointSizeBufferChanged(
+        renderedPoints,
+        renderConfigSnapshot,
+      );
     const pointColorBufferChanged =
-      WebGLPointsRenderer._checkPointColorBufferChanged(renderedPoints, newRef);
+      WebGLPointsRenderer._checkPointColorBufferChanged(
+        renderedPoints,
+        renderConfigSnapshot,
+      );
     const geometryPromise =
       renderedPoints === undefined
         ? newRef.data.loadGeometry({ signal })
@@ -737,6 +747,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       packedPointMarkers,
       packedPointSizes,
       packedPointColors,
+      renderConfigSnapshot,
     };
   }
 
@@ -1004,21 +1015,77 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
+   * Captures what the buffers of an object are resolved from
+   *
+   * Every property the change predicates read has to be captured here: the
+   * item-level configurations, and the maps they resolve their values from,
+   * looked up now so that the predicates compare maps rather than map IDs (see
+   * {@link WebGLRendererBase.findGroupByConfigMap}).
+   *
+   * @param newRef - The object to capture the snapshot of
+   * @param markerMaps - Project-global marker maps
+   * @param sizeMaps - Project-global size maps
+   * @param colorMaps - Project-global color maps
+   * @param visibilityMaps - Project-global visibility maps
+   * @param opacityMaps - Project-global opacity maps
+   * @returns The snapshot
+   */
+  private static _createRenderConfigSnapshot(
+    newRef: PointsRef,
+    markerMaps: GroupValueMap<Marker>[],
+    sizeMaps: GroupValueMap<number>[],
+    colorMaps: GroupValueMap<Color>[],
+    visibilityMaps: GroupValueMap<boolean>[],
+    opacityMaps: GroupValueMap<number>[],
+  ): RenderedPoints["renderConfigSnapshot"] {
+    return {
+      pointMarker: newRef.object.pointMarker,
+      pointSize: WebGLPointsRenderer._stripSizeUnit(newRef.object.pointSize),
+      pointColor: newRef.object.pointColor,
+      pointVisibility: newRef.object.pointVisibility,
+      pointOpacity: newRef.object.pointOpacity,
+      pointMarkerMap: WebGLPointsRenderer.findGroupByConfigMap(
+        newRef.object.pointMarker,
+        markerMaps,
+      ),
+      pointSizeMap: WebGLPointsRenderer.findGroupByConfigMap(
+        newRef.object.pointSize,
+        sizeMaps,
+      ),
+      pointColorMap: WebGLPointsRenderer.findGroupByConfigMap(
+        newRef.object.pointColor,
+        colorMaps,
+      ),
+      pointVisibilityMap: WebGLPointsRenderer.findGroupByConfigMap(
+        newRef.object.pointVisibility,
+        visibilityMaps,
+      ),
+      pointOpacityMap: WebGLPointsRenderer.findGroupByConfigMap(
+        newRef.object.pointOpacity,
+        opacityMaps,
+      ),
+    };
+  }
+
+  /**
    * Returns whether the markers of an object have to be resolved again
    *
    * Also true for an object that has not been rendered yet, like the other
-   * predicates.
+   * predicates. Configurations are compared by value, maps by identity (see
+   * {@link _createRenderConfigSnapshot}).
    */
   private static _checkPointMarkerBufferChanged(
     renderedPoints: RenderedPoints | undefined,
-    newRef: PointsRef,
+    newSnapshot: RenderedPoints["renderConfigSnapshot"],
   ): boolean {
     return (
       renderedPoints === undefined ||
       !deepEqual(
         renderedPoints.renderConfigSnapshot.pointMarker,
-        newRef.object.pointMarker,
-      )
+        newSnapshot.pointMarker,
+      ) ||
+      renderedPoints.renderConfigSnapshot.pointMarkerMap !==
+        newSnapshot.pointMarkerMap
     );
   }
 
@@ -1031,14 +1098,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    */
   private static _checkPointSizeBufferChanged(
     renderedPoints: RenderedPoints | undefined,
-    newRef: PointsRef,
+    newSnapshot: RenderedPoints["renderConfigSnapshot"],
   ): boolean {
     return (
       renderedPoints === undefined ||
       !deepEqual(
         renderedPoints.renderConfigSnapshot.pointSize,
-        WebGLPointsRenderer._stripSizeUnit(newRef.object.pointSize),
-      )
+        newSnapshot.pointSize,
+      ) ||
+      renderedPoints.renderConfigSnapshot.pointSizeMap !==
+        newSnapshot.pointSizeMap
     );
   }
 
@@ -1049,29 +1118,31 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * channel, so they also depend on those configurations. The layer- and
    * object-level visibility and opacity are shader uniforms (see
    * {@link WebGLRendererBase.computeOpacityFactor}) and do not matter here.
-   *
-   * @todo Changes to the color, visibility and opacity maps themselves are not
-   * detected; they are only re-read when a configuration referencing them
-   * changes.
    */
   private static _checkPointColorBufferChanged(
     renderedPoints: RenderedPoints | undefined,
-    newRef: PointsRef,
+    newSnapshot: RenderedPoints["renderConfigSnapshot"],
   ): boolean {
     return (
       renderedPoints === undefined ||
       !deepEqual(
-        renderedPoints.renderConfigSnapshot.pointVisibility,
-        newRef.object.pointVisibility,
+        renderedPoints.renderConfigSnapshot.pointColor,
+        newSnapshot.pointColor,
       ) ||
+      renderedPoints.renderConfigSnapshot.pointColorMap !==
+        newSnapshot.pointColorMap ||
+      !deepEqual(
+        renderedPoints.renderConfigSnapshot.pointVisibility,
+        newSnapshot.pointVisibility,
+      ) ||
+      renderedPoints.renderConfigSnapshot.pointVisibilityMap !==
+        newSnapshot.pointVisibilityMap ||
       !deepEqual(
         renderedPoints.renderConfigSnapshot.pointOpacity,
-        newRef.object.pointOpacity,
+        newSnapshot.pointOpacity,
       ) ||
-      !deepEqual(
-        renderedPoints.renderConfigSnapshot.pointColor,
-        newRef.object.pointColor,
-      )
+      renderedPoints.renderConfigSnapshot.pointOpacityMap !==
+        newSnapshot.pointOpacityMap
     );
   }
 }
@@ -1088,9 +1159,9 @@ type PointsRef = ObjectRef<Points, PointsData>;
  * the per-point attributes, each backed by a buffer holding one value per
  * point or by one constant value for all points (see
  * {@link WebGLPointsRenderer._backAttribute}), plus a snapshot of the model
- * values they were loaded from, which the change predicates compare against:
- * every property they read has to be captured in it. Layer- and object-level
- * properties are read from the current model when drawing (see
+ * values they were loaded from, which the change predicates compare against
+ * (see {@link WebGLPointsRenderer._createRenderConfigSnapshot}). Layer- and
+ * object-level properties are read from the current model when drawing (see
  * {@link WebGLRendererBase.getRenderPasses}), and are not part of the snapshot.
  */
 type RenderedPoints = RenderedObjectBase<Points, PointsData> & {
@@ -1111,5 +1182,11 @@ type RenderedPoints = RenderedObjectBase<Points, PointsData> & {
     | "pointColor"
     | "pointVisibility"
     | "pointOpacity"
-  >;
+  > & {
+    pointMarkerMap: GroupValueMap<Marker> | undefined;
+    pointSizeMap: GroupValueMap<number> | undefined;
+    pointColorMap: GroupValueMap<Color> | undefined;
+    pointVisibilityMap: GroupValueMap<boolean> | undefined;
+    pointOpacityMap: GroupValueMap<number> | undefined;
+  };
 };

@@ -425,14 +425,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         continue;
       }
       // no awaits from here on, so that the object is updated atomically
-      const renderConfigSnapshot = {
-        shapeFillColor: newRef.object.shapeFillColor,
-        shapeFillVisibility: newRef.object.shapeFillVisibility,
-        shapeFillOpacity: newRef.object.shapeFillOpacity,
-        shapeStrokeColor: newRef.object.shapeStrokeColor,
-        shapeStrokeVisibility: newRef.object.shapeStrokeVisibility,
-        shapeStrokeOpacity: newRef.object.shapeStrokeOpacity,
-      };
       if (renderedShapes === undefined) {
         if (
           prepared.scanlineBuffer === undefined ||
@@ -445,7 +437,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         }
         this.addRenderedObject({
           ref: newRef,
-          renderConfigSnapshot,
+          renderConfigSnapshot: prepared.renderConfigSnapshot,
           objectBounds: prepared.objectBounds,
           numScanlines: prepared.numScanlines,
           scanlineDataTexture: this._createScanlineDataTexture(
@@ -459,7 +451,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           ),
         });
       } else {
-        renderedShapes.renderConfigSnapshot = renderConfigSnapshot;
+        renderedShapes.renderConfigSnapshot = prepared.renderConfigSnapshot;
         if (prepared.scanlineBuffer !== undefined) {
           const scanlineDataTexture = this._createScanlineDataTexture(
             prepared.scanlineBuffer,
@@ -490,9 +482,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    *
    * Decides what the object's textures need - the geometry for a new object or
    * a changed number of scanlines, and the resolved fill and stroke colors whose
-   * configurations changed - requests all of it before the first `await`, and
-   * then computes the bounds, rasterizes the scanline data and folds the
-   * resolved visibilities and opacities into the colors.
+   * configurations or referenced maps changed (see
+   * {@link _createRenderConfigSnapshot}) - requests all of it before the first
+   * `await`, and then computes the bounds, rasterizes the scanline data and
+   * folds the resolved visibilities and opacities into the colors.
    *
    * Must be called synchronously for every object of a synchronization, see
    * {@link _createOrUpdateRenderedShapes}.
@@ -504,9 +497,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * @param opacityMaps - Project-global opacity maps
    * @param loadTable - Loader for the object's table, if any
    * @param options - Optional abort signal
-   * @returns The bounds and the number of scanlines, the packed scanline data
-   * (if the geometry was loaded) and the resolved colors that have to be
-   * uploaded, or `null` if the shapes have no area
+   * @returns The snapshot the decisions were based on, the bounds and the
+   * number of scanlines, the packed scanline data (if the geometry was loaded)
+   * and the resolved colors that have to be uploaded, or `null` if the shapes
+   * have no area
    */
   private async _prepareRenderedShapes(
     newRef: ShapesRef,
@@ -523,6 +517,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     scanlineBuffer: Float32Array | undefined;
     packedShapeFillColors: Uint32Array | undefined;
     packedShapeStrokeColors: Uint32Array | undefined;
+    renderConfigSnapshot: RenderedShapes["renderConfigSnapshot"];
   } | null> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
@@ -530,15 +525,22 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     const geometryChanged =
       renderedShapes === undefined ||
       renderedShapes.numScanlines !== numScanlines;
+    const renderConfigSnapshot =
+      WebGLShapesRenderer._createRenderConfigSnapshot(
+        newRef,
+        colorMaps,
+        visibilityMaps,
+        opacityMaps,
+      );
     const fillColorsChanged =
       WebGLShapesRenderer._checkShapeFillColorsTextureChanged(
         renderedShapes,
-        newRef,
+        renderConfigSnapshot,
       );
     const strokeColorsChanged =
       WebGLShapesRenderer._checkShapeStrokeColorsTextureChanged(
         renderedShapes,
-        newRef,
+        renderConfigSnapshot,
       );
     const numValuesPerTextureLine =
       1 * WebGLShapesRenderer._shapeColorsTextureWidth; // values per texture line, 1 per R32UI texel
@@ -681,6 +683,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       scanlineBuffer,
       packedShapeFillColors,
       packedShapeStrokeColors,
+      renderConfigSnapshot,
     };
   }
 
@@ -904,6 +907,60 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
+   * Captures what the textures of an object are resolved from
+   *
+   * Every property the change predicates read has to be captured here: the
+   * item-level configurations, and the maps they resolve their values from,
+   * looked up now so that the predicates compare maps rather than map IDs (see
+   * {@link WebGLRendererBase.findGroupByConfigMap}).
+   *
+   * @param newRef - The object to capture the snapshot of
+   * @param colorMaps - Project-global color maps
+   * @param visibilityMaps - Project-global visibility maps
+   * @param opacityMaps - Project-global opacity maps
+   * @returns The snapshot
+   */
+  private static _createRenderConfigSnapshot(
+    newRef: ShapesRef,
+    colorMaps: GroupValueMap<Color>[],
+    visibilityMaps: GroupValueMap<boolean>[],
+    opacityMaps: GroupValueMap<number>[],
+  ): RenderedShapes["renderConfigSnapshot"] {
+    return {
+      shapeFillColor: newRef.object.shapeFillColor,
+      shapeFillVisibility: newRef.object.shapeFillVisibility,
+      shapeFillOpacity: newRef.object.shapeFillOpacity,
+      shapeStrokeColor: newRef.object.shapeStrokeColor,
+      shapeStrokeVisibility: newRef.object.shapeStrokeVisibility,
+      shapeStrokeOpacity: newRef.object.shapeStrokeOpacity,
+      shapeFillColorMap: WebGLShapesRenderer.findGroupByConfigMap(
+        newRef.object.shapeFillColor,
+        colorMaps,
+      ),
+      shapeFillVisibilityMap: WebGLShapesRenderer.findGroupByConfigMap(
+        newRef.object.shapeFillVisibility,
+        visibilityMaps,
+      ),
+      shapeFillOpacityMap: WebGLShapesRenderer.findGroupByConfigMap(
+        newRef.object.shapeFillOpacity,
+        opacityMaps,
+      ),
+      shapeStrokeColorMap: WebGLShapesRenderer.findGroupByConfigMap(
+        newRef.object.shapeStrokeColor,
+        colorMaps,
+      ),
+      shapeStrokeVisibilityMap: WebGLShapesRenderer.findGroupByConfigMap(
+        newRef.object.shapeStrokeVisibility,
+        visibilityMaps,
+      ),
+      shapeStrokeOpacityMap: WebGLShapesRenderer.findGroupByConfigMap(
+        newRef.object.shapeStrokeOpacity,
+        opacityMaps,
+      ),
+    };
+  }
+
+  /**
    * Returns whether the fill colors of an object have to be resolved again
    *
    * Colors carry the resolved shape visibilities and opacities in their alpha
@@ -911,30 +968,33 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * object-level visibility and opacity are shader uniforms (see
    * {@link WebGLRendererBase.computeOpacityFactor}) and do not matter here.
    * Also true for an object that has not been rendered yet, like the other
-   * predicates.
-   *
-   * @todo Changes to the color, visibility and opacity maps themselves are not
-   * detected; they are only re-read when a configuration referencing them
-   * changes.
+   * predicate. Configurations are compared by value, maps by identity (see
+   * {@link _createRenderConfigSnapshot}).
    */
   private static _checkShapeFillColorsTextureChanged(
     renderedShapes: RenderedShapes | undefined,
-    newRef: ShapesRef,
+    newSnapshot: RenderedShapes["renderConfigSnapshot"],
   ): boolean {
     return (
       renderedShapes === undefined ||
       !deepEqual(
-        renderedShapes.renderConfigSnapshot.shapeFillVisibility,
-        newRef.object.shapeFillVisibility,
+        renderedShapes.renderConfigSnapshot.shapeFillColor,
+        newSnapshot.shapeFillColor,
       ) ||
+      renderedShapes.renderConfigSnapshot.shapeFillColorMap !==
+        newSnapshot.shapeFillColorMap ||
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeFillVisibility,
+        newSnapshot.shapeFillVisibility,
+      ) ||
+      renderedShapes.renderConfigSnapshot.shapeFillVisibilityMap !==
+        newSnapshot.shapeFillVisibilityMap ||
       !deepEqual(
         renderedShapes.renderConfigSnapshot.shapeFillOpacity,
-        newRef.object.shapeFillOpacity,
+        newSnapshot.shapeFillOpacity,
       ) ||
-      !deepEqual(
-        renderedShapes.renderConfigSnapshot.shapeFillColor,
-        newRef.object.shapeFillColor,
-      )
+      renderedShapes.renderConfigSnapshot.shapeFillOpacityMap !==
+        newSnapshot.shapeFillOpacityMap
     );
   }
 
@@ -942,29 +1002,31 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Returns whether the stroke colors of an object have to be resolved again
    *
    * See {@link _checkShapeFillColorsTextureChanged}.
-   *
-   * @todo Changes to the color, visibility and opacity maps themselves are not
-   * detected; they are only re-read when a configuration referencing them
-   * changes.
    */
   private static _checkShapeStrokeColorsTextureChanged(
     renderedShapes: RenderedShapes | undefined,
-    newRef: ShapesRef,
+    newSnapshot: RenderedShapes["renderConfigSnapshot"],
   ): boolean {
     return (
       renderedShapes === undefined ||
       !deepEqual(
-        renderedShapes.renderConfigSnapshot.shapeStrokeVisibility,
-        newRef.object.shapeStrokeVisibility,
+        renderedShapes.renderConfigSnapshot.shapeStrokeColor,
+        newSnapshot.shapeStrokeColor,
       ) ||
+      renderedShapes.renderConfigSnapshot.shapeStrokeColorMap !==
+        newSnapshot.shapeStrokeColorMap ||
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeStrokeVisibility,
+        newSnapshot.shapeStrokeVisibility,
+      ) ||
+      renderedShapes.renderConfigSnapshot.shapeStrokeVisibilityMap !==
+        newSnapshot.shapeStrokeVisibilityMap ||
       !deepEqual(
         renderedShapes.renderConfigSnapshot.shapeStrokeOpacity,
-        newRef.object.shapeStrokeOpacity,
+        newSnapshot.shapeStrokeOpacity,
       ) ||
-      !deepEqual(
-        renderedShapes.renderConfigSnapshot.shapeStrokeColor,
-        newRef.object.shapeStrokeColor,
-      )
+      renderedShapes.renderConfigSnapshot.shapeStrokeOpacityMap !==
+        newSnapshot.shapeStrokeOpacityMap
     );
   }
 }
@@ -979,10 +1041,11 @@ type ShapesRef = ObjectRef<Shapes, ShapesData>;
  *
  * Holds the texture handles for scanline data, fill colors and stroke colors,
  * plus a snapshot of the model values they were built from, which the change
- * predicates compare against: every property they read has to be captured in
- * it. Layer- and object-level properties are read from the current model when
- * drawing (see {@link WebGLRendererBase.getRenderPasses}), and are not part of
- * the snapshot. The number of scanlines is the one the scanline data texture
+ * predicates compare against (see
+ * {@link WebGLShapesRenderer._createRenderConfigSnapshot}). Layer- and
+ * object-level properties are read from the current model when drawing (see
+ * {@link WebGLRendererBase.getRenderPasses}), and are not part of the
+ * snapshot. The number of scanlines is the one the scanline data texture
  * was rasterized for, which is also the one the object is drawn with.
  */
 type RenderedShapes = RenderedObjectBase<Shapes, ShapesData> & {
@@ -998,5 +1061,12 @@ type RenderedShapes = RenderedObjectBase<Shapes, ShapesData> & {
     | "shapeStrokeColor"
     | "shapeStrokeVisibility"
     | "shapeStrokeOpacity"
-  >;
+  > & {
+    shapeFillColorMap: GroupValueMap<Color> | undefined;
+    shapeFillVisibilityMap: GroupValueMap<boolean> | undefined;
+    shapeFillOpacityMap: GroupValueMap<number> | undefined;
+    shapeStrokeColorMap: GroupValueMap<Color> | undefined;
+    shapeStrokeVisibilityMap: GroupValueMap<boolean> | undefined;
+    shapeStrokeOpacityMap: GroupValueMap<number> | undefined;
+  };
 };

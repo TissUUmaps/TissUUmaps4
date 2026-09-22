@@ -1,7 +1,9 @@
 import { deepEqual } from "fast-equals";
 
 import {
+  type Config,
   GeometryUtils,
+  type GroupValueMap,
   type Layer,
   type Points,
   type PointsData,
@@ -12,6 +14,8 @@ import {
   type TableData,
   TableUtils,
   TransformUtils,
+  getActiveConfigSource,
+  isGroupByConfig,
 } from "@tissuumaps/core";
 
 import type { WebGLContext } from "./WebGLContext";
@@ -645,6 +649,38 @@ export abstract class WebGLRendererBase<
       return undefined;
     }
     return (options?: { signal?: AbortSignal }) => loadTable(table, options);
+  }
+
+  /**
+   * Returns the group-to-value map that an item-level configuration resolves
+   * its values from, if any
+   *
+   * The renderers capture it in the snapshots their change predicates compare
+   * against, so that an edit to a map is detected by the objects referencing
+   * it. Maps are never mutated - an edit replaces the map object - so the
+   * predicates compare a map by identity, which is why the maps passed to a
+   * synchronization have to keep their identity for as long as they are
+   * unchanged. Mirrors the selection of the resolvers: only an active
+   * `groupBy` source with a map ID resolves from a map.
+   *
+   * @param config - The configuration
+   * @param maps - The project-global maps to look the referenced map up in
+   * @returns The map, or `undefined` if the configuration does not resolve
+   * from a map, or if the map it references does not exist (which the
+   * resolvers report)
+   */
+  protected static findGroupByConfigMap<TValue>(
+    config: Config<string>,
+    maps: GroupValueMap<TValue>[],
+  ): GroupValueMap<TValue> | undefined {
+    if (
+      getActiveConfigSource(config) === "groupBy" &&
+      isGroupByConfig<false>(config) &&
+      config.groupBy.map !== undefined
+    ) {
+      return maps.find((map) => map.id === config.groupBy.map);
+    }
+    return undefined;
   }
 
   /**
