@@ -189,7 +189,7 @@ function FromColorConfigWidget({
             inputMode="decimal"
             placeholder={
               columnValueRange !== null
-                ? String(columnValueRange[0])
+                ? columnValueRange[0].toPrecision(6)
                 : undefined
             }
             value={rangeMin ?? ""}
@@ -212,7 +212,7 @@ function FromColorConfigWidget({
             inputMode="decimal"
             placeholder={
               columnValueRange !== null
-                ? String(columnValueRange[1])
+                ? columnValueRange[1].toPrecision(6)
                 : undefined
             }
             value={rangeMax ?? ""}

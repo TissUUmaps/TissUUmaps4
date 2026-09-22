@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   type Color,
   type ColorConfig,
-  type TableData,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -72,15 +71,16 @@ export function useColorConfigWidget(
       : null,
   );
 
-  // keep the loaded value range with its origin, so that another column's
-  // range is never shown
   const tableData = useTableData(tableId);
-  const [loadedFromColumnValueRange, setLoadedFromColumnValueRange] = useState<{
-    tableData: TableData;
-    column: string;
-    valueRange: [number, number] | undefined;
-  } | null>(null);
+
+  const [currentFromColumnValueRange, setCurrentFromColumnValueRange] =
+    useState<[number, number] | null>(null);
+
   useEffect(() => {
+    // clear the previous column's range synchronously, so that the placeholder
+    // does not show a stale range while the new one is still loading
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentFromColumnValueRange(null);
     if (
       currentSource === "from" &&
       currentFromColumn !== null &&
@@ -91,11 +91,7 @@ export function useColorConfigWidget(
         .loadValueRange(currentFromColumn, { signal: abortController.signal })
         .then((valueRange) => {
           if (!abortController.signal.aborted) {
-            setLoadedFromColumnValueRange({
-              tableData,
-              column: currentFromColumn,
-              valueRange,
-            });
+            setCurrentFromColumnValueRange(valueRange ?? null);
           }
         })
         .catch((error) => {
@@ -106,12 +102,6 @@ export function useColorConfigWidget(
       return () => abortController.abort();
     }
   }, [tableData, currentSource, currentFromColumn]);
-  const currentFromColumnValueRange =
-    loadedFromColumnValueRange !== null &&
-    loadedFromColumnValueRange.tableData === tableData &&
-    loadedFromColumnValueRange.column === currentFromColumn
-      ? (loadedFromColumnValueRange.valueRange ?? null)
-      : null;
 
   useEffect(() => {
     const currentFromRange: [number, number] | null =
