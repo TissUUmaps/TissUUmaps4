@@ -27,6 +27,7 @@ import {
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
+  projectDefaults,
 } from "@tissuumaps/core";
 
 import markersUrl from "../assets/markers/markers.png?url";
@@ -53,11 +54,12 @@ import { WebGLUtils } from "./WebGLUtils";
  * y, size, color, marker), one draw call per object.
  *
  * Every object owns its vertex array and attribute buffers. Synchronizing
- * compares the current model state against the state those buffers were
- * loaded from, and re-uploads only the attributes whose inputs changed.
+ * compares the current model against the snapshot those buffers were loaded
+ * from, and re-uploads only the attributes whose inputs changed.
  * Layer- and object-level properties (transforms, point size factors,
  * visibility and opacity) are shader uniforms, so changing them never touches
- * the buffers.
+ * the buffers, and never requires a synchronization (see
+ * {@link WebGLRendererBase.setModel}).
  */
 export class WebGLPointsRenderer extends WebGLRendererBase<
   Points,
@@ -75,6 +77,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     MARKER_ATLAS: 0,
   };
 
+  renderOptions: WebGLPointsRenderOptions =
+    projectDefaults.glOptions.pointsRenderOptions;
   private readonly _program: WebGLProgram;
   private readonly _uniformLocations: {
     globalPointSizeFactor: WebGLUniformLocation;
@@ -86,7 +90,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     pointSizeFactor: WebGLUniformLocation;
     opacityFactor: WebGLUniformLocation;
   };
-  private _globalPointSizeFactor: number;
   private _markerAtlasTexture: WebGLTexture | undefined;
 
   /**
@@ -99,21 +102,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param context - The WebGL context to use for rendering
    * @param onInitialized - Called once the marker atlas texture has been loaded
    * @param onError - Called if the marker atlas texture could not be loaded
-   * @param options - Optional abort signal and render options
+   * @param options - Optional abort signal
    */
   constructor(
     context: WebGLContext,
     onInitialized: () => void,
     onError: (error: Error) => void,
-    options?: {
-      signal?: AbortSignal;
-      renderOptions?: WebGLPointsRenderOptions;
-    },
+    options?: { signal?: AbortSignal },
   ) {
     super(context);
-    const { signal, renderOptions } = options ?? {};
-    const { globalPointSizeFactor } = renderOptions ?? {};
-    this._globalPointSizeFactor = globalPointSizeFactor ?? 1.0;
+    const { signal } = options ?? {};
     this._program = context.createProgram(
       pointsVertexShader,
       pointsFragmentShader,
@@ -164,38 +162,15 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Sets the render options, and reports what they require to take effect
-   *
-   * The global point size factor is a shader uniform, so changing it never
-   * requires a resynchronization, only a redraw.
-   *
-   * @param options - The options to set for the renderer
-   * @returns Whether the renderer has to be resynchronized and/or redrawn
-   */
-  setRenderOptions(options: WebGLPointsRenderOptions): {
-    resync: boolean;
-    redraw: boolean;
-  } {
-    const { globalPointSizeFactor } = options;
-    if (globalPointSizeFactor !== this._globalPointSizeFactor) {
-      this._globalPointSizeFactor = globalPointSizeFactor;
-      return { resync: false, redraw: true };
-    }
-    return { resync: false, redraw: false };
-  }
-
-  /**
    * Synchronizes GPU buffers with the current model state
    *
-   * Loads all points data for the given layers, removes GPU resources for
-   * points that are no longer needed, and creates or updates the attribute
-   * buffers of the remaining ones. Configuration-driven properties (marker,
-   * size, color, visibility, opacity) are resolved via the provided maps and
-   * table loader; only the properties whose configuration actually changed are
-   * resolved again.
+   * Loads all points data of the model set by {@link setModel}, removes GPU
+   * resources for points that are no longer needed, and creates or updates the
+   * attribute buffers of the remaining ones. Configuration-driven properties
+   * (marker, size, color, visibility, opacity) are resolved via the provided
+   * maps and table loader; only the properties whose configuration actually
+   * changed are resolved again.
    *
-   * @param layers - Layers to render
-   * @param points - Points data objects
    * @param tables - Tables that the points objects resolve their properties from
    * @param markerMaps - Project-global marker maps for {@link GroupByConfig} resolution
    * @param sizeMaps - Project-global size maps
@@ -205,12 +180,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param loadPoints - Async getter for points data
    * @param loadTable - Async getter for table data
    * @param options - Optional abort signal
-   * @returns The bounding box of all rendered points in world coordinates, or
-   * `null` if nothing is rendered
    */
   async synchronize(
-    layers: Layer[],
-    points: Points[],
     tables: Table[],
     markerMaps: GroupValueMap<Marker>[],
     sizeMaps: GroupValueMap<number>[],
@@ -226,21 +197,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       options?: { signal?: AbortSignal },
     ) => Promise<TableData>,
     options?: { signal?: AbortSignal },
-  ): Promise<Rect | null> {
+  ): Promise<void> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const newRefs = await this.loadObjects(
-      layers,
-      points,
-      tables,
-      loadPoints,
-      loadTable,
-      { signal },
-    );
-    const renderedPointsByNewRef = this.cleanRenderedObjects(newRefs);
+    this.recordSyncState();
+    const newRefs = await this.loadObjects(tables, loadPoints, loadTable, {
+      signal,
+    });
+    const matches = this.matchOrDestroyRenderedObjects(newRefs);
     await this._createOrUpdateRenderedPoints(
-      newRefs,
-      renderedPointsByNewRef,
+      matches,
       tables,
       markerMaps,
       sizeMaps,
@@ -250,7 +216,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       loadTable,
       { signal },
     );
-    return this.getRenderedBounds();
   }
 
   /**
@@ -260,7 +225,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * viewport, canvas size, device pixel ratio), binds the marker atlas texture,
    * and then draws every object in its own `gl.POINTS` call with alpha
    * blending, with its data → world matrix, point size factor and opacity
-   * factor as uniforms. Objects whose layer or object is invisible are skipped.
+   * factor as uniforms, computed from the current model (see
+   * {@link getRenderPasses}). Objects whose layer or object is invisible are
+   * skipped.
    *
    * @throws Error if the renderer has not been initialized
    */
@@ -268,13 +235,14 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     if (this._markerAtlasTexture === undefined) {
       throw new Error("Not initialized");
     }
-    if (this.renderedObjects.length === 0) {
+    const renderPasses = this.getRenderPasses();
+    if (renderPasses.length === 0) {
       return;
     }
     this.context.gl.useProgram(this._program);
     this.context.gl.uniform1f(
       this._uniformLocations.globalPointSizeFactor,
-      this._globalPointSizeFactor,
+      this.renderOptions.globalPointSizeFactor,
     );
     this.context.gl.uniformMatrix3x2fv(
       this._uniformLocations.worldToViewportMatrix,
@@ -306,9 +274,14 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       this._markerAtlasTexture,
     );
     this.context.enableAlphaBlending();
-    for (const renderedPoints of this.renderedObjects) {
+    for (const {
+      layer,
+      object: points,
+      renderedObject: renderedPoints,
+    } of renderPasses) {
       const opacityFactor = WebGLPointsRenderer.computeOpacityFactor(
-        renderedPoints.ref,
+        layer,
+        points,
       );
       if (opacityFactor === 0) {
         continue;
@@ -317,15 +290,12 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         this._uniformLocations.dataToWorldMatrix,
         false,
         WebGLUtils.convertMatrixToGLMat3x2(
-          WebGLUtils.createDataToWorldMatrix(
-            renderedPoints.ref.object.transform,
-            renderedPoints.ref.layer.transform,
-          ),
+          WebGLUtils.createDataToWorldMatrix(points.transform, layer.transform),
         ),
       );
       this.context.gl.uniform1f(
         this._uniformLocations.pointSizeFactor,
-        WebGLPointsRenderer._computePointSizeFactor(renderedPoints.ref),
+        WebGLPointsRenderer._computePointSizeFactor(layer, points),
       );
       this.context.gl.uniform1f(
         this._uniformLocations.opacityFactor,
@@ -349,21 +319,39 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    */
   destroy(): void {
     this.context.gl.deleteProgram(this._program);
-    for (const renderedPoints of this.renderedObjects) {
-      this.destroyRenderedObject(renderedPoints);
-    }
     if (this._markerAtlasTexture !== undefined) {
       this.context.gl.deleteTexture(this._markerAtlasTexture);
       this._markerAtlasTexture = undefined;
     }
-    this.renderedObjects = [];
+    this.clearRenderedObjects();
+  }
+
+  /**
+   * Returns the state of a points object that a synchronization depends on
+   *
+   * Blanks out the object-level point size factor, and the units of the point
+   * size configuration, on top of what the base class blanks out: the sizes are
+   * uploaded without their unit, which is applied as part of the point size
+   * factor uniform instead (see {@link _computePointSizeFactor}).
+   *
+   * @param points - The points object to return the state of
+   * @returns The points object without the properties that are applied when drawing
+   */
+  protected override getObjectSyncState(points: Points): object {
+    return {
+      ...super.getObjectSyncState(points),
+      pointSizeFactor: undefined,
+      pointSize: WebGLPointsRenderer._stripSizeUnit(points.pointSize),
+    };
   }
 
   /**
    * Deletes the vertex array and all attribute buffers owned by a single
    * rendered object
    */
-  protected destroyRenderedObject(renderedPoints: RenderedPoints): void {
+  protected override destroyRenderedObject(
+    renderedPoints: RenderedPoints,
+  ): void {
     this.context.gl.deleteVertexArray(renderedPoints.vao);
     for (const buffer of Object.values(renderedPoints.buffers)) {
       this.context.gl.deleteBuffer(buffer);
@@ -371,7 +359,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Creates new GPU resources for points that have no existing render pass, or
+   * Creates new GPU resources for points that have no rendered object yet, or
    * updates existing ones when the model state has changed
    *
    * Runs in two passes. The first prepares every object (see
@@ -397,8 +385,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * whose data fails to load (see {@link loadObjects}); the other objects are
    * unaffected.
    *
-   * @param newRefs - The objects to create or update GPU resources for, in draw order
-   * @param renderedPointsByNewRef - The reusable GPU resources, by object
+   * @param matches - The objects to create or update GPU resources for, in draw
+   * order, each with the rendered points to reuse for it, if any
    * @param tables - Tables that the objects resolve their properties from
    * @param markerMaps - Project-global marker maps
    * @param sizeMaps - Project-global size maps
@@ -409,8 +397,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param options - Optional abort signal
    */
   private async _createOrUpdateRenderedPoints(
-    newRefs: PointsRef[],
-    renderedPointsByNewRef: Map<PointsRef, RenderedPoints>,
+    matches: {
+      newRef: PointsRef;
+      renderedObject: RenderedPoints | undefined;
+    }[],
     tables: Table[],
     markerMaps: GroupValueMap<Marker>[],
     sizeMaps: GroupValueMap<number>[],
@@ -425,23 +415,28 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   ): Promise<void> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const objectPreloads = newRefs.map((newRef) => {
-      const renderedPoints = renderedPointsByNewRef.get(newRef);
-      const preparedPromise = WebGLPointsRenderer._prepareRenderedPoints(
-        newRef,
-        renderedPoints,
-        markerMaps,
-        sizeMaps,
-        colorMaps,
-        visibilityMaps,
-        opacityMaps,
-        WebGLPointsRenderer.createObjectTableLoader(newRef, tables, loadTable),
-        { signal },
-      );
-      preparedPromise.catch(() => {}); // prevent unhandled rejections in console
-      return { newRef, renderedPoints, preparedPromise };
-    });
-    for (const { newRef, renderedPoints, preparedPromise } of objectPreloads) {
+    const preloads = matches.map(
+      ({ newRef, renderedObject: renderedPoints }) => {
+        const preparedPromise = WebGLPointsRenderer._prepareRenderedPoints(
+          newRef,
+          renderedPoints,
+          markerMaps,
+          sizeMaps,
+          colorMaps,
+          visibilityMaps,
+          opacityMaps,
+          WebGLPointsRenderer.createObjectTableLoader(
+            newRef,
+            tables,
+            loadTable,
+          ),
+          { signal },
+        );
+        preparedPromise.catch(() => {}); // prevent unhandled rejections in console
+        return { newRef, renderedPoints, preparedPromise };
+      },
+    );
+    for (const { newRef, renderedPoints, preparedPromise } of preloads) {
       let prepared;
       try {
         prepared = await preparedPromise;
@@ -458,13 +453,12 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       }
       signal?.throwIfAborted();
       // no awaits from here on, so that the object is uploaded atomically
-      const state = {
-        dataSource: structuredClone(newRef.object.dataSource),
-        pointMarker: structuredClone(newRef.object.pointMarker),
+      const renderConfigSnapshot = {
+        pointMarker: newRef.object.pointMarker,
         pointSize: WebGLPointsRenderer._stripSizeUnit(newRef.object.pointSize),
-        pointColor: structuredClone(newRef.object.pointColor),
-        pointVisibility: structuredClone(newRef.object.pointVisibility),
-        pointOpacity: structuredClone(newRef.object.pointOpacity),
+        pointColor: newRef.object.pointColor,
+        pointVisibility: newRef.object.pointVisibility,
+        pointOpacity: newRef.object.pointOpacity,
       };
       if (renderedPoints === undefined) {
         if (
@@ -477,22 +471,19 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
             "All attributes must be resolved for new points object",
           );
         }
-        this.insertRenderedObject(
-          {
-            ref: newRef,
-            state,
-            objectBounds: prepared.objectBounds,
-            ...this._createBuffers(
-              prepared.maskedGeometry,
-              prepared.packedPointMarkers,
-              prepared.packedPointSizes,
-              prepared.packedPointColors,
-            ),
-          },
-          newRefs,
-        );
+        this.addRenderedObject({
+          ref: newRef,
+          renderConfigSnapshot,
+          objectBounds: prepared.objectBounds,
+          ...this._createBuffers(
+            prepared.maskedGeometry,
+            prepared.packedPointMarkers,
+            prepared.packedPointSizes,
+            prepared.packedPointColors,
+          ),
+        });
       } else {
-        renderedPoints.state = state;
+        renderedPoints.renderConfigSnapshot = renderConfigSnapshot;
         if (prepared.packedPointMarkers !== undefined) {
           this.context.loadBuffer(
             WebGL2RenderingContext.ARRAY_BUFFER,
@@ -553,26 +544,72 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       ((options?: { signal?: AbortSignal }) => Promise<TableData>) | undefined,
     options?: { signal?: AbortSignal },
   ): Promise<{
-    maskedGeometry: PointsGeometry | undefined;
     objectBounds: Rect;
+    maskedGeometry: PointsGeometry | undefined;
     packedPointMarkers: Uint8Array | undefined;
     packedPointSizes: Float32Array | undefined;
     packedPointColors: Uint32Array | undefined;
   }> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const markersChanged = WebGLPointsRenderer._checkPointMarkerBufferChanged(
-      renderedPoints,
-      newRef,
-    );
-    const sizesChanged = WebGLPointsRenderer._checkPointSizeBufferChanged(
-      renderedPoints,
-      newRef,
-    );
-    const colorsChanged = WebGLPointsRenderer._checkPointColorBufferChanged(
-      renderedPoints,
-      newRef,
-    );
+    const pointMarkerBufferChanged =
+      WebGLPointsRenderer._checkPointMarkerBufferChanged(
+        renderedPoints,
+        newRef,
+      );
+    const pointSizeBufferChanged =
+      WebGLPointsRenderer._checkPointSizeBufferChanged(renderedPoints, newRef);
+    const pointColorBufferChanged =
+      WebGLPointsRenderer._checkPointColorBufferChanged(renderedPoints, newRef);
+    const geometryPromise =
+      renderedPoints === undefined
+        ? newRef.data.loadGeometry({ signal })
+        : undefined;
+    const packedPointMarkersPromise = pointMarkerBufferChanged
+      ? MarkerResolver.resolveMarkers(
+          newRef.itemIds,
+          newRef.object.pointMarker,
+          markerMaps,
+          defaultPointMarker,
+          { signal, loadTable },
+        )
+      : undefined;
+    const packedPointSizesPromise = pointSizeBufferChanged
+      ? SizeResolver.resolveSizes(
+          newRef.itemIds,
+          newRef.object.pointSize,
+          sizeMaps,
+          defaultPointSize,
+          { signal, loadTable },
+        )
+      : undefined;
+    const packedPointColorsPromise = pointColorBufferChanged
+      ? ColorResolver.resolveColors(
+          newRef.itemIds,
+          newRef.object.pointColor,
+          colorMaps,
+          defaultPointColor,
+          { signal, loadTable },
+        )
+      : undefined;
+    const packedPointVisibilitiesPromise = pointColorBufferChanged
+      ? VisibilityResolver.resolveVisibilities(
+          newRef.itemIds,
+          newRef.object.pointVisibility,
+          visibilityMaps,
+          defaultPointVisibility,
+          { signal, loadTable },
+        )
+      : undefined;
+    const packedPointOpacitiesPromise = pointColorBufferChanged
+      ? OpacityResolver.resolveOpacities(
+          newRef.itemIds,
+          newRef.object.pointOpacity,
+          opacityMaps,
+          defaultPointOpacity,
+          { signal, loadTable },
+        )
+      : undefined;
     const [
       geometry,
       packedPointMarkers,
@@ -581,54 +618,12 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       packedPointVisibilities,
       packedPointOpacities,
     ] = await Promise.all([
-      renderedPoints === undefined
-        ? newRef.data.loadGeometry({ signal })
-        : undefined,
-      markersChanged
-        ? MarkerResolver.resolveMarkers(
-            newRef.itemIds,
-            newRef.object.pointMarker,
-            markerMaps,
-            defaultPointMarker,
-            { signal, loadTable },
-          )
-        : undefined,
-      sizesChanged
-        ? SizeResolver.resolveSizes(
-            newRef.itemIds,
-            newRef.object.pointSize,
-            sizeMaps,
-            defaultPointSize,
-            { signal, loadTable },
-          )
-        : undefined,
-      colorsChanged
-        ? ColorResolver.resolveColors(
-            newRef.itemIds,
-            newRef.object.pointColor,
-            colorMaps,
-            defaultPointColor,
-            { signal, loadTable },
-          )
-        : undefined,
-      colorsChanged
-        ? VisibilityResolver.resolveVisibilities(
-            newRef.itemIds,
-            newRef.object.pointVisibility,
-            visibilityMaps,
-            defaultPointVisibility,
-            { signal, loadTable },
-          )
-        : undefined,
-      colorsChanged
-        ? OpacityResolver.resolveOpacities(
-            newRef.itemIds,
-            newRef.object.pointOpacity,
-            opacityMaps,
-            defaultPointOpacity,
-            { signal, loadTable },
-          )
-        : undefined,
+      geometryPromise,
+      packedPointMarkersPromise,
+      packedPointSizesPromise,
+      packedPointColorsPromise,
+      packedPointVisibilitiesPromise,
+      packedPointOpacitiesPromise,
     ]);
     signal?.throwIfAborted();
     let maskedGeometry: PointsGeometry | undefined;
@@ -804,28 +799,31 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * sizes in data units scale with the object and layer transforms, sizes in
    * layer units with the layer transform only, and sizes in world units with
    * neither.
+   *
+   * @param layer - The layer the points are drawn on, as of the current model
+   * @param points - The points object being drawn, as of the current model
    */
-  private static _computePointSizeFactor(ref: PointsRef): number {
+  private static _computePointSizeFactor(layer: Layer, points: Points): number {
     let activeUnit: CoordinateSpace;
-    const activeSource = getActiveConfigSource(ref.object.pointSize);
-    if (activeSource === "constant" && isConstantConfig(ref.object.pointSize)) {
-      activeUnit = ref.object.pointSize.constant.unit ?? defaultPointSizeUnit;
-    } else if (activeSource === "from" && isFromConfig(ref.object.pointSize)) {
-      activeUnit = ref.object.pointSize.from.unit ?? defaultPointSizeUnit;
+    const activeSource = getActiveConfigSource(points.pointSize);
+    if (activeSource === "constant" && isConstantConfig(points.pointSize)) {
+      activeUnit = points.pointSize.constant.unit ?? defaultPointSizeUnit;
+    } else if (activeSource === "from" && isFromConfig(points.pointSize)) {
+      activeUnit = points.pointSize.from.unit ?? defaultPointSizeUnit;
     } else if (
       activeSource === "groupBy" &&
-      isGroupByConfig(ref.object.pointSize)
+      isGroupByConfig(points.pointSize)
     ) {
-      activeUnit = ref.object.pointSize.groupBy.unit ?? defaultPointSizeUnit;
+      activeUnit = points.pointSize.groupBy.unit ?? defaultPointSizeUnit;
     } else {
       activeUnit = defaultPointSizeUnit;
     }
-    let sizeFactor = ref.object.pointSizeFactor * ref.layer.pointSizeFactor;
+    let sizeFactor = points.pointSizeFactor * layer.pointSizeFactor;
     if (activeUnit === "data") {
-      sizeFactor *= ref.object.transform.scale;
+      sizeFactor *= points.transform.scale;
     }
     if (activeUnit === "data" || activeUnit === "layer") {
-      sizeFactor *= ref.layer.transform.scale;
+      sizeFactor *= layer.transform.scale;
     }
     return sizeFactor;
   }
@@ -834,7 +832,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Copies a size configuration without its units
    *
    * The unit only affects {@link _computePointSizeFactor}, not the resolved
-   * sizes, so it is left out of the state that
+   * sizes, so it is left out of the snapshot that
    * {@link _checkPointSizeBufferChanged} compares.
    */
   private static _stripSizeUnit(config: SizeConfig): SizeConfig {
@@ -863,7 +861,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedPoints === undefined ||
-      !deepEqual(renderedPoints.state.pointMarker, newRef.object.pointMarker)
+      !deepEqual(
+        renderedPoints.renderConfigSnapshot.pointMarker,
+        newRef.object.pointMarker,
+      )
     );
   }
 
@@ -881,7 +882,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     return (
       renderedPoints === undefined ||
       !deepEqual(
-        renderedPoints.state.pointSize,
+        renderedPoints.renderConfigSnapshot.pointSize,
         WebGLPointsRenderer._stripSizeUnit(newRef.object.pointSize),
       )
     );
@@ -906,14 +907,17 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     return (
       renderedPoints === undefined ||
       !deepEqual(
-        renderedPoints.state.pointVisibility,
+        renderedPoints.renderConfigSnapshot.pointVisibility,
         newRef.object.pointVisibility,
       ) ||
       !deepEqual(
-        renderedPoints.state.pointOpacity,
+        renderedPoints.renderConfigSnapshot.pointOpacity,
         newRef.object.pointOpacity,
       ) ||
-      !deepEqual(renderedPoints.state.pointColor, newRef.object.pointColor)
+      !deepEqual(
+        renderedPoints.renderConfigSnapshot.pointColor,
+        newRef.object.pointColor,
+      )
     );
   }
 }
@@ -929,19 +933,11 @@ type PointsRef = ObjectRef<Points, PointsData>;
  * Holds the vertex array and the attribute buffers it is configured with, plus
  * a snapshot of the model values the buffers were loaded from, which the change
  * predicates compare against: every property they read has to be captured in
- * it. Layer- and object-level properties are read from the reference when
- * drawing, and are not part of the snapshot.
+ * it. Layer- and object-level properties are read from the current model when
+ * drawing (see {@link WebGLRendererBase.getRenderPasses}), and are not part of
+ * the snapshot.
  */
 type RenderedPoints = RenderedObjectBase<Points, PointsData> & {
-  state: Pick<
-    Points,
-    | "dataSource"
-    | "pointMarker"
-    | "pointSize"
-    | "pointColor"
-    | "pointVisibility"
-    | "pointOpacity"
-  >;
   vao: WebGLVertexArrayObject;
   buffers: {
     x: WebGLBuffer;
@@ -950,4 +946,12 @@ type RenderedPoints = RenderedObjectBase<Points, PointsData> & {
     color: WebGLBuffer;
     marker: WebGLBuffer;
   };
+  renderConfigSnapshot: Pick<
+    Points,
+    | "pointMarker"
+    | "pointSize"
+    | "pointColor"
+    | "pointVisibility"
+    | "pointOpacity"
+  >;
 };
