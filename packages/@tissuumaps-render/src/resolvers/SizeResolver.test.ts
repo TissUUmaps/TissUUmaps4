@@ -242,6 +242,18 @@ describe("SizeResolver", () => {
     });
   });
 
+  describe("resolveConstantSize", () => {
+    it("returns the packed size for a constant config", () => {
+      const config = { constant: { value: 9 } } satisfies SizeConfig;
+      expect(SizeResolver.resolveConstantSize(config)).toBe(9);
+    });
+
+    it("returns undefined for table-backed configs", () => {
+      const config = { from: { column: "col1" } } satisfies SizeConfig;
+      expect(SizeResolver.resolveConstantSize(config)).toBeUndefined();
+    });
+  });
+
   describe("resolveSizeWithoutTable", () => {
     it("returns the packed constant size for a constant config", () => {
       const config = { constant: { value: 9 } } satisfies SizeConfig;

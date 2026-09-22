@@ -87,6 +87,25 @@ export class SizeResolver {
   }
 
   /**
+   * Resolves the size all items share if the configuration is a constant
+   *
+   * The counterpart of {@link resolveSizes} for a constant source, which needs
+   * no items: the one packed size applies to every item, so a consumer can
+   * supply it once instead of once per item.
+   *
+   * @param config - Size configuration specifying the data source
+   * @returns The packed size, or `undefined` if the active source is not a
+   * constant
+   */
+  static resolveConstantSize(config: SizeConfig): number | undefined {
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return SizeResolver.packSize(config.constant.value);
+    }
+    return undefined;
+  }
+
+  /**
    * Resolves the size of a single item without loading any table data
    *
    * Synchronous counterpart to {@link resolveSizes} for items that are not

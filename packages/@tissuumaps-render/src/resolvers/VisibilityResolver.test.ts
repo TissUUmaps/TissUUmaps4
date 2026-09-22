@@ -223,6 +223,20 @@ describe("VisibilityResolver", () => {
     });
   });
 
+  describe("resolveConstantVisibility", () => {
+    it("returns the packed visibility for a constant config", () => {
+      const config = { constant: { value: false } } satisfies VisibilityConfig;
+      expect(VisibilityResolver.resolveConstantVisibility(config)).toBe(0);
+    });
+
+    it("returns undefined for table-backed configs", () => {
+      const config = { from: { column: "col1" } } satisfies VisibilityConfig;
+      expect(
+        VisibilityResolver.resolveConstantVisibility(config),
+      ).toBeUndefined();
+    });
+  });
+
   describe("resolveVisibilityWithoutTable", () => {
     it("returns the packed constant visibility for a constant config", () => {
       const config = { constant: { value: false } } satisfies VisibilityConfig;

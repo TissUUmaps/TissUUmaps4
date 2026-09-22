@@ -85,6 +85,25 @@ export class MarkerResolver {
   }
 
   /**
+   * Resolves the marker all items share if the configuration is a constant
+   *
+   * The counterpart of {@link resolveMarkers} for a constant source, which needs
+   * no items: the one packed marker applies to every item, so a consumer can
+   * supply it once instead of once per item.
+   *
+   * @param config - Marker configuration specifying the data source
+   * @returns The packed marker, or `undefined` if the active source is not a
+   * constant
+   */
+  static resolveConstantMarker(config: MarkerConfig): number | undefined {
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return MarkerResolver.packMarker(config.constant.value);
+    }
+    return undefined;
+  }
+
+  /**
    * Resolves the marker of a single item without loading any table data
    *
    * Synchronous counterpart to {@link resolveMarkers} for items that are not

@@ -107,6 +107,25 @@ export class ColorResolver {
   }
 
   /**
+   * Resolves the color all items share if the configuration is a constant
+   *
+   * The counterpart of {@link resolveColors} for a constant source, which needs
+   * no items: the one packed color applies to every item, so a consumer can
+   * supply it once instead of once per item.
+   *
+   * @param config - Color configuration specifying the data source
+   * @returns The packed color, or `undefined` if the active source is not a
+   * constant
+   */
+  static resolveConstantColor(config: ColorConfig): number | undefined {
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return ColorResolver.packColor(config.constant.value);
+    }
+    return undefined;
+  }
+
+  /**
    * Resolves the color of a single item without loading any table data
    *
    * Synchronous counterpart to {@link resolveColors} for items that are not

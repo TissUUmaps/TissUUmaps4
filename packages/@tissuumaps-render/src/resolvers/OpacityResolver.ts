@@ -88,6 +88,25 @@ export class OpacityResolver {
   }
 
   /**
+   * Resolves the opacity all items share if the configuration is a constant
+   *
+   * The counterpart of {@link resolveOpacities} for a constant source, which needs
+   * no items: the one packed opacity applies to every item, so a consumer can
+   * supply it once instead of once per item.
+   *
+   * @param config - Opacity configuration specifying the data source
+   * @returns The packed opacity, or `undefined` if the active source is not a
+   * constant
+   */
+  static resolveConstantOpacity(config: OpacityConfig): number | undefined {
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return OpacityResolver.packOpacity(config.constant.value);
+    }
+    return undefined;
+  }
+
+  /**
    * Resolves the opacity of a single item without loading any table data
    *
    * Synchronous counterpart to {@link resolveOpacities} for items that are

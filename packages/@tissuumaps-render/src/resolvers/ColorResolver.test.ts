@@ -660,6 +660,26 @@ describe("ColorResolver", () => {
     });
   });
 
+  describe("resolveConstantColor", () => {
+    it("returns the packed color for a constant config", () => {
+      const config = { constant: { value: red } } satisfies ColorConfig;
+      expect(ColorResolver.resolveConstantColor(config)).toBe(
+        ColorUtils.packColor(red),
+      );
+    });
+
+    it("returns undefined for table-backed and random configs", () => {
+      const fromConfig = {
+        from: { column: "col1", palette: colorPalettes[0]!.id },
+      } satisfies ColorConfig;
+      const randomConfig = {
+        random: { palette: colorPalettes[0]!.id },
+      } satisfies ColorConfig;
+      expect(ColorResolver.resolveConstantColor(fromConfig)).toBeUndefined();
+      expect(ColorResolver.resolveConstantColor(randomConfig)).toBeUndefined();
+    });
+  });
+
   describe("resolveColorWithoutTable", () => {
     it("returns the packed constant color for a constant config", () => {
       const config = { constant: { value: red } } satisfies ColorConfig;

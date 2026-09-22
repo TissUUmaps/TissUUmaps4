@@ -3,12 +3,14 @@ import { deepEqual } from "fast-equals";
 import {
   AsyncUtils,
   type Color,
+  type ColorConfig,
   ColorUtils,
   type CoordinateSpace,
   type GroupValueMap,
   type Layer,
   type Marker,
   MathUtils,
+  type OpacityConfig,
   type Points,
   type PointsData,
   type PointsGeometry,
@@ -16,6 +18,8 @@ import {
   type SizeConfig,
   type Table,
   type TableData,
+  type TypedArray,
+  type VisibilityConfig,
   type WebGLPointsRenderOptions,
   defaultPointColor,
   defaultPointMarker,
@@ -55,7 +59,10 @@ import { WebGLUtils } from "./WebGLUtils";
  *
  * Every object owns its vertex array and attribute buffers. Synchronizing
  * compares the current model against the snapshot those buffers were loaded
- * from, and re-uploads only the attributes whose inputs changed.
+ * from, and re-uploads only the attributes whose inputs changed. An attribute
+ * whose configuration is a constant has no buffer at all: its value is
+ * supplied as a generic vertex attribute when drawing, which saves the buffer,
+ * its upload and the resolve (see {@link _backAttribute}).
  * Layer- and object-level properties (transforms, point size factors,
  * visibility and opacity) are shader uniforms, so changing them never touches
  * the buffers, and never requires a synchronization (see
@@ -231,8 +238,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * and then draws every object in its own `gl.POINTS` call with alpha
    * blending, with its data → world matrix, point size factor and opacity
    * factor as uniforms, computed from the current model (see
-   * {@link getRenderPasses}). Objects whose layer or object is invisible are
-   * skipped.
+   * {@link getRenderPasses}), and with the constants of its per-point
+   * attributes as generic vertex attributes (see {@link _backAttribute}).
+   * Objects whose layer or object is invisible are skipped.
    *
    * @throws Error if the renderer has not been initialized
    */
@@ -307,6 +315,31 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         opacityFactor,
       );
       this.context.gl.bindVertexArray(renderedPoints.vao);
+      const { marker, size, color } = renderedPoints.attributes;
+      if (typeof marker === "number") {
+        this.context.gl.vertexAttribI4ui(
+          WebGLPointsRenderer._attribLocations.MARKER,
+          marker,
+          0,
+          0,
+          0,
+        );
+      }
+      if (typeof size === "number") {
+        this.context.gl.vertexAttrib1f(
+          WebGLPointsRenderer._attribLocations.SIZE,
+          size,
+        );
+      }
+      if (typeof color === "number") {
+        this.context.gl.vertexAttribI4ui(
+          WebGLPointsRenderer._attribLocations.COLOR,
+          color,
+          0,
+          0,
+          0,
+        );
+      }
       this.context.gl.drawArrays(
         WebGL2RenderingContext.POINTS,
         0,
@@ -360,6 +393,11 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     this.context.gl.deleteVertexArray(renderedPoints.vao);
     for (const buffer of Object.values(renderedPoints.buffers)) {
       this.context.gl.deleteBuffer(buffer);
+    }
+    for (const attribute of Object.values(renderedPoints.attributes)) {
+      if (typeof attribute !== "number") {
+        this.context.gl.deleteBuffer(attribute);
+      }
     }
   }
 
@@ -480,7 +518,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           ref: newRef,
           renderConfigSnapshot,
           objectBounds: prepared.objectBounds,
-          ...this._createBuffers(
+          ...this._createVertexArray(
             prepared.maskedGeometry,
             prepared.packedPointMarkers,
             prepared.packedPointSizes,
@@ -489,25 +527,32 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         });
       } else {
         renderedPoints.renderConfigSnapshot = renderConfigSnapshot;
+        const { vao, attributes } = renderedPoints;
         if (prepared.packedPointMarkers !== undefined) {
-          this.context.loadBuffer(
-            WebGL2RenderingContext.ARRAY_BUFFER,
-            renderedPoints.buffers.marker,
+          attributes.marker = this._backAttribute(
+            vao,
+            WebGLPointsRenderer._attribLocations.MARKER,
+            WebGL2RenderingContext.UNSIGNED_BYTE,
             prepared.packedPointMarkers,
+            attributes.marker,
           );
         }
         if (prepared.packedPointSizes !== undefined) {
-          this.context.loadBuffer(
-            WebGL2RenderingContext.ARRAY_BUFFER,
-            renderedPoints.buffers.size,
+          attributes.size = this._backAttribute(
+            vao,
+            WebGLPointsRenderer._attribLocations.SIZE,
+            WebGL2RenderingContext.FLOAT,
             prepared.packedPointSizes,
+            attributes.size,
           );
         }
         if (prepared.packedPointColors !== undefined) {
-          this.context.loadBuffer(
-            WebGL2RenderingContext.ARRAY_BUFFER,
-            renderedPoints.buffers.color,
+          attributes.color = this._backAttribute(
+            vao,
+            WebGLPointsRenderer._attribLocations.COLOR,
+            WebGL2RenderingContext.UNSIGNED_INT,
             prepared.packedPointColors,
+            attributes.color,
           );
         }
       }
@@ -518,9 +563,11 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Prepares everything that has to be uploaded for an object
    *
    * Decides what the object's buffers need - the geometry for a new object,
-   * and the resolved markers, sizes and colors whose configurations changed -
-   * requests all of it before the first `await`, and then computes the bounds
-   * and folds the resolved visibilities and opacities into the colors.
+   * and the markers, sizes and colors whose configurations changed - requests
+   * all of it before the first `await`, and then computes the bounds and folds
+   * the resolved visibilities and opacities into the colors. An attribute whose
+   * configuration is a constant is not resolved per point: it is prepared as
+   * the one packed value all points share (see {@link _backAttribute}).
    *
    * Must be called synchronously for every object of a synchronization, see
    * {@link _createOrUpdateRenderedPoints}.
@@ -535,7 +582,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param loadTable - Loader for the object's table, if any
    * @param options - Optional abort signal
    * @returns The masked geometry (new objects only), the bounds, and the
-   * resolved attributes that have to be uploaded
+   * attributes that have to be uploaded, each resolved per point or as a
+   * constant
    */
   private static async _prepareRenderedPoints(
     newRef: PointsRef,
@@ -551,9 +599,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   ): Promise<{
     objectBounds: Rect;
     maskedGeometry: PointsGeometry | undefined;
-    packedPointMarkers: Uint8Array | undefined;
-    packedPointSizes: Float32Array | undefined;
-    packedPointColors: Uint32Array | undefined;
+    packedPointMarkers: Uint8Array | number | undefined;
+    packedPointSizes: Float32Array | number | undefined;
+    packedPointColors: Uint32Array | number | undefined;
   }> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
@@ -570,51 +618,67 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       renderedPoints === undefined
         ? newRef.data.loadGeometry({ signal })
         : undefined;
+    const constantPointMarker = MarkerResolver.resolveConstantMarker(
+      newRef.object.pointMarker,
+    );
+    const constantPointSize = SizeResolver.resolveConstantSize(
+      newRef.object.pointSize,
+    );
+    const constantPointColor = WebGLPointsRenderer._resolveConstantColor(
+      newRef.object.pointColor,
+      newRef.object.pointVisibility,
+      newRef.object.pointOpacity,
+    );
     const packedPointMarkersPromise = pointMarkerBufferChanged
-      ? MarkerResolver.resolveMarkers(
+      ? (constantPointMarker ??
+        MarkerResolver.resolveMarkers(
           newRef.itemIds,
           newRef.object.pointMarker,
           markerMaps,
           defaultPointMarker,
           { signal, loadTable },
-        )
+        ))
       : undefined;
     const packedPointSizesPromise = pointSizeBufferChanged
-      ? SizeResolver.resolveSizes(
+      ? (constantPointSize ??
+        SizeResolver.resolveSizes(
           newRef.itemIds,
           newRef.object.pointSize,
           sizeMaps,
           defaultPointSize,
           { signal, loadTable },
-        )
+        ))
       : undefined;
     const packedPointColorsPromise = pointColorBufferChanged
-      ? ColorResolver.resolveColors(
+      ? (constantPointColor ??
+        ColorResolver.resolveColors(
           newRef.itemIds,
           newRef.object.pointColor,
           colorMaps,
           defaultPointColor,
           { signal, loadTable },
-        )
+        ))
       : undefined;
-    const packedPointVisibilitiesPromise = pointColorBufferChanged
-      ? VisibilityResolver.resolveVisibilities(
-          newRef.itemIds,
-          newRef.object.pointVisibility,
-          visibilityMaps,
-          defaultPointVisibility,
-          { signal, loadTable },
-        )
-      : undefined;
-    const packedPointOpacitiesPromise = pointColorBufferChanged
-      ? OpacityResolver.resolveOpacities(
-          newRef.itemIds,
-          newRef.object.pointOpacity,
-          opacityMaps,
-          defaultPointOpacity,
-          { signal, loadTable },
-        )
-      : undefined;
+    const packedPointVisibilitiesPromise =
+      pointColorBufferChanged && constantPointColor === undefined
+        ? VisibilityResolver.resolveVisibilities(
+            newRef.itemIds,
+            newRef.object.pointVisibility,
+            visibilityMaps,
+            defaultPointVisibility,
+            { signal, loadTable },
+          )
+        : undefined;
+    const packedPointOpacitiesPromise =
+      pointColorBufferChanged && constantPointColor === undefined
+        ? OpacityResolver.resolveOpacities(
+            newRef.itemIds,
+            newRef.object.pointOpacity,
+            opacityMaps,
+            defaultPointOpacity,
+            { signal, loadTable },
+          )
+        : undefined;
     const [
       geometry,
       packedPointMarkers,
@@ -651,7 +715,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       throw new Error("Geometry must be loaded for new points object");
     }
     if (
-      packedPointColors !== undefined &&
+      typeof packedPointColors === "object" &&
       packedPointVisibilities !== undefined &&
       packedPointOpacities !== undefined
     ) {
@@ -677,29 +741,30 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Creates the vertex array and attribute buffers of an object, filled with
-   * the given attributes
+   * Creates the vertex array of an object, configured with its coordinate
+   * buffers and per-point attributes
+   *
+   * The coordinates always go into buffers; the other attributes go into
+   * buffers or are constants, see {@link _backAttribute}.
    *
    * @param geometry - X and Y coordinates of the points, in data coordinates
-   * @param packedPointMarkers - The marker index of every point
-   * @param packedPointSizes - The size of every point
-   * @param packedPointColors - The packed RGBA color of every point
-   * @returns The vertex array and the attribute buffers it is configured with
+   * @param packedPointMarkers - The marker index of every point, or of all points
+   * @param packedPointSizes - The size of every point, or of all points
+   * @param packedPointColors - The packed RGBA color of every point, or of all points
+   * @returns The vertex array, the coordinate buffers and the per-point
+   * attributes it is configured with
    */
-  private _createBuffers(
+  private _createVertexArray(
     geometry: PointsGeometry,
-    packedPointMarkers: Uint8Array,
-    packedPointSizes: Float32Array,
-    packedPointColors: Uint32Array,
-  ): Pick<RenderedPoints, "vao" | "buffers"> {
+    packedPointMarkers: Uint8Array | number,
+    packedPointSizes: Float32Array | number,
+    packedPointColors: Uint32Array | number,
+  ): Pick<RenderedPoints, "vao" | "buffers" | "attributes"> {
+    const vao = this.context.createVertexArray();
     const buffers = {
       x: this.context.createBuffer(),
       y: this.context.createBuffer(),
-      size: this.context.createBuffer(),
-      color: this.context.createBuffer(),
-      marker: this.context.createBuffer(),
     };
-    const vao = this.context.createVertexArray();
     this.context.gl.bindVertexArray(vao);
     this.context.configureVertexFloatAttribute(
       WebGL2RenderingContext.ARRAY_BUFFER,
@@ -715,27 +780,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       1,
       WebGL2RenderingContext.FLOAT,
     );
-    this.context.configureVertexFloatAttribute(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      buffers.size,
-      WebGLPointsRenderer._attribLocations.SIZE,
-      1,
-      WebGL2RenderingContext.FLOAT,
-    );
-    this.context.configureVertexIntAttribute(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      buffers.color,
-      WebGLPointsRenderer._attribLocations.COLOR,
-      1,
-      WebGL2RenderingContext.UNSIGNED_INT,
-    );
-    this.context.configureVertexIntAttribute(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      buffers.marker,
-      WebGLPointsRenderer._attribLocations.MARKER,
-      1,
-      WebGL2RenderingContext.UNSIGNED_BYTE,
-    );
     this.context.gl.bindVertexArray(null);
     this.context.allocateBuffer(
       WebGL2RenderingContext.ARRAY_BUFFER,
@@ -749,25 +793,104 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       geometry.ys,
       WebGL2RenderingContext.STATIC_DRAW,
     );
+    const attributes = {
+      marker: this._backAttribute(
+        vao,
+        WebGLPointsRenderer._attribLocations.MARKER,
+        WebGL2RenderingContext.UNSIGNED_BYTE,
+        packedPointMarkers,
+      ),
+      size: this._backAttribute(
+        vao,
+        WebGLPointsRenderer._attribLocations.SIZE,
+        WebGL2RenderingContext.FLOAT,
+        packedPointSizes,
+      ),
+      color: this._backAttribute(
+        vao,
+        WebGLPointsRenderer._attribLocations.COLOR,
+        WebGL2RenderingContext.UNSIGNED_INT,
+        packedPointColors,
+      ),
+    };
+    return { vao, buffers, attributes };
+  }
+
+  /**
+   * Brings a per-point attribute of an object up to date with its prepared
+   * values, and returns what the attribute is now backed by
+   *
+   * A per-point attribute is backed either by a buffer holding one value per
+   * point, or, if its configuration is a constant, by nothing: the vertex
+   * attribute array is disabled in the vertex array, and the constant is
+   * supplied as a generic vertex attribute when drawing (see {@link draw}).
+   * Per-point values refill an existing buffer in place, or allocate one and
+   * enable the attribute array if the attribute was constant before; a constant
+   * releases an existing buffer and disables the attribute array. The buffer is
+   * released with the vertex array bound, as that is the only way a deleted
+   * buffer is detached from its attribute pointer; otherwise the vertex array
+   * would keep it alive.
+   *
+   * @param vao - The vertex array of the object
+   * @param location - The attribute location, see {@link _attribLocations}
+   * @param type - The data type of the attribute: `gl.FLOAT` configures a float
+   * attribute, any other type an integer attribute
+   * @param values - The prepared values: one per point, or one constant
+   * @param current - What the attribute is currently backed by; omitted for a
+   * new object
+   * @returns The buffer now holding the values, or the constant
+   */
+  private _backAttribute(
+    vao: WebGLVertexArrayObject,
+    location: number,
+    type: GLenum,
+    values: Exclude<TypedArray, Float64Array> | number,
+    current?: WebGLBuffer | number,
+  ): WebGLBuffer | number {
+    if (typeof values === "number") {
+      if (typeof current === "object") {
+        this.context.gl.bindVertexArray(vao);
+        this.context.gl.deleteBuffer(current);
+        this.context.gl.disableVertexAttribArray(location);
+        this.context.gl.bindVertexArray(null);
+      }
+      return values;
+    }
+    if (typeof current === "object") {
+      this.context.loadBuffer(
+        WebGL2RenderingContext.ARRAY_BUFFER,
+        current,
+        values,
+      );
+      return current;
+    }
+    const buffer = this.context.createBuffer();
+    this.context.gl.bindVertexArray(vao);
+    if (type === WebGL2RenderingContext.FLOAT) {
+      this.context.configureVertexFloatAttribute(
+        WebGL2RenderingContext.ARRAY_BUFFER,
+        buffer,
+        location,
+        1,
+        type,
+      );
+    } else {
+      this.context.configureVertexIntAttribute(
+        WebGL2RenderingContext.ARRAY_BUFFER,
+        buffer,
+        location,
+        1,
+        type,
+      );
+    }
+    this.context.gl.bindVertexArray(null);
     this.context.allocateBuffer(
       WebGL2RenderingContext.ARRAY_BUFFER,
-      buffers.size,
-      packedPointSizes,
+      buffer,
+      values,
       WebGL2RenderingContext.STATIC_DRAW,
     );
-    this.context.allocateBuffer(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      buffers.color,
-      packedPointColors,
-      WebGL2RenderingContext.STATIC_DRAW,
-    );
-    this.context.allocateBuffer(
-      WebGL2RenderingContext.ARRAY_BUFFER,
-      buffers.marker,
-      packedPointMarkers,
-      WebGL2RenderingContext.STATIC_DRAW,
-    );
-    return { vao, buffers };
+    return buffer;
   }
 
   /**
@@ -794,6 +917,32 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     const [xMin, xMax] = await MathUtils.computeRange(xs, { signal });
     const [yMin, yMax] = await MathUtils.computeRange(ys, { signal });
     return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
+  }
+
+  /**
+   * Resolves the packed RGBA color all points share if the color, visibility
+   * and opacity configurations are all constants, `undefined` otherwise
+   *
+   * The three fold into one attribute (see {@link ColorUtils.withAlpha}), so
+   * it is only constant if all of them are.
+   */
+  private static _resolveConstantColor(
+    colorConfig: ColorConfig,
+    visibilityConfig: VisibilityConfig,
+    opacityConfig: OpacityConfig,
+  ): number | undefined {
+    const packedColor = ColorResolver.resolveConstantColor(colorConfig);
+    const packedVisibility =
+      VisibilityResolver.resolveConstantVisibility(visibilityConfig);
+    const packedOpacity = OpacityResolver.resolveConstantOpacity(opacityConfig);
+    if (
+      packedColor === undefined ||
+      packedVisibility === undefined ||
+      packedOpacity === undefined
+    ) {
+      return undefined;
+    }
+    return ColorUtils.withAlpha(packedColor, packedVisibility, packedOpacity);
   }
 
   /**
@@ -935,21 +1084,25 @@ type PointsRef = ObjectRef<Points, PointsData>;
 /**
  * GPU state for a single points object
  *
- * Holds the vertex array and the attribute buffers it is configured with, plus
- * a snapshot of the model values the buffers were loaded from, which the change
- * predicates compare against: every property they read has to be captured in
- * it. Layer- and object-level properties are read from the current model when
- * drawing (see {@link WebGLRendererBase.getRenderPasses}), and are not part of
- * the snapshot.
+ * Holds the vertex array, the coordinate buffers it is configured with, and
+ * the per-point attributes, each backed by a buffer holding one value per
+ * point or by one constant value for all points (see
+ * {@link WebGLPointsRenderer._backAttribute}), plus a snapshot of the model
+ * values they were loaded from, which the change predicates compare against:
+ * every property they read has to be captured in it. Layer- and object-level
+ * properties are read from the current model when drawing (see
+ * {@link WebGLRendererBase.getRenderPasses}), and are not part of the snapshot.
  */
 type RenderedPoints = RenderedObjectBase<Points, PointsData> & {
   vao: WebGLVertexArrayObject;
   buffers: {
     x: WebGLBuffer;
     y: WebGLBuffer;
-    size: WebGLBuffer;
-    color: WebGLBuffer;
-    marker: WebGLBuffer;
+  };
+  attributes: {
+    marker: WebGLBuffer | number;
+    size: WebGLBuffer | number;
+    color: WebGLBuffer | number;
   };
   renderConfigSnapshot: Pick<
     Points,

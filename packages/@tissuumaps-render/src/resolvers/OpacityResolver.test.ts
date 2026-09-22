@@ -253,6 +253,18 @@ describe("OpacityResolver", () => {
     });
   });
 
+  describe("resolveConstantOpacity", () => {
+    it("returns the packed opacity for a constant config", () => {
+      const config = { constant: { value: 1 } } satisfies OpacityConfig;
+      expect(OpacityResolver.resolveConstantOpacity(config)).toBe(255);
+    });
+
+    it("returns undefined for table-backed configs", () => {
+      const config = { from: { column: "col1" } } satisfies OpacityConfig;
+      expect(OpacityResolver.resolveConstantOpacity(config)).toBeUndefined();
+    });
+  });
+
   describe("resolveOpacityWithoutTable", () => {
     it("returns the packed constant opacity for a constant config", () => {
       const config = { constant: { value: 1 } } satisfies OpacityConfig;

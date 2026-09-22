@@ -87,6 +87,27 @@ export class VisibilityResolver {
   }
 
   /**
+   * Resolves the visibility all items share if the configuration is a constant
+   *
+   * The counterpart of {@link resolveVisibilities} for a constant source, which needs
+   * no items: the one packed visibility applies to every item, so a consumer can
+   * supply it once instead of once per item.
+   *
+   * @param config - Visibility configuration specifying the data source
+   * @returns The packed visibility, or `undefined` if the active source is not a
+   * constant
+   */
+  static resolveConstantVisibility(
+    config: VisibilityConfig,
+  ): number | undefined {
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return VisibilityResolver.packVisibility(config.constant.value);
+    }
+    return undefined;
+  }
+
+  /**
    * Resolves the visibility of a single item without loading any table data
    *
    * Synchronous counterpart to {@link resolveVisibilities} for items that are

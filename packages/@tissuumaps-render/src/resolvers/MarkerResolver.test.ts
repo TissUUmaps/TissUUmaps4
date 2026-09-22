@@ -245,6 +245,20 @@ describe("MarkerResolver", () => {
     });
   });
 
+  describe("resolveConstantMarker", () => {
+    it("returns the packed marker for a constant config", () => {
+      const config = {
+        constant: { value: Marker.Diamond },
+      } satisfies MarkerConfig;
+      expect(MarkerResolver.resolveConstantMarker(config)).toBe(Marker.Diamond);
+    });
+
+    it("returns undefined for table-backed configs", () => {
+      const config = { from: { column: "col1" } } satisfies MarkerConfig;
+      expect(MarkerResolver.resolveConstantMarker(config)).toBeUndefined();
+    });
+  });
+
   describe("resolveMarkerWithoutTable", () => {
     it("returns the packed constant marker for a constant config", () => {
       const config = {
