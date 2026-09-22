@@ -58,7 +58,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
       <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
         {isEditing ? (
           <>
-            Source:
+            <FieldLabel>Source</FieldLabel>
             <SimpleSelect
               items={providerEntries}
               itemLabel={([, provider]) => provider.name}

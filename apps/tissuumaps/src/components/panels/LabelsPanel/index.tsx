@@ -124,6 +124,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
               <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
+                aria-label="Opacity"
                 inputMode="decimal"
                 step={0.05}
                 min={0}

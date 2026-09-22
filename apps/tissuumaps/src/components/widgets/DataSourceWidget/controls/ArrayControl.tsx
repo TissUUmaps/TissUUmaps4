@@ -66,18 +66,21 @@ export const ArrayControl = withJsonFormsArrayControlProps(
                   />
                   <Button
                     disabled={!props.enabled}
+                    aria-label="Move up"
                     onClick={() => props.moveUp?.(props.path, index)()}
                   >
                     <ArrowUpIcon />
                   </Button>
                   <Button
                     disabled={!props.enabled}
+                    aria-label="Move down"
                     onClick={() => props.moveDown?.(props.path, index)()}
                   >
                     <ArrowDownIcon />
                   </Button>
                   <Button
                     disabled={!props.enabled}
+                    aria-label="Remove"
                     onClick={() => props.removeItems?.(props.path, [index])()}
                   >
                     <XIcon />

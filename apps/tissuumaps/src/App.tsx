@@ -86,7 +86,9 @@ function DockviewRightHeaderActionsComponent() {
   const dark = useSettingsStore((state) => state.dark);
   const setDark = useSettingsStore((state) => state.setDark);
   return (
-    <Button onClick={() => setDark(!dark)}>{dark ? <Sun /> : <Moon />}</Button>
+    <Button aria-label="Dark mode toggle" onClick={() => setDark(!dark)}>
+      {dark ? <Sun /> : <Moon />}{" "}
+    </Button>
   );
 }
 

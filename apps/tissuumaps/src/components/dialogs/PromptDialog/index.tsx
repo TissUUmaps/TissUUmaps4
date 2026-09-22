@@ -74,6 +74,7 @@ export function PromptDialog({
           </AlertDialogHeader>
           <Input
             {...inputProps}
+            aria-label={title}
             ref={inputRef}
             name="prompt"
             defaultValue={defaultValue}

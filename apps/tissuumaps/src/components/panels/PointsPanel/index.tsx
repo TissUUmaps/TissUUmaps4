@@ -127,6 +127,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               <InputGroupAddon>s</InputGroupAddon>
               <InputGroupInput
                 type="number"
+                aria-label="Point size"
                 inputMode="decimal"
                 step={0.1}
                 min={0}
@@ -145,6 +146,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
+                aria-label="Opacity"
                 inputMode="decimal"
                 step={0.05}
                 min={0}
