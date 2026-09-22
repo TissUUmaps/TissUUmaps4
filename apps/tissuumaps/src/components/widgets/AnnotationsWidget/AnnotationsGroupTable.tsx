@@ -1,12 +1,12 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import type { GenericArray, TableData } from "@tissuumaps/core";
 
 import {
   VirtualTable,
   type VirtualTableColumnDef,
 } from "@/components/common/virtual-table";
-
-import { rowHeight } from "./rowHeight";
-import { useGroupRows } from "./useGroupRows";
+import { useTableData } from "@/hooks/useData";
 
 export type AnnotationsGroupTableRowData = {
   group: string;
@@ -17,21 +17,84 @@ export type AnnotationsGroupTableColumnDef =
 
 export type AnnotationsGroupTableProps = {
   height: number;
+  rowHeight: number;
   table: string;
   groupByColumn: string;
   extraGroupColumnDefs?: AnnotationsGroupTableColumnDef[];
 };
 
+type LoadedGroups = {
+  tableData: TableData;
+  groupByColumn: string;
+  groups: GenericArray<string>;
+};
+
 export function AnnotationsGroupTable({
   height,
+  rowHeight,
   table,
   groupByColumn,
   extraGroupColumnDefs,
 }: AnnotationsGroupTableProps) {
-  const { rowCount, getRows, loaded } = useGroupRows(table, groupByColumn);
+  // the groups are kept with what they were loaded from, so that the ones of
+  // a previous table or column are not shown as the current ones
+  const [loadedGroups, setLoadedGroups] = useState<LoadedGroups | null>(null);
+
+  const tableData = useTableData(table);
+
+  const groups =
+    loadedGroups?.tableData === tableData &&
+    loadedGroups.groupByColumn === groupByColumn
+      ? loadedGroups.groups
+      : null;
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    if (tableData !== null) {
+      tableData
+        .loadUniqueValueCounts<string>(groupByColumn, {
+          signal: abortController.signal,
+        })
+        .then((uniqueValueCounts) => {
+          if (!abortController.signal.aborted) {
+            setLoadedGroups({
+              tableData,
+              groupByColumn,
+              groups: Array.from(uniqueValueCounts.keys()),
+            });
+          }
+        })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error loading table unique value counts", error);
+          }
+        });
+    }
+    return () => {
+      abortController.abort();
+    };
+  }, [tableData, groupByColumn]);
+
+  // the groups are sorted as the plain values they are loaded as; a row object
+  // per group would cost as much as one per item for a column of unique values
+  const sortedGroups = useMemo(() => {
+    if (groups === null) {
+      return null;
+    }
+    const sortedGroups = Array.from(groups, String);
+    sortedGroups.sort((a, b) => a.localeCompare(b));
+    return sortedGroups;
+  }, [groups]);
+
+  const getRows = useCallback(
+    (startIndex: number, endIndex: number): AnnotationsGroupTableRowData[] =>
+      sortedGroups?.slice(startIndex, endIndex).map((group) => ({ group })) ??
+      [],
+    [sortedGroups],
+  );
 
   const columnDefs = useMemo(() => {
-    if (!loaded) {
+    if (sortedGroups === null) {
       return [];
     }
     const columnDefs: AnnotationsGroupTableColumnDef[] = [
@@ -41,11 +104,11 @@ export function AnnotationsGroupTable({
       columnDefs.push(...extraGroupColumnDefs);
     }
     return columnDefs;
-  }, [loaded, groupByColumn, extraGroupColumnDefs]);
+  }, [sortedGroups, groupByColumn, extraGroupColumnDefs]);
 
   return (
     <VirtualTable
-      rowCount={rowCount}
+      rowCount={sortedGroups?.length ?? 0}
       getRows={getRows}
       getRowId={(row) => row.group}
       columnDefs={columnDefs}
