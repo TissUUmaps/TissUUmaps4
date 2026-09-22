@@ -9,10 +9,11 @@ import {
 } from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 
-import type {
-  GenericArray,
-  ShapesGeometry,
-  TypedArray,
+import {
+  type GenericArray,
+  NumberUtils,
+  type ShapesGeometry,
+  type TypedArray,
 } from "@tissuumaps/core";
 
 import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
@@ -288,6 +289,9 @@ async function readParquetColumn(
   if (result === undefined) {
     throw new Error(`Column "${column}" not found in Parquet file`);
   }
+  if (result instanceof BigInt64Array || result instanceof BigUint64Array) {
+    return Float64Array.from(result, (v) => NumberUtils.parseSafeInt(v));
+  }
   return result;
 }
 
@@ -346,16 +350,7 @@ async function readIdsAndNames(
   ]);
   const ids =
     idData !== undefined
-      ? Array.from(idData, (id) => {
-          if (id === undefined || id === "") {
-            throw new Error(`Missing ID in column '${idColumn}'`);
-          }
-          const numericId = Number(id);
-          if (!Number.isSafeInteger(numericId)) {
-            throw new Error(`Invalid ID in column '${idColumn}'`);
-          }
-          return numericId;
-        })
+      ? Array.from(idData, (id) => NumberUtils.parseSafeInt(id))
       : undefined;
   const names =
     nameData !== undefined ? Array.from(nameData, String) : undefined;
@@ -471,30 +466,12 @@ async function handleColumnRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  const columnMetadata = parquetSchema(metadata).children.find(
-    (columnMetadata) => columnMetadata.element.name === request.column,
-  );
-  if (
-    columnMetadata !== undefined &&
-    columnMetadata.element.type === "INT64" &&
-    (columnMetadata.element.logical_type !== undefined
-      ? columnMetadata.element.logical_type.type === "INTEGER" &&
-        columnMetadata.element.logical_type.bitWidth === 64
-      : columnMetadata.element.converted_type === undefined ||
-        columnMetadata.element.converted_type === "INT_64" ||
-        columnMetadata.element.converted_type === "UINT_64")
-  ) {
-    throw new Error("64-bit integer columns are not supported");
-  }
   const data = await readParquetColumn(
     buffer,
     metadata,
     request.column,
     onProgress,
   );
-  if (data instanceof BigInt64Array || data instanceof BigUint64Array) {
-    throw new Error("64-bit integer columns are not supported");
-  }
   return {
     response: { op: "column", data },
     transfer:
@@ -592,6 +569,14 @@ async function handleShapesRequest(
   };
 }
 
+/** Parses a numeric column statistic, which is a bigint for int64 columns */
+function parseStatistic(value: unknown): number | undefined {
+  if (typeof value !== "number" && typeof value !== "bigint") {
+    return undefined;
+  }
+  return NumberUtils.tryParseFinite(value, { requireSafeBigInt: true });
+}
+
 async function handleRangeRequest(
   request: ParquetRangeRequest,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -631,14 +616,16 @@ async function handleRangeRequest(
       return { response: { op: "range", range: undefined } };
     }
     const { min_value, max_value } = columnChunk.meta_data.statistics;
-    if (typeof min_value !== "number" || typeof max_value !== "number") {
+    const min = parseStatistic(min_value);
+    const max = parseStatistic(max_value);
+    if (min === undefined || max === undefined) {
       return { response: { op: "range", range: undefined } };
     }
-    if (min_value < vmin) {
-      vmin = min_value;
+    if (min < vmin) {
+      vmin = min;
     }
-    if (max_value > vmax) {
-      vmax = max_value;
+    if (max > vmax) {
+      vmax = max;
     }
   }
   return {

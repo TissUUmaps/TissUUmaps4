@@ -96,7 +96,7 @@ A project showing the circles and the polygons of a [SpatialData](https://spatia
 
 ## Limitations
 
-- Columns of 64-bit integers are not supported, as TissUUmaps does not handle bigint values. An integer ID column is the exception: its values are read as numbers, and have to be below 2^53.
+- Columns of 64-bit integers are read as numbers, so their values have to be below 2^53. A column with a larger value fails to load rather than losing precision.
 - Geometries are read from WKB columns only. Other GeoParquet encodings are read as their raw values.
 - A geometry column that declares no geometry types is offered as coordinate columns; reading them fails if a row is not a point.
 - Workspace files need an open workspace.
