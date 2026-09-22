@@ -291,9 +291,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Runs in two passes. The first prepares every object (see
    * {@link _prepareRenderedShapes}), issuing all requests before the first
    * `await`. The second awaits the preparations in order and uploads them, each
-   * in one synchronous block that creates the new textures and releases the
-   * ones they replace, so a draw in between never sees a half-updated object
-   * or a released texture. New objects join the rendered objects as soon as
+   * in one synchronous block that refills the colors textures in place, and
+   * creates a new scanline data texture and releases the one it replaces, so a
+   * draw in between never sees a half-updated object or a released texture. New objects join the rendered objects as soon as
    * their textures exist, so an aborted synchronization leaves nothing
    * orphaned.
    *
@@ -430,20 +430,16 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           renderedShapes.numScanlines = prepared.numScanlines;
         }
         if (prepared.packedShapeFillColors !== undefined) {
-          const shapeFillColorsTexture = this._createShapeColorsTexture(
+          this._loadShapeColorsTexture(
+            renderedShapes.shapeFillColorsTexture,
             prepared.packedShapeFillColors,
           );
-          this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
-          renderedShapes.shapeFillColorsTexture = shapeFillColorsTexture;
         }
         if (prepared.packedShapeStrokeColors !== undefined) {
-          const shapeStrokeColorsTexture = this._createShapeColorsTexture(
+          this._loadShapeColorsTexture(
+            renderedShapes.shapeStrokeColorsTexture,
             prepared.packedShapeStrokeColors,
           );
-          this.context.gl.deleteTexture(
-            renderedShapes.shapeStrokeColorsTexture,
-          );
-          renderedShapes.shapeStrokeColorsTexture = shapeStrokeColorsTexture;
         }
       }
     }
@@ -712,7 +708,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Uploads packed fill or stroke colors as an R32UI texture
+   * Uploads packed fill or stroke colors as a new R32UI texture
    *
    * @param packedShapeColors - The packed RGBA colors, one per shape, aligned
    * to the texture width
@@ -725,6 +721,33 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       1 * WebGLShapesRenderer._shapeColorsTextureWidth; // values per texture line, 1 per R32UI texel
     return this.context.createDataTexture(
       WebGL2RenderingContext.R32UI,
+      WebGLShapesRenderer._shapeColorsTextureWidth,
+      packedShapeColors.length / numValuesPerTextureLine,
+      WebGL2RenderingContext.RED_INTEGER,
+      WebGL2RenderingContext.UNSIGNED_INT,
+      packedShapeColors,
+    );
+  }
+
+  /**
+   * Refills an existing colors texture with packed fill or stroke colors
+   *
+   * The texture has to have been created by {@link _createShapeColorsTexture}
+   * for the same number of shapes: its storage is immutable, so the colors
+   * have to fill it exactly.
+   *
+   * @param texture - The colors texture to refill
+   * @param packedShapeColors - The packed RGBA colors, one per shape, aligned
+   * to the texture width
+   */
+  private _loadShapeColorsTexture(
+    texture: WebGLTexture,
+    packedShapeColors: Uint32Array,
+  ): void {
+    const numValuesPerTextureLine =
+      1 * WebGLShapesRenderer._shapeColorsTextureWidth; // values per texture line, 1 per R32UI texel
+    this.context.loadDataTexture(
+      texture,
       WebGLShapesRenderer._shapeColorsTextureWidth,
       packedShapeColors.length / numValuesPerTextureLine,
       WebGL2RenderingContext.RED_INTEGER,
