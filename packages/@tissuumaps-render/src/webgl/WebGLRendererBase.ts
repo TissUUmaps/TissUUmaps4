@@ -40,10 +40,15 @@ type ItemsInfo = { itemIds: number[]; itemsMask: Uint8Array };
  *
  * The layers and objects to render are set by {@link setModel};
  * {@link needsSynchronization} tells whether the rendered objects have to be
- * synchronized with them. The properties that are applied when drawing are
- * never captured: {@link getRenderPasses} reads them from the current model on
- * every draw, so setting a model that only changes those takes effect on the
- * next draw, with nothing to synchronize.
+ * synchronized with them, or with changed render options (see
+ * {@link getRenderOptionsSyncState}), which {@link synchronize} does: it
+ * prepares every object before it uploads them one by one, through
+ * {@link prepareRenderedObject}, {@link createRenderedObject} and
+ * {@link updateRenderedObject}, which the renderers implement for their GPU
+ * resources. The properties that are applied when drawing are never captured:
+ * {@link getRenderPasses} reads them from the current model on every draw, so
+ * setting a model that only changes those takes effect on the next draw, with
+ * nothing to synchronize.
  *
  * The rendered objects, each owning the GPU resources of one reference, are
  * kept in {@link _renderedObjects}, by layer and object. Their draw order is
@@ -58,6 +63,18 @@ type ItemsInfo = { itemIds: number[]; itemsMask: Uint8Array };
 export abstract class WebGLRendererBase<
   TObject extends Points | Shapes,
   TObjectData extends PointsData | ShapesData,
+  TSyncContext extends {
+    tables: Table[];
+    loadObject: (
+      object: TObject,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TObjectData>;
+    loadTable: (
+      table: Table,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>;
+  },
+  TPreparedObject,
   TRenderedObject extends RenderedObjectBase<TObject, TObjectData>,
 > {
   readonly context: WebGLContext;
@@ -116,51 +133,217 @@ export abstract class WebGLRendererBase<
   }
 
   /**
-   * Returns whether the rendered objects have to be synchronized with the current model
+   * Gets the bounding box of all drawn objects, in world coordinates
+   *
+   * Reads the transforms from the current model (see
+   * {@link getRenderPasses}), so the bounds follow a model that requires no
+   * resynchronization.
+   *
+   * @returns The bounds, or null if nothing is drawn
+   */
+  getRenderedBounds(): Rect | null {
+    return this.getRenderPasses().reduce<Rect | null>(
+      (union, { layer, object, renderedObject }) => {
+        const bounds = TransformUtils.transformBoundingBox(
+          renderedObject.objectBounds,
+          WebGLUtils.createDataToWorldMatrix(object.transform, layer.transform),
+        );
+        return union !== null ? GeometryUtils.union(union, bounds) : bounds;
+      },
+      null,
+    );
+  }
+
+  /**
+   * Returns whether the rendered objects have to be synchronized with the
+   * current model and render options
    *
    * Compares the state that a synchronization depends on (see
-   * {@link getSyncState}) between the current model and the model the last
-   * synchronization was based on (see {@link recordSyncState}). Everything else
-   * about the model - the properties that are applied when drawing, and the
-   * order of the layers and objects - is fully applied by {@link setModel}.
+   * {@link getSyncState}) against the one the last synchronization was based
+   * on (see {@link _recordSyncState}). Everything else about the model - the
+   * properties that are applied when drawing, and the order of the layers and
+   * objects - is fully applied by {@link setModel}, and everything else about
+   * the render options by the next draw.
    */
   needsSynchronization(): boolean {
     return !deepEqual(this.getSyncState(), this._lastSyncState);
   }
 
   /**
-   * Records the current model as the one the rendered objects are being synchronized with
+   * Synchronizes the rendered objects with the current model and render options
    *
-   * Every synchronization has to call this first, before its first `await`: the
-   * model may be set again while it runs, and {@link needsSynchronization} has
-   * to report such a change against the model the synchronization actually
-   * read, not against the one it found when it finished. A synchronization
-   * that fails has to hand the returned state back to
-   * {@link discardSyncState}, so that the model is synchronized again.
+   * Loads the objects of the model set by {@link setModel} (see
+   * {@link loadObjects}), drops the rendered objects that no longer match one
+   * (see {@link matchOrDestroyRenderedObjects}), and creates or updates the
+   * GPU resources of the rest in two passes. The first prepares every object
+   * (see {@link prepareRenderedObject}), issuing all requests before the first
+   * `await`. The second awaits the preparations in order and uploads them (see
+   * {@link createRenderedObject} and {@link updateRenderedObject}), each in
+   * one synchronous block, so a draw in between never sees a half-updated
+   * object. New objects join the rendered objects as soon as their resources
+   * exist, so an aborted synchronization leaves nothing orphaned.
    *
-   * @returns The recorded state
+   * Requests resolve through operations that are shared between their callers
+   * and cancelled once the last of them has given up, unless it is reclaimed
+   * within the same task. Issuing them one object at a time would therefore
+   * throw away the requests of a synchronization that has just been
+   * superseded: the gap until the new pass reaches an object grows with the
+   * objects ahead of it, until it spans a task and their operations are
+   * cancelled and have to start over from scratch. Issuing them all before the
+   * first `await` keeps that gap within a single task, no matter how many
+   * objects there are or how long each of them takes. It also lets them run
+   * concurrently, at the price of holding every object's preparation until the
+   * second pass has uploaded it.
+   *
+   * An object whose preparation fails is logged and dropped, like an object
+   * whose data fails to load (see {@link loadObjects}), and so is an object
+   * whose preparation finds nothing to render; the other objects are
+   * unaffected. A synchronization that fails or is aborted leaves the model
+   * unsynchronized (see {@link _discardSyncState}).
+   *
+   * @param syncContext - The inputs to synchronize with: the tables and
+   * group-to-value maps that the objects resolve their properties from, and
+   * the loaders for object and table data. It carries inputs only; what an
+   * object was resolved from is captured per object (see {@link ObjectRef})
+   * @param options - Optional abort signal
+   * @throws Error if no model has been set (see {@link setModel})
    */
-  protected recordSyncState(): object | undefined {
-    this._lastSyncState = this.getSyncState();
-    return this._lastSyncState;
+  async synchronize(
+    syncContext: TSyncContext,
+    options?: { signal?: AbortSignal },
+  ): Promise<void> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const syncState = this._recordSyncState();
+    try {
+      const newRefs = await this.loadObjects(syncContext, { signal });
+      const matches = this.matchOrDestroyRenderedObjects(newRefs);
+      const preparations = matches.map(({ newRef, renderedObject }) => {
+        const preparedPromise = this.prepareRenderedObject(
+          newRef,
+          renderedObject,
+          syncContext,
+          { signal },
+        );
+        preparedPromise.catch(() => {}); // prevent unhandled rejections in console
+        return { newRef, renderedObject, preparedPromise };
+      });
+      for (const { newRef, renderedObject, preparedPromise } of preparations) {
+        const prepared = await this._settleRenderedObjectPreparation(
+          newRef,
+          renderedObject,
+          preparedPromise,
+          { signal },
+        );
+        if (prepared === undefined) {
+          continue;
+        }
+        // no awaits from here on, so that the object is uploaded atomically
+        if (renderedObject === undefined) {
+          this.addRenderedObject(this.createRenderedObject(newRef, prepared));
+        } else {
+          this.updateRenderedObject(renderedObject, prepared);
+        }
+      }
+    } catch (error) {
+      this._discardSyncState(syncState);
+      throw error;
+    }
   }
 
   /**
-   * Forgets a recorded synchronization state, unless another synchronization
-   * has recorded its own since
+   * Returns the state of the current model and render options that a
+   * synchronization depends on
    *
-   * Called by a synchronization that failed, so that
-   * {@link needsSynchronization} reports the model as unsynchronized again. A
-   * synchronization that was aborted because a newer one started must not
-   * undo what the newer one recorded, hence the identity check.
+   * The layers and objects are keyed by ID, so that their order - the draw order
+   * - is not part of the state (see {@link getLayerSyncState} and
+   * {@link getObjectSyncState} for what is, and
+   * {@link getRenderOptionsSyncState} for the render options).
    *
-   * @param syncState - The state the failed synchronization recorded, as
-   * returned by {@link recordSyncState}
+   * @returns The state, or `undefined` if no model has been set
    */
-  protected discardSyncState(syncState: object | undefined): void {
-    if (this._lastSyncState === syncState) {
-      this._lastSyncState = undefined;
+  protected getSyncState(): object | undefined {
+    if (this._model === undefined) {
+      return undefined;
     }
+    return {
+      layers: Object.fromEntries(
+        this._model.layers.map((layer) => [
+          layer.id,
+          this.getLayerSyncState(layer),
+        ]),
+      ),
+      objects: Object.fromEntries(
+        this._model.objects.map((object) => [
+          object.id,
+          this.getObjectSyncState(object),
+        ]),
+      ),
+      renderOptions: this.getRenderOptionsSyncState(),
+    };
+  }
+
+  /**
+   * Returns the state of a layer that a synchronization depends on
+   *
+   * The counterpart of {@link getObjectSyncState} for layers. The point size
+   * factor is blanked out as well: it is a uniform of the points renderer, and
+   * the shapes renderer never reads it. So is the name, which nothing rendered
+   * depends on.
+   *
+   * @param layer - The layer to return the state of
+   * @returns The layer without the properties that are applied when drawing,
+   * and without the cosmetic ones
+   */
+  protected getLayerSyncState(layer: Layer): object {
+    return {
+      ...layer,
+      name: undefined,
+      transform: undefined,
+      visibility: undefined,
+      opacity: undefined,
+      pointSizeFactor: undefined,
+    };
+  }
+
+  /**
+   * Returns the state of an object that a synchronization depends on
+   *
+   * Everything but the properties that are applied when drawing, which are read
+   * from the current model on every draw (see {@link getRenderPasses}) and
+   * hence need no synchronization, and but the cosmetic ones, which nothing
+   * rendered depends on. Those are blanked out rather than dropped, so that a
+   * property added to the model later is part of the state, and thereby
+   * requires a resynchronization, unless it is blanked out here as well.
+   *
+   * The result is only ever deep-compared against that of another object, hence
+   * the opaque return type.
+   *
+   * @param object - The object (points or shapes) to return the state of
+   * @returns The object without the properties that are applied when drawing,
+   * and without the cosmetic ones
+   */
+  protected getObjectSyncState(object: TObject): object {
+    return {
+      ...object,
+      name: undefined,
+      transform: undefined,
+      visibility: undefined,
+      opacity: undefined,
+    };
+  }
+
+  /**
+   * Returns the state of the render options that a synchronization depends on
+   *
+   * Render options that are applied when drawing need no synchronization and
+   * are left out. Nothing by default; a renderer whose GPU resources are built
+   * for a render option overrides this to return it.
+   *
+   * @returns The state, or `undefined` if no render option needs a synchronization
+   */
+  protected getRenderOptionsSyncState(): object | undefined {
+    return undefined;
   }
 
   /**
@@ -177,23 +360,15 @@ export abstract class WebGLRendererBase<
    * items on a layer are skipped silently, which also covers empty objects and
    * objects whose table is empty - those are legitimate states, not failures.
    *
-   * @param tables - The tables that the objects resolve their item layers from
-   * @param loadObject - A function to load the data of an object
-   * @param loadTable - A function to load the data of a table
+   * @param syncContext - The inputs of the current synchronization: the tables
+   * that the objects resolve their item layers from, and the loaders for
+   * object and table data
    * @param options - Optional abort signal
    * @returns A promise that resolves to one reference per loaded object and layer
    * @throws Error if no model has been set (see {@link setModel})
    */
   protected async loadObjects(
-    tables: Table[],
-    loadObject: (
-      object: TObject,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TObjectData>,
-    loadTable: (
-      table: Table,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
+    syncContext: TSyncContext,
     options?: { signal?: AbortSignal },
   ): Promise<ObjectRef<TObject, TObjectData>[]> {
     const { signal } = options ?? {};
@@ -220,7 +395,7 @@ export abstract class WebGLRendererBase<
         }
         let dataPromise = dataPromises.get(currentObject.id);
         if (dataPromise === undefined) {
-          dataPromise = loadObject(currentObject, { signal });
+          dataPromise = syncContext.loadObject(currentObject, { signal });
           dataPromise.catch((error) => {
             if (!signal?.aborted) {
               console.error(
@@ -240,11 +415,11 @@ export abstract class WebGLRendererBase<
             currentObject.dataSource.table,
           );
           if (tableDataPromise === undefined) {
-            const table = tables.find(
+            const table = syncContext.tables.find(
               (table) => table.id === currentObject.dataSource.table,
             );
             if (table !== undefined) {
-              tableDataPromise = loadTable(table, { signal });
+              tableDataPromise = syncContext.loadTable(table, { signal });
             } else {
               tableDataPromise = Promise.reject(
                 new Error(
@@ -403,28 +578,6 @@ export abstract class WebGLRendererBase<
   }
 
   /**
-   * Gets the bounding box of all drawn objects, in world coordinates
-   *
-   * Reads the transforms from the current model (see
-   * {@link getRenderPasses}), so the bounds follow a model that requires no
-   * resynchronization.
-   *
-   * @returns The bounds, or null if nothing is drawn
-   */
-  getRenderedBounds(): Rect | null {
-    return this.getRenderPasses().reduce<Rect | null>(
-      (union, { layer, object, renderedObject }) => {
-        const bounds = TransformUtils.transformBoundingBox(
-          renderedObject.objectBounds,
-          WebGLUtils.createDataToWorldMatrix(object.transform, layer.transform),
-        );
-        return union !== null ? GeometryUtils.union(union, bounds) : bounds;
-      },
-      null,
-    );
-  }
-
-  /**
    * Adds a newly created rendered object under its layer and object
    *
    * @param renderedObject - The rendered object to add
@@ -462,6 +615,67 @@ export abstract class WebGLRendererBase<
     }
     this._renderedObjects.clear();
   }
+
+  /**
+   * Prepares everything that has to be uploaded for an object
+   *
+   * Runs in the first pass of {@link synchronize}, which calls it synchronously
+   * for every object of a synchronization, one after the other: every request
+   * has to be issued before the first `await`. Decides, from the object's
+   * current rendered state, which of its GPU resources have to be rebuilt, and
+   * resolves only those.
+   *
+   * @param newRef - The object to prepare
+   * @param renderedObject - The object's current rendered state, if it is reused
+   * @param syncContext - The inputs of the current synchronization
+   * @param options - Optional abort signal
+   * @returns What {@link createRenderedObject} or {@link updateRenderedObject}
+   * upload, or `null` if there is nothing to render for the object, which is
+   * then dropped
+   */
+  protected abstract prepareRenderedObject(
+    newRef: ObjectRef<TObject, TObjectData>,
+    renderedObject: TRenderedObject | undefined,
+    syncContext: TSyncContext,
+    options?: { signal?: AbortSignal },
+  ): Promise<TPreparedObject | null>;
+
+  /**
+   * Creates the rendered object, with its GPU resources, of a newly prepared object
+   *
+   * Runs in the second pass of {@link synchronize}, synchronously.
+   *
+   * @param newRef - The object
+   * @param prepared - Its preparation, made without a rendered object to reuse
+   * @returns The rendered object, which {@link synchronize} adds
+   */
+  protected abstract createRenderedObject(
+    newRef: ObjectRef<TObject, TObjectData>,
+    prepared: TPreparedObject,
+  ): TRenderedObject;
+
+  /**
+   * Updates the GPU resources of a rendered object from its preparation
+   *
+   * Runs in the second pass of {@link synchronize}, synchronously.
+   *
+   * @param renderedObject - The rendered object to update in place
+   * @param prepared - Its preparation, made with it as the rendered object to reuse
+   */
+  protected abstract updateRenderedObject(
+    renderedObject: TRenderedObject,
+    prepared: TPreparedObject,
+  ): void;
+
+  /**
+   * Releases the GPU resources owned by a single rendered object
+   *
+   * Does not remove the object from {@link _renderedObjects}, see
+   * {@link removeRenderedObject}.
+   */
+  protected abstract destroyRenderedObject(
+    renderedObject: TRenderedObject,
+  ): void;
 
   /**
    * Returns one render pass per rendered object to draw, in draw order
@@ -513,174 +727,39 @@ export abstract class WebGLRendererBase<
   }
 
   /**
-   * Releases the GPU resources owned by a single rendered object
+   * Records the current model and render options as what the rendered objects
+   * are being synchronized with
    *
-   * Does not remove the object from {@link _renderedObjects}, see
-   * {@link removeRenderedObject}.
+   * {@link synchronize} calls this first, before its first `await`: the model
+   * may be set again while it runs, and {@link needsSynchronization} has to
+   * report such a change against the model the synchronization actually read,
+   * not against the one it found when it finished. A synchronization that
+   * fails hands the returned state back to {@link _discardSyncState}, so that
+   * the model is synchronized again.
+   *
+   * @returns The recorded state
    */
-  protected abstract destroyRenderedObject(
-    renderedObject: TRenderedObject,
-  ): void;
-
-  /**
-   * Returns the state of the current model that a synchronization depends on
-   *
-   * The layers and objects are keyed by ID, so that their order - the draw order
-   * - is not part of the state (see {@link getLayerSyncState} and
-   * {@link getObjectSyncState} for what is).
-   *
-   * @returns The state, or `undefined` if no model has been set
-   */
-  protected getSyncState(): object | undefined {
-    if (this._model === undefined) {
-      return undefined;
-    }
-    return {
-      layers: Object.fromEntries(
-        this._model.layers.map((layer) => [
-          layer.id,
-          this.getLayerSyncState(layer),
-        ]),
-      ),
-      objects: Object.fromEntries(
-        this._model.objects.map((object) => [
-          object.id,
-          this.getObjectSyncState(object),
-        ]),
-      ),
-    };
+  private _recordSyncState(): object | undefined {
+    this._lastSyncState = this.getSyncState();
+    return this._lastSyncState;
   }
 
   /**
-   * Returns the state of a layer that a synchronization depends on
+   * Forgets a recorded synchronization state, unless another synchronization
+   * has recorded its own since
    *
-   * The counterpart of {@link getObjectSyncState} for layers. The point size
-   * factor is blanked out as well: it is a uniform of the points renderer, and
-   * the shapes renderer never reads it. So is the name, which nothing rendered
-   * depends on.
+   * Called by a synchronization that failed, so that
+   * {@link needsSynchronization} reports the model as unsynchronized again. A
+   * synchronization that was aborted because a newer one started must not
+   * undo what the newer one recorded, hence the identity check.
    *
-   * @param layer - The layer to return the state of
-   * @returns The layer without the properties that are applied when drawing,
-   * and without the cosmetic ones
+   * @param syncState - The state the failed synchronization recorded, as
+   * returned by {@link _recordSyncState}
    */
-  protected getLayerSyncState(layer: Layer): object {
-    return {
-      ...layer,
-      name: undefined,
-      transform: undefined,
-      visibility: undefined,
-      opacity: undefined,
-      pointSizeFactor: undefined,
-    };
-  }
-
-  /**
-   * Returns the state of an object that a synchronization depends on
-   *
-   * Everything but the properties that are applied when drawing, which are read
-   * from the current model on every draw (see {@link getRenderPasses}) and
-   * hence need no synchronization, and but the cosmetic ones, which nothing
-   * rendered depends on. Those are blanked out rather than dropped, so that a
-   * property added to the model later is part of the state, and thereby
-   * requires a resynchronization, unless it is blanked out here as well.
-   *
-   * The result is only ever deep-compared against that of another object, hence
-   * the opaque return type.
-   *
-   * @param object - The object (points or shapes) to return the state of
-   * @returns The object without the properties that are applied when drawing,
-   * and without the cosmetic ones
-   */
-  protected getObjectSyncState(object: TObject): object {
-    return {
-      ...object,
-      name: undefined,
-      transform: undefined,
-      visibility: undefined,
-      opacity: undefined,
-    };
-  }
-
-  /**
-   * Computes the factor that the alpha of every item of an object is
-   * multiplied with when drawing
-   *
-   * @param layer - The layer the object is drawn on, as of the current model
-   * @param object - The object being drawn, as of the current model
-   * @returns The product of the layer and object opacities, or `0` if the
-   * layer or the object is invisible
-   */
-  protected static computeOpacityFactor(
-    layer: Layer,
-    object: Points | Shapes,
-  ): number {
-    if (layer.visibility === false || object.visibility === false) {
-      return 0;
+  private _discardSyncState(syncState: object | undefined): void {
+    if (this._lastSyncState === syncState) {
+      this._lastSyncState = undefined;
     }
-    return layer.opacity * object.opacity;
-  }
-
-  /**
-   * Creates the loader for the table that an object resolves its properties
-   * from
-   *
-   * @param ref - The object reference
-   * @param tables - The tables to look the object's table up in
-   * @param loadTable - A function to load the data of a table
-   * @returns The loader, or `undefined` if the object has no table, or its
-   * table was not found (which is logged)
-   */
-  protected static createObjectTableLoader(
-    ref: ObjectRef<Points | Shapes, PointsData | ShapesData>,
-    tables: Table[],
-    loadTable: (
-      table: Table,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
-  ): ((options?: { signal?: AbortSignal }) => Promise<TableData>) | undefined {
-    if (ref.object.dataSource.table === undefined) {
-      return undefined;
-    }
-    const table = tables.find(
-      (table) => table.id === ref.object.dataSource.table,
-    );
-    if (table === undefined) {
-      console.warn(`Table with ID '${ref.object.dataSource.table}' not found`);
-      return undefined;
-    }
-    return (options?: { signal?: AbortSignal }) => loadTable(table, options);
-  }
-
-  /**
-   * Returns the group-to-value map that an item-level configuration resolves
-   * its values from, if any
-   *
-   * The renderers capture it in the snapshots their change predicates compare
-   * against, so that an edit to a map is detected by the objects referencing
-   * it. Maps are never mutated - an edit replaces the map object - so the
-   * predicates compare a map by identity, which is why the maps passed to a
-   * synchronization have to keep their identity for as long as they are
-   * unchanged. Mirrors the selection of the resolvers: only an active
-   * `groupBy` source with a map ID resolves from a map.
-   *
-   * @param config - The configuration
-   * @param maps - The project-global maps to look the referenced map up in
-   * @returns The map, or `undefined` if the configuration does not resolve
-   * from a map, or if the map it references does not exist (which the
-   * resolvers report)
-   */
-  protected static findGroupByConfigMap<TValue>(
-    config: Config<string>,
-    maps: GroupValueMap<TValue>[],
-  ): GroupValueMap<TValue> | undefined {
-    if (
-      getActiveConfigSource(config) === "groupBy" &&
-      isGroupByConfig<false>(config) &&
-      config.groupBy.map !== undefined
-    ) {
-      return maps.find((map) => map.id === config.groupBy.map);
-    }
-    return undefined;
   }
 
   /**
@@ -763,6 +842,137 @@ export abstract class WebGLRendererBase<
       }
     }
     return entry.layerItemsInfos;
+  }
+
+  /**
+   * Awaits the preparation of an object, dropping the object if it fails or
+   * finds nothing to render
+   *
+   * @param newRef - The prepared object
+   * @param renderedObject - The object's current rendered state, if any, which
+   * is removed if the object is dropped
+   * @param preparedPromise - The preparation, see {@link prepareRenderedObject}
+   * @param options - Optional abort signal
+   * @returns The preparation, or `undefined` if the object was dropped (which
+   * is logged)
+   */
+  private async _settleRenderedObjectPreparation(
+    newRef: ObjectRef<TObject, TObjectData>,
+    renderedObject: TRenderedObject | undefined,
+    preparedPromise: Promise<TPreparedObject | null>,
+    options?: { signal?: AbortSignal },
+  ): Promise<TPreparedObject | undefined> {
+    const { signal } = options ?? {};
+    let prepared;
+    try {
+      prepared = await preparedPromise;
+    } catch (error) {
+      signal?.throwIfAborted();
+      console.error(
+        `Failed to prepare object with ID '${newRef.object.id}'`,
+        error,
+      );
+      if (renderedObject !== undefined) {
+        this.removeRenderedObject(renderedObject);
+      }
+      return undefined;
+    }
+    signal?.throwIfAborted();
+    if (prepared === null) {
+      console.warn(
+        `Object with ID '${newRef.object.id}' has nothing to render, skipping`,
+      );
+      if (renderedObject !== undefined) {
+        this.removeRenderedObject(renderedObject);
+      }
+      return undefined;
+    }
+    return prepared;
+  }
+
+  /**
+   * Creates the loader for the table that an object resolves its properties
+   * from
+   *
+   * @param ref - The object reference
+   * @param syncContext - The inputs of the current synchronization: the tables to
+   * look the object's table up in, and the loader for table data
+   * @returns The loader, or `undefined` if the object has no table, or its
+   * table was not found (which is logged)
+   */
+  protected static createObjectTableLoader(
+    ref: ObjectRef<Points | Shapes, PointsData | ShapesData>,
+    syncContext: {
+      tables: Table[];
+      loadTable: (
+        table: Table,
+        options?: { signal?: AbortSignal },
+      ) => Promise<TableData>;
+    },
+  ): ((options?: { signal?: AbortSignal }) => Promise<TableData>) | undefined {
+    if (ref.object.dataSource.table === undefined) {
+      return undefined;
+    }
+    const table = syncContext.tables.find(
+      (table) => table.id === ref.object.dataSource.table,
+    );
+    if (table === undefined) {
+      console.warn(`Table with ID '${ref.object.dataSource.table}' not found`);
+      return undefined;
+    }
+    return (options?: { signal?: AbortSignal }) =>
+      syncContext.loadTable(table, options);
+  }
+
+  /**
+   * Returns the group-to-value map that an item-level configuration resolves
+   * its values from, if any
+   *
+   * The renderers capture it in the snapshots their change predicates compare
+   * against, so that an edit to a map is detected by the objects referencing
+   * it. Maps are never mutated - an edit replaces the map object - so the
+   * predicates compare a map by identity, which is why the maps passed to a
+   * synchronization have to keep their identity for as long as they are
+   * unchanged. Mirrors the selection of the resolvers: only an active
+   * `groupBy` source with a map ID resolves from a map.
+   *
+   * @param config - The configuration
+   * @param maps - The project-global maps to look the referenced map up in
+   * @returns The map, or `undefined` if the configuration does not resolve
+   * from a map, or if the map it references does not exist (which the
+   * resolvers report)
+   */
+  protected static findGroupByConfigMap<TValue>(
+    config: Config<string>,
+    maps: GroupValueMap<TValue>[],
+  ): GroupValueMap<TValue> | undefined {
+    if (
+      getActiveConfigSource(config) === "groupBy" &&
+      isGroupByConfig<false>(config) &&
+      config.groupBy.map !== undefined
+    ) {
+      return maps.find((map) => map.id === config.groupBy.map);
+    }
+    return undefined;
+  }
+
+  /**
+   * Computes the factor that the alpha of every item of an object is
+   * multiplied with when drawing
+   *
+   * @param layer - The layer the object is drawn on, as of the current model
+   * @param object - The object being drawn, as of the current model
+   * @returns The product of the layer and object opacities, or `0` if the
+   * layer or the object is invisible
+   */
+  protected static computeOpacityFactor(
+    layer: Layer,
+    object: Points | Shapes,
+  ): number {
+    if (layer.visibility === false || object.visibility === false) {
+      return 0;
+    }
+    return layer.opacity * object.opacity;
   }
 }
 

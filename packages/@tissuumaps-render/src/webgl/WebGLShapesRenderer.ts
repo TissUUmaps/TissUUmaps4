@@ -56,10 +56,16 @@ import { WebGLUtils } from "./WebGLUtils";
 export class WebGLShapesRenderer extends WebGLRendererBase<
   Shapes,
   ShapesData,
+  WebGLShapesSyncContext,
+  PreparedShapes,
   RenderedShapes
 > {
   private static readonly _scanlineDataTextureWidth = 4096; // see fragment shader
   private static readonly _shapeColorsTextureWidth = 4096; // see fragment shader
+  private static readonly _numValuesPerScanlineDataTextureLine =
+    4 * WebGLShapesRenderer._scanlineDataTextureWidth; // 4 values per RGBA32F texel
+  private static readonly _numValuesPerShapeColorsTextureLine =
+    1 * WebGLShapesRenderer._shapeColorsTextureWidth; // 1 value per R32UI texel
   private static readonly _textureUnits = {
     SCANLINE_DATA: 1, // unit 0 is used by the points renderer
     SHAPE_FILL_COLORS: 2,
@@ -126,59 +132,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       WebGLShapesRenderer._textureUnits.SHAPE_STROKE_COLORS,
     );
     context.gl.useProgram(null);
-  }
-
-  /**
-   * Synchronizes GPU textures with the current model state
-   *
-   * Loads all shapes data of the model set by {@link setModel}, removes GPU
-   * resources for shapes that are no longer needed, and creates or updates
-   * scanline data textures and color textures for the remaining ones.
-   *
-   * @param tables - Tables that the shapes objects resolve their properties from
-   * @param colorMaps - Project-global color maps for {@link GroupByConfig} resolution
-   * @param visibilityMaps - Project-global visibility maps
-   * @param opacityMaps - Project-global opacity maps
-   * @param loadShapes - Async getter for shapes data
-   * @param loadTable - Async getter for table data
-   * @param options - Optional abort signal
-   */
-  async synchronize(
-    tables: Table[],
-    colorMaps: GroupValueMap<Color>[],
-    visibilityMaps: GroupValueMap<boolean>[],
-    opacityMaps: GroupValueMap<number>[],
-    loadShapes: (
-      shapes: Shapes,
-      options?: { signal?: AbortSignal },
-    ) => Promise<ShapesData>,
-    loadTable: (
-      table: Table,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
-    options?: { signal?: AbortSignal },
-  ): Promise<void> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const syncState = this.recordSyncState();
-    try {
-      const newRefs = await this.loadObjects(tables, loadShapes, loadTable, {
-        signal,
-      });
-      const matches = this.matchOrDestroyRenderedObjects(newRefs);
-      await this._createOrUpdateRenderedShapes(
-        matches,
-        tables,
-        colorMaps,
-        visibilityMaps,
-        opacityMaps,
-        loadTable,
-        { signal },
-      );
-    } catch (error) {
-      this.discardSyncState(syncState);
-      throw error;
-    }
   }
 
   /**
@@ -314,167 +267,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Deletes all GPU textures owned by a single rendered object
+   * Returns the number of scanlines, which the scanline data textures are
+   * rasterized for, so that changing it requires a resynchronization
    */
-  protected override destroyRenderedObject(
-    renderedShapes: RenderedShapes,
-  ): void {
-    this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
-    this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
-    this.context.gl.deleteTexture(renderedShapes.shapeStrokeColorsTexture);
-  }
-
-  /**
-   * Creates new GPU resources for shapes that have no rendered object yet, or
-   * updates existing ones when the model state has changed
-   *
-   * Runs in two passes. The first prepares every object (see
-   * {@link _prepareRenderedShapes}), issuing all requests before the first
-   * `await`. The second awaits the preparations in order and uploads them, each
-   * in one synchronous block that refills the colors textures in place, and
-   * creates a new scanline data texture and releases the one it replaces, so a
-   * draw in between never sees a half-updated object or a released texture. New objects join the rendered objects as soon as
-   * their textures exist, so an aborted synchronization leaves nothing
-   * orphaned.
-   *
-   * Requests resolve through operations that are shared between their callers
-   * and cancelled once the last of them has given up, unless it is reclaimed
-   * within the same task. Issuing them one object at a time would therefore
-   * throw away the requests of a synchronization that has just been superseded:
-   * the gap until the new pass reaches an object grows with the objects ahead
-   * of it, until it spans a task and their operations are cancelled and have to
-   * start over from scratch. Issuing them all before the first `await` keeps
-   * that gap within a single task, no matter how many objects there are or how
-   * long each of them takes. It also lets them run concurrently, at the price
-   * of holding every object's resolved color buffers until the second pass has
-   * uploaded them.
-   *
-   * An object whose preparation fails is logged and dropped, like an object
-   * whose data fails to load (see {@link loadObjects}); the other objects are
-   * unaffected. Objects whose shapes have no area are dropped as well, as the
-   * fragment shader discards them anyway.
-   *
-   * @param matches - The objects to create or update GPU resources for, in draw
-   * order, each with the rendered shapes to reuse for it, if any
-   * @param tables - Tables that the objects resolve their properties from
-   * @param colorMaps - Project-global color maps
-   * @param visibilityMaps - Project-global visibility maps
-   * @param opacityMaps - Project-global opacity maps
-   * @param loadTable - Async getter for table data
-   * @param options - Optional abort signal
-   */
-  private async _createOrUpdateRenderedShapes(
-    matches: {
-      newRef: ShapesRef;
-      renderedObject: RenderedShapes | undefined;
-    }[],
-    tables: Table[],
-    colorMaps: GroupValueMap<Color>[],
-    visibilityMaps: GroupValueMap<boolean>[],
-    opacityMaps: GroupValueMap<number>[],
-    loadTable: (
-      table: Table,
-      options?: { signal?: AbortSignal },
-    ) => Promise<TableData>,
-    options?: { signal?: AbortSignal },
-  ): Promise<void> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const preloads = matches.map(
-      ({ newRef, renderedObject: renderedShapes }) => {
-        const preparedPromise = this._prepareRenderedShapes(
-          newRef,
-          renderedShapes,
-          colorMaps,
-          visibilityMaps,
-          opacityMaps,
-          WebGLShapesRenderer.createObjectTableLoader(
-            newRef,
-            tables,
-            loadTable,
-          ),
-          { signal },
-        );
-        preparedPromise.catch(() => {}); // prevent unhandled rejections in console
-        return { newRef, renderedShapes, preparedPromise };
-      },
-    );
-    for (const { newRef, renderedShapes, preparedPromise } of preloads) {
-      let prepared;
-      try {
-        prepared = await preparedPromise;
-      } catch (error) {
-        signal?.throwIfAborted();
-        console.error(
-          `Failed to prepare shapes object with ID '${newRef.object.id}'`,
-          error,
-        );
-        if (renderedShapes !== undefined) {
-          this.removeRenderedObject(renderedShapes);
-        }
-        continue;
-      }
-      signal?.throwIfAborted();
-      if (prepared === null) {
-        console.warn(
-          `Shapes object with ID '${newRef.object.id}' has no area, skipping`,
-        );
-        if (renderedShapes !== undefined) {
-          this.removeRenderedObject(renderedShapes);
-        }
-        continue;
-      }
-      // no awaits from here on, so that the object is updated atomically
-      if (renderedShapes === undefined) {
-        if (
-          prepared.scanlineBuffer === undefined ||
-          prepared.packedShapeFillColors === undefined ||
-          prepared.packedShapeStrokeColors === undefined
-        ) {
-          throw new Error(
-            "All textures must be prepared for new shapes object",
-          );
-        }
-        this.addRenderedObject({
-          ref: newRef,
-          renderConfigSnapshot: prepared.renderConfigSnapshot,
-          objectBounds: prepared.objectBounds,
-          numScanlines: prepared.numScanlines,
-          scanlineDataTexture: this._createScanlineDataTexture(
-            prepared.scanlineBuffer,
-          ),
-          shapeFillColorsTexture: this._createShapeColorsTexture(
-            prepared.packedShapeFillColors,
-          ),
-          shapeStrokeColorsTexture: this._createShapeColorsTexture(
-            prepared.packedShapeStrokeColors,
-          ),
-        });
-      } else {
-        renderedShapes.renderConfigSnapshot = prepared.renderConfigSnapshot;
-        if (prepared.scanlineBuffer !== undefined) {
-          const scanlineDataTexture = this._createScanlineDataTexture(
-            prepared.scanlineBuffer,
-          );
-          this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
-          renderedShapes.scanlineDataTexture = scanlineDataTexture;
-          renderedShapes.objectBounds = prepared.objectBounds;
-          renderedShapes.numScanlines = prepared.numScanlines;
-        }
-        if (prepared.packedShapeFillColors !== undefined) {
-          this._loadShapeColorsTexture(
-            renderedShapes.shapeFillColorsTexture,
-            prepared.packedShapeFillColors,
-          );
-        }
-        if (prepared.packedShapeStrokeColors !== undefined) {
-          this._loadShapeColorsTexture(
-            renderedShapes.shapeStrokeColorsTexture,
-            prepared.packedShapeStrokeColors,
-          );
-        }
-      }
-    }
+  protected override getRenderOptionsSyncState(): object {
+    return { numScanlines: this.renderOptions.numScanlines };
   }
 
   /**
@@ -487,51 +284,35 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * `await`, and then computes the bounds, rasterizes the scanline data and
    * folds the resolved visibilities and opacities into the colors.
    *
-   * Must be called synchronously for every object of a synchronization, see
-   * {@link _createOrUpdateRenderedShapes}.
+   * See {@link WebGLRendererBase.prepareRenderedObject} for when this runs.
    *
    * @param newRef - The object to prepare
    * @param renderedShapes - The object's current GPU state, if it is reused
-   * @param colorMaps - Project-global color maps
-   * @param visibilityMaps - Project-global visibility maps
-   * @param opacityMaps - Project-global opacity maps
-   * @param loadTable - Loader for the object's table, if any
+   * @param syncContext - The inputs of the current synchronization
    * @param options - Optional abort signal
    * @returns The snapshot the decisions were based on, the bounds and the
    * number of scanlines, the packed scanline data (if the geometry was loaded)
    * and the resolved colors that have to be uploaded, or `null` if the shapes
    * have no area
    */
-  private async _prepareRenderedShapes(
+  protected override async prepareRenderedObject(
     newRef: ShapesRef,
     renderedShapes: RenderedShapes | undefined,
-    colorMaps: GroupValueMap<Color>[],
-    visibilityMaps: GroupValueMap<boolean>[],
-    opacityMaps: GroupValueMap<number>[],
-    loadTable:
-      ((options?: { signal?: AbortSignal }) => Promise<TableData>) | undefined,
+    syncContext: WebGLShapesSyncContext,
     options?: { signal?: AbortSignal },
-  ): Promise<{
-    objectBounds: Rect;
-    numScanlines: number;
-    scanlineBuffer: Float32Array | undefined;
-    packedShapeFillColors: Uint32Array | undefined;
-    packedShapeStrokeColors: Uint32Array | undefined;
-    renderConfigSnapshot: RenderedShapes["renderConfigSnapshot"];
-  } | null> {
+  ): Promise<PreparedShapes | null> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
+    const loadTable = WebGLShapesRenderer.createObjectTableLoader(
+      newRef,
+      syncContext,
+    );
     const { numScanlines } = this.renderOptions;
     const geometryChanged =
       renderedShapes === undefined ||
       renderedShapes.numScanlines !== numScanlines;
     const renderConfigSnapshot =
-      WebGLShapesRenderer._createRenderConfigSnapshot(
-        newRef,
-        colorMaps,
-        visibilityMaps,
-        opacityMaps,
-      );
+      WebGLShapesRenderer._createRenderConfigSnapshot(newRef, syncContext);
     const fillColorsChanged =
       WebGLShapesRenderer._checkShapeFillColorsTextureChanged(
         renderedShapes,
@@ -542,8 +323,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         renderedShapes,
         renderConfigSnapshot,
       );
-    const numValuesPerTextureLine =
-      1 * WebGLShapesRenderer._shapeColorsTextureWidth; // values per texture line, 1 per R32UI texel
     const geometryPromise = geometryChanged
       ? newRef.data.loadGeometry({ signal })
       : undefined;
@@ -551,54 +330,78 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       ? ColorResolver.resolveColors(
           newRef.itemIds,
           newRef.object.shapeFillColor,
-          colorMaps,
+          syncContext.colorMaps,
           defaultShapeFillColor,
-          { signal, loadTable, align: numValuesPerTextureLine },
+          {
+            signal,
+            loadTable,
+            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+          },
         )
       : undefined;
     const packedShapeFillVisibilitiesPromise = fillColorsChanged
       ? VisibilityResolver.resolveVisibilities(
           newRef.itemIds,
           newRef.object.shapeFillVisibility,
-          visibilityMaps,
+          syncContext.visibilityMaps,
           defaultShapeFillVisibility,
-          { signal, loadTable, align: numValuesPerTextureLine },
+          {
+            signal,
+            loadTable,
+            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+          },
         )
       : undefined;
     const packedShapeFillOpacitiesPromise = fillColorsChanged
       ? OpacityResolver.resolveOpacities(
           newRef.itemIds,
           newRef.object.shapeFillOpacity,
-          opacityMaps,
+          syncContext.opacityMaps,
           defaultShapeFillOpacity,
-          { signal, loadTable, align: numValuesPerTextureLine },
+          {
+            signal,
+            loadTable,
+            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+          },
         )
       : undefined;
     const packedShapeStrokeColorsPromise = strokeColorsChanged
       ? ColorResolver.resolveColors(
           newRef.itemIds,
           newRef.object.shapeStrokeColor,
-          colorMaps,
+          syncContext.colorMaps,
           defaultShapeStrokeColor,
-          { signal, loadTable, align: numValuesPerTextureLine },
+          {
+            signal,
+            loadTable,
+            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+          },
         )
       : undefined;
     const packedShapeStrokeVisibilitiesPromise = strokeColorsChanged
       ? VisibilityResolver.resolveVisibilities(
           newRef.itemIds,
           newRef.object.shapeStrokeVisibility,
-          visibilityMaps,
+          syncContext.visibilityMaps,
           defaultShapeStrokeVisibility,
-          { signal, loadTable, align: numValuesPerTextureLine },
+          {
+            signal,
+            loadTable,
+            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+          },
         )
       : undefined;
     const packedShapeStrokeOpacitiesPromise = strokeColorsChanged
       ? OpacityResolver.resolveOpacities(
           newRef.itemIds,
           newRef.object.shapeStrokeOpacity,
-          opacityMaps,
+          syncContext.opacityMaps,
           defaultShapeStrokeOpacity,
-          { signal, loadTable, align: numValuesPerTextureLine },
+          {
+            signal,
+            loadTable,
+            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+          },
         )
       : undefined;
     const [
@@ -688,6 +491,90 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
+   * Creates the textures of a new object
+   *
+   * @param newRef - The object
+   * @param prepared - Its preparation, which holds every texture's data
+   * @returns The rendered object
+   */
+  protected override createRenderedObject(
+    newRef: ShapesRef,
+    prepared: PreparedShapes,
+  ): RenderedShapes {
+    if (
+      prepared.scanlineBuffer === undefined ||
+      prepared.packedShapeFillColors === undefined ||
+      prepared.packedShapeStrokeColors === undefined
+    ) {
+      throw new Error("All textures must be prepared for new shapes object");
+    }
+    return {
+      ref: newRef,
+      renderConfigSnapshot: prepared.renderConfigSnapshot,
+      objectBounds: prepared.objectBounds,
+      numScanlines: prepared.numScanlines,
+      scanlineDataTexture: this._createScanlineDataTexture(
+        prepared.scanlineBuffer,
+      ),
+      shapeFillColorsTexture: this._createShapeColorsTexture(
+        prepared.packedShapeFillColors,
+      ),
+      shapeStrokeColorsTexture: this._createShapeColorsTexture(
+        prepared.packedShapeStrokeColors,
+      ),
+    };
+  }
+
+  /**
+   * Reloads the textures of an object whose data was prepared again
+   *
+   * Refills the colors textures in place, and creates a new scanline data
+   * texture before releasing the one it replaces, so a draw in between never
+   * sees a released texture.
+   *
+   * @param renderedShapes - The rendered object to update in place
+   * @param prepared - Its preparation, holding the texture data that changed
+   */
+  protected override updateRenderedObject(
+    renderedShapes: RenderedShapes,
+    prepared: PreparedShapes,
+  ): void {
+    renderedShapes.renderConfigSnapshot = prepared.renderConfigSnapshot;
+    if (prepared.scanlineBuffer !== undefined) {
+      const scanlineDataTexture = this._createScanlineDataTexture(
+        prepared.scanlineBuffer,
+      );
+      this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
+      renderedShapes.scanlineDataTexture = scanlineDataTexture;
+      renderedShapes.objectBounds = prepared.objectBounds;
+      renderedShapes.numScanlines = prepared.numScanlines;
+    }
+    if (prepared.packedShapeFillColors !== undefined) {
+      this._loadShapeColorsTexture(
+        renderedShapes.shapeFillColorsTexture,
+        prepared.packedShapeFillColors,
+      );
+    }
+    if (prepared.packedShapeStrokeColors !== undefined) {
+      this._loadShapeColorsTexture(
+        renderedShapes.shapeStrokeColorsTexture,
+        prepared.packedShapeStrokeColors,
+      );
+    }
+  }
+
+  /**
+   * Deletes all GPU textures owned by a single rendered object
+   */
+  protected override destroyRenderedObject(
+    renderedShapes: RenderedShapes,
+  ): void {
+    this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
+    this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
+    this.context.gl.deleteTexture(renderedShapes.shapeStrokeColorsTexture);
+  }
+
+  /**
    * Builds the scanline data of a shapes object
    *
    * Rasterizes all shapes into horizontal scanlines and packs the result into
@@ -718,13 +605,14 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         objectBounds,
         { signal },
       );
-    const numValuesPerTextureLine =
-      4 * WebGLShapesRenderer._scanlineDataTextureWidth; // 4 values per RGBA32F texel
     const scanlineBuffer = await WebGLShapesRasterizer.packScanlines(
       scanlines,
       totalNumScanlineShapes,
       totalNumScanlineShapeEdges,
-      { align: numValuesPerTextureLine, signal },
+      {
+        align: WebGLShapesRenderer._numValuesPerScanlineDataTextureLine,
+        signal,
+      },
     );
     return new Float32Array(scanlineBuffer);
   }
@@ -738,12 +626,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   private _createScanlineDataTexture(
     scanlineBuffer: Float32Array,
   ): WebGLTexture {
-    const numValuesPerTextureLine =
-      4 * WebGLShapesRenderer._scanlineDataTextureWidth; // 4 values per RGBA32F texel
     return this.context.createDataTexture(
       WebGL2RenderingContext.RGBA32F,
       WebGLShapesRenderer._scanlineDataTextureWidth,
-      scanlineBuffer.length / numValuesPerTextureLine,
+      scanlineBuffer.length /
+        WebGLShapesRenderer._numValuesPerScanlineDataTextureLine,
       WebGL2RenderingContext.RGBA,
       WebGL2RenderingContext.FLOAT,
       scanlineBuffer,
@@ -760,12 +647,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   private _createShapeColorsTexture(
     packedShapeColors: Uint32Array,
   ): WebGLTexture {
-    const numValuesPerTextureLine =
-      1 * WebGLShapesRenderer._shapeColorsTextureWidth; // values per texture line, 1 per R32UI texel
     return this.context.createDataTexture(
       WebGL2RenderingContext.R32UI,
       WebGLShapesRenderer._shapeColorsTextureWidth,
-      packedShapeColors.length / numValuesPerTextureLine,
+      packedShapeColors.length /
+        WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
       WebGL2RenderingContext.RED_INTEGER,
       WebGL2RenderingContext.UNSIGNED_INT,
       packedShapeColors,
@@ -787,87 +673,15 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     texture: WebGLTexture,
     packedShapeColors: Uint32Array,
   ): void {
-    const numValuesPerTextureLine =
-      1 * WebGLShapesRenderer._shapeColorsTextureWidth; // values per texture line, 1 per R32UI texel
     this.context.loadDataTexture(
       texture,
       WebGLShapesRenderer._shapeColorsTextureWidth,
-      packedShapeColors.length / numValuesPerTextureLine,
+      packedShapeColors.length /
+        WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
       WebGL2RenderingContext.RED_INTEGER,
       WebGL2RenderingContext.UNSIGNED_INT,
       packedShapeColors,
     );
-  }
-
-  /**
-   * Computes the axis-aligned bounding box of all (included) shapes
-   *
-   * @param geometry - Geometry for all shapes in the object
-   * @param shapesMask - Per-shape inclusion mask, or `undefined` if all shapes are included
-   * @param options - Optional abort signal
-   * @returns The bounding rectangle in data-space coordinates, or `null` if the
-   * shapes have no area, as such an object can neither be rasterized into
-   * scanlines nor drawn by the fragment shader
-   * @throws Error if the geometry is empty
-   */
-  private static async _getObjectBounds(
-    geometry: ShapesGeometry,
-    shapesMask: Uint8Array | undefined,
-    options?: { signal?: AbortSignal },
-  ): Promise<Rect | null> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const {
-      shapePolygonOffsets,
-      polygonRingOffsets,
-      ringVertexOffsets,
-      coords,
-    } = geometry;
-    let xMin = Infinity,
-      yMin = Infinity,
-      xMax = -Infinity,
-      yMax = -Infinity;
-    const maybeYield = AsyncUtils.createYielder();
-    for (let s = 0; s < shapePolygonOffsets.length - 1; s++) {
-      if (shapesMask === undefined || shapesMask[s]! > 0) {
-        const polygonStart = shapePolygonOffsets[s]!;
-        const polygonEnd = shapePolygonOffsets[s + 1]!;
-        for (let p = polygonStart; p < polygonEnd; p++) {
-          const shellRing = polygonRingOffsets[p]!;
-          const shellVertexStart = ringVertexOffsets[shellRing]!;
-          const shellVertexEnd = ringVertexOffsets[shellRing + 1]!;
-          for (let v = shellVertexStart; v < shellVertexEnd; v++) {
-            const x = coords[2 * v]!;
-            const y = coords[2 * v + 1]!;
-            if (x < xMin) {
-              xMin = x;
-            }
-            if (y < yMin) {
-              yMin = y;
-            }
-            if (x > xMax) {
-              xMax = x;
-            }
-            if (y > yMax) {
-              yMax = y;
-            }
-          }
-        }
-      }
-      await maybeYield({ signal });
-    }
-    if (
-      !Number.isFinite(xMin) ||
-      !Number.isFinite(yMin) ||
-      !Number.isFinite(xMax) ||
-      !Number.isFinite(yMax)
-    ) {
-      throw new Error("Shapes geometry must not be empty");
-    }
-    if (xMin >= xMax || yMin >= yMax) {
-      return null;
-    }
-    return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
   }
 
   /**
@@ -915,16 +729,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * {@link WebGLRendererBase.findGroupByConfigMap}).
    *
    * @param newRef - The object to capture the snapshot of
-   * @param colorMaps - Project-global color maps
-   * @param visibilityMaps - Project-global visibility maps
-   * @param opacityMaps - Project-global opacity maps
+   * @param syncContext - The inputs of the current synchronization, holding the maps
    * @returns The snapshot
    */
   private static _createRenderConfigSnapshot(
     newRef: ShapesRef,
-    colorMaps: GroupValueMap<Color>[],
-    visibilityMaps: GroupValueMap<boolean>[],
-    opacityMaps: GroupValueMap<number>[],
+    syncContext: WebGLShapesSyncContext,
   ): RenderedShapes["renderConfigSnapshot"] {
     return {
       shapeFillColor: newRef.object.shapeFillColor,
@@ -935,27 +745,27 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       shapeStrokeOpacity: newRef.object.shapeStrokeOpacity,
       shapeFillColorMap: WebGLShapesRenderer.findGroupByConfigMap(
         newRef.object.shapeFillColor,
-        colorMaps,
+        syncContext.colorMaps,
       ),
       shapeFillVisibilityMap: WebGLShapesRenderer.findGroupByConfigMap(
         newRef.object.shapeFillVisibility,
-        visibilityMaps,
+        syncContext.visibilityMaps,
       ),
       shapeFillOpacityMap: WebGLShapesRenderer.findGroupByConfigMap(
         newRef.object.shapeFillOpacity,
-        opacityMaps,
+        syncContext.opacityMaps,
       ),
       shapeStrokeColorMap: WebGLShapesRenderer.findGroupByConfigMap(
         newRef.object.shapeStrokeColor,
-        colorMaps,
+        syncContext.colorMaps,
       ),
       shapeStrokeVisibilityMap: WebGLShapesRenderer.findGroupByConfigMap(
         newRef.object.shapeStrokeVisibility,
-        visibilityMaps,
+        syncContext.visibilityMaps,
       ),
       shapeStrokeOpacityMap: WebGLShapesRenderer.findGroupByConfigMap(
         newRef.object.shapeStrokeOpacity,
-        opacityMaps,
+        syncContext.opacityMaps,
       ),
     };
   }
@@ -1029,12 +839,119 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         newSnapshot.shapeStrokeOpacityMap
     );
   }
+
+  /**
+   * Computes the axis-aligned bounding box of all (included) shapes
+   *
+   * @param geometry - Geometry for all shapes in the object
+   * @param shapesMask - Per-shape inclusion mask, or `undefined` if all shapes are included
+   * @param options - Optional abort signal
+   * @returns The bounding rectangle in data-space coordinates, or `null` if the
+   * shapes have no area, as such an object can neither be rasterized into
+   * scanlines nor drawn by the fragment shader
+   * @throws Error if the geometry is empty
+   */
+  private static async _getObjectBounds(
+    geometry: ShapesGeometry,
+    shapesMask: Uint8Array | undefined,
+    options?: { signal?: AbortSignal },
+  ): Promise<Rect | null> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const {
+      shapePolygonOffsets,
+      polygonRingOffsets,
+      ringVertexOffsets,
+      coords,
+    } = geometry;
+    let xMin = Infinity,
+      yMin = Infinity,
+      xMax = -Infinity,
+      yMax = -Infinity;
+    const maybeYield = AsyncUtils.createYielder();
+    for (let s = 0; s < shapePolygonOffsets.length - 1; s++) {
+      if (shapesMask === undefined || shapesMask[s]! > 0) {
+        const polygonStart = shapePolygonOffsets[s]!;
+        const polygonEnd = shapePolygonOffsets[s + 1]!;
+        for (let p = polygonStart; p < polygonEnd; p++) {
+          const shellRing = polygonRingOffsets[p]!;
+          const shellVertexStart = ringVertexOffsets[shellRing]!;
+          const shellVertexEnd = ringVertexOffsets[shellRing + 1]!;
+          for (let v = shellVertexStart; v < shellVertexEnd; v++) {
+            const x = coords[2 * v]!;
+            const y = coords[2 * v + 1]!;
+            if (x < xMin) {
+              xMin = x;
+            }
+            if (y < yMin) {
+              yMin = y;
+            }
+            if (x > xMax) {
+              xMax = x;
+            }
+            if (y > yMax) {
+              yMax = y;
+            }
+          }
+        }
+      }
+      await maybeYield({ signal });
+    }
+    if (
+      !Number.isFinite(xMin) ||
+      !Number.isFinite(yMin) ||
+      !Number.isFinite(xMax) ||
+      !Number.isFinite(yMax)
+    ) {
+      throw new Error("Shapes geometry must not be empty");
+    }
+    if (xMin >= xMax || yMin >= yMax) {
+      return null;
+    }
+    return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
+  }
 }
+
+/**
+ * The inputs of a synchronization of the shapes renderer
+ *
+ * The tables and group-to-value maps that the objects resolve their
+ * properties from, and the loaders for shapes and table data (see
+ * {@link WebGLRendererBase.synchronize}).
+ */
+export type WebGLShapesSyncContext = {
+  tables: Table[];
+  colorMaps: GroupValueMap<Color>[];
+  visibilityMaps: GroupValueMap<boolean>[];
+  opacityMaps: GroupValueMap<number>[];
+  loadObject: (
+    shapes: Shapes,
+    options?: { signal?: AbortSignal },
+  ) => Promise<ShapesData>;
+  loadTable: (
+    table: Table,
+    options?: { signal?: AbortSignal },
+  ) => Promise<TableData>;
+};
 
 /**
  * A reference to a shapes object, its layer, and its loaded data
  */
 type ShapesRef = ObjectRef<Shapes, ShapesData>;
+
+/**
+ * What a preparation of a shapes object uploads
+ *
+ * See {@link WebGLShapesRenderer.prepareRenderedObject}.
+ */
+type PreparedShapes = {
+  objectBounds: Rect;
+  numScanlines: number;
+  scanlineBuffer: Float32Array | undefined;
+  packedShapeFillColors: Uint32Array | undefined;
+  packedShapeStrokeColors: Uint32Array | undefined;
+  renderConfigSnapshot: RenderedShapes["renderConfigSnapshot"];
+};
 
 /**
  * GPU state for a single shapes object

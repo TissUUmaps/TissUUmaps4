@@ -225,20 +225,18 @@ export function useWebGL(adapter: ViewerAdapter) {
       glRef.current.pointsRenderer.renderOptions =
         glOptions.pointsRenderOptions;
       dispatchRedraw();
+      if (glRef.current.pointsRenderer.needsSynchronization()) {
+        dispatchSyncPoints();
+      }
     }
   }, [glReady, glOptions.pointsRenderOptions]);
 
   useEffect(() => {
     if (glReady && glRef.current !== null) {
-      // the scanline data textures are rasterized for a fixed number of
-      // scanlines, so changing it requires a resynchronization
-      const resync =
-        glRef.current.shapesRenderer.renderOptions.numScanlines !==
-        glOptions.shapesRenderOptions.numScanlines;
       glRef.current.shapesRenderer.renderOptions =
         glOptions.shapesRenderOptions;
       dispatchRedraw();
-      if (resync) {
+      if (glRef.current.shapesRenderer.needsSynchronization()) {
         dispatchSyncShapes();
       }
     }
@@ -285,14 +283,16 @@ export function useWebGL(adapter: ViewerAdapter) {
     if (glReady && glRef.current !== null) {
       glRef.current.pointsRenderer
         .synchronize(
-          tables,
-          markerMaps,
-          sizeMaps,
-          colorMaps,
-          visibilityMaps,
-          opacityMaps,
-          loadPoints,
-          loadTable,
+          {
+            tables,
+            markerMaps,
+            sizeMaps,
+            colorMaps,
+            visibilityMaps,
+            opacityMaps,
+            loadObject: loadPoints,
+            loadTable,
+          },
           { signal: abortController.signal },
         )
         .then(() => {
@@ -336,12 +336,14 @@ export function useWebGL(adapter: ViewerAdapter) {
     if (glReady && glRef.current !== null) {
       glRef.current.shapesRenderer
         .synchronize(
-          tables,
-          colorMaps,
-          visibilityMaps,
-          opacityMaps,
-          loadShapes,
-          loadTable,
+          {
+            tables,
+            colorMaps,
+            visibilityMaps,
+            opacityMaps,
+            loadObject: loadShapes,
+            loadTable,
+          },
           { signal: abortController.signal },
         )
         .then(() => {
