@@ -414,9 +414,7 @@ export abstract class WebGLRendererBase<
           renderedObject.objectBounds,
           WebGLUtils.createDataToWorldMatrix(object.transform, layer.transform),
         );
-        return union !== null
-          ? GeometryUtils.boundingBox(union, bounds)
-          : bounds;
+        return union !== null ? GeometryUtils.union(union, bounds) : bounds;
       },
       null,
     );

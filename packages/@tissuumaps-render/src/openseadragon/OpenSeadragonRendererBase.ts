@@ -180,7 +180,7 @@ export abstract class OpenSeadragonRendererBase<
         }
       }
       const bounds =
-        GeometryUtils.boundingBox(...tiledImageBounds, ...this._extraBounds) ??
+        GeometryUtils.union(...tiledImageBounds, ...this._extraBounds) ??
         OpenSeadragonRendererBase._defaultBounds;
       this._anchor = await this.context.updateBounds(bounds, {
         signal,

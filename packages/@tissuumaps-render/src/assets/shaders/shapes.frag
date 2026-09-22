@@ -12,6 +12,7 @@ precision highp usampler2D; // no default otherwise
 uniform uint u_numScanlines;
 uniform vec4 u_objectBounds; // (x, y, width, height), in data dimensions
 uniform float u_opacityFactor; // layer and object opacity, 0 if the layer or object is invisible
+uniform float u_halfStrokeWidth; // in data dimensions
 
 /*
  * Scanline data (RGBA32F texture)
@@ -41,7 +42,6 @@ uniform usampler2D u_shapeStrokeColors;
 
 in vec2 v_pos; // in data dimensions
 in float v_scanline; // in [0, u_numScanlines]
-flat in float v_hsw; // half stroke width, in data dimensions
 
 out vec4 fragColor;
 
@@ -133,7 +133,7 @@ void main() {
     if(u_numScanlines == 0u || u_objectBounds[2] <= 0.0 || u_objectBounds[3] <= 0.0) {
         discard; // no scanlines or invalid object bounds
     }
-    if(v_pos.x < u_objectBounds[0] - v_hsw || v_pos.x > u_objectBounds[0] + u_objectBounds[2] + v_hsw || v_pos.y < u_objectBounds[1] - v_hsw || v_pos.y > u_objectBounds[1] + u_objectBounds[3] + v_hsw) {
+    if(v_pos.x < u_objectBounds[0] - u_halfStrokeWidth || v_pos.x > u_objectBounds[0] + u_objectBounds[2] + u_halfStrokeWidth || v_pos.y < u_objectBounds[1] - u_halfStrokeWidth || v_pos.y > u_objectBounds[1] + u_objectBounds[3] + u_halfStrokeWidth) {
         discard; // out of object bounds
     }
     // get scanline info
@@ -141,13 +141,13 @@ void main() {
     vec4 scanlineInfo = texel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineInfoOffset);
     uint scanlineOffset = floatBitsToUint(scanlineInfo[0]);
     uint numShapes = floatBitsToUint(scanlineInfo[1]);
-    if(numShapes == 0u || v_pos.x < scanlineInfo[2] - v_hsw || v_pos.x > scanlineInfo[3] + v_hsw) {
+    if(numShapes == 0u || v_pos.x < scanlineInfo[2] - u_halfStrokeWidth || v_pos.x > scanlineInfo[3] + u_halfStrokeWidth) {
         discard; // no shapes on this scanline or x coordinate outside scanline bounds
     }
     // check occupancy mask
     vec4 occupancyMask = texel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineOffset);
     bool empty = !occupancy(v_pos.x, u_objectBounds[0], u_objectBounds[2], occupancyMask);
-    for(float dx = u_objectBounds[2] / 128.0; empty && dx <= v_hsw; dx += u_objectBounds[2] / 128.0) {
+    for(float dx = u_objectBounds[2] / 128.0; empty && dx <= u_halfStrokeWidth; dx += u_objectBounds[2] / 128.0) {
         if(occupancy(v_pos.x - dx, u_objectBounds[0], u_objectBounds[2], occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], u_objectBounds[2], occupancyMask)) {
             empty = false;
         }
@@ -162,10 +162,10 @@ void main() {
         vec4 shapeInfo = texel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset);
         uint shapeIndex = floatBitsToUint(shapeInfo[0]);
         uint numEdges = floatBitsToUint(shapeInfo[1]);
-        if(numEdges > 0u && v_pos.x >= shapeInfo[2] - v_hsw && v_pos.x <= shapeInfo[3] + v_hsw) {
+        if(numEdges > 0u && v_pos.x >= shapeInfo[2] - u_halfStrokeWidth && v_pos.x <= shapeInfo[3] + u_halfStrokeWidth) {
             float minDist;
             int wn = windingNumber(v_pos, u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset + 1u, numEdges, minDist);
-            if(minDist < v_hsw) { // point is inside stroke area
+            if(minDist < u_halfStrokeWidth) { // point is inside stroke area
                 uvec4 strokeColorTexel = utexel(u_shapeStrokeColors, SHAPE_COLORS_TEXTURE_WIDTH, shapeIndex);
                 vec4 strokeColor = unpackColor(strokeColorTexel[0]);
                 strokeColor.rgb = strokeColor.rgb * strokeColor.a; // premultiply

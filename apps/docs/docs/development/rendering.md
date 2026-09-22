@@ -32,7 +32,7 @@ To enable partial attribute updates, data is loaded using separate buffers for e
 
 ## Shapes
 
-Shapes are rendered in multiple passes (i.e., one draw call per shape cloud) using separate data textures for each shape cloud. A "compute shader approach" is employed, where the vertex shader merely runs on the viewport corners (i.e., executed precisely four times) and the fragment shader implements a custom rendering pipeline (i.e., executed for all fragments of the entire viewport).
+Shapes are rendered in multiple passes (i.e., one draw call per shape cloud) using separate data textures for each shape cloud. A "compute shader approach" is employed, where the vertex shader merely runs on the four corners of a quad covering the shape cloud's bounds (dilated by half the stroke width) within the viewport, and the fragment shader implements a custom rendering pipeline (i.e., executed for all fragments of that quad). Shape clouds outside the viewport are skipped entirely.
 
 Partial updates are enabled implicitly by using separate data textures for each shape cloud (update individual shape clouds) and each property (update individual shape cloud properties). However, shape fill/stroke color, visibility and opacity values are packed into joint 32-bit RGBA values for memory efficiency. As for points, the world → data transform and the layer and object opacity and visibility are per-pass uniforms rather than baked into the textures, so changing them never rebuilds a texture.
 
@@ -49,14 +49,14 @@ The custom rendering pipeline is based on scanline rendering, with the following
 Specifically, the approach works as follows:
 
 - Construct scanline data for each shape cloud on the CPU and transfer them into data textures on the GPU
-- For each shape cloud, call `gl.drawArrays()` with `gl.TRIANGLE_STRIP` for the viewport bounding box (single quad)
-  - The vertex shader will run once per viewport corner, converting viewport coordinates to data coordinates
-  - The fragment shader will run once for each fragment in the viewport:
+- For each shape cloud, call `gl.drawArrays()` with `gl.TRIANGLE_STRIP` for the quad covering its bounds within the viewport
+  - The vertex shader will run once per quad corner, converting viewport coordinates to data coordinates
+  - The fragment shader will run once for each fragment in the quad:
     1. Determine the current scanline from the (interpolated) scanline varying
     2. Check the scanline bounding box and occupancy mask to quickly discard empty viewport fragments
     3. For each shape in the scanline potentially overlapping with the current fragment (check shape bounding box), compute the winding number and the minimum point-to-segment distance for the current fragment; if the current fragment is close enough to one of the shape's segments, blend the fragment color with the shape's stroke color; otherwise, if the current fragment is within the shape (non-zero winding number), blend the fragment color with the shape's fill color
 
-The number of scanlines (default 512) is a render option, and the stroke width is a single uniform shared by all shapes, which is why per-shape stroke widths are not supported (the bounding boxes and occupancy masks are computed without it). Scanline data is stored as `RGBA32F` and the packed colors as `R32UI`, in textures 4096 texels wide.
+The number of scanlines (default 512) is a render option, and the stroke width is a single uniform per shape cloud, shared by all of its shapes, which is why per-shape stroke widths are not supported (the bounding boxes and occupancy masks are computed without it). Scanline data is stored as `RGBA32F` and the packed colors as `R32UI`, in textures 4096 texels wide.
 
 This approach has been chosen over a "standard approach" primarily to avoid CPU-side triangulation, reduce memory usage (no need to store triangles), enable thick outlines (strokes), allow for high-quality anti-aliasing, and for legacy (TissUUmaps 3) reasons.
 

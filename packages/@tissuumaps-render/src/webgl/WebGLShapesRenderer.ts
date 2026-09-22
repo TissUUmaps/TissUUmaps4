@@ -1,9 +1,11 @@
 import { deepEqual } from "fast-equals";
+import type { mat3 } from "gl-matrix";
 
 import {
   AsyncUtils,
   type Color,
   ColorUtils,
+  GeometryUtils,
   type GroupValueMap,
   type Rect,
   type Shapes,
@@ -11,6 +13,7 @@ import {
   type ShapesGeometry,
   type Table,
   type TableData,
+  TransformUtils,
   type WebGLShapesRenderOptions,
   defaultShapeFillColor,
   defaultShapeFillOpacity,
@@ -39,9 +42,9 @@ import { WebGLUtils } from "./WebGLUtils";
  * WebGL renderer for two-dimensional shape clouds
  *
  * Shapes are rasterized on the GPU via a scanline-based algorithm. Each shapes
- * object is represented by a full-screen quad whose fragment shader samples a
- * scanline data texture to determine polygon membership, fill colors, and
- * stroke colors.
+ * object is represented by a quad covering its bounds within the viewport,
+ * whose fragment shader samples a scanline data texture to determine polygon
+ * membership, fill colors, and stroke colors.
  *
  * Every object owns its textures. Synchronizing compares the current model
  * against the snapshot those textures were built from, and rebuilds only the
@@ -67,12 +70,13 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     projectDefaults.glOptions.shapesRenderOptions;
   private readonly _program: WebGLProgram;
   private readonly _uniformLocations: {
+    quad: WebGLUniformLocation;
     viewportToWorldMatrix: WebGLUniformLocation;
     worldToDataMatrix: WebGLUniformLocation;
-    strokeWidth: WebGLUniformLocation;
     numScanlines: WebGLUniformLocation;
     objectBounds: WebGLUniformLocation;
     opacityFactor: WebGLUniformLocation;
+    halfStrokeWidth: WebGLUniformLocation;
   };
 
   /**
@@ -87,6 +91,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       shapesFragmentShader,
     );
     this._uniformLocations = {
+      quad: context.getUniformLocation(this._program, "u_quad"),
       viewportToWorldMatrix: context.getUniformLocation(
         this._program,
         "u_viewportToWorldMatrix",
@@ -95,12 +100,15 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         this._program,
         "u_worldToDataMatrix",
       ),
-      strokeWidth: context.getUniformLocation(this._program, "u_strokeWidth"),
       numScanlines: context.getUniformLocation(this._program, "u_numScanlines"),
       objectBounds: context.getUniformLocation(this._program, "u_objectBounds"),
       opacityFactor: context.getUniformLocation(
         this._program,
         "u_opacityFactor",
+      ),
+      halfStrokeWidth: context.getUniformLocation(
+        this._program,
+        "u_halfStrokeWidth",
       ),
     };
     // texture units never change, so the sampler uniforms are set only once
@@ -176,12 +184,15 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Issues the WebGL draw calls for all synchronized shapes
    *
-   * Renders each shapes object as a full-screen quad whose fragment shader
-   * performs scanline-based polygon rasterization using the per-object
-   * scanline data texture, with its world → data matrix, bounds, number of
-   * scanlines and opacity factor as uniforms, computed from the current model
-   * (see {@link getRenderPasses}). Objects whose layer or object is invisible
-   * are skipped.
+   * Renders each shapes object as a quad whose fragment shader performs
+   * scanline-based polygon rasterization using the per-object scanline data
+   * texture, with the viewport → world matrix as a global uniform and its
+   * world → data matrix, bounds, number of scanlines, half stroke width in
+   * data units and opacity factor as per-pass uniforms, computed from the
+   * current model (see {@link getRenderPasses}). The quad covers the object's
+   * bounds, dilated by half the stroke width, within the viewport, so that
+   * fragments are only shaded where the object can be; objects outside the
+   * viewport, and objects whose layer or object is invisible, are skipped.
    */
   draw(): void {
     const renderPasses = this.getRenderPasses();
@@ -196,10 +207,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         WebGLUtils.createViewportToWorldMatrix(this.viewport),
       ),
     );
-    this.context.gl.uniform1f(
-      this._uniformLocations.strokeWidth,
-      this.renderOptions.strokeWidth,
-    );
     this.context.enableAlphaBlending();
     for (const {
       layer,
@@ -213,12 +220,30 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       if (opacityFactor === 0) {
         continue;
       }
+      const quad = this._computeQuad(
+        renderedShapes.objectBounds,
+        WebGLUtils.createDataToWorldMatrix(shapes.transform, layer.transform),
+      );
+      if (quad === null) {
+        continue;
+      }
+      this.context.gl.uniform4f(
+        this._uniformLocations.quad,
+        quad.x,
+        quad.y,
+        quad.width,
+        quad.height,
+      );
       this.context.gl.uniformMatrix3x2fv(
         this._uniformLocations.worldToDataMatrix,
         false,
         WebGLUtils.convertMatrixToGLMat3x2(
           WebGLUtils.createWorldToDataMatrix(shapes.transform, layer.transform),
         ),
+      );
+      this.context.gl.uniform1ui(
+        this._uniformLocations.numScanlines,
+        renderedShapes.numScanlines,
       );
       this.context.gl.uniform4f(
         this._uniformLocations.objectBounds,
@@ -227,13 +252,14 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         renderedShapes.objectBounds.width,
         renderedShapes.objectBounds.height,
       );
-      this.context.gl.uniform1ui(
-        this._uniformLocations.numScanlines,
-        renderedShapes.numScanlines,
-      );
       this.context.gl.uniform1f(
         this._uniformLocations.opacityFactor,
         opacityFactor,
+      );
+      this.context.gl.uniform1f(
+        this._uniformLocations.halfStrokeWidth,
+        (0.5 * this.renderOptions.strokeWidth) /
+          (shapes.transform.scale * layer.transform.scale),
       );
       this.context.gl.activeTexture(
         WebGL2RenderingContext.TEXTURE0 +
@@ -271,6 +297,20 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   destroy(): void {
     this.context.gl.deleteProgram(this._program);
     this.clearRenderedObjects();
+  }
+
+  /**
+   * Gets the bounding box of all drawn shapes, in world coordinates
+   *
+   * Dilates the bounds of the shapes by half the stroke width, as the strokes
+   * reach beyond them (see {@link _computeQuad}).
+   */
+  override getRenderedBounds(): Rect | null {
+    const bounds = super.getRenderedBounds();
+    if (bounds === null) {
+      return null;
+    }
+    return GeometryUtils.dilate(bounds, 0.5 * this.renderOptions.strokeWidth);
   }
 
   /**
@@ -825,6 +865,42 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       return null;
     }
     return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
+  }
+
+  /**
+   * Computes the quad to draw an object with, in viewport coordinates
+   *
+   * The object's bounds are transformed to world coordinates, dilated by half
+   * the stroke width as strokes reach beyond the shapes, and intersected with
+   * the viewport, then expressed in viewport coordinates, `[0, 1]` spanning the
+   * viewport. Fragments outside the object's bounds are discarded by the
+   * fragment shader anyway, so drawing only this quad changes nothing but the
+   * number of fragments shaded.
+   *
+   * @param objectBounds - The bounds of the object's shapes, in data coordinates
+   * @param dataToWorldMatrix - The data → world matrix of the object
+   * @returns The quad, or `null` if the object lies outside the viewport
+   */
+  private _computeQuad(
+    objectBounds: Rect,
+    dataToWorldMatrix: mat3,
+  ): Rect | null {
+    const worldBounds = TransformUtils.transformBoundingBox(
+      objectBounds,
+      dataToWorldMatrix,
+    );
+    const halfStrokeWidth = 0.5 * this.renderOptions.strokeWidth;
+    const visibleBounds = GeometryUtils.intersection(
+      GeometryUtils.dilate(worldBounds, halfStrokeWidth),
+      this.viewport,
+    );
+    if (visibleBounds === null) {
+      return null;
+    }
+    return TransformUtils.transformBoundingBox(
+      visibleBounds,
+      WebGLUtils.createWorldToViewportMatrix(this.viewport),
+    );
   }
 
   /**
