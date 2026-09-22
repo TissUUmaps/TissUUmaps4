@@ -11,6 +11,8 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
+import { useTableData } from "@/hooks/useData";
+
 import type { ColorConfigSource, ColorConfigWidgetAdapter } from "./adapter";
 
 export function useColorConfigWidget(
@@ -68,6 +70,38 @@ export function useColorConfigWidget(
       ? colorConfig.random.seed
       : null,
   );
+
+  const tableData = useTableData(tableId);
+
+  const [currentFromColumnValueRange, setCurrentFromColumnValueRange] =
+    useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    // clear the previous column's range synchronously, so that the placeholder
+    // does not show a stale range while the new one is still loading
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentFromColumnValueRange(null);
+    if (
+      currentSource === "from" &&
+      currentFromColumn !== null &&
+      tableData !== null
+    ) {
+      const abortController = new AbortController();
+      tableData
+        .loadValueRange(currentFromColumn, { signal: abortController.signal })
+        .then((valueRange) => {
+          if (!abortController.signal.aborted) {
+            setCurrentFromColumnValueRange(valueRange ?? null);
+          }
+        })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error("Error loading table value range", error);
+          }
+        });
+      return () => abortController.abort();
+    }
+  }, [tableData, currentSource, currentFromColumn]);
 
   useEffect(() => {
     const currentFromRange: [number, number] | null =
@@ -175,6 +209,7 @@ export function useColorConfigWidget(
     currentFromColumn,
     currentFromRangeMin,
     currentFromRangeMax,
+    currentFromColumnValueRange,
     currentFromPalette,
     currentGroupByColumn,
     currentGroupByPalette,
