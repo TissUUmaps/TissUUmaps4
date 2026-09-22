@@ -142,7 +142,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
-              aria-label="Show/Hide"
+              aria-label={labels.visibility ? "Hide labels" : "Show labels"}
               onClick={() =>
                 updateLabels(labels.id, { visibility: !labels.visibility })
               }

@@ -173,7 +173,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
-              aria-label="Delete points"
+              aria-label="Delete point cloud"
               onClick={() => {
                 void confirm({
                   title: "Delete point cloud",
