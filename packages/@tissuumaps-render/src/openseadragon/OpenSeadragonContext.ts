@@ -82,6 +82,17 @@ export class OpenSeadragonContext {
   ]);
 
   readonly viewer: OpenSeadragon.Viewer;
+  /**
+   * How often the data transfer of a tile source has changed
+   *
+   * A tile transferred with an outdated generation is abandoned: the change
+   * that outdated it has invalidated the same tiles again, so it recolors them.
+   */
+  private readonly _dataTransferGenerations = new WeakMap<
+    OpenSeadragon.TileSource,
+    number
+  >();
+
   private readonly _tileSourceDataTransfers = new WeakMap<
     OpenSeadragon.TileSource,
     DataTransfer
@@ -492,6 +503,10 @@ export class OpenSeadragonContext {
       } else {
         this._tileSourceDataTransfers.delete(tiledImage.source);
       }
+      this._dataTransferGenerations.set(
+        tiledImage.source,
+        (this._dataTransferGenerations.get(tiledImage.source) ?? 0) + 1,
+      );
       const tiledImagesToInvalidate = [tiledImage];
       const navigator = this.viewer.navigator as OpenSeadragon.Navigator | null;
       if (navigator !== null) {
@@ -669,6 +684,33 @@ export class OpenSeadragonContext {
   }
 
   /**
+   * Yields to the event loop, so that the browser can paint and handle input
+   *
+   * Uses the scheduler where it is available, and a message channel otherwise,
+   * as a timeout is clamped to several milliseconds after a few nested calls.
+   *
+   * @returns A promise that resolves in a later task
+   */
+  private static _yieldToEventLoop(): Promise<void> {
+    const scheduler = (
+      globalThis as unknown as {
+        scheduler?: { yield?: () => Promise<void> };
+      }
+    ).scheduler;
+    if (scheduler?.yield !== undefined) {
+      return scheduler.yield();
+    }
+    return new Promise((resolve) => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = () => {
+        channel.port1.close();
+        resolve();
+      };
+      channel.port2.postMessage(undefined);
+    });
+  }
+
+  /**
    * Replaces the data of an invalidated tile with the colors of its values
    *
    * Does nothing unless a data transfer is set for the tile source of the tile
@@ -703,6 +745,15 @@ export class OpenSeadragonContext {
     }
     const dataTransfer = this._tileSourceDataTransfers.get(tiledImage.source);
     if (dataTransfer === undefined) {
+      return;
+    }
+    // recoloring a tile holds the thread for as long as the tile has pixels, so
+    // the tiles of a change are recolored one event loop turn at a time: the
+    // user interface stays responsive, the tiles appear as they are done, and a
+    // change that arrives meanwhile abandons the tiles of the one before it
+    const generation = this._dataTransferGenerations.get(tiledImage.source);
+    await OpenSeadragonContext._yieldToEventLoop();
+    if (generation !== this._dataTransferGenerations.get(tiledImage.source)) {
       return;
     }
     const { values, width, height } = await dataTransfer.getTileData(event);
