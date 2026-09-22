@@ -200,22 +200,27 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   ): Promise<void> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    this.recordSyncState();
-    const newRefs = await this.loadObjects(tables, loadPoints, loadTable, {
-      signal,
-    });
-    const matches = this.matchOrDestroyRenderedObjects(newRefs);
-    await this._createOrUpdateRenderedPoints(
-      matches,
-      tables,
-      markerMaps,
-      sizeMaps,
-      colorMaps,
-      visibilityMaps,
-      opacityMaps,
-      loadTable,
-      { signal },
-    );
+    const syncState = this.recordSyncState();
+    try {
+      const newRefs = await this.loadObjects(tables, loadPoints, loadTable, {
+        signal,
+      });
+      const matches = this.matchOrDestroyRenderedObjects(newRefs);
+      await this._createOrUpdateRenderedPoints(
+        matches,
+        tables,
+        markerMaps,
+        sizeMaps,
+        colorMaps,
+        visibilityMaps,
+        opacityMaps,
+        loadTable,
+        { signal },
+      );
+    } catch (error) {
+      this.discardSyncState(syncState);
+      throw error;
+    }
   }
 
   /**

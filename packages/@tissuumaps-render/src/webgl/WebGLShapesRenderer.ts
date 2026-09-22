@@ -152,20 +152,25 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): Promise<void> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    this.recordSyncState();
-    const newRefs = await this.loadObjects(tables, loadShapes, loadTable, {
-      signal,
-    });
-    const matches = this.matchOrDestroyRenderedObjects(newRefs);
-    await this._createOrUpdateRenderedShapes(
-      matches,
-      tables,
-      colorMaps,
-      visibilityMaps,
-      opacityMaps,
-      loadTable,
-      { signal },
-    );
+    const syncState = this.recordSyncState();
+    try {
+      const newRefs = await this.loadObjects(tables, loadShapes, loadTable, {
+        signal,
+      });
+      const matches = this.matchOrDestroyRenderedObjects(newRefs);
+      await this._createOrUpdateRenderedShapes(
+        matches,
+        tables,
+        colorMaps,
+        visibilityMaps,
+        opacityMaps,
+        loadTable,
+        { signal },
+      );
+    } catch (error) {
+      this.discardSyncState(syncState);
+      throw error;
+    }
   }
 
   /**
@@ -388,48 +393,53 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         shapeStrokeVisibility: newRef.object.shapeStrokeVisibility,
         shapeStrokeOpacity: newRef.object.shapeStrokeOpacity,
       };
-      const scanlineDataTexture =
-        prepared.scanlineBuffer !== undefined
-          ? this._createScanlineDataTexture(prepared.scanlineBuffer)
-          : undefined;
-      const shapeFillColorsTexture =
-        prepared.packedShapeFillColors !== undefined
-          ? this._createShapeColorsTexture(prepared.packedShapeFillColors)
-          : undefined;
-      const shapeStrokeColorsTexture =
-        prepared.packedShapeStrokeColors !== undefined
-          ? this._createShapeColorsTexture(prepared.packedShapeStrokeColors)
-          : undefined;
       if (renderedShapes === undefined) {
         if (
-          scanlineDataTexture === undefined ||
-          shapeFillColorsTexture === undefined ||
-          shapeStrokeColorsTexture === undefined
+          prepared.scanlineBuffer === undefined ||
+          prepared.packedShapeFillColors === undefined ||
+          prepared.packedShapeStrokeColors === undefined
         ) {
-          throw new Error("All textures must be created for new shapes object");
+          throw new Error(
+            "All textures must be prepared for new shapes object",
+          );
         }
         this.addRenderedObject({
           ref: newRef,
           renderConfigSnapshot,
           objectBounds: prepared.objectBounds,
           numScanlines: prepared.numScanlines,
-          scanlineDataTexture,
-          shapeFillColorsTexture,
-          shapeStrokeColorsTexture,
+          scanlineDataTexture: this._createScanlineDataTexture(
+            prepared.scanlineBuffer,
+          ),
+          shapeFillColorsTexture: this._createShapeColorsTexture(
+            prepared.packedShapeFillColors,
+          ),
+          shapeStrokeColorsTexture: this._createShapeColorsTexture(
+            prepared.packedShapeStrokeColors,
+          ),
         });
       } else {
         renderedShapes.renderConfigSnapshot = renderConfigSnapshot;
-        if (scanlineDataTexture !== undefined) {
+        if (prepared.scanlineBuffer !== undefined) {
+          const scanlineDataTexture = this._createScanlineDataTexture(
+            prepared.scanlineBuffer,
+          );
           this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
           renderedShapes.scanlineDataTexture = scanlineDataTexture;
           renderedShapes.objectBounds = prepared.objectBounds;
           renderedShapes.numScanlines = prepared.numScanlines;
         }
-        if (shapeFillColorsTexture !== undefined) {
+        if (prepared.packedShapeFillColors !== undefined) {
+          const shapeFillColorsTexture = this._createShapeColorsTexture(
+            prepared.packedShapeFillColors,
+          );
           this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
           renderedShapes.shapeFillColorsTexture = shapeFillColorsTexture;
         }
-        if (shapeStrokeColorsTexture !== undefined) {
+        if (prepared.packedShapeStrokeColors !== undefined) {
+          const shapeStrokeColorsTexture = this._createShapeColorsTexture(
+            prepared.packedShapeStrokeColors,
+          );
           this.context.gl.deleteTexture(
             renderedShapes.shapeStrokeColorsTexture,
           );

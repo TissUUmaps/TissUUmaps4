@@ -130,10 +130,33 @@ export abstract class WebGLRendererBase<
    * Every synchronization has to call this first, before its first `await`: the
    * model may be set again while it runs, and {@link needsSynchronization} has
    * to report such a change against the model the synchronization actually
-   * read, not against the one it found when it finished.
+   * read, not against the one it found when it finished. A synchronization
+   * that fails has to hand the returned state back to
+   * {@link discardSyncState}, so that the model is synchronized again.
+   *
+   * @returns The recorded state
    */
-  protected recordSyncState(): void {
+  protected recordSyncState(): object | undefined {
     this._lastSyncState = this.getSyncState();
+    return this._lastSyncState;
+  }
+
+  /**
+   * Forgets a recorded synchronization state, unless another synchronization
+   * has recorded its own since
+   *
+   * Called by a synchronization that failed, so that
+   * {@link needsSynchronization} reports the model as unsynchronized again. A
+   * synchronization that was aborted because a newer one started must not
+   * undo what the newer one recorded, hence the identity check.
+   *
+   * @param syncState - The state the failed synchronization recorded, as
+   * returned by {@link recordSyncState}
+   */
+  protected discardSyncState(syncState: object | undefined): void {
+    if (this._lastSyncState === syncState) {
+      this._lastSyncState = undefined;
+    }
   }
 
   /**
@@ -536,14 +559,17 @@ export abstract class WebGLRendererBase<
    *
    * The counterpart of {@link getObjectSyncState} for layers. The point size
    * factor is blanked out as well: it is a uniform of the points renderer, and
-   * the shapes renderer never reads it.
+   * the shapes renderer never reads it. So is the name, which nothing rendered
+   * depends on.
    *
    * @param layer - The layer to return the state of
-   * @returns The layer without the properties that are applied when drawing
+   * @returns The layer without the properties that are applied when drawing,
+   * and without the cosmetic ones
    */
   protected getLayerSyncState(layer: Layer): object {
     return {
       ...layer,
+      name: undefined,
       transform: undefined,
       visibility: undefined,
       opacity: undefined,
@@ -556,20 +582,22 @@ export abstract class WebGLRendererBase<
    *
    * Everything but the properties that are applied when drawing, which are read
    * from the current model on every draw (see {@link getRenderPasses}) and
-   * hence need no synchronization. Those are blanked out rather than dropped,
-   * so that a property added to the model later is part of the state, and
-   * thereby requires a resynchronization, unless it is blanked out here as
-   * well.
+   * hence need no synchronization, and but the cosmetic ones, which nothing
+   * rendered depends on. Those are blanked out rather than dropped, so that a
+   * property added to the model later is part of the state, and thereby
+   * requires a resynchronization, unless it is blanked out here as well.
    *
    * The result is only ever deep-compared against that of another object, hence
    * the opaque return type.
    *
    * @param object - The object (points or shapes) to return the state of
-   * @returns The object without the properties that are applied when drawing
+   * @returns The object without the properties that are applied when drawing,
+   * and without the cosmetic ones
    */
   protected getObjectSyncState(object: TObject): object {
     return {
       ...object,
+      name: undefined,
       transform: undefined,
       visibility: undefined,
       opacity: undefined,
