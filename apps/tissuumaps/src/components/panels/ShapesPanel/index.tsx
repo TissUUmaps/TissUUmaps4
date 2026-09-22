@@ -153,7 +153,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
-              aria-label="Delete"
+              aria-label="Delete shape cloud"
               onClick={() => {
                 void confirm({
                   title: "Delete shape cloud",

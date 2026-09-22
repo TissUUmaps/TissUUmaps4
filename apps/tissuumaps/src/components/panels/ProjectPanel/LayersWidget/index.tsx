@@ -163,7 +163,7 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
             <Button
               variant="ghost"
               disabled={hasObjects}
-              aria-label="delete"
+              aria-label="Delete layer"
               onClick={() => {
                 void confirm({
                   title: "Delete layer",

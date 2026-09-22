@@ -70,12 +70,11 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
     <div className={className}>
       <div>
         <Field>
-          <FieldLabel htmlFor="project-name">Project name</FieldLabel>
+          <FieldLabel>Project name</FieldLabel>
           <FieldControl
             render={
               <Input
                 type="text"
-                id="project-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />

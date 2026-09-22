@@ -94,7 +94,7 @@ function TableAccordionItem({ table, index }: TableAccordionItemProps) {
           <div className="ml-auto flex flex-row items-center gap-x-2">
             <Button
               variant="ghost"
-              aria-label="Delete"
+              aria-label="Delete table"
               onClick={() => {
                 void confirm({
                   title: "Delete table",
