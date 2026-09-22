@@ -498,7 +498,7 @@ async function handleShapesRequest(
   if (geoColumn === undefined) {
     throw new Error(
       request.geometryColumn !== undefined
-        ? `Geometry column "${request.geometryColumn}" not found in Parquet file`
+        ? `Geometry column "${request.geometryColumn}" is missing or not encoded as WKB`
         : "Parquet file has no GeoParquet geometry column",
     );
   }
