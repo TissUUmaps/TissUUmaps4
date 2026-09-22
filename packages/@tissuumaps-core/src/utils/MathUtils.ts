@@ -195,7 +195,7 @@ export class MathUtils {
    * @param options - Optional abort signal
    * @returns A promise that resolves to the count of every distinct value
    */
-  static async computeValueCounts<T>(
+  static async computeUniqueValueCounts<T>(
     values: GenericArray<T>,
     options?: { signal?: AbortSignal },
   ): Promise<Map<T, number>> {

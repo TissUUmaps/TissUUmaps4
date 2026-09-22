@@ -26,7 +26,7 @@ function createMockTableData(
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
     loadValueRange: vi.fn().mockResolvedValue(valueRange),
-    loadValueCounts: vi.fn(),
+    loadUniqueValueCounts: vi.fn(),
     suggestColumnQueries: vi.fn(),
     resolveColumnQuery: vi.fn(),
   };

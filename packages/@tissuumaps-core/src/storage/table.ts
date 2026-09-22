@@ -56,7 +56,7 @@ export interface TableData extends ItemsData {
    * @param options - Optional abort signal and progress callback
    * @returns The row count of every unique column value, keyed by value
    */
-  loadValueCounts<T>(
+  loadUniqueValueCounts<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<Map<T, number>>;

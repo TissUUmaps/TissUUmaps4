@@ -70,14 +70,14 @@ export class ParquetTableData implements TableData {
     return data as GenericArray<T>;
   }
 
-  async loadValueCounts<T>(
+  async loadUniqueValueCounts<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<Map<T, number>> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const values = await this.loadValues<T>(column, { signal, onProgress });
-    return await MathUtils.computeValueCounts(values, { signal });
+    return await MathUtils.computeUniqueValueCounts(values, { signal });
   }
 
   async loadValueRange(

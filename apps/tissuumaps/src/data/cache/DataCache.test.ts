@@ -102,7 +102,7 @@ function createTestTableData(): { data: TableData; close: Mock } {
       suggestColumnQueries: () => Promise.resolve([]),
       resolveColumnQuery: () => Promise.resolve(null),
       loadValues: notImplemented,
-      loadValueCounts: notImplemented,
+      loadUniqueValueCounts: notImplemented,
       loadValueRange: notImplemented,
     },
     close,

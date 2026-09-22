@@ -367,9 +367,9 @@ describe("MathUtils", () => {
     });
   });
 
-  describe("computeValueCounts", () => {
+  describe("computeUniqueValueCounts", () => {
     it("counts the occurrences of every distinct value", async () => {
-      const counts = await MathUtils.computeValueCounts(["b", "a", "b"]);
+      const counts = await MathUtils.computeUniqueValueCounts(["b", "a", "b"]);
       expect([...counts]).toEqual([
         ["b", 2],
         ["a", 1],
@@ -377,7 +377,7 @@ describe("MathUtils", () => {
     });
 
     it("counts the values of typed arrays", async () => {
-      const counts = await MathUtils.computeValueCounts(
+      const counts = await MathUtils.computeUniqueValueCounts(
         new Uint8Array([1, 2, 1]),
       );
       expect([...counts]).toEqual([
@@ -387,14 +387,14 @@ describe("MathUtils", () => {
     });
 
     it("returns no counts for empty data", async () => {
-      await expect(MathUtils.computeValueCounts([])).resolves.toEqual(
+      await expect(MathUtils.computeUniqueValueCounts([])).resolves.toEqual(
         new Map(),
       );
     });
 
     it("handles large data", async () => {
       const values = new Uint16Array(100_000).map((_, i) => i % 1000);
-      const counts = await MathUtils.computeValueCounts(values);
+      const counts = await MathUtils.computeUniqueValueCounts(values);
       expect(counts.size).toBe(1000);
       expect([...counts.values()].every((count) => count === 100)).toBe(true);
     });
@@ -403,7 +403,7 @@ describe("MathUtils", () => {
       const controller = new AbortController();
       controller.abort(new Error("aborted"));
       await expect(
-        MathUtils.computeValueCounts(new Uint8Array(10), {
+        MathUtils.computeUniqueValueCounts(new Uint8Array(10), {
           signal: controller.signal,
         }),
       ).rejects.toThrow("aborted");

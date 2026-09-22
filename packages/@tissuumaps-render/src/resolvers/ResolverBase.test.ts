@@ -23,7 +23,7 @@ function createMockTableData(
       close: vi.fn(),
       loadValues,
       loadValueRange,
-      loadValueCounts: vi.fn(),
+      loadUniqueValueCounts: vi.fn(),
       suggestColumnQueries: vi.fn(),
       resolveColumnQuery: vi.fn(),
     },
