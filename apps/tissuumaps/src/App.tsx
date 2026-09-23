@@ -23,6 +23,7 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
+import { NotificationCenter } from "./components/widgets/NotificationCenter";
 import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
 
@@ -228,6 +229,7 @@ export function App() {
             setDockviewApi(event.api);
           }}
         />
+        <NotificationCenter />
       </div>
     </DialogProvider>
   );
