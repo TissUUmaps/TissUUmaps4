@@ -61,29 +61,456 @@ function createTestSquare(
 
 const unitBounds: Rect = { x: 0, y: 0, width: 1, height: 1 };
 
-describe("WebGLShapesRasterizer.createScanlines", () => {
-  it("rasterizes a single full-extent square into one scanline", async () => {
+/**
+ * Rasterizes shapes with {@link WebGLShapesRasterizer.rasterizeScanlines} and
+ * decodes the packed buffer into the shapes and bins of every scanline, for
+ * inspection
+ *
+ * The shapes of a scanline are the ones its bins reference, keyed by shape
+ * index in the order they are laid out in. Also checks that these shapes and
+ * their edges fill the buffer's scanline section exactly, i.e. that nothing
+ * is written outside of them and nothing is left unreferenced.
+ */
+async function rasterizeAndDecode(
+  numScanlines: number,
+  numBins: number,
+  scanlinePadding: number,
+  binPadding: number,
+  geometry: ShapesGeometry,
+  shapesMask: Uint8Array | undefined,
+  objectBounds: Rect,
+  options?: { signal?: AbortSignal },
+) {
+  const buffer = await WebGLShapesRasterizer.rasterizeScanlines(
+    numScanlines,
+    numBins,
+    scanlinePadding,
+    binPadding,
+    geometry,
+    shapesMask,
+    objectBounds,
+    options,
+  );
+  const uint32Buffer = new Uint32Array(buffer);
+  const float32Buffer = new Float32Array(buffer);
+  const scanlines: {
+    bins: number[][];
+    shapes: Map<
+      number,
+      {
+        xMin: number;
+        xMax: number;
+        edges: { v0x: number; v0y: number; v1x: number; v1y: number }[];
+      }
+    >;
+  }[] = [];
+  let totalNumScanlineShapes = 0;
+  let totalNumScanlineShapeEdges = 0;
+  let totalNumScanlineBinShapes = 0;
+  for (let s = 0; s < (buffer.byteLength > 0 ? numScanlines : 0); s++) {
+    const bins: number[][] = [];
+    const shapeTexelOffsets = new Set<number>();
+    for (let b = 0; b < numBins; b++) {
+      const binEntryValueOffset = 2 * (s * numBins + b);
+      const shapeReferenceValueOffset = uint32Buffer[binEntryValueOffset]!;
+      const numShapes = uint32Buffer[binEntryValueOffset + 1]!;
+      const bin: number[] = [];
+      for (let i = 0; i < numShapes; i++) {
+        const shapeTexelOffset = uint32Buffer[shapeReferenceValueOffset + i]!;
+        shapeTexelOffsets.add(shapeTexelOffset);
+        bin.push(uint32Buffer[4 * shapeTexelOffset]!);
+      }
+      bins.push(bin);
+      totalNumScanlineBinShapes += numShapes;
+    }
+    const shapes: (typeof scanlines)[number]["shapes"] = new Map();
+    for (const shapeTexelOffset of [...shapeTexelOffsets].sort(
+      (a, b) => a - b,
+    )) {
+      const shapeValueOffset = 4 * shapeTexelOffset;
+      const numEdges = uint32Buffer[shapeValueOffset + 1]!;
+      const edges = [];
+      for (let e = 0; e < numEdges; e++) {
+        const edgeValueOffset = 4 * (shapeTexelOffset + 1 + e);
+        edges.push({
+          v0x: float32Buffer[edgeValueOffset]!,
+          v0y: float32Buffer[edgeValueOffset + 1]!,
+          v1x: float32Buffer[edgeValueOffset + 2]!,
+          v1y: float32Buffer[edgeValueOffset + 3]!,
+        });
+      }
+      shapes.set(uint32Buffer[shapeValueOffset]!, {
+        xMin: float32Buffer[shapeValueOffset + 2]!,
+        xMax: float32Buffer[shapeValueOffset + 3]!,
+        edges,
+      });
+      totalNumScanlineShapes++;
+      totalNumScanlineShapeEdges += numEdges;
+    }
+    scanlines.push({ bins, shapes });
+  }
+  if (buffer.byteLength > 0) {
+    const numBinTableTexels = Math.ceil((numScanlines * numBins) / 2);
+    const numShapeReferenceTexels = Math.ceil(totalNumScanlineBinShapes / 4);
+    expect(
+      numBinTableTexels +
+        numShapeReferenceTexels +
+        totalNumScanlineShapes +
+        totalNumScanlineShapeEdges,
+    ).toBe(buffer.byteLength / 16);
+  }
+  return {
+    scanlines,
+    totalNumScanlineShapes,
+    totalNumScanlineShapeEdges,
+    totalNumScanlineBinShapes,
+  };
+}
+
+describe("WebGLShapesRasterizer.computeGridSize", () => {
+  it("sizes the scanlines to hold the given number of edges of a typical shape", async () => {
+    // 4 edges over a height of 1 -> 0.25 per edge; 2 edges -> scanline height 0.5
     const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
 
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
+        geometry,
+        undefined,
+        { x: 0, y: 0, width: 20, height: 10 },
+        2,
         1,
+        0,
+      ),
+    ).resolves.toEqual({
+      numScanlines: 20,
+      numBins: 20,
+      scanlinePadding: 0,
+      binPadding: 0,
+    });
+  });
+
+  it("pads by a fraction of the median shape height and width", async () => {
+    // scanline height 0.5 and bin width 1 (see above) -> half the median
+    // shape height (0.5) is one scanline, half its width (0.5) half a bin
+    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
+
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
+        geometry,
+        undefined,
+        { x: 0, y: 0, width: 20, height: 10 },
+        2,
+        1,
+        0.5,
+      ),
+    ).resolves.toEqual({
+      numScanlines: 20,
+      numBins: 20,
+      scanlinePadding: 1,
+      binPadding: 0.5,
+    });
+  });
+
+  it("does not scale the padding with the bin width factor", async () => {
+    // bin width 2 -> half the median shape width (0.5) is a quarter bin
+    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
+
+    const { numBins, binPadding } = await WebGLShapesRasterizer.computeGridSize(
+      geometry,
+      undefined,
+      { x: 0, y: 0, width: 20, height: 10 },
+      2,
+      2,
+      0.5,
+    );
+
+    expect(numBins).toBe(10);
+    expect(binPadding).toBe(0.25);
+  });
+
+  it("weights the heights per edge of the shapes by their area", async () => {
+    // heights per edge 0.25 (area 1), 0.25 (area 1) and 1 (area 40) -> 1,
+    // i.e. scanline height 4 (unweighted: 0.25, i.e. scanline height 1)
+    const geometry = createTestGeometry([
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 10, 4),
+    ]);
+
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
+        geometry,
+        undefined,
+        { x: 0, y: 0, width: 20, height: 12 },
+        4,
+        1,
+        0,
+      ),
+    ).resolves.toEqual({
+      numScanlines: 3,
+      numBins: 20,
+      scanlinePadding: 0,
+      binPadding: 0,
+    });
+  });
+
+  it("counts the edges of holes, but not zero-length edges", async () => {
+    // 4 shell edges (one duplicated vertex) + 4 hole edges over a height of 4
+    // -> 0.5 per edge
+    const geometry = createTestGeometry([
+      [
+        [
+          [
+            [0, 0],
+            [4, 0],
+            [4, 0],
+            [4, 4],
+            [0, 4],
+          ],
+          [
+            [1, 1],
+            [3, 1],
+            [3, 3],
+            [1, 3],
+          ],
+        ],
+      ],
+    ]);
+
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
+        geometry,
+        undefined,
+        { x: 0, y: 0, width: 20, height: 10 },
+        1,
+        1,
+        0,
+      ),
+    ).resolves.toEqual({
+      numScanlines: 20,
+      numBins: 5,
+      scanlinePadding: 0,
+      binPadding: 0,
+    });
+  });
+
+  it("leaves out shapes without edges when sizing the scanlines", async () => {
+    const geometry = createTestGeometry([
+      [
+        [
+          [
+            [5, 5],
+            [5, 5],
+            [5, 5],
+          ],
+        ],
+      ],
+      createTestSquare(0, 0, 1, 1),
+    ]);
+
+    const { numScanlines } = await WebGLShapesRasterizer.computeGridSize(
+      geometry,
+      undefined,
+      { x: 0, y: 0, width: 20, height: 10 },
+      2,
+      1,
+      0,
+    );
+
+    expect(numScanlines).toBe(20);
+  });
+
+  it("sizes the bins like the median shape width, times the bin width factor", async () => {
+    // widths 1, 2 and 10 -> median 2, times 2.5 -> bin width 5
+    const geometry = createTestGeometry([
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 2, 1),
+      createTestSquare(0, 0, 10, 4),
+    ]);
+
+    const { numBins } = await WebGLShapesRasterizer.computeGridSize(
+      geometry,
+      undefined,
+      { x: 0, y: 0, width: 20, height: 10 },
+      4,
+      2.5,
+      0,
+    );
+
+    expect(numBins).toBe(4);
+  });
+
+  it("only considers the included shapes", async () => {
+    // 5 x 5 square: 1.25 per edge, times 4 edges -> scanline height 5
+    const geometry = createTestGeometry([
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 5, 5),
+    ]);
+
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
+        geometry,
+        new Uint8Array([0, 1]),
+        { x: 0, y: 0, width: 20, height: 10 },
+        4,
+        1,
+        0,
+      ),
+    ).resolves.toEqual({
+      numScanlines: 2,
+      numBins: 4,
+      scanlinePadding: 0,
+      binPadding: 0,
+    });
+  });
+
+  it("uses at least one scanline and bin", async () => {
+    const geometry = createTestGeometry([createTestSquare(0, 0, 100, 100)]);
+
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
         geometry,
         undefined,
         unitBounds,
+        4,
+        1,
+        0,
+      ),
+    ).resolves.toEqual({
+      numScanlines: 1,
+      numBins: 1,
+      scanlinePadding: 0,
+      binPadding: 0,
+    });
+  });
+
+  it("uses one scanline and bin without included shapes", async () => {
+    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
+
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
+        geometry,
+        new Uint8Array([0]),
+        unitBounds,
+        4,
+        1,
+        0,
+      ),
+    ).resolves.toEqual({
+      numScanlines: 1,
+      numBins: 1,
+      scanlinePadding: 0,
+      binPadding: 0,
+    });
+  });
+
+  it("limits the number of scanlines and of bins per scanline", async () => {
+    // zero-width shapes -> as many bins as allowed (2 edges over a height of 1,
+    // unweighted without area -> scanline height 1)
+    const zeroWidthGeometry = createTestGeometry([
+      createTestSquare(0, 0, 0, 1),
+    ]);
+    // zero-height shapes -> as many scanlines as allowed
+    const zeroHeightGeometry = createTestGeometry([
+      createTestSquare(0, 0, 1, 0),
+    ]);
+
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
+        zeroWidthGeometry,
+        undefined,
+        unitBounds,
+        2,
+        1,
+        0,
+      ),
+    ).resolves.toEqual({
+      numScanlines: 1,
+      numBins: 4096,
+      scanlinePadding: 0,
+      binPadding: 0,
+    });
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
+        zeroHeightGeometry,
+        undefined,
+        unitBounds,
+        2,
+        1,
+        0,
+      ),
+    ).resolves.toEqual({
+      numScanlines: 4096,
+      numBins: 1,
+      scanlinePadding: 0,
+      binPadding: 0,
+    });
+  });
+
+  it("scales both down together to limit the total number of bins", async () => {
+    // 4096 x 4096 bins before scaling down to at most 2^21 in total
+    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
+
+    const { numScanlines, numBins } =
+      await WebGLShapesRasterizer.computeGridSize(
+        geometry,
+        undefined,
+        { x: 0, y: 0, width: 10000, height: 10000 },
+        4,
+        1,
+        0,
       );
+
+    expect(numScanlines).toBe(numBins);
+    expect(numScanlines * numBins).toBeLessThanOrEqual(2 ** 21);
+    expect((numScanlines + 1) * (numBins + 1)).toBeGreaterThan(2 ** 21);
+  });
+
+  it("rejects when the abort signal is already aborted", async () => {
+    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      WebGLShapesRasterizer.computeGridSize(
+        geometry,
+        undefined,
+        unitBounds,
+        4,
+        1,
+        0,
+        { signal: controller.signal },
+      ),
+    ).rejects.toThrow();
+  });
+});
+
+describe("WebGLShapesRasterizer.rasterizeScanlines", () => {
+  it("rasterizes a single full-extent square into one scanline", async () => {
+    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
+
+    const {
+      scanlines,
+      totalNumScanlineShapes,
+      totalNumScanlineShapeEdges,
+      totalNumScanlineBinShapes,
+    } = await rasterizeAndDecode(
+      1,
+      1,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
+    );
 
     expect(scanlines).toHaveLength(1);
     expect(totalNumScanlineShapes).toBe(1);
     expect(totalNumScanlineShapeEdges).toBe(4);
+    expect(totalNumScanlineBinShapes).toBe(1);
 
     const scanline = scanlines[0]!;
-    expect(scanline.xMin).toBe(0);
-    expect(scanline.xMax).toBe(1);
-    // full horizontal extent -> every occupancy bit set
-    expect(scanline.occupancyMask).toEqual([
-      0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-    ]);
+    expect(scanline.bins).toEqual([[0]]);
 
     expect([...scanline.shapes.keys()]).toEqual([0]);
     const scanlineShape = scanline.shapes.get(0)!;
@@ -97,41 +524,10 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     ]);
   });
 
-  it("sets only the occupancy bins covered by a partial-width shape", async () => {
-    // square covering the left quarter -> bins [0, 32]
-    const geometry = createTestGeometry([createTestSquare(0, 0, 0.25, 1)]);
-
-    const { scanlines } = await WebGLShapesRasterizer.createScanlines(
-      1,
-      geometry,
-      undefined,
-      unitBounds,
-    );
-
-    // bins 0..31 -> first word all set, bin 32 -> second word bit 0
-    expect(scanlines[0]!.occupancyMask).toEqual([0xffffffff, 0x1, 0x0, 0x0]);
-  });
-
-  it("pads the occupancy bins by one bin to the left, as slack for strokes", async () => {
-    // square covering the right quarter -> bins [96, 127], padded to [95, 127]
-    const geometry = createTestGeometry([createTestSquare(0.75, 0, 1, 1)]);
-
-    const { scanlines } = await WebGLShapesRasterizer.createScanlines(
-      1,
-      geometry,
-      undefined,
-      unitBounds,
-    );
-
-    // bin 95 -> third word bit 31, bins 96..127 -> fourth word all set
-    expect(scanlines[0]!.occupancyMask).toEqual([
-      0x0, 0x0, 0x80000000, 0xffffffff,
-    ]);
-  });
-
-  it("drops the edges of a hole that reaches beyond the bands of its shell", async () => {
-    // with 8 bands: shape 0 covers bands 0-2 (with slack), the shell of shape 1
-    // bands 5-7, but the (invalid) hole of shape 1 reaches down to band 0
+  it("drops the edges of a hole that reaches beyond the scanlines of its shell", async () => {
+    // with 8 scanlines: shape 0 covers scanlines 0-2 (with slack), the shell of
+    // shape 1 scanlines 5-7, but the (invalid) hole of shape 1 reaches down to
+    // scanline 0
     const geometry = createTestGeometry([
       createTestSquare(0, 0, 1, 0.25),
       [
@@ -152,8 +548,11 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       ],
     ]);
 
-    const { scanlines } = await WebGLShapesRasterizer.createScanlines(
+    const { scanlines } = await rasterizeAndDecode(
       8,
+      1,
+      0.5,
+      0.5,
       geometry,
       undefined,
       unitBounds,
@@ -168,79 +567,78 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
 
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        2,
-        geometry,
-        undefined,
-        unitBounds,
-      );
+      await rasterizeAndDecode(4, 1, 0.5, 0.5, geometry, undefined, unitBounds);
 
-    expect(scanlines).toHaveLength(2);
-    // the shape spans both scanlines -> one shape entry per scanline
-    expect(totalNumScanlineShapes).toBe(2);
-    // vertical edges straddle both scanlines, horizontal edges only one each
-    expect(totalNumScanlineShapeEdges).toBe(6);
+    expect(scanlines).toHaveLength(4);
+    // the shape spans all scanlines -> one shape entry per scanline
+    expect(totalNumScanlineShapes).toBe(4);
+    // vertical edges straddle all scanlines, horizontal edges only their own
+    // (the adjacent ones are more than half a scanline away)
+    expect(totalNumScanlineShapeEdges).toBe(3 + 2 + 2 + 3);
 
     expect(scanlines[0]!.shapes.get(0)!.edges).toHaveLength(3);
-    expect(scanlines[1]!.shapes.get(0)!.edges).toHaveLength(3);
+    expect(scanlines[1]!.shapes.get(0)!.edges).toHaveLength(2);
+    expect(scanlines[2]!.shapes.get(0)!.edges).toHaveLength(2);
+    expect(scanlines[3]!.shapes.get(0)!.edges).toHaveLength(3);
   });
 
   it("leaves scanlines outside a shape's vertical extent empty", async () => {
     // square occupying only the top third of a 3-unit-tall object
     const geometry = createTestGeometry([createTestSquare(0, 2, 1, 3)]);
 
-    const { scanlines } = await WebGLShapesRasterizer.createScanlines(
+    const { scanlines } = await rasterizeAndDecode(
       3,
+      1,
+      0.5,
+      0.5,
       geometry,
       undefined,
       { x: 0, y: 0, width: 1, height: 3 },
     );
 
     const emptyScanline = scanlines[0]!;
-    expect(emptyScanline.xMin).toBe(Infinity);
-    expect(emptyScanline.xMax).toBe(-Infinity);
     expect(emptyScanline.shapes.size).toBe(0);
-    expect(emptyScanline.occupancyMask).toEqual([0, 0, 0, 0]);
+    expect(emptyScanline.bins).toEqual([[]]);
 
     const populatedScanline = scanlines[2]!;
     expect(populatedScanline.shapes.has(0)).toBe(true);
   });
 
-  it("pads shapes and their edges by a quarter scanline, as slack for strokes", async () => {
-    // on 4 scanlines of height 1: shape 0 reaches within a quarter scanline of
-    // scanlines 0 and 2, shape 1 does not reach within a quarter scanline of
-    // any scanline but its own
+  it("pads shapes and their edges by half a scanline, as slack for strokes", async () => {
+    // on 8 scanlines of height 1: the shape spans scanlines 3-4, and reaches
+    // within half a scanline of scanlines 2 and 5, but not of scanlines 1 and 6
     const geometry = createTestGeometry([
-      createTestSquare(0, 1.125, 0.5, 1.875),
-      createTestSquare(0.5, 2.5, 1, 2.625),
+      createTestSquare(0, 3.125, 0.5, 4.875),
     ]);
 
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(4, geometry, undefined, {
+      await rasterizeAndDecode(8, 1, 0.5, 0.5, geometry, undefined, {
         x: 0,
         y: 0,
         width: 1,
-        height: 4,
+        height: 8,
       });
 
-    expect([...scanlines[0]!.shapes.keys()]).toEqual([0]);
-    expect([...scanlines[1]!.shapes.keys()]).toEqual([0]);
-    expect([...scanlines[2]!.shapes.keys()]).toEqual([0, 1]);
-    expect(scanlines[3]!.shapes.size).toBe(0);
+    expect(scanlines[1]!.shapes.size).toBe(0);
+    expect([...scanlines[2]!.shapes.keys()]).toEqual([0]);
+    expect([...scanlines[5]!.shapes.keys()]).toEqual([0]);
+    expect(scanlines[6]!.shapes.size).toBe(0);
     expect(totalNumScanlineShapes).toBe(4);
-    // the bottom edge (y = 1.125) of shape 0 is padded onto scanline 0, its top
-    // edge (y = 1.875) onto scanline 2
-    expect(scanlines[0]!.shapes.get(0)!.edges).toEqual([
-      { v0x: 0, v0y: 1.125, v1x: 0.5, v1y: 1.125 },
-      { v0x: 0.5, v0y: 1.125, v1x: 0.5, v1y: 1.875 },
-      { v0x: 0, v0y: 1.875, v1x: 0, v1y: 1.125 },
-    ]);
+    // the bottom edge (y = 3.125) is padded onto scanline 2, but not 4, the top
+    // edge (y = 4.875) onto scanline 5, but not 3
     expect(scanlines[2]!.shapes.get(0)!.edges).toEqual([
-      { v0x: 0.5, v0y: 1.125, v1x: 0.5, v1y: 1.875 },
-      { v0x: 0.5, v0y: 1.875, v1x: 0, v1y: 1.875 },
-      { v0x: 0, v0y: 1.875, v1x: 0, v1y: 1.125 },
+      { v0x: 0, v0y: 3.125, v1x: 0.5, v1y: 3.125 },
+      { v0x: 0.5, v0y: 3.125, v1x: 0.5, v1y: 4.875 },
+      { v0x: 0, v0y: 4.875, v1x: 0, v1y: 3.125 },
     ]);
-    expect(totalNumScanlineShapeEdges).toBe(3 + 4 + 3 + 4);
+    expect(scanlines[5]!.shapes.get(0)!.edges).toEqual([
+      { v0x: 0.5, v0y: 3.125, v1x: 0.5, v1y: 4.875 },
+      { v0x: 0.5, v0y: 4.875, v1x: 0, v1y: 4.875 },
+      { v0x: 0, v0y: 4.875, v1x: 0, v1y: 3.125 },
+    ]);
+    expect(scanlines[3]!.shapes.get(0)!.edges).toHaveLength(3);
+    expect(scanlines[4]!.shapes.get(0)!.edges).toHaveLength(3);
+    expect(totalNumScanlineShapeEdges).toBe(3 + 3 + 3 + 3);
   });
 
   it("respects the shape mask and compacts the shape index", async () => {
@@ -250,13 +648,15 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       createTestSquare(0, 0, 1, 1),
     ]);
 
-    const { scanlines, totalNumScanlineShapes } =
-      await WebGLShapesRasterizer.createScanlines(
-        1,
-        geometry,
-        new Uint8Array([0, 1, 0]),
-        unitBounds,
-      );
+    const { scanlines, totalNumScanlineShapes } = await rasterizeAndDecode(
+      1,
+      1,
+      0.5,
+      0.5,
+      geometry,
+      new Uint8Array([0, 1, 0]),
+      unitBounds,
+    );
 
     expect(totalNumScanlineShapes).toBe(1);
     // second shape (masked in) is compacted to index 0
@@ -270,13 +670,15 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       createTestSquare(0, 0, 1, 1),
     ]);
 
-    const { scanlines, totalNumScanlineShapes } =
-      await WebGLShapesRasterizer.createScanlines(
-        1,
-        geometry,
-        new Uint8Array([1, 0, 1]),
-        unitBounds,
-      );
+    const { scanlines, totalNumScanlineShapes } = await rasterizeAndDecode(
+      1,
+      1,
+      0.5,
+      0.5,
+      geometry,
+      new Uint8Array([1, 0, 1]),
+      unitBounds,
+    );
 
     expect(totalNumScanlineShapes).toBe(2);
     expect([...scanlines[0]!.shapes.keys()]).toEqual([0, 1]);
@@ -297,13 +699,15 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       ],
     ]);
 
-    const { totalNumScanlineShapeEdges, scanlines } =
-      await WebGLShapesRasterizer.createScanlines(
-        1,
-        geometry,
-        undefined,
-        unitBounds,
-      );
+    const { totalNumScanlineShapeEdges, scanlines } = await rasterizeAndDecode(
+      1,
+      1,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
+    );
 
     // 4 ring segments, but the zero-length one is dropped
     expect(totalNumScanlineShapeEdges).toBe(3);
@@ -332,7 +736,7 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     ]);
 
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(1, geometry, undefined, {
+      await rasterizeAndDecode(1, 1, 0.5, 0.5, geometry, undefined, {
         x: 0,
         y: 0,
         width: 4,
@@ -356,7 +760,7 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     ]);
 
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(1, geometry, undefined, {
+      await rasterizeAndDecode(1, 1, 0.5, 0.5, geometry, undefined, {
         x: 0,
         y: 0,
         width: 3,
@@ -373,27 +777,213 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     expect(scanlineShape.edges).toHaveLength(8);
   });
 
-  it("returns an empty result when there are no scanlines", async () => {
-    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
+  it("lists a shape in the bins its x-range spans", async () => {
+    // x-range [0.4, 0.6] with 8 bins -> bins [3, 4], padded to [2, 5]
+    const geometry = createTestGeometry([createTestSquare(0.4, 0, 0.6, 1)]);
 
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        0,
+    const { scanlines } = await rasterizeAndDecode(
+      1,
+      8,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
+    );
+
+    expect(scanlines[0]!.bins).toEqual([[], [], [0], [0], [0], [0], [], []]);
+  });
+
+  it("pads the bins by half a bin on either side, as slack for strokes", async () => {
+    // x-range [0.32, 0.34] with 8 bins -> bin 2, padded to [0.2575, 0.4025] ->
+    // bins [2, 3] (half a bin reaches into bin 3, but not into bin 1)
+    const geometry = createTestGeometry([createTestSquare(0.32, 0, 0.34, 1)]);
+
+    const { scanlines } = await rasterizeAndDecode(
+      1,
+      8,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
+    );
+
+    expect(scanlines[0]!.bins).toEqual([[], [], [0], [0], [], [], [], []]);
+  });
+
+  it("pads the scanlines and bins by their own paddings", async () => {
+    // y- and x-range [0.32, 0.34] with 8 scanlines and bins -> scanline and bin
+    // 2 unpadded, and [0.195, 0.465] -> [1, 3] padded by one scanline or bin
+    const geometry = createTestGeometry([
+      createTestSquare(0.32, 0.32, 0.34, 0.34),
+    ]);
+    const createPaddedScanlines = (
+      scanlinePadding: number,
+      binPadding: number,
+    ) =>
+      rasterizeAndDecode(
+        8,
+        8,
+        scanlinePadding,
+        binPadding,
         geometry,
         undefined,
         unitBounds,
       );
+    const unpadded = await createPaddedScanlines(0, 0);
+    const scanlinePadded = await createPaddedScanlines(1, 0);
+    const binPadded = await createPaddedScanlines(0, 1);
+
+    expect(unpadded.scanlines.map((scanline) => scanline.shapes.size)).toEqual([
+      0, 0, 1, 0, 0, 0, 0, 0,
+    ]);
+    expect(unpadded.scanlines[2]!.bins).toEqual([
+      [],
+      [],
+      [0],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ]);
+    expect(
+      scanlinePadded.scanlines.map((scanline) => scanline.shapes.size),
+    ).toEqual([0, 1, 1, 1, 0, 0, 0, 0]);
+    expect(scanlinePadded.scanlines[2]!.bins).toEqual([
+      [],
+      [],
+      [0],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ]);
+    expect(binPadded.scanlines.map((scanline) => scanline.shapes.size)).toEqual(
+      [0, 0, 1, 0, 0, 0, 0, 0],
+    );
+    expect(binPadded.scanlines[2]!.bins).toEqual([
+      [],
+      [0],
+      [0],
+      [0],
+      [],
+      [],
+      [],
+      [],
+    ]);
+  });
+
+  it("lists the included shapes per bin in ascending compacted order", async () => {
+    // shape 1 is masked out, shape 2 becomes compacted index 1
+    const geometry = createTestGeometry([
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0.75, 0, 1, 1),
+    ]);
+
+    const { scanlines } = await rasterizeAndDecode(
+      1,
+      4,
+      0.5,
+      0.5,
+      geometry,
+      new Uint8Array([1, 0, 1]),
+      unitBounds,
+    );
+
+    // shape 2 spans bin 3, padded to bins [2, 3]
+    expect(scanlines[0]!.bins).toEqual([[0], [0], [0, 1], [0, 1]]);
+  });
+
+  it("bins a multi-polygon shape by its x-range on each scanline", async () => {
+    // with 8 scanlines and 8 bins: the lower-left polygon covers scanlines 0-2
+    // and bins 0-2, the upper-right one scanlines 5-7 and bins 5-7 (with slack)
+    const geometry = createTestGeometry([
+      [
+        ...createTestSquare(0, 0, 0.25, 0.25),
+        ...createTestSquare(0.75, 0.75, 1, 1),
+      ],
+    ]);
+
+    const { scanlines, totalNumScanlineBinShapes } = await rasterizeAndDecode(
+      8,
+      8,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
+    );
+
+    expect(scanlines.map((scanline) => scanline.bins)).toEqual([
+      [[0], [0], [0], [], [], [], [], []],
+      [[0], [0], [0], [], [], [], [], []],
+      [[0], [0], [0], [], [], [], [], []],
+      [[], [], [], [], [], [], [], []],
+      [[], [], [], [], [], [], [], []],
+      [[], [], [], [], [], [0], [0], [0]],
+      [[], [], [], [], [], [0], [0], [0]],
+      [[], [], [], [], [], [0], [0], [0]],
+    ]);
+    expect(totalNumScanlineBinShapes).toBe(3 * 3 + 3 * 3);
+  });
+
+  it("returns an empty result when there are no bins", async () => {
+    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
+
+    const {
+      scanlines,
+      totalNumScanlineShapes,
+      totalNumScanlineShapeEdges,
+      totalNumScanlineBinShapes,
+    } = await rasterizeAndDecode(
+      1,
+      0,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
+    );
 
     expect(scanlines).toEqual([]);
     expect(totalNumScanlineShapes).toBe(0);
     expect(totalNumScanlineShapeEdges).toBe(0);
+    expect(totalNumScanlineBinShapes).toBe(0);
+  });
+
+  it("returns an empty result when there are no scanlines", async () => {
+    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
+
+    const {
+      scanlines,
+      totalNumScanlineShapes,
+      totalNumScanlineShapeEdges,
+      totalNumScanlineBinShapes,
+    } = await rasterizeAndDecode(
+      0,
+      1,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
+    );
+
+    expect(scanlines).toEqual([]);
+    expect(totalNumScanlineShapes).toBe(0);
+    expect(totalNumScanlineShapeEdges).toBe(0);
+    expect(totalNumScanlineBinShapes).toBe(0);
   });
 
   it("rejects object bounds without a positive width or height", async () => {
     const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
 
     await expect(
-      WebGLShapesRasterizer.createScanlines(4, geometry, undefined, {
+      rasterizeAndDecode(4, 1, 0.5, 0.5, geometry, undefined, {
         x: 0,
         y: 0,
         width: 1,
@@ -406,19 +996,14 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     const geometry = createTestGeometry([]);
 
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        3,
-        geometry,
-        undefined,
-        unitBounds,
-      );
+      await rasterizeAndDecode(3, 1, 0.5, 0.5, geometry, undefined, unitBounds);
 
     expect(scanlines).toHaveLength(3);
     expect(totalNumScanlineShapes).toBe(0);
     expect(totalNumScanlineShapeEdges).toBe(0);
     for (const scanline of scanlines) {
       expect(scanline.shapes.size).toBe(0);
-      expect(scanline.occupancyMask).toEqual([0, 0, 0, 0]);
+      expect(scanline.bins).toEqual([[]]);
     }
   });
 
@@ -429,8 +1014,11 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     ]);
 
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
+      await rasterizeAndDecode(
         2,
+        1,
+        0.5,
+        0.5,
         geometry,
         new Uint8Array([0, 0]),
         unitBounds,
@@ -440,7 +1028,7 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     expect(totalNumScanlineShapeEdges).toBe(0);
     for (const scanline of scanlines) {
       expect(scanline.shapes.size).toBe(0);
-      expect(scanline.occupancyMask).toEqual([0, 0, 0, 0]);
+      expect(scanline.bins).toEqual([[]]);
     }
   });
 
@@ -450,13 +1038,9 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     controller.abort();
 
     await expect(
-      WebGLShapesRasterizer.createScanlines(
-        1,
-        geometry,
-        undefined,
-        unitBounds,
-        { signal: controller.signal },
-      ),
+      rasterizeAndDecode(1, 1, 0.5, 0.5, geometry, undefined, unitBounds, {
+        signal: controller.signal,
+      }),
     ).rejects.toThrow();
   });
 
@@ -465,7 +1049,7 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       vi.restoreAllMocks();
     });
 
-    it("passes the signal to the yielder once per shape", async () => {
+    it("passes the signal to the yielder once per shape and pass", async () => {
       const geometry = createTestGeometry([
         createTestSquare(0, 0, 1, 1),
         createTestSquare(0, 0, 1, 1),
@@ -474,15 +1058,18 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       const maybeYield = vi.fn(() => Promise.resolve());
       vi.spyOn(AsyncUtils, "createYielder").mockReturnValue(maybeYield);
 
-      await WebGLShapesRasterizer.createScanlines(
+      await rasterizeAndDecode(
         1,
+        1,
+        0.5,
+        0.5,
         geometry,
         undefined,
         unitBounds,
         { signal: controller.signal },
       );
 
-      expect(maybeYield).toHaveBeenCalledTimes(2);
+      expect(maybeYield).toHaveBeenCalledTimes(2 * 2);
       expect(maybeYield).toHaveBeenCalledWith({ signal: controller.signal });
     });
 
@@ -494,14 +1081,17 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       const maybeYield = vi.fn(() => Promise.resolve());
       vi.spyOn(AsyncUtils, "createYielder").mockReturnValue(maybeYield);
 
-      await WebGLShapesRasterizer.createScanlines(
+      await rasterizeAndDecode(
         1,
+        1,
+        0.5,
+        0.5,
         geometry,
         new Uint8Array([0, 0]),
         unitBounds,
       );
 
-      expect(maybeYield).toHaveBeenCalledTimes(2);
+      expect(maybeYield).toHaveBeenCalledTimes(2 * 2);
     });
 
     it("rejects when the signal is aborted mid-iteration", async () => {
@@ -519,54 +1109,39 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
       vi.spyOn(AsyncUtils, "createYielder").mockReturnValue(maybeYield);
 
       await expect(
-        WebGLShapesRasterizer.createScanlines(
-          1,
-          geometry,
-          undefined,
-          unitBounds,
-          { signal: controller.signal },
-        ),
+        rasterizeAndDecode(1, 1, 0.5, 0.5, geometry, undefined, unitBounds, {
+          signal: controller.signal,
+        }),
       ).rejects.toThrow();
       expect(maybeYield).toHaveBeenCalledTimes(2);
     });
   });
 });
 
-describe("WebGLShapesRasterizer.packScanlines", () => {
-  it("packs the header, occupancy, shape header, and edges of a single shape", async () => {
+describe("WebGLShapesRasterizer.rasterizeScanlines layout", () => {
+  it("packs the bin table, shape references, shape header, and edges of a single shape", async () => {
     const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        1,
-        geometry,
-        undefined,
-        unitBounds,
-      );
 
-    const buffer = await WebGLShapesRasterizer.packScanlines(
-      scanlines,
-      totalNumScanlineShapes,
-      totalNumScanlineShapeEdges,
+    const buffer = await WebGLShapesRasterizer.rasterizeScanlines(
+      1,
+      1,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
     );
 
-    // header (4) + occupancy (4) + shape header (4) + 4 edges (16) = 28 values
+    // bin table (4) + shape references (4) + shape header (4) + 4 edges (16) = 28 values
     expect(buffer.byteLength).toBe(28 * 4);
     const uint32Buffer = new Uint32Array(buffer);
     const float32Buffer = new Float32Array(buffer);
 
-    // scanline header (texel 0): pointer, shape count, xMin, xMax
-    expect(uint32Buffer[0]).toBe(1); // data block starts right after the 1-texel header
-    expect(uint32Buffer[1]).toBe(1); // one shape
-    expect(float32Buffer[2]).toBe(0);
-    expect(float32Buffer[3]).toBe(1);
+    // bin table (texel 0): one bin entry of shape reference value offset and shape count
+    expect([...uint32Buffer.slice(0, 2)]).toEqual([4, 1]);
 
-    // scanline data block (texel 1): occupancy mask
-    expect([
-      uint32Buffer[4],
-      uint32Buffer[5],
-      uint32Buffer[6],
-      uint32Buffer[7],
-    ]).toEqual([0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff]);
+    // shape references (texel 1): the shape header's texel offset
+    expect(uint32Buffer[4]).toBe(2);
 
     // shape header (texel 2): shape index, edge count, xMin, xMax
     expect(uint32Buffer[8]).toBe(0);
@@ -582,18 +1157,15 @@ describe("WebGLShapesRasterizer.packScanlines", () => {
 
   it("aligns the buffer size to the requested multiple", async () => {
     const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        1,
-        geometry,
-        undefined,
-        unitBounds,
-      );
 
-    const buffer = await WebGLShapesRasterizer.packScanlines(
-      scanlines,
-      totalNumScanlineShapes,
-      totalNumScanlineShapeEdges,
+    const buffer = await WebGLShapesRasterizer.rasterizeScanlines(
+      1,
+      1,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
       { align: 16 },
     );
 
@@ -603,156 +1175,115 @@ describe("WebGLShapesRasterizer.packScanlines", () => {
     expect([...new Uint32Array(buffer).slice(28, 32)]).toEqual([0, 0, 0, 0]);
   });
 
-  it("writes per-scanline pointers and empty-scanline headers", async () => {
-    // square in the top third so scanline 0 is empty and scanlines 1 (stroke
-    // padding) and 2 are populated
-    const geometry = createTestGeometry([createTestSquare(0, 2, 1, 3)]);
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(3, geometry, undefined, {
+  it("writes a bin entry per scanline and bin, in scanline-major order", async () => {
+    // square in the top third and left fifth, so scanline 0 is empty,
+    // scanlines 1 (stroke padding) and 2 are populated, and only in bins 0-1
+    const geometry = createTestGeometry([createTestSquare(0, 2, 0.2, 3)]);
+
+    const buffer = await WebGLShapesRasterizer.rasterizeScanlines(
+      3,
+      4,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      {
         x: 0,
         y: 0,
         width: 1,
         height: 3,
-      });
+      },
+    );
+    const uint32Buffer = new Uint32Array(buffer);
 
-    const buffer = await WebGLShapesRasterizer.packScanlines(
-      scanlines,
-      totalNumScanlineShapes,
-      totalNumScanlineShapeEdges,
+    // bin table (texels 0..5): shape reference value offset and shape count
+    // per bin; empty bins point to where the next bin's references start
+    expect([...uint32Buffer.slice(0, 24)]).toEqual([
+      ...[24, 0, 24, 0, 24, 0, 24, 0], // scanline 0
+      ...[24, 1, 25, 1, 26, 0, 26, 0], // scanline 1
+      ...[26, 1, 27, 1, 28, 0, 28, 0], // scanline 2
+    ]);
+
+    // shape references (texel 6): scanline 1's shape at texel 7 (followed by
+    // its 3 edges), scanline 2's shape at texel 11
+    expect([...uint32Buffer.slice(24, 28)]).toEqual([7, 7, 11, 11]);
+    expect(uint32Buffer[4 * 7 + 1]).toBe(3);
+    expect(uint32Buffer[4 * 11 + 1]).toBe(4);
+  });
+
+  it("references the shapes of each bin in ascending order, sharing their data across bins", async () => {
+    // shape 0 spans all 4 bins, shape 1 bin 0, padded to bins [0, 1]
+    const geometry = createTestGeometry([
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 0.125, 0.5),
+    ]);
+
+    const buffer = await WebGLShapesRasterizer.rasterizeScanlines(
+      1,
+      4,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
     );
     const uint32Buffer = new Uint32Array(buffer);
     const float32Buffer = new Float32Array(buffer);
 
-    // scanline 0 header (texel 0): points just past the 3-texel header region
-    expect(uint32Buffer[0]).toBe(3);
-    expect(uint32Buffer[1]).toBe(0); // no shapes
-    expect(float32Buffer[2]).toBe(Infinity); // untouched xMin
-    expect(float32Buffer[3]).toBe(-Infinity); // untouched xMax
+    // bin table (texels 0..1): bins 0-1 have two shape references, bins 2-3 one
+    expect([...uint32Buffer.slice(0, 8)]).toEqual([8, 2, 10, 2, 12, 1, 13, 1]);
 
-    // scanline 1 header (texel 1): points past scanline 0's data (just its mask)
-    expect(uint32Buffer[4]).toBe(4);
-    expect(uint32Buffer[5]).toBe(1); // one shape
-    expect(float32Buffer[6]).toBe(0);
-    expect(float32Buffer[7]).toBe(1);
+    // shape references (texels 2..3): bins 0-1 -> shapes 0 and 1, bins 2-3 -> shape 0
+    expect([...uint32Buffer.slice(8, 14)]).toEqual([4, 9, 4, 9, 4, 4]);
 
-    // scanline 0 data block (texel 3): empty occupancy mask, no shapes follow
-    expect([
-      uint32Buffer[12],
-      uint32Buffer[13],
-      uint32Buffer[14],
-      uint32Buffer[15],
-    ]).toEqual([0, 0, 0, 0]);
+    // first shape header (texel 4), its 4 edges occupy texels 5..8
+    expect(uint32Buffer[16]).toBe(0);
+    expect(uint32Buffer[17]).toBe(4);
+    expect(float32Buffer[18]).toBe(0);
+    expect(float32Buffer[19]).toBe(1);
+
+    // second shape header follows at texel 9, bounded by the smaller square
+    expect(uint32Buffer[36]).toBe(1);
+    expect(uint32Buffer[37]).toBe(4);
+    expect(float32Buffer[38]).toBe(0);
+    expect(float32Buffer[39]).toBe(0.125);
   });
 
-  it("rejects when the abort signal is already aborted", async () => {
-    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        1,
-        geometry,
-        undefined,
-        unitBounds,
-      );
-    const controller = new AbortController();
-    controller.abort();
-
-    await expect(
-      WebGLShapesRasterizer.packScanlines(
-        scanlines,
-        totalNumScanlineShapes,
-        totalNumScanlineShapeEdges,
-        { signal: controller.signal },
-      ),
-    ).rejects.toThrow();
-  });
-
-  it("chains the texel offsets of multiple shapes within one scanline", async () => {
+  it("sizes the buffer to match the rasterized totals", async () => {
     const geometry = createTestGeometry([
       createTestSquare(0, 0, 1, 1),
       createTestSquare(0, 0, 0.5, 0.5),
     ]);
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        1,
-        geometry,
-        undefined,
-        unitBounds,
-      );
 
-    const buffer = await WebGLShapesRasterizer.packScanlines(
+    const buffer = await WebGLShapesRasterizer.rasterizeScanlines(
+      3,
+      3,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
+    );
+    const {
       scanlines,
       totalNumScanlineShapes,
       totalNumScanlineShapeEdges,
-    );
-    const uint32Buffer = new Uint32Array(buffer);
-    const float32Buffer = new Float32Array(buffer);
-
-    // header (1) + occupancy (1) + 2 * (shape header (1) + 4 edges) = 12 texels
-    expect(uint32Buffer[1]).toBe(2); // two shapes in the scanline
-
-    // first shape header (texel 2), its 4 edges occupy texels 3..6
-    expect(uint32Buffer[8]).toBe(0);
-    expect(uint32Buffer[9]).toBe(4);
-    expect(float32Buffer[10]).toBe(0);
-    expect(float32Buffer[11]).toBe(1);
-
-    // second shape header follows at texel 7, bounded by the smaller square
-    expect(uint32Buffer[28]).toBe(1);
-    expect(uint32Buffer[29]).toBe(4);
-    expect(float32Buffer[30]).toBe(0);
-    expect(float32Buffer[31]).toBe(0.5);
-  });
-
-  it("passes the signal to the yielder once per scanline", async () => {
-    const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        3,
-        geometry,
-        undefined,
-        unitBounds,
-      );
-    const controller = new AbortController();
-    const maybeYield = vi.fn(() => Promise.resolve());
-    vi.spyOn(AsyncUtils, "createYielder").mockReturnValue(maybeYield);
-
-    await WebGLShapesRasterizer.packScanlines(
-      scanlines,
-      totalNumScanlineShapes,
-      totalNumScanlineShapeEdges,
-      { signal: controller.signal },
+      totalNumScanlineBinShapes,
+    } = await rasterizeAndDecode(
+      3,
+      3,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
     );
 
-    expect(maybeYield).toHaveBeenCalledTimes(3);
-    expect(maybeYield).toHaveBeenCalledWith({ signal: controller.signal });
-    vi.restoreAllMocks();
-  });
-});
-
-describe("WebGLShapesRasterizer round-trip", () => {
-  it("packs a buffer sized to match the scanline totals", async () => {
-    const geometry = createTestGeometry([
-      createTestSquare(0, 0, 1, 1),
-      createTestSquare(0, 0, 0.5, 0.5),
-    ]);
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        4,
-        geometry,
-        undefined,
-        unitBounds,
-      );
-
-    const buffer = await WebGLShapesRasterizer.packScanlines(
-      scanlines,
-      totalNumScanlineShapes,
-      totalNumScanlineShapeEdges,
-    );
-
-    // per-scanline: header texel (4) + occupancy texel (4);
-    // plus one texel (4) per shape entry and per edge entry
+    // two bin entries and four shape references per texel (4 values each),
+    // plus one texel per shape entry and per edge entry
     const expectedValues =
-      8 * scanlines.length +
+      4 * Math.ceil((scanlines.length * 3) / 2) +
+      4 * Math.ceil(totalNumScanlineBinShapes / 4) +
       4 * totalNumScanlineShapes +
       4 * totalNumScanlineShapeEdges;
     expect(buffer.byteLength).toBe(expectedValues * 4);

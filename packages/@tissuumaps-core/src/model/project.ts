@@ -58,7 +58,9 @@ export const projectDefaults = {
     },
     shapesRenderOptions: {
       strokeWidth: 1,
-      numScanlines: 512,
+      edgesPerScanline: 8,
+      binWidthFactor: 1,
+      shapePadding: 0.2,
     },
   },
 } as const satisfies Partial<RawProject>;
@@ -186,6 +188,30 @@ export function createProject(rawProject: RawProject): Project {
     ...createModel(rawProject),
     ...structuredClone(projectDefaults),
     ...structuredClone(rawProject),
+    osOptions: {
+      viewerOptions: {
+        ...projectDefaults.osOptions.viewerOptions,
+        ...rawProject.osOptions?.viewerOptions,
+      },
+      viewerAnimationStartOptions: {
+        ...projectDefaults.osOptions.viewerAnimationStartOptions,
+        ...rawProject.osOptions?.viewerAnimationStartOptions,
+      },
+      viewerAnimationFinishOptions: {
+        ...projectDefaults.osOptions.viewerAnimationFinishOptions,
+        ...rawProject.osOptions?.viewerAnimationFinishOptions,
+      },
+    },
+    glOptions: {
+      pointsRenderOptions: {
+        ...projectDefaults.glOptions.pointsRenderOptions,
+        ...rawProject.glOptions?.pointsRenderOptions,
+      },
+      shapesRenderOptions: {
+        ...projectDefaults.glOptions.shapesRenderOptions,
+        ...rawProject.glOptions?.shapesRenderOptions,
+      },
+    },
     layers: rawProject.layers?.map(createLayer) ?? [],
     images: rawProject.images?.map(createImage) ?? [],
     labels: rawProject.labels?.map(createLabels) ?? [],

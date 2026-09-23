@@ -80,6 +80,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     viewportToWorldMatrix: WebGLUniformLocation;
     worldToDataMatrix: WebGLUniformLocation;
     numScanlines: WebGLUniformLocation;
+    numBins: WebGLUniformLocation;
     objectBounds: WebGLUniformLocation;
     opacityFactor: WebGLUniformLocation;
     halfStrokeWidth: WebGLUniformLocation;
@@ -108,6 +109,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         "u_worldToDataMatrix",
       ),
       numScanlines: context.getUniformLocation(this._program, "u_numScanlines"),
+      numBins: context.getUniformLocation(this._program, "u_numBins"),
       objectBounds: context.getUniformLocation(this._program, "u_objectBounds"),
       opacityFactor: context.getUniformLocation(
         this._program,
@@ -145,14 +147,14 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Renders each shapes object as a quad whose fragment shader performs
    * scanline-based polygon rasterization using the per-object scanline data
    * texture, with the viewport → world matrix as a global uniform and its
-   * world → data matrix, bounds, number of scanlines, half stroke width and
-   * device pixel size in data units (for anti-aliasing) and opacity factor as
-   * per-pass uniforms, computed from the current model (see
+   * world → data matrix, bounds, numbers of scanlines and bins, half stroke
+   * width and device pixel size in data units (for anti-aliasing) and opacity
+   * factor as per-pass uniforms, computed from the current model (see
    * {@link getRenderPasses}). The quad covers the object's bounds, dilated by
    * how far the anti-aliased strokes reach beyond them, within the viewport, so
    * that fragments are only shaded where the object can be; objects outside the
    * viewport, objects whose layer or object is invisible, and objects without
-   * scanlines are skipped.
+   * scanlines or bins are skipped.
    */
   draw(): void {
     const renderPasses = this.getRenderPasses();
@@ -177,11 +179,14 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       object: shapes,
       renderedObject: renderedShapes,
     } of renderPasses) {
+      if (renderedShapes.numScanlines < 1 || renderedShapes.numBins < 1) {
+        continue;
+      }
       const opacityFactor = WebGLShapesRenderer.computeOpacityFactor(
         layer,
         shapes,
       );
-      if (opacityFactor === 0 || renderedShapes.numScanlines < 1) {
+      if (opacityFactor === 0) {
         continue;
       }
       const quad = this._computeQuad(
@@ -209,6 +214,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       this.context.gl.uniform1ui(
         this._uniformLocations.numScanlines,
         renderedShapes.numScanlines,
+      );
+      this.context.gl.uniform1ui(
+        this._uniformLocations.numBins,
+        renderedShapes.numBins,
       );
       this.context.gl.uniform4f(
         this._uniformLocations.objectBounds,
@@ -284,22 +293,28 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Returns the number of scanlines, which the scanline data textures are
-   * rasterized for, so that changing it requires a resynchronization
+   * Returns the grid render options (the number of edges per scanline, the
+   * bin width factor and the shape padding), which the scanline data textures
+   * are rasterized for, so that changing them requires a resynchronization
    */
   protected override getRenderOptionsSyncState(): object {
-    return { numScanlines: this.renderOptions.numScanlines };
+    return {
+      edgesPerScanline: this.renderOptions.edgesPerScanline,
+      binWidthFactor: this.renderOptions.binWidthFactor,
+      shapePadding: this.renderOptions.shapePadding,
+    };
   }
 
   /**
    * Prepares everything that has to be uploaded for an object
    *
    * Decides what the object's textures need - the geometry for a new object or
-   * a changed number of scanlines, and the resolved fill and stroke colors whose
-   * configurations or referenced maps changed (see
-   * {@link _createRenderConfigSnapshot}) - requests all of it before the first
-   * `await`, and then computes the bounds, rasterizes the scanline data and
-   * folds the resolved visibilities and opacities into the colors.
+   * changed grid render options (see {@link getRenderOptionsSyncState}), and
+   * the resolved fill and stroke colors whose configurations or referenced
+   * maps changed (see {@link _createRenderConfigSnapshot}) -
+   * requests all of it before the first `await`, and then computes the bounds,
+   * the grid size and the paddings, rasterizes the scanline data and folds the
+   * resolved visibilities and opacities into the colors.
    *
    * See {@link WebGLRendererBase.prepareRenderedObject} for when this runs.
    *
@@ -307,10 +322,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * @param renderedShapes - The object's current GPU state, if it is reused
    * @param syncContext - The inputs of the current synchronization
    * @param options - Optional abort signal
-   * @returns The snapshot the decisions were based on, the bounds and the
-   * number of scanlines, the packed scanline data (if the geometry was loaded)
-   * and the resolved colors that have to be uploaded, or `null` if the shapes
-   * have no area
+   * @returns The snapshot the decisions were based on, the bounds, the grid
+   * render options and the numbers of scanlines and bins, the packed scanline
+   * data (if the geometry was loaded) and the resolved colors that have to be
+   * uploaded, or `null` if the shapes have no area
    */
   protected override async prepareRenderedObject(
     newRef: ShapesRef,
@@ -324,10 +339,13 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       newRef,
       syncContext,
     );
-    const { numScanlines } = this.renderOptions;
+    const { edgesPerScanline, binWidthFactor, shapePadding } =
+      this.renderOptions;
     const geometryChanged =
       renderedShapes === undefined ||
-      renderedShapes.numScanlines !== numScanlines;
+      renderedShapes.edgesPerScanline !== edgesPerScanline ||
+      renderedShapes.binWidthFactor !== binWidthFactor ||
+      renderedShapes.shapePadding !== shapePadding;
     const renderConfigSnapshot =
       WebGLShapesRenderer._createRenderConfigSnapshot(newRef, syncContext);
     const fillColorsChanged =
@@ -440,6 +458,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     ]);
     signal?.throwIfAborted();
     let objectBounds: Rect;
+    let numScanlines: number;
+    let numBins: number;
     let scanlineBuffer: Uint32Array | undefined;
     if (geometry !== undefined) {
       const newObjectBounds = await WebGLShapesRenderer._getObjectBounds(
@@ -451,8 +471,23 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         return null;
       }
       objectBounds = newObjectBounds;
+      let scanlinePadding: number;
+      let binPadding: number;
+      ({ numScanlines, numBins, scanlinePadding, binPadding } =
+        await WebGLShapesRasterizer.computeGridSize(
+          geometry,
+          newRef.itemsMask,
+          objectBounds,
+          edgesPerScanline,
+          binWidthFactor,
+          shapePadding,
+          { signal },
+        ));
       scanlineBuffer = await WebGLShapesRenderer._createScanlineBuffer(
         numScanlines,
+        numBins,
+        scanlinePadding,
+        binPadding,
         geometry,
         newRef.itemsMask,
         objectBounds,
@@ -466,6 +501,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       );
     } else if (renderedShapes !== undefined) {
       objectBounds = renderedShapes.objectBounds;
+      numScanlines = renderedShapes.numScanlines;
+      numBins = renderedShapes.numBins;
     } else {
       throw new Error("Geometry must be loaded for new shapes object");
     }
@@ -518,7 +555,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     }
     return {
       objectBounds,
+      edgesPerScanline,
+      binWidthFactor,
+      shapePadding,
       numScanlines,
+      numBins,
       scanlineBuffer,
       packedShapeFillColors,
       packedShapeStrokeColors,
@@ -548,7 +589,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       ref: newRef,
       renderConfigSnapshot: prepared.renderConfigSnapshot,
       objectBounds: prepared.objectBounds,
+      edgesPerScanline: prepared.edgesPerScanline,
+      binWidthFactor: prepared.binWidthFactor,
+      shapePadding: prepared.shapePadding,
       numScanlines: prepared.numScanlines,
+      numBins: prepared.numBins,
       scanlineDataTexture: this._createScanlineDataTexture(
         prepared.scanlineBuffer,
       ),
@@ -584,7 +629,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
       renderedShapes.scanlineDataTexture = scanlineDataTexture;
       renderedShapes.objectBounds = prepared.objectBounds;
+      renderedShapes.edgesPerScanline = prepared.edgesPerScanline;
+      renderedShapes.binWidthFactor = prepared.binWidthFactor;
+      renderedShapes.shapePadding = prepared.shapePadding;
       renderedShapes.numScanlines = prepared.numScanlines;
+      renderedShapes.numBins = prepared.numBins;
     }
     if (prepared.packedShapeFillColors !== undefined) {
       this._loadShapeColorsTexture(
@@ -619,11 +668,14 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Builds the scanline data of a shapes object
    *
-   * Rasterizes all shapes into horizontal scanlines and packs the result into
-   * a 32-bit integer buffer, aligned to the lines of the scanline data texture that
-   * {@link _createScanlineDataTexture} creates from it.
+   * Rasterizes all shapes into horizontal scanlines and their x-bins, packed
+   * into a 32-bit integer buffer, aligned to the lines of the scanline data
+   * texture that {@link _createScanlineDataTexture} creates from it.
    *
    * @param numScanlines - Number of scanlines to rasterize into
+   * @param numBins - Number of x-bins per scanline
+   * @param scanlinePadding - See {@link WebGLShapesRasterizer.rasterizeScanlines}
+   * @param binPadding - See {@link WebGLShapesRasterizer.rasterizeScanlines}
    * @param geometry - Geometry for all shapes in the object
    * @param shapesMask - Per-shape inclusion mask, or `undefined` if all shapes are included
    * @param objectBounds - Axis-aligned bounding box of all shapes
@@ -632,6 +684,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    */
   private static async _createScanlineBuffer(
     numScanlines: number,
+    numBins: number,
+    scanlinePadding: number,
+    binPadding: number,
     geometry: ShapesGeometry,
     shapesMask: Uint8Array | undefined,
     objectBounds: Rect,
@@ -639,18 +694,14 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): Promise<Uint32Array> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(
-        numScanlines,
-        geometry,
-        shapesMask,
-        objectBounds,
-        { signal },
-      );
-    const scanlineBuffer = await WebGLShapesRasterizer.packScanlines(
-      scanlines,
-      totalNumScanlineShapes,
-      totalNumScanlineShapeEdges,
+    const scanlineBuffer = await WebGLShapesRasterizer.rasterizeScanlines(
+      numScanlines,
+      numBins,
+      scanlinePadding,
+      binPadding,
+      geometry,
+      shapesMask,
+      objectBounds,
       {
         align: WebGLShapesRenderer._numValuesPerScanlineDataTextureLine,
         signal,
@@ -1015,7 +1066,11 @@ type ShapesRef = ObjectRef<Shapes, ShapesData>;
  */
 type PreparedShapes = {
   objectBounds: Rect;
+  edgesPerScanline: number;
+  binWidthFactor: number;
+  shapePadding: number;
   numScanlines: number;
+  numBins: number;
   scanlineBuffer: Uint32Array | undefined;
   packedShapeFillColors: Uint32Array | undefined;
   packedShapeStrokeColors: Uint32Array | undefined;
@@ -1031,11 +1086,18 @@ type PreparedShapes = {
  * {@link WebGLShapesRenderer._createRenderConfigSnapshot}). Layer- and
  * object-level properties are read from the current model when drawing (see
  * {@link WebGLRendererBase.getRenderPasses}), and are not part of the
- * snapshot. The number of scanlines is the one the scanline data texture
- * was rasterized for, which is also the one the object is drawn with.
+ * snapshot. The grid render options are the ones the scanline data texture
+ * was rasterized for (see
+ * {@link WebGLShapesRenderer.getRenderOptionsSyncState}), and the numbers of
+ * scanlines and bins are the ones it was rasterized into, which are also the
+ * ones the object is drawn with.
  */
 type RenderedShapes = RenderedObjectBase<Shapes, ShapesData> & {
+  edgesPerScanline: number;
+  binWidthFactor: number;
+  shapePadding: number;
   numScanlines: number;
+  numBins: number;
   scanlineDataTexture: WebGLTexture;
   shapeFillColorsTexture: WebGLTexture;
   shapeStrokeColorsTexture: WebGLTexture;

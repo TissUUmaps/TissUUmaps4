@@ -40,7 +40,8 @@ The custom rendering pipeline is based on scanline rendering, with the following
 
 - Scanline data (edge lists) are stored in separate data textures for each shape cloud
 - Scanlines relate to the shape cloud bounds (as opposed to viewport/world bounds) to allow for infinite worlds
-- Each scanline holds a one-dimensional bounding box and a 128-bit occupancy mask for rapidly discarding fragments (dilated by half the stroke width, so strokes near a bin edge survive)
+- Each scanline is divided into equally wide x-bins, each of which lists the shapes reaching into it, in the order they are composited in
+- Shapes and edges are padded by a fraction (a render option) of the median shape height above and below, and shapes by the same fraction of the median shape width to the left and right, so that strokes reaching beyond a shape are still drawn, however large the scanlines and bins
 - For each scanline, edges are processed separately for each shape to ensure proper compositing
 - Each shape holds a one-dimensional bounding box per scanline for rapidly skipping shapes
 - An optimized winding number algorithm is used for point-in-polygon testing, with the even-odd rule (odd winding numbers are inside), so that holes are cut out whatever the orientation of their rings, which e.g. GeoJSON recommends but does not require
@@ -53,16 +54,21 @@ Specifically, the approach works as follows:
   - The vertex shader will run once per quad corner, converting viewport coordinates to data coordinates
   - The fragment shader will run once for each fragment in the quad:
     1. Determine the current scanline from the (interpolated) scanline varying
-    2. Check the scanline bounding box and occupancy mask to quickly discard empty viewport fragments
-    3. For each shape in the scanline potentially overlapping with the current fragment (check shape bounding box), compute the winding number and the minimum point-to-segment distance for the current fragment; if the current fragment is close enough to one of the shape's segments, blend the fragment color with the shape's stroke color; otherwise, if the current fragment is within the shape (odd winding number), blend the fragment color with the shape's fill color
+    2. Determine the current bin from the fragment's x coordinate, and discard the fragment if the bin is empty
+    3. For each shape in the bin potentially overlapping with the current fragment (check shape bounding box), compute the winding number and the minimum point-to-segment distance for the current fragment; if the current fragment is close enough to one of the shape's segments, blend the fragment color with the shape's stroke color; otherwise, if the current fragment is within the shape (odd winding number), blend the fragment color with the shape's fill color
 
-The number of scanlines (default 512) is a render option, and the stroke width is a single uniform per shape cloud, shared by all of its shapes, which is why per-shape stroke widths are not supported (the bounding boxes and occupancy masks are computed without it). Scanline data is stored as `RGBA32F` and the packed colors as `R32UI`, in textures 4096 texels wide. A shape cloud whose textures would need more lines than the GPU's maximum texture size is skipped with an error.
+The numbers of scanlines and of bins per scanline are chosen independently for each shape cloud, as they bound different costs of a fragment:
+
+- **Scanline height** bounds the number of edges a fragment tests per shape, as edges are only assigned to scanlines. It is chosen so that a scanline holds a given number of edges (a render option) of a typical shape, plus the edges within the padding. The typical shape is determined by the median height per edge, weighted by shape area: fragments are distributed by area, so when zoomed in, a few large, detailed shapes among many small ones cover most of them.
+- **Bin width** bounds the number of shapes a fragment considers. It is the median shape width times a bin width factor (a render option): bins about as wide as the shapes keep both the number of shapes per fragment and the number of bins each shape is listed in small.
+
+The stroke width is a single uniform per shape cloud, shared by all of its shapes. Per-shape stroke widths are therefore not supported, as the bounding boxes and bins are computed without them. Scanline data is stored as `RGBA32UI` and the packed colors as `R32UI`, in textures of a fixed width. A shape cloud whose textures would need more lines than the GPU's maximum texture size is skipped with an error.
 
 This approach has been chosen over a "standard approach" primarily to avoid CPU-side triangulation, reduce memory usage (no need to store triangles), enable thick outlines (strokes), allow for high-quality anti-aliasing, and for legacy (TissUUmaps 3) reasons.
 
 |                                  | Standard approach                                                                                                                          | Compute shader approach                                                                                              |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| **CPU load**                     | High (triangulation)                                                                                                                       | **Low** (edge table/occupancy mask construction)                                                                     |
+| **CPU load**                     | High (triangulation)                                                                                                                       | **Low** (edge table/bin construction)                                                                                |
 | **Memory usage**                 | O(shapes \* triangles per shape \* 3)                                                                                                      | **O(shapes \* vertices per shape)**, but arbitrary limit wrt. how many vertices/shapes can overlap the same scanline |
 | **Data transfer**                | Using element array buffers                                                                                                                | Using custom data textures                                                                                           |
 | **GPU performance**              | Vertex shader transforms vertex coordinates in parallel; **cheap** fragment shader runs **for each fragment of each triangle** in parallel | Vertex shader does nothing; **VERY expensive** fragment shader runs **for each foreground pixel** in parallel        |

@@ -10,6 +10,7 @@ precision highp sampler2D; // defaults to lowp otherwise
 precision highp usampler2D; // no default otherwise
 
 uniform uint u_numScanlines;
+uniform uint u_numBins; // per scanline
 uniform vec4 u_objectBounds; // (x, y, width, height), in data dimensions
 uniform float u_opacityFactor; // layer and object opacity, 0 if the layer or object is invisible
 uniform float u_halfStrokeWidth; // in data dimensions
@@ -18,22 +19,23 @@ uniform float u_devicePixelSize; // size of a device pixel, in data dimensions
 /*
  * Scanline data (RGBA32UI texture)
  *
- * Memory layout: [header, scanline 0, scanline 1, ..., scanline N]
- *   Header: [scanline info 1, scanline info 2, ..., scanline info N]
- *     Scanline info = (texel offset, shape count M, xmin, xmax)
- *   Scanline: [scanline header, shape 1, shape 2, ..., shape M]
- *     Scanline header = (occupancy mask = 4 * 32 = 128 bits)
+ * Memory layout: [bin table, shape refs, scanline 0, scanline 1, ..., scanline N]
+ *   Bin table: [bin entry 0, bin entry 1, ...], two bin entries per texel, scanline-major
+ *     Bin entry = (value offset of the bin's first shape ref, shape count M)
+ *   Shape refs: [shape ref 0, shape ref 1, ...], four shape refs per texel
+ *     Shape ref = texel offset of a shape of the bin's scanline
+ *     (per bin: M consecutive shape refs, in the order the shapes are composited in)
+ *   Scanline: [shape 1, shape 2, ...]
  *     Shape: [shape header, edge 1, edge 2, ..., edge L]
  *       Shape header = (shape index, edge count L, xmin, xmax)
  *       Edge = (x0, y0, x1, y1)
  *
  * Notes:
- * - Scanline/shape bounding boxes and edge vertices are in data dimensions
+ * - Shape bounding boxes and edge vertices are in data dimensions
  * - Scanline data relates to the current shape cloud --> one draw call per data object
- * - Scanline/shape bounding boxes and the scanline occupancy masks don't account for stroke widths
- *   (this is why we cannot have shape-specific stroke widths, since strokes grow both inward and outward);
- *   shapes and edges are only padded by a quarter scanline, occupancy bins by one bin, on either side (see WebGLShapesRasterizer)
- * - The same applies to the anti-aliased edges of fills and strokes, which reach half a pixel beyond them
+ * - Shape bounding boxes and the bin entries don't account for stroke widths, nor for the anti-aliased edges of fills
+ *   and strokes, which reach half a pixel beyond them (this is why we cannot have shape-specific stroke widths, since
+ *   strokes grow both inward and outward); shapes and edges are only padded on either side (see WebGLShapesRasterizer)
  * - Anti-aliasing is per shape, so edges shared by adjacent shapes are only partially covered by either,
  *   letting faint seams of the background show through between their fills (unless covered by opaque strokes)
  */
@@ -54,14 +56,6 @@ out vec4 fragColor;
 uvec4 utexel(usampler2D sampler, uint textureWidth, uint offset) {
     ivec2 p = ivec2(int(offset % textureWidth), int(offset / textureWidth));
     return texelFetch(sampler, p, 0);
-}
-
-// checks if a given x coordinate falls into an occupied bin of an 128-bit occupancy mask
-bool occupancy(float x, float xmin, float objectWidth, uvec4 occupancyMask) {
-    float xNorm = clamp((x - xmin) / objectWidth, 0.0, 1.0);
-    uint bin = min(uint(128.0 * xNorm), 127u);
-    uint bitMask = 1u << (bin & 0x1Fu);
-    return (occupancyMask[bin >> 5] & bitMask) != 0u;
 }
 
 // tests if a point p is left (>0), on (=0), or right (<0) of an infinite line through v0 and v1
@@ -129,29 +123,26 @@ void main() {
     if(v_pos.x < u_objectBounds[0] - margin || v_pos.x > u_objectBounds[0] + u_objectBounds[2] + margin || v_pos.y < u_objectBounds[1] - margin || v_pos.y > u_objectBounds[1] + u_objectBounds[3] + margin) {
         discard; // out of object bounds
     }
-    // get scanline info (clamp before converting: v_scanline is negative within the stroke margin)
-    uint scanlineInfoOffset = uint(clamp(v_scanline, 0.0, float(u_numScanlines - 1u)));
-    uvec4 scanlineInfo = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineInfoOffset);
-    uint scanlineOffset = scanlineInfo[0];
-    uint numShapes = scanlineInfo[1];
-    if(v_pos.x < uintBitsToFloat(scanlineInfo[2]) - margin || v_pos.x > uintBitsToFloat(scanlineInfo[3]) + margin) {
-        discard; // x coordinate outside scanline bounds (infinite if there are no shapes on this scanline)
-    }
-    // check occupancy mask
-    uvec4 occupancyMask = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineOffset);
-    bool empty = !occupancy(v_pos.x, u_objectBounds[0], u_objectBounds[2], occupancyMask);
-    for(float dx = u_objectBounds[2] / 128.0; empty && dx <= margin; dx += u_objectBounds[2] / 128.0) {
-        if(occupancy(v_pos.x - dx, u_objectBounds[0], u_objectBounds[2], occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], u_objectBounds[2], occupancyMask)) {
-            empty = false;
-        }
-    }
-    if(empty) {
+    // get the bin entry (clamp before converting: v_scanline and v_pos.x are out of range within the stroke margin)
+    uint scanline = uint(clamp(v_scanline, 0.0, float(u_numScanlines - 1u)));
+    uint bin = uint(clamp(float(u_numBins) * (v_pos.x - u_objectBounds[0]) / u_objectBounds[2], 0.0, float(u_numBins - 1u)));
+    uint binIndex = scanline * u_numBins + bin;
+    uvec4 binEntries2 = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, binIndex >> 1);
+    uvec2 binEntry = (binIndex & 1u) == 0u ? binEntries2.xy : binEntries2.zw;
+    uint shapeRefOffset = binEntry[0];
+    uint numShapes = binEntry[1];
+    if(numShapes == 0u) {
         discard; // no shapes on this scanline near the given x coordinate
     }
-    // iterate over scanline shapes
+    // iterate over the bin's shapes
     fragColor = vec4(0.0);
-    uint shapeOffset = scanlineOffset + 1u;
+    uvec4 shapeRefs4;
     for(uint i = 0u; i < numShapes; ++i) {
+        uint shapeRefIndex = shapeRefOffset + i;
+        if(i == 0u || (shapeRefIndex & 3u) == 0u) {
+            shapeRefs4 = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeRefIndex >> 2);
+        }
+        uint shapeOffset = shapeRefs4[shapeRefIndex & 3u];
         uvec4 shapeInfo = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset);
         uint shapeIndex = shapeInfo[0];
         uint numEdges = shapeInfo[1];
@@ -181,7 +172,6 @@ void main() {
             vec4 shapeColor = strokeColor + (1.0 - strokeColor.a) * fillColor;
             fragColor = shapeColor + (1.0 - shapeColor.a) * fragColor;
         }
-        shapeOffset += 1u + numEdges;
     }
     // apply the layer and object opacity to the composited shapes (premultiplied)
     fragColor *= u_opacityFactor;
