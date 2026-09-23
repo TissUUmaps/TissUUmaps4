@@ -490,16 +490,25 @@ export abstract class WebGLRendererBase<
               dataPromise,
               tableDataPromise,
               tableLayersPromise,
-            ]).then(([data, tableData, tableLayers]) =>
-              this._getLayerItemsInfos(
+            ]).then(([data, tableData, tableLayers]) => {
+              const promise = this._getLayerItemsInfos(
                 data,
                 tableData,
                 tableLayersColumn,
                 tableLayers,
                 model.layers,
                 { signal },
-              ),
-            );
+              );
+              promise.catch((error) => {
+                if (!signal?.aborted) {
+                  console.error(
+                    `Failed to assign the items of object with ID '${currentObject.id}' to layers`,
+                    error,
+                  );
+                }
+              });
+              return promise;
+            });
             layerItemsInfosPromises.set(
               currentObject.id,
               layerItemsInfosPromise,

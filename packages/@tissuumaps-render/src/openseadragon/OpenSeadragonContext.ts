@@ -794,6 +794,7 @@ export class OpenSeadragonContext {
       return;
     }
     if (!this._tileSourceDataTransfers.has(tiledImage.source)) {
+      this._tileDataTransfers.delete(event.tile);
       return;
     }
     await AsyncUtils.yield();
@@ -802,6 +803,7 @@ export class OpenSeadragonContext {
     }
     const dataTransfer = this._tileSourceDataTransfers.get(tiledImage.source);
     if (dataTransfer === undefined) {
+      this._tileDataTransfers.delete(event.tile);
       return;
     }
     this._tileDataTransfers.set(event.tile, dataTransfer);

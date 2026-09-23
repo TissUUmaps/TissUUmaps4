@@ -74,7 +74,10 @@ export class WebGLShapesRasterizer {
    * which reach beyond it, find its edges from the neighboring bands as well,
    * as long as half the stroke width does not exceed the band height. Per
    * band, it also builds a 128-bit occupancy mask, which lets the fragment
-   * shader skip fragments early.
+   * shader skip fragments early; its bins are padded by one bin on either side
+   * in the same way, so that the shader, which probes further bins only in
+   * steps of whole bins, never skips a stroke that reaches into a neighboring
+   * bin.
    *
    * Shapes are identified by their index among the *included* shapes, i.e.
    * `shapesMask` compacts the indices. Holes contribute their edges, but not
@@ -169,7 +172,8 @@ export class WebGLShapesRasterizer {
             numScanlines - 1,
           );
           const firstOccupancyMaskBin = MathUtils.clamp(
-            Math.floor((128 * (xMin - objectBounds.x)) / objectBounds.width),
+            Math.floor((128 * (xMin - objectBounds.x)) / objectBounds.width) -
+              1, // one bin of slack to the left, for strokes
             0,
             127,
           );
@@ -307,37 +311,29 @@ export class WebGLShapesRasterizer {
     for (let s = 0; s < scanlines.length; s++) {
       const scanline = scanlines[s]!;
       // header
-      uint32Buffer.set(
-        [currentScanlineTexelOffset, scanline.shapes.size],
-        4 * s,
-      );
-      float32Buffer.set([scanline.xMin, scanline.xMax], 4 * s + 2);
+      uint32Buffer[4 * s] = currentScanlineTexelOffset;
+      uint32Buffer[4 * s + 1] = scanline.shapes.size;
+      float32Buffer[4 * s + 2] = scanline.xMin;
+      float32Buffer[4 * s + 3] = scanline.xMax;
       // scanline
       uint32Buffer.set(scanline.occupancyMask, 4 * currentScanlineTexelOffset);
       let currentScanlineShapeTexelOffset = currentScanlineTexelOffset + 1;
       for (const [shapeIndex, scanlineShape] of scanline.shapes) {
         // scanline shape
-        uint32Buffer.set(
-          [shapeIndex, scanlineShape.edges.length],
-          4 * currentScanlineShapeTexelOffset,
-        );
-        float32Buffer.set(
-          [scanlineShape.xMin, scanlineShape.xMax],
-          4 * currentScanlineShapeTexelOffset + 2,
-        );
+        const shapeValueOffset = 4 * currentScanlineShapeTexelOffset;
+        uint32Buffer[shapeValueOffset] = shapeIndex;
+        uint32Buffer[shapeValueOffset + 1] = scanlineShape.edges.length;
+        float32Buffer[shapeValueOffset + 2] = scanlineShape.xMin;
+        float32Buffer[shapeValueOffset + 3] = scanlineShape.xMax;
         let currentScanlineShapeEdgeTexelOffset =
           currentScanlineShapeTexelOffset + 1;
         for (const scanlineShapeEdge of scanlineShape.edges) {
           // scanline shape edge
-          float32Buffer.set(
-            [
-              scanlineShapeEdge.v0x,
-              scanlineShapeEdge.v0y,
-              scanlineShapeEdge.v1x,
-              scanlineShapeEdge.v1y,
-            ],
-            4 * currentScanlineShapeEdgeTexelOffset,
-          );
+          const edgeValueOffset = 4 * currentScanlineShapeEdgeTexelOffset;
+          float32Buffer[edgeValueOffset] = scanlineShapeEdge.v0x;
+          float32Buffer[edgeValueOffset + 1] = scanlineShapeEdge.v0y;
+          float32Buffer[edgeValueOffset + 2] = scanlineShapeEdge.v1x;
+          float32Buffer[edgeValueOffset + 3] = scanlineShapeEdge.v1y;
           currentScanlineShapeEdgeTexelOffset++;
         }
         currentScanlineShapeTexelOffset = currentScanlineShapeEdgeTexelOffset;

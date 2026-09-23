@@ -112,6 +112,23 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     expect(scanlines[0]!.occupancyMask).toEqual([0xffffffff, 0x1, 0x0, 0x0]);
   });
 
+  it("pads the occupancy bins by one bin to the left, as slack for strokes", async () => {
+    // square covering the right quarter -> bins [96, 127], padded to [95, 127]
+    const geometry = createTestGeometry([createTestSquare(0.75, 0, 1, 1)]);
+
+    const { scanlines } = await WebGLShapesRasterizer.createScanlines(
+      1,
+      geometry,
+      undefined,
+      unitBounds,
+    );
+
+    // bin 95 -> third word bit 31, bins 96..127 -> fourth word all set
+    expect(scanlines[0]!.occupancyMask).toEqual([
+      0x0, 0x0, 0x80000000, 0xffffffff,
+    ]);
+  });
+
   it("distributes a shape and its edges across multiple scanlines", async () => {
     const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
 

@@ -30,7 +30,8 @@ uniform float u_halfStrokeWidth; // in data dimensions
  * - Scanline/shape bounding boxes and edge vertices are in data dimensions
  * - Scanline data relates to the current shape cloud --> one draw call per data object
  * - Scanline/shape bounding boxes and the scanline occupancy masks don't account for stroke widths
- *   (this is why we cannot have shape-specific stroke widths, since strokes grow both inward and outward)
+ *   (this is why we cannot have shape-specific stroke widths, since strokes grow both inward and outward);
+ *   shapes, edges and occupancy bins are only padded by one scanline/bin on either side (see WebGLShapesRasterizer)
  */
 uniform sampler2D u_scanlineData;
 

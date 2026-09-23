@@ -97,6 +97,11 @@ export function useWebGL(adapter: ViewerAdapter) {
         glRef.current.canvas,
         containerSize,
       );
+      // OSD raises "resize" before it updates the viewport bounds, so this
+      // draws the old viewport and is superseded by the viewport-change draw
+      // later in the same update - except on a resize that leaves the bounds
+      // unchanged, where it is the only draw that refills the resized, and
+      // therefore blank, canvas.
       if (redraw) {
         drawGL(glRef.current); // keep direct to avoid lags!
       }
