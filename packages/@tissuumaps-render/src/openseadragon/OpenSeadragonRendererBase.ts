@@ -574,14 +574,16 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Retains the rendered objects that can be reused for the new object references, and deletes the rest
    *
-   * A rendered object is matched by the layer and object it references. It is
-   * reusable if the data source it was loaded for is that of the reference, and
-   * if its backdrop, if any, and all of its tiled images already sit at the
-   * consecutive world indices expected for its position among the references,
-   * counted from the anchor. A partially misplaced object is not reusable. All
-   * other rendered objects are deleted, and are expected to be recreated by the
-   * caller via {@link _createRenderedObject}, which is also how the world is
-   * reordered.
+   * A rendered object is matched by the layer and object it references.
+   * Unmatched rendered objects are deleted first, so that removing an object
+   * does not shift the world indices of the objects behind it. A matched
+   * rendered object is reusable if the data source it was loaded for is that of
+   * the reference, and if its backdrop, if any, and all of its tiled images
+   * already sit at the consecutive world indices expected for its position
+   * among the references, counted from the anchor. A partially misplaced object
+   * is not reusable. The other matched rendered objects are deleted as well,
+   * and are expected to be recreated by the caller via
+   * {@link _createRenderedObject}, which is also how the world is reordered.
    *
    * The expected indices account for every matched rendered object, reusable or
    * not, by the world footprint it currently has: a matched object that is
@@ -603,6 +605,31 @@ export abstract class OpenSeadragonRendererBase<
   > {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
+    const matchedRenderedObjects = new Set<
+      RenderedObject<TObject, TObjectData>
+    >();
+    const matchedRenderedObjectsByNewRef = new Map<
+      ObjectRef<TObject, TObjectData>,
+      RenderedObject<TObject, TObjectData>
+    >();
+    for (const newRef of newRefs) {
+      const renderedObject = this._renderedObjects.find(
+        (renderedObject) =>
+          renderedObject.ref.layer.id === newRef.layer.id &&
+          renderedObject.ref.object.id === newRef.object.id,
+      );
+      if (renderedObject !== undefined) {
+        matchedRenderedObjects.add(renderedObject);
+        matchedRenderedObjectsByNewRef.set(newRef, renderedObject);
+      }
+    }
+    for (const renderedObject of this._renderedObjects) {
+      if (!matchedRenderedObjects.has(renderedObject)) {
+        await this._deleteRenderedObject(renderedObject);
+        signal?.throwIfAborted();
+      }
+    }
+    this._renderedObjects = [...matchedRenderedObjects];
     if (this._anchor === undefined) {
       throw new Error("Anchor not initialized");
     }
@@ -617,11 +644,7 @@ export abstract class OpenSeadragonRendererBase<
     const survivors = new Set<RenderedObject<TObject, TObjectData>>();
     let offset = 1;
     for (const newRef of newRefs) {
-      const renderedObject = this._renderedObjects.find(
-        (renderedObject) =>
-          renderedObject.ref.layer.id === newRef.layer.id &&
-          renderedObject.ref.object.id === newRef.object.id,
-      );
+      const renderedObject = matchedRenderedObjectsByNewRef.get(newRef);
       if (renderedObject !== undefined) {
         if (
           // data source configuration unchanged (checked instead of data)
@@ -650,7 +673,7 @@ export abstract class OpenSeadragonRendererBase<
           renderedObject.tileSourceCount;
       }
     }
-    for (const renderedObject of this._renderedObjects) {
+    for (const renderedObject of matchedRenderedObjects) {
       if (!survivors.has(renderedObject)) {
         await this._deleteRenderedObject(renderedObject);
         signal?.throwIfAborted();
