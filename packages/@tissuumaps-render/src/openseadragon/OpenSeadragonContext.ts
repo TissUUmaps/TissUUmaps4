@@ -1,11 +1,10 @@
 import OpenSeadragon from "openseadragon";
 
-import {
-  type Dims,
-  GeometryUtils,
-  type NumericArray,
-  type OpenSeadragonViewerOptions,
-  type Rect,
+import type {
+  Dims,
+  NumericArray,
+  OpenSeadragonViewerOptions,
+  Rect,
 } from "@tissuumaps/core";
 
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
@@ -80,9 +79,9 @@ export class OpenSeadragonContext {
     "Equal",
     "Minus",
   ]);
+  private static readonly _relativeBoundsTolerance = 1e-9;
 
   readonly viewer: OpenSeadragon.Viewer;
-  private readonly _dummyBounds = new WeakMap<OpenSeadragon.TiledImage, Rect>();
   private readonly _tileSourceDataTransfers = new WeakMap<
     OpenSeadragon.TileSource,
     DataTransfer
@@ -524,13 +523,13 @@ export class OpenSeadragonContext {
    * The viewport is not fitted here: it follows the bounds of the world as a
    * whole, for as long as the renderers own it (see {@link resetViewport}).
    *
-   * If `dummy` already spans `newBounds`, it is returned unchanged. Whether it
-   * does is decided from the bounds it was created for, which are recorded per
-   * dummy, not from the bounds OpenSeadragon reports for it: those derive the
-   * height from the width and the aspect ratio of the tile source, and can be
-   * off by a rounding error, which would replace the dummy on every call.
-   * Otherwise, a new dummy is created at `dummyIndex` (defaulting to the index
-   * of `dummy`, or appended if neither is specified) and `dummy` is removed.
+   * If `dummy` already spans `newBounds`, it is returned unchanged. Its bounds
+   * are compared with a tolerance relative to the size of `newBounds`, as
+   * OpenSeadragon derives the height of `dummy` from its width and the aspect
+   * ratio of its tile source, which can be off by a rounding error and would
+   * otherwise replace the dummy on every call. Otherwise, a new dummy is created
+   * at `dummyIndex` (defaulting to the index of `dummy`, or appended if neither
+   * is specified) and `dummy` is removed.
    * Where possible, OpenSeadragon replaces `dummy` as part of the addition, so
    * that the new dummy takes its place without leaving a gap. Replacing `dummy`
    * cannot be aborted once the new dummy has been created, as that would leave
@@ -552,10 +551,15 @@ export class OpenSeadragonContext {
     const { signal, dummy, dummyIndex } = options ?? {};
     signal?.throwIfAborted();
     if (dummy !== undefined) {
-      const dummyBounds = this._dummyBounds.get(dummy);
+      const { x, y, width, height } = dummy.getBounds();
+      const tolerance =
+        OpenSeadragonContext._relativeBoundsTolerance *
+        Math.max(newBounds.width, newBounds.height);
       if (
-        dummyBounds !== undefined &&
-        GeometryUtils.rectEquals(dummyBounds, newBounds)
+        Math.abs(x - newBounds.x) <= tolerance &&
+        Math.abs(y - newBounds.y) <= tolerance &&
+        Math.abs(width - newBounds.width) <= tolerance &&
+        Math.abs(height - newBounds.height) <= tolerance
       ) {
         return dummy;
       }
@@ -581,7 +585,6 @@ export class OpenSeadragonContext {
       },
       { signal, getIndex },
     );
-    this._dummyBounds.set(newDummy, { ...newBounds });
     if (dummy !== undefined && replace !== true) {
       await this.removeTiledImage(dummy);
     }
