@@ -1,10 +1,11 @@
 import OpenSeadragon from "openseadragon";
 
-import type {
-  Dims,
-  NumericArray,
-  OpenSeadragonViewerOptions,
-  Rect,
+import {
+  AsyncUtils,
+  type Dims,
+  type NumericArray,
+  type OpenSeadragonViewerOptions,
+  type Rect,
 } from "@tissuumaps/core";
 
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
@@ -686,6 +687,15 @@ export class OpenSeadragonContext {
    * Does nothing unless a data transfer is set for the tile source of the tile
    * (see {@link updateTiledImageDataTransfer}).
    *
+   * OpenSeadragon raises the invalidation events of all tiles of a change at
+   * once, and recoloring a tile holds the thread for as long as the tile has
+   * pixels, so each tile first yields to the event loop: the user interface
+   * stays responsive while a change is recolored. A change that arrives
+   * meanwhile invalidates the same tiles again, which marks the runs of the
+   * change before it as outdated; those are abandoned, as the newer runs
+   * recolor the tiles. The data transfer is read only after yielding, so that
+   * a run that continues always applies the latest one.
+   *
    * The colors are written as packed 32-bit values through a `Uint32Array`
    * view of an `ImageData` buffer, whose bytes are R, G, B, A. The
    * `0xAABBGGRR` layout of {@link DataTransfer} lands in that order on a
@@ -700,7 +710,11 @@ export class OpenSeadragonContext {
    * becomes the tile's data. The canvas cannot be shared, as OpenSeadragon
    * keeps it in its tile cache by reference. Nor is the tile's own canvas
    * used: obtaining that would convert the tile's original data to a canvas
-   * first, only for it to be overwritten.
+   * first, only for it to be overwritten. The canvas is created with
+   * `willReadFrequently`, which keeps it in memory rather than on the GPU: the
+   * WebGL drawer reads a pixel of every canvas it turns into a texture, to
+   * check whether it is tainted, and reading from a GPU canvas waits for the
+   * GPU.
    *
    * @param event - The tile invalidation event whose tile data is replaced
    * @returns A promise that resolves once the tile data has been replaced
@@ -711,6 +725,13 @@ export class OpenSeadragonContext {
   ): Promise<void> {
     const tiledImage = event.tile.tiledImage;
     if (tiledImage === null) {
+      return;
+    }
+    if (!this._tileSourceDataTransfers.has(tiledImage.source)) {
+      return;
+    }
+    await AsyncUtils.yield();
+    if (await event.outdated()) {
       return;
     }
     const dataTransfer = this._tileSourceDataTransfers.get(tiledImage.source);
@@ -738,7 +759,7 @@ export class OpenSeadragonContext {
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
     ctx.putImageData(imageData, 0, 0);
     await event.setData(ctx, "context2d");
   }
