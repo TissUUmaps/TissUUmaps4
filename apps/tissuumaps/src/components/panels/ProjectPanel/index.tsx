@@ -16,10 +16,17 @@ import { Input } from "@/components/ui/input";
 import {
   clearProjectURLParam,
   loadProjectFromFile,
+  loadProjectFromFileHandle,
   loadProjectFromURL,
   saveAndDownloadProjectToJSON,
   setProjectURLParam,
 } from "@/data/io/project";
+import {
+  isProjectFilePickerSupported,
+  isWorkspaceSupported,
+  pickProjectFile,
+  pickWorkspace,
+} from "@/data/io/workspace";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
@@ -28,12 +35,6 @@ import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
 export type ProjectPanelProps = {
   className?: string;
-};
-
-type WindowWithDirectoryPicker = Window & {
-  showDirectoryPicker?: (options?: {
-    mode?: "read" | "readwrite";
-  }) => Promise<FileSystemDirectoryHandle>;
 };
 
 export function ProjectPanel({ className }: ProjectPanelProps) {
@@ -46,6 +47,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
   const setWorkspace = useAppStore((state) => state.setWorkspace);
   const confirm = useConfirmDialog();
   const prompt = usePromptDialog();
+  const workspaceSupported = isWorkspaceSupported();
 
   const promptLoadProjectFromURL = useCallback(() => {
     void prompt({ title: "Enter project URL to load" }).then((value) => {
@@ -75,25 +77,53 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
     });
   }, [clearProject, confirm]);
 
-  const toggleWorkspace = async () => {
-    if (workspace) {
-      setWorkspace(null);
-      return;
-    }
-    const w = window as WindowWithDirectoryPicker;
-    if (!w.showDirectoryPicker) {
-      return;
-    }
-    try {
-      const directoryHandle = await w.showDirectoryPicker({
-        mode: "readwrite",
+  const openWorkspace = useCallback(() => {
+    void pickWorkspace()
+      .then((directory) => {
+        if (directory !== null) {
+          setWorkspace(directory);
+        }
+        // A cancelled picker yields null, and leaves the workspace unchanged
+      })
+      .catch((error) => {
+        console.error("Failed to open workspace", error);
       });
-      setWorkspace(directoryHandle);
-    } catch (error) {
-      // Thrown with an AbortError when the user cancels the picker
-      console.error("Failed to open workspace", error);
+  }, [setWorkspace]);
+
+  const confirmCloseWorkspace = useCallback(() => {
+    void confirm({
+      title: "Close workspace",
+      body: "Are you sure you want to close the workspace? Data loaded from it will no longer be available until you open it again.",
+    }).then((confirmed) => {
+      if (confirmed) {
+        setWorkspace(null);
+      }
+    });
+  }, [confirm, setWorkspace]);
+
+  /**
+   * Picks a project file, preferring the file handle picker while a workspace
+   * is open, so that a project file within the workspace is loaded with its
+   * path as the project source. Falls back to the file input otherwise, which
+   * yields a file that cannot be located within the workspace.
+   */
+  const loadProjectFile = useCallback(() => {
+    if (workspace === null || !isProjectFilePickerSupported()) {
+      loadProjectFileInputRef.current?.click();
+      return;
     }
-  };
+    void pickProjectFile()
+      .then(async (projectFile) => {
+        if (projectFile === null) {
+          return;
+        }
+        await loadProjectFromFileHandle(projectFile, workspace);
+        clearProjectURLParam();
+      })
+      .catch((error) => {
+        console.error("Failed to load project from file", error);
+      });
+  }, [workspace]);
 
   return (
     <div className={className}>
@@ -146,14 +176,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
           />
           <FieldControl
             render={
-              <Button
-                onClick={() => {
-                  const loadProjectFileInput = loadProjectFileInputRef.current;
-                  if (loadProjectFileInput !== null) {
-                    loadProjectFileInput.click();
-                  }
-                }}
-              >
+              <Button onClick={() => loadProjectFile()}>
                 Load project from file
               </Button>
             }
@@ -189,20 +212,31 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
       </div>
       <div className="grid grid-cols-2">
         <div className="flex items-end">
-          <p
-            className="text-sm truncate min-w-0"
-            title={workspace ? workspace.name : ""}
-          >
-            {workspace
-              ? `Current workspace: ${workspace.name}`
-              : `No current workspace.`}
-          </p>
+          {!workspaceSupported ? (
+            <p className="text-xs opacity-75 mx-1">
+              Workspaces are not supported by this browser.
+            </p>
+          ) : (
+            <p
+              className="text-sm truncate min-w-0"
+              title={workspace ? workspace.name : ""}
+            >
+              {workspace
+                ? `Current workspace: ${workspace.name}`
+                : `No current workspace.`}
+            </p>
+          )}
         </div>
 
         <Field>
           <FieldControl
             render={
-              <Button onClick={() => void toggleWorkspace()}>
+              <Button
+                disabled={!workspaceSupported}
+                onClick={() =>
+                  workspace ? confirmCloseWorkspace() : openWorkspace()
+                }
+              >
                 {workspace ? "Close workspace" : "Open workspace"}
               </Button>
             }
