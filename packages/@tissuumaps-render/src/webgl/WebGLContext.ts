@@ -16,7 +16,7 @@ export class WebGLContext {
    * Creates a new WebGLContext for the given canvas element
    *
    * @param canvas - The HTML canvas element to use for rendering
-   * @throws If the browser does not support WebGL 2.0
+   * @throws Error if the browser does not support WebGL 2.0
    */
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl2", {
@@ -80,7 +80,7 @@ export class WebGLContext {
    *
    * @param vertexShaderSource - GLSL source for the vertex shader
    * @param fragmentShaderSource - GLSL source for the fragment shader
-   * @throws If shader compilation or program linking fails
+   * @throws Error if shader compilation or program linking fails
    */
   createProgram(
     vertexShaderSource: string,
@@ -147,7 +147,7 @@ export class WebGLContext {
    *
    * @param program - The shader program
    * @param name - The uniform name as declared in the shader
-   * @throws If the uniform is not found
+   * @throws Error if the uniform is not found
    */
   getUniformLocation(
     program: WebGLProgram,
@@ -163,7 +163,7 @@ export class WebGLContext {
   /**
    * Creates a new vertex array object (VAO)
    *
-   * @throws If VAO creation fails
+   * @throws Error if VAO creation fails
    */
   createVertexArray(): WebGLVertexArrayObject {
     const vao = this.gl.createVertexArray();
@@ -245,7 +245,7 @@ export class WebGLContext {
    * @param format - Pixel data format (e.g. `gl.RGBA`)
    * @param type - Pixel data type (e.g. `gl.FLOAT`)
    * @param data - Optional initial pixel data
-   * @throws If texture creation fails
+   * @throws Error if texture creation fails
    */
   createDataTexture(
     internalformat: GLenum,
@@ -346,7 +346,7 @@ export class WebGLContext {
    *
    * @param url - The image URL
    * @param options - Optional mipmap generation flag and abort signal
-   * @throws If texture creation fails, the image fails to load, or the
+   * @throws Error if texture creation fails, the image fails to load, or the
    * operation was aborted
    */
   async loadImageTextureFromUrl(
@@ -423,7 +423,7 @@ export class WebGLContext {
   /**
    * Creates a new WebGL buffer
    *
-   * @throws If buffer creation fails
+   * @throws Error if buffer creation fails
    */
   createBuffer(): WebGLBuffer {
     const buffer = this.gl.createBuffer();

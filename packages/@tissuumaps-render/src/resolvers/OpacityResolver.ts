@@ -29,7 +29,7 @@ export class OpacityResolver {
    * @param config - Opacity configuration specifying the data source
    * @param opacityMaps - Available opacity maps for groupBy lookups
    * @param defaultOpacity - Fallback opacity value (0–1) when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, opacity scaling factor, and table loader
+   * @param options - Optional abort signal, buffer alignment, and table loader
    * @returns A `Uint8Array` of packed opacity values (0–255), one per ID
    */
   static async resolveOpacities(
@@ -40,17 +40,15 @@ export class OpacityResolver {
     options?: {
       signal?: AbortSignal;
       align?: number;
-      opacityFactor?: number;
       loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
     },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, opacityFactor = 1, loadTable } = options ?? {};
+    const { signal, align = 1, loadTable } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
       return OpacityResolver.resolveUniformOpacities(ids, config, {
         align,
-        opacityFactor,
       });
     }
     if (
@@ -63,7 +61,7 @@ export class OpacityResolver {
         config,
         defaultOpacity,
         loadTable,
-        { signal, align, opacityFactor },
+        { signal, align },
       );
     }
     if (
@@ -77,13 +75,12 @@ export class OpacityResolver {
         opacityMaps,
         defaultOpacity,
         loadTable,
-        { signal, align, opacityFactor },
+        { signal, align },
       );
     }
     console.warn("No valid opacity config found, using default opacity");
     return OpacityResolver.createUniformOpacities(ids.length, defaultOpacity, {
       align,
-      opacityFactor,
     });
   }
 
@@ -118,23 +115,17 @@ export class OpacityResolver {
    * @param _id - The item ID (unused, kept for symmetry with the other resolvers)
    * @param config - Opacity configuration specifying the data source
    * @param defaultOpacity - Fallback opacity when the source cannot be resolved without a table
-   * @param options - Optional opacity scaling factor
    * @returns The packed opacity as an integer in the range [0, 255]
    */
   static resolveOpacityWithoutTable(
     _id: number,
     config: OpacityConfig,
     defaultOpacity: number,
-    options?: { opacityFactor?: number },
   ): number {
-    const { opacityFactor = 1 } = options ?? {};
-    const activeConfigSource = getActiveConfigSource(config);
-    if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return OpacityResolver.packOpacity(config.constant.value, {
-        opacityFactor,
-      });
-    }
-    return OpacityResolver.packOpacity(defaultOpacity, { opacityFactor });
+    return (
+      OpacityResolver.resolveConstantOpacity(config) ??
+      OpacityResolver.packOpacity(defaultOpacity)
+    );
   }
 
   /**
@@ -142,19 +133,19 @@ export class OpacityResolver {
    *
    * @param ids - Ordered list of item IDs (only the length is used)
    * @param config - Constant opacity configuration containing the opacity value
-   * @param options - Optional buffer alignment and opacity scaling factor
+   * @param options - Optional buffer alignment
    * @returns A `Uint8Array` filled with the packed constant opacity
    */
   static resolveUniformOpacities(
     ids: number[],
     config: Extract<OpacityConfig, ConstantConfig<number>>,
-    options?: { align?: number; opacityFactor?: number },
+    options?: { align?: number },
   ): Uint8Array {
-    const { align = 1, opacityFactor = 1 } = options ?? {};
+    const { align = 1 } = options ?? {};
     return OpacityResolver.createUniformOpacities(
       ids.length,
       config.constant.value,
-      { align, opacityFactor },
+      { align },
     );
   }
 
@@ -165,7 +156,7 @@ export class OpacityResolver {
    * @param config - From configuration specifying the source column
    * @param defaultOpacity - Fallback opacity when a value is missing or invalid
    * @param loadTable - Async function that loads the {@link TableData}
-   * @param options - Optional abort signal, buffer alignment, and opacity scaling factor
+   * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed opacity values
    */
   static async resolveOpacitiesFromTableValues(
@@ -173,9 +164,9 @@ export class OpacityResolver {
     config: Extract<OpacityConfig, FromConfig>,
     defaultOpacity: number,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
-    options?: { signal?: AbortSignal; align?: number; opacityFactor?: number },
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, opacityFactor = 1 } = options ?? {};
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const data = await loadTable({ signal });
     const packedOpacities = OpacityResolver.createOpacityBuffer(ids.length, {
@@ -188,7 +179,7 @@ export class OpacityResolver {
       config.from.column,
       defaultOpacity,
       (value) => OpacityResolver.parseOpacity(value),
-      (opacity) => OpacityResolver.packOpacity(opacity, { opacityFactor }),
+      (opacity) => OpacityResolver.packOpacity(opacity),
       { signal },
     );
     return packedOpacities;
@@ -203,7 +194,7 @@ export class OpacityResolver {
    * @param opacityMaps - Available opacity maps for group-to-opacity lookups
    * @param defaultOpacity - Fallback opacity when the map is not found or a group is unmapped
    * @param loadTable - Async function that loads the {@link TableData}
-   * @param options - Optional abort signal, buffer alignment, and opacity scaling factor
+   * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed opacity values
    */
   static async resolveOpacitiesFromTableGroups(
@@ -212,9 +203,9 @@ export class OpacityResolver {
     opacityMaps: GroupValueMap<number>[],
     defaultOpacity: number,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
-    options?: { signal?: AbortSignal; align?: number; opacityFactor?: number },
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, opacityFactor = 1 } = options ?? {};
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const opacityMap = opacityMaps.find(
       (opacityMap) => opacityMap.id === config.groupBy.map,
@@ -226,7 +217,7 @@ export class OpacityResolver {
       return OpacityResolver.createUniformOpacities(
         ids.length,
         defaultOpacity,
-        { align, opacityFactor },
+        { align },
       );
     }
     const data = await loadTable({ signal });
@@ -241,7 +232,7 @@ export class OpacityResolver {
       config.groupBy.column,
       opacityMap.default ?? defaultOpacity,
       (group) => groupOpacities.get(group),
-      (opacity) => OpacityResolver.packOpacity(opacity, { opacityFactor }),
+      (opacity) => OpacityResolver.packOpacity(opacity),
       { signal },
     );
     return packedOpacities;
@@ -252,19 +243,17 @@ export class OpacityResolver {
    *
    * @param n - Number of elements
    * @param opacity - The opacity value (0–1) to fill with
-   * @param options - Optional buffer alignment and opacity scaling factor
+   * @param options - Optional buffer alignment
    * @returns A `Uint8Array` filled with the packed opacity
    */
   static createUniformOpacities(
     n: number,
     opacity: number,
-    options?: { align?: number; opacityFactor?: number },
+    options?: { align?: number },
   ): Uint8Array {
-    const { align = 1, opacityFactor = 1 } = options ?? {};
+    const { align = 1 } = options ?? {};
     const packedOpacities = OpacityResolver.createOpacityBuffer(n, { align });
-    const packedOpacity = OpacityResolver.packOpacity(opacity, {
-      opacityFactor,
-    });
+    const packedOpacity = OpacityResolver.packOpacity(opacity);
     packedOpacities.fill(packedOpacity, 0, n);
     return packedOpacities;
   }
@@ -299,18 +288,12 @@ export class OpacityResolver {
   }
 
   /**
-   * Packs an opacity value (0–1) into a `Uint8Array`-compatible integer (0–255),
-   * optionally scaled by an opacity factor.
+   * Packs an opacity value (0–1) into a `Uint8Array`-compatible integer (0–255)
    *
    * @param opacity - The opacity value (0–1)
-   * @param options - Optional opacity scaling factor (defaults to 1)
    * @returns The packed opacity as an integer in the range [0, 255]
    */
-  static packOpacity(
-    opacity: number,
-    options?: { opacityFactor?: number },
-  ): number {
-    const { opacityFactor = 1 } = options ?? {};
-    return ColorUtils.packOpacity(opacity * opacityFactor);
+  static packOpacity(opacity: number): number {
+    return ColorUtils.packOpacity(opacity);
   }
 }

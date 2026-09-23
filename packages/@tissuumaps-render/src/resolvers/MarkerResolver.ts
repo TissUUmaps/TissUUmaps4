@@ -123,11 +123,10 @@ export class MarkerResolver {
     config: MarkerConfig,
     defaultMarker: Marker,
   ): number {
-    const activeConfigSource = getActiveConfigSource(config);
-    if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return MarkerResolver.packMarker(config.constant.value);
-    }
-    return MarkerResolver.packMarker(defaultMarker);
+    return (
+      MarkerResolver.resolveConstantMarker(config) ??
+      MarkerResolver.packMarker(defaultMarker)
+    );
   }
 
   /**

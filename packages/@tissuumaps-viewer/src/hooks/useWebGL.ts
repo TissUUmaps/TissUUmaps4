@@ -33,6 +33,22 @@ function drawGL(gl: GL | null) {
 }
 
 /**
+ * Creates a state updater that sets new bounds, but keeps the current ones if
+ * they are equal, so that equal bounds do not trigger a re-render
+ *
+ * @param newBounds - The new bounds, or null if nothing is drawn
+ * @returns The state updater
+ */
+function updateBounds(newBounds: Rect | null) {
+  return (currentBounds: Rect | null) =>
+    newBounds !== null &&
+    currentBounds !== null &&
+    GeometryUtils.rectEquals(currentBounds, newBounds)
+      ? currentBounds
+      : newBounds;
+}
+
+/**
  * Creates the canvas the WebGL renderers draw on, covering its parent
  */
 function createCanvas() {
@@ -71,6 +87,8 @@ export function useWebGL(adapter: ViewerAdapter) {
 
   const [syncPoints, dispatchSyncPoints] = useReducer((x) => x + 1, 0);
   const [syncShapes, dispatchSyncShapes] = useReducer((x) => x + 1, 0);
+  const syncPointsAbortControllerRef = useRef<AbortController | null>(null);
+  const syncShapesAbortControllerRef = useRef<AbortController | null>(null);
   const requestedSyncPointsRef = useRef(0);
   const requestedSyncShapesRef = useRef(0);
 
@@ -170,6 +188,13 @@ export function useWebGL(adapter: ViewerAdapter) {
     }
 
     function stopGL() {
+      // On context loss, the sync effects are only cleaned up (and thereby
+      // aborted) after the re-render that unsetting glReady schedules, so their
+      // synchronizations could resume on the renderers destroyed below and fail
+      // with spurious errors. Abort them first; on unmount, React has already
+      // cleaned up the effects, and this does nothing.
+      syncPointsAbortControllerRef.current?.abort();
+      syncShapesAbortControllerRef.current?.abort();
       const gl = glRef.current;
       setGLReady(false);
       glRef.current = null;
@@ -246,13 +271,7 @@ export function useWebGL(adapter: ViewerAdapter) {
         glOptions.shapesRenderOptions;
       // the rendered bounds include the stroke width, a render option
       const newShapesBounds = glRef.current.shapesRenderer.getRenderedBounds();
-      setGLShapesBounds((currentShapesBounds) =>
-        newShapesBounds !== null &&
-        currentShapesBounds !== null &&
-        GeometryUtils.rectEquals(currentShapesBounds, newShapesBounds)
-          ? currentShapesBounds
-          : newShapesBounds,
-      );
+      setGLShapesBounds(updateBounds(newShapesBounds));
       dispatchRedraw();
       if (glRef.current.shapesRenderer.needsSynchronization()) {
         requestedSyncShapesRef.current++;
@@ -266,13 +285,7 @@ export function useWebGL(adapter: ViewerAdapter) {
       if (glRef.current.pointsRenderer.setModel(layers, points)) {
         const newPointsBounds =
           glRef.current.pointsRenderer.getRenderedBounds();
-        setGLPointsBounds((currentPointsBounds) =>
-          newPointsBounds !== null &&
-          currentPointsBounds !== null &&
-          GeometryUtils.rectEquals(currentPointsBounds, newPointsBounds)
-            ? currentPointsBounds
-            : newPointsBounds,
-        );
+        setGLPointsBounds(updateBounds(newPointsBounds));
         dispatchRedraw();
       }
       if (glRef.current.pointsRenderer.needsSynchronization()) {
@@ -287,13 +300,7 @@ export function useWebGL(adapter: ViewerAdapter) {
       if (glRef.current.shapesRenderer.setModel(layers, shapes)) {
         const newShapesBounds =
           glRef.current.shapesRenderer.getRenderedBounds();
-        setGLShapesBounds((currentShapesBounds) =>
-          newShapesBounds !== null &&
-          currentShapesBounds !== null &&
-          GeometryUtils.rectEquals(currentShapesBounds, newShapesBounds)
-            ? currentShapesBounds
-            : newShapesBounds,
-        );
+        setGLShapesBounds(updateBounds(newShapesBounds));
         dispatchRedraw();
       }
       if (glRef.current.shapesRenderer.needsSynchronization()) {
@@ -305,6 +312,7 @@ export function useWebGL(adapter: ViewerAdapter) {
 
   useEffect(() => {
     const abortController = new AbortController();
+    syncPointsAbortControllerRef.current = abortController;
     if (
       glReady &&
       glRef.current !== null &&
@@ -332,13 +340,7 @@ export function useWebGL(adapter: ViewerAdapter) {
           ) {
             const newPointsBounds =
               glRef.current.pointsRenderer.getRenderedBounds();
-            setGLPointsBounds((currentPointsBounds) =>
-              newPointsBounds !== null &&
-              currentPointsBounds !== null &&
-              GeometryUtils.rectEquals(currentPointsBounds, newPointsBounds)
-                ? currentPointsBounds
-                : newPointsBounds,
-            );
+            setGLPointsBounds(updateBounds(newPointsBounds));
             drawGL(glRef.current); // direct (async continuation in own task)
           }
         })
@@ -366,6 +368,7 @@ export function useWebGL(adapter: ViewerAdapter) {
 
   useEffect(() => {
     const abortController = new AbortController();
+    syncShapesAbortControllerRef.current = abortController;
     if (
       glReady &&
       glRef.current !== null &&
@@ -391,13 +394,7 @@ export function useWebGL(adapter: ViewerAdapter) {
           ) {
             const newShapesBounds =
               glRef.current.shapesRenderer.getRenderedBounds();
-            setGLShapesBounds((currentShapesBounds) =>
-              newShapesBounds !== null &&
-              currentShapesBounds !== null &&
-              GeometryUtils.rectEquals(currentShapesBounds, newShapesBounds)
-                ? currentShapesBounds
-                : newShapesBounds,
-            );
+            setGLShapesBounds(updateBounds(newShapesBounds));
             drawGL(glRef.current); // direct (async continuation in own task)
           }
         })

@@ -610,8 +610,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Reloads the textures of an object whose data was prepared again
    *
    * Refills the colors textures in place, and creates a new scanline data
-   * texture before releasing the one it replaces, so a draw in between never
-   * sees a released texture.
+   * texture before releasing the one it replaces, so that the old one survives
+   * if creating the new one throws. The snapshot is adopted last, so that an
+   * update that throws is retried by the next synchronization.
    *
    * @param renderedShapes - The rendered object to update in place
    * @param prepared - Its preparation, holding the texture data that changed
@@ -621,7 +622,6 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     renderedShapes: RenderedShapes,
     prepared: PreparedShapes,
   ): boolean {
-    renderedShapes.renderConfigSnapshot = prepared.renderConfigSnapshot;
     if (prepared.scanlineBuffer !== undefined) {
       const scanlineDataTexture = this._createScanlineDataTexture(
         prepared.scanlineBuffer,
@@ -647,6 +647,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         prepared.packedShapeStrokeColors,
       );
     }
+    renderedShapes.renderConfigSnapshot = prepared.renderConfigSnapshot;
     return (
       prepared.scanlineBuffer !== undefined ||
       prepared.packedShapeFillColors !== undefined ||
@@ -656,6 +657,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
 
   /**
    * Deletes all GPU textures owned by a single rendered object
+   *
+   * @param renderedShapes - The rendered object whose textures to delete
    */
   protected override destroyRenderedObject(
     renderedShapes: RenderedShapes,

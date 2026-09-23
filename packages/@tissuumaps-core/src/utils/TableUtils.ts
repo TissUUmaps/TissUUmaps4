@@ -26,10 +26,8 @@ import { AsyncUtils } from "./AsyncUtils";
  * On top of the row lookup, {@link fillFromTableValues} and
  * {@link fillFromTableGroups} fill a typed array with one packed value per
  * item from a table column, one by parsing the cell values and one by mapping
- * their distinct values as groups. This is how the resolvers of
- * `@tissuumaps/render` turn a from-column or group-by configuration into GPU
- * data. IDs that the table does not contain fall back to a default value, with
- * a warning.
+ * their distinct values as groups. IDs that the table does not contain fall
+ * back to a default value, with a warning.
  */
 export class TableUtils {
   /**
@@ -228,15 +226,13 @@ export class TableUtils {
     tableData: TableData,
     options?: { signal?: AbortSignal },
   ): Promise<ReadonlyMap<number, number>> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
     const tableIds = tableData.getIds();
     let rowIndicesPromise = TableUtils._rowIndicesCache.get(tableIds);
     if (rowIndicesPromise === undefined) {
       rowIndicesPromise = TableUtils._buildRowIndices(tableIds);
       TableUtils._rowIndicesCache.set(tableIds, rowIndicesPromise);
     }
-    return AsyncUtils.raceSignal(rowIndicesPromise, { signal });
+    return AsyncUtils.raceSignal(rowIndicesPromise, options);
   }
 
   /**

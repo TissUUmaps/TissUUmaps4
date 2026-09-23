@@ -271,7 +271,7 @@ export class WebGLShapesRasterizer {
    * pad the buffer to (used to fill whole texture lines)
    * @returns The packed buffer. Without scanlines or bins, there is nothing to
    * rasterize into, and the buffer is empty
-   * @throws If `objectBounds` has a non-positive width or height, as shapes
+   * @throws Error if `objectBounds` has a non-positive width or height, as shapes
    * cannot be rasterized into a degenerate bounding box
    */
   static async rasterizeScanlines(

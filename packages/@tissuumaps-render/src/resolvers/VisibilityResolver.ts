@@ -126,11 +126,10 @@ export class VisibilityResolver {
     config: VisibilityConfig,
     defaultVisibility: boolean,
   ): number {
-    const activeConfigSource = getActiveConfigSource(config);
-    if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return VisibilityResolver.packVisibility(config.constant.value);
-    }
-    return VisibilityResolver.packVisibility(defaultVisibility);
+    return (
+      VisibilityResolver.resolveConstantVisibility(config) ??
+      VisibilityResolver.packVisibility(defaultVisibility)
+    );
   }
 
   /**

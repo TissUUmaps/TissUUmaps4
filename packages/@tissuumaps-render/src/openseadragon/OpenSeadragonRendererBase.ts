@@ -179,13 +179,15 @@ export abstract class OpenSeadragonRendererBase<
     this._lastSyncState = syncState;
     try {
       const newRefs = await this._loadObjects(context, { signal });
-      this.retainObjects(newRefs.map((newRef) => newRef.object));
-      let offset = 0;
-      const newRenderedObjects: RenderedObject<TObject, TObjectData>[] = [];
       const renderedObjectsByNewRef = await this._cleanRenderedObjects(
         newRefs,
         { signal },
       );
+      // drop the state of the other objects only once their tiled images are
+      // gone, as setModel would otherwise update them without it
+      this.retainObjects(newRefs.map((newRef) => newRef.object));
+      let offset = 0;
+      const newRenderedObjects: RenderedObject<TObject, TObjectData>[] = [];
       for (const newRef of newRefs) {
         let renderedObject = renderedObjectsByNewRef.get(newRef);
         if (renderedObject === undefined) {
@@ -377,9 +379,10 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Retains what was resolved for the given objects, and discards the rest
    *
-   * Called by {@link synchronize} once all objects have loaded, with the
-   * objects that are about to be displayed: those assigned to a rendered layer
-   * whose data loaded successfully. Does nothing here; subclasses that keep
+   * Called by {@link synchronize} once all objects have loaded and the rendered
+   * objects of all others have been deleted, with the objects that are about
+   * to be displayed: those assigned to a rendered layer whose data loaded
+   * successfully. Does nothing here; subclasses that keep
    * state per object (see {@link resolveObject} and
    * {@link resolveTiledImageDataTransfer}) override this to drop the state of
    * every object that is not among the given ones.

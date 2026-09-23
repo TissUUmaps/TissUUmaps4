@@ -144,11 +144,11 @@ export class ColorResolver {
     config: ColorConfig,
     defaultColor: Color,
   ): number {
-    const activeConfigSource = getActiveConfigSource(config);
-    if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return ColorResolver.packColor(config.constant.value);
+    const constantColor = ColorResolver.resolveConstantColor(config);
+    if (constantColor !== undefined) {
+      return constantColor;
     }
-    if (activeConfigSource === "random" && isRandomConfig(config)) {
+    if (getActiveConfigSource(config) === "random" && isRandomConfig(config)) {
       const colorPalette = colorPalettes.find(
         (colorPalette) => colorPalette.id === config.random.palette,
       );

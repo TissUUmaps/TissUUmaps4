@@ -49,12 +49,8 @@ describe("OpacityResolver", () => {
       expect(OpacityResolver.packOpacity(0.5)).toBe(128); // round(127.5)
     });
 
-    it("applies the opacity factor", () => {
-      expect(OpacityResolver.packOpacity(0.5, { opacityFactor: 0.5 })).toBe(64); // round(0.5*0.5*255) = round(63.75)
-    });
-
     it("clamps the packed value to [0, 255]", () => {
-      expect(OpacityResolver.packOpacity(1, { opacityFactor: 2 })).toBe(255);
+      expect(OpacityResolver.packOpacity(2)).toBe(255);
       expect(OpacityResolver.packOpacity(-1)).toBe(0);
     });
   });
@@ -77,13 +73,6 @@ describe("OpacityResolver", () => {
     it("fills the buffer with the packed opacity", () => {
       const packedOpacities = OpacityResolver.createUniformOpacities(3, 1);
       expect(Array.from(packedOpacities)).toEqual([255, 255, 255]);
-    });
-
-    it("applies the opacity factor while filling", () => {
-      const packedOpacities = OpacityResolver.createUniformOpacities(2, 1, {
-        opacityFactor: 0.5,
-      });
-      expect(Array.from(packedOpacities)).toEqual([128, 128]); // round(0.5*255)
     });
   });
 
@@ -225,32 +214,6 @@ describe("OpacityResolver", () => {
       expect(Array.from(packedOpacities)).toEqual([255, 255]);
       expect(loadTable).not.toHaveBeenCalled();
     });
-
-    it("applies the opacity factor to the mapped opacities", async () => {
-      const ids = [1];
-      const data = createMockTableData(ids, ["A"]);
-      const loadTable = vi.fn().mockResolvedValue(data);
-      const opacityMap: GroupValueMap<number> = {
-        id: "om1",
-        name: "Opacity Map",
-        values: { [JSON.stringify("A")]: 1 },
-      };
-      const config = {
-        groupBy: { column: "col1", map: "om1" },
-      } satisfies OpacityConfig;
-
-      const packedOpacities =
-        await OpacityResolver.resolveOpacitiesFromTableGroups(
-          ids,
-          config,
-          [opacityMap],
-          0,
-          loadTable,
-          { opacityFactor: 0.5 },
-        );
-
-      expect(packedOpacities[0]).toBe(128);
-    });
   });
 
   describe("resolveConstantOpacity", () => {
@@ -273,15 +236,6 @@ describe("OpacityResolver", () => {
       );
     });
 
-    it("applies the opacity factor", () => {
-      const config = { constant: { value: 1 } } satisfies OpacityConfig;
-      expect(
-        OpacityResolver.resolveOpacityWithoutTable(1, config, 0, {
-          opacityFactor: 0.5,
-        }),
-      ).toBe(OpacityResolver.packOpacity(0.5));
-    });
-
     it("falls back to the default opacity for table-backed configs", () => {
       const fromConfig = { from: { column: "col1" } } satisfies OpacityConfig;
       const groupByConfig = {
@@ -291,9 +245,7 @@ describe("OpacityResolver", () => {
         OpacityResolver.resolveOpacityWithoutTable(1, fromConfig, 0.5),
       ).toBe(OpacityResolver.packOpacity(0.5));
       expect(
-        OpacityResolver.resolveOpacityWithoutTable(1, groupByConfig, 1, {
-          opacityFactor: 0.5,
-        }),
+        OpacityResolver.resolveOpacityWithoutTable(1, groupByConfig, 0.5),
       ).toBe(OpacityResolver.packOpacity(0.5));
     });
   });
@@ -349,22 +301,6 @@ describe("OpacityResolver", () => {
 
       expect(loadTable).toHaveBeenCalledOnce();
       expect(packedOpacities[0]).toBe(255);
-    });
-
-    it("passes the opacity factor on to the table-backed sources", async () => {
-      const data = createMockTableData([1], [1]);
-      const loadTable = vi.fn().mockResolvedValue(data);
-      const config = { from: { column: "col1" } } satisfies OpacityConfig;
-
-      const packedOpacities = await OpacityResolver.resolveOpacities(
-        [1],
-        config,
-        [],
-        0,
-        { loadTable, opacityFactor: 0.5 },
-      );
-
-      expect(packedOpacities[0]).toBe(128);
     });
 
     it("falls back to the default opacity when the config has no active source", async () => {

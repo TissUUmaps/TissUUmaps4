@@ -26,40 +26,20 @@ type ItemsInfo = { itemIds: number[]; itemsMask: Uint8Array };
 /**
  * Base class for WebGL renderers that draw the items of objects (points or shapes)
  *
- * Objects are assigned to a layer either as a whole, by layer ID, or per item,
- * by a table column holding the layer ID of each item. {@link loadObjects}
- * resolves both into one {@link ObjectRef} per object and layer.
- *
- * Resolving the per-item assignment is linear in the size of the object and of
- * its table, while {@link loadObjects} runs on every synchronization, i.e. also
- * for changes that leave the layer membership of the items untouched. Its
- * results are therefore cached in {@link _layerItemsInfosCache}, keyed by the
- * identity of the loaded object and table data, and by the layer column:
- * the data returned by the loaders passed to {@link loadObjects} has to be
- * immutable, and has to keep its identity for as long as its content is
- * unchanged.
- *
- * The layers and objects to render are set by {@link setModel};
- * {@link needsSynchronization} tells whether the rendered objects have to be
- * synchronized with them, or with changed render options (see
- * {@link getRenderOptionsSyncState}), which {@link synchronize} does: it
- * prepares every object before it uploads them one by one, through
+ * {@link setModel} sets the layers and objects to render. The properties that
+ * are applied when drawing (transforms, visibility, opacity, draw order) are
+ * read from the current model on every draw (see {@link getRenderPasses}).
+ * Everything else is built into GPU resources by {@link synchronize}, which
+ * {@link needsSynchronization} tells when to call, through the
  * {@link prepareRenderedObject}, {@link createRenderedObject} and
- * {@link updateRenderedObject}, which the renderers implement for their GPU
- * resources. The properties that are applied when drawing are never captured:
- * {@link getRenderPasses} reads them from the current model on every draw, so
- * setting a model that only changes those takes effect on the next draw, with
- * nothing to synchronize.
+ * {@link updateRenderedObject} hooks that the renderers implement.
  *
- * The rendered objects, each owning the GPU resources of one reference, are
- * kept in {@link _renderedObjects}, by layer and object. Their draw order is
- * the order of the layers and objects of the model, read when drawing like
- * every other model property (see {@link getRenderPasses}).
- * {@link matchOrDestroyRenderedObjects} matches them to the references of a new
- * synchronization, {@link addRenderedObject} and
- * {@link removeRenderedObject} add and drop single objects,
- * {@link destroyRenderedObject} releases the GPU resources of one object, and
- * {@link clearRenderedObjects} those of all of them.
+ * Objects are assigned to a layer either as a whole, by layer ID, or per item,
+ * by a table column; {@link loadObjects} resolves both into one
+ * {@link ObjectRef} per object and layer. The per-item assignment is cached by
+ * the identity of the object and table data (see {@link _getLayerItemsInfos}),
+ * so the loaders have to return immutable data that keeps its identity for as
+ * long as its content is unchanged.
  */
 export abstract class WebGLRendererBase<
   TObject extends Points | Shapes,
@@ -171,6 +151,8 @@ export abstract class WebGLRendererBase<
    * properties that are applied when drawing, and the order of the layers and
    * objects - is fully applied by {@link setModel}, and everything else about
    * the render options by the next draw.
+   *
+   * @returns Whether {@link synchronize} has to be called
    */
   needsSynchronization(): boolean {
     return !deepEqual(this.getSyncState(), this._lastSyncState);
@@ -179,39 +161,21 @@ export abstract class WebGLRendererBase<
   /**
    * Synchronizes the rendered objects with the current model and render options
    *
-   * Loads the objects of the model set by {@link setModel} (see
-   * {@link loadObjects}), drops the rendered objects that no longer match one
-   * (see {@link matchOrDestroyRenderedObjects}), and creates or updates the
-   * GPU resources of the rest in two passes. The first prepares every object
-   * (see {@link prepareRenderedObject}), issuing all requests before the first
-   * `await`. The second awaits the preparations in order and uploads them (see
-   * {@link createRenderedObject} and {@link updateRenderedObject}), each in
-   * one synchronous block, so a draw in between never sees a half-updated
-   * object. New objects join the rendered objects as soon as their resources
-   * exist, so an aborted synchronization leaves nothing orphaned.
+   * Loads the objects of the model (see {@link loadObjects}), drops the
+   * rendered objects that no longer match one (see
+   * {@link matchOrDestroyRenderedObjects}), and then creates or updates the
+   * rest in two passes. The first prepares every object (see
+   * {@link prepareRenderedObject}), issuing all requests before the first
+   * `await`: requests are shared with, and cancelled once abandoned by, a
+   * superseded synchronization, unless they are reclaimed within the same
+   * task. The second awaits the preparations in order and uploads each of them
+   * in one synchronous block (see {@link createRenderedObject} and
+   * {@link updateRenderedObject}), so a draw never sees a half-updated object.
    *
-   * Requests resolve through operations that are shared between their callers
-   * and cancelled once the last of them has given up, unless it is reclaimed
-   * within the same task. Issuing them one object at a time would therefore
-   * throw away the requests of a synchronization that has just been
-   * superseded: the gap until the new pass reaches an object grows with the
-   * objects ahead of it, until it spans a task and their operations are
-   * cancelled and have to start over from scratch. Issuing them all before the
-   * first `await` keeps that gap within a single task, no matter how many
-   * objects there are or how long each of them takes. It also lets them run
-   * concurrently, at the price of holding every object's preparation until the
-   * second pass has uploaded it.
-   *
-   * An object whose preparation fails is logged and dropped, like an object
-   * whose data fails to load (see {@link loadObjects}), and so is an object
-   * whose preparation finds nothing to render; the other objects are
-   * unaffected. A synchronization that fails or is aborted leaves the model
-   * unsynchronized (see {@link _discardSyncState}).
-   *
-   * Reports whether a rendered object was created, destroyed or uploaded to,
-   * i.e. whether the caller has to redraw. A synchronization that fails or is
-   * aborted may have done so for some objects before it stopped; those
-   * changes are reported by the next synchronization that completes.
+   * An object whose preparation fails, or finds nothing to render, is logged
+   * and dropped. A synchronization that fails or is aborted leaves the model
+   * unsynchronized (see {@link _discardSyncState}), and the changes it made
+   * before it stopped are reported by the next one that completes.
    *
    * @param syncContext - The inputs to synchronize with: the tables and
    * group-to-value maps that the objects resolve their properties from, and
@@ -480,8 +444,10 @@ export abstract class WebGLRendererBase<
           );
           if (tableLayersPromise === undefined) {
             tableLayersPromise = tableDataPromise.then(async (tableData) => {
-              const tableLayers =
-                await tableData.loadValues<string>(tableLayersColumn);
+              const tableLayers = await tableData.loadValues<string>(
+                tableLayersColumn,
+                { signal },
+              );
               if (tableLayers.length !== tableData.getSize()) {
                 throw new Error(
                   `Table with ID '${currentObject.dataSource.table}' has inconsistent size for column '${tableLayersColumn}'`,
@@ -719,6 +685,8 @@ export abstract class WebGLRendererBase<
    *
    * Does not remove the object from {@link _renderedObjects}, see
    * {@link removeRenderedObject}.
+   *
+   * @param renderedObject - The rendered object whose GPU resources to release
    */
   protected abstract destroyRenderedObject(
     renderedObject: TRenderedObject,
@@ -745,6 +713,8 @@ export abstract class WebGLRendererBase<
    * another layer, are therefore never visited, until the resynchronization
    * that the change requires drops them. Before a model is set, there is
    * nothing to draw.
+   *
+   * @returns The render passes, in draw order
    */
   protected getRenderPasses(): {
     layer: Layer;

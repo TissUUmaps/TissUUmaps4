@@ -144,6 +144,19 @@ describe("TableUtils", () => {
       await expect(aborted).rejects.toThrow();
       expect((await kept).size).toBe(5000);
     });
+
+    it("rejects rather than throws for an already aborted signal", async () => {
+      const { data } = createMockTableData([1, 2, 3]);
+      const controller = new AbortController();
+      controller.abort();
+      let rowIndices: Promise<ReadonlyMap<number, number>> | undefined;
+      expect(() => {
+        rowIndices = TableUtils.getRowIndices(data, {
+          signal: controller.signal,
+        });
+      }).not.toThrow();
+      await expect(rowIndices).rejects.toThrow();
+    });
   });
 
   describe("fillFromTableValues", () => {

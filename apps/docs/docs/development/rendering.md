@@ -32,7 +32,7 @@ To enable partial attribute updates, data is loaded using separate buffers for e
 
 ## Shapes
 
-Shapes are rendered in multiple passes (i.e., one draw call per shape cloud) using separate data textures for each shape cloud. A "compute shader approach" is employed, where the vertex shader merely runs on the four corners of a quad covering the shape cloud's bounds (dilated by half the stroke width) within the viewport, and the fragment shader implements a custom rendering pipeline (i.e., executed for all fragments of that quad). Shape clouds outside the viewport are skipped entirely.
+Shapes are rendered in multiple passes (i.e., one draw call per shape cloud) using separate data textures for each shape cloud. A "compute shader approach" is employed, where the vertex shader merely runs on the four corners of a quad covering the shape cloud's bounds (dilated by how far the anti-aliased strokes reach beyond them) within the viewport, and the fragment shader implements a custom rendering pipeline (i.e., executed for all fragments of that quad). Shape clouds outside the viewport are skipped entirely.
 
 Partial updates are enabled implicitly by using separate data textures for each shape cloud (update individual shape clouds) and each property (update individual shape cloud properties), including changes to the group-to-value maps a property references. However, shape fill/stroke color, visibility and opacity values are packed into joint 32-bit RGBA values for memory efficiency. As for points, the world → data transform and the layer and object opacity and visibility are per-pass uniforms rather than baked into the textures, so changing them never rebuilds a texture.
 
@@ -41,7 +41,7 @@ The custom rendering pipeline is based on scanline rendering, with the following
 - Scanline data (edge lists) are stored in separate data textures for each shape cloud
 - Scanlines relate to the shape cloud bounds (as opposed to viewport/world bounds) to allow for infinite worlds
 - Each scanline is divided into equally wide x-bins, each of which lists the shapes reaching into it, in the order they are composited in
-- Shapes and edges are padded by a fraction (a render option) of the median shape height above and below, and shapes by the same fraction of the median shape width to the left and right, so that strokes reaching beyond a shape are still drawn, however large the scanlines and bins
+- Shapes and edges are padded by a fraction (a render option) of the median shape height above and below, and shapes by the same fraction of the median shape width to the left and right, so that strokes reaching beyond a shape are still drawn, however large the scanlines and bins; strokes are therefore clipped where half the stroke width exceeds the padding
 - For each scanline, edges are processed separately for each shape to ensure proper compositing
 - Each shape holds a one-dimensional bounding box per scanline for rapidly skipping shapes
 - An optimized winding number algorithm is used for point-in-polygon testing, with the even-odd rule (odd winding numbers are inside), so that holes are cut out whatever the orientation of their rings, which e.g. GeoJSON recommends but does not require

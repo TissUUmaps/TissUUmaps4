@@ -41,13 +41,8 @@ describe("SizeResolver", () => {
   });
 
   describe("packSize", () => {
-    it("returns the size unchanged by default", () => {
+    it("returns the size unchanged", () => {
       expect(SizeResolver.packSize(10)).toBe(10);
-    });
-
-    it("scales the size by the size factor", () => {
-      expect(SizeResolver.packSize(10, { sizeFactor: 2 })).toBe(20);
-      expect(SizeResolver.packSize(10, { sizeFactor: 0.5 })).toBe(5);
     });
   });
 
@@ -68,13 +63,6 @@ describe("SizeResolver", () => {
       const packedSizes = SizeResolver.createUniformSizes(3, 7);
       expect(Array.from(packedSizes)).toEqual([7, 7, 7]);
     });
-
-    it("applies the size factor while filling", () => {
-      const packedSizes = SizeResolver.createUniformSizes(2, 4, {
-        sizeFactor: 3,
-      });
-      expect(Array.from(packedSizes)).toEqual([12, 12]);
-    });
   });
 
   describe("resolveUniformSizes", () => {
@@ -83,18 +71,10 @@ describe("SizeResolver", () => {
       const packedSizes = SizeResolver.resolveUniformSizes([1, 2], config);
       expect(Array.from(packedSizes)).toEqual([9, 9]);
     });
-
-    it("applies the size factor to the constant size", () => {
-      const config = { constant: { value: 9 } } satisfies SizeConfig;
-      const packedSizes = SizeResolver.resolveUniformSizes([1], config, {
-        sizeFactor: 2,
-      });
-      expect(packedSizes[0]).toBe(18);
-    });
   });
 
   describe("resolveSizesFromTableValues", () => {
-    it("reads sizes from the table column and scales them", async () => {
+    it("reads sizes from the table column", async () => {
       const ids = [1, 2];
       const data = createMockTableData(ids, [3, 4]);
       const loadTable = vi.fn().mockResolvedValue(data);
@@ -105,10 +85,9 @@ describe("SizeResolver", () => {
         config,
         1,
         loadTable,
-        { sizeFactor: 2 },
       );
 
-      expect(Array.from(packedSizes)).toEqual([6, 8]);
+      expect(Array.from(packedSizes)).toEqual([3, 4]);
     });
 
     it("uses the default size for invalid values", async () => {
@@ -215,31 +194,6 @@ describe("SizeResolver", () => {
       expect(Array.from(packedSizes)).toEqual([5, 5]);
       expect(loadTable).not.toHaveBeenCalled();
     });
-
-    it("applies the size factor to the mapped sizes", async () => {
-      const ids = [1];
-      const data = createMockTableData(ids, ["A"]);
-      const loadTable = vi.fn().mockResolvedValue(data);
-      const sizeMap: GroupValueMap<number> = {
-        id: "sm1",
-        name: "Size Map",
-        values: { [JSON.stringify("A")]: 3 },
-      };
-      const config = {
-        groupBy: { column: "col1", map: "sm1" },
-      } satisfies SizeConfig;
-
-      const packedSizes = await SizeResolver.resolveSizesFromTableGroups(
-        ids,
-        config,
-        [sizeMap],
-        1,
-        loadTable,
-        { sizeFactor: 2 },
-      );
-
-      expect(packedSizes[0]).toBe(6);
-    });
   });
 
   describe("resolveConstantSize", () => {
@@ -260,24 +214,13 @@ describe("SizeResolver", () => {
       expect(SizeResolver.resolveSizeWithoutTable(1, config, 3)).toBe(9);
     });
 
-    it("applies the size factor", () => {
-      const config = { constant: { value: 9 } } satisfies SizeConfig;
-      expect(
-        SizeResolver.resolveSizeWithoutTable(1, config, 3, { sizeFactor: 2 }),
-      ).toBe(18);
-    });
-
     it("falls back to the default size for table-backed configs", () => {
       const fromConfig = { from: { column: "col1" } } satisfies SizeConfig;
       const groupByConfig = {
         groupBy: { column: "col1", map: "sm1" },
       } satisfies SizeConfig;
       expect(SizeResolver.resolveSizeWithoutTable(1, fromConfig, 3)).toBe(3);
-      expect(
-        SizeResolver.resolveSizeWithoutTable(1, groupByConfig, 3, {
-          sizeFactor: 2,
-        }),
-      ).toBe(6);
+      expect(SizeResolver.resolveSizeWithoutTable(1, groupByConfig, 3)).toBe(3);
     });
   });
 
@@ -328,19 +271,6 @@ describe("SizeResolver", () => {
 
       expect(loadTable).toHaveBeenCalledOnce();
       expect(packedSizes[0]).toBe(5);
-    });
-
-    it("passes the size factor on to the table-backed sources", async () => {
-      const data = createMockTableData([1], [3]);
-      const loadTable = vi.fn().mockResolvedValue(data);
-      const config = { from: { column: "col1" } } satisfies SizeConfig;
-
-      const packedSizes = await SizeResolver.resolveSizes([1], config, [], 1, {
-        loadTable,
-        sizeFactor: 2,
-      });
-
-      expect(packedSizes[0]).toBe(6);
     });
 
     it("falls back to the default size when the config has no active source", async () => {

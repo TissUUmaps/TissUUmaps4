@@ -339,11 +339,14 @@ export class OpenSeadragonContext {
    * addition keeps the loading concurrent, while the additions themselves stay
    * serialized (see {@link addTiledImage}).
    *
+   * Rejects as soon as the operation is aborted, so that nothing waits for an
+   * abandoned open; the open itself cannot be canceled, and settles unobserved.
+   *
    * @param tiledImageOptions - Options containing the tile source to open
    * @param options - Optional abort signal
    * @returns A promise that resolves with the opened tile source
    */
-  async openTileSource(
+  openTileSource(
     tiledImageOptions: Omit<
       OpenSeadragon.TileSourceSpecifier,
       "success" | "error"
@@ -351,22 +354,11 @@ export class OpenSeadragonContext {
     options?: { signal?: AbortSignal },
   ): Promise<OpenSeadragon.TileSource> {
     const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    // OpenSeadragon types tile sources as `string | object`, which also covers
-    // promises of an already opened tile source; anything else is passed through
-    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
-    signal?.throwIfAborted();
-    try {
-      const { source: openedTileSource } =
-        (await this.viewer.instantiateTileSourceClass(
-          // this needs to be a shallow copy; OpenSeadragon mutates it!
-          { ...tiledImageOptions, tileSource },
-        )) as { source: OpenSeadragon.TileSource };
-      signal?.throwIfAborted();
-      return openedTileSource;
-    } catch (error) {
-      throw new Error("Failed to open tile source", { cause: error });
-    }
+    const tileSourcePromise = this._openTileSource(tiledImageOptions, {
+      signal,
+    });
+    tileSourcePromise.catch(() => {}); // prevent unhandled rejections in console
+    return AsyncUtils.raceSignal(tileSourcePromise, { signal });
   }
 
   /**
@@ -640,6 +632,38 @@ export class OpenSeadragonContext {
   }
 
   /**
+   * Opens a tile source, see {@link openTileSource}
+   *
+   * @param tiledImageOptions - Options containing the tile source to open
+   * @param options - Optional abort signal, which skips the open if the
+   * operation is aborted before it starts
+   * @returns A promise that resolves with the opened tile source
+   */
+  private async _openTileSource(
+    tiledImageOptions: Omit<
+      OpenSeadragon.TileSourceSpecifier,
+      "success" | "error"
+    >,
+    options?: { signal?: AbortSignal },
+  ): Promise<OpenSeadragon.TileSource> {
+    const { signal } = options ?? {};
+    // OpenSeadragon types tile sources as `string | object`, which also covers
+    // promises of an already opened tile source; anything else is passed through
+    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
+    signal?.throwIfAborted();
+    try {
+      const { source: openedTileSource } =
+        (await this.viewer.instantiateTileSourceClass(
+          // this needs to be a shallow copy; OpenSeadragon mutates it!
+          { ...tiledImageOptions, tileSource },
+        )) as { source: OpenSeadragon.TileSource };
+      return openedTileSource;
+    } catch (error) {
+      throw new Error("Failed to open tile source", { cause: error });
+    }
+  }
+
+  /**
    * Implementation of {@link addTiledImage}, bypassing the world mutation queue
    *
    * Must only be called from within an enqueued world mutation, such that the
@@ -808,6 +832,9 @@ export class OpenSeadragonContext {
     }
     this._tileDataTransfers.set(event.tile, dataTransfer);
     const { values, width, height } = await dataTransfer.getTileData(event);
+    if (await event.outdated()) {
+      return; // skip the recoloring, as a newer run replaces the data anyway
+    }
     if (values.length !== width * height) {
       throw new Error("Invalid tile data size");
     }

@@ -551,6 +551,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Backs the attributes of an object that were resolved again
    *
+   * The snapshot is adopted last, so that an update that throws is retried by
+   * the next synchronization.
+   *
    * @param renderedPoints - The rendered object to update in place
    * @param prepared - Its preparation, holding the attributes that changed
    * @returns Whether any attribute was backed again
@@ -559,7 +562,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     renderedPoints: RenderedPoints,
     prepared: PreparedPoints,
   ): boolean {
-    renderedPoints.renderConfigSnapshot = prepared.renderConfigSnapshot;
     const { vao, attributes } = renderedPoints;
     if (prepared.packedPointMarkers !== undefined) {
       attributes.marker = this._backAttribute(
@@ -588,6 +590,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         attributes.color,
       );
     }
+    renderedPoints.renderConfigSnapshot = prepared.renderConfigSnapshot;
     return (
       prepared.packedPointMarkers !== undefined ||
       prepared.packedPointSizes !== undefined ||
@@ -598,6 +601,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Deletes the vertex array and all attribute buffers owned by a single
    * rendered object
+   *
+   * @param renderedPoints - The rendered object whose GPU resources to delete
    */
   protected override destroyRenderedObject(
     renderedPoints: RenderedPoints,
