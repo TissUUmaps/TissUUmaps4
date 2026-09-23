@@ -154,8 +154,8 @@ describe("MarkerResolver", () => {
         id: "mm1",
         name: "Marker Map",
         values: {
-          [JSON.stringify("A")]: Marker.Disc,
-          [JSON.stringify("B")]: Marker.Square,
+          A: Marker.Disc,
+          B: Marker.Square,
         },
       };
       const config = {
@@ -233,14 +233,10 @@ describe("MarkerResolver", () => {
       );
 
       expect(packedMarkers[0]).toBe(
-        markerPalette[
-          HashUtils.hash(JSON.stringify("groupA")) % markerPalette.length
-        ],
+        markerPalette[HashUtils.hash("groupA") % markerPalette.length],
       );
       expect(packedMarkers[1]).toBe(
-        markerPalette[
-          HashUtils.hash(JSON.stringify("groupB")) % markerPalette.length
-        ],
+        markerPalette[HashUtils.hash("groupB") % markerPalette.length],
       );
     });
   });
@@ -324,7 +320,7 @@ describe("MarkerResolver", () => {
       const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",
-        values: { [JSON.stringify("A")]: Marker.Diamond },
+        values: { A: Marker.Diamond },
       };
       const config = {
         groupBy: { column: "col1", map: "mm1" },
@@ -370,7 +366,7 @@ describe("MarkerResolver", () => {
       const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",
-        values: { [JSON.stringify("A")]: Marker.Diamond },
+        values: { A: Marker.Diamond },
       };
       const config = {
         groupBy: { column: "col1", map: "mm1" },

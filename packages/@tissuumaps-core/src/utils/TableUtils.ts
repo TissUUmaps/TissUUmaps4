@@ -110,8 +110,8 @@ export class TableUtils {
    * Fills `packedValues` by grouping IDs by the given table column and mapping the groups to values
    *
    * For each ID in `ids`, the corresponding row is looked up in the table by ID
-   * (see {@link forEachRow}). The raw cell value is JSON-stringified into a
-   * group key, which `mapGroupToValue` maps to a value; if that fails, or if the
+   * (see {@link forEachRow}). The raw cell value is converted to a string to
+   * form the group key, which `mapGroupToValue` maps to a value; if that fails, or if the
    * table does not contain the ID, `defaultValue` is used instead. Groups are
    * resolved once per distinct cell value, i.e. `mapGroupToValue` is not called
    * per item.
@@ -121,7 +121,8 @@ export class TableUtils {
    * @param ids - Ordered list of item IDs
    * @param column - Name of the table column to load group keys from
    * @param defaultValue - Value used when the ID is missing or the group is unmapped
-   * @param mapGroupToValue - Maps a JSON-stringified group key to `TValue`, or to `undefined`
+   * @param mapGroupToValue - Maps a group key (the cell value as a string) to
+   * `TValue`, or to `undefined`
    * @param packValue - Converts `TValue` to the numeric representation stored
    * in `packedValues`
    * @param options - Optional abort signal
@@ -150,7 +151,7 @@ export class TableUtils {
           const tableGroup = tableGroups[rowIndex];
           let packedValue = packedValueByTableGroup.get(tableGroup);
           if (packedValue === undefined) {
-            const group = JSON.stringify(tableGroup);
+            const group = String(tableGroup);
             const value = mapGroupToValue(group);
             if (value === undefined) {
               numUnmappedGroups++;

@@ -157,8 +157,8 @@ describe("VisibilityResolver", () => {
         id: "vm1",
         name: "Visibility Map",
         values: {
-          [JSON.stringify("A")]: true,
-          [JSON.stringify("B")]: false,
+          A: true,
+          B: false,
         },
       };
       const config = {
@@ -300,7 +300,7 @@ describe("VisibilityResolver", () => {
       const visibilityMap: GroupValueMap<boolean> = {
         id: "vm1",
         name: "Visibility Map",
-        values: { [JSON.stringify("A")]: true },
+        values: { A: true },
       };
       const config = {
         groupBy: { column: "col1", map: "vm1" },
@@ -346,7 +346,7 @@ describe("VisibilityResolver", () => {
       const visibilityMap: GroupValueMap<boolean> = {
         id: "vm1",
         name: "Visibility Map",
-        values: { [JSON.stringify("A")]: false },
+        values: { A: false },
       };
       const config = {
         groupBy: { column: "col1", map: "vm1" },

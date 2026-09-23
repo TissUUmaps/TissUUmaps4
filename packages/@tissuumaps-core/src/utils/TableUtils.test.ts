@@ -335,8 +335,8 @@ describe("TableUtils", () => {
       const mapGroupToValue = vi
         .fn<(group: string) => number | undefined>()
         .mockImplementation((group) => {
-          if (group === JSON.stringify("A")) return 10;
-          if (group === JSON.stringify("B")) return 20;
+          if (group === "A") return 10;
+          if (group === "B") return 20;
           return undefined;
         });
 
@@ -471,14 +471,14 @@ describe("TableUtils", () => {
         [1, 2, 3],
         "col1",
         0,
-        (group) => group.length, // JSON.stringify adds the quotes
+        (group) => group.length,
         (value) => value,
       );
 
-      expect(Array.from(buffer)).toEqual([3, 3, 3]);
+      expect(Array.from(buffer)).toEqual([1, 1, 1]);
     });
 
-    it("JSON-stringifies group values before mapping", async () => {
+    it("converts group values to strings before mapping", async () => {
       const { data } = createMockTableData([1], [42]);
       const buffer = new Uint8Array(1);
       const mapGroupToValue = vi
@@ -495,7 +495,6 @@ describe("TableUtils", () => {
         (value) => value,
       );
 
-      // numeric 42 becomes "42" after JSON.stringify
       expect(mapGroupToValue).toHaveBeenCalledWith("42");
     });
 
@@ -505,9 +504,7 @@ describe("TableUtils", () => {
       const buffer = new Uint8Array(3);
       const mapGroupToValue = vi
         .fn<(group: string) => number | undefined>()
-        .mockImplementation((group) =>
-          group === JSON.stringify("A") ? 10 : 20,
-        );
+        .mockImplementation((group) => (group === "A" ? 10 : 20));
 
       await TableUtils.fillFromTableGroups(
         buffer,

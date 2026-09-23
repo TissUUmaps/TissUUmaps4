@@ -133,8 +133,8 @@ describe("SizeResolver", () => {
         id: "sm1",
         name: "Size Map",
         values: {
-          [JSON.stringify("A")]: 2,
-          [JSON.stringify("B")]: 4,
+          A: 2,
+          B: 4,
         },
       };
       const config = {
@@ -255,7 +255,7 @@ describe("SizeResolver", () => {
       const sizeMap: GroupValueMap<number> = {
         id: "sm1",
         name: "Size Map",
-        values: { [JSON.stringify("A")]: 5 },
+        values: { A: 5 },
       };
       const config = {
         groupBy: { column: "col1", map: "sm1" },
@@ -296,7 +296,7 @@ describe("SizeResolver", () => {
       const sizeMap: GroupValueMap<number> = {
         id: "sm1",
         name: "Size Map",
-        values: { [JSON.stringify("A")]: 5 },
+        values: { A: 5 },
       };
       const config = {
         groupBy: { column: "col1", map: "sm1" },
