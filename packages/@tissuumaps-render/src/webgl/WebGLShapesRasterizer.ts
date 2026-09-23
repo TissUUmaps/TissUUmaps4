@@ -68,8 +68,13 @@ export class WebGLShapesRasterizer {
    * each shape to the bands spanned by the bounding box of its polygon shells,
    * and each edge to the bands spanned by its own bounding box. Both are
    * conservative: a shape or edge may be assigned to bands it does not actually
-   * reach into, but never to too few. Per band, it also builds a 128-bit
-   * occupancy mask, which lets the fragment shader skip fragments early.
+   * reach into, but never to too few. Both are also padded by one band on
+   * either side - rounding the last band up pads above, one extra band pads
+   * below - so that the strokes the fragment shader draws around a shape,
+   * which reach beyond it, find its edges from the neighboring bands as well,
+   * as long as half the stroke width does not exceed the band height. Per
+   * band, it also builds a 128-bit occupancy mask, which lets the fragment
+   * shader skip fragments early.
    *
    * Shapes are identified by their index among the *included* shapes, i.e.
    * `shapesMask` compacts the indices. Holes contribute their edges, but not
@@ -152,7 +157,7 @@ export class WebGLShapesRasterizer {
           const firstScanlineIndex = MathUtils.clamp(
             Math.floor(
               (numScanlines * (yMin - objectBounds.y)) / objectBounds.height,
-            ),
+            ) - 1, // one band of slack below, for strokes
             0,
             numScanlines - 1,
           );
@@ -223,7 +228,7 @@ export class WebGLShapesRasterizer {
                 Math.floor(
                   (numScanlines * (Math.min(v0y, v1y) - objectBounds.y)) /
                     objectBounds.height,
-                ),
+                ) - 1, // one band of slack below, for strokes
                 0,
                 numScanlines - 1,
               );

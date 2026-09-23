@@ -136,8 +136,8 @@ void main() {
     if(v_pos.x < u_objectBounds[0] - u_halfStrokeWidth || v_pos.x > u_objectBounds[0] + u_objectBounds[2] + u_halfStrokeWidth || v_pos.y < u_objectBounds[1] - u_halfStrokeWidth || v_pos.y > u_objectBounds[1] + u_objectBounds[3] + u_halfStrokeWidth) {
         discard; // out of object bounds
     }
-    // get scanline info
-    uint scanlineInfoOffset = clamp(uint(v_scanline), 0u, u_numScanlines - 1u);
+    // get scanline info (clamp before converting: v_scanline is negative within the stroke margin)
+    uint scanlineInfoOffset = uint(clamp(v_scanline, 0.0, float(u_numScanlines - 1u)));
     vec4 scanlineInfo = texel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineInfoOffset);
     uint scanlineOffset = floatBitsToUint(scanlineInfo[0]);
     uint numShapes = floatBitsToUint(scanlineInfo[1]);

@@ -356,9 +356,11 @@ export abstract class WebGLRendererBase<
    * loaded once, no matter how many references it is shared by.
    *
    * The returned references are ordered by layer and then by object. Objects
-   * whose data or table failed to load are logged and skipped. Objects without
-   * items on a layer are skipped silently, which also covers empty objects and
-   * objects whose table is empty - those are legitimate states, not failures.
+   * whose data or table failed to load are logged and skipped, and so are
+   * objects whose items are assigned per item without a table to resolve the
+   * assignment from. Objects without items on a layer are skipped silently,
+   * which also covers empty objects and objects whose table is empty - those
+   * are legitimate states, not failures.
    *
    * @param syncContext - The inputs of the current synchronization: the tables
    * that the objects resolve their item layers from, and the loaders for
@@ -385,12 +387,25 @@ export abstract class WebGLRendererBase<
       Promise<Map<string, ItemsInfo | null>>
     >();
     const newRefPromises: Promise<ObjectRef<TObject, TObjectData>>[] = [];
+    const objectIdsWithoutTable = new Set<string>();
     for (const currentLayer of model.layers) {
       for (const currentObject of model.objects) {
         if (
-          currentObject.layer !== currentLayer.id &&
-          typeof currentObject.layer === "string"
+          typeof currentObject.layer === "string" &&
+          currentObject.layer !== currentLayer.id
         ) {
+          continue;
+        }
+        if (
+          typeof currentObject.layer !== "string" &&
+          currentObject.dataSource.table === undefined
+        ) {
+          if (!objectIdsWithoutTable.has(currentObject.id)) {
+            objectIdsWithoutTable.add(currentObject.id);
+            console.error(
+              `Object with ID '${currentObject.id}' assigns its items to layers by column '${currentObject.layer.column}', but has no table`,
+            );
+          }
           continue;
         }
         let dataPromise = dataPromises.get(currentObject.id);

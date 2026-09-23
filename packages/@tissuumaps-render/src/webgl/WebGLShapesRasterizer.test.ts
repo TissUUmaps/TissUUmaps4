@@ -134,14 +134,14 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
   });
 
   it("leaves scanlines outside a shape's vertical extent empty", async () => {
-    // square occupying only the top half of a 2-unit-tall object
-    const geometry = createTestGeometry([createTestSquare(0, 1, 1, 2)]);
+    // square occupying only the top third of a 3-unit-tall object
+    const geometry = createTestGeometry([createTestSquare(0, 2, 1, 3)]);
 
     const { scanlines } = await WebGLShapesRasterizer.createScanlines(
-      2,
+      3,
       geometry,
       undefined,
-      { x: 0, y: 0, width: 1, height: 2 },
+      { x: 0, y: 0, width: 1, height: 3 },
     );
 
     const emptyScanline = scanlines[0]!;
@@ -150,8 +150,40 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     expect(emptyScanline.shapes.size).toBe(0);
     expect(emptyScanline.occupancyMask).toEqual([0, 0, 0, 0]);
 
-    const populatedScanline = scanlines[1]!;
+    const populatedScanline = scanlines[2]!;
     expect(populatedScanline.shapes.has(0)).toBe(true);
+  });
+
+  it("pads a shape and its edges by one scanline below, as slack for strokes", async () => {
+    // square occupying only the top third of a 3-unit-tall object
+    const geometry = createTestGeometry([createTestSquare(0, 2, 1, 3)]);
+
+    const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
+      await WebGLShapesRasterizer.createScanlines(3, geometry, undefined, {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 3,
+      });
+
+    // the shape is on scanline 2, and padded onto scanline 1
+    expect(totalNumScanlineShapes).toBe(2);
+    const paddedScanline = scanlines[1]!;
+    expect(paddedScanline.xMin).toBe(0);
+    expect(paddedScanline.xMax).toBe(1);
+    expect(paddedScanline.occupancyMask).toEqual([
+      0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+    ]);
+    // the bottom edge (y = 2) is padded onto scanline 1 as well, and the
+    // vertical edges span scanlines 1 and 2; the top edge (y = 3) is padded
+    // onto the scanline above, which is clamped to scanline 2
+    expect(paddedScanline.shapes.get(0)!.edges).toEqual([
+      { v0x: 0, v0y: 2, v1x: 1, v1y: 2 },
+      { v0x: 1, v0y: 2, v1x: 1, v1y: 3 },
+      { v0x: 0, v0y: 3, v1x: 0, v1y: 2 },
+    ]);
+    expect(scanlines[2]!.shapes.get(0)!.edges).toHaveLength(4);
+    expect(totalNumScanlineShapeEdges).toBe(7);
   });
 
   it("respects the shape mask and compacts the shape index", async () => {
@@ -515,14 +547,15 @@ describe("WebGLShapesRasterizer.packScanlines", () => {
   });
 
   it("writes per-scanline pointers and empty-scanline headers", async () => {
-    // square in the top half so scanline 0 is empty and scanline 1 is populated
-    const geometry = createTestGeometry([createTestSquare(0, 1, 1, 2)]);
+    // square in the top third so scanline 0 is empty and scanlines 1 (stroke
+    // padding) and 2 are populated
+    const geometry = createTestGeometry([createTestSquare(0, 2, 1, 3)]);
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(2, geometry, undefined, {
+      await WebGLShapesRasterizer.createScanlines(3, geometry, undefined, {
         x: 0,
         y: 0,
         width: 1,
-        height: 2,
+        height: 3,
       });
 
     const buffer = await WebGLShapesRasterizer.packScanlines(
@@ -533,24 +566,24 @@ describe("WebGLShapesRasterizer.packScanlines", () => {
     const uint32Buffer = new Uint32Array(buffer);
     const float32Buffer = new Float32Array(buffer);
 
-    // scanline 0 header (texel 0): points just past the 2-texel header region
-    expect(uint32Buffer[0]).toBe(2);
+    // scanline 0 header (texel 0): points just past the 3-texel header region
+    expect(uint32Buffer[0]).toBe(3);
     expect(uint32Buffer[1]).toBe(0); // no shapes
     expect(float32Buffer[2]).toBe(Infinity); // untouched xMin
     expect(float32Buffer[3]).toBe(-Infinity); // untouched xMax
 
     // scanline 1 header (texel 1): points past scanline 0's data (just its mask)
-    expect(uint32Buffer[4]).toBe(3);
+    expect(uint32Buffer[4]).toBe(4);
     expect(uint32Buffer[5]).toBe(1); // one shape
     expect(float32Buffer[6]).toBe(0);
     expect(float32Buffer[7]).toBe(1);
 
-    // scanline 0 data block (texel 2): empty occupancy mask, no shapes follow
+    // scanline 0 data block (texel 3): empty occupancy mask, no shapes follow
     expect([
-      uint32Buffer[8],
-      uint32Buffer[9],
-      uint32Buffer[10],
-      uint32Buffer[11],
+      uint32Buffer[12],
+      uint32Buffer[13],
+      uint32Buffer[14],
+      uint32Buffer[15],
     ]).toEqual([0, 0, 0, 0]);
   });
 

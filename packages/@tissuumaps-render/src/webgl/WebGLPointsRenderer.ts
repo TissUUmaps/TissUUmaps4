@@ -94,7 +94,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     worldToViewportMatrix: WebGLUniformLocation;
     viewportSize: WebGLUniformLocation;
     canvasSize: WebGLUniformLocation;
-    devicePixelRatio: WebGLUniformLocation;
     dataToWorldMatrix: WebGLUniformLocation;
     pointSizeFactor: WebGLUniformLocation;
     opacityFactor: WebGLUniformLocation;
@@ -136,10 +135,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       ),
       viewportSize: context.getUniformLocation(this._program, "u_viewportSize"),
       canvasSize: context.getUniformLocation(this._program, "u_canvasSize"),
-      devicePixelRatio: context.getUniformLocation(
-        this._program,
-        "u_devicePixelRatio",
-      ),
       dataToWorldMatrix: context.getUniformLocation(
         this._program,
         "u_dataToWorldMatrix",
@@ -174,7 +169,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Issues the WebGL draw calls for all synchronized points
    *
    * Binds the shader program, configures the global uniforms (transform,
-   * viewport, canvas size, device pixel ratio), binds the marker atlas texture,
+   * viewport, canvas size in device pixels), binds the marker atlas texture,
    * and then draws every object in its own `gl.POINTS` call with alpha
    * blending, with its data → world matrix, point size factor and opacity
    * factor as uniforms, computed from the current model (see
@@ -213,10 +208,6 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       this._uniformLocations.canvasSize,
       this.context.gl.canvas.width,
       this.context.gl.canvas.height,
-    );
-    this.context.gl.uniform1f(
-      this._uniformLocations.devicePixelRatio,
-      window.devicePixelRatio,
     );
     this.context.gl.activeTexture(
       WebGL2RenderingContext.TEXTURE0 +

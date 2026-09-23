@@ -13,8 +13,7 @@
 uniform float u_globalPointSizeFactor;
 uniform mat3x2 u_worldToViewportMatrix;
 uniform vec2 u_viewportSize; // in world units
-uniform vec2 u_canvasSize; // in browser pixels
-uniform float u_devicePixelRatio; // device pixels per browser pixel
+uniform vec2 u_canvasSize; // in device pixels
 
 // Per-object uniforms
 // An object is one point cloud on one layer, drawn in its own pass.
@@ -58,10 +57,10 @@ void main() {
     }
 
     // Compute point size in device pixels and discard points with non-positive size
-    float canvasPixelRatio = dot(u_canvasSize / u_viewportSize, vec2(0.5));
+    // The canvas is sized in device pixels already, so no device pixel ratio applies here.
+    float canvasPixelRatio = dot(u_canvasSize / u_viewportSize, vec2(0.5)); // device pixels per world unit
     float worldPointSize = a_size * u_pointSizeFactor * u_globalPointSizeFactor;
-    float canvasPointSize = worldPointSize * canvasPixelRatio; // in browser pixels
-    float devicePointSize = canvasPointSize * u_devicePixelRatio; // in device pixels
+    float devicePointSize = worldPointSize * canvasPixelRatio; // in device pixels
     if(devicePointSize <= 0.0) {
         DISCARD;
     }
