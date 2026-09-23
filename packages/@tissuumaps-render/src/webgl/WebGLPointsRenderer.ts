@@ -99,13 +99,15 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     opacityFactor: WebGLUniformLocation;
   };
   private _markerAtlasTexture: WebGLTexture | undefined;
+  private _destroyed: boolean = false;
 
   /**
    * Creates the shader program and retrieves uniform locations
    *
    * The marker atlas texture is loaded asynchronously, so the renderer must not
    * be drawn before `onInitialized` has been called; `onError` is called instead
-   * if loading it failed or was aborted.
+   * if loading it failed or was aborted, or if the renderer was destroyed
+   * meanwhile, in which case the texture is released right away.
    *
    * @param context - The WebGL context to use for rendering
    * @param onInitialized - Called once the marker atlas texture has been loaded
@@ -157,10 +159,15 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     context.gl.useProgram(null);
     const initialize = async () => {
       signal?.throwIfAborted();
-      this._markerAtlasTexture = await context.loadImageTextureFromUrl(
+      const markerAtlasTexture = await context.loadImageTextureFromUrl(
         markersUrl,
         { mipmap: true, signal },
       );
+      if (this._destroyed) {
+        context.gl.deleteTexture(markerAtlasTexture);
+        throw new Error("Renderer destroyed");
+      }
+      this._markerAtlasTexture = markerAtlasTexture;
     };
     initialize().then(onInitialized, onError);
   }
@@ -285,8 +292,12 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Releases the shader program, the marker atlas texture, and all per-object
    * GPU resources
+   *
+   * A marker atlas texture that is still loading is released once it has
+   * loaded (see the constructor).
    */
   destroy(): void {
+    this._destroyed = true;
     this.context.gl.deleteProgram(this._program);
     if (this._markerAtlasTexture !== undefined) {
       this.context.gl.deleteTexture(this._markerAtlasTexture);
@@ -451,8 +462,22 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       let { xs, ys } = geometry;
       const pointsMask = newRef.itemsMask;
       if (pointsMask !== undefined) {
-        xs = xs.filter((_, j) => pointsMask[j]! > 0);
-        ys = ys.filter((_, j) => pointsMask[j]! > 0);
+        let k = 0;
+        const mxs = new Float32Array(newRef.itemIds.length);
+        const mys = new Float32Array(newRef.itemIds.length);
+        await AsyncUtils.forEach(
+          pointsMask,
+          (included, j) => {
+            if (included > 0) {
+              mxs[k] = xs[j]!;
+              mys[k] = ys[j]!;
+              k++;
+            }
+          },
+          { signal },
+        );
+        xs = mxs;
+        ys = mys;
       }
       maskedGeometry = { xs, ys };
       objectBounds = await WebGLPointsRenderer._getObjectBounds(

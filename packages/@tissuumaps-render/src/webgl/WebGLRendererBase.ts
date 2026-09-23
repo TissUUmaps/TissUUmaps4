@@ -34,9 +34,10 @@ type ItemsInfo = { itemIds: number[]; itemsMask: Uint8Array };
  * its table, while {@link loadObjects} runs on every synchronization, i.e. also
  * for changes that leave the layer membership of the items untouched. Its
  * results are therefore cached in {@link _layerItemsInfosCache}, keyed by the
- * identity of the loaded data: the data returned by the loaders passed to
- * {@link loadObjects} has to be immutable, and has to keep its identity for as
- * long as its content is unchanged.
+ * identity of the loaded object and table data, and by the layer column:
+ * the data returned by the loaders passed to {@link loadObjects} has to be
+ * immutable, and has to keep its identity for as long as its content is
+ * unchanged.
  *
  * The layers and objects to render are set by {@link setModel};
  * {@link needsSynchronization} tells whether the rendered objects have to be
@@ -88,11 +89,7 @@ export abstract class WebGLRendererBase<
   >();
   private readonly _layerItemsInfosCache = new WeakMap<
     TObjectData,
-    {
-      tableData: TableData;
-      tableLayersColumn: string;
-      layerItemsInfos: Map<string, ItemsInfo | null>;
-    }
+    WeakMap<TableData, Map<string, Map<string, ItemsInfo | null>>>
   >();
 
   /**
@@ -792,10 +789,13 @@ export abstract class WebGLRendererBase<
    * Layers that are missing from {@link _layerItemsInfosCache} are computed in a
    * single pass over the items of the object, looking each item's row up in the
    * table (see {@link TableUtils.forEachRow}), and are added to the cache.
-   * Layers that are already cached for the
-   * same object data, table data and layer column are re-used as they are. Item
-   * IDs and masks are only allocated for layers that turn out to contain items,
-   * layers without items are cached as `null`.
+   * Layers that are already cached for the same object data, table data and
+   * layer column are re-used as they are, so that objects sharing their data,
+   * but not their table or layer column, do not evict each other's layers.
+   * Cached layers that are not among the given ones are dropped, as are their
+   * item masks, which take one byte per item of the object. Item IDs and masks
+   * are only allocated for layers that turn out to contain items, layers
+   * without items are cached as `null`.
    *
    * @param data - The data of the object to compute the item masks for
    * @param tableData - The data of the table holding the item layers
@@ -816,18 +816,29 @@ export abstract class WebGLRendererBase<
   ): Promise<Map<string, ItemsInfo | null>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    let entry = this._layerItemsInfosCache.get(data);
-    if (
-      entry === undefined ||
-      entry.tableData !== tableData ||
-      entry.tableLayersColumn !== tableLayersColumn
-    ) {
-      entry = { tableData, tableLayersColumn, layerItemsInfos: new Map() };
-      this._layerItemsInfosCache.set(data, entry);
+    let layerItemsInfosByTableData = this._layerItemsInfosCache.get(data);
+    if (layerItemsInfosByTableData === undefined) {
+      layerItemsInfosByTableData = new WeakMap();
+      this._layerItemsInfosCache.set(data, layerItemsInfosByTableData);
+    }
+    let layerItemsInfosByColumn = layerItemsInfosByTableData.get(tableData);
+    if (layerItemsInfosByColumn === undefined) {
+      layerItemsInfosByColumn = new Map();
+      layerItemsInfosByTableData.set(tableData, layerItemsInfosByColumn);
+    }
+    let layerItemsInfos = layerItemsInfosByColumn.get(tableLayersColumn);
+    if (layerItemsInfos === undefined) {
+      layerItemsInfos = new Map();
+      layerItemsInfosByColumn.set(tableLayersColumn, layerItemsInfos);
+    }
+    for (const layerId of layerItemsInfos.keys()) {
+      if (!layers.some((layer) => layer.id === layerId)) {
+        layerItemsInfos.delete(layerId);
+      }
     }
     const newLayerIds = new Set<string>();
     for (const layer of layers) {
-      if (!entry.layerItemsInfos.has(layer.id)) {
+      if (!layerItemsInfos.has(layer.id)) {
         newLayerIds.add(layer.id);
       }
     }
@@ -859,13 +870,13 @@ export abstract class WebGLRendererBase<
         { signal },
       );
       for (const newLayerId of newLayerIds) {
-        entry.layerItemsInfos.set(
+        layerItemsInfos.set(
           newLayerId,
           newLayerItemsInfos.get(newLayerId) ?? null,
         );
       }
     }
-    return entry.layerItemsInfos;
+    return layerItemsInfos;
   }
 
   /**
