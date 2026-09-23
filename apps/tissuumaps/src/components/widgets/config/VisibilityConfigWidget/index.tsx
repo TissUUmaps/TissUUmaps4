@@ -79,8 +79,8 @@ function FromVisibilityConfigWidget({
 }: FromVisibilityConfigWidgetProps) {
   const {
     tableId,
-    currentFromColumn: column,
-    setCurrentFromColumn: setColumn,
+    currentFromTableColumn: column,
+    setCurrentFromTableColumn: setColumn,
   } = adapter;
 
   return (
@@ -108,9 +108,9 @@ function GroupByVisibilityConfigWidget({
 }: GroupByVisibilityConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByColumn: column,
+    currentGroupByTableColumn: column,
     currentGroupByMap: map,
-    setCurrentGroupByColumn: setColumn,
+    setCurrentGroupByTableColumn: setColumn,
     setCurrentGroupByMap: setMap,
   } = adapter;
 

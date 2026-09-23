@@ -236,7 +236,21 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
           if (Array.isArray(labelIds)) {
             throw new Error("String IDs cannot address label values");
           }
-          const loadTable = () => Promise.resolve(tableData);
+          // values of another table are resolved by the labels' own IDs
+          const getTableLoader = (tableId: string | undefined) => {
+            if (tableId === undefined || tableId === labels.dataSource.table) {
+              return () => Promise.resolve(tableData);
+            }
+            const configTable = context.tables.find(
+              (contextTable) => contextTable.id === tableId,
+            );
+            if (configTable === undefined) {
+              console.warn(`Table with ID '${tableId}' not found`);
+              return undefined;
+            }
+            return (options?: { signal?: AbortSignal }) =>
+              context.loadTable(configTable, options);
+          };
           const [
             packedLabelColors,
             packedLabelVisibilities,
@@ -247,21 +261,21 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
               labels.labelColor,
               context.colorMaps,
               defaultLabelColor,
-              { signal, loadTable },
+              { signal, getTableLoader },
             ),
             VisibilityResolver.resolveVisibilities(
               labelIds,
               labels.labelVisibility,
               context.visibilityMaps,
               defaultLabelVisibility,
-              { signal, loadTable },
+              { signal, getTableLoader },
             ),
             OpacityResolver.resolveOpacities(
               labelIds,
               labels.labelOpacity,
               context.opacityMaps,
               defaultLabelOpacity,
-              { signal, loadTable },
+              { signal, getTableLoader },
             ),
           ]);
           await AsyncUtils.forEach(

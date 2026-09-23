@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 
-import type { HighlightedItemGroup, ItemsData } from "@tissuumaps/core";
+import type {
+  HighlightedItemGroup,
+  ItemsData,
+  TableColumnRef,
+} from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
@@ -52,8 +56,8 @@ export type AnnotationsWidgetProps = {
    */
   annotatedObject: HighlightedItemGroup["annotatedObject"];
 
-  selectedGroupByColumn: string | null;
-  onSelectedGroupByColumnChange: (column: string | null) => void;
+  selectedGroupByColumn: TableColumnRef | null;
+  onSelectedGroupByColumnChange: (column: TableColumnRef | null) => void;
   groupCounts: Map<string, number> | null;
   groupVisibility?: GroupVisibility;
   groupColumnDefs?: GroupAnnotationsTableColumnDef[];

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { ConstantConfig, GroupByConfig } from "../model/configs";
+import type {
+  ConstantConfig,
+  GroupByConfig,
+  TableColumnRef,
+} from "../model/configs";
 import type { GroupValueMap } from "../model/primitives";
 import { ConfigUtils } from "./ConfigUtils";
 import { HashUtils } from "./HashUtils";
@@ -138,7 +142,9 @@ describe("ConfigUtils", () => {
     it("groups by the column with the map, keeping the other sources", () => {
       const config: ConstantConfig<boolean> = { constant: { value: false } };
 
-      expect(ConfigUtils.withGroupByMap(config, "cluster", "map1")).toEqual({
+      expect(
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map1"),
+      ).toEqual({
         constant: { value: false },
         source: "groupBy",
         groupBy: { column: "cluster", map: "map1" },
@@ -150,7 +156,9 @@ describe("ConfigUtils", () => {
         groupBy: { column: "gene", map: undefined, palette: "viridis" },
       };
 
-      expect(ConfigUtils.withGroupByMap(config, "cluster", "map1")).toEqual({
+      expect(
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map1"),
+      ).toEqual({
         source: "groupBy",
         groupBy: { column: "cluster", map: "map1", palette: "viridis" },
       });
@@ -163,7 +171,8 @@ describe("ConfigUtils", () => {
       };
 
       expect(
-        ConfigUtils.withGroupByMap(config, "cluster", "map2").groupBy,
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map2")
+          .groupBy,
       ).toEqual({
         column: "cluster",
         map: "map2",
@@ -179,7 +188,8 @@ describe("ConfigUtils", () => {
       };
 
       expect(
-        ConfigUtils.withGroupByMap(config, "cluster", "map2").groupBy,
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map2")
+          .groupBy,
       ).not.toHaveProperty("unit", "world");
     });
 
@@ -188,9 +198,9 @@ describe("ConfigUtils", () => {
         groupBy: { column: "cluster", map: "map1" },
       };
 
-      expect(ConfigUtils.withGroupByMap(config, "cluster", "map1")).toBe(
-        config,
-      );
+      expect(
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map1"),
+      ).toBe(config);
     });
   });
 
@@ -200,7 +210,7 @@ describe("ConfigUtils", () => {
         ConfigUtils.getGroupByColumn({
           groupBy: { column: "cluster", map: "map1" },
         }),
-      ).toBe("cluster");
+      ).toEqual({ column: "cluster" });
     });
 
     it("returns undefined if group-by is not the active source", () => {
@@ -227,6 +237,45 @@ describe("ConfigUtils", () => {
 
     it("returns undefined if the active source has no unit", () => {
       expect(ConfigUtils.getUnit({ constant: { value: 1 } })).toBeUndefined();
+    });
+  });
+
+  describe("getTableColumnRef", () => {
+    it("keeps only the table and the column", () => {
+      expect(
+        ConfigUtils.getTableColumnRef({
+          table: "cells",
+          column: "cluster",
+          map: "map1",
+        } as TableColumnRef),
+      ).toEqual({ table: "cells", column: "cluster" });
+    });
+  });
+
+  describe("isSameTableColumn", () => {
+    it("matches references to the same column of the same table", () => {
+      expect(
+        ConfigUtils.isSameTableColumn(
+          { table: "cells", column: "cluster" },
+          { table: "cells", column: "cluster" },
+        ),
+      ).toBe(true);
+      expect(
+        ConfigUtils.isSameTableColumn(
+          { table: "cells", column: "cluster" },
+          { table: "genes", column: "cluster" },
+        ),
+      ).toBe(false);
+    });
+
+    it("reads a reference without a table as one to the default table", () => {
+      expect(
+        ConfigUtils.isSameTableColumn(
+          { column: "cluster" },
+          { table: "cells", column: "cluster" },
+          "cells",
+        ),
+      ).toBe(true);
     });
   });
 });

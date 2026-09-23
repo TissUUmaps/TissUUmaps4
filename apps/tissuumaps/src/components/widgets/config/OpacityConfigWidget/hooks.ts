@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 
 import {
+  ConfigUtils,
   type OpacityConfig,
+  type TableColumnRef,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -17,8 +19,8 @@ import type {
 type OpacityConfigWidgetState = {
   currentSource: OpacityConfigSource;
   currentConstantValue: number;
-  currentFromColumn: string | null;
-  currentGroupByColumn: string | null;
+  currentFromTableColumn: TableColumnRef | null;
+  currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
 };
 
@@ -38,9 +40,11 @@ function configToState(
     currentConstantValue: isConstantConfig(config)
       ? config.constant.value
       : defaultOpacity,
-    currentFromColumn: isFromConfig(config) ? config.from.column : null,
-    currentGroupByColumn: isGroupByConfig(config)
-      ? config.groupBy.column
+    currentFromTableColumn: isFromConfig(config)
+      ? ConfigUtils.getTableColumnRef(config.from)
+      : null,
+    currentGroupByTableColumn: isGroupByConfig(config)
+      ? ConfigUtils.getTableColumnRef(config.groupBy)
       : null,
     currentGroupByMap:
       isGroupByConfig(config) && config.groupBy.map !== undefined
@@ -71,19 +75,19 @@ function stateToConfig(
         },
       };
     case "from":
-      if (state.currentFromColumn === null) {
+      if (state.currentFromTableColumn === null) {
         return null;
       }
       return {
         ...config,
         source: "from",
         from: {
-          column: state.currentFromColumn,
+          ...state.currentFromTableColumn,
         },
       };
     case "groupBy":
       if (
-        state.currentGroupByColumn === null ||
+        state.currentGroupByTableColumn === null ||
         state.currentGroupByMap === null
       ) {
         return null;
@@ -92,7 +96,7 @@ function stateToConfig(
         ...config,
         source: "groupBy",
         groupBy: {
-          column: state.currentGroupByColumn,
+          ...state.currentGroupByTableColumn,
           map: state.currentGroupByMap,
         },
       };
@@ -119,10 +123,12 @@ export function useOpacityConfigWidget(
         setState((state) => ({ ...state, currentSource })),
       setCurrentConstantValue: (currentConstantValue: number) =>
         setState((state) => ({ ...state, currentConstantValue })),
-      setCurrentFromColumn: (currentFromColumn: string | null) =>
-        setState((state) => ({ ...state, currentFromColumn })),
-      setCurrentGroupByColumn: (currentGroupByColumn: string | null) =>
-        setState((state) => ({ ...state, currentGroupByColumn })),
+      setCurrentFromTableColumn: (
+        currentFromTableColumn: TableColumnRef | null,
+      ) => setState((state) => ({ ...state, currentFromTableColumn })),
+      setCurrentGroupByTableColumn: (
+        currentGroupByTableColumn: TableColumnRef | null,
+      ) => setState((state) => ({ ...state, currentGroupByTableColumn })),
       setCurrentGroupByMap: (currentGroupByMap: string | null) =>
         setState((state) => ({ ...state, currentGroupByMap })),
     }),

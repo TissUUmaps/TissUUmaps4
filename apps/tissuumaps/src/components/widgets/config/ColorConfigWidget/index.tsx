@@ -149,11 +149,11 @@ function FromColorConfigWidget({
   const {
     tableId,
     fromColumnValueRange: columnValueRange,
-    currentFromColumn: column,
+    currentFromTableColumn: column,
     currentFromRangeMin: rangeMin,
     currentFromRangeMax: rangeMax,
     currentFromPalette: palette,
-    setCurrentFromColumn: setColumn,
+    setCurrentFromTableColumn: setColumn,
     setCurrentFromRangeMin: setRangeMin,
     setCurrentFromRangeMax: setRangeMax,
     setCurrentFromPalette: setPalette,
@@ -240,10 +240,10 @@ function GroupByColorConfigWidget({
 }: GroupByColorConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByColumn: column,
+    currentGroupByTableColumn: column,
     currentGroupByPalette: palette,
     currentGroupByMap: map,
-    setCurrentGroupByColumn: setColumn,
+    setCurrentGroupByTableColumn: setColumn,
     setCurrentGroupByPalette: setPalette,
     setCurrentGroupByMap: setMap,
   } = adapter;

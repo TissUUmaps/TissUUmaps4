@@ -8,7 +8,7 @@ import type {
 } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 
-import type { HighlightedItemGroup } from "@tissuumaps/core";
+import type { HighlightedItemGroup, TableColumnRef } from "@tissuumaps/core";
 
 import {
   VirtualTable,
@@ -88,7 +88,7 @@ export type GroupAnnotationsTableProps = {
   /** The object whose items are grouped, which the eye buttons highlight */
   annotatedObject: HighlightedItemGroup["annotatedObject"];
 
-  groupByColumn: string;
+  groupByColumn: TableColumnRef;
   groupCounts: Map<string, number> | null;
   groupVisibility?: GroupVisibility;
   groupColumnDefs?: GroupAnnotationsTableColumnDef[];
@@ -111,7 +111,7 @@ export function GroupAnnotationsTable({
     (): GroupAnnotationsTableColumnDef[] => [
       {
         id: "group",
-        header: groupByColumn,
+        header: groupByColumn.column,
         accessorFn: (row) => row.group,
         enableHiding: false,
         size: 110,
@@ -233,7 +233,7 @@ export function GroupAnnotationsTable({
             }}
             itemGroup={{
               annotatedObject,
-              column: groupByColumn,
+              groupBy: groupByColumn,
               group: row.original.group,
             }}
           />

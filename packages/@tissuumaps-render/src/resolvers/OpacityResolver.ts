@@ -27,11 +27,15 @@ export class OpacityResolver {
    * Dispatches to the appropriate loader (constant, from, or groupBy) depending on which
    * configuration source is active.
    *
+   * If the table cannot be loaded, or the configuration cannot be resolved
+   * from it, the failure is logged and the default is used for every item.
+   *
    * @param ids - Ordered list of item IDs
    * @param config - Opacity configuration specifying the data source
    * @param opacityMaps - Available opacity maps for groupBy lookups
    * @param defaultOpacity - Fallback opacity value (0–1) when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and table loader
+   * @param options - Optional abort signal, buffer alignment, and a getter for
+   * the loader of a table by ID, which returns `undefined` for a missing table
    * @returns A `Uint8Array` of packed opacity values (0–255), one per ID
    */
   static async resolveOpacities(
@@ -42,10 +46,14 @@ export class OpacityResolver {
     options?: {
       signal?: AbortSignal;
       align?: number;
-      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
+      getTableLoader?: (
+        tableId: string | undefined,
+      ) =>
+        | ((options?: { signal?: AbortSignal }) => Promise<TableData>)
+        | undefined;
     },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, loadTable } = options ?? {};
+    const { signal, align = 1, getTableLoader } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
@@ -53,31 +61,44 @@ export class OpacityResolver {
         align,
       });
     }
-    if (
-      activeConfigSource === "from" &&
-      isFromConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return OpacityResolver.resolveOpacitiesFromTableValues(
-        ids,
-        config,
-        defaultOpacity,
-        loadTable,
-        { signal, align },
+    try {
+      if (activeConfigSource === "from" && isFromConfig(config)) {
+        const loadTable = getTableLoader?.(config.from.table);
+        if (loadTable !== undefined) {
+          return await OpacityResolver.resolveOpacitiesFromTableValues(
+            ids,
+            config,
+            defaultOpacity,
+            loadTable,
+            { signal, align },
+          );
+        }
+      }
+      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
+        const loadTable = getTableLoader?.(config.groupBy.table);
+        if (loadTable !== undefined) {
+          return await OpacityResolver.resolveOpacitiesFromTableGroups(
+            ids,
+            config,
+            opacityMaps,
+            defaultOpacity,
+            loadTable,
+            { signal, align },
+          );
+        }
+      }
+    } catch (error) {
+      signal?.throwIfAborted();
+      console.warn(
+        "Failed to resolve opacities from the table, using default opacity",
+        error,
       );
-    }
-    if (
-      activeConfigSource === "groupBy" &&
-      isGroupByConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return OpacityResolver.resolveOpacitiesFromTableGroups(
-        ids,
-        config,
-        opacityMaps,
+      return OpacityResolver.createUniformOpacities(
+        ids.length,
         defaultOpacity,
-        loadTable,
-        { signal, align },
+        {
+          align,
+        },
       );
     }
     console.warn("No valid opacity config found, using default opacity");

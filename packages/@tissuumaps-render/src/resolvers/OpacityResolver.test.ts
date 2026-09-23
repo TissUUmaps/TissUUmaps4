@@ -267,7 +267,7 @@ describe("OpacityResolver", () => {
       expect(Array.from(packedOpacities)).toEqual([255, 255]);
     });
 
-    it("dispatches to from config when loadTable is given", async () => {
+    it("dispatches to from config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), [0.5]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies OpacityConfig;
@@ -277,14 +277,14 @@ describe("OpacityResolver", () => {
         config,
         [],
         0,
-        { loadTable },
+        { getTableLoader: () => loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
       expect(packedOpacities[0]).toBe(128);
     });
 
-    it("dispatches to groupBy config when loadTable is given", async () => {
+    it("dispatches to groupBy config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const opacityMap: GroupValueMap<number> = {
@@ -301,7 +301,7 @@ describe("OpacityResolver", () => {
         config,
         [opacityMap],
         0,
-        { loadTable },
+        { getTableLoader: () => loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -319,7 +319,7 @@ describe("OpacityResolver", () => {
       expect(Array.from(packedOpacities)).toEqual([255, 255]);
     });
 
-    it("falls back to the default opacity for a from config without loadTable", async () => {
+    it("falls back to the default opacity for a from config without a table loader", async () => {
       const config = { from: { column: "col1" } } satisfies OpacityConfig;
 
       const packedOpacities = await OpacityResolver.resolveOpacities(
@@ -332,7 +332,7 @@ describe("OpacityResolver", () => {
       expect(packedOpacities[0]).toBe(255);
     });
 
-    it("falls back to the default opacity for a groupBy config without loadTable", async () => {
+    it("falls back to the default opacity for a groupBy config without a table loader", async () => {
       const opacityMap: GroupValueMap<number> = {
         id: "om1",
         name: "Opacity Map",

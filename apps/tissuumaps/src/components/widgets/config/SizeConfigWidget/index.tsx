@@ -105,9 +105,9 @@ function FromSizeConfigWidget({
 }: FromSizeConfigWidgetProps) {
   const {
     tableId,
-    currentFromColumn: column,
+    currentFromTableColumn: column,
     currentFromUnit: unit,
-    setCurrentFromColumn: setColumn,
+    setCurrentFromTableColumn: setColumn,
     setCurrentFromUnit: setUnit,
   } = adapter;
 
@@ -157,10 +157,10 @@ function GroupBySizeConfigWidget({
 }: GroupBySizeConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByColumn: column,
+    currentGroupByTableColumn: column,
     currentGroupByMap: map,
     currentGroupByUnit: unit,
-    setCurrentGroupByColumn: setColumn,
+    setCurrentGroupByTableColumn: setColumn,
     setCurrentGroupByMap: setMap,
     setCurrentGroupByUnit: setUnit,
   } = adapter;

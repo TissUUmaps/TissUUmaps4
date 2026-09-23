@@ -1,6 +1,7 @@
 import {
   type Config,
   type GroupByConfig,
+  type TableColumnRef,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -101,10 +102,10 @@ export class ConfigUtils {
    * @param config - The configuration
    * @returns The column, or `undefined` if `groupBy` is not the active source
    */
-  static getGroupByColumn(config: Config<string>): string | undefined {
+  static getGroupByColumn(config: Config<string>): TableColumnRef | undefined {
     return getActiveConfigSource(config) === "groupBy" &&
       isGroupByConfig(config)
-      ? config.groupBy.column
+      ? ConfigUtils.getTableColumnRef(config.groupBy)
       : undefined;
   }
 
@@ -119,17 +120,19 @@ export class ConfigUtils {
    * updating an object with it changes nothing.
    *
    * @param config - The configuration
-   * @param column - Name of the categorical table column to group by
+   * @param column - The categorical table column to group by
    * @param mapId - ID of the project-global map to take the group values from
    * @returns The configuration, with `groupBy` as its active source
    */
   static withGroupByMap(
     config: Config<string>,
-    column: string,
+    column: TableColumnRef,
     mapId: string,
   ): GroupByConfig<true> {
+    const groupByColumn = ConfigUtils.getGroupByColumn(config);
     if (
-      ConfigUtils.getGroupByColumn(config) === column &&
+      groupByColumn !== undefined &&
+      ConfigUtils.isSameTableColumn(groupByColumn, column) &&
       isGroupByConfig<true>(config) &&
       config.groupBy.map === mapId
     ) {
@@ -145,7 +148,7 @@ export class ConfigUtils {
       groupBy: {
         ...groupBy,
         ...((unit !== undefined || groupBy?.unit !== undefined) && { unit }),
-        column,
+        ...ConfigUtils.getTableColumnRef(column),
         map: mapId,
       },
     };
@@ -173,5 +176,38 @@ export class ConfigUtils {
       default:
         return undefined;
     }
+  }
+
+  /**
+   * Narrows a configuration's column specification to the column it references
+   *
+   * @param tableColumnRef - The column specification, with any extra fields the
+   * configuration carries alongside it
+   * @returns The table column reference alone
+   */
+  static getTableColumnRef(tableColumnRef: TableColumnRef): TableColumnRef {
+    return { table: tableColumnRef.table, column: tableColumnRef.column };
+  }
+
+  /**
+   * Determines whether two table column references point to the same column
+   *
+   * References without a table point to the column of `defaultTable`.
+   *
+   * @param tableColumnRef - The table column reference
+   * @param otherTableColumnRef - The table column reference to compare with
+   * @param defaultTable - ID of the table of references without a table
+   * @returns Whether both references point to the same column
+   */
+  static isSameTableColumn(
+    tableColumnRef: TableColumnRef,
+    otherTableColumnRef: TableColumnRef,
+    defaultTable?: string,
+  ): boolean {
+    return (
+      (tableColumnRef.table ?? defaultTable) ===
+        (otherTableColumnRef.table ?? defaultTable) &&
+      tableColumnRef.column === otherTableColumnRef.column
+    );
   }
 }
