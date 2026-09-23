@@ -471,6 +471,16 @@ export class OpenSeadragonContext {
    * low-resolution tiles, so this stays cheap; invalidating the whole viewer
    * would re-run every data transfer on every loaded tile instead.
    *
+   * A tiled image keeps up to the whole tile cache loaded, most of it outside
+   * the viewport, and OpenSeadragon processes the tiles of an invalidation in
+   * the order of its tile cache, so that the tiles in the viewport would wait
+   * for the others. The tiles drawn in the viewport are therefore invalidated
+   * first, on their own. Once they are recolored, all tiles are invalidated
+   * with the same timestamp, which OpenSeadragon skips for the tiles
+   * invalidated already - unless the data transfer has changed meanwhile, as
+   * the newer invalidation then recolors the tiles instead, and every
+   * invalidation ends with a draw of the viewer.
+   *
    * Data transfers are compared by identity: the tiles are only invalidated,
    * and thereby recolored from their original data, if a different data
    * transfer object is passed. Callers are expected to pass the same object for
@@ -503,9 +513,26 @@ export class OpenSeadragonContext {
           }
         }
       }
+      const tStamp = OpenSeadragon.now();
       for (const tiledImageToInvalidate of tiledImagesToInvalidate) {
         tiledImageToInvalidate
-          .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
+          .requestInvalidate(
+            /* restoreTiles */ true,
+            /* viewportOnly */ true,
+            tStamp,
+          )
+          .then(() => {
+            if (
+              this._tileSourceDataTransfers.get(tiledImage.source) ===
+              dataTransfer
+            ) {
+              return tiledImageToInvalidate.requestInvalidate(
+                /* restoreTiles */ true,
+                /* viewportOnly */ false,
+                tStamp,
+              );
+            }
+          })
           .catch((error) => {
             console.error(`Failed to invalidate tiles: ${error}`);
           });
