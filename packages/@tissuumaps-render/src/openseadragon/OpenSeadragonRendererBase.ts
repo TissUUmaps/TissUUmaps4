@@ -597,9 +597,11 @@ export abstract class OpenSeadragonRendererBase<
    * behind it keep their indices relative to it and stay reusable. Only the
    * backdrop and tiled images assigned to it count, i.e. none for an object
    * whose tiled images could not be added, which is thereby retried without
-   * recreating the objects behind it, and none for an object whose tiled
-   * images are still being added, which may make the objects behind it
-   * non-reusable, but never misplaces them.
+   * recreating the objects behind it. The tiled images that an earlier
+   * synchronization is still adding are waited for first, so that each
+   * rendered object is either fully in the world or not at all. This does not
+   * delay the additions of this synchronization, which are queued behind them
+   * anyway (see {@link OpenSeadragonContext.addTiledImage}).
    *
    * @param newRefs - The new object references, in the intended world order
    * @param options - Optional abort signal
@@ -615,6 +617,12 @@ export abstract class OpenSeadragonRendererBase<
   > {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
+    await Promise.allSettled(
+      this._renderedObjects.map(
+        (renderedObject) => renderedObject.tiledImagesPromise,
+      ),
+    );
+    signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
     const matchedRenderedObjects = new Set<
       RenderedObject<TObject, TObjectData>
     >();
