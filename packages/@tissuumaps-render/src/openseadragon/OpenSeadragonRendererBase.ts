@@ -222,6 +222,14 @@ export abstract class OpenSeadragonRendererBase<
       );
       signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
       await this.updateBounds({ signal });
+      // reveal the objects whose creation did not see the context's world
+      // background cover them, e.g. because it was aborted, now that it does
+      for (const renderedObject of newRenderedObjects) {
+        if (renderedObject.pendingBackground === true) {
+          renderedObject.pendingBackground = false;
+          this._updateRenderedObject(renderedObject);
+        }
+      }
     } catch (error) {
       if (this._lastSyncState === syncState) {
         this._lastSyncState = undefined;
@@ -899,10 +907,10 @@ export abstract class OpenSeadragonRendererBase<
           newRenderedObject.tiledImages = tiledImages;
           // transform first, while still hidden, so that the context's world
           // background covers the tiled images by the time they are drawn
-          this._updateRenderedObject(newRenderedObject, undefined, {
-            hidden: true,
-          });
+          newRenderedObject.pendingBackground = true;
+          this._updateRenderedObject(newRenderedObject);
           await this.updateBounds({ signal });
+          newRenderedObject.pendingBackground = false;
           this._updateRenderedObject(newRenderedObject);
         }
         return tiledImages;
@@ -934,19 +942,17 @@ export abstract class OpenSeadragonRendererBase<
    * that subclasses can vary it by channel; all other properties are shared by
    * all TiledImages of an object, and by its backdrop. The backdrop is opaque
    * where the object is, so it gets {@link getTiledImageOpacity} without a
-   * channel index.
+   * channel index. A rendered object that is `pendingBackground` gets
+   * everything but its opacity, which stays at zero.
    *
    * @param renderedObject - The rendered object to update
    * @param newRef - The reference to store, addressing the same layer, object
    * and data source as the current one; defaults to the current one
-   * @param options - Whether to keep the backdrop and TiledImages hidden, i.e.
-   * apply everything but their opacity
    * @throws Error if the TiledImages have not been created yet
    */
   private _updateRenderedObject(
     renderedObject: RenderedObject<TObject, TObjectData>,
     newRef: ObjectRef<TObject, TObjectData> = renderedObject.ref,
-    options?: { hidden?: boolean },
   ): void {
     if (renderedObject.tiledImages === undefined) {
       throw new Error("Rendered object not loaded");
@@ -968,16 +974,15 @@ export abstract class OpenSeadragonRendererBase<
     }
     const currentRef = { layer, object, data: newRef.data };
     if (renderedObject.backdrop !== undefined) {
-      this._updateTiledImage(
-        renderedObject.backdrop,
-        currentRef,
-        null,
-        options,
-      );
+      this._updateTiledImage(renderedObject.backdrop, currentRef, null, {
+        hidden: renderedObject.pendingBackground,
+      });
     }
     for (let index = 0; index < renderedObject.tiledImages.length; index++) {
       const tiledImage = renderedObject.tiledImages[index]!;
-      this._updateTiledImage(tiledImage, currentRef, index, options);
+      this._updateTiledImage(tiledImage, currentRef, index, {
+        hidden: renderedObject.pendingBackground,
+      });
     }
   }
 
@@ -1127,6 +1132,12 @@ export type ObjectRef<
  * exist; every later synchronization counts the latter, i.e. the footprint
  * that the object actually has (see
  * {@link OpenSeadragonRendererBase._cleanRenderedObjects}).
+ *
+ * A newly created object is `pendingBackground` from the moment its tiled
+ * images are assigned until the context's world background has been resized
+ * to cover them: while pending, its backdrop and tiled images are kept at
+ * opacity zero, whoever updates them (see
+ * {@link OpenSeadragonRendererBase._updateRenderedObject}).
  */
 export type RenderedObject<
   TObject extends Image | Labels,
@@ -1139,4 +1150,5 @@ export type RenderedObject<
   tiledImages?: OpenSeadragon.TiledImage[];
   backdrop?: OpenSeadragon.TiledImage;
   pendingDelete?: boolean;
+  pendingBackground?: boolean;
 };
