@@ -712,7 +712,11 @@ export abstract class OpenSeadragonRendererBase<
    * backdrop and TiledImages are removed again immediately after they were added
    * if the rendered object is deleted or the operation is aborted in the
    * meantime, or if any of them could not be added at all - a partially added
-   * object would shift the world indices of every object after it. If the context
+   * object would shift the world indices of every object after it. For the same
+   * reason, a tile source that fails to open is replaced by a transparent
+   * placeholder rather than skipped: the indices of the objects created after
+   * this one are resolved against the full footprint of this one, so it has to
+   * take up all of its indices until it is removed again. If the context
    * is destroyed, nothing is done at all, as the viewer tears down its world
    * itself.
    *
@@ -738,15 +742,26 @@ export abstract class OpenSeadragonRendererBase<
     const tileSourcePromises = tileSources.map((tileSource) =>
       this.context.openTileSource({ tileSource }, { signal }),
     );
+    const getPlaceholderTileSource = (error: unknown) => {
+      if (signal?.aborted) {
+        throw error; // skips the additions of the objects behind, too
+      }
+      return OpenSeadragonUtils.createPixelTileSource(
+        { width: 1, height: 1 },
+        OpenSeadragonUtils.transparentPixelUrl,
+      );
+    };
     const backdropTileSourcePromise = useBackdrop
-      ? tileSourcePromises[0]!.then((firstTileSource) =>
-          OpenSeadragonUtils.createPixelTileSource(
-            {
-              width: firstTileSource.dimensions.x,
-              height: firstTileSource.dimensions.y,
-            },
-            OpenSeadragonUtils.blackPixelUrl,
-          ),
+      ? tileSourcePromises[0]!.then(
+          (firstTileSource) =>
+            OpenSeadragonUtils.createPixelTileSource(
+              {
+                width: firstTileSource.dimensions.x,
+                height: firstTileSource.dimensions.y,
+              },
+              OpenSeadragonUtils.blackPixelUrl,
+            ),
+          getPlaceholderTileSource,
         )
       : undefined;
     const {
@@ -789,7 +804,7 @@ export abstract class OpenSeadragonRendererBase<
       (tileSourcePromise, index) => {
         const tiledImagePromise = this.context.addTiledImage(
           {
-            tileSource: tileSourcePromise,
+            tileSource: tileSourcePromise.catch(getPlaceholderTileSource),
             opacity: 0, // only make visible once transformed
             ...(useBackdrop && { compositeOperation: "lighter" }),
           },
@@ -814,8 +829,11 @@ export abstract class OpenSeadragonRendererBase<
         return tiledImagePromise;
       },
     );
-    Promise.allSettled([backdropPromise, ...tiledImagePromises])
-      .then(async (results) => {
+    Promise.all([
+      Promise.allSettled(tileSourcePromises),
+      Promise.allSettled([backdropPromise, ...tiledImagePromises]),
+    ])
+      .then(async ([tileSourceResults, results]) => {
         const [backdropResult, ...tiledImageResults] = results;
         const backdrop =
           backdropResult?.status === "fulfilled"
@@ -827,7 +845,9 @@ export abstract class OpenSeadragonRendererBase<
         if (this.context.isDestroyed()) {
           return tiledImages; // the viewer tears down its world itself
         }
-        const failure = results.find((result) => result.status === "rejected");
+        const failure = [...tileSourceResults, ...results].find(
+          (result) => result.status === "rejected",
+        );
         if (
           signal?.aborted ||
           failure !== undefined ||
