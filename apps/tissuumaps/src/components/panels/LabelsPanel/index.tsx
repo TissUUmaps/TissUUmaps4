@@ -102,7 +102,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
   const confirm = useConfirmDialog();
 
-  const { extraTableGroupColumnDefs } = useLabelsAnnotationsColumns(
+  const { extraGroupColumnDefs } = useLabelsAnnotationsColumns(
     labels,
     selectedGroupByColumn,
   );
@@ -190,7 +190,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
               table={labels.dataSource.table}
               selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraTableGroupColumnDefs={extraTableGroupColumnDefs}
+              extraGroupColumnDefs={extraGroupColumnDefs}
               className="bg-card"
             />
           )}

@@ -1,0 +1,131 @@
+import { useCallback, useMemo } from "react";
+
+import type { ItemsData } from "@tissuumaps/core";
+
+import {
+  VirtualTable,
+  type VirtualTableColumnDef,
+} from "@/components/common/virtual-table";
+import { useTableData } from "@/hooks/useData";
+
+export type ItemAnnotationsTableRowData = {
+  id: number;
+  name?: string;
+  annotated?: boolean;
+};
+
+export type ItemAnnotationsTableColumnDef =
+  VirtualTableColumnDef<ItemAnnotationsTableRowData>;
+
+export type ItemAnnotationsTableProps = {
+  data?: ItemsData;
+  height: number;
+  rowHeight: number;
+  table: string | null;
+  extraColumnDefs?: ItemAnnotationsTableColumnDef[];
+};
+
+export function ItemAnnotationsTable({
+  data,
+  height,
+  rowHeight,
+  table,
+  extraColumnDefs,
+}: ItemAnnotationsTableProps) {
+  const tableData = useTableData(table);
+
+  // the ids and the per-index accessors the rows are built from, so that only
+  // the rows within the visible range have to be materialized
+  const { ids, getName, isAnnotated } = useMemo(() => {
+    let ids: number[] = [];
+    let getName: ((index: number) => string | undefined) | undefined;
+    let isAnnotated: ((id: number) => boolean) | undefined;
+    if (data !== undefined) {
+      ids = data.getIds();
+      if (table !== null) {
+        // the selected table governs the names; while it is still loading there
+        // are none yet, rather than the object's own names, which would show a
+        // different column for a moment and then be replaced
+        if (tableData !== null) {
+          const tableIds = tableData.getIds();
+          // table-backed items hand out the table's own ids array, so every
+          // item has a row in the table and no lookup structure is needed
+          if (tableIds === ids) {
+            isAnnotated = () => true;
+          } else {
+            const annotatedIds = new Set(tableIds);
+            isAnnotated = (id) => annotatedIds.has(id);
+          }
+          const tableNames = tableData.getNames?.();
+          if (tableNames !== undefined) {
+            // the shared ids array aligns the names by index; only other item
+            // types need the id lookup
+            if (tableIds === ids) {
+              getName = (index) => tableNames[index];
+            } else {
+              const tableNamesById = new Map(
+                tableIds.map((id, i) => [id, tableNames[i]!]),
+              );
+              getName = (index) => tableNamesById.get(ids[index]!);
+            }
+          }
+        }
+      } else {
+        const names = data.getNames?.();
+        if (names !== undefined) {
+          getName = (index) => names[index];
+        }
+      }
+    } else if (tableData !== null) {
+      ids = tableData.getIds();
+      const names = tableData.getNames?.();
+      if (names !== undefined) {
+        getName = (index) => names[index];
+      }
+    }
+    return { ids, getName, isAnnotated };
+  }, [data, table, tableData]);
+
+  const getRows = useCallback(
+    (startIndex: number, endIndex: number) => {
+      const rows: ItemAnnotationsTableRowData[] = [];
+      for (let index = startIndex; index < endIndex; index++) {
+        const id = ids[index]!;
+        rows.push({
+          id,
+          name: getName?.(index),
+          annotated: isAnnotated?.(id),
+        });
+      }
+      return rows;
+    },
+    [ids, getName, isAnnotated],
+  );
+
+  const columnDefs = useMemo(() => {
+    const columnDefs: ItemAnnotationsTableColumnDef[] = [
+      { id: "id", header: "ID", accessorKey: "id" },
+    ];
+    if (getName !== undefined) {
+      columnDefs.push({ id: "name", header: "Name", accessorKey: "name" });
+    }
+    if (extraColumnDefs !== undefined) {
+      columnDefs.push(...extraColumnDefs);
+    }
+    return columnDefs;
+  }, [getName, extraColumnDefs]);
+
+  return (
+    <VirtualTable
+      rowCount={ids.length}
+      getRows={getRows}
+      getRowId={(row) => String(row.id)}
+      columnDefs={columnDefs}
+      rowHeight={rowHeight}
+      height={height}
+      rowClassName={(row) =>
+        row.annotated === false ? "text-muted-foreground" : undefined
+      }
+    />
+  );
+}

@@ -1,5 +1,3 @@
-import type { ColumnDef } from "@tanstack/react-table";
-
 import type { ItemsData } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
@@ -10,10 +8,17 @@ import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 
 import {
-  AnnotationsTable,
-  type AnnotationsTableGroupRowData,
-  type AnnotationsTableRowData,
-} from "./AnnotationsTable";
+  GroupAnnotationsTable,
+  type GroupAnnotationsTableColumnDef,
+} from "./GroupAnnotationsTable";
+import {
+  ItemAnnotationsTable,
+  type ItemAnnotationsTableColumnDef,
+} from "./ItemAnnotationsTable";
+
+// rows have a fixed height, so that the visible range follows from the scroll
+// offset alone; cells of extra columns must fit within it
+const tableRowHeight = 36;
 
 export type AnnotationsWidgetProps = {
   data?: ItemsData;
@@ -21,8 +26,8 @@ export type AnnotationsWidgetProps = {
   table: string | null;
   selectedGroupByColumn?: string | null;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
-  extraTableColumnDefs?: ColumnDef<AnnotationsTableRowData>[];
-  extraTableGroupColumnDefs?: ColumnDef<AnnotationsTableGroupRowData>[];
+  extraItemColumnDefs?: ItemAnnotationsTableColumnDef[];
+  extraGroupColumnDefs?: GroupAnnotationsTableColumnDef[];
   className?: string;
 };
 
@@ -32,8 +37,8 @@ export function AnnotationsWidget({
   table,
   selectedGroupByColumn: controlledSelectedGroupByColumn,
   onSelectedGroupByColumnChange: setControlledSelectedGroupByColumn,
-  extraTableColumnDefs,
-  extraTableGroupColumnDefs,
+  extraItemColumnDefs,
+  extraGroupColumnDefs,
   className,
 }: AnnotationsWidgetProps) {
   const [selectedGroupByColumn, setSelectedGroupByColumn] = useControlled(
@@ -62,14 +67,23 @@ export function AnnotationsWidget({
           onSelectedItemChange={setSelectedGroupByColumn}
         />
       </Field>
-      <AnnotationsTable
-        data={data}
-        height={tableHeight}
-        table={table}
-        groupByColumn={selectedGroupByColumn}
-        extraColumnDefs={extraTableColumnDefs}
-        extraGroupColumnDefs={extraTableGroupColumnDefs}
-      />
+      {table !== null && selectedGroupByColumn ? (
+        <GroupAnnotationsTable
+          height={tableHeight}
+          rowHeight={tableRowHeight}
+          table={table}
+          groupByColumn={selectedGroupByColumn}
+          extraGroupColumnDefs={extraGroupColumnDefs}
+        />
+      ) : (
+        <ItemAnnotationsTable
+          data={data}
+          height={tableHeight}
+          rowHeight={tableRowHeight}
+          table={table}
+          extraColumnDefs={extraItemColumnDefs}
+        />
+      )}
     </Fieldset>
   );
 }

@@ -105,7 +105,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
 
   const shapesData = useShapesData(shapes.id);
 
-  const { extraTableGroupColumnDefs } = useShapesAnnotationsColumns(
+  const { extraGroupColumnDefs } = useShapesAnnotationsColumns(
     shapes,
     selectedGroupByColumn,
   );
@@ -194,7 +194,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
               table={shapes.dataSource.table ?? null}
               selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraTableGroupColumnDefs={extraTableGroupColumnDefs}
+              extraGroupColumnDefs={extraGroupColumnDefs}
               className="bg-card"
             />
           )}
