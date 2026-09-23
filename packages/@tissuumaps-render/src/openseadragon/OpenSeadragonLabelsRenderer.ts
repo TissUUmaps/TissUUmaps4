@@ -172,7 +172,7 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    * @returns The data transfer resolved by {@link resolveObject}, or
    * `undefined` if the object has not been resolved
    */
-  protected override getTiledImageDataTransfer(
+  protected override resolveTiledImageDataTransfer(
     ref: ObjectRef<Labels, LabelsData>,
   ): DataTransfer | undefined {
     const renderedLabels = this._renderedLabels.get(ref.object.id);

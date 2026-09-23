@@ -45,10 +45,13 @@ export type OpenSeadragonImageSyncContext = {
  * part of the transfer: like layer and image opacity, OpenSeadragon applies
  * them when drawing the tiled image (see {@link getTiledImageOpacity}).
  *
- * As data transfers are compared by identity, each channel's data transfer is
- * kept (see {@link resolveObject}) until the image's data or the channel's
- * color or contrast limits change, so that tiles are only recolored when
- * needed.
+ * Channel colors and contrast limits need no synchronization: like visibility
+ * and opacity, they are read from the current model whenever the image's tiled
+ * images are updated (see {@link resolveTiledImageDataTransfer}), so changing
+ * them only requires {@link setModel}. As data transfers are compared by
+ * identity, each channel's data transfer is kept until the image's data or the
+ * channel's color or contrast limits change, so that tiles are only recolored
+ * when needed.
  */
 export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   Image,
@@ -69,11 +72,11 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   /**
    * Returns the state of an image that a synchronization depends on
    *
-   * Blanks out the name, visibility and opacity of every channel on top of
-   * what the base class blanks out: they are applied from the current model
-   * when updating the channel's tiled image (see {@link getTiledImageOpacity}),
-   * whereas the channel colors and contrast limits build the data transfers
-   * (see {@link resolveObject}) and stay part of the state.
+   * Blanks out the name, visibility, opacity, color and contrast limits of
+   * every channel on top of what the base class blanks out: they are applied
+   * from the current model when updating the channel's tiled image (see
+   * {@link getTiledImageOpacity} and {@link resolveTiledImageDataTransfer}),
+   * except for the name, which is cosmetic.
    *
    * @param image - The image to return the state of
    * @returns The image without the properties that are applied by
@@ -87,6 +90,8 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
         name: undefined,
         visibility: undefined,
         opacity: undefined,
+        color: undefined,
+        contrastLimits: undefined,
       })),
     };
   }
@@ -102,76 +107,6 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
         this._renderedMultichannelImages.delete(imageId);
       }
     }
-  }
-
-  /**
-   * Resolves the data transfers of an image's channels, unless they are up to date
-   *
-   * Image data that is not multi-channel has no channels to resolve. Otherwise,
-   * each channel's color and contrast limits are resolved from the image's
-   * channel settings, falling back to those reported by the data (see
-   * {@link _getChannelColor} and {@link _getChannelContrastLimits}), and its data
-   * transfer is kept as long as the image's data and the resolved values are
-   * unchanged, and is created anew otherwise (see {@link _createDataTransfer}).
-   * Channels are resolved independently, so that changing one channel only
-   * recolors the tiles of that channel.
-   *
-   * @param image - The image to resolve
-   * @param data - The loaded data of the image
-   * @returns A promise that resolves once the data transfers have been resolved
-   */
-  protected override resolveObject(
-    image: Image,
-    data: ImageData,
-  ): Promise<void> {
-    const sizeC = data.getSizeC();
-    if (sizeC === undefined) {
-      this._renderedMultichannelImages.delete(image.id);
-      return Promise.resolve();
-    }
-    const renderedMultichannelImage = this._renderedMultichannelImages.get(
-      image.id,
-    );
-    const channels = [];
-    for (let index = 0; index < sizeC; index++) {
-      const channel = image.channels?.[index];
-      const renderedMultichannelImageChannel =
-        renderedMultichannelImage?.channels[index];
-      const newRenderedMultichannelImageChannelState = structuredClone({
-        color: OpenSeadragonImageRenderer._getChannelColor(
-          data,
-          index,
-          channel,
-        ),
-        contrastLimits: OpenSeadragonImageRenderer._getChannelContrastLimits(
-          data,
-          index,
-          channel,
-        ),
-      });
-      if (
-        renderedMultichannelImage !== undefined &&
-        renderedMultichannelImage.data === data &&
-        renderedMultichannelImageChannel !== undefined &&
-        deepEqual(
-          renderedMultichannelImageChannel.state,
-          newRenderedMultichannelImageChannelState,
-        )
-      ) {
-        channels.push(renderedMultichannelImageChannel);
-      } else {
-        channels.push({
-          state: newRenderedMultichannelImageChannelState,
-          dataTransfer: OpenSeadragonImageRenderer._createDataTransfer(
-            data,
-            index,
-            newRenderedMultichannelImageChannelState,
-          ),
-        });
-      }
-    }
-    this._renderedMultichannelImages.set(image.id, { data, channels });
-    return Promise.resolve();
   }
 
   /**
@@ -245,33 +180,81 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   }
 
   /**
-   * Returns the data transfer resolved for one of an image's tiled images
+   * Resolves the data transfer for one of an image's tiled images, unless it is up to date
    *
-   * Only the tiled images of an image's channels are recolored, never its
-   * backdrop.
+   * Only the tiled images of the channels of multi-channel image data are
+   * recolored, never the backdrop. A channel's color and contrast limits are
+   * resolved from the image's channel settings, falling back to those reported
+   * by the data (see {@link _getChannelColor} and
+   * {@link _getChannelContrastLimits}), and its data transfer is kept as long as
+   * the image's data and the resolved values are unchanged, and is created anew
+   * otherwise (see {@link _createDataTransfer}). Channels are resolved
+   * independently, so that changing one channel only recolors the tiles of that
+   * channel.
    *
-   * @param ref - The image reference for which to get the data transfer
+   * @param ref - The image reference for which to get the data transfer, holding
+   * the image as it currently is in the model
    * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
-   * @returns The channel's data transfer resolved by {@link resolveObject},
-   * or `undefined` if the channel has none
+   * @returns The channel's data transfer, or `undefined` if the channel has none
    */
-  protected override getTiledImageDataTransfer(
+  protected override resolveTiledImageDataTransfer(
     ref: ObjectRef<Image, ImageData>,
     index: number | null,
   ): DataTransfer | undefined {
-    if (index !== null) {
-      const renderedMultichannelImage = this._renderedMultichannelImages.get(
-        ref.object.id,
-      );
-      if (renderedMultichannelImage !== undefined) {
-        const renderedMultichannelImageChannel =
-          renderedMultichannelImage.channels[index];
-        if (renderedMultichannelImageChannel !== undefined) {
-          return renderedMultichannelImageChannel.dataTransfer;
-        }
-      }
+    if (ref.data.getSizeC() === undefined) {
+      this._renderedMultichannelImages.delete(ref.object.id);
+      return undefined;
     }
-    return undefined;
+    if (index === null) {
+      return undefined;
+    }
+    let renderedMultichannelImage = this._renderedMultichannelImages.get(
+      ref.object.id,
+    );
+    if (
+      renderedMultichannelImage === undefined ||
+      renderedMultichannelImage.data !== ref.data
+    ) {
+      renderedMultichannelImage = { data: ref.data, channels: [] };
+      this._renderedMultichannelImages.set(
+        ref.object.id,
+        renderedMultichannelImage,
+      );
+    }
+    const channel = ref.object.channels?.[index];
+    const renderedMultichannelImageChannel =
+      renderedMultichannelImage.channels[index];
+    const newRenderedMultichannelImageChannelState = structuredClone({
+      color: OpenSeadragonImageRenderer._getChannelColor(
+        ref.data,
+        index,
+        channel,
+      ),
+      contrastLimits: OpenSeadragonImageRenderer._getChannelContrastLimits(
+        ref.data,
+        index,
+        channel,
+      ),
+    });
+    if (
+      renderedMultichannelImageChannel !== undefined &&
+      deepEqual(
+        renderedMultichannelImageChannel.state,
+        newRenderedMultichannelImageChannelState,
+      )
+    ) {
+      return renderedMultichannelImageChannel.dataTransfer;
+    }
+    const dataTransfer = OpenSeadragonImageRenderer._createDataTransfer(
+      ref.data,
+      index,
+      newRenderedMultichannelImageChannelState,
+    );
+    renderedMultichannelImage.channels[index] = {
+      state: newRenderedMultichannelImageChannelState,
+      dataTransfer,
+    };
+    return dataTransfer;
   }
 
   /**

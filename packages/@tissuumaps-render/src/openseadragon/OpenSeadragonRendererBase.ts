@@ -102,8 +102,9 @@ export abstract class OpenSeadragonRendererBase<
    * The properties that tiled images take directly - the layer and object
    * transforms, visibility and opacity, and whatever else a subclass reads from
    * the current model when updating a tiled image (see
-   * {@link getTiledImageOpacity}) - are applied to the rendered objects right
-   * away (see {@link _updateRenderedObject}), and need no synchronization.
+   * {@link getTiledImageOpacity} and {@link resolveTiledImageDataTransfer}) -
+   * are applied to the rendered objects right away (see
+   * {@link _updateRenderedObject}), and need no synchronization.
    * Every other change - a different set or order of layers or objects, layer
    * memberships, data sources or the configurations that subclasses resolve
    * from - requires a resynchronization, which the caller is expected to
@@ -379,8 +380,9 @@ export abstract class OpenSeadragonRendererBase<
    * Called by {@link synchronize} once all objects have loaded, with the
    * objects that are about to be displayed: those assigned to a rendered layer
    * whose data loaded successfully. Does nothing here; subclasses that keep
-   * state per object (see {@link resolveObject}) override this to drop the
-   * state of every object that is not among the given ones.
+   * state per object (see {@link resolveObject} and
+   * {@link resolveTiledImageDataTransfer}) override this to drop the state of
+   * every object that is not among the given ones.
    *
    * @param _objects - The objects (images or labels) about to be displayed
    */
@@ -399,7 +401,7 @@ export abstract class OpenSeadragonRendererBase<
    * still created or updated, with whatever the synchronous hooks return for
    * it. Does nothing here; subclasses override this to resolve, from the
    * object, its data and the inputs of the synchronization, whatever their
-   * synchronous hooks return later (see {@link getTiledImageDataTransfer}),
+   * synchronous hooks return later (see {@link resolveTiledImageDataTransfer}),
    * and to keep it for as long as its outcome would not change.
    *
    * @param _object - The object (image or labels) to resolve
@@ -479,22 +481,25 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Returns the data transfer for one of an object's tiled images
+   * Resolves the data transfer for one of an object's tiled images
    *
    * Returns `undefined` here, i.e. the tiles are drawn as they are; subclasses
    * whose tiles carry values rather than colors override this to map the values
    * to colors (see {@link OpenSeadragonContext.updateTiledImageDataTransfer}).
    * As data transfers are compared by identity, the returned object has to stay
    * the same for as long as its outcome would not change. This hook is
-   * synchronous; subclasses resolve the data transfer once the object's data
-   * has loaded (see {@link resolveObject}), and only return it here.
+   * synchronous and receives the object as it currently is in the model:
+   * subclasses either resolve the data transfer here, from the current object
+   * and its data, which needs no synchronization, or, if resolving is
+   * asynchronous, once the object's data has loaded (see
+   * {@link resolveObject}), and only return it here.
    *
    * @param _ref - The object reference for which to get the data transfer
    * @param _index - The index of the tiled image (e.g. channel), or `null` for the object's backdrop
    * @returns The data transfer to apply, or `undefined` for none. Defaults to
    * `undefined`.
    */
-  protected getTiledImageDataTransfer(
+  protected resolveTiledImageDataTransfer(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _ref: ObjectRef<TObject, TObjectData>,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1001,7 +1006,7 @@ export abstract class OpenSeadragonRendererBase<
       }
     }
     // (channel/label) values --> data transfer
-    const dataTransfer = this.getTiledImageDataTransfer(ref, index);
+    const dataTransfer = this.resolveTiledImageDataTransfer(ref, index);
     this.context.updateTiledImageDataTransfer(tiledImage, dataTransfer);
   }
 
