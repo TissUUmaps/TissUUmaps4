@@ -87,6 +87,10 @@ export class OpenSeadragonContext {
     OpenSeadragon.TileSource,
     DataTransfer
   >();
+  private readonly _tileDataTransfers = new WeakMap<
+    OpenSeadragon.Tile,
+    DataTransfer
+  >();
   private _animationMemory?: {
     viewerOptions: Partial<OpenSeadragonViewerOptions>;
     tiledImageViewerOptions: WeakMap<
@@ -167,6 +171,7 @@ export class OpenSeadragonContext {
         console.error(`Failed to transfer tile data: ${error}`);
       }),
     );
+    this.viewer.addHandler("update-viewport", () => this._recolorStaleTiles());
   }
 
   /**
@@ -472,20 +477,19 @@ export class OpenSeadragonContext {
    * would re-run every data transfer on every loaded tile instead.
    *
    * A tiled image keeps up to the whole tile cache loaded, most of it outside
-   * the viewport, and OpenSeadragon processes the tiles of an invalidation in
-   * the order of its tile cache, so that the tiles in the viewport would wait
-   * for the others. The tiles drawn in the viewport are therefore invalidated
-   * first, on their own. Once they are recolored, all tiles are invalidated
-   * with the same timestamp, which OpenSeadragon skips for the tiles
-   * invalidated already - unless the data transfer has changed meanwhile, as
-   * the newer invalidation then recolors the tiles instead, and every
-   * invalidation ends with a draw of the viewer.
+   * the viewport, so only the tiles drawn in the viewport are invalidated. The
+   * others are recolored once they are drawn again (see
+   * {@link _recolorStaleTiles}), which keeps the cost of a change proportional
+   * to the viewport rather than to the tile cache. Removing a data transfer
+   * invalidates every tile of the tiled image instead, as tiles without a data
+   * transfer are not caught up with.
    *
    * Data transfers are compared by identity: the tiles are only invalidated,
    * and thereby recolored from their original data, if a different data
    * transfer object is passed. Callers are expected to pass the same object for
    * as long as its outcome would not change, as invalidating the tiles re-runs
-   * the data transfer on every loaded tile of the tile source.
+   * the data transfer on every tile in the viewport, and on every other loaded
+   * tile of the tile source once it is drawn.
    *
    * @param tiledImage - The tiled image to update
    * @param dataTransfer - The data transfer to apply, or `undefined` for none
@@ -513,26 +517,13 @@ export class OpenSeadragonContext {
           }
         }
       }
-      const tStamp = OpenSeadragon.now();
       for (const tiledImageToInvalidate of tiledImagesToInvalidate) {
         tiledImageToInvalidate
           .requestInvalidate(
             /* restoreTiles */ true,
-            /* viewportOnly */ true,
-            tStamp,
+            /* viewportOnly */ tiledImageToInvalidate === tiledImage &&
+              dataTransfer !== undefined,
           )
-          .then(() => {
-            if (
-              this._tileSourceDataTransfers.get(tiledImage.source) ===
-              dataTransfer
-            ) {
-              return tiledImageToInvalidate.requestInvalidate(
-                /* restoreTiles */ true,
-                /* viewportOnly */ false,
-                tStamp,
-              );
-            }
-          })
           .catch((error) => {
             console.error(`Failed to invalidate tiles: ${error}`);
           });
@@ -709,6 +700,52 @@ export class OpenSeadragonContext {
   }
 
   /**
+   * Recolors the drawn tiles whose data transfer is outdated
+   *
+   * A change of a data transfer only invalidates the tiles in the viewport
+   * (see {@link updateTiledImageDataTransfer}), which leaves the other loaded
+   * tiles of the tile source in the colors of an earlier data transfer. Every
+   * tile records the data transfer it was last recolored with (see
+   * {@link _transferData}); a drawn tile that recorded a different one than
+   * its tile source's is invalidated, unless it is being recolored already.
+   * Such a tile is drawn in its earlier colors until it is recolored, which
+   * takes a frame or two.
+   *
+   * Tiles loaded after a change are recolored on load, and tile sources
+   * without a data transfer are skipped: their tiles were all restored when
+   * the data transfer was removed.
+   */
+  private _recolorStaleTiles(): void {
+    const staleTiles = [];
+    for (let i = 0; i < this.viewer.world.getItemCount(); i++) {
+      const tiledImage = this.viewer.world.getItemAt(i);
+      const dataTransfer = this._tileSourceDataTransfers.get(tiledImage.source);
+      if (dataTransfer === undefined) {
+        continue;
+      }
+      for (const { tile } of tiledImage.getTilesToDraw()) {
+        if (
+          tile.processing === false &&
+          this._tileDataTransfers.get(tile) !== dataTransfer
+        ) {
+          staleTiles.push(tile);
+        }
+      }
+    }
+    if (staleTiles.length > 0) {
+      this.viewer.world
+        .requestTileInvalidateEvent(
+          staleTiles,
+          OpenSeadragon.now(),
+          /* restoreTiles */ true,
+        )
+        .catch((error) => {
+          console.error(`Failed to invalidate tiles: ${error}`);
+        });
+    }
+  }
+
+  /**
    * Replaces the data of an invalidated tile with the colors of its values
    *
    * Does nothing unless a data transfer is set for the tile source of the tile
@@ -721,7 +758,9 @@ export class OpenSeadragonContext {
    * meanwhile invalidates the same tiles again, which marks the runs of the
    * change before it as outdated; those are abandoned, as the newer runs
    * recolor the tiles. The data transfer is read only after yielding, so that
-   * a run that continues always applies the latest one.
+   * a run that continues always applies the latest one. It is recorded as the
+   * tile's before the tile is recolored (see {@link _recolorStaleTiles}), so
+   * that a tile whose recoloring fails is not retried on every draw.
    *
    * The colors are written as packed 32-bit values through a `Uint32Array`
    * view of an `ImageData` buffer, whose bytes are R, G, B, A. The
@@ -765,6 +804,7 @@ export class OpenSeadragonContext {
     if (dataTransfer === undefined) {
       return;
     }
+    this._tileDataTransfers.set(event.tile, dataTransfer);
     const { values, width, height } = await dataTransfer.getTileData(event);
     if (values.length !== width * height) {
       throw new Error("Invalid tile data size");
