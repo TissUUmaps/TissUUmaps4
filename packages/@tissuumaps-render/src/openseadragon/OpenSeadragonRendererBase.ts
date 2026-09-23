@@ -670,17 +670,20 @@ export abstract class OpenSeadragonRendererBase<
             renderedObject.ref.object.dataSource,
             newRef.object.dataSource,
           ) &&
-          // not using a backdrop or backdrop exists and is at the expected index
-          (!renderedObject.usesBackdrop ||
-            (renderedObject.backdrop !== undefined &&
-              this.context.getTiledImageIndex(renderedObject.backdrop) ===
-                anchorIndex + offset)) &&
-          // tiled images exist and are at the expected indices
+          // tiled images exist, i.e. so does the backdrop if the object uses one
           renderedObject.tiledImages !== undefined &&
+          // backdrop, if any, is at the expected index
+          (renderedObject.backdrop === undefined ||
+            this.context.getTiledImageIndex(renderedObject.backdrop) ===
+              anchorIndex + offset) &&
+          // tiled images are at the expected indices
           renderedObject.tiledImages.every(
             (tiledImage, c) =>
               this.context.getTiledImageIndex(tiledImage) ===
-              anchorIndex + offset + (renderedObject.usesBackdrop ? 1 : 0) + c,
+              anchorIndex +
+                offset +
+                (renderedObject.backdrop !== undefined ? 1 : 0) +
+                c,
           )
         ) {
           renderedObjectsByNewRef.set(newRef, renderedObject);
@@ -1094,9 +1097,12 @@ export type ObjectRef<
  * whether there is a backdrop (`usesBackdrop`), are known as soon as the
  * rendered object is created, whereas `backdrop` and `tiledImages` are assigned
  * only once all of them have been added to the world, which is also when
- * `tiledImagesPromise` resolves, with `tiledImages` alone. Both are recorded
- * rather than derived from the data of `ref` again, as that data may have been
- * released by the time the world footprint is needed.
+ * `tiledImagesPromise` resolves, with `tiledImages` alone. The former are the
+ * footprint that the object is going to have, which the synchronization that
+ * creates it needs to place the objects behind it before its tiled images
+ * exist; every later synchronization counts the latter, i.e. the footprint
+ * that the object actually has (see
+ * {@link OpenSeadragonRendererBase._cleanRenderedObjects}).
  */
 export type RenderedObject<
   TObject extends Image | Labels,
