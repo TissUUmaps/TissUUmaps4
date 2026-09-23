@@ -243,6 +243,15 @@ export function useWebGL(adapter: ViewerAdapter) {
     if (glReady && glRef.current !== null) {
       glRef.current.shapesRenderer.renderOptions =
         glOptions.shapesRenderOptions;
+      // the rendered bounds include the stroke width, a render option
+      const newShapesBounds = glRef.current.shapesRenderer.getRenderedBounds();
+      setGLShapesBounds((currentShapesBounds) =>
+        newShapesBounds !== null &&
+        currentShapesBounds !== null &&
+        GeometryUtils.rectEquals(currentShapesBounds, newShapesBounds)
+          ? currentShapesBounds
+          : newShapesBounds,
+      );
       dispatchRedraw();
       if (glRef.current.shapesRenderer.needsSynchronization()) {
         requestedSyncShapesRef.current++;

@@ -847,9 +847,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * @param shapesMask - Per-shape inclusion mask, or `undefined` if all shapes are included
    * @param options - Optional abort signal
    * @returns The bounding rectangle in data-space coordinates, or `null` if the
-   * shapes have no area, as such an object can neither be rasterized into
-   * scanlines nor drawn by the fragment shader
-   * @throws Error if the geometry is empty
+   * shapes have no area, including shapes without any vertices, as such an
+   * object can neither be rasterized into scanlines nor drawn by the fragment
+   * shader
    */
   private static async _getObjectBounds(
     geometry: ShapesGeometry,
@@ -897,14 +897,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       }
       await maybeYield({ signal });
     }
-    if (
-      !Number.isFinite(xMin) ||
-      !Number.isFinite(yMin) ||
-      !Number.isFinite(xMax) ||
-      !Number.isFinite(yMax)
-    ) {
-      throw new Error("Shapes geometry must not be empty");
-    }
+    // also true without any vertices, where the minima and maxima are infinite
     if (xMin >= xMax || yMin >= yMax) {
       return null;
     }
