@@ -113,21 +113,6 @@ function useCompressedRowVirtualizer(
   const [headerHeight, setHeaderHeight] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(containerHeight);
   const compressionRef = useRef(1);
-
-  useLayoutEffect(() => {
-    const header = headerRef.current;
-    if (header === null) {
-      return;
-    }
-    const resizeObserver = new ResizeObserver(() =>
-      setHeaderHeight(header.offsetHeight),
-    );
-    resizeObserver.observe(header);
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
   const [scrollOffset, setScrollOffset] = useState(0);
   // the offset is also kept in a ref, so that restoring it after a resize does
   // not have to re-subscribe on every scroll
@@ -135,7 +120,8 @@ function useCompressedRowVirtualizer(
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (container === null) {
+    const header = headerRef.current;
+    if (container === null || header === null) {
       return;
     }
     const onScroll = () => {
@@ -145,9 +131,27 @@ function useCompressedRowVirtualizer(
       scrollOffsetRef.current = offset;
       setScrollOffset(offset);
     };
+    // a hidden panel loses its scroll offset without raising a scroll event,
+    // which would leave the rendered rows outside of the visible range
+    const resizeObserver = new ResizeObserver(() => {
+      setHeaderHeight(header.offsetHeight);
+      if (container.clientHeight === 0) {
+        return;
+      }
+      setViewportHeight(container.clientHeight);
+      const layoutOffset = Math.round(
+        scrollOffsetRef.current / compressionRef.current,
+      );
+      if (container.scrollTop !== layoutOffset) {
+        container.scrollTop = layoutOffset;
+      }
+    });
     container.addEventListener("scroll", onScroll, { passive: true });
+    resizeObserver.observe(container);
+    resizeObserver.observe(header);
     return () => {
       container.removeEventListener("scroll", onScroll);
+      resizeObserver.disconnect();
     };
   }, []);
 
@@ -170,31 +174,6 @@ function useCompressedRowVirtualizer(
       container.scrollTop = layoutOffset;
     }
   }, [compression]);
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (container === null) {
-      return;
-    }
-    // a hidden panel loses its scroll offset without raising a scroll event,
-    // which would leave the rendered rows outside of the visible range
-    const resizeObserver = new ResizeObserver(() => {
-      if (container.clientHeight === 0) {
-        return;
-      }
-      setViewportHeight(container.clientHeight);
-      const layoutOffset = Math.round(
-        scrollOffsetRef.current / compressionRef.current,
-      );
-      if (container.scrollTop !== layoutOffset) {
-        container.scrollTop = layoutOffset;
-      }
-    });
-    resizeObserver.observe(container);
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
 
   // the rows follow the header in the scroll content, so the offset into them
   // is the scroll offset less the header
