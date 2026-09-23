@@ -594,7 +594,12 @@ export abstract class OpenSeadragonRendererBase<
    * not, by the world footprint it currently has: a matched object that is
    * recreated, e.g. because its data source changed, is deleted and inserted at
    * the same position, with possibly different tiled images, so the objects
-   * behind it keep their indices relative to it and stay reusable.
+   * behind it keep their indices relative to it and stay reusable. Only the
+   * backdrop and tiled images assigned to it count, i.e. none for an object
+   * whose tiled images could not be added, which is thereby retried without
+   * recreating the objects behind it, and none for an object whose tiled
+   * images are still being added, which may make the objects behind it
+   * non-reusable, but never misplaces them.
    *
    * @param newRefs - The new object references, in the intended world order
    * @param options - Optional abort signal
@@ -674,8 +679,8 @@ export abstract class OpenSeadragonRendererBase<
           survivors.add(renderedObject);
         }
         offset +=
-          (renderedObject.usesBackdrop ? 1 : 0) +
-          renderedObject.tileSourceCount;
+          (renderedObject.backdrop !== undefined ? 1 : 0) +
+          (renderedObject.tiledImages?.length ?? 0);
       }
     }
     for (const renderedObject of matchedRenderedObjects) {
