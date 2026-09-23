@@ -35,6 +35,17 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
  * Tiled images are inserted behind the anchor when they are added, rather than
  * moved there afterwards, as OpenSeadragon's navigator cannot keep up with
  * reordering. {@link _cleanRenderedObjects} recreates those that are out of place.
+ *
+ * The layers and objects to render are set by {@link setModel}, which applies
+ * the properties that tiled images take directly - transforms, visibility and
+ * opacity - to the rendered objects right away. Everything else - the set and
+ * order of the layers and objects, data sources and whatever the subclasses
+ * resolve from an object (see {@link resolveObject}) - requires a
+ * synchronization, which {@link needsSynchronization} reports and
+ * {@link synchronize} performs. The properties applied directly are always read
+ * from the current model, never from the reference of a rendered object (see
+ * {@link _updateRenderedObject}), so a synchronization that is in flight while
+ * the model changes does not write stale values.
  */
 export abstract class OpenSeadragonRendererBase<
   TObject extends Image | Labels,
@@ -50,6 +61,8 @@ export abstract class OpenSeadragonRendererBase<
 
   readonly context: OpenSeadragonContext;
   private _anchor: OpenSeadragon.TiledImage | undefined;
+  private _model?: { layers: Layer[]; objects: TObject[] };
+  private _lastSyncState?: object;
   private _renderedObjects: RenderedObject<TObject, TObjectData>[] = [];
   private _anchorTaskPromise: Promise<unknown> = Promise.resolve();
   private _destroyed: boolean = false;
@@ -84,71 +97,130 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Synchronizes the viewer's tiled images with the current model state
+   * Sets the layers and objects to render
    *
-   * Loads all objects assigned to the given layers, removes the tiled images
-   * that are no longer needed, and creates or updates the remaining ones.
-   * Resolves once the tiled images have actually been added to the world, i.e.
-   * once the viewer reflects the given model state.
+   * The properties that tiled images take directly - the layer and object
+   * transforms, visibility and opacity, and whatever else a subclass reads from
+   * the current model when updating a tiled image (see
+   * {@link getTiledImageOpacity}) - are applied to the rendered objects right
+   * away (see {@link _updateRenderedObject}), and need no synchronization.
+   * Every other change - a different set or order of layers or objects, layer
+   * memberships, data sources or the configurations that subclasses resolve
+   * from - requires a resynchronization, which the caller is expected to
+   * trigger whenever {@link needsSynchronization} says so.
+   *
+   * Does not resize the anchor: a transform change moves the tiled images, so
+   * the caller is expected to call {@link updateBounds} afterwards.
+   *
+   * The layers and objects are cloned, so that what the renderer compares
+   * against later - in {@link needsSynchronization}, and in the references of
+   * a synchronization - is what it was given, whatever the caller does with its
+   * instances afterwards.
+   *
+   * @param layers - The layers to render
+   * @param objects - The objects (images or labels) to render
+   */
+  setModel(layers: Layer[], objects: TObject[]): void {
+    this._model = structuredClone({ layers, objects });
+    for (const renderedObject of this._renderedObjects) {
+      if (renderedObject.tiledImages !== undefined) {
+        this._updateRenderedObject(renderedObject);
+      }
+    }
+  }
+
+  /**
+   * Returns whether the rendered objects have to be synchronized with the
+   * current model
+   *
+   * Compares the state that a synchronization depends on (see
+   * {@link getSyncState}) against the one the last synchronization was based
+   * on, which {@link synchronize} records before its first `await` and forgets
+   * again if it fails. Everything else about the model - the properties that
+   * tiled images take directly - is fully applied by {@link setModel}.
+   */
+  needsSynchronization(): boolean {
+    return !deepEqual(this.getSyncState(), this._lastSyncState);
+  }
+
+  /**
+   * Synchronizes the viewer's tiled images with the current model
+   *
+   * Loads all objects assigned to the layers of the model set by
+   * {@link setModel}, removes the tiled images that are no longer needed, and
+   * creates or updates the remaining ones. Resolves once the tiled images have
+   * actually been added to the world, i.e. once the viewer reflects the model
+   * state that was read. The model may be set again while the synchronization
+   * runs; it reads the model once, so it sees one consistent state, while the
+   * properties it applies to the tiled images come from the current model (see
+   * {@link _updateRenderedObject}).
    *
    * Objects whose tiled images cannot be created, e.g. because their data
    * provides no tile sources, are logged and skipped, just like objects whose
-   * data failed to load (see {@link _loadObjects}).
+   * data failed to load (see {@link _loadObjects}). A synchronization that
+   * fails or is aborted leaves the model unsynchronized (see
+   * {@link needsSynchronization}).
    *
-   * @param layers - Layers to render
-   * @param objects - Objects (images or labels) to display
    * @param context - The inputs to synchronize with: an immutable snapshot of
-   * the model state and loaders that the renderer needs. It carries inputs
-   * only; a renderer that derives state from an object does so in
-   * {@link resolveObject}.
+   * the tables and maps that the objects resolve from and the loaders that the
+   * renderer needs. It carries inputs only; a renderer that derives state from
+   * an object does so in {@link resolveObject}.
    * @param options - Optional abort signal
+   * @throws Error if no model has been set (see {@link setModel})
    */
   async synchronize(
-    layers: Layer[],
-    objects: TObject[],
     context: TSyncContext,
     options?: { signal?: AbortSignal },
   ): Promise<void> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const newRefs = await this._loadObjects(layers, objects, context, {
-      signal,
-    });
-    this.retainObjects(newRefs.map((newRef) => newRef.object));
-    let offset = 0;
-    const newRenderedObjects: RenderedObject<TObject, TObjectData>[] = [];
-    const renderedObjectsByNewRef = await this._cleanRenderedObjects(newRefs, {
-      signal,
-    });
-    for (const newRef of newRefs) {
-      let renderedObject = renderedObjectsByNewRef.get(newRef);
-      if (renderedObject === undefined) {
-        try {
-          renderedObject = this._createRenderedObject(offset, newRef, {
-            signal,
-          });
-        } catch (error) {
-          console.error(
-            `Failed to create tiled images for object with ID '${newRef.object.id}'`,
-            error,
-          );
-          continue;
+    const syncState = this.getSyncState();
+    this._lastSyncState = syncState;
+    try {
+      const newRefs = await this._loadObjects(context, { signal });
+      this.retainObjects(newRefs.map((newRef) => newRef.object));
+      let offset = 0;
+      const newRenderedObjects: RenderedObject<TObject, TObjectData>[] = [];
+      const renderedObjectsByNewRef = await this._cleanRenderedObjects(
+        newRefs,
+        { signal },
+      );
+      for (const newRef of newRefs) {
+        let renderedObject = renderedObjectsByNewRef.get(newRef);
+        if (renderedObject === undefined) {
+          try {
+            renderedObject = this._createRenderedObject(offset, newRef, {
+              signal,
+            });
+          } catch (error) {
+            console.error(
+              `Failed to create tiled images for object with ID '${newRef.object.id}'`,
+              error,
+            );
+            continue;
+          }
+        } else {
+          this._updateRenderedObject(renderedObject, newRef);
         }
-      } else {
-        this._updateRenderedObject(renderedObject, newRef);
+        newRenderedObjects.push(renderedObject);
+        offset +=
+          (renderedObject.usesBackdrop ? 1 : 0) +
+          renderedObject.tileSourceCount;
       }
-      newRenderedObjects.push(renderedObject);
-      const useBackdrop = this.usesAdditiveBlending(renderedObject.ref.data);
-      offset += (useBackdrop ? 1 : 0) + renderedObject.tileSourceCount;
+      this._renderedObjects = newRenderedObjects;
+      await Promise.allSettled(
+        newRenderedObjects.map(
+          (renderedObject) => renderedObject.tiledImagesPromise,
+        ),
+      );
+      signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
+      await this.updateBounds({ signal });
+    } catch (error) {
+      if (this._lastSyncState === syncState) {
+        this._lastSyncState = undefined;
+      }
+      throw error;
     }
-    this._renderedObjects = newRenderedObjects;
-    await Promise.allSettled(
-      newRenderedObjects.map(
-        (renderedObject) => renderedObject.tiledImagesPromise,
-      ),
-    );
-    signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
-    await this.updateBounds({ signal });
   }
 
   /**
@@ -227,6 +299,78 @@ export abstract class OpenSeadragonRendererBase<
         await this.context.removeTiledImage(anchor);
       }
     });
+  }
+
+  /**
+   * Returns the state of the current model that a synchronization depends on
+   *
+   * Unlike the WebGL renderers, whose draw order is read from the model on
+   * every draw, the order of the layers and objects is part of the state: it
+   * is the order of the tiled images in the world, which only a
+   * synchronization can change (see {@link _cleanRenderedObjects}). See
+   * {@link getLayerSyncState} and {@link getObjectSyncState} for what else is.
+   *
+   * @returns The state, or `undefined` if no model has been set
+   */
+  protected getSyncState(): object | undefined {
+    if (this._model === undefined) {
+      return undefined;
+    }
+    return {
+      layers: this._model.layers.map((layer) => this.getLayerSyncState(layer)),
+      objects: this._model.objects.map((object) =>
+        this.getObjectSyncState(object),
+      ),
+    };
+  }
+
+  /**
+   * Returns the state of a layer that a synchronization depends on
+   *
+   * The counterpart of {@link getObjectSyncState} for layers. The point size
+   * factor is blanked out as well, as nothing rendered here depends on it, and
+   * so is the name.
+   *
+   * @param layer - The layer to return the state of
+   * @returns The layer without the properties that are applied by
+   * {@link setModel}, and without the cosmetic ones
+   */
+  protected getLayerSyncState(layer: Layer): object {
+    return {
+      ...layer,
+      name: undefined,
+      transform: undefined,
+      visibility: undefined,
+      opacity: undefined,
+      pointSizeFactor: undefined,
+    };
+  }
+
+  /**
+   * Returns the state of an object that a synchronization depends on
+   *
+   * Everything but the properties that are applied by {@link setModel}, and
+   * but the cosmetic ones, which nothing rendered depends on. Those are blanked
+   * out rather than dropped, so that a property added to the model later is
+   * part of the state, and thereby requires a resynchronization, unless it is
+   * blanked out here as well. Subclasses override this to blank out the
+   * properties that they apply from the current model themselves.
+   *
+   * The result is only ever deep-compared against that of another object, hence
+   * the opaque return type.
+   *
+   * @param object - The object (image or labels) to return the state of
+   * @returns The object without the properties that are applied by
+   * {@link setModel}, and without the cosmetic ones
+   */
+  protected getObjectSyncState(object: TObject): object {
+    return {
+      ...object,
+      name: undefined,
+      transform: undefined,
+      visibility: undefined,
+      opacity: undefined,
+    };
   }
 
   /**
@@ -360,32 +504,35 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Concurrently loads and resolves all objects assigned to the specified layers
+   * Concurrently loads and resolves all objects assigned to the layers of the current model
    *
    * Each object's data is loaded with the context's `loadObject`, and the object
    * is then resolved (see {@link resolveObject}). The returned references are
    * ordered by layer and then by object, which determines the order of the
    * corresponding tiled images in the world. Objects whose data failed to load
    * are logged and skipped; objects that could not be resolved are logged, but
-   * kept.
+   * kept. The model is read once, before the first `await`, so one
+   * synchronization sees one consistent model state, however often the model
+   * is set while it runs.
    *
-   * @param layers - The layers for which to load objects
-   * @param objects - The objects to load (images or labels), filtered by layer membership
    * @param context - The inputs of the current synchronization
    * @param options - Optional abort signal
    * @returns A promise that resolves to one object reference per successfully loaded object
+   * @throws Error if no model has been set (see {@link setModel})
    */
   private async _loadObjects(
-    layers: Layer[],
-    objects: TObject[],
     context: TSyncContext,
     options?: { signal?: AbortSignal },
   ): Promise<ObjectRef<TObject, TObjectData>[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
+    const model = this._model;
+    if (model === undefined) {
+      throw new Error("Model not set");
+    }
     const newRefPromises: Promise<ObjectRef<TObject, TObjectData>>[] = [];
-    for (const currentLayer of layers) {
-      for (const currentObject of objects.filter(
+    for (const currentLayer of model.layers) {
+      for (const currentObject of model.objects.filter(
         (object) => object.layer === currentLayer.id,
       )) {
         const newRefPromise = context
@@ -427,13 +574,20 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Retains the rendered objects that can be reused for the new object references, and deletes the rest
    *
-   * A rendered object is reusable if it references the same object on the same
-   * layer with an unchanged data source, and if its backdrop, if any, and all of
-   * its tiled images already sit at the consecutive world indices expected for
-   * its position among the reusable references, counted from the anchor. A
-   * partially misplaced object is not reusable. All other rendered objects are
-   * deleted, and are expected to be recreated by the caller via
-   * {@link _createRenderedObject}, which is also how the world is reordered.
+   * A rendered object is matched by the layer and object it references. It is
+   * reusable if the data source it was loaded for is that of the reference, and
+   * if its backdrop, if any, and all of its tiled images already sit at the
+   * consecutive world indices expected for its position among the references,
+   * counted from the anchor. A partially misplaced object is not reusable. All
+   * other rendered objects are deleted, and are expected to be recreated by the
+   * caller via {@link _createRenderedObject}, which is also how the world is
+   * reordered.
+   *
+   * The expected indices account for every matched rendered object, reusable or
+   * not, by the world footprint it currently has: a matched object that is
+   * recreated, e.g. because its data source changed, is deleted and inserted at
+   * the same position, with possibly different tiled images, so the objects
+   * behind it keep their indices relative to it and stay reusable.
    *
    * @param newRefs - The new object references, in the intended world order
    * @param options - Optional abort signal
@@ -466,17 +620,17 @@ export abstract class OpenSeadragonRendererBase<
       const renderedObject = this._renderedObjects.find(
         (renderedObject) =>
           renderedObject.ref.layer.id === newRef.layer.id &&
-          renderedObject.ref.object.id === newRef.object.id &&
-          deepEqual(
-            renderedObject.state.object.dataSource,
-            newRef.object.dataSource,
-          ),
+          renderedObject.ref.object.id === newRef.object.id,
       );
       if (renderedObject !== undefined) {
-        const useBackdrop = this.usesAdditiveBlending(newRef.data);
         if (
+          // data source configuration unchanged (checked instead of data)
+          deepEqual(
+            renderedObject.ref.object.dataSource,
+            newRef.object.dataSource,
+          ) &&
           // not using a backdrop or backdrop exists and is at the expected index
-          (!useBackdrop ||
+          (!renderedObject.usesBackdrop ||
             (renderedObject.backdrop !== undefined &&
               this.context.getTiledImageIndex(renderedObject.backdrop) ===
                 anchorIndex + offset)) &&
@@ -485,13 +639,15 @@ export abstract class OpenSeadragonRendererBase<
           renderedObject.tiledImages.every(
             (tiledImage, c) =>
               this.context.getTiledImageIndex(tiledImage) ===
-              anchorIndex + offset + (useBackdrop ? 1 : 0) + c,
+              anchorIndex + offset + (renderedObject.usesBackdrop ? 1 : 0) + c,
           )
         ) {
           renderedObjectsByNewRef.set(newRef, renderedObject);
           survivors.add(renderedObject);
         }
-        offset += (useBackdrop ? 1 : 0) + renderedObject.tileSourceCount;
+        offset +=
+          (renderedObject.usesBackdrop ? 1 : 0) +
+          renderedObject.tileSourceCount;
       }
     }
     for (const renderedObject of this._renderedObjects) {
@@ -573,10 +729,8 @@ export abstract class OpenSeadragonRendererBase<
     tiledImagesPromise.catch(() => {}); // prevent unhandled rejections in console
     const newRenderedObject: RenderedObject<TObject, TObjectData> = {
       ref: newRef,
-      state: {
-        object: { dataSource: structuredClone(newRef.object.dataSource) },
-      },
       tileSourceCount: tileSources.length,
+      usesBackdrop: useBackdrop,
       tiledImagesPromise,
     };
     let backdropPromise: Promise<OpenSeadragon.TiledImage> | undefined;
@@ -681,18 +835,33 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Applies the transform, visibility, and opacity of an object reference to the rendered object's backdrop and TiledImages
+   * Stores a reference on the rendered object and applies the current model to its backdrop and TiledImages
    *
-   * The opacity is computed per TiledImage via {@link getTiledImageOpacity}, so that
-   * subclasses can vary it by channel; all other properties are shared by all
-   * TiledImages of an object, and by its backdrop. The backdrop is opaque where
-   * the object is, so it gets {@link getTiledImageOpacity} without a channel index. The
-   * applied data source is recorded in the rendered object's state, where
-   * {@link _cleanRenderedObjects} picks it up to detect TiledImages that have to
-   * be recreated.
+   * The reference holds the layer and object as they were when it was loaded,
+   * and is what the next synchronization matches against (see
+   * {@link _cleanRenderedObjects}). The transform, visibility and opacity
+   * applied to the TiledImages are not read from it, but from the current
+   * model, as they are the properties {@link setModel} applies without a
+   * synchronization: read from the reference, a call from {@link setModel}
+   * would re-apply the values of the last synchronization, and a call from a
+   * synchronization that was in flight while the model changed would overwrite
+   * what {@link setModel} applied.
+   *
+   * Nothing is applied if the layer or object has left the model, the object
+   * has moved to another layer, or its data source has changed: each of these
+   * requires a resynchronization, which drops or recreates the rendered object.
+   * The last one also protects the reference's data, which its provider may
+   * release once the data source it was loaded for is gone from the model.
+   *
+   * The opacity is computed per TiledImage via {@link getTiledImageOpacity}, so
+   * that subclasses can vary it by channel; all other properties are shared by
+   * all TiledImages of an object, and by its backdrop. The backdrop is opaque
+   * where the object is, so it gets {@link getTiledImageOpacity} without a
+   * channel index.
    *
    * @param renderedObject - The rendered object to update
-   * @param newRef - The new object reference to update the rendered object with. If not provided, the existing reference will be used.
+   * @param newRef - The reference to store, addressing the same layer, object
+   * and data source as the current one; defaults to the current one
    * @throws Error if the TiledImages have not been created yet
    */
   private _updateRenderedObject(
@@ -703,18 +872,28 @@ export abstract class OpenSeadragonRendererBase<
       throw new Error("Rendered object not loaded");
     }
     renderedObject.ref = newRef;
+    const layer = this._model?.layers.find(
+      (layer) => layer.id === newRef.layer.id,
+    );
+    const object = this._model?.objects.find(
+      (object) => object.id === newRef.object.id,
+    );
+    if (
+      layer === undefined ||
+      object === undefined ||
+      object.layer !== layer.id ||
+      !deepEqual(object.dataSource, newRef.object.dataSource)
+    ) {
+      return;
+    }
+    const currentRef = { layer, object, data: newRef.data };
     if (renderedObject.backdrop !== undefined) {
-      this._updateTiledImage(renderedObject.backdrop, newRef, null);
+      this._updateTiledImage(renderedObject.backdrop, currentRef, null);
     }
     for (let index = 0; index < renderedObject.tiledImages.length; index++) {
       const tiledImage = renderedObject.tiledImages[index]!;
-      this._updateTiledImage(tiledImage, newRef, index);
+      this._updateTiledImage(tiledImage, currentRef, index);
     }
-    renderedObject.state = {
-      object: {
-        dataSource: structuredClone(newRef.object.dataSource),
-      },
-    };
   }
 
   /**
@@ -828,6 +1007,11 @@ export abstract class OpenSeadragonRendererBase<
 
 /**
  * A reference to either an image or labels object on a specific layer
+ *
+ * The reference of a rendered object carries the layer and object as they were
+ * when the reference was loaded; the properties applied to its tiled images
+ * come from the current model instead (see
+ * {@link OpenSeadragonRendererBase._updateRenderedObject}).
  */
 export type ObjectRef<
   TObject extends Image | Labels,
@@ -845,18 +1029,21 @@ export type ObjectRef<
  * image per channel, in the order of its tile sources, preceded by that of its
  * `backdrop`: the opaque black tiled image that the channels of an additively
  * blended object add up on (see
- * {@link OpenSeadragonRendererBase.usesAdditiveBlending}). The count is known as
- * soon as the rendered object is created, whereas `backdrop` and `tiledImages`
- * are assigned only once all of them have been added to the world, which is also
- * when `tiledImagesPromise` resolves, with `tiledImages` alone.
+ * {@link OpenSeadragonRendererBase.usesAdditiveBlending}). The count, and
+ * whether there is a backdrop (`usesBackdrop`), are known as soon as the
+ * rendered object is created, whereas `backdrop` and `tiledImages` are assigned
+ * only once all of them have been added to the world, which is also when
+ * `tiledImagesPromise` resolves, with `tiledImages` alone. Both are recorded
+ * rather than derived from the data of `ref` again, as that data may have been
+ * released by the time the world footprint is needed.
  */
 export type RenderedObject<
   TObject extends Image | Labels,
   TObjectData extends ImageData | LabelsData,
 > = {
   ref: ObjectRef<TObject, TObjectData>;
-  state: { object: Pick<TObject, "dataSource"> };
   tileSourceCount: number;
+  usesBackdrop: boolean;
   tiledImagesPromise: Promise<OpenSeadragon.TiledImage[]>;
   tiledImages?: OpenSeadragon.TiledImage[];
   backdrop?: OpenSeadragon.TiledImage;

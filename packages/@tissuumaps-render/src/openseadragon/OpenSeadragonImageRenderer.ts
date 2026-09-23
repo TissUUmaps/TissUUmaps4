@@ -67,6 +67,31 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   >();
 
   /**
+   * Returns the state of an image that a synchronization depends on
+   *
+   * Blanks out the name, visibility and opacity of every channel on top of
+   * what the base class blanks out: they are applied from the current model
+   * when updating the channel's tiled image (see {@link getTiledImageOpacity}),
+   * whereas the channel colors and contrast limits build the data transfers
+   * (see {@link resolveObject}) and stay part of the state.
+   *
+   * @param image - The image to return the state of
+   * @returns The image without the properties that are applied by
+   * {@link setModel}, and without the cosmetic ones
+   */
+  protected override getObjectSyncState(image: Image): object {
+    return {
+      ...super.getObjectSyncState(image),
+      channels: image.channels?.map((channel) => ({
+        ...channel,
+        name: undefined,
+        visibility: undefined,
+        opacity: undefined,
+      })),
+    };
+  }
+
+  /**
    * Drops the data transfers of all images other than the given ones
    *
    * @param images - The images about to be displayed
