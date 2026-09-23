@@ -57,7 +57,9 @@ void main() {
     if(devicePointSize <= 0.0) {
         DISCARD;
     }
-    gl_PointSize = devicePointSize;
+    // Anti-aliasing: points are at least one device pixel wide, smaller points fade by (areal) coverage instead
+    float coverage = min(devicePointSize, 1.0);
+    gl_PointSize = max(devicePointSize, 1.0);
 
     // Compute point position in normalized device coordinates (NDCs)
     vec2 worldPosition = u_dataToWorldMatrix * vec3(a_x, a_y, 1.0);
@@ -65,9 +67,9 @@ void main() {
     vec2 ndcPosition = (2.0 * viewportPosition - 1.0) * vec2(1.0, -1.0); // in [-1, 1], y flipped
     gl_Position = vec4(ndcPosition, 0.0, 1.0);
 
-    // Unpack color, apply the layer and object opacity, and discard fully transparent points
+    // Unpack color, apply the layer and object opacity and the coverage, and discard fully transparent points
     vec4 color = unpackColor(a_color);
-    color.a *= u_opacityFactor;
+    color.a *= u_opacityFactor * coverage * coverage;
     if(color.a == 0.0) {
         DISCARD;
     }
