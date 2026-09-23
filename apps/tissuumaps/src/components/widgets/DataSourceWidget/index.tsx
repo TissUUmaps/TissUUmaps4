@@ -58,25 +58,23 @@ export function DataSourceWidget<TDataSource extends DataSource>({
     >
       <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
         {isEditing ? (
-          <>
-            <Field className="flex flex-row items-center gap-x-1">
-              <FieldLabel>Source</FieldLabel>
-              <SimpleSelect
-                items={providerEntries}
-                itemLabel={([, provider]) => provider.name}
-                itemValue={([type]) => type}
-                value={currentDataSource.type}
-                onValueChange={(value) => {
-                  if (value !== null) {
-                    setDataSourceDraft({
-                      ...dataSourceDraft,
-                      type: value,
-                    });
-                  }
-                }}
-              />
-            </Field>
-          </>
+          <Field className="flex flex-row items-center gap-x-1">
+            <FieldLabel>Source</FieldLabel>
+            <SimpleSelect
+              items={providerEntries}
+              itemLabel={([, provider]) => provider.name}
+              itemValue={([type]) => type}
+              value={currentDataSource.type}
+              onValueChange={(value) => {
+                if (value !== null) {
+                  setDataSourceDraft({
+                    ...dataSourceDraft,
+                    type: value,
+                  });
+                }
+              }}
+            />
+          </Field>
         ) : (
           <>Source: {dataProvider?.name ?? `type=${currentDataSource.type}`}</>
         )}
