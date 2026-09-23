@@ -9,6 +9,8 @@ export class WebGLContext {
   private static readonly _maxCanvasSize = 4096;
 
   readonly gl: WebGL2RenderingContext;
+  /** The largest width and height of a texture that the GPU supports, in texels */
+  readonly maxTextureSize: number;
 
   /**
    * Creates a new WebGLContext for the given canvas element
@@ -26,6 +28,9 @@ export class WebGLContext {
     }
     gl.viewport(0, 0, canvas.width, canvas.height);
     this.gl = gl;
+    this.maxTextureSize = gl.getParameter(
+      WebGL2RenderingContext.MAX_TEXTURE_SIZE,
+    ) as number;
   }
 
   /**

@@ -129,6 +129,41 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     ]);
   });
 
+  it("drops the edges of a hole that reaches beyond the bands of its shell", async () => {
+    // with 8 bands: shape 0 covers bands 0-2 (with slack), the shell of shape 1
+    // bands 5-7, but the (invalid) hole of shape 1 reaches down to band 0
+    const geometry = createTestGeometry([
+      createTestSquare(0, 0, 1, 0.25),
+      [
+        [
+          [
+            [0, 0.75],
+            [1, 0.75],
+            [1, 1],
+            [0, 1],
+          ],
+          [
+            [0.25, 0.1],
+            [0.25, 0.9],
+            [0.75, 0.9],
+            [0.75, 0.1],
+          ],
+        ],
+      ],
+    ]);
+
+    const { scanlines } = await WebGLShapesRasterizer.createScanlines(
+      8,
+      geometry,
+      undefined,
+      unitBounds,
+    );
+
+    expect([...scanlines[1]!.shapes.keys()]).toEqual([0]);
+    expect(scanlines[4]!.shapes.size).toBe(0);
+    expect([...scanlines[6]!.shapes.keys()]).toEqual([1]);
+  });
+
   it("distributes a shape and its edges across multiple scanlines", async () => {
     const geometry = createTestGeometry([createTestSquare(0, 0, 1, 1)]);
 

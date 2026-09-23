@@ -441,10 +441,27 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         objectBounds,
         { signal },
       );
+      this._checkDataTextureHeight(
+        "scanline data",
+        scanlineBuffer.length /
+          WebGLShapesRenderer._numValuesPerScanlineDataTextureLine,
+      );
     } else if (renderedShapes !== undefined) {
       objectBounds = renderedShapes.objectBounds;
     } else {
       throw new Error("Geometry must be loaded for new shapes object");
+    }
+    for (const packedShapeColors of [
+      packedShapeFillColors,
+      packedShapeStrokeColors,
+    ]) {
+      if (packedShapeColors !== undefined) {
+        this._checkDataTextureHeight(
+          "shape colors",
+          packedShapeColors.length /
+            WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+        );
+      }
     }
     if (
       packedShapeFillColors !== undefined &&
@@ -615,6 +632,25 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       },
     );
     return new Float32Array(scanlineBuffer);
+  }
+
+  /**
+   * Throws unless a data texture with the given number of lines fits the GPU
+   *
+   * Checked while an object is prepared, where a failure drops only that
+   * object, with a message that says why, rather than when its textures are
+   * created, where WebGL would fail with an opaque error, or render garbage.
+   *
+   * @param name - What the texture holds, for the error message
+   * @param height - The number of texture lines the data needs
+   * @throws Error if the height exceeds the maximum texture size
+   */
+  private _checkDataTextureHeight(name: string, height: number): void {
+    if (height > this.context.maxTextureSize) {
+      throw new Error(
+        `The ${name} texture needs ${height} lines, but this GPU supports at most ${this.context.maxTextureSize}`,
+      );
+    }
   }
 
   /**

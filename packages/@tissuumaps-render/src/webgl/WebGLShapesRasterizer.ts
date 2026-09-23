@@ -82,6 +82,8 @@ export class WebGLShapesRasterizer {
    * Shapes are identified by their index among the *included* shapes, i.e.
    * `shapesMask` compacts the indices. Holes contribute their edges, but not
    * their bounds, as a shape is bounded by the shells of its polygons only.
+   * Accordingly, the edges of a hole that reaches beyond the bands of the
+   * shape's shells, which is invalid geometry, are dropped in those bands.
    *
    * Yields between shapes, i.e. long-running rasterizations neither block the
    * event loop nor ignore an abort for long.
@@ -250,7 +252,10 @@ export class WebGLShapesRasterizer {
                 scanlineIndex++
               ) {
                 const scanline = scanlines[scanlineIndex]!;
-                const scanlineShape = scanline.shapes.get(shapeIndex)!;
+                const scanlineShape = scanline.shapes.get(shapeIndex);
+                if (scanlineShape === undefined) {
+                  continue; // hole beyond the bands of the shape's shells
+                }
                 scanlineShape.edges.push({ v0x, v0y, v1x, v1y });
                 totalNumScanlineShapeEdges++;
               }
