@@ -348,10 +348,17 @@ async function readIdsAndNames(
     idDataPromise,
     nameDataPromise,
   ]);
-  const ids =
+  let ids =
     idData !== undefined
       ? Array.from(idData, (id) => NumberUtils.parseSafeInt(id))
       : undefined;
+  // e.g. the partition-local index that Dask writes; items are looked up by ID
+  if (ids !== undefined && new Set(ids).size !== ids.length) {
+    console.warn(
+      `ID column "${idColumn}" has duplicate values, keying rows by row number instead`,
+    );
+    ids = undefined;
+  }
   const names =
     nameData !== undefined ? Array.from(nameData, String) : undefined;
   return { ids, names };

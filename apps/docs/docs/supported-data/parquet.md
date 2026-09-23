@@ -48,6 +48,8 @@ Parquet has no index, so a file written by [pandas](https://pandas.pydata.org/do
 
 Only a single-level integer index is used: IDs are numbers, so a string index leaves the default at row numbers, as do a multi-level index and a `RangeIndex`, which is not written as a column at all.
 
+IDs must be unique. An ID column with duplicate values, such as the partition-local index that [Dask](https://www.dask.org/) writes, is ignored with a warning, and rows are keyed by row numbers.
+
 ## Example
 
 A project showing the circles and the polygons of a [SpatialData](https://spatialdata.scverse.org/) store. The circles are a GeoParquet file of points with a radius, read as a table and drawn as a point cloud sized by that radius; the polygons are read as shapes:
