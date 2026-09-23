@@ -83,6 +83,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     objectBounds: WebGLUniformLocation;
     opacityFactor: WebGLUniformLocation;
     halfStrokeWidth: WebGLUniformLocation;
+    devicePixelSize: WebGLUniformLocation;
   };
 
   /**
@@ -116,6 +117,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         this._program,
         "u_halfStrokeWidth",
       ),
+      devicePixelSize: context.getUniformLocation(
+        this._program,
+        "u_devicePixelSize",
+      ),
     };
     // texture units never change, so the sampler uniforms are set only once
     context.gl.useProgram(this._program);
@@ -140,11 +145,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Renders each shapes object as a quad whose fragment shader performs
    * scanline-based polygon rasterization using the per-object scanline data
    * texture, with the viewport → world matrix as a global uniform and its
-   * world → data matrix, bounds, number of scanlines, half stroke width in
-   * data units and opacity factor as per-pass uniforms, computed from the
-   * current model (see {@link getRenderPasses}). The quad covers the object's
-   * bounds, dilated by half the stroke width, within the viewport, so that
-   * fragments are only shaded where the object can be; objects outside the
+   * world → data matrix, bounds, number of scanlines, half stroke width and
+   * device pixel size in data units (for anti-aliasing) and opacity factor as
+   * per-pass uniforms, computed from the current model (see
+   * {@link getRenderPasses}). The quad covers the object's bounds, dilated by
+   * how far the anti-aliased strokes reach beyond them, within the viewport, so
+   * that fragments are only shaded where the object can be; objects outside the
    * viewport, objects whose layer or object is invisible, and objects without
    * scanlines are skipped.
    */
@@ -161,6 +167,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         WebGLUtils.createViewportToWorldMatrix(this.viewport),
       ),
     );
+    const worldDevicePixelSize =
+      0.5 *
+      (this.viewport.width / this.context.gl.canvas.width +
+        this.viewport.height / this.context.gl.canvas.height);
     this.context.enableAlphaBlending();
     for (const {
       layer,
@@ -177,6 +187,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       const quad = this._computeQuad(
         renderedShapes.objectBounds,
         WebGLUtils.createDataToWorldMatrix(shapes.transform, layer.transform),
+        worldDevicePixelSize,
       );
       if (quad === null) {
         continue;
@@ -214,6 +225,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         this._uniformLocations.halfStrokeWidth,
         (0.5 * this.renderOptions.strokeWidth) /
           (shapes.transform.scale * layer.transform.scale),
+      );
+      this.context.gl.uniform1f(
+        this._uniformLocations.devicePixelSize,
+        worldDevicePixelSize / (shapes.transform.scale * layer.transform.scale),
       );
       this.context.gl.activeTexture(
         WebGL2RenderingContext.TEXTURE0 +
@@ -257,7 +272,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Gets the bounding box of all drawn shapes, in world coordinates
    *
    * Dilates the bounds of the shapes by half the stroke width, as the strokes
-   * reach beyond them (see {@link _computeQuad}).
+   * reach beyond them, but not by the anti-aliasing margin, which depends on
+   * the current zoom level (see {@link _computeQuad}).
    */
   override getRenderedBounds(): Rect | null {
     const bounds = super.getRenderedBounds();
@@ -733,28 +749,36 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Computes the quad to draw an object with, in viewport coordinates
    *
-   * The object's bounds are transformed to world coordinates, dilated by half
-   * the stroke width as strokes reach beyond the shapes, and intersected with
-   * the viewport, then expressed in viewport coordinates, `[0, 1]` spanning the
-   * viewport. Fragments outside the object's bounds are discarded by the
-   * fragment shader anyway, so drawing only this quad changes nothing but the
-   * number of fragments shaded.
+   * The object's bounds are transformed to world coordinates, dilated by how
+   * far the anti-aliased strokes reach beyond the shapes (half the stroke
+   * width, which is at least half a pixel, plus half a pixel, see fragment
+   * shader), and intersected with the viewport, then expressed in viewport
+   * coordinates, `[0, 1]` spanning the viewport. Fragments outside the
+   * object's bounds are discarded by the fragment shader anyway, so drawing
+   * only this quad changes nothing but the number of fragments shaded.
    *
    * @param objectBounds - The bounds of the object's shapes, in data coordinates
    * @param dataToWorldMatrix - The data → world matrix of the object
+   * @param worldDevicePixelSize - The size of a device pixel, in world coordinates
    * @returns The quad, or `null` if the object lies outside the viewport
    */
   private _computeQuad(
     objectBounds: Rect,
     dataToWorldMatrix: mat3,
+    worldDevicePixelSize: number,
   ): Rect | null {
     const worldBounds = TransformUtils.transformBoundingBox(
       objectBounds,
       dataToWorldMatrix,
     );
-    const halfStrokeWidth = 0.5 * this.renderOptions.strokeWidth;
+    const margin =
+      Math.max(
+        0.5 * this.renderOptions.strokeWidth,
+        0.5 * worldDevicePixelSize,
+      ) +
+      0.5 * worldDevicePixelSize;
     const visibleBounds = GeometryUtils.intersection(
-      GeometryUtils.dilate(worldBounds, halfStrokeWidth),
+      GeometryUtils.dilate(worldBounds, margin),
       this.viewport,
     );
     if (visibleBounds === null) {

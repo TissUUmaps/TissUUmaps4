@@ -13,6 +13,7 @@ uniform uint u_numScanlines;
 uniform vec4 u_objectBounds; // (x, y, width, height), in data dimensions
 uniform float u_opacityFactor; // layer and object opacity, 0 if the layer or object is invisible
 uniform float u_halfStrokeWidth; // in data dimensions
+uniform float u_devicePixelSize; // size of a device pixel, in data dimensions
 
 /*
  * Scanline data (RGBA32UI texture)
@@ -32,6 +33,9 @@ uniform float u_halfStrokeWidth; // in data dimensions
  * - Scanline/shape bounding boxes and the scanline occupancy masks don't account for stroke widths
  *   (this is why we cannot have shape-specific stroke widths, since strokes grow both inward and outward);
  *   shapes and edges are only padded by a quarter scanline, occupancy bins by one bin, on either side (see WebGLShapesRasterizer)
+ * - The same applies to the anti-aliased edges of fills and strokes, which reach half a pixel beyond them
+ * - Anti-aliasing is per shape, so edges shared by adjacent shapes are only partially covered by either,
+ *   letting faint seams of the background show through between their fills (unless covered by opaque strokes)
  */
 uniform usampler2D u_scanlineData;
 
@@ -118,7 +122,11 @@ vec4 unpackColor(uint color) {
 }
 
 void main() {
-    if(v_pos.x < u_objectBounds[0] - u_halfStrokeWidth || v_pos.x > u_objectBounds[0] + u_objectBounds[2] + u_halfStrokeWidth || v_pos.y < u_objectBounds[1] - u_halfStrokeWidth || v_pos.y > u_objectBounds[1] + u_objectBounds[3] + u_halfStrokeWidth) {
+    // anti-aliasing: strokes are at least one pixel wide, thinner strokes fade by coverage instead
+    float hsw = max(u_halfStrokeWidth, 0.5 * u_devicePixelSize);
+    float strokeFade = min(u_halfStrokeWidth / (0.5 * u_devicePixelSize), 1.0);
+    float margin = hsw + 0.5 * u_devicePixelSize; // how far anti-aliased strokes and fills reach beyond the shapes
+    if(v_pos.x < u_objectBounds[0] - margin || v_pos.x > u_objectBounds[0] + u_objectBounds[2] + margin || v_pos.y < u_objectBounds[1] - margin || v_pos.y > u_objectBounds[1] + u_objectBounds[3] + margin) {
         discard; // out of object bounds
     }
     // get scanline info (clamp before converting: v_scanline is negative within the stroke margin)
@@ -126,13 +134,13 @@ void main() {
     uvec4 scanlineInfo = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineInfoOffset);
     uint scanlineOffset = scanlineInfo[0];
     uint numShapes = scanlineInfo[1];
-    if(v_pos.x < uintBitsToFloat(scanlineInfo[2]) - u_halfStrokeWidth || v_pos.x > uintBitsToFloat(scanlineInfo[3]) + u_halfStrokeWidth) {
+    if(v_pos.x < uintBitsToFloat(scanlineInfo[2]) - margin || v_pos.x > uintBitsToFloat(scanlineInfo[3]) + margin) {
         discard; // x coordinate outside scanline bounds (infinite if there are no shapes on this scanline)
     }
     // check occupancy mask
     uvec4 occupancyMask = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineOffset);
     bool empty = !occupancy(v_pos.x, u_objectBounds[0], u_objectBounds[2], occupancyMask);
-    for(float dx = u_objectBounds[2] / 128.0; empty && dx <= u_halfStrokeWidth; dx += u_objectBounds[2] / 128.0) {
+    for(float dx = u_objectBounds[2] / 128.0; empty && dx <= margin; dx += u_objectBounds[2] / 128.0) {
         if(occupancy(v_pos.x - dx, u_objectBounds[0], u_objectBounds[2], occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], u_objectBounds[2], occupancyMask)) {
             empty = false;
         }
@@ -147,20 +155,31 @@ void main() {
         uvec4 shapeInfo = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset);
         uint shapeIndex = shapeInfo[0];
         uint numEdges = shapeInfo[1];
-        if(v_pos.x >= uintBitsToFloat(shapeInfo[2]) - u_halfStrokeWidth && v_pos.x <= uintBitsToFloat(shapeInfo[3]) + u_halfStrokeWidth) {
+        if(v_pos.x >= uintBitsToFloat(shapeInfo[2]) - margin && v_pos.x <= uintBitsToFloat(shapeInfo[3]) + margin) {
             float minDist;
             int wn = windingNumber(v_pos, u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset + 1u, numEdges, minDist);
-            if(minDist < u_halfStrokeWidth) { // point is inside stroke area
-                uvec4 strokeColorTexel = utexel(u_shapeStrokeColors, SHAPE_COLORS_TEXTURE_WIDTH, shapeIndex);
-                vec4 strokeColor = unpackColor(strokeColorTexel[0]);
-                strokeColor.rgb = strokeColor.rgb * strokeColor.a; // premultiply
-                fragColor = strokeColor + (1.0 - strokeColor.a) * fragColor;
-            } else if((wn & 1) != 0) { // point is inside fill area (even-odd rule: holes are cut out whatever the orientation of their rings)
+            // pixel coverage of the stroke and fill areas, approximated from the distance to the closest edge
+            // (even-odd rule: holes are cut out whatever the orientation of their rings)
+            float signedDist = (wn & 1) != 0 ? minDist : -minDist; // positive inside the fill area
+            float fillCoverage = clamp(signedDist / u_devicePixelSize + 0.5, 0.0, 1.0);
+            float strokeCoverage = strokeFade * clamp((hsw - minDist) / u_devicePixelSize + 0.5, 0.0, 1.0);
+            // only fetch the colors of covered areas (most fragments are covered by the fill only)
+            vec4 fillColor = vec4(0.0);
+            if(fillCoverage > 0.0) {
                 uvec4 fillColorTexel = utexel(u_shapeFillColors, SHAPE_COLORS_TEXTURE_WIDTH, shapeIndex);
-                vec4 fillColor = unpackColor(fillColorTexel[0]);
+                fillColor = unpackColor(fillColorTexel[0]);
                 fillColor.rgb = fillColor.rgb * fillColor.a; // premultiply
-                fragColor = fillColor + (1.0 - fillColor.a) * fragColor;
+                fillColor *= fillCoverage;
             }
+            vec4 strokeColor = vec4(0.0);
+            if(strokeCoverage > 0.0) {
+                uvec4 strokeColorTexel = utexel(u_shapeStrokeColors, SHAPE_COLORS_TEXTURE_WIDTH, shapeIndex);
+                strokeColor = unpackColor(strokeColorTexel[0]);
+                strokeColor.rgb = strokeColor.rgb * strokeColor.a; // premultiply
+                strokeColor *= strokeCoverage;
+            }
+            vec4 shapeColor = strokeColor + (1.0 - strokeColor.a) * fillColor;
+            fragColor = shapeColor + (1.0 - shapeColor.a) * fragColor;
         }
         shapeOffset += 1u + numEdges;
     }
