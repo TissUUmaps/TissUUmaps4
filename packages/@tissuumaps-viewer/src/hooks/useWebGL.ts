@@ -263,16 +263,18 @@ export function useWebGL(adapter: ViewerAdapter) {
 
   useEffect(() => {
     if (glReady && glRef.current !== null) {
-      glRef.current.pointsRenderer.setModel(layers, points);
-      const newPointsBounds = glRef.current.pointsRenderer.getRenderedBounds();
-      setGLPointsBounds((currentPointsBounds) =>
-        newPointsBounds !== null &&
-        currentPointsBounds !== null &&
-        GeometryUtils.rectEquals(currentPointsBounds, newPointsBounds)
-          ? currentPointsBounds
-          : newPointsBounds,
-      );
-      dispatchRedraw();
+      if (glRef.current.pointsRenderer.setModel(layers, points)) {
+        const newPointsBounds =
+          glRef.current.pointsRenderer.getRenderedBounds();
+        setGLPointsBounds((currentPointsBounds) =>
+          newPointsBounds !== null &&
+          currentPointsBounds !== null &&
+          GeometryUtils.rectEquals(currentPointsBounds, newPointsBounds)
+            ? currentPointsBounds
+            : newPointsBounds,
+        );
+        dispatchRedraw();
+      }
       if (glRef.current.pointsRenderer.needsSynchronization()) {
         requestedSyncPointsRef.current++;
         dispatchSyncPoints();
@@ -282,16 +284,18 @@ export function useWebGL(adapter: ViewerAdapter) {
 
   useEffect(() => {
     if (glReady && glRef.current !== null) {
-      glRef.current.shapesRenderer.setModel(layers, shapes);
-      const newShapesBounds = glRef.current.shapesRenderer.getRenderedBounds();
-      setGLShapesBounds((currentShapesBounds) =>
-        newShapesBounds !== null &&
-        currentShapesBounds !== null &&
-        GeometryUtils.rectEquals(currentShapesBounds, newShapesBounds)
-          ? currentShapesBounds
-          : newShapesBounds,
-      );
-      dispatchRedraw();
+      if (glRef.current.shapesRenderer.setModel(layers, shapes)) {
+        const newShapesBounds =
+          glRef.current.shapesRenderer.getRenderedBounds();
+        setGLShapesBounds((currentShapesBounds) =>
+          newShapesBounds !== null &&
+          currentShapesBounds !== null &&
+          GeometryUtils.rectEquals(currentShapesBounds, newShapesBounds)
+            ? currentShapesBounds
+            : newShapesBounds,
+        );
+        dispatchRedraw();
+      }
       if (glRef.current.shapesRenderer.needsSynchronization()) {
         requestedSyncShapesRef.current++;
         dispatchSyncShapes();
@@ -320,8 +324,12 @@ export function useWebGL(adapter: ViewerAdapter) {
           },
           { signal: abortController.signal },
         )
-        .then(() => {
-          if (!abortController.signal.aborted && glRef.current !== null) {
+        .then((changed) => {
+          if (
+            changed &&
+            glRef.current !== null &&
+            !abortController.signal.aborted
+          ) {
             const newPointsBounds =
               glRef.current.pointsRenderer.getRenderedBounds();
             setGLPointsBounds((currentPointsBounds) =>
@@ -375,8 +383,12 @@ export function useWebGL(adapter: ViewerAdapter) {
           },
           { signal: abortController.signal },
         )
-        .then(() => {
-          if (!abortController.signal.aborted && glRef.current !== null) {
+        .then((changed) => {
+          if (
+            changed &&
+            glRef.current !== null &&
+            !abortController.signal.aborted
+          ) {
             const newShapesBounds =
               glRef.current.shapesRenderer.getRenderedBounds();
             setGLShapesBounds((currentShapesBounds) =>

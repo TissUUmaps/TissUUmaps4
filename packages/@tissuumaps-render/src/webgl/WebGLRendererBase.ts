@@ -83,6 +83,7 @@ export abstract class WebGLRendererBase<
 
   private _model?: { layers: Layer[]; objects: TObject[] };
   private _lastSyncState?: object;
+  private _hasUnreportedChanges = false;
   private readonly _renderedObjects = new Map<
     string,
     Map<string, TRenderedObject>
@@ -115,7 +116,8 @@ export abstract class WebGLRendererBase<
    *
    * Does not redraw: a model that differs at all differs either in a property
    * that is applied when drawing, or in one that requires a resynchronization,
-   * so the caller is expected to redraw either way.
+   * so the caller is expected to redraw whenever this returns `true`. A model
+   * equal to the current one is ignored.
    *
    * The layers and objects are cloned, so that what the renderer compares
    * against later - in {@link needsSynchronization}, and in the references of
@@ -124,9 +126,17 @@ export abstract class WebGLRendererBase<
    *
    * @param layers - The layers to render
    * @param objects - The objects (points or shapes) to render
+   * @returns Whether the model differs from the current one
    */
-  setModel(layers: Layer[], objects: TObject[]): void {
+  setModel(layers: Layer[], objects: TObject[]): boolean {
+    if (
+      this._model !== undefined &&
+      deepEqual(this._model, { layers, objects })
+    ) {
+      return false;
+    }
     this._model = structuredClone({ layers, objects });
+    return true;
   }
 
   /**
@@ -198,17 +208,24 @@ export abstract class WebGLRendererBase<
    * unaffected. A synchronization that fails or is aborted leaves the model
    * unsynchronized (see {@link _discardSyncState}).
    *
+   * Reports whether a rendered object was created, destroyed or uploaded to,
+   * i.e. whether the caller has to redraw. A synchronization that fails or is
+   * aborted may have done so for some objects before it stopped; those
+   * changes are reported by the next synchronization that completes.
+   *
    * @param syncContext - The inputs to synchronize with: the tables and
    * group-to-value maps that the objects resolve their properties from, and
    * the loaders for object and table data. It carries inputs only; what an
    * object was resolved from is captured per object (see {@link ObjectRef})
    * @param options - Optional abort signal
+   * @returns A promise that resolves to whether any rendered object changed
+   * since the last completed synchronization
    * @throws Error if no model has been set (see {@link setModel})
    */
   async synchronize(
     syncContext: TSyncContext,
     options?: { signal?: AbortSignal },
-  ): Promise<void> {
+  ): Promise<boolean> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const syncState = this._recordSyncState();
@@ -238,14 +255,17 @@ export abstract class WebGLRendererBase<
         // no awaits from here on, so that the object is uploaded atomically
         if (renderedObject === undefined) {
           this.addRenderedObject(this.createRenderedObject(newRef, prepared));
-        } else {
-          this.updateRenderedObject(renderedObject, prepared);
+        } else if (this.updateRenderedObject(renderedObject, prepared)) {
+          this._hasUnreportedChanges = true;
         }
       }
     } catch (error) {
       this._discardSyncState(syncState);
       throw error;
     }
+    const hasUnreportedChanges = this._hasUnreportedChanges;
+    this._hasUnreportedChanges = false;
+    return hasUnreportedChanges;
   }
 
   /**
@@ -592,6 +612,7 @@ export abstract class WebGLRendererBase<
         if (!matchedRenderedObjects.has(renderedObject)) {
           renderedObjects.delete(objectId);
           this.destroyRenderedObject(renderedObject);
+          this._hasUnreportedChanges = true;
         }
       }
     }
@@ -611,6 +632,7 @@ export abstract class WebGLRendererBase<
       this._renderedObjects.set(layerId, renderedObjects);
     }
     renderedObjects.set(object.id, renderedObject);
+    this._hasUnreportedChanges = true;
   }
 
   /**
@@ -623,6 +645,7 @@ export abstract class WebGLRendererBase<
       .get(renderedObject.ref.layerId)
       ?.delete(renderedObject.ref.object.id);
     this.destroyRenderedObject(renderedObject);
+    this._hasUnreportedChanges = true;
   }
 
   /**
@@ -635,6 +658,7 @@ export abstract class WebGLRendererBase<
       }
     }
     this._renderedObjects.clear();
+    this._hasUnreportedChanges = true;
   }
 
   /**
@@ -682,11 +706,13 @@ export abstract class WebGLRendererBase<
    *
    * @param renderedObject - The rendered object to update in place
    * @param prepared - Its preparation, made with it as the rendered object to reuse
+   * @returns Whether any GPU resource was uploaded to, i.e. whether the object
+   * draws differently now
    */
   protected abstract updateRenderedObject(
     renderedObject: TRenderedObject,
     prepared: TPreparedObject,
-  ): void;
+  ): boolean;
 
   /**
    * Releases the GPU resources owned by a single rendered object

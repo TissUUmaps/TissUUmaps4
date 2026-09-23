@@ -570,11 +570,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    *
    * @param renderedShapes - The rendered object to update in place
    * @param prepared - Its preparation, holding the texture data that changed
+   * @returns Whether any texture was reloaded
    */
   protected override updateRenderedObject(
     renderedShapes: RenderedShapes,
     prepared: PreparedShapes,
-  ): void {
+  ): boolean {
     renderedShapes.renderConfigSnapshot = prepared.renderConfigSnapshot;
     if (prepared.scanlineBuffer !== undefined) {
       const scanlineDataTexture = this._createScanlineDataTexture(
@@ -597,6 +598,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         prepared.packedShapeStrokeColors,
       );
     }
+    return (
+      prepared.scanlineBuffer !== undefined ||
+      prepared.packedShapeFillColors !== undefined ||
+      prepared.packedShapeStrokeColors !== undefined
+    );
   }
 
   /**

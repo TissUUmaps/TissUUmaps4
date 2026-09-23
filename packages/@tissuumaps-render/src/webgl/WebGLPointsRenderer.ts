@@ -553,11 +553,12 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    *
    * @param renderedPoints - The rendered object to update in place
    * @param prepared - Its preparation, holding the attributes that changed
+   * @returns Whether any attribute was backed again
    */
   protected override updateRenderedObject(
     renderedPoints: RenderedPoints,
     prepared: PreparedPoints,
-  ): void {
+  ): boolean {
     renderedPoints.renderConfigSnapshot = prepared.renderConfigSnapshot;
     const { vao, attributes } = renderedPoints;
     if (prepared.packedPointMarkers !== undefined) {
@@ -587,6 +588,11 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         attributes.color,
       );
     }
+    return (
+      prepared.packedPointMarkers !== undefined ||
+      prepared.packedPointSizes !== undefined ||
+      prepared.packedPointColors !== undefined
+    );
   }
 
   /**
