@@ -1,8 +1,8 @@
 import OpenSeadragon from "openseadragon";
 
 import {
+  AsyncUtils,
   type Dims,
-  GeometryUtils,
   type NumericArray,
   type OpenSeadragonViewerOptions,
   type Rect,
@@ -80,10 +80,15 @@ export class OpenSeadragonContext {
     "Equal",
     "Minus",
   ]);
+  private static readonly _relativeBoundsTolerance = 1e-9;
 
   readonly viewer: OpenSeadragon.Viewer;
   private readonly _tileSourceDataTransfers = new WeakMap<
     OpenSeadragon.TileSource,
+    DataTransfer
+  >();
+  private readonly _tileDataTransfers = new WeakMap<
+    OpenSeadragon.Tile,
     DataTransfer
   >();
   private _animationMemory?: {
@@ -166,6 +171,7 @@ export class OpenSeadragonContext {
         console.error(`Failed to transfer tile data: ${error}`);
       }),
     );
+    this.viewer.addHandler("update-viewport", () => this._recolorStaleTiles());
   }
 
   /**
@@ -333,11 +339,14 @@ export class OpenSeadragonContext {
    * addition keeps the loading concurrent, while the additions themselves stay
    * serialized (see {@link addTiledImage}).
    *
+   * Rejects as soon as the operation is aborted, so that nothing waits for an
+   * abandoned open; the open itself cannot be canceled, and settles unobserved.
+   *
    * @param tiledImageOptions - Options containing the tile source to open
    * @param options - Optional abort signal
    * @returns A promise that resolves with the opened tile source
    */
-  async openTileSource(
+  openTileSource(
     tiledImageOptions: Omit<
       OpenSeadragon.TileSourceSpecifier,
       "success" | "error"
@@ -345,22 +354,11 @@ export class OpenSeadragonContext {
     options?: { signal?: AbortSignal },
   ): Promise<OpenSeadragon.TileSource> {
     const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    // OpenSeadragon types tile sources as `string | object`, which also covers
-    // promises of an already opened tile source; anything else is passed through
-    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
-    signal?.throwIfAborted();
-    try {
-      const { source: openedTileSource } =
-        (await this.viewer.instantiateTileSourceClass(
-          // this needs to be a shallow copy; OpenSeadragon mutates it!
-          { ...tiledImageOptions, tileSource },
-        )) as { source: OpenSeadragon.TileSource };
-      signal?.throwIfAborted();
-      return openedTileSource;
-    } catch (error) {
-      throw new Error("Failed to open tile source", { cause: error });
-    }
+    const tileSourcePromise = this._openTileSource(tiledImageOptions, {
+      signal,
+    });
+    tileSourcePromise.catch(() => {}); // prevent unhandled rejections in console
+    return AsyncUtils.raceSignal(tileSourcePromise, { signal });
   }
 
   /**
@@ -470,11 +468,20 @@ export class OpenSeadragonContext {
    * low-resolution tiles, so this stays cheap; invalidating the whole viewer
    * would re-run every data transfer on every loaded tile instead.
    *
+   * A tiled image keeps up to the whole tile cache loaded, most of it outside
+   * the viewport, so only the tiles drawn in the viewport are invalidated. The
+   * others are recolored once they are drawn again (see
+   * {@link _recolorStaleTiles}), which keeps the cost of a change proportional
+   * to the viewport rather than to the tile cache. Removing a data transfer
+   * invalidates every tile of the tiled image instead, as tiles without a data
+   * transfer are not caught up with.
+   *
    * Data transfers are compared by identity: the tiles are only invalidated,
    * and thereby recolored from their original data, if a different data
    * transfer object is passed. Callers are expected to pass the same object for
    * as long as its outcome would not change, as invalidating the tiles re-runs
-   * the data transfer on every loaded tile of the tile source.
+   * the data transfer on every tile in the viewport, and on every other loaded
+   * tile of the tile source once it is drawn.
    *
    * @param tiledImage - The tiled image to update
    * @param dataTransfer - The data transfer to apply, or `undefined` for none
@@ -504,7 +511,11 @@ export class OpenSeadragonContext {
       }
       for (const tiledImageToInvalidate of tiledImagesToInvalidate) {
         tiledImageToInvalidate
-          .requestInvalidate(/* restoreTiles */ true, /* viewportOnly */ false)
+          .requestInvalidate(
+            /* restoreTiles */ true,
+            /* viewportOnly */ tiledImageToInvalidate === tiledImage &&
+              dataTransfer !== undefined,
+          )
           .catch((error) => {
             console.error(`Failed to invalidate tiles: ${error}`);
           });
@@ -523,13 +534,17 @@ export class OpenSeadragonContext {
    * The viewport is not fitted here: it follows the bounds of the world as a
    * whole, for as long as the renderers own it (see {@link resetViewport}).
    *
-   * If `dummy` already spans `newBounds`, it is returned unchanged. Otherwise, a
-   * new dummy is created at `dummyIndex` (defaulting to the index of `dummy`, or
-   * appended if neither is specified) and `dummy` is removed. Where possible,
-   * OpenSeadragon replaces `dummy` as part of the addition, so that the new dummy
-   * takes its place without leaving a gap. Replacing `dummy` cannot be aborted
-   * once the new dummy has been created, as that would leave the caller without a
-   * dummy.
+   * If `dummy` already spans `newBounds`, it is returned unchanged. Its bounds
+   * are compared with a tolerance relative to the size of `newBounds`, as
+   * OpenSeadragon derives the height of `dummy` from its width and the aspect
+   * ratio of its tile source, which can be off by a rounding error and would
+   * otherwise replace the dummy on every call. Otherwise, a new dummy is created
+   * at `dummyIndex` (defaulting to the index of `dummy`, or appended if neither
+   * is specified) and `dummy` is removed.
+   * Where possible, OpenSeadragon replaces `dummy` as part of the addition, so
+   * that the new dummy takes its place without leaving a gap. Replacing `dummy`
+   * cannot be aborted once the new dummy has been created, as that would leave
+   * the caller without a dummy.
    *
    * @param newBounds - The new world bounds
    * @param options - Optional abort signal, dummy to replace, and index at which
@@ -548,7 +563,15 @@ export class OpenSeadragonContext {
     signal?.throwIfAborted();
     if (dummy !== undefined) {
       const { x, y, width, height } = dummy.getBounds();
-      if (GeometryUtils.rectEquals({ x, y, width, height }, newBounds)) {
+      const tolerance =
+        OpenSeadragonContext._relativeBoundsTolerance *
+        Math.max(newBounds.width, newBounds.height);
+      if (
+        Math.abs(x - newBounds.x) <= tolerance &&
+        Math.abs(y - newBounds.y) <= tolerance &&
+        Math.abs(width - newBounds.width) <= tolerance &&
+        Math.abs(height - newBounds.height) <= tolerance
+      ) {
         return dummy;
       }
     }
@@ -605,6 +628,38 @@ export class OpenSeadragonContext {
     await this._worldMutationQueue;
     if (!this.viewer.isDestroyed()) {
       this.viewer.destroy();
+    }
+  }
+
+  /**
+   * Opens a tile source, see {@link openTileSource}
+   *
+   * @param tiledImageOptions - Options containing the tile source to open
+   * @param options - Optional abort signal, which skips the open if the
+   * operation is aborted before it starts
+   * @returns A promise that resolves with the opened tile source
+   */
+  private async _openTileSource(
+    tiledImageOptions: Omit<
+      OpenSeadragon.TileSourceSpecifier,
+      "success" | "error"
+    >,
+    options?: { signal?: AbortSignal },
+  ): Promise<OpenSeadragon.TileSource> {
+    const { signal } = options ?? {};
+    // OpenSeadragon types tile sources as `string | object`, which also covers
+    // promises of an already opened tile source; anything else is passed through
+    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
+    signal?.throwIfAborted();
+    try {
+      const { source: openedTileSource } =
+        (await this.viewer.instantiateTileSourceClass(
+          // this needs to be a shallow copy; OpenSeadragon mutates it!
+          { ...tiledImageOptions, tileSource },
+        )) as { source: OpenSeadragon.TileSource };
+      return openedTileSource;
+    } catch (error) {
+      throw new Error("Failed to open tile source", { cause: error });
     }
   }
 
@@ -669,10 +724,67 @@ export class OpenSeadragonContext {
   }
 
   /**
+   * Recolors the drawn tiles whose data transfer is outdated
+   *
+   * A change of a data transfer only invalidates the tiles in the viewport
+   * (see {@link updateTiledImageDataTransfer}), which leaves the other loaded
+   * tiles of the tile source in the colors of an earlier data transfer. Every
+   * tile records the data transfer it was last recolored with (see
+   * {@link _transferData}); a drawn tile that recorded a different one than
+   * its tile source's is invalidated, unless it is being recolored already.
+   * Such a tile is drawn in its earlier colors until it is recolored, which
+   * takes a frame or two.
+   *
+   * Tiles loaded after a change are recolored on load, and tile sources
+   * without a data transfer are skipped: their tiles were all restored when
+   * the data transfer was removed.
+   */
+  private _recolorStaleTiles(): void {
+    const staleTiles = [];
+    for (let i = 0; i < this.viewer.world.getItemCount(); i++) {
+      const tiledImage = this.viewer.world.getItemAt(i);
+      const dataTransfer = this._tileSourceDataTransfers.get(tiledImage.source);
+      if (dataTransfer === undefined) {
+        continue;
+      }
+      for (const { tile } of tiledImage.getTilesToDraw()) {
+        if (
+          tile.processing === false &&
+          this._tileDataTransfers.get(tile) !== dataTransfer
+        ) {
+          staleTiles.push(tile);
+        }
+      }
+    }
+    if (staleTiles.length > 0) {
+      this.viewer.world
+        .requestTileInvalidateEvent(
+          staleTiles,
+          OpenSeadragon.now(),
+          /* restoreTiles */ true,
+        )
+        .catch((error) => {
+          console.error(`Failed to invalidate tiles: ${error}`);
+        });
+    }
+  }
+
+  /**
    * Replaces the data of an invalidated tile with the colors of its values
    *
    * Does nothing unless a data transfer is set for the tile source of the tile
    * (see {@link updateTiledImageDataTransfer}).
+   *
+   * OpenSeadragon raises the invalidation events of all tiles of a change at
+   * once, and recoloring a tile holds the thread for as long as the tile has
+   * pixels, so each tile first yields to the event loop: the user interface
+   * stays responsive while a change is recolored. A change that arrives
+   * meanwhile invalidates the same tiles again, which marks the runs of the
+   * change before it as outdated; those are abandoned, as the newer runs
+   * recolor the tiles. The data transfer is read only after yielding, so that
+   * a run that continues always applies the latest one. It is recorded as the
+   * tile's before the tile is recolored (see {@link _recolorStaleTiles}), so
+   * that a tile whose recoloring fails is not retried on every draw.
    *
    * The colors are written as packed 32-bit values through a `Uint32Array`
    * view of an `ImageData` buffer, whose bytes are R, G, B, A. The
@@ -688,7 +800,11 @@ export class OpenSeadragonContext {
    * becomes the tile's data. The canvas cannot be shared, as OpenSeadragon
    * keeps it in its tile cache by reference. Nor is the tile's own canvas
    * used: obtaining that would convert the tile's original data to a canvas
-   * first, only for it to be overwritten.
+   * first, only for it to be overwritten. The canvas is created with
+   * `willReadFrequently`, which keeps it in memory rather than on the GPU: the
+   * WebGL drawer reads a pixel of every canvas it turns into a texture, to
+   * check whether it is tainted, and reading from a GPU canvas waits for the
+   * GPU.
    *
    * @param event - The tile invalidation event whose tile data is replaced
    * @returns A promise that resolves once the tile data has been replaced
@@ -701,11 +817,24 @@ export class OpenSeadragonContext {
     if (tiledImage === null) {
       return;
     }
-    const dataTransfer = this._tileSourceDataTransfers.get(tiledImage.source);
-    if (dataTransfer === undefined) {
+    if (!this._tileSourceDataTransfers.has(tiledImage.source)) {
+      this._tileDataTransfers.delete(event.tile);
       return;
     }
+    await AsyncUtils.yield();
+    if (await event.outdated()) {
+      return;
+    }
+    const dataTransfer = this._tileSourceDataTransfers.get(tiledImage.source);
+    if (dataTransfer === undefined) {
+      this._tileDataTransfers.delete(event.tile);
+      return;
+    }
+    this._tileDataTransfers.set(event.tile, dataTransfer);
     const { values, width, height } = await dataTransfer.getTileData(event);
+    if (await event.outdated()) {
+      return; // skip the recoloring, as a newer run replaces the data anyway
+    }
     if (values.length !== width * height) {
       throw new Error("Invalid tile data size");
     }
@@ -726,7 +855,7 @@ export class OpenSeadragonContext {
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
     ctx.putImageData(imageData, 0, 0);
     await event.setData(ctx, "context2d");
   }

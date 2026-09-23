@@ -1,8 +1,7 @@
 import { type Mock, describe, expect, it, vi } from "vitest";
 
-import type { TableData } from "@tissuumaps/core";
-
-import { ResolverBase } from "./ResolverBase";
+import type { TableData } from "../storage/table";
+import { TableUtils } from "./TableUtils";
 
 /**
  * Creates table data backed by mocks, returned alongside the loaders so that
@@ -10,7 +9,7 @@ import { ResolverBase } from "./ResolverBase";
  */
 function createMockTableData(
   ids: number[],
-  values: unknown[],
+  values: unknown[] = [],
   valueRange?: [number, number],
 ): { data: TableData; loadValues: Mock; loadValueRange: Mock } {
   const loadValues = vi.fn().mockResolvedValue(values);
@@ -32,14 +31,141 @@ function createMockTableData(
   };
 }
 
-describe("ResolverBase", () => {
+async function collectRows(
+  ids: number[],
+  tableData: TableData,
+  options?: { signal?: AbortSignal },
+): Promise<(number | undefined)[]> {
+  const rows: (number | undefined)[] = [];
+  await TableUtils.forEachRow(
+    ids,
+    tableData,
+    (rowIndex, i) => {
+      rows[i] = rowIndex;
+    },
+    options,
+  );
+  return rows;
+}
+
+describe("TableUtils", () => {
+  describe("forEachRow", () => {
+    it("maps the table's own IDs to their positions without looking them up", async () => {
+      const ids = [10, 20, 30];
+      const { data } = createMockTableData(ids);
+      const getRowIndices = vi.spyOn(TableUtils, "getRowIndices");
+      expect(await collectRows(ids, data)).toEqual([0, 1, 2]);
+      expect(getRowIndices).not.toHaveBeenCalled();
+      getRowIndices.mockRestore();
+    });
+
+    it("looks up the rows of other IDs, reporting missing ones as undefined", async () => {
+      const { data } = createMockTableData([10, 20, 30]);
+      expect(await collectRows([30, 99, 10], data)).toEqual([2, undefined, 0]);
+    });
+
+    it("maps an ID occurring more than once to its last row, with a warning", async () => {
+      const { data } = createMockTableData([10, 20, 10]);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      expect(await collectRows([10], data)).toEqual([2]);
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn.mock.calls[0]![0]).toContain("1 duplicated");
+      warn.mockRestore();
+    });
+
+    it("does not warn about unique IDs", async () => {
+      const { data } = createMockTableData([10, 20, 30]);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      await collectRows([20], data);
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    it("handles empty IDs", async () => {
+      const { data } = createMockTableData([10, 20]);
+      expect(await collectRows([], data)).toEqual([]);
+    });
+
+    it("rejects when the signal is already aborted", async () => {
+      const { data } = createMockTableData([10]);
+      const controller = new AbortController();
+      controller.abort();
+      await expect(
+        collectRows([10], data, { signal: controller.signal }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("getRowIndices", () => {
+    it("builds the row indices once per ID array", async () => {
+      const { data } = createMockTableData([10, 20]);
+      const first = await TableUtils.getRowIndices(data);
+      const second = await TableUtils.getRowIndices(data);
+      expect(second).toBe(first);
+      expect(Array.from(first.entries())).toEqual([
+        [10, 0],
+        [20, 1],
+      ]);
+    });
+
+    it("rebuilds for a different ID array with the same content", async () => {
+      const first = await TableUtils.getRowIndices(
+        createMockTableData([10, 20]).data,
+      );
+      const second = await TableUtils.getRowIndices(
+        createMockTableData([10, 20]).data,
+      );
+      expect(second).not.toBe(first);
+      expect(second).toEqual(first);
+    });
+
+    it("shares a pending build between concurrent callers", async () => {
+      const { data } = createMockTableData(
+        Array.from({ length: 5000 }, (_, i) => i),
+      );
+      const [first, second] = await Promise.all([
+        TableUtils.getRowIndices(data),
+        TableUtils.getRowIndices(data),
+      ]);
+      expect(second).toBe(first);
+      expect(first.size).toBe(5000);
+    });
+
+    it("keeps building for other callers when one aborts", async () => {
+      const { data } = createMockTableData(
+        Array.from({ length: 5000 }, (_, i) => i),
+      );
+      const controller = new AbortController();
+      const aborted = TableUtils.getRowIndices(data, {
+        signal: controller.signal,
+      });
+      const kept = TableUtils.getRowIndices(data);
+      controller.abort();
+      await expect(aborted).rejects.toThrow();
+      expect((await kept).size).toBe(5000);
+    });
+
+    it("rejects rather than throws for an already aborted signal", async () => {
+      const { data } = createMockTableData([1, 2, 3]);
+      const controller = new AbortController();
+      controller.abort();
+      let rowIndices: Promise<ReadonlyMap<number, number>> | undefined;
+      expect(() => {
+        rowIndices = TableUtils.getRowIndices(data, {
+          signal: controller.signal,
+        });
+      }).not.toThrow();
+      await expect(rowIndices).rejects.toThrow();
+    });
+  });
+
   describe("fillFromTableValues", () => {
     it("fills the buffer from table values using parseTableValue and packValue", async () => {
       const ids = [1, 2, 3];
-      const { data } = createMockTableData([1, 2, 3], [10, 20, 30], [10, 30]);
+      const { data } = createMockTableData([1, 2, 3], [10, 20, 30]);
       const buffer = new Float32Array(3);
 
-      await ResolverBase.fillFromTableValues(
+      await TableUtils.fillFromTableValues(
         buffer,
         data,
         ids,
@@ -52,7 +178,7 @@ describe("ResolverBase", () => {
       expect(Array.from(buffer)).toEqual([20, 40, 60]);
     });
 
-    it("loads the column values and value range from the given table data", async () => {
+    it("loads the column values, but not the value range, from the given table data", async () => {
       const { data, loadValues, loadValueRange } = createMockTableData(
         [1],
         [10],
@@ -60,7 +186,7 @@ describe("ResolverBase", () => {
       );
       const buffer = new Float32Array(1);
 
-      await ResolverBase.fillFromTableValues(
+      await TableUtils.fillFromTableValues(
         buffer,
         data,
         [1],
@@ -73,21 +199,15 @@ describe("ResolverBase", () => {
       expect(loadValues).toHaveBeenCalledWith("col1", {
         signal: undefined,
       });
-      expect(loadValueRange).toHaveBeenCalledWith("col1", {
-        signal: undefined,
-      });
+      expect(loadValueRange).not.toHaveBeenCalled();
     });
 
-    it("forwards the signal to the table data loads", async () => {
+    it("forwards the signal to the table data load", async () => {
       const controller = new AbortController();
-      const { data, loadValues, loadValueRange } = createMockTableData(
-        [1],
-        [10],
-        [0, 10],
-      );
+      const { data, loadValues } = createMockTableData([1], [10]);
       const buffer = new Float32Array(1);
 
-      await ResolverBase.fillFromTableValues(
+      await TableUtils.fillFromTableValues(
         buffer,
         data,
         [1],
@@ -101,17 +221,15 @@ describe("ResolverBase", () => {
       expect(loadValues).toHaveBeenCalledWith("col1", {
         signal: controller.signal,
       });
-      expect(loadValueRange).toHaveBeenCalledWith("col1", {
-        signal: controller.signal,
-      });
     });
 
     it("uses defaultValue when parseTableValue returns undefined", async () => {
       const ids = [1, 2];
       const { data } = createMockTableData([1, 2], ["bad", 5]);
       const buffer = new Float32Array(2);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-      await ResolverBase.fillFromTableValues(
+      await TableUtils.fillFromTableValues(
         buffer,
         data,
         ids,
@@ -123,6 +241,8 @@ describe("ResolverBase", () => {
 
       expect(buffer[0]).toBe(99); // "bad" failed parsing → default
       expect(buffer[1]).toBe(5);
+      expect(warn).toHaveBeenCalledOnce();
+      warn.mockRestore();
     });
 
     it("uses defaultValue when the ID is missing from the table data", async () => {
@@ -131,7 +251,7 @@ describe("ResolverBase", () => {
       const buffer = new Float32Array(3);
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-      await ResolverBase.fillFromTableValues(
+      await TableUtils.fillFromTableValues(
         buffer,
         data,
         ids,
@@ -152,7 +272,7 @@ describe("ResolverBase", () => {
       const { data } = createMockTableData([3, 1, 2], [30, 10, 20]);
       const buffer = new Float32Array(3);
 
-      await ResolverBase.fillFromTableValues(
+      await TableUtils.fillFromTableValues(
         buffer,
         data,
         [1, 2, 3],
@@ -165,19 +285,14 @@ describe("ResolverBase", () => {
       expect(Array.from(buffer)).toEqual([10, 20, 30]);
     });
 
-    it("passes the loaded value range to parseTableValue", async () => {
-      const { data } = createMockTableData([1], [50], [0, 100]);
+    it("passes the raw cell value to parseTableValue", async () => {
+      const { data } = createMockTableData([1], [50]);
       const buffer = new Float32Array(1);
       const parseTableValue = vi
-        .fn<
-          (
-            value: unknown,
-            valueRange: [number, number] | undefined,
-          ) => number | undefined
-        >()
+        .fn<(value: unknown) => number | undefined>()
         .mockReturnValue(50);
 
-      await ResolverBase.fillFromTableValues(
+      await TableUtils.fillFromTableValues(
         buffer,
         data,
         [1],
@@ -187,7 +302,7 @@ describe("ResolverBase", () => {
         (value) => value,
       );
 
-      expect(parseTableValue).toHaveBeenCalledWith(50, [0, 100]);
+      expect(parseTableValue).toHaveBeenCalledWith(50);
     });
 
     it("throws when the signal is already aborted", async () => {
@@ -197,7 +312,7 @@ describe("ResolverBase", () => {
       const buffer = new Float32Array(1);
 
       await expect(
-        ResolverBase.fillFromTableValues(
+        TableUtils.fillFromTableValues(
           buffer,
           data,
           [1],
@@ -225,7 +340,7 @@ describe("ResolverBase", () => {
           return undefined;
         });
 
-      await ResolverBase.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         buffer,
         data,
         ids,
@@ -245,7 +360,7 @@ describe("ResolverBase", () => {
       );
       const buffer = new Uint8Array(1);
 
-      await ResolverBase.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         buffer,
         data,
         [1],
@@ -267,7 +382,7 @@ describe("ResolverBase", () => {
       const { data, loadValues } = createMockTableData([1], ["A"]);
       const buffer = new Uint8Array(1);
 
-      await ResolverBase.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         buffer,
         data,
         [1],
@@ -286,8 +401,9 @@ describe("ResolverBase", () => {
     it("uses defaultValue when mapGroupToValue returns undefined", async () => {
       const { data } = createMockTableData([1], ["unknown"]);
       const buffer = new Uint8Array(1);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-      await ResolverBase.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         buffer,
         data,
         [1],
@@ -298,6 +414,8 @@ describe("ResolverBase", () => {
       );
 
       expect(buffer[0]).toBe(42);
+      expect(warn).toHaveBeenCalledOnce();
+      warn.mockRestore();
     });
 
     it("uses defaultValue when the ID is missing from the table data", async () => {
@@ -306,7 +424,7 @@ describe("ResolverBase", () => {
       const buffer = new Uint8Array(2);
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-      await ResolverBase.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         buffer,
         data,
         ids,
@@ -328,7 +446,7 @@ describe("ResolverBase", () => {
       const buffer = new Uint8Array(4);
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-      await ResolverBase.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         buffer,
         data,
         ids,
@@ -347,7 +465,7 @@ describe("ResolverBase", () => {
       const { data } = createMockTableData([3, 1, 2], ["C", "A", "B"]);
       const buffer = new Uint8Array(3);
 
-      await ResolverBase.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         buffer,
         data,
         [1, 2, 3],
@@ -367,7 +485,7 @@ describe("ResolverBase", () => {
         .fn<(group: string) => number | undefined>()
         .mockReturnValue(1);
 
-      await ResolverBase.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         buffer,
         data,
         [1],
@@ -391,7 +509,7 @@ describe("ResolverBase", () => {
           group === JSON.stringify("A") ? 10 : 20,
         );
 
-      await ResolverBase.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         buffer,
         data,
         ids,
@@ -413,7 +531,7 @@ describe("ResolverBase", () => {
       const buffer = new Uint8Array(1);
 
       await expect(
-        ResolverBase.fillFromTableGroups(
+        TableUtils.fillFromTableGroups(
           buffer,
           data,
           [1],

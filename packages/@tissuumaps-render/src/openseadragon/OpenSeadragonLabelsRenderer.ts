@@ -4,6 +4,7 @@ import {
   AsyncUtils,
   type Color,
   ColorUtils,
+  type Config,
   type GroupValueMap,
   type Labels,
   type LabelsData,
@@ -13,6 +14,7 @@ import {
   defaultLabelOpacity,
   defaultLabelVisibility,
   getActiveConfigSource,
+  isGroupByConfig,
 } from "@tissuumaps/core";
 
 import { ColorResolver } from "../resolvers/ColorResolver";
@@ -56,8 +58,12 @@ export type OpenSeadragonLabelsSyncContext = {
  * {@link _resolveDataTransfer}).
  *
  * As data transfers are compared by identity, each object's data transfer is
- * kept (see {@link resolveObject}) until its data or one of the configurations
- * it was resolved from changes, so that tiles are only recolored when needed.
+ * kept (see {@link resolveObject}) until its data, one of the configurations
+ * it was resolved from, or one of the group-to-value maps those configurations
+ * reference changes, so that tiles are only recolored when needed. Maps are
+ * never mutated - an edit replaces the map object - so they are compared by
+ * identity, which is why the maps passed to a synchronization have to keep
+ * their identity for as long as they are unchanged.
  */
 export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   Labels,
@@ -68,7 +74,11 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
     string,
     {
       data: LabelsData;
-      state: Pick<Labels, "labelColor" | "labelVisibility" | "labelOpacity">;
+      state: Pick<Labels, "labelColor" | "labelVisibility" | "labelOpacity"> & {
+        labelColorMap: GroupValueMap<Color> | undefined;
+        labelVisibilityMap: GroupValueMap<boolean> | undefined;
+        labelOpacityMap: GroupValueMap<number> | undefined;
+      };
       dataTransfer: DataTransfer;
     }
   >();
@@ -89,16 +99,15 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   /**
    * Resolves the data transfer of a labels object, unless it is up to date
    *
-   * An object's data transfer is kept as long as its data and its label color,
-   * visibility and opacity configurations are unchanged, and is resolved anew
-   * otherwise (see {@link _resolveDataTransfer}). If resolving from the
-   * referenced table fails, e.g. because the table failed to load, the failure
-   * is logged and the object's labels are resolved without table data instead,
-   * until its data or one of its configurations changes.
-   *
-   * @todo Changes to the color, visibility and opacity maps themselves are not
-   * detected; they are only re-read when a configuration referencing them
-   * changes.
+   * An object's data transfer is kept as long as its data, its label color,
+   * visibility and opacity configurations, and the group-to-value maps those
+   * configurations resolve from (see {@link _findGroupByConfigMap}) are
+   * unchanged, and is resolved anew otherwise (see
+   * {@link _resolveDataTransfer}). Configurations are compared by value, maps
+   * by identity. If resolving from the referenced table fails, e.g. because the
+   * table failed to load, the failure is logged and the object's labels are
+   * resolved without table data instead, until its data, one of its
+   * configurations or one of its maps changes.
    *
    * @param labels - The labels object to resolve
    * @param data - The loaded data of the labels object
@@ -119,11 +128,28 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
       labelColor: structuredClone(labels.labelColor),
       labelVisibility: structuredClone(labels.labelVisibility),
       labelOpacity: structuredClone(labels.labelOpacity),
+      labelColorMap: OpenSeadragonLabelsRenderer._findGroupByConfigMap(
+        labels.labelColor,
+        context.colorMaps,
+      ),
+      labelVisibilityMap: OpenSeadragonLabelsRenderer._findGroupByConfigMap(
+        labels.labelVisibility,
+        context.visibilityMaps,
+      ),
+      labelOpacityMap: OpenSeadragonLabelsRenderer._findGroupByConfigMap(
+        labels.labelOpacity,
+        context.opacityMaps,
+      ),
     };
     if (
       renderedLabels === undefined ||
       renderedLabels.data !== data ||
-      !deepEqual(renderedLabels.state, state)
+      !deepEqual(renderedLabels.state.labelColor, state.labelColor) ||
+      renderedLabels.state.labelColorMap !== state.labelColorMap ||
+      !deepEqual(renderedLabels.state.labelVisibility, state.labelVisibility) ||
+      renderedLabels.state.labelVisibilityMap !== state.labelVisibilityMap ||
+      !deepEqual(renderedLabels.state.labelOpacity, state.labelOpacity) ||
+      renderedLabels.state.labelOpacityMap !== state.labelOpacityMap
     ) {
       const dataTransfer =
         await OpenSeadragonLabelsRenderer._resolveDataTransfer(
@@ -146,12 +172,41 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    * @returns The data transfer resolved by {@link resolveObject}, or
    * `undefined` if the object has not been resolved
    */
-  protected override getTiledImageDataTransfer(
+  protected override resolveTiledImageDataTransfer(
     ref: ObjectRef<Labels, LabelsData>,
   ): DataTransfer | undefined {
     const renderedLabels = this._renderedLabels.get(ref.object.id);
     if (renderedLabels !== undefined) {
       return renderedLabels.dataTransfer;
+    }
+    return undefined;
+  }
+
+  /**
+   * Returns the group-to-value map that a label configuration resolves its
+   * values from, if any
+   *
+   * Captured in the state that {@link resolveObject} compares against, so that
+   * an edit to a map is detected by the objects referencing it. Mirrors the
+   * selection of the resolvers: only an active `groupBy` source with a map ID
+   * resolves from a map.
+   *
+   * @param config - The configuration
+   * @param maps - The project-global maps to look the referenced map up in
+   * @returns The map, or `undefined` if the configuration does not resolve
+   * from a map, or if the map it references does not exist (which the
+   * resolvers report)
+   */
+  private static _findGroupByConfigMap<TValue>(
+    config: Config<string>,
+    maps: GroupValueMap<TValue>[],
+  ): GroupValueMap<TValue> | undefined {
+    if (
+      getActiveConfigSource(config) === "groupBy" &&
+      isGroupByConfig<false>(config) &&
+      config.groupBy.map !== undefined
+    ) {
+      return maps.find((map) => map.id === config.groupBy.map);
     }
     return undefined;
   }

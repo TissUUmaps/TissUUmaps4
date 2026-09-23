@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import type { Rect } from "@tissuumaps/core";
 import {
@@ -37,6 +37,11 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
   const [osReady, setOSReady] = useState(false);
 
   const osOptionsRef = useRef(osOptions);
+
+  const [syncImages, dispatchSyncImages] = useReducer((x) => x + 1, 0);
+  const [syncLabels, dispatchSyncLabels] = useReducer((x) => x + 1, 0);
+  const requestedSyncImagesRef = useRef(0);
+  const requestedSyncLabelsRef = useRef(0);
 
   const initOS = useCallback((viewerElementOrNull: HTMLDivElement | null) => {
     if (viewerElementOrNull === null) {
@@ -164,10 +169,60 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
   useEffect(() => {
     const abortController = new AbortController();
     if (osReady && osRef.current !== null) {
+      osRef.current.imageRenderer.setModel(layers, images);
+      osRef.current.imageRenderer
+        .updateBounds({ signal: abortController.signal })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error(
+              "Error updating OpenSeadragon image world bounds",
+              error,
+            );
+          }
+        });
+      if (osRef.current.imageRenderer.needsSynchronization()) {
+        requestedSyncImagesRef.current++;
+        dispatchSyncImages();
+      }
+    }
+    return () => {
+      abortController.abort();
+    };
+  }, [osReady, layers, images]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    if (osReady && osRef.current !== null) {
+      osRef.current.labelsRenderer.setModel(layers, labels);
+      osRef.current.labelsRenderer
+        .updateBounds({ signal: abortController.signal })
+        .catch((error) => {
+          if (!abortController.signal.aborted) {
+            console.error(
+              "Error updating OpenSeadragon labels world bounds",
+              error,
+            );
+          }
+        });
+      if (osRef.current.labelsRenderer.needsSynchronization()) {
+        requestedSyncLabelsRef.current++;
+        dispatchSyncLabels();
+      }
+    }
+    return () => {
+      abortController.abort();
+    };
+  }, [osReady, layers, labels]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    if (
+      osReady &&
+      osRef.current !== null &&
+      syncImages === requestedSyncImagesRef.current
+    ) {
       osRef.current.imageRenderer
         .synchronize(
-          layers,
-          images,
           { loadObject: loadImage },
           { signal: abortController.signal },
         )
@@ -180,15 +235,17 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
     return () => {
       abortController.abort();
     };
-  }, [osReady, layers, images, tables, loadImage]);
+  }, [osReady, loadImage, syncImages]);
 
   useEffect(() => {
     const abortController = new AbortController();
-    if (osReady && osRef.current !== null) {
+    if (
+      osReady &&
+      osRef.current !== null &&
+      syncLabels === requestedSyncLabelsRef.current
+    ) {
       osRef.current.labelsRenderer
         .synchronize(
-          layers,
-          labels,
           {
             tables,
             colorMaps,
@@ -210,14 +267,13 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
     };
   }, [
     osReady,
-    layers,
-    labels,
     tables,
     colorMaps,
     visibilityMaps,
     opacityMaps,
     loadLabels,
     loadTable,
+    syncLabels,
   ]);
 
   const updateOSExternalBounds = useCallback(

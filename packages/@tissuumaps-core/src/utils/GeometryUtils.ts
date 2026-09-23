@@ -8,7 +8,7 @@ export class GeometryUtils {
    * @param rects - The rectangles to compute the union of
    * @returns The smallest rectangle that contains all the input rectangles, or `null` if no rectangles are provided
    */
-  static boundingBox(...rects: Rect[]): Rect | null {
+  static union(...rects: Rect[]): Rect | null {
     return rects.reduce<Rect | null>((union, rect) => {
       if (union === null) {
         return rect;
@@ -19,6 +19,42 @@ export class GeometryUtils {
       const height = Math.max(union.y + union.height, rect.y + rect.height) - y;
       return { x, y, width, height };
     }, null);
+  }
+
+  /**
+   * Computes the intersection of two rectangles
+   *
+   * @param a - The first rectangle
+   * @param b - The second rectangle
+   * @returns The rectangle covered by both, or `null` if they do not overlap
+   * (touching edges do not count as overlapping)
+   */
+  static intersection(a: Rect, b: Rect): Rect | null {
+    const x = Math.max(a.x, b.x);
+    const y = Math.max(a.y, b.y);
+    const width = Math.min(a.x + a.width, b.x + b.width) - x;
+    const height = Math.min(a.y + a.height, b.y + b.height) - y;
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
+    return { x, y, width, height };
+  }
+
+  /**
+   * Grows a rectangle by the same amount on every side
+   *
+   * @param rect - The rectangle to grow
+   * @param amount - The amount to move every side outwards by; negative
+   * amounts shrink the rectangle
+   * @returns The grown rectangle
+   */
+  static dilate(rect: Rect, amount: number): Rect {
+    return {
+      x: rect.x - amount,
+      y: rect.y - amount,
+      width: rect.width + 2 * amount,
+      height: rect.height + 2 * amount,
+    };
   }
 
   /**

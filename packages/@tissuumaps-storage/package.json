@@ -74,11 +74,11 @@
     "@types/papaparse": "^5.5.2",
     "hyparquet": "^1.26.1",
     "hyparquet-compressors": "^1.1.1",
-    "openseadragon": "^6.0.2"
+    "openseadragon": "^6.1.1"
   },
   "peerDependencies": {
     "@tissuumaps/core": "workspace:^",
-    "openseadragon": "^6.0.2"
+    "openseadragon": "^6.1.1"
   },
   "engines": {
     "node": ">=22.22.1"

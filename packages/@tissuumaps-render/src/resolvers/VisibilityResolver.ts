@@ -7,6 +7,7 @@ import {
   MathUtils,
   NumberUtils,
   type TableData,
+  TableUtils,
   type VisibilityConfig,
   getActiveConfigSource,
   isConstantConfig,
@@ -14,12 +15,10 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { ResolverBase } from "./ResolverBase";
-
 /**
  * Resolves the visibility of every item, packed as `0` or `1`
  */
-export class VisibilityResolver extends ResolverBase {
+export class VisibilityResolver {
   /**
    * Loads visibility data for a set of IDs based on the active visibility configuration source
    *
@@ -88,6 +87,27 @@ export class VisibilityResolver extends ResolverBase {
   }
 
   /**
+   * Resolves the visibility all items share if the configuration is a constant
+   *
+   * The counterpart of {@link resolveVisibilities} for a constant source, which needs
+   * no items: the one packed visibility applies to every item, so a consumer can
+   * supply it once instead of once per item.
+   *
+   * @param config - Visibility configuration specifying the data source
+   * @returns The packed visibility, or `undefined` if the active source is not a
+   * constant
+   */
+  static resolveConstantVisibility(
+    config: VisibilityConfig,
+  ): number | undefined {
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return VisibilityResolver.packVisibility(config.constant.value);
+    }
+    return undefined;
+  }
+
+  /**
    * Resolves the visibility of a single item without loading any table data
    *
    * Synchronous counterpart to {@link resolveVisibilities} for items that are
@@ -106,11 +126,10 @@ export class VisibilityResolver extends ResolverBase {
     config: VisibilityConfig,
     defaultVisibility: boolean,
   ): number {
-    const activeConfigSource = getActiveConfigSource(config);
-    if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return VisibilityResolver.packVisibility(config.constant.value);
-    }
-    return VisibilityResolver.packVisibility(defaultVisibility);
+    return (
+      VisibilityResolver.resolveConstantVisibility(config) ??
+      VisibilityResolver.packVisibility(defaultVisibility)
+    );
   }
 
   /**
@@ -158,7 +177,7 @@ export class VisibilityResolver extends ResolverBase {
       ids.length,
       { align },
     );
-    await VisibilityResolver.fillFromTableValues(
+    await TableUtils.fillFromTableValues(
       packedVisibilities,
       data,
       ids,
@@ -212,7 +231,7 @@ export class VisibilityResolver extends ResolverBase {
       { align },
     );
     const groupVisibilities = new Map(Object.entries(visibilityMap.values));
-    await VisibilityResolver.fillFromTableGroups(
+    await TableUtils.fillFromTableGroups(
       packedVisibilities,
       data,
       ids,

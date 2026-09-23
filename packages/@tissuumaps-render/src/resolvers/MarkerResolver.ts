@@ -9,6 +9,7 @@ import {
   MathUtils,
   NumberUtils,
   type TableData,
+  TableUtils,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -16,12 +17,10 @@ import {
   markerPalette,
 } from "@tissuumaps/core";
 
-import { ResolverBase } from "./ResolverBase";
-
 /**
  * Resolves the marker of every item, packed as a {@link Marker} index
  */
-export class MarkerResolver extends ResolverBase {
+export class MarkerResolver {
   /**
    * Loads marker data for a set of IDs based on the active marker configuration source
    *
@@ -86,6 +85,25 @@ export class MarkerResolver extends ResolverBase {
   }
 
   /**
+   * Resolves the marker all items share if the configuration is a constant
+   *
+   * The counterpart of {@link resolveMarkers} for a constant source, which needs
+   * no items: the one packed marker applies to every item, so a consumer can
+   * supply it once instead of once per item.
+   *
+   * @param config - Marker configuration specifying the data source
+   * @returns The packed marker, or `undefined` if the active source is not a
+   * constant
+   */
+  static resolveConstantMarker(config: MarkerConfig): number | undefined {
+    const activeConfigSource = getActiveConfigSource(config);
+    if (activeConfigSource === "constant" && isConstantConfig(config)) {
+      return MarkerResolver.packMarker(config.constant.value);
+    }
+    return undefined;
+  }
+
+  /**
    * Resolves the marker of a single item without loading any table data
    *
    * Synchronous counterpart to {@link resolveMarkers} for items that are not
@@ -105,11 +123,10 @@ export class MarkerResolver extends ResolverBase {
     config: MarkerConfig,
     defaultMarker: Marker,
   ): number {
-    const activeConfigSource = getActiveConfigSource(config);
-    if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      return MarkerResolver.packMarker(config.constant.value);
-    }
-    return MarkerResolver.packMarker(defaultMarker);
+    return (
+      MarkerResolver.resolveConstantMarker(config) ??
+      MarkerResolver.packMarker(defaultMarker)
+    );
   }
 
   /**
@@ -156,7 +173,7 @@ export class MarkerResolver extends ResolverBase {
     const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
       align,
     });
-    await MarkerResolver.fillFromTableValues(
+    await TableUtils.fillFromTableValues(
       packedMarkers,
       data,
       ids,
@@ -208,7 +225,7 @@ export class MarkerResolver extends ResolverBase {
         align,
       });
       const groupMarkers = new Map(Object.entries(markerMap.values));
-      await MarkerResolver.fillFromTableGroups(
+      await TableUtils.fillFromTableGroups(
         packedMarkers,
         data,
         ids,
@@ -224,7 +241,7 @@ export class MarkerResolver extends ResolverBase {
     const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
       align,
     });
-    await MarkerResolver.fillFromTableGroups(
+    await TableUtils.fillFromTableGroups(
       packedMarkers,
       data,
       ids,

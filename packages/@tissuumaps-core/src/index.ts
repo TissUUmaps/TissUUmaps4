@@ -231,6 +231,7 @@ export { MathUtils } from "./utils/MathUtils";
 export { NumberUtils } from "./utils/NumberUtils";
 export { RandomUtils } from "./utils/RandomUtils";
 export { SourceUtils } from "./utils/SourceUtils";
+export { TableUtils } from "./utils/TableUtils";
 export { TransformUtils } from "./utils/TransformUtils";
 
 export {

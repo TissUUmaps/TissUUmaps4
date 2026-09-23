@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import type { Dims, Rect } from "@tissuumaps/core";
+import { type Dims, GeometryUtils, type Rect } from "@tissuumaps/core";
 import {
   WebGLContext,
   WebGLPointsRenderer,
@@ -32,6 +32,35 @@ function drawGL(gl: GL | null) {
   }
 }
 
+/**
+ * Creates a state updater that sets new bounds, but keeps the current ones if
+ * they are equal, so that equal bounds do not trigger a re-render
+ *
+ * @param newBounds - The new bounds, or null if nothing is drawn
+ * @returns The state updater
+ */
+function updateBounds(newBounds: Rect | null) {
+  return (currentBounds: Rect | null) =>
+    newBounds !== null &&
+    currentBounds !== null &&
+    GeometryUtils.rectEquals(currentBounds, newBounds)
+      ? currentBounds
+      : newBounds;
+}
+
+/**
+ * Creates the canvas the WebGL renderers draw on, covering its parent
+ */
+function createCanvas() {
+  const canvas = document.createElement("canvas");
+  canvas.style.position = "absolute";
+  canvas.style.top = "0";
+  canvas.style.left = "0";
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  return canvas;
+}
+
 export function useWebGL(adapter: ViewerAdapter) {
   const {
     layers,
@@ -53,33 +82,31 @@ export function useWebGL(adapter: ViewerAdapter) {
   const glPromiseRef = useRef<Promise<GL | null>>(Promise.resolve(null));
   const [glReady, setGLReady] = useState(false);
 
-  const glOptionsRef = useRef(glOptions);
   const viewportRef = useRef<Rect | null>(null);
   const containerSizeRef = useRef<Dims | null>(null);
 
   const [syncPoints, dispatchSyncPoints] = useReducer((x) => x + 1, 0);
   const [syncShapes, dispatchSyncShapes] = useReducer((x) => x + 1, 0);
+  const syncPointsAbortControllerRef = useRef<AbortController | null>(null);
+  const syncShapesAbortControllerRef = useRef<AbortController | null>(null);
+  const requestedSyncPointsRef = useRef(0);
+  const requestedSyncShapesRef = useRef(0);
+
+  const [redraw, dispatchRedraw] = useReducer((x) => x + 1, 0);
 
   const [glPointsBounds, setGLPointsBounds] = useState<Rect | null>(null);
   const [glShapesBounds, setGLShapesBounds] = useState<Rect | null>(null);
 
-  function createCanvas() {
-    const canvas = document.createElement("canvas");
-    canvas.style.position = "absolute";
-    canvas.style.top = "0";
-    canvas.style.left = "0";
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-    return canvas;
-  }
-
   const setGLViewport = useCallback((viewport: Rect) => {
-    viewportRef.current = viewport;
-    if (glRef.current !== null) {
-      const redrawPoints = glRef.current.pointsRenderer.setViewport(viewport);
-      const redrawShapes = glRef.current.shapesRenderer.setViewport(viewport);
-      if (redrawPoints || redrawShapes) {
-        drawGL(glRef.current);
+    if (
+      viewportRef.current === null ||
+      !GeometryUtils.rectEquals(viewport, viewportRef.current)
+    ) {
+      viewportRef.current = viewport;
+      if (glRef.current !== null) {
+        glRef.current.pointsRenderer.viewport = viewport;
+        glRef.current.shapesRenderer.viewport = viewport;
+        drawGL(glRef.current); // keep direct to avoid lags!
       }
     }
   }, []);
@@ -97,7 +124,7 @@ export function useWebGL(adapter: ViewerAdapter) {
       // unchanged, where it is the only draw that refills the resized, and
       // therefore blank, canvas.
       if (redraw) {
-        drawGL(glRef.current);
+        drawGL(glRef.current); // keep direct to avoid lags!
       }
     }
   }, []);
@@ -127,10 +154,7 @@ export function useWebGL(adapter: ViewerAdapter) {
           context,
           resolvePointsRendererInitPromise,
           rejectPointsRendererInitPromise,
-          {
-            renderOptions: glOptionsRef.current.pointsRenderOptions,
-            signal: abortController.signal,
-          },
+          { signal: abortController.signal },
         );
       } catch (error) {
         context.destroy();
@@ -146,28 +170,31 @@ export function useWebGL(adapter: ViewerAdapter) {
       }
       let shapesRenderer: WebGLShapesRenderer;
       try {
-        shapesRenderer = new WebGLShapesRenderer(context, {
-          renderOptions: glOptionsRef.current.shapesRenderOptions,
-        });
+        shapesRenderer = new WebGLShapesRenderer(context);
       } catch (error) {
         pointsRenderer.destroy();
         context.destroy();
         throw new Error("Error creating shapes renderer", { cause: error });
       }
-      // set only now, as the viewport may have changed while awaiting the
-      // points renderer
+      // set only now, as it may have changed while awaiting the renderers
       if (viewportRef.current !== null) {
-        pointsRenderer.setViewport(viewportRef.current);
-        shapesRenderer.setViewport(viewportRef.current);
+        pointsRenderer.viewport = viewportRef.current;
+        shapesRenderer.viewport = viewportRef.current;
       }
       const gl = { canvas, context, pointsRenderer, shapesRenderer };
       glRef.current = gl;
       setGLReady(true);
-      drawGL(gl);
       return gl;
     }
 
     function stopGL() {
+      // On context loss, the sync effects are only cleaned up (and thereby
+      // aborted) after the re-render that unsetting glReady schedules, so their
+      // synchronizations could resume on the renderers destroyed below and fail
+      // with spurious errors. Abort them first; on unmount, React has already
+      // cleaned up the effects, and this does nothing.
+      syncPointsAbortControllerRef.current?.abort();
+      syncShapesAbortControllerRef.current?.abort();
       const gl = glRef.current;
       setGLReady(false);
       glRef.current = null;
@@ -227,49 +254,94 @@ export function useWebGL(adapter: ViewerAdapter) {
   }, []);
 
   useEffect(() => {
-    glOptionsRef.current = glOptions;
     if (glReady && glRef.current !== null) {
-      const { resync: resyncPoints, redraw: redrawPoints } =
-        glRef.current.pointsRenderer.setRenderOptions(
-          glOptions.pointsRenderOptions,
-        );
-      const { resync: resyncShapes, redraw: redrawShapes } =
-        glRef.current.shapesRenderer.setRenderOptions(
-          glOptions.shapesRenderOptions,
-        );
-      if (redrawPoints || redrawShapes) {
-        drawGL(glRef.current);
-      }
-      if (resyncPoints) {
+      glRef.current.pointsRenderer.renderOptions =
+        glOptions.pointsRenderOptions;
+      dispatchRedraw();
+      if (glRef.current.pointsRenderer.needsSynchronization()) {
+        requestedSyncPointsRef.current++;
         dispatchSyncPoints();
       }
-      if (resyncShapes) {
+    }
+  }, [glReady, glOptions.pointsRenderOptions]);
+
+  useEffect(() => {
+    if (glReady && glRef.current !== null) {
+      glRef.current.shapesRenderer.renderOptions =
+        glOptions.shapesRenderOptions;
+      // the rendered bounds include the stroke width, a render option
+      const newShapesBounds = glRef.current.shapesRenderer.getRenderedBounds();
+      setGLShapesBounds(updateBounds(newShapesBounds));
+      dispatchRedraw();
+      if (glRef.current.shapesRenderer.needsSynchronization()) {
+        requestedSyncShapesRef.current++;
         dispatchSyncShapes();
       }
     }
-  }, [glReady, glOptions]);
+  }, [glReady, glOptions.shapesRenderOptions]);
+
+  useEffect(() => {
+    if (glReady && glRef.current !== null) {
+      if (glRef.current.pointsRenderer.setModel(layers, points)) {
+        const newPointsBounds =
+          glRef.current.pointsRenderer.getRenderedBounds();
+        setGLPointsBounds(updateBounds(newPointsBounds));
+        dispatchRedraw();
+      }
+      if (glRef.current.pointsRenderer.needsSynchronization()) {
+        requestedSyncPointsRef.current++;
+        dispatchSyncPoints();
+      }
+    }
+  }, [glReady, layers, points]);
+
+  useEffect(() => {
+    if (glReady && glRef.current !== null) {
+      if (glRef.current.shapesRenderer.setModel(layers, shapes)) {
+        const newShapesBounds =
+          glRef.current.shapesRenderer.getRenderedBounds();
+        setGLShapesBounds(updateBounds(newShapesBounds));
+        dispatchRedraw();
+      }
+      if (glRef.current.shapesRenderer.needsSynchronization()) {
+        requestedSyncShapesRef.current++;
+        dispatchSyncShapes();
+      }
+    }
+  }, [glReady, layers, shapes]);
 
   useEffect(() => {
     const abortController = new AbortController();
-    if (glReady && glRef.current !== null) {
+    syncPointsAbortControllerRef.current = abortController;
+    if (
+      glReady &&
+      glRef.current !== null &&
+      syncPoints === requestedSyncPointsRef.current
+    ) {
       glRef.current.pointsRenderer
         .synchronize(
-          layers,
-          points,
-          tables,
-          markerMaps,
-          sizeMaps,
-          colorMaps,
-          visibilityMaps,
-          opacityMaps,
-          loadPoints,
-          loadTable,
+          {
+            tables,
+            markerMaps,
+            sizeMaps,
+            colorMaps,
+            visibilityMaps,
+            opacityMaps,
+            loadObject: loadPoints,
+            loadTable,
+          },
           { signal: abortController.signal },
         )
-        .then((renderedBounds) => {
-          if (!abortController.signal.aborted) {
-            setGLPointsBounds(renderedBounds ?? null);
-            drawGL(glRef.current);
+        .then((changed) => {
+          if (
+            changed &&
+            glRef.current !== null &&
+            !abortController.signal.aborted
+          ) {
+            const newPointsBounds =
+              glRef.current.pointsRenderer.getRenderedBounds();
+            setGLPointsBounds(updateBounds(newPointsBounds));
+            drawGL(glRef.current); // direct (async continuation in own task)
           }
         })
         .catch((error) => {
@@ -283,8 +355,6 @@ export function useWebGL(adapter: ViewerAdapter) {
     };
   }, [
     glReady,
-    layers,
-    points,
     tables,
     markerMaps,
     sizeMaps,
@@ -298,23 +368,34 @@ export function useWebGL(adapter: ViewerAdapter) {
 
   useEffect(() => {
     const abortController = new AbortController();
-    if (glReady && glRef.current !== null) {
+    syncShapesAbortControllerRef.current = abortController;
+    if (
+      glReady &&
+      glRef.current !== null &&
+      syncShapes === requestedSyncShapesRef.current
+    ) {
       glRef.current.shapesRenderer
         .synchronize(
-          layers,
-          shapes,
-          tables,
-          colorMaps,
-          visibilityMaps,
-          opacityMaps,
-          loadShapes,
-          loadTable,
+          {
+            tables,
+            colorMaps,
+            visibilityMaps,
+            opacityMaps,
+            loadObject: loadShapes,
+            loadTable,
+          },
           { signal: abortController.signal },
         )
-        .then((renderedBounds) => {
-          if (!abortController.signal.aborted) {
-            setGLShapesBounds(renderedBounds ?? null);
-            drawGL(glRef.current);
+        .then((changed) => {
+          if (
+            changed &&
+            glRef.current !== null &&
+            !abortController.signal.aborted
+          ) {
+            const newShapesBounds =
+              glRef.current.shapesRenderer.getRenderedBounds();
+            setGLShapesBounds(updateBounds(newShapesBounds));
+            drawGL(glRef.current); // direct (async continuation in own task)
           }
         })
         .catch((error) => {
@@ -328,8 +409,6 @@ export function useWebGL(adapter: ViewerAdapter) {
     };
   }, [
     glReady,
-    layers,
-    shapes,
     tables,
     colorMaps,
     visibilityMaps,
@@ -339,12 +418,16 @@ export function useWebGL(adapter: ViewerAdapter) {
     syncShapes,
   ]);
 
+  useEffect(() => {
+    if (glReady) {
+      drawGL(glRef.current);
+    }
+  }, [glReady, redraw]);
+
   return {
     initGL,
     setGLViewport,
     setGLContainerSize,
-    glRef,
-    glReady,
     glPointsBounds,
     glShapesBounds,
   };

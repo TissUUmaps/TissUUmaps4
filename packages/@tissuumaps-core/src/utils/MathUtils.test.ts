@@ -108,6 +108,39 @@ describe("MathUtils", () => {
     });
   });
 
+  describe("computeWeightedMedian", () => {
+    it("returns the value at which the cumulative weight reaches half the total", () => {
+      expect(
+        MathUtils.computeWeightedMedian([3, 1, 2], new Float64Array([1, 1, 1])),
+      ).toBe(2);
+      expect(MathUtils.computeWeightedMedian([1, 2, 10], [1, 1, 40])).toBe(10);
+    });
+
+    it("returns the smaller value when the cumulative weight is exactly half", () => {
+      expect(MathUtils.computeWeightedMedian([1, 2], [1, 1])).toBe(1);
+    });
+
+    it("ignores values without weight", () => {
+      expect(MathUtils.computeWeightedMedian([0, 5, 7], [0, 1, 0])).toBe(5);
+    });
+
+    it("weights all values equally if the total weight is zero", () => {
+      expect(MathUtils.computeWeightedMedian([3, 1, 2], [0, 0, 0])).toBe(2);
+    });
+
+    it("throws error when values are empty", () => {
+      expect(() => MathUtils.computeWeightedMedian([], [])).toThrow(
+        "values must not be empty",
+      );
+    });
+
+    it("throws error when weights have a different length", () => {
+      expect(() => MathUtils.computeWeightedMedian([1, 2], [1])).toThrow(
+        "weights must have the same length as values",
+      );
+    });
+  });
+
   describe("computeRange", () => {
     it("returns the minimum and maximum of plain arrays", async () => {
       await expect(MathUtils.computeRange([3, -1, 7, 2])).resolves.toEqual([
@@ -387,9 +420,9 @@ describe("MathUtils", () => {
     });
 
     it("returns no counts for empty data", async () => {
-      await expect(MathUtils.computeUniqueValueCounts([])).resolves.toEqual(
-        new Map(),
-      );
+      await expect(
+        MathUtils.computeUniqueValueCounts<number>([]),
+      ).resolves.toEqual(new Map());
     });
 
     it("handles large data", async () => {

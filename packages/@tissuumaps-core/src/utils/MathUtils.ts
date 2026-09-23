@@ -3,8 +3,8 @@ import { AsyncUtils } from "./AsyncUtils";
 import { RandomUtils } from "./RandomUtils";
 
 /**
- * Utility methods for numeric clamping, remapping, alignment, histograms and
- * counts
+ * Utility methods for numeric clamping, remapping, alignment, medians,
+ * histograms and counts
  */
 export class MathUtils {
   /**
@@ -67,6 +67,46 @@ export class MathUtils {
       return n;
     }
     return Math.ceil(n / m) * m;
+  }
+
+  /**
+   * Computes the weighted median of numeric values
+   *
+   * Returns the smallest value whose cumulative weight, in ascending order of
+   * the values, reaches half the total weight. If the total weight is zero,
+   * all values are weighted equally instead.
+   *
+   * @param values - The non-empty values to compute the weighted median of
+   * @param weights - The non-negative weight of each value
+   * @returns The weighted median
+   * @throws Error if `values` is empty, or if `weights` has a different length
+   */
+  static computeWeightedMedian(
+    values: NumericArray,
+    weights: NumericArray,
+  ): number {
+    if (values.length === 0) {
+      throw new Error("values must not be empty");
+    }
+    if (weights.length !== values.length) {
+      throw new Error("weights must have the same length as values");
+    }
+    const order = new Uint32Array(values.length).map((_, i) => i);
+    order.sort((i, j) => values[i]! - values[j]!);
+    let totalWeight = 0;
+    for (let i = 0; i < weights.length; i++) {
+      totalWeight += weights[i]!;
+    }
+    const weighted = totalWeight > 0;
+    const halfWeight = 0.5 * (weighted ? totalWeight : values.length);
+    let cumulativeWeight = 0;
+    for (const i of order) {
+      cumulativeWeight += weighted ? weights[i]! : 1;
+      if (cumulativeWeight >= halfWeight) {
+        return values[i]!;
+      }
+    }
+    return values[order[order.length - 1]!]!; // unreachable but for rounding errors
   }
 
   /**

@@ -20,7 +20,7 @@ export function ProjectSettingsDialog() {
 
       <div className="space-y-4">
         <Field>
-          <FieldLabel>Global Point Size Factor</FieldLabel>
+          <FieldLabel>Point Size Factor</FieldLabel>
           <FieldControl
             render={
               <Input
@@ -50,7 +50,7 @@ export function ProjectSettingsDialog() {
         </Field>
 
         <Field>
-          <FieldLabel>Shape Stroke Width (px)</FieldLabel>
+          <FieldLabel>Shape Stroke Width</FieldLabel>
           <FieldControl
             render={
               <Input
@@ -73,18 +73,20 @@ export function ProjectSettingsDialog() {
             }
           />
           <FieldDescription className="text-xs text-muted-foreground">
-            Stroke width for shape outlines in pixels
+            Stroke width for shape outlines, in world coordinates
           </FieldDescription>
         </Field>
 
         <Field>
-          <FieldLabel>Shape Scanlines</FieldLabel>
+          <FieldLabel>Shape Edges per Scanline</FieldLabel>
           <FieldControl
             render={
               <Input
                 type="number"
+                inputMode="decimal"
+                step={1}
                 min={1}
-                value={glOptions.shapesRenderOptions.numScanlines}
+                value={glOptions.shapesRenderOptions.edgesPerScanline}
                 onChange={(event) => {
                   const newValue = event.target.valueAsNumber;
                   if (!isNaN(newValue)) {
@@ -92,7 +94,7 @@ export function ProjectSettingsDialog() {
                       ...glOptions,
                       shapesRenderOptions: {
                         ...glOptions.shapesRenderOptions,
-                        numScanlines: Math.max(1, Math.trunc(newValue)),
+                        edgesPerScanline: Math.max(1, newValue),
                       },
                     });
                   }
@@ -101,7 +103,71 @@ export function ProjectSettingsDialog() {
             }
           />
           <FieldDescription className="text-xs text-muted-foreground">
-            Number of scanlines for shape rasterization
+            Number of outline edges of a typical shape per rasterization
+            scanline (fewer is faster, but uses more memory)
+          </FieldDescription>
+        </Field>
+
+        <Field>
+          <FieldLabel>Shape Bin Width Factor</FieldLabel>
+          <FieldControl
+            render={
+              <Input
+                type="number"
+                inputMode="decimal"
+                step={0.1}
+                min={0.1}
+                value={glOptions.shapesRenderOptions.binWidthFactor}
+                onChange={(event) => {
+                  const newValue = event.target.valueAsNumber;
+                  if (!isNaN(newValue)) {
+                    setGLOptions({
+                      ...glOptions,
+                      shapesRenderOptions: {
+                        ...glOptions.shapesRenderOptions,
+                        binWidthFactor: Math.max(0.1, newValue),
+                      },
+                    });
+                  }
+                }}
+              />
+            }
+          />
+          <FieldDescription className="text-xs text-muted-foreground">
+            Width of the rasterization scanline bins, relative to the median
+            shape width (smaller is faster, but uses more memory)
+          </FieldDescription>
+        </Field>
+
+        <Field>
+          <FieldLabel>Shape Padding</FieldLabel>
+          <FieldControl
+            render={
+              <Input
+                type="number"
+                inputMode="decimal"
+                step={0.1}
+                min={0}
+                value={glOptions.shapesRenderOptions.shapePadding}
+                onChange={(event) => {
+                  const newValue = event.target.valueAsNumber;
+                  if (!isNaN(newValue)) {
+                    setGLOptions({
+                      ...glOptions,
+                      shapesRenderOptions: {
+                        ...glOptions.shapesRenderOptions,
+                        shapePadding: Math.max(0, newValue),
+                      },
+                    });
+                  }
+                }}
+              />
+            }
+          />
+          <FieldDescription className="text-xs text-muted-foreground">
+            Padding of the shapes in the rasterization scanlines and bins, as a
+            fraction of the median shape size (larger lets strokes reach
+            further, but is slower and uses more memory)
           </FieldDescription>
         </Field>
       </div>

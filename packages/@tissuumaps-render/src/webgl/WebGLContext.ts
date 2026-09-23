@@ -9,12 +9,14 @@ export class WebGLContext {
   private static readonly _maxCanvasSize = 4096;
 
   readonly gl: WebGL2RenderingContext;
+  /** The largest width and height of a texture that the GPU supports, in texels */
+  readonly maxTextureSize: number;
 
   /**
    * Creates a new WebGLContext for the given canvas element
    *
    * @param canvas - The HTML canvas element to use for rendering
-   * @throws If the browser does not support WebGL 2.0
+   * @throws Error if the browser does not support WebGL 2.0
    */
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl2", {
@@ -26,6 +28,9 @@ export class WebGLContext {
     }
     gl.viewport(0, 0, canvas.width, canvas.height);
     this.gl = gl;
+    this.maxTextureSize = gl.getParameter(
+      WebGL2RenderingContext.MAX_TEXTURE_SIZE,
+    ) as number;
   }
 
   /**
@@ -37,9 +42,8 @@ export class WebGLContext {
    * @returns `true` if the canvas size actually changed, `false` otherwise
    */
   resizeCanvas(canvas: HTMLCanvasElement, newCanvasSize: Dims): boolean {
-    let { width, height } = newCanvasSize;
-    width *= window.devicePixelRatio;
-    height *= window.devicePixelRatio;
+    let width = Math.floor(newCanvasSize.width * window.devicePixelRatio);
+    let height = Math.floor(newCanvasSize.height * window.devicePixelRatio);
     if (width <= 0 || height <= 0) {
       width = 1;
       height = 1;
@@ -76,7 +80,7 @@ export class WebGLContext {
    *
    * @param vertexShaderSource - GLSL source for the vertex shader
    * @param fragmentShaderSource - GLSL source for the fragment shader
-   * @throws If shader compilation or program linking fails
+   * @throws Error if shader compilation or program linking fails
    */
   createProgram(
     vertexShaderSource: string,
@@ -143,7 +147,7 @@ export class WebGLContext {
    *
    * @param program - The shader program
    * @param name - The uniform name as declared in the shader
-   * @throws If the uniform is not found
+   * @throws Error if the uniform is not found
    */
   getUniformLocation(
     program: WebGLProgram,
@@ -157,32 +161,9 @@ export class WebGLContext {
   }
 
   /**
-   * Returns the index of a uniform block in a shader program
-   *
-   * @param program - The shader program
-   * @param uniformBlockName - The name of the uniform block as declared in the shader
-   * @throws If the uniform block is not found
-   */
-  getUniformBlockIndex(
-    program: WebGLProgram,
-    uniformBlockName: string,
-  ): number {
-    const uniformBlockIndex = this.gl.getUniformBlockIndex(
-      program,
-      uniformBlockName,
-    );
-    if (uniformBlockIndex === WebGL2RenderingContext.INVALID_INDEX) {
-      throw new Error(
-        `Failed to get uniform block index for ${uniformBlockName}`,
-      );
-    }
-    return uniformBlockIndex;
-  }
-
-  /**
    * Creates a new vertex array object (VAO)
    *
-   * @throws If VAO creation fails
+   * @throws Error if VAO creation fails
    */
   createVertexArray(): WebGLVertexArrayObject {
     const vao = this.gl.createVertexArray();
@@ -264,7 +245,7 @@ export class WebGLContext {
    * @param format - Pixel data format (e.g. `gl.RGBA`)
    * @param type - Pixel data type (e.g. `gl.FLOAT`)
    * @param data - Optional initial pixel data
-   * @throws If texture creation fails
+   * @throws Error if texture creation fails
    */
   createDataTexture(
     internalformat: GLenum,
@@ -365,7 +346,7 @@ export class WebGLContext {
    *
    * @param url - The image URL
    * @param options - Optional mipmap generation flag and abort signal
-   * @throws If texture creation fails, the image fails to load, or the
+   * @throws Error if texture creation fails, the image fails to load, or the
    * operation was aborted
    */
   async loadImageTextureFromUrl(
@@ -424,8 +405,8 @@ export class WebGLContext {
         this.gl.bindTexture(WebGL2RenderingContext.TEXTURE_2D, null);
         resolve();
       };
-      img.onerror = (...args) => {
-        reject(new Error(`Failed to load image: ${url}`, { cause: args[4] }));
+      img.onerror = (event) => {
+        reject(new Error(`Failed to load image: ${url}`, { cause: event }));
       };
       img.src = url;
     });
@@ -442,7 +423,7 @@ export class WebGLContext {
   /**
    * Creates a new WebGL buffer
    *
-   * @throws If buffer creation fails
+   * @throws Error if buffer creation fails
    */
   createBuffer(): WebGLBuffer {
     const buffer = this.gl.createBuffer();
@@ -453,21 +434,22 @@ export class WebGLContext {
   }
 
   /**
-   * Allocates (or re-allocates) storage for a buffer, discarding previous contents
+   * Allocates (or re-allocates) storage for a buffer and fills it with the
+   * given data, discarding previous contents
    *
    * @param target - Buffer binding target (e.g. `gl.ARRAY_BUFFER`)
-   * @param buffer - The buffer to resize
-   * @param size - New size in bytes
+   * @param buffer - The buffer to allocate
+   * @param data - The data to fill the buffer with; sets its size
    * @param usage - Usage hint (e.g. `gl.STATIC_DRAW`)
    */
-  resizeBuffer(
+  allocateBuffer(
     target: GLenum,
     buffer: WebGLBuffer,
-    size: GLsizeiptr,
+    data: Exclude<TypedArray, Float64Array>,
     usage: GLenum,
   ): void {
     this.gl.bindBuffer(target, buffer);
-    this.gl.bufferData(target, size, usage);
+    this.gl.bufferData(target, data, usage);
     this.gl.bindBuffer(target, null);
   }
 

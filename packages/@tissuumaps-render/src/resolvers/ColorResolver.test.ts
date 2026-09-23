@@ -53,77 +53,65 @@ describe("ColorResolver", () => {
 
   describe("parseColor", () => {
     it("maps the minimum of the range to the first color", () => {
-      expect(
-        ColorResolver.parseColor(0, [0, 3], undefined, testPalette),
-      ).toEqual(red);
+      expect(ColorResolver.parseColor(0, [0, 3], testPalette)).toEqual(red);
     });
 
     it("maps the middle of the range to the middle color", () => {
-      expect(
-        ColorResolver.parseColor(1.5, [0, 3], undefined, testPalette),
-      ).toEqual(green);
+      expect(ColorResolver.parseColor(1.5, [0, 3], testPalette)).toEqual(green);
     });
 
     it("maps the maximum of the range to the last color", () => {
-      expect(
-        ColorResolver.parseColor(3, [0, 3], undefined, testPalette),
-      ).toEqual(blue);
+      expect(ColorResolver.parseColor(3, [0, 3], testPalette)).toEqual(blue);
     });
 
     it("interpolates between the two colors a value falls between", () => {
-      expect(
-        ColorResolver.parseColor(0.75, [0, 3], undefined, testPalette),
-      ).toEqual({ r: 127.5, g: 127.5, b: 0 });
+      expect(ColorResolver.parseColor(0.75, [0, 3], testPalette)).toEqual({
+        r: 127.5,
+        g: 127.5,
+        b: 0,
+      });
     });
 
     it("maps every value onto the first color for an empty range", () => {
-      expect(
-        ColorResolver.parseColor(5, undefined, [5, 5], testPalette),
-      ).toEqual(red);
+      expect(ColorResolver.parseColor(5, [5, 5], testPalette)).toEqual(red);
     });
 
-    it("prefers the configured value range over the data range", () => {
+    it("normalizes within the given range", () => {
       // 5/10 = 0.5, the middle of the palette → green
-      expect(
-        ColorResolver.parseColor(5, [0, 100], [0, 10], testPalette),
-      ).toEqual(green);
+      expect(ColorResolver.parseColor(5, [0, 10], testPalette)).toEqual(green);
     });
 
-    it("uses the data value range when no configured range is given", () => {
+    it("normalizes within a wide range", () => {
       // 50/100 = 0.5, the middle of the palette → green
-      expect(
-        ColorResolver.parseColor(50, [0, 100], undefined, testPalette),
-      ).toEqual(green);
+      expect(ColorResolver.parseColor(50, [0, 100], testPalette)).toEqual(
+        green,
+      );
     });
 
-    it("defaults to [0, 1] when both ranges are undefined", () => {
+    it("defaults to [0, 1] when the range is undefined", () => {
       // 0.5/1 = 0.5, the middle of the palette → green
-      expect(
-        ColorResolver.parseColor(0.5, undefined, undefined, testPalette),
-      ).toEqual(green);
+      expect(ColorResolver.parseColor(0.5, undefined, testPalette)).toEqual(
+        green,
+      );
     });
 
     it("clamps out-of-range values to the palette ends", () => {
-      expect(
-        ColorResolver.parseColor(-10, [0, 1], undefined, testPalette),
-      ).toEqual(red);
-      expect(
-        ColorResolver.parseColor(100, [0, 1], undefined, testPalette),
-      ).toEqual(blue);
+      expect(ColorResolver.parseColor(-10, [0, 1], testPalette)).toEqual(red);
+      expect(ColorResolver.parseColor(100, [0, 1], testPalette)).toEqual(blue);
     });
 
     it("returns undefined for non-finite values", () => {
       expect(
-        ColorResolver.parseColor(NaN, [0, 1], undefined, testPalette),
+        ColorResolver.parseColor(NaN, [0, 1], testPalette),
       ).toBeUndefined();
       expect(
-        ColorResolver.parseColor(Infinity, [0, 1], undefined, testPalette),
+        ColorResolver.parseColor(Infinity, [0, 1], testPalette),
       ).toBeUndefined();
     });
 
     it("returns undefined for non-number values", () => {
       expect(
-        ColorResolver.parseColor("abc", [0, 1], undefined, testPalette),
+        ColorResolver.parseColor("abc", [0, 1], testPalette),
       ).toBeUndefined();
     });
   });
@@ -207,6 +195,56 @@ describe("ColorResolver", () => {
       expect(packedColors[1]).toBe(
         ColorResolver.packColor(palette.colors[palette.colors.length - 1]!),
       );
+    });
+
+    it("normalizes within the loaded value range when no range is configured", async () => {
+      const palette = colorPalettes[0]!;
+      const ids = [1, 2];
+      const loadValueRange = vi.fn().mockResolvedValue([-10, 30]);
+      const data = { ...createMockTableData(ids, [-10, 30]), loadValueRange };
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = {
+        from: { column: "col1", palette: palette.id },
+      } satisfies ColorConfig;
+
+      const packedColors = await ColorResolver.resolveColorsFromTableValues(
+        ids,
+        config,
+        black,
+        loadTable,
+      );
+
+      expect(loadValueRange).toHaveBeenCalledWith("col1", {
+        signal: undefined,
+      });
+      // the loaded range maps -10 to the first and 30 to the last color
+      expect(packedColors[0]).toBe(ColorResolver.packColor(palette.colors[0]!));
+      expect(packedColors[1]).toBe(
+        ColorResolver.packColor(palette.colors[palette.colors.length - 1]!),
+      );
+    });
+
+    it("normalizes within the configured range without loading the value range", async () => {
+      const palette = colorPalettes[0]!;
+      const ids = [1, 2];
+      const loadValueRange = vi.fn().mockResolvedValue([0, 100]);
+      const data = { ...createMockTableData(ids, [0, 100]), loadValueRange };
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = {
+        from: { column: "col1", palette: palette.id, range: [100, 200] },
+      } satisfies ColorConfig;
+
+      const packedColors = await ColorResolver.resolveColorsFromTableValues(
+        ids,
+        config,
+        black,
+        loadTable,
+      );
+
+      expect(loadValueRange).not.toHaveBeenCalled();
+      // both values fall below the configured range and clamp to the first color
+      const firstColor = ColorResolver.packColor(palette.colors[0]!);
+      expect(Array.from(packedColors)).toEqual([firstColor, firstColor]);
     });
 
     it("returns uniform default color when the palette is not found", async () => {
@@ -619,6 +657,26 @@ describe("ColorResolver", () => {
           signal: controller.signal,
         }),
       ).rejects.toThrow();
+    });
+  });
+
+  describe("resolveConstantColor", () => {
+    it("returns the packed color for a constant config", () => {
+      const config = { constant: { value: red } } satisfies ColorConfig;
+      expect(ColorResolver.resolveConstantColor(config)).toBe(
+        ColorUtils.packColor(red),
+      );
+    });
+
+    it("returns undefined for table-backed and random configs", () => {
+      const fromConfig = {
+        from: { column: "col1", palette: colorPalettes[0]!.id },
+      } satisfies ColorConfig;
+      const randomConfig = {
+        random: { palette: colorPalettes[0]!.id },
+      } satisfies ColorConfig;
+      expect(ColorResolver.resolveConstantColor(fromConfig)).toBeUndefined();
+      expect(ColorResolver.resolveConstantColor(randomConfig)).toBeUndefined();
     });
   });
 
