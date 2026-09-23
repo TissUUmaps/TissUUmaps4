@@ -20,6 +20,7 @@ import {
   saveAndDownloadProjectToJSON,
   setProjectURLParam,
 } from "@/data/io/project";
+import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
 import { LayersWidget } from "./LayersWidget";
@@ -29,12 +30,20 @@ export type ProjectPanelProps = {
   className?: string;
 };
 
+type WindowWithDirectoryPicker = Window & {
+  showDirectoryPicker?: (options?: {
+    mode?: "read" | "readwrite";
+  }) => Promise<FileSystemDirectoryHandle>;
+};
+
 export function ProjectPanel({ className }: ProjectPanelProps) {
   const loadProjectFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const name = useProjectStore((state) => state.name);
   const setName = useProjectStore((state) => state.setName);
   const clearProject = useProjectStore((state) => state.clear);
+  const workspace = useAppStore((state) => state.workspace);
+  const setWorkspace = useAppStore((state) => state.setWorkspace);
   const confirm = useConfirmDialog();
   const prompt = usePromptDialog();
 
@@ -66,6 +75,26 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
     });
   }, [clearProject, confirm]);
 
+  const toggleWorkspace = async () => {
+    if (workspace) {
+      setWorkspace(null);
+      return;
+    }
+    const w = window as WindowWithDirectoryPicker;
+    if (!w.showDirectoryPicker) {
+      return;
+    }
+    try {
+      const directoryHandle = await w.showDirectoryPicker({
+        mode: "readwrite",
+      });
+      setWorkspace(directoryHandle);
+    } catch (error) {
+      // Thrown with an AbortError when the user cancels the picker
+      console.error("Failed to open workspace", error);
+    }
+  };
+
   return (
     <div className={className}>
       <div>
@@ -95,6 +124,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
           </Dialog>
         </Field>
       </div>
+
       <div className="grid grid-cols-2">
         <Field>
           <Input
@@ -152,6 +182,28 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
             render={
               <Button onClick={() => confirmClearProject()}>
                 Clear project
+              </Button>
+            }
+          />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2">
+        <div className="flex items-end">
+          <p
+            className="text-sm truncate min-w-0"
+            title={workspace ? workspace.name : ""}
+          >
+            {workspace
+              ? `Current workspace: ${workspace.name}`
+              : `No current workspace.`}
+          </p>
+        </div>
+
+        <Field>
+          <FieldControl
+            render={
+              <Button onClick={() => void toggleWorkspace()}>
+                {workspace ? "Close workspace" : "Open workspace"}
               </Button>
             }
           />
