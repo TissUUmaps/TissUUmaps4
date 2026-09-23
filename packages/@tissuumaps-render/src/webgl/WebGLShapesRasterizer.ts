@@ -53,7 +53,9 @@ export type ScanlineOccupancyMask = [number, number, number, number];
  *
  * Shapes are not triangulated. Instead, the fragment shader determines per
  * fragment which shape it falls into, by computing a winding number over the
- * polygon edges near that fragment. To keep that affordable, the object's
+ * polygon edges near that fragment and applying the even-odd rule, so that
+ * holes are cut out whatever the orientation of their rings. To keep that
+ * affordable, the object's
  * bounding box is divided into horizontal scanlines, and each scanline holds
  * only the shapes and edges that reach into it: {@link createScanlines}
  * rasterizes them, {@link packScanlines} lays them out for the GPU.

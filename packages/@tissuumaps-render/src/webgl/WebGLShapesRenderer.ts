@@ -441,8 +441,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         objectBounds,
         { signal },
       );
-      this._checkDataTextureHeight(
+      this._checkDataTextureSize(
         "scanline data",
+        WebGLShapesRenderer._scanlineDataTextureWidth,
         scanlineBuffer.length /
           WebGLShapesRenderer._numValuesPerScanlineDataTextureLine,
       );
@@ -456,8 +457,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       packedShapeStrokeColors,
     ]) {
       if (packedShapeColors !== undefined) {
-        this._checkDataTextureHeight(
+        this._checkDataTextureSize(
           "shape colors",
+          WebGLShapesRenderer._shapeColorsTextureWidth,
           packedShapeColors.length /
             WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
         );
@@ -635,20 +637,27 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Throws unless a data texture with the given number of lines fits the GPU
+   * Throws unless a data texture of the given size fits the GPU
    *
    * Checked while an object is prepared, where a failure drops only that
    * object, with a message that says why, rather than when its textures are
    * created, where WebGL would fail with an opaque error, or render garbage.
+   * The width is fixed per texture, but WebGL 2 only guarantees 2048 texels.
    *
    * @param name - What the texture holds, for the error message
+   * @param width - The width of the texture, in texels
    * @param height - The number of texture lines the data needs
-   * @throws Error if the height exceeds the maximum texture size
+   * @throws Error if the width or height exceeds the maximum texture size
    */
-  private _checkDataTextureHeight(name: string, height: number): void {
-    if (height > this.context.maxTextureSize) {
+  private _checkDataTextureSize(
+    name: string,
+    width: number,
+    height: number,
+  ): void {
+    const { maxTextureSize } = this.context;
+    if (width > maxTextureSize || height > maxTextureSize) {
       throw new Error(
-        `The ${name} texture needs ${height} lines, but this GPU supports at most ${this.context.maxTextureSize}`,
+        `The ${name} texture needs ${width}x${height} texels, but this GPU supports at most ${maxTextureSize}x${maxTextureSize}`,
       );
     }
   }
