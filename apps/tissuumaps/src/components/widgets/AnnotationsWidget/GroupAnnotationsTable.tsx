@@ -8,19 +8,19 @@ import {
 } from "@/components/common/virtual-table";
 import { useTableData } from "@/hooks/useData";
 
-export type AnnotationsGroupTableRowData = {
+export type GroupAnnotationsTableRowData = {
   group: string;
 };
 
-export type AnnotationsGroupTableColumnDef =
-  VirtualTableColumnDef<AnnotationsGroupTableRowData>;
+export type GroupAnnotationsTableColumnDef =
+  VirtualTableColumnDef<GroupAnnotationsTableRowData>;
 
-export type AnnotationsGroupTableProps = {
+export type GroupAnnotationsTableProps = {
   height: number;
   rowHeight: number;
   table: string;
   groupByColumn: string;
-  extraGroupColumnDefs?: AnnotationsGroupTableColumnDef[];
+  extraGroupColumnDefs?: GroupAnnotationsTableColumnDef[];
 };
 
 type LoadedGroups = {
@@ -29,13 +29,13 @@ type LoadedGroups = {
   groups: GenericArray<string>;
 };
 
-export function AnnotationsGroupTable({
+export function GroupAnnotationsTable({
   height,
   rowHeight,
   table,
   groupByColumn,
   extraGroupColumnDefs,
-}: AnnotationsGroupTableProps) {
+}: GroupAnnotationsTableProps) {
   // the groups are kept with what they were loaded from, so that the ones of
   // a previous table or column are not shown as the current ones
   const [loadedGroups, setLoadedGroups] = useState<LoadedGroups | null>(null);
@@ -87,7 +87,7 @@ export function AnnotationsGroupTable({
   }, [groups]);
 
   const getRows = useCallback(
-    (startIndex: number, endIndex: number): AnnotationsGroupTableRowData[] =>
+    (startIndex: number, endIndex: number): GroupAnnotationsTableRowData[] =>
       sortedGroups?.slice(startIndex, endIndex).map((group) => ({ group })) ??
       [],
     [sortedGroups],
@@ -97,7 +97,7 @@ export function AnnotationsGroupTable({
     if (sortedGroups === null) {
       return [];
     }
-    const columnDefs: AnnotationsGroupTableColumnDef[] = [
+    const columnDefs: GroupAnnotationsTableColumnDef[] = [
       { id: "group", header: groupByColumn, accessorKey: "group" },
     ];
     if (extraGroupColumnDefs !== undefined) {

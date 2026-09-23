@@ -105,7 +105,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
 
   const pointsData = usePointsData(points.id);
 
-  const { extraTableGroupColumnDefs } = usePointsAnnotationsColumns(
+  const { extraGroupColumnDefs } = usePointsAnnotationsColumns(
     points,
     selectedGroupByColumn,
   );
@@ -213,7 +213,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               table={points.dataSource.table ?? null}
               selectedGroupByColumn={selectedGroupByColumn}
               onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraTableGroupColumnDefs={extraTableGroupColumnDefs}
+              extraGroupColumnDefs={extraGroupColumnDefs}
               className="bg-card"
             />
           )}

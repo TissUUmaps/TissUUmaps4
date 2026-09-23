@@ -8,13 +8,13 @@ import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
 import { cn } from "@/lib/utils";
 
 import {
-  AnnotationsGroupTable,
-  type AnnotationsGroupTableColumnDef,
-} from "./AnnotationsGroupTable";
+  GroupAnnotationsTable,
+  type GroupAnnotationsTableColumnDef,
+} from "./GroupAnnotationsTable";
 import {
-  AnnotationsItemTable,
-  type AnnotationsItemTableColumnDef,
-} from "./AnnotationsItemTable";
+  ItemAnnotationsTable,
+  type ItemAnnotationsTableColumnDef,
+} from "./ItemAnnotationsTable";
 
 // rows have a fixed height, so that the visible range follows from the scroll
 // offset alone; cells of extra columns must fit within it
@@ -26,8 +26,8 @@ export type AnnotationsWidgetProps = {
   table: string | null;
   selectedGroupByColumn?: string | null;
   onSelectedGroupByColumnChange?: (column: string | null) => void;
-  extraTableColumnDefs?: AnnotationsItemTableColumnDef[];
-  extraTableGroupColumnDefs?: AnnotationsGroupTableColumnDef[];
+  extraItemColumnDefs?: ItemAnnotationsTableColumnDef[];
+  extraGroupColumnDefs?: GroupAnnotationsTableColumnDef[];
   className?: string;
 };
 
@@ -37,8 +37,8 @@ export function AnnotationsWidget({
   table,
   selectedGroupByColumn: controlledSelectedGroupByColumn,
   onSelectedGroupByColumnChange: setControlledSelectedGroupByColumn,
-  extraTableColumnDefs,
-  extraTableGroupColumnDefs,
+  extraItemColumnDefs,
+  extraGroupColumnDefs,
   className,
 }: AnnotationsWidgetProps) {
   const [selectedGroupByColumn, setSelectedGroupByColumn] = useControlled(
@@ -68,20 +68,20 @@ export function AnnotationsWidget({
         />
       </Field>
       {table !== null && selectedGroupByColumn ? (
-        <AnnotationsGroupTable
+        <GroupAnnotationsTable
           height={tableHeight}
           rowHeight={tableRowHeight}
           table={table}
           groupByColumn={selectedGroupByColumn}
-          extraGroupColumnDefs={extraTableGroupColumnDefs}
+          extraGroupColumnDefs={extraGroupColumnDefs}
         />
       ) : (
-        <AnnotationsItemTable
+        <ItemAnnotationsTable
           data={data}
           height={tableHeight}
           rowHeight={tableRowHeight}
           table={table}
-          extraColumnDefs={extraTableColumnDefs}
+          extraColumnDefs={extraItemColumnDefs}
         />
       )}
     </Fieldset>

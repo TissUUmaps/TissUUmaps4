@@ -8,30 +8,30 @@ import {
 } from "@/components/common/virtual-table";
 import { useTableData } from "@/hooks/useData";
 
-export type AnnotationsItemTableRowData = {
+export type ItemAnnotationsTableRowData = {
   id: number;
   name?: string;
   annotated?: boolean;
 };
 
-export type AnnotationsItemTableColumnDef =
-  VirtualTableColumnDef<AnnotationsItemTableRowData>;
+export type ItemAnnotationsTableColumnDef =
+  VirtualTableColumnDef<ItemAnnotationsTableRowData>;
 
-export type AnnotationsItemTableProps = {
+export type ItemAnnotationsTableProps = {
   data?: ItemsData;
   height: number;
   rowHeight: number;
   table: string | null;
-  extraColumnDefs?: AnnotationsItemTableColumnDef[];
+  extraColumnDefs?: ItemAnnotationsTableColumnDef[];
 };
 
-export function AnnotationsItemTable({
+export function ItemAnnotationsTable({
   data,
   height,
   rowHeight,
   table,
   extraColumnDefs,
-}: AnnotationsItemTableProps) {
+}: ItemAnnotationsTableProps) {
   const tableData = useTableData(table);
 
   // the ids and the per-index accessors the rows are built from, so that only
@@ -88,7 +88,7 @@ export function AnnotationsItemTable({
 
   const getRows = useCallback(
     (startIndex: number, endIndex: number) => {
-      const rows: AnnotationsItemTableRowData[] = [];
+      const rows: ItemAnnotationsTableRowData[] = [];
       for (let index = startIndex; index < endIndex; index++) {
         const id = ids[index]!;
         rows.push({
@@ -103,7 +103,7 @@ export function AnnotationsItemTable({
   );
 
   const columnDefs = useMemo(() => {
-    const columnDefs: AnnotationsItemTableColumnDef[] = [
+    const columnDefs: ItemAnnotationsTableColumnDef[] = [
       { id: "id", header: "ID", accessorKey: "id" },
     ];
     if (getName !== undefined) {
