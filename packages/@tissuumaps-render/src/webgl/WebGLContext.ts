@@ -37,9 +37,8 @@ export class WebGLContext {
    * @returns `true` if the canvas size actually changed, `false` otherwise
    */
   resizeCanvas(canvas: HTMLCanvasElement, newCanvasSize: Dims): boolean {
-    let { width, height } = newCanvasSize;
-    width *= window.devicePixelRatio;
-    height *= window.devicePixelRatio;
+    let width = Math.floor(newCanvasSize.width * window.devicePixelRatio);
+    let height = Math.floor(newCanvasSize.height * window.devicePixelRatio);
     if (width <= 0 || height <= 0) {
       width = 1;
       height = 1;
@@ -401,8 +400,8 @@ export class WebGLContext {
         this.gl.bindTexture(WebGL2RenderingContext.TEXTURE_2D, null);
         resolve();
       };
-      img.onerror = (...args) => {
-        reject(new Error(`Failed to load image: ${url}`, { cause: args[4] }));
+      img.onerror = (event) => {
+        reject(new Error(`Failed to load image: ${url}`, { cause: event }));
       };
       img.src = url;
     });

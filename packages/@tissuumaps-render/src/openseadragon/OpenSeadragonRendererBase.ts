@@ -641,13 +641,14 @@ export abstract class OpenSeadragonRendererBase<
         matchedRenderedObjectsByNewRef.set(newRef, renderedObject);
       }
     }
-    for (const renderedObject of this._renderedObjects) {
-      if (!matchedRenderedObjects.has(renderedObject)) {
-        await this._deleteRenderedObject(renderedObject);
-        signal?.throwIfAborted();
-      }
-    }
+    // deletions are queued right away, so the deleted objects are forgotten
+    // right away, too, even if the synchronization is aborted while they run
+    const unmatchedDeletions = this._renderedObjects
+      .filter((renderedObject) => !matchedRenderedObjects.has(renderedObject))
+      .map((renderedObject) => this._deleteRenderedObject(renderedObject));
     this._renderedObjects = [...matchedRenderedObjects];
+    await Promise.all(unmatchedDeletions);
+    signal?.throwIfAborted();
     if (this._anchor === undefined) {
       throw new Error("Anchor not initialized");
     }
@@ -694,13 +695,12 @@ export abstract class OpenSeadragonRendererBase<
           (renderedObject.tiledImages?.length ?? 0);
       }
     }
-    for (const renderedObject of matchedRenderedObjects) {
-      if (!survivors.has(renderedObject)) {
-        await this._deleteRenderedObject(renderedObject);
-        signal?.throwIfAborted();
-      }
-    }
+    const unreusableDeletions = [...matchedRenderedObjects]
+      .filter((renderedObject) => !survivors.has(renderedObject))
+      .map((renderedObject) => this._deleteRenderedObject(renderedObject));
     this._renderedObjects = [...survivors];
+    await Promise.all(unreusableDeletions);
+    signal?.throwIfAborted();
     return renderedObjectsByNewRef;
   }
 
