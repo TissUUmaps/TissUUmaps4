@@ -65,14 +65,6 @@ function compressScrollRange(
 const maxLayoutHeight = 10_000_000;
 
 /**
- * How many rows are rendered beyond each end of the visible range
- *
- * Rows outside of it are not rendered, so scrolling reveals blank space until
- * the next render; the overscan covers a scroll of up to this many rows.
- */
-const overscan = 2;
-
-/**
  * The layout of a compressed virtualized list
  */
 type CompressedRowVirtualizer = {
@@ -101,12 +93,15 @@ type CompressedRowVirtualizer = {
  * @param rowCount - The number of rows in the list
  * @param rowHeight - The height of every row, in pixels
  * @param containerHeight - The height of the scroll container, in pixels
+ * @param overscan - How many rows to render beyond each end of the visible
+ * range
  * @returns The refs to attach, the visible range of rows and their layout
  */
 function useCompressedRowVirtualizer(
   rowCount: number,
   rowHeight: number,
   containerHeight: number,
+  overscan: number,
 ): CompressedRowVirtualizer {
   const containerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLTableSectionElement>(null);
@@ -217,6 +212,13 @@ export type VirtualTableProps<TRowData extends RowData> = {
   columnDefs: VirtualTableColumnDef<TRowData>[];
   rowHeight: number;
   height: number;
+  /**
+   * How many rows are rendered beyond each end of the visible range
+   *
+   * Rows outside of it are not rendered, so scrolling reveals blank space until
+   * the next render; the overscan covers a scroll of up to this many rows.
+   */
+  overscan?: number;
   rowClassName?: (row: TRowData) => string | undefined;
   className?: string;
 };
@@ -228,6 +230,7 @@ export function VirtualTable<TRowData extends RowData>({
   columnDefs,
   rowHeight,
   height,
+  overscan = 2,
   rowClassName,
   className,
 }: VirtualTableProps<TRowData>) {
@@ -238,7 +241,7 @@ export function VirtualTable<TRowData extends RowData>({
     lastIndex,
     layoutRowsHeight,
     rowShift,
-  } = useCompressedRowVirtualizer(rowCount, rowHeight, height);
+  } = useCompressedRowVirtualizer(rowCount, rowHeight, height, overscan);
 
   // only the rows within the visible range are materialized, so that the cost
   // of the table does not depend on the number of rows
