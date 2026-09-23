@@ -1,7 +1,8 @@
-import type {
-  GenericArray,
-  ProgressCallback,
-  TableData,
+import {
+  type GenericArray,
+  MathUtils,
+  type ProgressCallback,
+  type TableData,
 } from "@tissuumaps/core";
 
 import { runParquetWorker } from "./runParquetWorker";
@@ -69,15 +70,14 @@ export class ParquetTableData implements TableData {
     return data as GenericArray<T>;
   }
 
-  async loadUniqueValues<T>(
+  async loadUniqueValueCounts<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<GenericArray<T>> {
+  ): Promise<Map<T, number>> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
-    const values = await this.loadValues(column, { signal, onProgress });
-    const uniqueValues = Array.from(new Set(values));
-    return uniqueValues as GenericArray<T>;
+    const values = await this.loadValues<T>(column, { signal, onProgress });
+    return await MathUtils.computeUniqueValueCounts(values, { signal });
   }
 
   async loadValueRange(

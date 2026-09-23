@@ -1,8 +1,11 @@
-import type { NumericArray } from "../types/arrays";
+import type { GenericArray, NumericArray } from "../types/arrays";
 import { AsyncUtils } from "./AsyncUtils";
 import { RandomUtils } from "./RandomUtils";
 
-/** Utility methods for numeric clamping, remapping, alignment and histograms */
+/**
+ * Utility methods for numeric clamping, remapping, alignment, histograms and
+ * counts
+ */
 export class MathUtils {
   /**
    * Clamps a value to the range `[min, max]`
@@ -174,5 +177,38 @@ export class MathUtils {
       { signal },
     );
     return { hist, range };
+  }
+
+  /**
+   * Counts the number of occurrences of every distinct value
+   *
+   * The counts are keyed by value, in the order the values first occur.
+   * Distinctness follows `Map` key equality, i.e. `NaN` counts as one value
+   * and `0` and `-0` as the same one.
+   *
+   * The values are traversed on the main thread, yielding to the event loop
+   * periodically so the UI stays responsive for large arrays (see
+   * {@link AsyncUtils.forEach}). Aborting the signal rejects with its reason.
+   *
+   * @typeParam T - Element type of the values
+   * @param values - The values to count
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the count of every distinct value
+   */
+  static async computeUniqueValueCounts<T>(
+    values: GenericArray<T>,
+    options?: { signal?: AbortSignal },
+  ): Promise<Map<T, number>> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const counts = new Map<T, number>();
+    await AsyncUtils.forEach(
+      values as ArrayLike<T>,
+      (v) => {
+        counts.set(v, (counts.get(v) ?? 0) + 1);
+      },
+      { signal },
+    );
+    return counts;
   }
 }

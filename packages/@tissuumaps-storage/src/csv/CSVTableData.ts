@@ -65,16 +65,15 @@ export class CSVTableData implements TableData {
     return Promise.resolve(columnValues as GenericArray<T>);
   }
 
-  async loadUniqueValues<T>(
+  async loadUniqueValueCounts<T>(
     column: string,
     options?: { signal?: AbortSignal },
-  ): Promise<GenericArray<T>> {
+  ): Promise<Map<T, number>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const values = await this.loadValues(column);
+    const values = await this.loadValues<T>(column);
     signal?.throwIfAborted(); // loadValues() does not throw on abort
-    const uniqueValues = Array.from(new Set(values));
-    return uniqueValues as GenericArray<T>;
+    return await MathUtils.computeUniqueValueCounts(values, { signal });
   }
 
   async loadValueRange(

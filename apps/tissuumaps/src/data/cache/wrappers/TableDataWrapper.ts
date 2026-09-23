@@ -10,10 +10,10 @@ import { DataWrapperBase } from "./DataWrapperBase";
 /**
  * Cache wrapper around table data, sharing the loaded columns
  *
- * Values, unique values and value ranges are each loaded once per column and
- * then kept for as long as this wrapper lives; column queries are delegated to
- * the wrapped data unchanged. The optional names getter is only provided if
- * the wrapped data provides it.
+ * Values, unique value counts and value ranges are each loaded once per
+ * column and then kept for as long as this wrapper lives; column queries are
+ * delegated to the wrapped data unchanged. The optional names getter is only
+ * provided if the wrapped data provides it.
  */
 export class TableDataWrapper
   extends DataWrapperBase<TableData>
@@ -23,9 +23,9 @@ export class TableDataWrapper
     string,
     SharedOperation<GenericArray<unknown>>
   >();
-  private readonly _loadUniqueValuesOps = new Map<
+  private readonly _loadUniqueValueCountsOps = new Map<
     string,
-    SharedOperation<GenericArray<unknown>>
+    SharedOperation<Map<unknown, number>>
   >();
   private readonly _loadValueRangeOps = new Map<
     string,
@@ -100,39 +100,39 @@ export class TableDataWrapper
   }
 
   /**
-   * Loads a column's unique values, sharing one load operation per column
-   * between all callers
+   * Loads a column's unique value counts, sharing one load operation per
+   * column between all callers
    *
-   * @param column - The name of the column to load the unique values of
+   * @param column - The name of the column to load the unique value counts of
    * @param options - Optional abort signal and progress callback
-   * @returns A promise that resolves to the column's unique values, or rejects
-   * if the wrapper has been destroyed
+   * @returns A promise that resolves to the row count of every unique value of
+   * the column, or rejects if the wrapper has been destroyed
    */
-  loadUniqueValues<T>(
+  loadUniqueValueCounts<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<GenericArray<T>> {
+  ): Promise<Map<T, number>> {
     if (this.destroyed) {
       return Promise.reject(new Error("Data has been destroyed"));
     }
-    let op = this._loadUniqueValuesOps.get(column);
+    let op = this._loadUniqueValueCountsOps.get(column);
     if (op === undefined || op.failed) {
       const newOp = new SharedOperation((opts) =>
-        this.data.loadUniqueValues(column, opts),
+        this.data.loadUniqueValueCounts(column, opts),
       );
       newOp.signal.addEventListener(
         "abort",
         () => {
-          if (this._loadUniqueValuesOps.get(column) === newOp) {
-            this._loadUniqueValuesOps.delete(column);
+          if (this._loadUniqueValueCountsOps.get(column) === newOp) {
+            this._loadUniqueValueCountsOps.delete(column);
           }
         },
         { once: true },
       );
-      this._loadUniqueValuesOps.set(column, newOp);
+      this._loadUniqueValueCountsOps.set(column, newOp);
       op = newOp;
     }
-    return op.subscribe(options) as Promise<GenericArray<T>>;
+    return op.subscribe(options) as Promise<Map<T, number>>;
   }
 
   /**
@@ -178,7 +178,7 @@ export class TableDataWrapper
   override destroy(): void {
     for (const op of [
       ...this._loadValuesOps.values(),
-      ...this._loadUniqueValuesOps.values(),
+      ...this._loadUniqueValueCountsOps.values(),
       ...this._loadValueRangeOps.values(),
     ]) {
       op.abort();

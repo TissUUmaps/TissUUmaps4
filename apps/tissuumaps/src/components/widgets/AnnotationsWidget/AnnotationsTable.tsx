@@ -61,17 +61,17 @@ export function AnnotationsTable({
     setTableGroups(null);
     if (tableData && groupByColumn) {
       tableData
-        .loadUniqueValues<string>(groupByColumn, {
+        .loadUniqueValueCounts<string>(groupByColumn, {
           signal: abortController.signal,
         })
-        .then((tableGroups) => {
+        .then((uniqueValueCounts) => {
           if (!abortController.signal.aborted) {
-            setTableGroups(tableGroups);
+            setTableGroups(Array.from(uniqueValueCounts.keys()));
           }
         })
         .catch((error) => {
           if (!abortController.signal.aborted) {
-            console.error("Error loading unique table values", error);
+            console.error("Error loading table unique value counts", error);
           }
         });
     }
