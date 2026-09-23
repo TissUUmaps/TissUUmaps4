@@ -71,10 +71,7 @@ float isPointLeftOfLine(vec2 p, vec2 v0, vec2 v1) {
 float pointToSegmentDist(vec2 p, vec2 v0, vec2 v1) {
     vec2 v0ToP = p - v0;
     vec2 segment = v1 - v0;
-    float segmentLength = length(segment);
-    if(segmentLength <= 0.0) {
-        return length(v0ToP);
-    }
+    float segmentLength = length(segment); // strictly positive (zero-length edges are dropped in WebGLShapesRasterizer)
     vec2 unitSegment = segment / segmentLength;
     float pointOnSegment = dot(unitSegment, v0ToP);
     if(pointOnSegment <= 0.0) {
@@ -97,9 +94,6 @@ int windingNumber(vec2 p, usampler2D sampler, uint textureWidth, uint offset, ui
         vec4 edge = uintBitsToFloat(utexel(sampler, textureWidth, offset + i));
         vec2 v0 = vec2(edge[0], edge[1]);
         vec2 v1 = vec2(edge[2], edge[3]);
-        if(v0.x == v1.x && v0.y == v1.y) {
-            continue;
-        }
         if(v0.y <= p.y) { // edge starts on/below point
             if(v1.y > p.y && isPointLeftOfLine(p, v0, v1) > 0.0) { // edge ends strictly above point, and point is strictly left of edge
                 wn++;
@@ -124,9 +118,6 @@ vec4 unpackColor(uint color) {
 }
 
 void main() {
-    if(u_numScanlines == 0u || u_objectBounds[2] <= 0.0 || u_objectBounds[3] <= 0.0) {
-        discard; // no scanlines or invalid object bounds
-    }
     if(v_pos.x < u_objectBounds[0] - u_halfStrokeWidth || v_pos.x > u_objectBounds[0] + u_objectBounds[2] + u_halfStrokeWidth || v_pos.y < u_objectBounds[1] - u_halfStrokeWidth || v_pos.y > u_objectBounds[1] + u_objectBounds[3] + u_halfStrokeWidth) {
         discard; // out of object bounds
     }
@@ -135,8 +126,8 @@ void main() {
     uvec4 scanlineInfo = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineInfoOffset);
     uint scanlineOffset = scanlineInfo[0];
     uint numShapes = scanlineInfo[1];
-    if(numShapes == 0u || v_pos.x < uintBitsToFloat(scanlineInfo[2]) - u_halfStrokeWidth || v_pos.x > uintBitsToFloat(scanlineInfo[3]) + u_halfStrokeWidth) {
-        discard; // no shapes on this scanline or x coordinate outside scanline bounds
+    if(v_pos.x < uintBitsToFloat(scanlineInfo[2]) - u_halfStrokeWidth || v_pos.x > uintBitsToFloat(scanlineInfo[3]) + u_halfStrokeWidth) {
+        discard; // x coordinate outside scanline bounds (infinite if there are no shapes on this scanline)
     }
     // check occupancy mask
     uvec4 occupancyMask = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineOffset);
@@ -156,7 +147,7 @@ void main() {
         uvec4 shapeInfo = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset);
         uint shapeIndex = shapeInfo[0];
         uint numEdges = shapeInfo[1];
-        if(numEdges > 0u && v_pos.x >= uintBitsToFloat(shapeInfo[2]) - u_halfStrokeWidth && v_pos.x <= uintBitsToFloat(shapeInfo[3]) + u_halfStrokeWidth) {
+        if(v_pos.x >= uintBitsToFloat(shapeInfo[2]) - u_halfStrokeWidth && v_pos.x <= uintBitsToFloat(shapeInfo[3]) + u_halfStrokeWidth) {
             float minDist;
             int wn = windingNumber(v_pos, u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset + 1u, numEdges, minDist);
             if(minDist < u_halfStrokeWidth) { // point is inside stroke area

@@ -2,9 +2,7 @@
 
 // Marker atlas configuration
 #define MARKER_ATLAS_GRID_SIZE 4u
-#define N_MARKER_ATLAS_CHANNELS 4u
 #define N_MARKERS_PER_CHANNEL (MARKER_ATLAS_GRID_SIZE * MARKER_ATLAS_GRID_SIZE)
-#define MAX_N_MARKERS (N_MARKER_ATLAS_CHANNELS * N_MARKERS_PER_CHANNEL)
 
 // Macro to discard the current vertex
 #define DISCARD gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 0.0, 1.0); v_color = vec4(0.0); v_marker = uvec3(0); return;
@@ -51,11 +49,6 @@ uvec3 markerAtlasCoords(uint marker) {
 
 // Main vertex shader function
 void main() {
-    // Discard points with invalid marker indices
-    if(a_marker >= MAX_N_MARKERS) {
-        DISCARD;
-    }
-
     // Compute point size in device pixels and discard points with non-positive size
     // The canvas is sized in device pixels already, so no device pixel ratio applies here.
     float canvasPixelRatio = dot(u_canvasSize / u_viewportSize, vec2(0.5)); // device pixels per world unit
@@ -66,14 +59,10 @@ void main() {
     }
     gl_PointSize = devicePointSize;
 
-    // Compute point position in normalized device coordinates (NDCs) and discard points outside the viewport
+    // Compute point position in normalized device coordinates (NDCs)
     vec2 worldPosition = u_dataToWorldMatrix * vec3(a_x, a_y, 1.0);
     vec2 viewportPosition = u_worldToViewportMatrix * vec3(worldPosition, 1.0); // in [0, 1]
     vec2 ndcPosition = (2.0 * viewportPosition - 1.0) * vec2(1.0, -1.0); // in [-1, 1], y flipped
-    vec2 ndcPointSize = 2.0 * worldPointSize / u_viewportSize;
-    if(ndcPosition.x + 0.5 * ndcPointSize.x < -1.0 || ndcPosition.x - 0.5 * ndcPointSize.x > 1.0 || ndcPosition.y + 0.5 * ndcPointSize.y < -1.0 || ndcPosition.y - 0.5 * ndcPointSize.y > 1.0) {
-        DISCARD;
-    }
     gl_Position = vec4(ndcPosition, 0.0, 1.0);
 
     // Unpack color, apply the layer and object opacity, and discard fully transparent points

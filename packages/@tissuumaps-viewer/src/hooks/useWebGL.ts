@@ -73,6 +73,7 @@ export function useWebGL(adapter: ViewerAdapter) {
   const [syncShapes, dispatchSyncShapes] = useReducer((x) => x + 1, 0);
   const requestedSyncPointsRef = useRef(0);
   const requestedSyncShapesRef = useRef(0);
+
   const [redraw, dispatchRedraw] = useReducer((x) => x + 1, 0);
 
   const [glPointsBounds, setGLPointsBounds] = useState<Rect | null>(null);

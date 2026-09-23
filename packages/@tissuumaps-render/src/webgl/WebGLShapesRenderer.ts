@@ -145,7 +145,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * current model (see {@link getRenderPasses}). The quad covers the object's
    * bounds, dilated by half the stroke width, within the viewport, so that
    * fragments are only shaded where the object can be; objects outside the
-   * viewport, and objects whose layer or object is invisible, are skipped.
+   * viewport, objects whose layer or object is invisible, and objects without
+   * scanlines are skipped.
    */
   draw(): void {
     const renderPasses = this.getRenderPasses();
@@ -170,7 +171,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         layer,
         shapes,
       );
-      if (opacityFactor === 0) {
+      if (opacityFactor === 0 || renderedShapes.numScanlines < 1) {
         continue;
       }
       const quad = this._computeQuad(
