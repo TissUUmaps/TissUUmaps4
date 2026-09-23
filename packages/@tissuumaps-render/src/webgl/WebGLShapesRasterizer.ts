@@ -64,20 +64,27 @@ export type ScanlineOccupancyMask = [number, number, number, number];
  */
 export class WebGLShapesRasterizer {
   /**
+   * Fraction of a band that shapes and edges are padded by on either side, so
+   * that strokes reaching beyond them find their edges from the neighboring
+   * bands as well (limits half the stroke width to this fraction of the band
+   * height)
+   */
+  private static readonly _scanlinePadding = 0.25;
+
+  /**
    * Rasterizes shapes into horizontal scanlines
    *
    * Divides `objectBounds` into `numScanlines` horizontal bands, and assigns
    * each shape to the bands spanned by the bounding box of its polygon shells,
    * and each edge to the bands spanned by its own bounding box. Both are
    * conservative: a shape or edge may be assigned to bands it does not actually
-   * reach into, but never to too few. Both are also padded by one band on
-   * either side - rounding the last band up pads above, one extra band pads
-   * below - so that the strokes the fragment shader draws around a shape,
-   * which reach beyond it, find its edges from the neighboring bands as well,
-   * as long as half the stroke width does not exceed the band height. Per
-   * band, it also builds a 128-bit occupancy mask, which lets the fragment
-   * shader skip fragments early; its bins are padded by one bin on either side
-   * in the same way, so that the shader, which probes further bins only in
+   * reach into, but never to too few. Both are also padded by a quarter of a
+   * band on either side, so that the strokes the fragment shader draws around
+   * a shape, which reach beyond it, find its edges from the neighboring bands
+   * as well, as long as half the stroke width does not exceed a quarter of the
+   * band height. Per band, it also builds a 128-bit occupancy mask, which lets
+   * the fragment shader skip fragments early; its bins are padded by one bin
+   * on either side, so that the shader, which probes further bins only in
    * steps of whole bins, never skips a stroke that reaches into a neighboring
    * bin.
    *
@@ -163,14 +170,16 @@ export class WebGLShapesRasterizer {
           }
           const firstScanlineIndex = MathUtils.clamp(
             Math.floor(
-              (numScanlines * (yMin - objectBounds.y)) / objectBounds.height,
-            ) - 1, // one band of slack below, for strokes
+              (numScanlines * (yMin - objectBounds.y)) / objectBounds.height -
+                WebGLShapesRasterizer._scanlinePadding, // slack below, for strokes
+            ),
             0,
             numScanlines - 1,
           );
           const lastScanlineIndex = MathUtils.clamp(
-            Math.ceil(
-              (numScanlines * (yMax - objectBounds.y)) / objectBounds.height,
+            Math.floor(
+              (numScanlines * (yMax - objectBounds.y)) / objectBounds.height +
+                WebGLShapesRasterizer._scanlinePadding, // slack above, for strokes
             ),
             0,
             numScanlines - 1,
@@ -235,15 +244,17 @@ export class WebGLShapesRasterizer {
               const firstEdgeScanlineIndex = MathUtils.clamp(
                 Math.floor(
                   (numScanlines * (Math.min(v0y, v1y) - objectBounds.y)) /
-                    objectBounds.height,
-                ) - 1, // one band of slack below, for strokes
+                    objectBounds.height -
+                    WebGLShapesRasterizer._scanlinePadding, // slack below, for strokes
+                ),
                 0,
                 numScanlines - 1,
               );
               const lastEdgeScanlineIndex = MathUtils.clamp(
-                Math.ceil(
+                Math.floor(
                   (numScanlines * (Math.max(v0y, v1y) - objectBounds.y)) /
-                    objectBounds.height,
+                    objectBounds.height +
+                    WebGLShapesRasterizer._scanlinePadding, // slack above, for strokes
                 ),
                 0,
                 numScanlines - 1,

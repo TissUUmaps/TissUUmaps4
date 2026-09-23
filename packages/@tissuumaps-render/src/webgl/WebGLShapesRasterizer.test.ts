@@ -206,36 +206,41 @@ describe("WebGLShapesRasterizer.createScanlines", () => {
     expect(populatedScanline.shapes.has(0)).toBe(true);
   });
 
-  it("pads a shape and its edges by one scanline below, as slack for strokes", async () => {
-    // square occupying only the top third of a 3-unit-tall object
-    const geometry = createTestGeometry([createTestSquare(0, 2, 1, 3)]);
+  it("pads shapes and their edges by a quarter scanline, as slack for strokes", async () => {
+    // on 4 scanlines of height 1: shape 0 reaches within a quarter scanline of
+    // scanlines 0 and 2, shape 1 does not reach within a quarter scanline of
+    // any scanline but its own
+    const geometry = createTestGeometry([
+      createTestSquare(0, 1.125, 0.5, 1.875),
+      createTestSquare(0.5, 2.5, 1, 2.625),
+    ]);
 
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
-      await WebGLShapesRasterizer.createScanlines(3, geometry, undefined, {
+      await WebGLShapesRasterizer.createScanlines(4, geometry, undefined, {
         x: 0,
         y: 0,
         width: 1,
-        height: 3,
+        height: 4,
       });
 
-    // the shape is on scanline 2, and padded onto scanline 1
-    expect(totalNumScanlineShapes).toBe(2);
-    const paddedScanline = scanlines[1]!;
-    expect(paddedScanline.xMin).toBe(0);
-    expect(paddedScanline.xMax).toBe(1);
-    expect(paddedScanline.occupancyMask).toEqual([
-      0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+    expect([...scanlines[0]!.shapes.keys()]).toEqual([0]);
+    expect([...scanlines[1]!.shapes.keys()]).toEqual([0]);
+    expect([...scanlines[2]!.shapes.keys()]).toEqual([0, 1]);
+    expect(scanlines[3]!.shapes.size).toBe(0);
+    expect(totalNumScanlineShapes).toBe(4);
+    // the bottom edge (y = 1.125) of shape 0 is padded onto scanline 0, its top
+    // edge (y = 1.875) onto scanline 2
+    expect(scanlines[0]!.shapes.get(0)!.edges).toEqual([
+      { v0x: 0, v0y: 1.125, v1x: 0.5, v1y: 1.125 },
+      { v0x: 0.5, v0y: 1.125, v1x: 0.5, v1y: 1.875 },
+      { v0x: 0, v0y: 1.875, v1x: 0, v1y: 1.125 },
     ]);
-    // the bottom edge (y = 2) is padded onto scanline 1 as well, and the
-    // vertical edges span scanlines 1 and 2; the top edge (y = 3) is padded
-    // onto the scanline above, which is clamped to scanline 2
-    expect(paddedScanline.shapes.get(0)!.edges).toEqual([
-      { v0x: 0, v0y: 2, v1x: 1, v1y: 2 },
-      { v0x: 1, v0y: 2, v1x: 1, v1y: 3 },
-      { v0x: 0, v0y: 3, v1x: 0, v1y: 2 },
+    expect(scanlines[2]!.shapes.get(0)!.edges).toEqual([
+      { v0x: 0.5, v0y: 1.125, v1x: 0.5, v1y: 1.875 },
+      { v0x: 0.5, v0y: 1.875, v1x: 0, v1y: 1.875 },
+      { v0x: 0, v0y: 1.875, v1x: 0, v1y: 1.125 },
     ]);
-    expect(scanlines[2]!.shapes.get(0)!.edges).toHaveLength(4);
-    expect(totalNumScanlineShapeEdges).toBe(7);
+    expect(totalNumScanlineShapeEdges).toBe(3 + 4 + 3 + 4);
   });
 
   it("respects the shape mask and compacts the shape index", async () => {
