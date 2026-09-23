@@ -71,6 +71,8 @@ export function useWebGL(adapter: ViewerAdapter) {
 
   const [syncPoints, dispatchSyncPoints] = useReducer((x) => x + 1, 0);
   const [syncShapes, dispatchSyncShapes] = useReducer((x) => x + 1, 0);
+  const requestedSyncPointsRef = useRef(0);
+  const requestedSyncShapesRef = useRef(0);
   const [redraw, dispatchRedraw] = useReducer((x) => x + 1, 0);
 
   const [glPointsBounds, setGLPointsBounds] = useState<Rect | null>(null);
@@ -231,6 +233,7 @@ export function useWebGL(adapter: ViewerAdapter) {
         glOptions.pointsRenderOptions;
       dispatchRedraw();
       if (glRef.current.pointsRenderer.needsSynchronization()) {
+        requestedSyncPointsRef.current++;
         dispatchSyncPoints();
       }
     }
@@ -242,6 +245,7 @@ export function useWebGL(adapter: ViewerAdapter) {
         glOptions.shapesRenderOptions;
       dispatchRedraw();
       if (glRef.current.shapesRenderer.needsSynchronization()) {
+        requestedSyncShapesRef.current++;
         dispatchSyncShapes();
       }
     }
@@ -260,6 +264,7 @@ export function useWebGL(adapter: ViewerAdapter) {
       );
       dispatchRedraw();
       if (glRef.current.pointsRenderer.needsSynchronization()) {
+        requestedSyncPointsRef.current++;
         dispatchSyncPoints();
       }
     }
@@ -278,6 +283,7 @@ export function useWebGL(adapter: ViewerAdapter) {
       );
       dispatchRedraw();
       if (glRef.current.shapesRenderer.needsSynchronization()) {
+        requestedSyncShapesRef.current++;
         dispatchSyncShapes();
       }
     }
@@ -285,7 +291,11 @@ export function useWebGL(adapter: ViewerAdapter) {
 
   useEffect(() => {
     const abortController = new AbortController();
-    if (glReady && glRef.current !== null) {
+    if (
+      glReady &&
+      glRef.current !== null &&
+      syncPoints === requestedSyncPointsRef.current
+    ) {
       glRef.current.pointsRenderer
         .synchronize(
           {
@@ -338,7 +348,11 @@ export function useWebGL(adapter: ViewerAdapter) {
 
   useEffect(() => {
     const abortController = new AbortController();
-    if (glReady && glRef.current !== null) {
+    if (
+      glReady &&
+      glRef.current !== null &&
+      syncShapes === requestedSyncShapesRef.current
+    ) {
       glRef.current.shapesRenderer
         .synchronize(
           {

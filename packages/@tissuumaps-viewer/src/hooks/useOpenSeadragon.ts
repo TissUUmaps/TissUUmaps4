@@ -40,6 +40,8 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
 
   const [syncImages, dispatchSyncImages] = useReducer((x) => x + 1, 0);
   const [syncLabels, dispatchSyncLabels] = useReducer((x) => x + 1, 0);
+  const requestedSyncImagesRef = useRef(0);
+  const requestedSyncLabelsRef = useRef(0);
 
   const initOS = useCallback((viewerElementOrNull: HTMLDivElement | null) => {
     if (viewerElementOrNull === null) {
@@ -179,6 +181,7 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
           }
         });
       if (osRef.current.imageRenderer.needsSynchronization()) {
+        requestedSyncImagesRef.current++;
         dispatchSyncImages();
       }
     }
@@ -202,6 +205,7 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
           }
         });
       if (osRef.current.labelsRenderer.needsSynchronization()) {
+        requestedSyncLabelsRef.current++;
         dispatchSyncLabels();
       }
     }
@@ -212,7 +216,11 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
 
   useEffect(() => {
     const abortController = new AbortController();
-    if (osReady && osRef.current !== null) {
+    if (
+      osReady &&
+      osRef.current !== null &&
+      syncImages === requestedSyncImagesRef.current
+    ) {
       osRef.current.imageRenderer
         .synchronize(
           { loadObject: loadImage },
@@ -231,7 +239,11 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
 
   useEffect(() => {
     const abortController = new AbortController();
-    if (osReady && osRef.current !== null) {
+    if (
+      osReady &&
+      osRef.current !== null &&
+      syncLabels === requestedSyncLabelsRef.current
+    ) {
       osRef.current.labelsRenderer
         .synchronize(
           {
