@@ -1,9 +1,171 @@
 import { describe, expect, it } from "vitest";
 
+import { type Image, type RawImage, createImage } from "../model/image";
+import type { Color } from "../model/primitives";
+import type { ChannelHistogram, ImageData } from "../storage/image";
 import { ImageUtils } from "./ImageUtils";
 import { MathUtils } from "./MathUtils";
 
+function createImageData(
+  channels: {
+    color?: Color;
+    contrastLimits?: [number, number];
+    histogram?: ChannelHistogram;
+    dataTypeRange?: [number, number];
+    visibility?: boolean;
+    opacity?: number;
+  }[],
+): ImageData {
+  return {
+    getSizeX: () => 1,
+    getSizeY: () => 1,
+    getSizeC: () => channels.length,
+    getTileSource: () => "",
+    getChannelColor: (c) => channels[c]?.color,
+    getChannelContrastLimits: (c) => channels[c]?.contrastLimits,
+    getChannelHistogram: (c) => channels[c]?.histogram,
+    getChannelDataTypeRange: (c) => channels[c]?.dataTypeRange,
+    getChannelVisibility: (c) => channels[c]?.visibility,
+    getChannelOpacity: (c) => channels[c]?.opacity,
+  };
+}
+
+function createTestImage(
+  image?: Pick<RawImage, "channels" | "activeChannel">,
+): Image {
+  return createImage({
+    id: "image",
+    name: "image",
+    layer: "layer",
+    dataSource: { type: "test" },
+    ...image,
+  });
+}
+
 describe("ImageUtils", () => {
+  describe("getChannelColor", () => {
+    it("prefers the image's color over the one the data states", () => {
+      const data = createImageData([{ color: { r: 1, g: 2, b: 3 } }, {}]);
+      const image = createTestImage({
+        channels: [{ color: { r: 4, g: 5, b: 6 } }],
+      });
+      expect(ImageUtils.getChannelColor(image, data, 0)).toEqual({
+        r: 4,
+        g: 5,
+        b: 6,
+      });
+      expect(ImageUtils.getChannelColor(createTestImage(), data, 0)).toEqual({
+        r: 1,
+        g: 2,
+        b: 3,
+      });
+    });
+
+    it("falls back to the default color for the channel index", () => {
+      const data = createImageData([{}, {}]);
+      expect(ImageUtils.getChannelColor(createTestImage(), data, 1)).toEqual(
+        ImageUtils.getDefaultChannelColor(1),
+      );
+    });
+
+    it("returns white for the only channel of single-channel data", () => {
+      const data = createImageData([{}]);
+      expect(ImageUtils.getChannelColor(createTestImage(), data, 0)).toEqual({
+        r: 255,
+        g: 255,
+        b: 255,
+      });
+    });
+  });
+
+  describe("getChannelContrastLimits", () => {
+    it("prefers the image's limits over those the data states", () => {
+      const data = createImageData([{ contrastLimits: [10, 20] }]);
+      const image = createTestImage({
+        channels: [{ contrastLimits: [30, 40] }],
+      });
+      expect(ImageUtils.getChannelContrastLimits(image, data, 0)).toEqual([
+        30, 40,
+      ]);
+      expect(
+        ImageUtils.getChannelContrastLimits(createTestImage(), data, 0),
+      ).toEqual([10, 20]);
+    });
+
+    it("derives limits from the histogram before the data type range", () => {
+      const histogram: ChannelHistogram = {
+        hist: [100, 10, 10, 10, 100],
+        range: [0, 4],
+      };
+      const data = createImageData([{ histogram, dataTypeRange: [0, 65535] }]);
+      expect(
+        ImageUtils.getChannelContrastLimits(createTestImage(), data, 0),
+      ).toEqual(ImageUtils.getDefaultContrastLimits(histogram));
+    });
+
+    it("falls back to the data type range without a histogram", () => {
+      const data = createImageData([{ dataTypeRange: [0, 65535] }]);
+      expect(
+        ImageUtils.getChannelContrastLimits(createTestImage(), data, 0),
+      ).toEqual([0, 65535]);
+    });
+
+    it("returns undefined without limits, histogram and data type range", () => {
+      const data = createImageData([{}]);
+      expect(
+        ImageUtils.getChannelContrastLimits(createTestImage(), data, 0),
+      ).toBeUndefined();
+    });
+  });
+
+  describe("getChannelVisibility", () => {
+    it("prefers the image's visibility over the one the data states", () => {
+      const data = createImageData([{ visibility: false }]);
+      const image = createTestImage({ channels: [{ visibility: true }] });
+      expect(ImageUtils.getChannelVisibility(image, data, 0)).toBe(true);
+      expect(ImageUtils.getChannelVisibility(createTestImage(), data, 0)).toBe(
+        false,
+      );
+    });
+
+    it("returns true without a visibility", () => {
+      const data = createImageData([{}]);
+      expect(ImageUtils.getChannelVisibility(createTestImage(), data, 0)).toBe(
+        true,
+      );
+    });
+  });
+
+  describe("getChannelOpacity", () => {
+    it("prefers the image's opacity over the one the data states", () => {
+      const data = createImageData([{ opacity: 0.2 }]);
+      const image = createTestImage({ channels: [{ opacity: 0.5 }] });
+      expect(ImageUtils.getChannelOpacity(image, data, 0)).toBe(0.5);
+      expect(ImageUtils.getChannelOpacity(createTestImage(), data, 0)).toBe(
+        0.2,
+      );
+    });
+
+    it("returns 1 without an opacity", () => {
+      const data = createImageData([{}]);
+      expect(ImageUtils.getChannelOpacity(createTestImage(), data, 0)).toBe(1);
+    });
+  });
+
+  describe("getActiveChannel", () => {
+    it("bounds the image's active channel to the channels the data has", () => {
+      expect(
+        ImageUtils.getActiveChannel(createTestImage({ activeChannel: 7 }), 3),
+      ).toBe(2);
+      expect(
+        ImageUtils.getActiveChannel(createTestImage({ activeChannel: 1 }), 3),
+      ).toBe(1);
+      expect(
+        ImageUtils.getActiveChannel(createTestImage({ activeChannel: -1 }), 3),
+      ).toBe(0);
+    });
+  });
+
   describe("getDefaultChannelColor", () => {
     it("returns fixed colors for the first six channels", () => {
       expect(ImageUtils.getDefaultChannelColor(0)).toEqual({
@@ -190,6 +352,22 @@ describe("ImageUtils", () => {
         ImageUtils.getDefaultContrastLimits({ hist: [1, 1], range: [3, 3] }),
       ).toEqual([3, 3]);
     });
+  });
+
+  describe("getIntegerTypeRange", () => {
+    it.each([
+      [8, false, [0, 255]],
+      [16, false, [0, 65535]],
+      [32, false, [0, 4294967295]],
+      [8, true, [-128, 127]],
+      [16, true, [-32768, 32767]],
+      [32, true, [-2147483648, 2147483647]],
+    ])(
+      "returns the range of %i-bit values (signed: %s)",
+      (bits, signed, range) => {
+        expect(ImageUtils.getIntegerTypeRange(bits, signed)).toEqual(range);
+      },
+    );
   });
 
   describe("getDataTypeRange", () => {

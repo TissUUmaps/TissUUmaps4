@@ -12,11 +12,8 @@ import {
   type TIFFLabelsDataSource,
   tiffLabelsDataSourceDefaults,
 } from "./TIFFLabelsDataSource";
-import {
-  type TIFFStructure,
-  sampleFormatSignedInteger,
-  sampleFormatUnsignedInteger,
-} from "./formats/TIFFParser";
+import { TIFFUtils } from "./TIFFUtils";
+import type { TIFFStructure } from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
 
@@ -176,15 +173,9 @@ export function getLabelLevels(structure: TIFFStructure): GeoTIFFImage[] {
   }
   const levels = pyramids[0]!;
   const image = levels[0]!;
-  const format = image.getSampleFormat(0);
-  const bits = image.getBitsPerSample(0);
-  if (
-    (format !== sampleFormatUnsignedInteger &&
-      format !== sampleFormatSignedInteger) ||
-    bits > 32
-  ) {
+  if (TIFFUtils.getIntegerSampleType(image) === undefined) {
     throw new Error(
-      `The image holds ${bits}-bit samples of TIFF sample format ${format}; label IDs are integers of at most 32 bits.`,
+      `The image holds ${image.getBitsPerSample(0)}-bit samples of TIFF sample format ${image.getSampleFormat(0)}; label IDs are integers of at most 32 bits.`,
     );
   }
   return levels;

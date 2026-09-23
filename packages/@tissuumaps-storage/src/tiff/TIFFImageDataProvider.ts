@@ -1,8 +1,10 @@
 import type { GeoTIFFImage, Pool } from "geotiff";
 
 import {
+  type ChannelHistogram,
   type DataProviderLoadOptions,
   type ImageDataProvider,
+  ImageUtils,
   MathUtils,
   type NumericArray,
   SourceUtils,
@@ -14,7 +16,7 @@ import {
   type TIFFImageDataSource,
   tiffImageDataSourceDefaults,
 } from "./TIFFImageDataSource";
-import { sampleFormatUnsignedInteger } from "./formats/TIFFParser";
+import { TIFFUtils } from "./TIFFUtils";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
 
@@ -146,9 +148,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
       // the histograms only seed the contrast limits, which the renderer can
       // fall back to the data type range for, so a file whose pixels cannot be
       // decoded still opens
-      let histograms: (
-        { hist: number[]; range: [number, number] } | undefined
-      )[] = [];
+      let histograms: (ChannelHistogram | undefined)[] = [];
       try {
         histograms = await TIFFImageDataProvider._computeChannelHistograms(
           pyramids,
@@ -158,11 +158,20 @@ export class TIFFImageDataProvider implements ImageDataProvider<
         signal?.throwIfAborted();
         console.error("Failed to read the TIFF channel histograms:", error);
       }
-      channelsWithHistograms = channels.map((channel, c) => ({
-        ...channel,
-        histogram: histograms[c],
-        contrastLimits: getFullRange(pyramids[c]![0]!),
-      }));
+      channelsWithHistograms = channels.map((channel, c) => {
+        const sampleType = TIFFUtils.getIntegerSampleType(pyramids[c]![0]!);
+        const dataTypeRange =
+          sampleType !== undefined
+            ? ImageUtils.getIntegerTypeRange(sampleType.bits, sampleType.signed)
+            : undefined;
+        const isUint8 = sampleType?.bits === 8 && !sampleType.signed;
+        return {
+          ...channel,
+          histogram: histograms[c],
+          dataTypeRange,
+          contrastLimits: isUint8 ? dataTypeRange : undefined,
+        };
+      });
     }
     const tileSources = pyramids.map(
       (images) =>
@@ -193,12 +202,10 @@ export class TIFFImageDataProvider implements ImageDataProvider<
       concurrency?: number;
       signal?: AbortSignal;
     },
-  ): Promise<({ hist: number[]; range: [number, number] } | undefined)[]> {
+  ): Promise<(ChannelHistogram | undefined)[]> {
     const { pool = null, concurrency = 1, signal } = options ?? {};
     signal?.throwIfAborted();
-    const histograms: (
-      { hist: number[]; range: [number, number] } | undefined
-    )[] = [];
+    const histograms: (ChannelHistogram | undefined)[] = [];
     let next = 0;
     await Promise.all(
       Array.from(
@@ -239,7 +246,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
   private static async _computeChannelHistogram(
     pyramid: GeoTIFFImage[],
     options?: { pool?: Pool | null; signal?: AbortSignal },
-  ): Promise<{ hist: number[]; range: [number, number] } | undefined> {
+  ): Promise<ChannelHistogram | undefined> {
     const { pool = null, signal } = options ?? {};
     signal?.throwIfAborted();
     if (pyramid.length === 0) {
@@ -269,27 +276,4 @@ export class TIFFImageDataProvider implements ImageDataProvider<
       sample: TIFFImageDataProvider._numHistogramPixels,
     });
   }
-}
-
-/**
- * Returns the contrast limits an 8-bit channel is shown over, `undefined` for
- * every other channel
- *
- * 8-bit channels are shown over their full range, like other viewers show
- * them, rather than over the quantile-based limits the renderer would
- * otherwise derive from their histogram. TIFF does not record the range; it is
- * the conventional display range of 8-bit samples.
- *
- * @param image - The largest level of the channel
- * @returns `[0, 255]` for an 8-bit unsigned integer channel, `undefined`
- * otherwise
- */
-function getFullRange(image: GeoTIFFImage): [number, number] | undefined {
-  if (
-    image.getBitsPerSample(0) === 8 &&
-    image.getSampleFormat(0) === sampleFormatUnsignedInteger
-  ) {
-    return [0, 255];
-  }
-  return undefined;
 }

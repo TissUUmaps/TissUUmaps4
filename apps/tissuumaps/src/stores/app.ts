@@ -9,10 +9,10 @@ import "./zustand";
 /**
  * The store holding application state that is not part of the project
  *
- * This comprises the open workspace, the current interaction mode, the
- * registered data providers, and the registered plugins. The plugins are
- * written by the plugin registry, which owns their lifecycle, rather than
- * through an action.
+ * This comprises the open workspace, the current interaction mode, the hovered
+ * channel preview, the registered data providers, and the registered plugins.
+ * The plugins are written by the plugin registry, which owns their lifecycle,
+ * rather than through an action.
  */
 export const appStore: AppStoreApi = createStore<AppStore>()(
   devtools(
@@ -20,6 +20,7 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
       ...createInitialAppStoreState(),
       setWorkspace: (workspace) => set({ workspace }),
       setInteractionMode: (interactionMode) => set({ interactionMode }),
+      setChannelPreview: (channelPreview) => set({ channelPreview }),
       registerImageDataProvider: (type, dataProvider) =>
         set((draft) => {
           draft.imageDataProviders.set(type, dataProvider);
@@ -63,6 +64,7 @@ function createInitialAppStoreState(): AppStoreState {
   return {
     workspace: null,
     interactionMode: "pan",
+    channelPreview: null,
     imageDataProviders: new Map(),
     labelsDataProviders: new Map(),
     pointsDataProviders: new Map(),

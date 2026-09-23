@@ -1,6 +1,7 @@
 import { OMEZarrTileSource } from "omezarr-tilesource";
 
 import {
+  type ChannelHistogram,
   type DataProviderLoadOptions,
   type ImageDataProvider,
   MathUtils,
@@ -215,7 +216,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   private static async _computeChannelHistogram(
     tileSource: OMEZarrTileSource,
     options?: { signal?: AbortSignal },
-  ): Promise<{ hist: number[]; range: [number, number] } | undefined> {
+  ): Promise<ChannelHistogram | undefined> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const { dtype } = tileSource.loaded.arrays[0]!;

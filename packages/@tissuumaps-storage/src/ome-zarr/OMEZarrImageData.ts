@@ -1,12 +1,14 @@
 import type { OMEZarrTileData, OMEZarrTileSource } from "omezarr-tilesource";
 import type OpenSeadragon from "openseadragon";
 
-import type {
-  Color,
-  CustomTileSource,
-  ImageData,
-  NumericArray,
-  TileSourceConfig,
+import {
+  type ChannelHistogram,
+  type Color,
+  type CustomTileSource,
+  type ImageData,
+  ImageUtils,
+  type NumericArray,
+  type TileSourceConfig,
 } from "@tissuumaps/core";
 
 /**
@@ -34,8 +36,7 @@ import type {
  */
 export class OMEZarrImageData implements ImageData {
   private readonly _tileSources: OMEZarrTileSource | OMEZarrTileSource[];
-  private readonly _histograms:
-    ({ hist: number[]; range: [number, number] } | undefined)[] | undefined;
+  private readonly _histograms: (ChannelHistogram | undefined)[] | undefined;
 
   /**
    * @param tileSources - One ready tile source per channel, in channel order,
@@ -47,7 +48,7 @@ export class OMEZarrImageData implements ImageData {
    */
   constructor(
     tileSources: OMEZarrTileSource | OMEZarrTileSource[],
-    histograms?: ({ hist: number[]; range: [number, number] } | undefined)[],
+    histograms?: (ChannelHistogram | undefined)[],
   ) {
     this._tileSources = tileSources;
     this._histograms = histograms;
@@ -183,11 +184,26 @@ export class OMEZarrImageData implements ImageData {
    * planes with fewer than two distinct finite values)
    * @throws Error if the image has no channel axis, or if `c` is out of bounds
    */
-  getChannelHistogram(
-    c: number,
-  ): { hist: number[]; range: [number, number] } | undefined {
+  getChannelHistogram(c: number): ChannelHistogram | undefined {
     this._getChannelTileSource(c); // check channel index
     return this._histograms?.[c];
+  }
+
+  /**
+   * Returns the range the `dtype` of a channel can hold
+   *
+   * @param c - The channel index (0-based)
+   * @returns The full range of an integer `dtype` of at most 32 bits,
+   * `undefined` for every other `dtype`
+   * @throws Error if the image has no channel axis, or if `c` is out of bounds
+   */
+  getChannelDataTypeRange(c: number): [number, number] | undefined {
+    const { dtype } = this._getChannelTileSource(c).loaded.arrays[0]!;
+    const match = /^(u?)int(8|16|32)$/.exec(dtype);
+    if (match === null) {
+      return undefined;
+    }
+    return ImageUtils.getIntegerTypeRange(Number(match[2]), match[1] === "");
   }
 
   /**

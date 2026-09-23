@@ -6,9 +6,9 @@ function Slider<Value extends number | readonly number[]>({
   className,
   value,
   defaultValue,
-  "aria-label": ariaLabel,
+  thumbLabels,
   ...props
-}: SliderPrimitive.Root.Props<Value>) {
+}: SliderPrimitive.Root.Props<Value> & { thumbLabels?: string[] }) {
   const values = value ?? defaultValue;
   const thumbCount = typeof values === "number" ? 1 : (values?.length ?? 1);
   return (
@@ -35,8 +35,9 @@ function Slider<Value extends number | readonly number[]>({
         {Array.from({ length: thumbCount }, (_, index) => (
           <SliderPrimitive.Thumb
             key={index}
+            index={index}
             data-slot="slider-thumb"
-            aria-label={ariaLabel}
+            aria-label={thumbLabels?.[index]}
             // the thumb renders a nested input, which takes the focus
             className="border-primary bg-background has-[:focus-visible]:ring-ring/50 block size-4 cursor-pointer shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] outline-none has-[:focus-visible]:ring-[3px] data-disabled:pointer-events-none data-disabled:opacity-50"
           />
