@@ -171,7 +171,7 @@ void main() {
                 vec4 strokeColor = unpackColor(strokeColorTexel[0]);
                 strokeColor.rgb = strokeColor.rgb * strokeColor.a; // premultiply
                 fragColor = strokeColor + (1.0 - strokeColor.a) * fragColor;
-            } else if(wn != 0) { // point is inside fill area
+            } else if((wn & 1) != 0) { // point is inside fill area (even-odd rule: holes are cut out whatever the orientation of their rings)
                 uvec4 fillColorTexel = utexel(u_shapeFillColors, SHAPE_COLORS_TEXTURE_WIDTH, shapeIndex);
                 vec4 fillColor = unpackColor(fillColorTexel[0]);
                 fillColor.rgb = fillColor.rgb * fillColor.a; // premultiply

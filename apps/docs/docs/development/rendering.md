@@ -43,7 +43,7 @@ The custom rendering pipeline is based on scanline rendering, with the following
 - Each scanline holds a one-dimensional bounding box and a 128-bit occupancy mask for rapidly discarding fragments (dilated by half the stroke width, so strokes near a bin edge survive)
 - For each scanline, edges are processed separately for each shape to ensure proper compositing
 - Each shape holds a one-dimensional bounding box per scanline for rapidly skipping shapes
-- An optimized winding number algorithm is used for point-in-polygon testing
+- An optimized winding number algorithm is used for point-in-polygon testing, with the even-odd rule (odd winding numbers are inside), so that holes are cut out whatever the orientation of their rings, which e.g. GeoJSON recommends but does not require
 - An optimized point-to-segment distance algorithm is used for stroke drawing
 
 Specifically, the approach works as follows:
@@ -54,7 +54,7 @@ Specifically, the approach works as follows:
   - The fragment shader will run once for each fragment in the quad:
     1. Determine the current scanline from the (interpolated) scanline varying
     2. Check the scanline bounding box and occupancy mask to quickly discard empty viewport fragments
-    3. For each shape in the scanline potentially overlapping with the current fragment (check shape bounding box), compute the winding number and the minimum point-to-segment distance for the current fragment; if the current fragment is close enough to one of the shape's segments, blend the fragment color with the shape's stroke color; otherwise, if the current fragment is within the shape (non-zero winding number), blend the fragment color with the shape's fill color
+    3. For each shape in the scanline potentially overlapping with the current fragment (check shape bounding box), compute the winding number and the minimum point-to-segment distance for the current fragment; if the current fragment is close enough to one of the shape's segments, blend the fragment color with the shape's stroke color; otherwise, if the current fragment is within the shape (odd winding number), blend the fragment color with the shape's fill color
 
 The number of scanlines (default 512) is a render option, and the stroke width is a single uniform per shape cloud, shared by all of its shapes, which is why per-shape stroke widths are not supported (the bounding boxes and occupancy masks are computed without it). Scanline data is stored as `RGBA32F` and the packed colors as `R32UI`, in textures 4096 texels wide.
 
