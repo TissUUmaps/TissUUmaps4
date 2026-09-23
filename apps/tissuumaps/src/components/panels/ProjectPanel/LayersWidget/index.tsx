@@ -17,7 +17,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerUpDownIcon,
+  AccordionTriggerDownUpIcon,
 } from "@/components/common/accordion";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
@@ -136,6 +136,7 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
               <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
+                aria-label="Opacity"
                 inputMode="decimal"
                 step={0.05}
                 min={0}
@@ -153,6 +154,7 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label={layer.visibility ? "Hide layer" : "Show layer"}
               onClick={() =>
                 updateLayer(layer.id, { visibility: !layer.visibility })
               }
@@ -162,6 +164,7 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
             <Button
               variant="ghost"
               disabled={hasObjects}
+              aria-label="Delete layer"
               onClick={() => {
                 void confirm({
                   title: "Delete layer",
@@ -181,7 +184,7 @@ function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
               <Trash2Icon />
             </Button>
           </div>
-          <AccordionTriggerUpDownIcon />
+          <AccordionTriggerDownUpIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
           {hasObjects && (

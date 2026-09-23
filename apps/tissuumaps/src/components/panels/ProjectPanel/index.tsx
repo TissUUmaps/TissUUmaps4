@@ -99,6 +99,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
         <Field>
           <Input
             ref={loadProjectFileInputRef}
+            aria-label="Load project from file"
             type="file"
             onChange={(event) => {
               const files = event.target.files;

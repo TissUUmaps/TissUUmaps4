@@ -59,6 +59,7 @@ export function AccordionTriggerRightDownIcon({
   return (
     <AccordionPrimitive.Trigger
       className={cn("group/accordion-trigger", className)}
+      aria-label="Expand/collapse"
       {...props}
     >
       <ChevronRightIcon className="group-aria-expanded/accordion-trigger:hidden" />
@@ -67,17 +68,18 @@ export function AccordionTriggerRightDownIcon({
   );
 }
 
-export function AccordionTriggerUpDownIcon({
+export function AccordionTriggerDownUpIcon({
   className,
   ...props
 }: Omit<AccordionPrimitive.Trigger.Props, "children">) {
   return (
     <AccordionPrimitive.Trigger
       className={cn("group/accordion-trigger", className)}
+      aria-label="Expand/collapse"
       {...props}
     >
-      <ChevronUpIcon className="group-aria-expanded/accordion-trigger:hidden" />
-      <ChevronDownIcon className="hidden group-aria-expanded/accordion-trigger:inline" />
+      <ChevronDownIcon className="group-aria-expanded/accordion-trigger:hidden" />
+      <ChevronUpIcon className="hidden group-aria-expanded/accordion-trigger:inline" />
     </AccordionPrimitive.Trigger>
   );
 }

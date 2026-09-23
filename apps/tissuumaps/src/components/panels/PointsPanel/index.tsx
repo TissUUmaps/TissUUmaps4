@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerUpDownIcon,
+  AccordionTriggerDownUpIcon,
 } from "@/components/common/accordion";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
@@ -127,6 +127,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               <InputGroupAddon>s</InputGroupAddon>
               <InputGroupInput
                 type="number"
+                aria-label="Point size"
                 inputMode="decimal"
                 step={0.1}
                 min={0}
@@ -145,6 +146,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
+                aria-label="Opacity"
                 inputMode="decimal"
                 step={0.05}
                 min={0}
@@ -162,6 +164,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label={points.visibility ? "Hide points" : "Show points"}
               onClick={() =>
                 updatePoints(points.id, { visibility: !points.visibility })
               }
@@ -170,6 +173,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
+              aria-label="Delete point cloud"
               onClick={() => {
                 void confirm({
                   title: "Delete point cloud",
@@ -185,7 +189,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
               <Trash2Icon />
             </Button>
           </div>
-          <AccordionTriggerUpDownIcon />
+          <AccordionTriggerDownUpIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
           <DataSourceWidget

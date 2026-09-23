@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-  AccordionTriggerUpDownIcon,
+  AccordionTriggerDownUpIcon,
 } from "@/components/common/accordion";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
               <InputGroupAddon>&alpha;</InputGroupAddon>
               <InputGroupInput
                 type="number"
+                aria-label="Opacity"
                 inputMode="decimal"
                 step={0.05}
                 min={0}
@@ -122,6 +123,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             </InputGroup>
             <Button
               variant="ghost"
+              aria-label={image.visibility ? "Hide image" : "Show image"}
               onClick={() =>
                 updateImage(image.id, { visibility: !image.visibility })
               }
@@ -130,6 +132,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             </Button>
             <Button
               variant="ghost"
+              aria-label="Delete image"
               onClick={() => {
                 void confirm({
                   title: "Delete image",
@@ -145,7 +148,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
               <Trash2Icon />
             </Button>
           </div>
-          <AccordionTriggerUpDownIcon />
+          <AccordionTriggerDownUpIcon />
         </AccordionHeader>
         <AccordionPanel className="pt-2 flex flex-col gap-y-2">
           <DataSourceWidget

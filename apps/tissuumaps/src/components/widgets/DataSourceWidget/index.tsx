@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import type { Data, DataProvider, DataSource } from "@tissuumaps/core";
 
+import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Button } from "@/components/ui/button";
@@ -57,8 +58,8 @@ export function DataSourceWidget<TDataSource extends DataSource>({
     >
       <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
         {isEditing ? (
-          <>
-            Source:
+          <Field className="flex flex-row items-center gap-x-1">
+            <FieldLabel>Source</FieldLabel>
             <SimpleSelect
               items={providerEntries}
               itemLabel={([, provider]) => provider.name}
@@ -73,7 +74,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
                 }
               }}
             />
-          </>
+          </Field>
         ) : (
           <>Source: {dataProvider?.name ?? `type=${currentDataSource.type}`}</>
         )}
@@ -81,6 +82,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
           <span className="ml-auto flex flex-row">
             <Button
               variant="ghost"
+              aria-label="Reset"
               title="Reset"
               onClick={() => setDataSourceDraft(structuredClone(dataSource))}
             >
@@ -89,6 +91,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
             <Button
               variant="ghost"
               title="Save"
+              aria-label="Save"
               disabled={hasErrors}
               onClick={() => {
                 const knownKeys = new Set([
@@ -110,6 +113,7 @@ export function DataSourceWidget<TDataSource extends DataSource>({
         ) : (
           <Button
             variant="ghost"
+            aria-label="Edit"
             className="ml-auto"
             onClick={() => {
               setDataSourceDraft(structuredClone(dataSource));
