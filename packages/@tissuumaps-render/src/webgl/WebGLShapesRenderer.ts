@@ -63,7 +63,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   private static readonly _scanlineDataTextureWidth = 4096; // see fragment shader
   private static readonly _shapeColorsTextureWidth = 4096; // see fragment shader
   private static readonly _numValuesPerScanlineDataTextureLine =
-    4 * WebGLShapesRenderer._scanlineDataTextureWidth; // 4 values per RGBA32F texel
+    4 * WebGLShapesRenderer._scanlineDataTextureWidth; // 4 values per RGBA32UI texel
   private static readonly _numValuesPerShapeColorsTextureLine =
     1 * WebGLShapesRenderer._shapeColorsTextureWidth; // 1 value per R32UI texel
   private static readonly _textureUnits = {
@@ -423,7 +423,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     ]);
     signal?.throwIfAborted();
     let objectBounds: Rect;
-    let scanlineBuffer: Float32Array | undefined;
+    let scanlineBuffer: Uint32Array | undefined;
     if (geometry !== undefined) {
       const newObjectBounds = await WebGLShapesRenderer._getObjectBounds(
         geometry,
@@ -597,7 +597,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Builds the scanline data of a shapes object
    *
    * Rasterizes all shapes into horizontal scanlines and packs the result into
-   * a float buffer, aligned to the lines of the scanline data texture that
+   * a 32-bit integer buffer, aligned to the lines of the scanline data texture that
    * {@link _createScanlineDataTexture} creates from it.
    *
    * @param numScanlines - Number of scanlines to rasterize into
@@ -613,7 +613,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     shapesMask: Uint8Array | undefined,
     objectBounds: Rect,
     options?: { signal?: AbortSignal },
-  ): Promise<Float32Array> {
+  ): Promise<Uint32Array> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const { scanlines, totalNumScanlineShapes, totalNumScanlineShapeEdges } =
@@ -633,7 +633,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         signal,
       },
     );
-    return new Float32Array(scanlineBuffer);
+    return new Uint32Array(scanlineBuffer);
   }
 
   /**
@@ -663,21 +663,21 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Uploads packed scanline data as an RGBA32F texture
+   * Uploads packed scanline data as an RGBA32UI texture
    *
    * @param scanlineBuffer - The packed scanline data, see {@link _createScanlineBuffer}
    * @returns The scanline data texture
    */
   private _createScanlineDataTexture(
-    scanlineBuffer: Float32Array,
+    scanlineBuffer: Uint32Array,
   ): WebGLTexture {
     return this.context.createDataTexture(
-      WebGL2RenderingContext.RGBA32F,
+      WebGL2RenderingContext.RGBA32UI,
       WebGLShapesRenderer._scanlineDataTextureWidth,
       scanlineBuffer.length /
         WebGLShapesRenderer._numValuesPerScanlineDataTextureLine,
-      WebGL2RenderingContext.RGBA,
-      WebGL2RenderingContext.FLOAT,
+      WebGL2RenderingContext.RGBA_INTEGER,
+      WebGL2RenderingContext.UNSIGNED_INT,
       scanlineBuffer,
     );
   }
@@ -985,7 +985,7 @@ type ShapesRef = ObjectRef<Shapes, ShapesData>;
 type PreparedShapes = {
   objectBounds: Rect;
   numScanlines: number;
-  scanlineBuffer: Float32Array | undefined;
+  scanlineBuffer: Uint32Array | undefined;
   packedShapeFillColors: Uint32Array | undefined;
   packedShapeStrokeColors: Uint32Array | undefined;
   renderConfigSnapshot: RenderedShapes["renderConfigSnapshot"];

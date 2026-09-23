@@ -273,7 +273,7 @@ export class WebGLShapesRasterizer {
 
   /**
    * Packs scanline data into a flat {@link ArrayBuffer} suitable for
-   * uploading as an RGBA32F texture
+   * uploading as an RGBA32UI texture
    *
    * Values are grouped into texels of four 32-bit values, and every offset is a
    * texel offset:

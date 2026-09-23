@@ -15,7 +15,7 @@ uniform float u_opacityFactor; // layer and object opacity, 0 if the layer or ob
 uniform float u_halfStrokeWidth; // in data dimensions
 
 /*
- * Scanline data (RGBA32F texture)
+ * Scanline data (RGBA32UI texture)
  *
  * Memory layout: [header, scanline 0, scanline 1, ..., scanline N]
  *   Header: [scanline info 1, scanline info 2, ..., scanline info N]
@@ -33,7 +33,7 @@ uniform float u_halfStrokeWidth; // in data dimensions
  *   (this is why we cannot have shape-specific stroke widths, since strokes grow both inward and outward);
  *   shapes, edges and occupancy bins are only padded by one scanline/bin on either side (see WebGLShapesRasterizer)
  */
-uniform sampler2D u_scanlineData;
+uniform usampler2D u_scanlineData;
 
 // Shape fill colors (R32UI texture)
 uniform usampler2D u_shapeFillColors;
@@ -46,12 +46,6 @@ in float v_scanline; // in [0, u_numScanlines]
 
 out vec4 fragColor;
 
-// fetches a texel from the given float texture at a given offset
-vec4 texel(sampler2D sampler, uint textureWidth, uint offset) {
-    ivec2 p = ivec2(int(offset % textureWidth), int(offset / textureWidth));
-    return texelFetch(sampler, p, 0);
-}
-
 // fetches a texel from the given uint texture at a given offset
 uvec4 utexel(usampler2D sampler, uint textureWidth, uint offset) {
     ivec2 p = ivec2(int(offset % textureWidth), int(offset / textureWidth));
@@ -59,12 +53,11 @@ uvec4 utexel(usampler2D sampler, uint textureWidth, uint offset) {
 }
 
 // checks if a given x coordinate falls into an occupied bin of an 128-bit occupancy mask
-bool occupancy(float x, float xmin, float objectWidth, vec4 occupancyMask) {
+bool occupancy(float x, float xmin, float objectWidth, uvec4 occupancyMask) {
     float xNorm = clamp((x - xmin) / objectWidth, 0.0, 1.0);
     uint bin = min(uint(128.0 * xNorm), 127u);
-    uint value = floatBitsToUint(occupancyMask[bin >> 5]);
     uint bitMask = 1u << (bin & 0x1Fu);
-    return (value & bitMask) != 0u;
+    return (occupancyMask[bin >> 5] & bitMask) != 0u;
 }
 
 // tests if a point p is left (>0), on (=0), or right (<0) of an infinite line through v0 and v1
@@ -97,11 +90,11 @@ float pointToSegmentDist(vec2 p, vec2 v0, vec2 v1) {
 
 // computes the winding number for a given point p and n edges stored in data starting at offset
 // https://web.archive.org/web/20210504233957/http://geomalgorithms.com/a03-_inclusion.html
-int windingNumber(vec2 p, sampler2D sampler, uint textureWidth, uint offset, uint numEdges, out float minDist) {
+int windingNumber(vec2 p, usampler2D sampler, uint textureWidth, uint offset, uint numEdges, out float minDist) {
     int wn = 0;
     minDist = 1e38;
     for(uint i = 0u; i < numEdges; ++i) {
-        vec4 edge = texel(sampler, textureWidth, offset + i);
+        vec4 edge = uintBitsToFloat(utexel(sampler, textureWidth, offset + i));
         vec2 v0 = vec2(edge[0], edge[1]);
         vec2 v1 = vec2(edge[2], edge[3]);
         if(v0.x == v1.x && v0.y == v1.y) {
@@ -139,14 +132,14 @@ void main() {
     }
     // get scanline info (clamp before converting: v_scanline is negative within the stroke margin)
     uint scanlineInfoOffset = uint(clamp(v_scanline, 0.0, float(u_numScanlines - 1u)));
-    vec4 scanlineInfo = texel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineInfoOffset);
-    uint scanlineOffset = floatBitsToUint(scanlineInfo[0]);
-    uint numShapes = floatBitsToUint(scanlineInfo[1]);
-    if(numShapes == 0u || v_pos.x < scanlineInfo[2] - u_halfStrokeWidth || v_pos.x > scanlineInfo[3] + u_halfStrokeWidth) {
+    uvec4 scanlineInfo = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineInfoOffset);
+    uint scanlineOffset = scanlineInfo[0];
+    uint numShapes = scanlineInfo[1];
+    if(numShapes == 0u || v_pos.x < uintBitsToFloat(scanlineInfo[2]) - u_halfStrokeWidth || v_pos.x > uintBitsToFloat(scanlineInfo[3]) + u_halfStrokeWidth) {
         discard; // no shapes on this scanline or x coordinate outside scanline bounds
     }
     // check occupancy mask
-    vec4 occupancyMask = texel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineOffset);
+    uvec4 occupancyMask = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, scanlineOffset);
     bool empty = !occupancy(v_pos.x, u_objectBounds[0], u_objectBounds[2], occupancyMask);
     for(float dx = u_objectBounds[2] / 128.0; empty && dx <= u_halfStrokeWidth; dx += u_objectBounds[2] / 128.0) {
         if(occupancy(v_pos.x - dx, u_objectBounds[0], u_objectBounds[2], occupancyMask) || occupancy(v_pos.x + dx, u_objectBounds[0], u_objectBounds[2], occupancyMask)) {
@@ -160,10 +153,10 @@ void main() {
     fragColor = vec4(0.0);
     uint shapeOffset = scanlineOffset + 1u;
     for(uint i = 0u; i < numShapes; ++i) {
-        vec4 shapeInfo = texel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset);
-        uint shapeIndex = floatBitsToUint(shapeInfo[0]);
-        uint numEdges = floatBitsToUint(shapeInfo[1]);
-        if(numEdges > 0u && v_pos.x >= shapeInfo[2] - u_halfStrokeWidth && v_pos.x <= shapeInfo[3] + u_halfStrokeWidth) {
+        uvec4 shapeInfo = utexel(u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset);
+        uint shapeIndex = shapeInfo[0];
+        uint numEdges = shapeInfo[1];
+        if(numEdges > 0u && v_pos.x >= uintBitsToFloat(shapeInfo[2]) - u_halfStrokeWidth && v_pos.x <= uintBitsToFloat(shapeInfo[3]) + u_halfStrokeWidth) {
             float minDist;
             int wn = windingNumber(v_pos, u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset + 1u, numEdges, minDist);
             if(minDist < u_halfStrokeWidth) { // point is inside stroke area
