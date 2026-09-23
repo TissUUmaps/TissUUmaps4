@@ -97,7 +97,10 @@ export function TableColumnInput({
 
   const [isCommitPending, startCommitTransition] = useTransition();
   const commitAbortControllerRef = useRef<AbortController | null>(null);
-  useEffect(() => () => commitAbortControllerRef.current?.abort(), []);
+  useEffect(
+    () => () => commitAbortControllerRef.current?.abort(),
+    [value, loadTableData],
+  );
   function commit(query: string) {
     commitAbortControllerRef.current?.abort();
     if (query === (value ?? "")) {
@@ -199,7 +202,9 @@ export function TableColumnInput({
     }
     // matching suggestions are listed first, so the first one decides
     if (TableColumnUtils.matchColumnQuery(suggestions[0]!.query, text) === -1) {
-      return `No matches for "${text}", showing all columns`;
+      return suggestions.length > maxSuggestions
+        ? `No matches for "${text}", showing the first ${maxSuggestions} columns`
+        : `No matches for "${text}", showing all columns`;
     }
     if (suggestions.length > maxSuggestions) {
       return `Showing the first ${maxSuggestions} suggestions, keep typing to narrow down`;
