@@ -198,6 +198,33 @@ describe("MarkerResolver", () => {
       expect(packedMarkers[0]).toBe(Marker.Ring);
     });
 
+    it("falls back to the marker palette for groups missing from the map", async () => {
+      const ids = [1, 2];
+      const data = createMockTableData(ids, ["A", "missing"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const markerMap: GroupValueMap<Marker> = {
+        id: "mm1",
+        name: "Marker Map",
+        values: { A: Marker.Disc },
+      };
+      const config = {
+        groupBy: { column: "col1", map: "mm1" },
+      } satisfies MarkerConfig;
+
+      const buffer = await MarkerResolver.resolveMarkersFromTableGroups(
+        ids,
+        config,
+        [markerMap],
+        Marker.Cross,
+        loadTable,
+      );
+
+      expect(Array.from(buffer)).toEqual([
+        Marker.Disc,
+        markerPalette[HashUtils.hash("missing") % markerPalette.length],
+      ]);
+    });
+
     it("returns uniform default marker when a map is specified but not found", async () => {
       const loadTable = vi.fn();
       const config = {

@@ -247,7 +247,8 @@ export type ColorConfig =
         /**
          * ID of the color palette for mapping hashed group names to colors
          *
-         * Only used when no project-global colormap is specified
+         * Used for every group when no project-global colormap is specified,
+         * and for the groups the colormap does not contain.
          */
         palette?: string;
       }

@@ -340,6 +340,38 @@ describe("ColorResolver", () => {
       expect(packedColors[0]).toBe(ColorResolver.packColor(blue));
     });
 
+    it("falls back to the palette for groups missing from the map", async () => {
+      const ids = [1, 2];
+      const data = createMockTableData(ids, ["cat-a", "missing"]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const colorPalette = colorPalettes[0]!;
+      const colorMap: GroupValueMap<Color> = {
+        id: "cm1",
+        name: "Color Map 1",
+        values: { "cat-a": red },
+      };
+      const config = {
+        groupBy: { column: "col1", map: "cm1", palette: colorPalette.id },
+      } satisfies ColorConfig;
+
+      const buffer = await ColorResolver.resolveColorsFromTableGroups(
+        ids,
+        config,
+        [colorMap],
+        black,
+        loadTable,
+      );
+
+      expect(buffer[0]).toBe(ColorResolver.packColor(red));
+      expect(buffer[1]).toBe(
+        ColorResolver.packColor(
+          colorPalette.colors[
+            HashUtils.hash("missing") % colorPalette.colors.length
+          ]!,
+        ),
+      );
+    });
+
     it("returns uniform default color when a map is specified but not found", async () => {
       const loadTable = vi.fn();
       const config = {
