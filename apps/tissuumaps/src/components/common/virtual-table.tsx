@@ -31,26 +31,27 @@ import { cn } from "@/lib/utils";
  * silently clamp anything taller, so a list of millions of rows cannot be
  * scrolled past the cap. The list is therefore laid out at a compressed
  * height, and every scroll position is scaled between the two: the content
- * position is `factor` times the layout position, so that the end of the
+ * position is `compression` times the layout position, so that the end of the
  * layout still shows the end of the content.
  *
- * @param contentSize - The size of the content, in pixels
- * @param viewportSize - The size of the scroll container, in pixels
- * @param maxContentSize - The largest size to lay out, in pixels
- * @returns The size to lay out, and the factor content positions exceed layout
- * positions by, which is `1` while the content fits
+ * @param contentHeight - The height of the content, in pixels
+ * @param viewportHeight - The height of the visible part of the scroll
+ * container, in pixels
+ * @param maxLayoutHeight - The largest height to lay out, in pixels
+ * @returns The height to lay out, and the factor content positions exceed
+ * layout positions by, which is `1` while the content fits
  */
 function compressScrollRange(
-  contentSize: number,
-  viewportSize: number,
-  maxContentSize: number,
-): { layoutSize: number; factor: number } {
-  const range = contentSize - viewportSize;
-  const maxRange = maxContentSize - viewportSize;
+  contentHeight: number,
+  viewportHeight: number,
+  maxLayoutHeight: number,
+): { layoutHeight: number; compression: number } {
+  const range = contentHeight - viewportHeight;
+  const maxRange = maxLayoutHeight - viewportHeight;
   if (range <= maxRange || maxRange <= 0) {
-    return { layoutSize: contentSize, factor: 1 };
+    return { layoutHeight: contentHeight, compression: 1 };
   }
-  return { layoutSize: maxContentSize, factor: range / maxRange };
+  return { layoutHeight: maxLayoutHeight, compression: range / maxRange };
 }
 
 /**
@@ -61,7 +62,7 @@ function compressScrollRange(
  * that a longer list could not be scrolled past the cap. Content beyond this
  * height is compressed instead, see {@link compressScrollRange}.
  */
-const maxScrollContentHeight = 10_000_000;
+const maxLayoutHeight = 10_000_000;
 
 /**
  * How many rows are rendered beyond each end of the visible range
@@ -74,7 +75,7 @@ const overscan = 2;
 /**
  * The layout of a compressed virtualized list
  */
-type CompressedVirtualizer = {
+type CompressedRowVirtualizer = {
   /** Attached to the scroll container */
   containerRef: RefObject<HTMLDivElement | null>;
   /** Attached to the header that sticks to the top of the scroll container */
@@ -84,7 +85,7 @@ type CompressedVirtualizer = {
   /** The row past the last one within the visible range */
   lastIndex: number;
   /** The height to lay the rows out at, in pixels */
-  rowsHeight: number;
+  layoutRowsHeight: number;
   /** How far the rows have run ahead of the layout, in pixels */
   rowShift: number;
 };
@@ -99,18 +100,18 @@ type CompressedVirtualizer = {
  *
  * @param rowCount - The number of rows in the list
  * @param rowHeight - The height of every row, in pixels
- * @param height - The height of the scroll container, in pixels
+ * @param containerHeight - The height of the scroll container, in pixels
  * @returns The refs to attach, the visible range of rows and their layout
  */
-function useCompressedVirtualizer(
+function useCompressedRowVirtualizer(
   rowCount: number,
   rowHeight: number,
-  height: number,
-): CompressedVirtualizer {
+  containerHeight: number,
+): CompressedRowVirtualizer {
   const containerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLTableSectionElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(height);
+  const [viewportHeight, setViewportHeight] = useState(containerHeight);
   const compressionRef = useRef(1);
 
   useLayoutEffect(() => {
@@ -150,12 +151,11 @@ function useCompressedVirtualizer(
     };
   }, []);
 
-  const { layoutSize: layoutContentHeight, factor: compression } =
-    compressScrollRange(
-      headerHeight + rowCount * rowHeight,
-      viewportHeight,
-      maxScrollContentHeight,
-    );
+  const { layoutHeight, compression } = compressScrollRange(
+    headerHeight + rowCount * rowHeight,
+    viewportHeight,
+    maxLayoutHeight,
+  );
   // laid out before the browser can raise a scroll event against a stale factor
   useLayoutEffect(() => {
     compressionRef.current = compression;
@@ -211,7 +211,7 @@ function useCompressedVirtualizer(
       rowCount,
       Math.ceil((rowsScrollOffset + viewportHeight) / rowHeight) + overscan,
     ),
-    rowsHeight: layoutContentHeight - headerHeight,
+    layoutRowsHeight: layoutHeight - headerHeight,
     rowShift: scrollOffset * (1 - 1 / compression),
   };
 }
@@ -257,9 +257,9 @@ export function VirtualTable<TRowData extends RowData>({
     headerRef,
     firstIndex,
     lastIndex,
-    rowsHeight,
+    layoutRowsHeight,
     rowShift,
-  } = useCompressedVirtualizer(rowCount, rowHeight, height);
+  } = useCompressedRowVirtualizer(rowCount, rowHeight, height);
 
   // only the rows within the visible range are materialized, so that the cost
   // of the table does not depend on the number of rows
@@ -309,7 +309,7 @@ export function VirtualTable<TRowData extends RowData>({
         </TableHeader>
         <TableBody
           className="grid relative"
-          style={{ height: `${rowsHeight}px` }}
+          style={{ height: `${layoutRowsHeight}px` }}
         >
           {tableRows.map((row, index) => (
             <TableRow
