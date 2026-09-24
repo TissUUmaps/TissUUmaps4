@@ -67,8 +67,8 @@ export type DataTransfer = {
  * navigator's mirror of a tiled image is invalidated alongside the original
  * whenever the data transfer changes.
  *
- * The context also owns the world background: an opaque tiled image at world
- * index 0 that spans the bounds registered by every source via
+ * The context also owns the world background: an opaque single-tile image at
+ * world index 0 that spans the bounds registered by every source via
  * {@link setContentBounds} - the content of each renderer, and content rendered
  * outside OpenSeadragon, such as points and shapes. It thereby fits the world,
  * and with it the viewport, to all content, and it makes the drawer's canvas
@@ -76,12 +76,13 @@ export type DataTransfer = {
  * `OpenSeadragonRendererBase.usesAdditiveBlending`). Its color is given on
  * construction and is expected to match the background behind the viewer,
  * which shows outside of it. Renderers insert their anchors after it, i.e. at
- * world index 1 and up.
+ * world index 1 and up. See {@link _resizeBackground} for how it is resized
+ * without ever uncovering the canvas.
  */
 export class OpenSeadragonContext {
   private static readonly _isLittleEndian =
     new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
-  private static readonly _defaultBounds: Rect = {
+  private static readonly _emptyWorldBounds: Rect = {
     x: 0,
     y: 0,
     width: 1,
@@ -99,7 +100,6 @@ export class OpenSeadragonContext {
     "Equal",
     "Minus",
   ]);
-  private static readonly _relativeBoundsTolerance = 1e-9;
 
   readonly viewer: OpenSeadragon.Viewer;
   private readonly _tileSourceDataTransfers = new WeakMap<
@@ -126,7 +126,7 @@ export class OpenSeadragonContext {
   private _destroyed: boolean = false;
   private _viewportControlledByUser: boolean = false;
   private _background: OpenSeadragon.TiledImage | undefined;
-  private _backgroundTaskPromise: Promise<unknown> = Promise.resolve();
+  private _backgroundUpdateQueue: Promise<unknown> = Promise.resolve();
 
   /**
    * Creates a new OpenSeadragonContext instance and initializes the OpenSeadragon viewer
@@ -191,20 +191,21 @@ export class OpenSeadragonContext {
       this._viewportControlledByUser = false;
     });
     // OSD raises "reset-size" whenever the bounds of its world change, i.e.
-    // whenever a dummy is resized (see updateDummy). Fitting the viewport
-    // here, rather than per dummy, fits it to the whole world.
+    // whenever an anchor or the background is resized (see
+    // OpenSeadragonRendererBase._resizeAnchor and _resizeBackground). Fitting
+    // the viewport here, rather than per resize, fits it to the whole world.
     this.viewer.addHandler("reset-size", () => {
       if (!this._viewportControlledByUser) {
         this.viewer.viewport.goHome(/* immediately */ true);
       }
     });
     this.viewer.addHandler("tile-invalidated", (event) =>
-      this._transferData(event).catch((error) => {
+      this._applyDataTransfer(event).catch((error) => {
         console.error(`Failed to transfer tile data: ${error}`);
       }),
     );
     this.viewer.addHandler("update-viewport", () => this._recolorStaleTiles());
-    this._updateBackground().catch((error) => {
+    this._resizeBackground().catch((error) => {
       console.error("Failed to add the OpenSeadragon world background", error);
     });
   }
@@ -559,104 +560,21 @@ export class OpenSeadragonContext {
   }
 
   /**
-   * Resizes a dummy tiled image, or creates one
-   *
-   * A dummy is a single-tile image covering `newBounds`. As OpenSeadragon
-   * derives the extent of its world from the bounds of its items, such a dummy
-   * keeps the world bounds independent of which tiled images are currently
-   * loaded, and it doubles as a stable index anchor for renderers. The dummy
-   * is fully transparent unless a `pixelUrl` is given, in which case it is
-   * filled with that pixel, like the world background (see {@link setContentBounds}).
-   *
-   * The viewport is not fitted here: it follows the bounds of the world as a
-   * whole, for as long as the renderers own it (see {@link resetViewport}).
-   *
-   * If `dummy` already spans `newBounds`, it is returned unchanged. Its bounds
-   * are compared with a tolerance relative to the size of `newBounds`, as
-   * OpenSeadragon derives the height of `dummy` from its width and the aspect
-   * ratio of its tile source, which can be off by a rounding error and would
-   * otherwise replace the dummy on every call. Otherwise, a new dummy is created
-   * at `dummyIndex` (defaulting to the index of `dummy`, or appended if neither
-   * is specified) and `dummy` is removed.
-   * Where possible, OpenSeadragon replaces `dummy` as part of the addition, so
-   * that the new dummy takes its place without leaving a gap. Replacing `dummy`
-   * cannot be aborted once the new dummy has been created, as that would leave
-   * the caller without a dummy.
-   *
-   * @param newBounds - The new bounds of the dummy, in world coordinates
-   * @param options - Optional abort signal, dummy to replace, index at which
-   * to insert the new dummy, and URL of a pixel to fill the dummy with
-   * @returns A promise that resolves with the new (or the unchanged) dummy
-   */
-  async updateDummy(
-    newBounds: Rect,
-    options?: {
-      signal?: AbortSignal;
-      dummy?: OpenSeadragon.TiledImage;
-      dummyIndex?: number;
-      pixelUrl?: string;
-    },
-  ): Promise<OpenSeadragon.TiledImage> {
-    const { signal, dummy, dummyIndex, pixelUrl } = options ?? {};
-    signal?.throwIfAborted();
-    if (dummy !== undefined) {
-      const { x, y, width, height } = dummy.getBounds();
-      const tolerance =
-        OpenSeadragonContext._relativeBoundsTolerance *
-        Math.max(newBounds.width, newBounds.height);
-      if (
-        Math.abs(x - newBounds.x) <= tolerance &&
-        Math.abs(y - newBounds.y) <= tolerance &&
-        Math.abs(width - newBounds.width) <= tolerance &&
-        Math.abs(height - newBounds.height) <= tolerance
-      ) {
-        return dummy;
-      }
-    }
-    let replace = undefined;
-    let getIndex = undefined;
-    if (dummyIndex === undefined && dummy !== undefined) {
-      replace = true;
-      getIndex = () => this.viewer.world.getIndexOfItem(dummy);
-    }
-    const newDummy = await this.addTiledImage(
-      {
-        index: dummyIndex,
-        replace,
-        x: newBounds.x,
-        y: newBounds.y,
-        width: newBounds.width,
-        tileSource: OpenSeadragonUtils.createPixelTileSource(
-          { width: newBounds.width, height: newBounds.height },
-          pixelUrl ?? OpenSeadragonUtils.transparentBlackPixelUrl,
-        ),
-        opacity: pixelUrl !== undefined ? 1 : 0,
-      },
-      { signal, getIndex },
-    );
-    if (dummy !== undefined && replace !== true) {
-      await this.removeTiledImage(dummy);
-    }
-    return newDummy;
-  }
-
-  /**
    * Sets the bounds of the content that a source contributes to the world
    *
    * The world background (see the class documentation) is resized to the
-   * bounding box of the bounds of all sources, or to a unit square at the
-   * origin if there are none. Renderers register the bounds of their tiled
+   * bounding box of the bounds of all sources, or to
+   * {@link _emptyWorldBounds} if there are none (see
+   * {@link _resizeBackground}). Renderers register the bounds of their tiled
    * images under themselves; the bounds of content rendered outside
    * OpenSeadragon are registered under any other stable object. Passing no
    * bounds removes the source.
    *
-   * Resizes are applied one at a time, in call order, each to the bounds
-   * registered by the time it runs, so intermediate ones are skipped.
-   *
    * @param source - The object under which to register the bounds
    * @param bounds - The bounds contributed by the source, in world coordinates
    * @param options - Optional abort signal
-   * @returns A promise that resolves once the background covers the bounds
+   * @returns A promise that resolves once the background covers the bounds,
+   * i.e. once it has been drawn wherever they are in the viewport
    */
   setContentBounds(
     source: object,
@@ -668,7 +586,7 @@ export class OpenSeadragonContext {
     } else {
       this._contentBounds.delete(source);
     }
-    return this._updateBackground(options);
+    return this._resizeBackground(options);
   }
 
   /**
@@ -735,32 +653,71 @@ export class OpenSeadragonContext {
   /**
    * Resizes the world background to the registered bounds, creating it at world index 0 if it does not exist yet
    *
-   * Background tasks are run one at a time, in call order, and a failing task
-   * does not prevent subsequent tasks from running. Does nothing once the
-   * context has been destroyed.
+   * The background is kept if it already has the bounds (see
+   * {@link OpenSeadragonUtils.hasBounds}). Otherwise, a new background is
+   * inserted right below it, and the old one is removed only once the new one
+   * has been drawn (see {@link _waitUntilDrawn}). Unlike a renderer's anchor
+   * (see `OpenSeadragonRendererBase._resizeAnchor`), the background is not
+   * replaced as part of the addition: OpenSeadragon removes the replaced tiled
+   * image right away, whereas the new one is drawn only once its tile has
+   * loaded, which would leave the canvas uncovered for a frame or more. While
+   * both backgrounds exist, they sit below all anchors, so the world indices
+   * that the renderers resolve relative to their anchors are unaffected.
+   *
+   * Resizes are run one at a time, in call order, each to the bounds
+   * registered by the time it runs, so intermediate ones are skipped. A
+   * failing resize does not prevent subsequent ones from running. Aborting
+   * skips the resize if the new background has not been added yet, and has no
+   * effect afterwards, as that would leave two backgrounds in the world. Does
+   * nothing once the context has been destroyed.
    *
    * @param options - Optional abort signal
    * @returns A promise that resolves once the background has been resized
    */
-  private _updateBackground(options?: { signal?: AbortSignal }): Promise<void> {
+  private _resizeBackground(options?: { signal?: AbortSignal }): Promise<void> {
     const { signal } = options ?? {};
-    const result = this._backgroundTaskPromise.then(async () => {
+    const promise = this._backgroundUpdateQueue.then(async () => {
       if (this._destroyed) {
         return;
       }
       signal?.throwIfAborted();
       const bounds =
         GeometryUtils.union(...[...this._contentBounds.values()].flat()) ??
-        OpenSeadragonContext._defaultBounds;
-      this._background = await this.updateDummy(bounds, {
-        signal,
-        dummy: this._background,
-        dummyIndex: this._background === undefined ? 0 : undefined,
-        pixelUrl: this._backgroundPixelUrl,
-      });
+        OpenSeadragonContext._emptyWorldBounds;
+      const background = this._background;
+      if (
+        background !== undefined &&
+        OpenSeadragonUtils.hasBounds(background, bounds)
+      ) {
+        return;
+      }
+      const newBackground = await this.addTiledImage(
+        {
+          index: background === undefined ? 0 : undefined,
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          tileSource: OpenSeadragonUtils.createPixelTileSource(
+            { width: bounds.width, height: bounds.height },
+            this._backgroundPixelUrl,
+          ),
+        },
+        {
+          signal,
+          getIndex:
+            background !== undefined
+              ? () => this.getTiledImageIndex(background)
+              : undefined,
+        },
+      );
+      this._background = newBackground;
+      if (background !== undefined) {
+        await this._waitUntilDrawn(newBackground);
+        await this.removeTiledImage(background);
+      }
     });
-    this._backgroundTaskPromise = result.catch(() => {}); // prevent unhandled rejections in console
-    return result;
+    this._backgroundUpdateQueue = promise.catch(() => {}); // prevent unhandled rejections in console
+    return promise;
   }
 
   /**
@@ -807,6 +764,51 @@ export class OpenSeadragonContext {
   }
 
   /**
+   * Waits until a tiled image has been drawn wherever it is in the viewport
+   *
+   * That is, until all tiles it needs for the current view have loaded, or
+   * until it is not in the viewport at all: OpenSeadragon keeps the loading
+   * state of a tiled image outside the viewport as it is, so the tiled image
+   * would otherwise be waited for until it is panned into view. OpenSeadragon
+   * sets the former while updating a frame, right before drawing it; the
+   * latter can only change along with the viewport, as the tiled image is not
+   * moved while waited for. Both are therefore checked right away, and again
+   * whenever either changes. Also resolves once its tile has failed to load
+   * for good, as it is never fully loaded then, and once the context has been
+   * destroyed, at the latest when it destroys the viewer (see {@link destroy}).
+   *
+   * @param tiledImage - The tiled image to wait for
+   * @returns A promise that resolves once the tiled image has been drawn
+   */
+  private _waitUntilDrawn(tiledImage: OpenSeadragon.TiledImage): Promise<void> {
+    return new Promise((resolve) => {
+      const done = () => {
+        tiledImage.removeHandler("fully-loaded-change", check);
+        this.viewer.removeHandler("viewport-change", check);
+        this.viewer.removeHandler("before-destroy", check);
+        this.viewer.removeHandler("tile-load-failed", checkFailure);
+        resolve();
+      };
+      const check = () => {
+        const drawArea = tiledImage.getDrawArea();
+        if (this._destroyed || tiledImage.getFullyLoaded() || !drawArea) {
+          done();
+        }
+      };
+      const checkFailure = (event: OpenSeadragon.TileLoadFailedEvent) => {
+        if (event.tiledImage === tiledImage && event.maxReached) {
+          done();
+        }
+      };
+      tiledImage.addHandler("fully-loaded-change", check);
+      this.viewer.addHandler("viewport-change", check);
+      this.viewer.addHandler("before-destroy", check);
+      this.viewer.addHandler("tile-load-failed", checkFailure);
+      check();
+    });
+  }
+
+  /**
    * Appends a world mutation to the world mutation queue
    *
    * Tasks are run one at a time, in call order, and a failing task does not
@@ -830,7 +832,7 @@ export class OpenSeadragonContext {
    * (see {@link updateTiledImageDataTransfer}), which leaves the other loaded
    * tiles of the tile source in the colors of an earlier data transfer. Every
    * tile records the data transfer it was last recolored with (see
-   * {@link _transferData}); a drawn tile that recorded a different one than
+   * {@link _applyDataTransfer}); a drawn tile that recorded a different one than
    * its tile source's is invalidated, unless it is being recolored already.
    * Such a tile is drawn in its earlier colors until it is recolored, which
    * takes a frame or two.
@@ -910,7 +912,7 @@ export class OpenSeadragonContext {
    * @returns A promise that resolves once the tile data has been replaced
    * @throws Error if the number of pixel values does not match the raster size
    */
-  private async _transferData(
+  private async _applyDataTransfer(
     event: OpenSeadragon.TileInvalidatedEvent,
   ): Promise<void> {
     const tiledImage = event.tile.tiledImage;

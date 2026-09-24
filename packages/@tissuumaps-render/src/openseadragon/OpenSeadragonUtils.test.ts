@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 // OpenSeadragon touches the DOM when imported
-import { createCanvas, loadImage } from "canvas";
 import { vec2 } from "gl-matrix";
+import OpenSeadragon from "openseadragon";
 import { describe, expect, it } from "vitest";
 
-import { type SimilarityTransform, identityTransform } from "@tissuumaps/core";
+import {
+  type Rect,
+  type SimilarityTransform,
+  identityTransform,
+} from "@tissuumaps/core";
 
 import { WebGLUtils } from "../webgl/WebGLUtils";
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
@@ -92,17 +96,20 @@ function webglCorners(
 }
 
 /**
- * Decodes a single-pixel image data URL into its RGBA bytes
+ * Creates a stand-in for a tiled image that has the given bounds
  *
- * Uses the `canvas` package directly, as jsdom does not load images; it is the
- * same library that backs jsdom's canvas, and thus `createPixelUrl`, here.
+ * {@link OpenSeadragonUtils.hasBounds} only reads the bounds of a tiled image,
+ * so a real one, which needs a viewer, is not required.
  */
-async function decodePixel(url: string): Promise<number[]> {
-  expect(url.startsWith("data:image/png;base64,")).toBe(true);
-  const image = await loadImage(url);
-  const ctx = createCanvas(1, 1).getContext("2d");
-  ctx.drawImage(image, 0, 0);
-  return [...ctx.getImageData(0, 0, 1, 1).data];
+function tiledImageWithBounds({
+  x,
+  y,
+  width,
+  height,
+}: Rect): OpenSeadragon.TiledImage {
+  return {
+    getBounds: () => new OpenSeadragon.Rect(x, y, width, height),
+  } as unknown as OpenSeadragon.TiledImage;
 }
 
 describe("OpenSeadragonUtils", () => {
@@ -140,35 +147,6 @@ describe("OpenSeadragonUtils", () => {
       ) as { getTileUrl: (level: number, x: number, y: number) => string };
       expect(getTileUrl(0, 0, 0)).toBe("pixel-url");
       expect(getTileUrl(3, 2, 1)).toBe("pixel-url");
-    });
-  });
-
-  describe("createPixelUrl", () => {
-    it("encodes an opaque color", async () => {
-      const url = OpenSeadragonUtils.createPixelUrl(12, 200, 255, 1);
-      await expect(decodePixel(url)).resolves.toEqual([12, 200, 255, 255]);
-    });
-
-    it("encodes a fully transparent pixel", async () => {
-      const url = OpenSeadragonUtils.createPixelUrl(12, 200, 255, 0);
-      const pixel = await decodePixel(url);
-      expect(pixel[3]).toBe(0);
-    });
-
-    it("encodes the alpha of a translucent pixel", async () => {
-      const url = OpenSeadragonUtils.createPixelUrl(255, 255, 255, 0.5);
-      const pixel = await decodePixel(url);
-      expect(pixel[3]).toBeGreaterThanOrEqual(127);
-      expect(pixel[3]).toBeLessThanOrEqual(128);
-    });
-
-    it("provides the transparent and the opaque black pixel", async () => {
-      await expect(
-        decodePixel(OpenSeadragonUtils.transparentBlackPixelUrl),
-      ).resolves.toEqual([0, 0, 0, 0]);
-      await expect(
-        decodePixel(OpenSeadragonUtils.opaqueBlackPixelUrl),
-      ).resolves.toEqual([0, 0, 0, 255]);
     });
   });
 
@@ -218,6 +196,53 @@ describe("OpenSeadragonUtils", () => {
         contentSize,
       );
       expect(geom.flip).toBe(false);
+    });
+  });
+
+  describe("hasBounds", () => {
+    const bounds = { x: 10, y: -20, width: 300, height: 120 };
+
+    it("returns true for a tiled image with exactly the given bounds", () => {
+      expect(
+        OpenSeadragonUtils.hasBounds(tiledImageWithBounds(bounds), bounds),
+      ).toBe(true);
+    });
+
+    it("tolerates a rounding error in the derived height", () => {
+      const tiledImage = tiledImageWithBounds({
+        ...bounds,
+        height: bounds.height * (1 + 1e-14),
+      });
+      expect(OpenSeadragonUtils.hasBounds(tiledImage, bounds)).toBe(true);
+    });
+
+    it.each([
+      ["x", { ...bounds, x: bounds.x + 1 }],
+      ["y", { ...bounds, y: bounds.y - 1 }],
+      ["width", { ...bounds, width: bounds.width + 1 }],
+      ["height", { ...bounds, height: bounds.height - 1 }],
+    ])("returns false if the %s differs", (_, otherBounds) => {
+      expect(
+        OpenSeadragonUtils.hasBounds(tiledImageWithBounds(otherBounds), bounds),
+      ).toBe(false);
+    });
+
+    it("scales the tolerance with the size of the bounds", () => {
+      const offset = 1e-6;
+      const large = { x: 0, y: 0, width: 1e6, height: 1e6 };
+      const small = { x: 0, y: 0, width: 1, height: 1 };
+      expect(
+        OpenSeadragonUtils.hasBounds(
+          tiledImageWithBounds({ ...large, x: offset }),
+          large,
+        ),
+      ).toBe(true);
+      expect(
+        OpenSeadragonUtils.hasBounds(
+          tiledImageWithBounds({ ...small, x: offset }),
+          small,
+        ),
+      ).toBe(false);
     });
   });
 

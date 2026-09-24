@@ -21,6 +21,7 @@ import {
   defaultShapeStrokeColor,
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
+  findGroupByConfigMap,
   projectDefaults,
 } from "@tissuumaps/core";
 
@@ -856,7 +857,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Every property the change predicates read has to be captured here: the
    * item-level configurations, and the maps they resolve their values from,
    * looked up now so that the predicates compare maps rather than map IDs (see
-   * {@link WebGLRendererBase.findGroupByConfigMap}).
+   * {@link findGroupByConfigMap}).
    *
    * @param newRef - The object to capture the snapshot of
    * @param syncContext - The inputs of the current synchronization, holding the maps
@@ -873,27 +874,27 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       shapeStrokeColor: newRef.object.shapeStrokeColor,
       shapeStrokeVisibility: newRef.object.shapeStrokeVisibility,
       shapeStrokeOpacity: newRef.object.shapeStrokeOpacity,
-      shapeFillColorMap: WebGLShapesRenderer.findGroupByConfigMap(
+      shapeFillColorMap: findGroupByConfigMap(
         newRef.object.shapeFillColor,
         syncContext.colorMaps,
       ),
-      shapeFillVisibilityMap: WebGLShapesRenderer.findGroupByConfigMap(
+      shapeFillVisibilityMap: findGroupByConfigMap(
         newRef.object.shapeFillVisibility,
         syncContext.visibilityMaps,
       ),
-      shapeFillOpacityMap: WebGLShapesRenderer.findGroupByConfigMap(
+      shapeFillOpacityMap: findGroupByConfigMap(
         newRef.object.shapeFillOpacity,
         syncContext.opacityMaps,
       ),
-      shapeStrokeColorMap: WebGLShapesRenderer.findGroupByConfigMap(
+      shapeStrokeColorMap: findGroupByConfigMap(
         newRef.object.shapeStrokeColor,
         syncContext.colorMaps,
       ),
-      shapeStrokeVisibilityMap: WebGLShapesRenderer.findGroupByConfigMap(
+      shapeStrokeVisibilityMap: findGroupByConfigMap(
         newRef.object.shapeStrokeVisibility,
         syncContext.visibilityMaps,
       ),
-      shapeStrokeOpacityMap: WebGLShapesRenderer.findGroupByConfigMap(
+      shapeStrokeOpacityMap: findGroupByConfigMap(
         newRef.object.shapeStrokeOpacity,
         syncContext.opacityMaps,
       ),

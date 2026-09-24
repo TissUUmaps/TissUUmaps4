@@ -3,6 +3,7 @@ import OpenSeadragon from "openseadragon";
 
 import {
   type Dims,
+  type Rect,
   type SimilarityTransform,
   type TileSourceConfig,
   TransformUtils,
@@ -13,21 +14,33 @@ import {
  * geometry of OpenSeadragon tiled images
  */
 export class OpenSeadragonUtils {
-  /** A single transparent pixel, as a PNG data URL */
-  static readonly transparentBlackPixelUrl = OpenSeadragonUtils.createPixelUrl(
-    0,
-    0,
-    0,
-    0,
-  );
+  private static readonly _relativeBoundsTolerance = 1e-9;
+  private static _transparentBlackPixelUrl: string | undefined;
+  private static _opaqueBlackPixelUrl: string | undefined;
 
-  /** A single opaque black pixel, as a PNG data URL */
-  static readonly opaqueBlackPixelUrl = OpenSeadragonUtils.createPixelUrl(
-    0,
-    0,
-    0,
-    1,
-  );
+  /**
+   * A single transparent pixel, as a PNG data URL
+   *
+   * Created on first access rather than on import, as creating it requires a
+   * DOM with canvas support (see {@link createPixelUrl}).
+   */
+  static get transparentBlackPixelUrl(): string {
+    OpenSeadragonUtils._transparentBlackPixelUrl ??=
+      OpenSeadragonUtils.createPixelUrl(0, 0, 0, 0);
+    return OpenSeadragonUtils._transparentBlackPixelUrl;
+  }
+
+  /**
+   * A single opaque black pixel, as a PNG data URL
+   *
+   * Created on first access rather than on import, as creating it requires a
+   * DOM with canvas support (see {@link createPixelUrl}).
+   */
+  static get opaqueBlackPixelUrl(): string {
+    OpenSeadragonUtils._opaqueBlackPixelUrl ??=
+      OpenSeadragonUtils.createPixelUrl(0, 0, 0, 1);
+    return OpenSeadragonUtils._opaqueBlackPixelUrl;
+  }
 
   /**
    * Creates a tile source that fills the given size with a single tile
@@ -120,5 +133,35 @@ export class OpenSeadragonUtils {
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
     ctx.fillRect(0, 0, 1, 1);
     return canvas.toDataURL("image/png");
+  }
+
+  /**
+   * Returns whether a tiled image has the given bounds
+   *
+   * The bounds are compared with a tolerance relative to the size of `bounds`,
+   * as OpenSeadragon derives the height of a tiled image from its width and
+   * the aspect ratio of its tile source, which can be off by a rounding error.
+   * Callers that resize a tiled image whenever this returns `false` would
+   * otherwise resize it on every call.
+   *
+   * @param tiledImage - The tiled image to check
+   * @param bounds - The bounds to compare against, in world coordinates
+   * @returns Whether the bounds of `tiledImage` equal `bounds`, within the
+   * tolerance
+   */
+  static hasBounds(
+    tiledImage: OpenSeadragon.TiledImage,
+    bounds: Rect,
+  ): boolean {
+    const { x, y, width, height } = tiledImage.getBounds();
+    const tolerance =
+      OpenSeadragonUtils._relativeBoundsTolerance *
+      Math.max(bounds.width, bounds.height);
+    return (
+      Math.abs(x - bounds.x) <= tolerance &&
+      Math.abs(y - bounds.y) <= tolerance &&
+      Math.abs(width - bounds.width) <= tolerance &&
+      Math.abs(height - bounds.height) <= tolerance
+    );
   }
 }

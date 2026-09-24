@@ -4,7 +4,6 @@ import {
   AsyncUtils,
   type Color,
   ColorUtils,
-  type Config,
   type GroupValueMap,
   type Labels,
   type LabelsData,
@@ -13,8 +12,8 @@ import {
   defaultLabelColor,
   defaultLabelOpacity,
   defaultLabelVisibility,
+  findGroupByConfigMap,
   getActiveConfigSource,
-  isGroupByConfig,
 } from "@tissuumaps/core";
 
 import { ColorResolver } from "../resolvers/ColorResolver";
@@ -101,7 +100,7 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    *
    * An object's data transfer is kept as long as its data, its label color,
    * visibility and opacity configurations, and the group-to-value maps those
-   * configurations resolve from (see {@link _findGroupByConfigMap}) are
+   * configurations resolve from (see {@link findGroupByConfigMap}) are
    * unchanged, and is resolved anew otherwise (see
    * {@link _resolveDataTransfer}). Configurations are compared by value, maps
    * by identity. If resolving from the referenced table fails, e.g. because the
@@ -128,15 +127,12 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
       labelColor: structuredClone(labels.labelColor),
       labelVisibility: structuredClone(labels.labelVisibility),
       labelOpacity: structuredClone(labels.labelOpacity),
-      labelColorMap: OpenSeadragonLabelsRenderer._findGroupByConfigMap(
-        labels.labelColor,
-        context.colorMaps,
-      ),
-      labelVisibilityMap: OpenSeadragonLabelsRenderer._findGroupByConfigMap(
+      labelColorMap: findGroupByConfigMap(labels.labelColor, context.colorMaps),
+      labelVisibilityMap: findGroupByConfigMap(
         labels.labelVisibility,
         context.visibilityMaps,
       ),
-      labelOpacityMap: OpenSeadragonLabelsRenderer._findGroupByConfigMap(
+      labelOpacityMap: findGroupByConfigMap(
         labels.labelOpacity,
         context.opacityMaps,
       ),
@@ -178,35 +174,6 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
     const renderedLabels = this._renderedLabels.get(ref.object.id);
     if (renderedLabels !== undefined) {
       return renderedLabels.dataTransfer;
-    }
-    return undefined;
-  }
-
-  /**
-   * Returns the group-to-value map that a label configuration resolves its
-   * values from, if any
-   *
-   * Captured in the state that {@link resolveObject} compares against, so that
-   * an edit to a map is detected by the objects referencing it. Mirrors the
-   * selection of the resolvers: only an active `groupBy` source with a map ID
-   * resolves from a map.
-   *
-   * @param config - The configuration
-   * @param maps - The project-global maps to look the referenced map up in
-   * @returns The map, or `undefined` if the configuration does not resolve
-   * from a map, or if the map it references does not exist (which the
-   * resolvers report)
-   */
-  private static _findGroupByConfigMap<TValue>(
-    config: Config<string>,
-    maps: GroupValueMap<TValue>[],
-  ): GroupValueMap<TValue> | undefined {
-    if (
-      getActiveConfigSource(config) === "groupBy" &&
-      isGroupByConfig<false>(config) &&
-      config.groupBy.map !== undefined
-    ) {
-      return maps.find((map) => map.id === config.groupBy.map);
     }
     return undefined;
   }

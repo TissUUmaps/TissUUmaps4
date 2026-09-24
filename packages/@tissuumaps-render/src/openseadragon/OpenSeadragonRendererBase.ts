@@ -9,6 +9,7 @@ import {
   type Labels,
   type LabelsData,
   type Layer,
+  type Rect,
   type TileSourceConfig,
 } from "@tissuumaps/core";
 
@@ -21,17 +22,17 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
 /**
  * Base class for OpenSeadragon renderers that manage tiled images for objects (images or labels)
  *
- * Each renderer owns an anchor, a tiled image spanning everything the renderer
- * contributes to the world (see {@link OpenSeadragonContext.updateDummy}).
- * Renderers share a viewer, so the anchor also marks where the renderer's own
- * tiled images belong: they directly follow the anchor, in the order of
- * {@link _renderedObjects}, with one tiled image per channel of each object.
+ * Renderers share a viewer, so each renderer owns an anchor: an invisible
+ * single-tile image that marks where the renderer's own tiled images belong.
+ * They directly follow the anchor, in the order of {@link _renderedObjects},
+ * with one tiled image per channel of each object.
  *
- * The anchor is invisible and spans just the renderer's own tiled images: every
- * tiled image contributes to the bounds of the world, and this keeps the anchor
- * from extending them. The same bounds are registered with the context (see
- * {@link OpenSeadragonContext.setContentBounds}), whose world background covers the
- * content of all renderers from below.
+ * Every tiled image contributes to the bounds of the world, the anchor
+ * included, so the anchor spans just the renderer's own tiled images, which
+ * keeps it from extending the world (see {@link updateBounds}). The same bounds
+ * are registered with the context (see
+ * {@link OpenSeadragonContext.setContentBounds}), whose world background fits
+ * the world to the content of all renderers, and covers it from below.
  *
  * The tiled images of an object that uses additive blending are preceded by one
  * more tiled image, its backdrop (see {@link usesAdditiveBlending}).
@@ -61,7 +62,12 @@ export abstract class OpenSeadragonRendererBase<
     ) => Promise<TObjectData>;
   },
 > {
-  private static _defaultBounds = { x: 0, y: 0, width: 1, height: 1 };
+  private static readonly _emptyAnchorBounds: Rect = {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+  };
 
   readonly context: OpenSeadragonContext;
   private _anchor: OpenSeadragon.TiledImage | undefined;
@@ -93,10 +99,10 @@ export abstract class OpenSeadragonRendererBase<
     this._enqueueAnchorTask(async () => {
       const { signal, anchorIndex } = options ?? {};
       signal?.throwIfAborted();
-      this._anchor = await this.context.updateDummy(
-        OpenSeadragonRendererBase._defaultBounds,
-        { signal, dummyIndex: anchorIndex },
-      );
+      await this._resizeAnchor(OpenSeadragonRendererBase._emptyAnchorBounds, {
+        signal,
+        anchorIndex,
+      });
     }).then(onInitialized, onError);
   }
 
@@ -221,15 +227,7 @@ export abstract class OpenSeadragonRendererBase<
         ),
       );
       signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
-      await this.updateBounds({ signal });
-      // reveal the objects whose creation did not see the context's world
-      // background cover them, e.g. because it was aborted, now that it does
-      for (const renderedObject of newRenderedObjects) {
-        if (renderedObject.pendingBackground === true) {
-          renderedObject.pendingBackground = false;
-          this._updateRenderedObject(renderedObject);
-        }
-      }
+      await this._updateBoundsAndReveal(newRenderedObjects, { signal });
     } catch (error) {
       if (this._lastSyncState === syncState) {
         this._lastSyncState = undefined;
@@ -245,17 +243,21 @@ export abstract class OpenSeadragonRendererBase<
    * ignored; they update the anchor themselves upon arrival (see
    * {@link _createRenderedObject}). Resolves once the context's world
    * background covers the bounds, too (see
-   * {@link OpenSeadragonContext.setContentBounds}). Does nothing once the renderer has
-   * been destroyed, as there is no anchor to resize anymore.
+   * {@link OpenSeadragonContext.setContentBounds}). The bounds are registered
+   * after the anchor task rather than within it, so that the anchor task
+   * queue, and with it {@link destroy}, never waits for the background, which
+   * waits for being drawn. Does nothing once the renderer has been destroyed,
+   * as there is no anchor to resize anymore.
    *
    * @param options - Optional abort signal
    */
-  updateBounds(options?: { signal?: AbortSignal }): Promise<void> {
+  async updateBounds(options?: { signal?: AbortSignal }): Promise<void> {
     if (this._destroyed) {
-      return Promise.resolve();
+      return;
     }
-    return this._enqueueAnchorTask(async () => {
-      const { signal } = options ?? {};
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const bounds = await this._enqueueAnchorTask(async () => {
       signal?.throwIfAborted();
       const tiledImageBounds = [];
       for (const renderedObject of this._renderedObjects) {
@@ -269,16 +271,19 @@ export abstract class OpenSeadragonRendererBase<
         }
       }
       const bounds = GeometryUtils.union(...tiledImageBounds);
-      this._anchor = await this.context.updateDummy(
-        bounds ?? OpenSeadragonRendererBase._defaultBounds,
-        { signal, dummy: this._anchor },
+      await this._resizeAnchor(
+        bounds ?? OpenSeadragonRendererBase._emptyAnchorBounds,
+        { signal },
       );
+      return bounds;
+    });
+    if (!this._destroyed) {
       await this.context.setContentBounds(
         this,
         bounds !== null ? [bounds] : [],
         { signal },
       );
-    });
+    }
   }
 
   /**
@@ -290,6 +295,12 @@ export abstract class OpenSeadragonRendererBase<
    * The renderer is unusable afterwards: it has no anchor anymore, so
    * {@link updateBounds} does nothing, {@link _cleanRenderedObjects} throws, and
    * tiled images that still arrive are removed right away.
+   *
+   * The bounds are removed from the context without waiting for the world
+   * background to be resized, and a failure to resize it is only logged: the
+   * background waits for being drawn, which never happens while the page is
+   * hidden, and the teardown of the renderer, and thereby of the context, must
+   * not depend on it.
    */
   async destroy(): Promise<void> {
     this._destroyed = true;
@@ -305,7 +316,9 @@ export abstract class OpenSeadragonRendererBase<
         this._anchor = undefined;
         await this.context.removeTiledImage(anchor);
       }
-      await this.context.setContentBounds(this, []);
+    });
+    this.context.setContentBounds(this, []).catch((error) => {
+      console.error("Failed to remove the renderer's content bounds", error);
     });
   }
 
@@ -909,9 +922,7 @@ export abstract class OpenSeadragonRendererBase<
           // background covers the tiled images by the time they are drawn
           newRenderedObject.pendingBackground = true;
           this._updateRenderedObject(newRenderedObject);
-          await this.updateBounds({ signal });
-          newRenderedObject.pendingBackground = false;
-          this._updateRenderedObject(newRenderedObject);
+          await this._updateBoundsAndReveal([newRenderedObject], { signal });
         }
         return tiledImages;
       })
@@ -943,7 +954,9 @@ export abstract class OpenSeadragonRendererBase<
    * all TiledImages of an object, and by its backdrop. The backdrop is opaque
    * where the object is, so it gets {@link getTiledImageOpacity} without a
    * channel index. A rendered object that is `pendingBackground` gets
-   * everything but its opacity, which stays at zero.
+   * everything but its opacity, which stays at zero; its tiles are loaded
+   * nonetheless, unless it is invisible anyway, so that they are ready by the
+   * time it is revealed.
    *
    * @param renderedObject - The rendered object to update
    * @param newRef - The reference to store, addressing the same layer, object
@@ -995,6 +1008,10 @@ export abstract class OpenSeadragonRendererBase<
    * gets the world indices it expects.
    *
    * Deleting a rendered object does not remove it from {@link _renderedObjects}.
+   * An object that is `pendingBackground` is no longer, so that it is not
+   * revealed once the bounds update it waits for settles (see
+   * {@link _updateBoundsAndReveal}), which would update TiledImages that are
+   * no longer in the world.
    *
    * @param renderedObject - The rendered object to delete
    * @returns A promise that resolves once its backdrop and all of its TiledImages have been removed
@@ -1002,6 +1019,7 @@ export abstract class OpenSeadragonRendererBase<
   private _deleteRenderedObject(
     renderedObject: RenderedObject<TObject, TObjectData>,
   ): Promise<void> {
+    renderedObject.pendingBackground = false;
     if (renderedObject.tiledImages === undefined) {
       renderedObject.pendingDelete = true;
       return Promise.resolve();
@@ -1025,7 +1043,8 @@ export abstract class OpenSeadragonRendererBase<
    * @param tiledImage - The TiledImage to update
    * @param ref - The object reference whose transform to apply
    * @param index - The index of the tiled image (e.g. channel), or `null` for the object's backdrop
-   * @param options - Whether to keep the TiledImage hidden, i.e. at opacity `0`
+   * @param options - Whether to keep the TiledImage hidden, i.e. at opacity
+   * `0`, while preloading its tiles if it would be visible otherwise
    */
   private _updateTiledImage(
     tiledImage: OpenSeadragon.TiledImage,
@@ -1059,8 +1078,13 @@ export abstract class OpenSeadragonRendererBase<
     ) {
       tiledImage.setPosition(transform.position, true);
     }
-    // visibility & opacity --> opacity
-    const opacity = hidden ? 0 : this.getTiledImageOpacity(ref, index);
+    // visibility & opacity --> opacity, preload
+    const visibleOpacity = this.getTiledImageOpacity(ref, index);
+    const opacity = hidden ? 0 : visibleOpacity;
+    const preload = hidden && visibleOpacity > 0;
+    if (tiledImage.getPreload() !== preload) {
+      tiledImage.setPreload(preload);
+    }
     const oldOpacity = tiledImage.getOpacity();
     if (opacity !== oldOpacity) {
       tiledImage.setOpacity(opacity);
@@ -1073,6 +1097,103 @@ export abstract class OpenSeadragonRendererBase<
     // (channel/label) values --> data transfer
     const dataTransfer = this.resolveTiledImageDataTransfer(ref, index);
     this.context.updateTiledImageDataTransfer(tiledImage, dataTransfer);
+  }
+
+  /**
+   * Updates the bounds (see {@link updateBounds}), and then reveals the given rendered objects that are `pendingBackground`
+   *
+   * The objects are revealed once the context's world background covers them,
+   * and also if that failed for any other reason than an abort: an object
+   * shown on an uncovered canvas, where its channels may be composited wrongly
+   * (see {@link usesAdditiveBlending}), beats one that is not shown at all. An
+   * aborted update leaves them hidden, for the synchronization that follows to
+   * reveal them (see {@link synchronize}).
+   *
+   * @param renderedObjects - The rendered objects to reveal
+   * @param options - Optional abort signal
+   * @returns A promise that resolves once the bounds have been updated
+   */
+  private async _updateBoundsAndReveal(
+    renderedObjects: RenderedObject<TObject, TObjectData>[],
+    options?: { signal?: AbortSignal },
+  ): Promise<void> {
+    const { signal } = options ?? {};
+    let updated = false;
+    try {
+      await this.updateBounds({ signal });
+      updated = true;
+    } finally {
+      if (updated || !signal?.aborted) {
+        for (const renderedObject of renderedObjects) {
+          if (renderedObject.pendingBackground === true) {
+            renderedObject.pendingBackground = false;
+            this._updateRenderedObject(renderedObject);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Resizes the anchor (see the class documentation), or creates it
+   *
+   * If the anchor already has `newBounds` (see
+   * {@link OpenSeadragonUtils.hasBounds}), it is kept. Otherwise, a new anchor
+   * is created at `anchorIndex` (defaulting to the index of the current
+   * anchor, or appended if neither is specified) and the current anchor is
+   * removed. Where possible, OpenSeadragon replaces the current anchor as part
+   * of the addition, so that the new anchor takes its place without leaving a
+   * gap. Replacing the anchor cannot be aborted once the new anchor has been
+   * created, as that would leave the renderer without an anchor.
+   *
+   * The viewport is not fitted here: it follows the bounds of the world as a
+   * whole, for as long as the renderers own it (see
+   * {@link OpenSeadragonContext.resetViewport}). Reads and writes
+   * {@link _anchor}, so it must only be called from within an anchor task (see
+   * {@link _enqueueAnchorTask}).
+   *
+   * @param newBounds - The new bounds of the anchor, in world coordinates
+   * @param options - Optional abort signal, and index at which to insert the
+   * new anchor
+   * @returns A promise that resolves once the anchor has the new bounds
+   */
+  private async _resizeAnchor(
+    newBounds: Rect,
+    options?: { signal?: AbortSignal; anchorIndex?: number },
+  ): Promise<void> {
+    const { signal, anchorIndex } = options ?? {};
+    signal?.throwIfAborted();
+    const anchor = this._anchor;
+    if (
+      anchor !== undefined &&
+      OpenSeadragonUtils.hasBounds(anchor, newBounds)
+    ) {
+      return;
+    }
+    let replace = undefined;
+    let getIndex = undefined;
+    if (anchorIndex === undefined && anchor !== undefined) {
+      replace = true;
+      getIndex = () => this.context.getTiledImageIndex(anchor);
+    }
+    this._anchor = await this.context.addTiledImage(
+      {
+        index: anchorIndex,
+        replace,
+        x: newBounds.x,
+        y: newBounds.y,
+        width: newBounds.width,
+        tileSource: OpenSeadragonUtils.createPixelTileSource(
+          { width: newBounds.width, height: newBounds.height },
+          OpenSeadragonUtils.transparentBlackPixelUrl,
+        ),
+        opacity: 0,
+      },
+      { signal, getIndex },
+    );
+    if (anchor !== undefined && replace !== true) {
+      await this.context.removeTiledImage(anchor);
+    }
   }
 
   /**
@@ -1136,7 +1257,7 @@ export type ObjectRef<
  * A newly created object is `pendingBackground` from the moment its tiled
  * images are assigned until the context's world background has been resized
  * to cover them: while pending, its backdrop and tiled images are kept at
- * opacity zero, whoever updates them (see
+ * opacity zero, but preloaded, whoever updates them (see
  * {@link OpenSeadragonRendererBase._updateRenderedObject}).
  */
 export type RenderedObject<
