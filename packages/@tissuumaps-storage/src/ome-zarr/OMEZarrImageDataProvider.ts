@@ -114,7 +114,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * and shared between the tile sources opened for it: one per channel for
    * images with a channel axis, or a single one for images without one. Every
    * tile source renders exactly one channel (`c`), so that its tiles carry a
-   * single chunk (see {@link OMEZarrImageData.getTileData}) and its resolved
+   * single plane (see {@link OMEZarrImageData.getTileData}) and its resolved
    * `omero` metadata is that channel's. The `z` and `t` of the data source
    * select the plane to open.
    *
@@ -180,7 +180,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         );
       }
       const tileSource = await OMEZarrTileSource.open(
-        // c: 0 selects the only (implicit) channel: one chunk per tile, and no
+        // c: 0 selects the only (implicit) channel: one plane per tile, and no
         // "active channels" default (which would reject an inactive sole channel)
         { url, zip, t, z, c: 0 },
         loaded,
@@ -200,7 +200,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * Computes the value histogram of a channel from a downsampled resolution level
    *
    * 64-bit integers get no histogram, and no values are read for them, as
-   * {@link OMEZarrImageData.getTileData} rejects their chunks anyway. For all
+   * {@link OMEZarrImageData.getTileData} rejects their planes anyway. For all
    * other data types, loads the plane that the given tile source displays (its
    * channel, z-slice and timepoint, see `OMEZarrTileSource.loadChunks`) from
    * the lowest resolution level that still holds at least
@@ -218,7 +218,8 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * 64-bit integer planes and planes with fewer than two distinct finite
    * values (which have no range to spread bins over; the renderer falls back
    * to the data type range for them)
-   * @throws Error if the loaded plane does not consist of exactly one chunk
+   * @throws Error if the tile source does not load exactly one plane, i.e.
+   * does not render exactly one channel
    */
   private static async _computeChannelHistogram(
     tileSource: OMEZarrTileSource,
@@ -238,22 +239,22 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     ) {
       level++;
     }
-    const chunks = await tileSource.loadChunks(level, undefined, { signal });
-    if (chunks.length !== 1) {
-      throw new Error(`Expected a single chunk, got ${chunks.length}`);
+    const planes = await tileSource.loadChunks(level, undefined, { signal });
+    if (planes.length !== 1) {
+      throw new Error(`Expected a single channel plane, got ${planes.length}`);
     }
-    const chunk = chunks[0]!;
+    const plane = planes[0]!;
     if (
-      chunk.data instanceof BigInt64Array ||
-      chunk.data instanceof BigUint64Array
+      plane.data instanceof BigInt64Array ||
+      plane.data instanceof BigUint64Array
     ) {
       return undefined; // not reached for the dtypes checked above; narrows the type
     }
-    const [vmin, vmax] = await MathUtils.computeRange(chunk.data, { signal });
+    const [vmin, vmax] = await MathUtils.computeRange(plane.data, { signal });
     if (vmin >= vmax) {
       return undefined; // no finite values, or a single one
     }
-    return MathUtils.computeHistogram(chunk.data, [vmin, vmax], {
+    return MathUtils.computeHistogram(plane.data, [vmin, vmax], {
       signal,
       sample: OMEZarrImageDataProvider._numHistogramPixels,
     });
