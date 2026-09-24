@@ -98,7 +98,7 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
   ): Promise<ParquetShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-    const resolvedSource = await SourceUtils.resolveSource(
+    const resolvedSource = await SourceUtils.resolveSourceFile(
       normalizedDataSource.source,
       workspace,
       { signal },
