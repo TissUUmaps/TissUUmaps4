@@ -11,13 +11,11 @@ import {
 } from "@tissuumaps/core";
 
 import {
-  Accordion,
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionTrigger,
-  AccordionTriggerRightDownIcon,
-} from "@/components/common/accordion";
+  Collapsible,
+  CollapsiblePanel,
+  CollapsibleTrigger,
+  CollapsibleTriggerRightDownIcon,
+} from "@/components/common/collapsible";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -52,22 +50,25 @@ export function ChannelSettingsWidget({
   // End the preview when the widget goes away while a channel is hovered
   useEffect(() => () => setImageChannelPreview(null), [setImageChannelPreview]);
 
+  // Base UI's accordion would take the radios from the radio group, which then
+  // no longer moves the active channel on arrow keys
   const rows = (
-    <Accordion
-      multiple
-      value={expandedChannels}
-      onValueChange={(value) => setExpandedChannels(value as number[])}
-      className="gap-y-1"
-    >
+    <div className="flex flex-col gap-y-1">
       {Array.from({ length: sizeC }, (_, c) => (
         <ChannelSettingsRow
           key={c}
           image={image}
           data={data}
           channelIndex={c}
+          expanded={expandedChannels.includes(c)}
+          onExpandedChange={(expanded) =>
+            setExpandedChannels((channels) =>
+              expanded ? [...channels, c] : channels.filter((i) => i !== c),
+            )
+          }
         />
       ))}
-    </Accordion>
+    </div>
   );
 
   return (
@@ -118,6 +119,8 @@ type ChannelSettingsRowProps = {
   image: Image;
   data: ImageData;
   channelIndex: number;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
   className?: string;
 };
 
@@ -125,6 +128,8 @@ function ChannelSettingsRow({
   image,
   data,
   channelIndex: c,
+  expanded,
+  onExpandedChange,
   className,
 }: ChannelSettingsRowProps) {
   const updateImage = useProjectStore((state) => state.updateImage);
@@ -149,13 +154,14 @@ function ChannelSettingsRow({
   };
 
   return (
-    <AccordionItem
-      value={c}
+    <Collapsible
+      open={expanded}
+      onOpenChange={onExpandedChange}
       disabled={contrastLimits === undefined}
       className={className}
     >
-      <AccordionHeader className="gap-x-1.5">
-        <AccordionTriggerRightDownIcon className="[&_svg]:size-4" />
+      <div className="flex flex-row items-center gap-x-1.5">
+        <CollapsibleTriggerRightDownIcon className="[&_svg]:size-4" />
         {image.channelViewMode !== ImageChannelViewMode.composite ? (
           <RadioGroupItem value={String(c)} aria-label={name} />
         ) : (
@@ -192,11 +198,11 @@ function ChannelSettingsRow({
             </SimpleColorPicker>
           </span>
         ) : null}
-        <AccordionTrigger className="flex-1 min-w-0 cursor-pointer">
+        <CollapsibleTrigger className="flex-1 min-w-0 cursor-pointer">
           <span className="truncate" title={name}>
             {name}
           </span>
-        </AccordionTrigger>
+        </CollapsibleTrigger>
         <span className="flex flex-row items-center gap-x-1">
           <span className="text-muted-foreground text-xs" aria-hidden>
             &alpha;
@@ -213,9 +219,9 @@ function ChannelSettingsRow({
             onKeyDown={stopRadioGroupKeys}
           />
         </span>
-      </AccordionHeader>
+      </div>
       {contrastLimits !== undefined ? (
-        <AccordionPanel className="pt-1 pl-5" onKeyDown={stopRadioGroupKeys}>
+        <CollapsiblePanel className="pt-1 pl-5" onKeyDown={stopRadioGroupKeys}>
           <ContrastRangeWidget
             contrastLimits={contrastLimits}
             histogram={data.getChannelHistogram?.(c)}
@@ -229,9 +235,9 @@ function ChannelSettingsRow({
                 : undefined
             }
           />
-        </AccordionPanel>
+        </CollapsiblePanel>
       ) : null}
-    </AccordionItem>
+    </Collapsible>
   );
 }
 
