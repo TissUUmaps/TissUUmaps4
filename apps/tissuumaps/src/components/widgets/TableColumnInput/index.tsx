@@ -1,6 +1,12 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { ChevronDownIcon, FolderIcon, XIcon } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import type { TableColumnQuerySuggestion } from "@tissuumaps/core";
 
@@ -56,12 +62,15 @@ export function TableColumnInput({
     TableColumnQuerySuggestion[] | null
   >(null);
   const [open, setOpen] = useState(false);
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
 
-  const [syncedValue, setSyncedValue] = useState(value);
-  if (value !== syncedValue) {
-    setSyncedValue(value);
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     setText(value ?? "");
     setInvalid(false);
+    setPendingQuery(null);
   }
 
   const [isSuggestPending, startSuggestTransition] = useTransition();
@@ -91,52 +100,55 @@ export function TableColumnInput({
     return () => abortController.abort();
   }, [open, text, loadTableData, startSuggestTransition]);
 
-  const [isCommitPending, startCommitTransition] = useTransition();
-  const commitAbortControllerRef = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => commitAbortControllerRef.current?.abort(),
-    [value, loadTableData],
-  );
+  const handleCommitResolved = useEffectEvent((column: string | null) => {
+    setPendingQuery(null);
+    if (column !== null) {
+      setText(column);
+      setInvalid(false);
+      onValueChange(column);
+    } else {
+      setInvalid(true);
+    }
+  });
+  useEffect(() => {
+    if (pendingQuery === null) {
+      return;
+    }
+    const abortController = new AbortController();
+    const { signal } = abortController;
+    loadTableData({ signal })
+      .then(
+        (tableData) =>
+          tableData?.resolveColumnQuery(pendingQuery, { signal }) ?? null,
+      )
+      .then((column) => {
+        if (!signal.aborted) {
+          handleCommitResolved(column);
+        }
+      })
+      .catch((error) => {
+        if (!signal.aborted) {
+          console.error("Failed to resolve column query", error);
+          setPendingQuery(null);
+        }
+      });
+    return () => abortController.abort();
+  }, [pendingQuery, loadTableData]);
+
   function commit(query: string) {
-    commitAbortControllerRef.current?.abort();
     if (query === (value ?? "")) {
+      setPendingQuery(null);
       setInvalid(false);
       return;
     }
     if (query.trim() === "") {
+      setPendingQuery(null);
       setText("");
       setInvalid(false);
       onValueChange(null);
       return;
     }
-    const abortController = new AbortController();
-    commitAbortControllerRef.current = abortController;
-    startCommitTransition(async () => {
-      try {
-        const tableData = await loadTableData({
-          signal: abortController.signal,
-        });
-        const column =
-          (await tableData?.resolveColumnQuery(query, {
-            signal: abortController.signal,
-          })) ?? null;
-        if (!abortController.signal.aborted) {
-          startCommitTransition(() => {
-            if (column !== null) {
-              setText(column);
-              setInvalid(false);
-              onValueChange(column);
-            } else {
-              setInvalid(true);
-            }
-          });
-        }
-      } catch (error) {
-        if (!abortController.signal.aborted) {
-          console.error("Failed to resolve column query", error);
-        }
-      }
-    });
+    setPendingQuery(query);
   }
 
   const highlightedSuggestionRef = useRef<
@@ -157,7 +169,7 @@ export function TableColumnInput({
       details.cancel();
       return;
     }
-    commitAbortControllerRef.current?.abort();
+    setPendingQuery(null);
     setText(newText);
     setInvalid(false);
     if (details.reason === "item-press") {
@@ -230,7 +242,7 @@ export function TableColumnInput({
           render={<Input />}
           className="pr-14"
           aria-invalid={invalid || undefined}
-          aria-busy={isCommitPending || undefined}
+          aria-busy={pendingQuery !== null || undefined}
           onKeyDown={(event) => {
             if (
               event.key === "Enter" &&
