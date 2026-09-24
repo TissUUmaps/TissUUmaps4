@@ -201,7 +201,7 @@ export function TableColumnInput({
       return isSuggestPending ? "Loading table..." : null;
     }
     if (suggestions.length === 0) {
-      return "No columns";
+      return text === "" ? "No columns" : `No matches for "${text}"`;
     }
     // matching suggestions are listed first, so the first one decides
     if (findQuery(suggestions[0]!.query, text) === -1) {
