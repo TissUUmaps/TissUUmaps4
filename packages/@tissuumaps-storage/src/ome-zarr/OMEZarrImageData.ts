@@ -31,15 +31,11 @@ import type {
  * contrast limits for channels whose `omero` window is incomplete, except for
  * `uint8` channels, which fall back to the full `[0, 255]` range instead (see
  * {@link OMEZarrImageData.getChannelContrastLimits}).
- *
- * Owns the object URL created for images loaded from a workspace file (see
- * `openOMEZarr`), and revokes it on {@link OMEZarrImageData.close}.
  */
 export class OMEZarrImageData implements ImageData {
   private readonly _tileSources: OMEZarrTileSource | OMEZarrTileSource[];
   private readonly _histograms:
     ({ hist: number[]; range: [number, number] } | undefined)[] | undefined;
-  private readonly _objectUrl: string | undefined;
 
   /**
    * @param tileSources - One ready tile source per channel, in channel order,
@@ -48,20 +44,19 @@ export class OMEZarrImageData implements ImageData {
    * @param histograms - One precomputed value histogram per channel, in
    * channel order (`undefined` for channels without one), for images with a
    * channel axis; `undefined` for images without one
-   * @param objectUrl - The object URL created for the workspace file the
-   * image was loaded from, if any; revoked on {@link OMEZarrImageData.close}
    */
   constructor(
     tileSources: OMEZarrTileSource | OMEZarrTileSource[],
     histograms?: ({ hist: number[]; range: [number, number] } | undefined)[],
-    objectUrl?: string,
   ) {
     this._tileSources = tileSources;
     this._histograms = histograms;
-    this._objectUrl = objectUrl;
   }
 
-  /** Returns the number of channels, or `undefined` for images without a channel axis */
+  /**
+   * Returns the number of channels, or `undefined` for images without a
+   * channel axis
+   */
   getSizeC(): number | undefined {
     return Array.isArray(this._tileSources)
       ? this._tileSources.length
@@ -96,11 +91,9 @@ export class OMEZarrImageData implements ImageData {
    *
    * The tile has to belong to an `OMEZarrTileSource` rendering a single
    * channel, whose tile data (`chunks`) holds exactly one two-dimensional
-   * (height x width) tile read from the zarr array (with the channel, z-slice
-   * and timepoint already selected) instead of a rendered image.
-   *
-   * 64-bit integer tiles are rejected, as their values cannot be represented
-   * in a `NumericArray` without loss.
+   * (height x width) tile read from the Zarr array (with the channel, z-slice
+   * and timepoint already selected) instead of a rendered image. 64-bit
+   * integer tiles are rejected (see {@link OMEZarrImageData}).
    *
    * @param event - The tile invalidation event
    * @returns The samples of the invalidated tile, one per raster pixel in
@@ -224,12 +217,7 @@ export class OMEZarrImageData implements ImageData {
     return undefined;
   }
 
-  /** Revokes the object URL of the workspace file this image was loaded from, if any */
-  close(): void {
-    if (this._objectUrl !== undefined) {
-      URL.revokeObjectURL(this._objectUrl);
-    }
-  }
+  close(): void {}
 
   /**
    * Returns the tile source rendering a channel

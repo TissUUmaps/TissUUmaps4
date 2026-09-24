@@ -77,7 +77,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
         "A tile source configuration or a source is required to load data.",
       );
     }
-    const resolvedSource = await SourceUtils.resolveSource(
+    const resolvedSource = await SourceUtils.resolveSourceFile(
       normalizedDataSource.source,
       workspace,
       { signal },

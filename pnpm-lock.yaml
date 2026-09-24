@@ -270,6 +270,9 @@ importers:
 
   packages/@tissuumaps-storage:
     dependencies:
+      "@zarrita/storage":
+        specifier: github:TissUUmaps/zarrita.js#9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0&path:packages/@zarrita-storage
+        version: https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0#path:packages/@zarrita-storage
       geotiff:
         specifier: ^3.0.5
         version: 3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b)
@@ -277,8 +280,8 @@ importers:
         specifier: github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28
         version: https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))
       omezarr-tilesource:
-        specifier: ^0.7.1
-        version: 0.7.1(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))(zarrita@0.7.5)
+        specifier: ^0.8.0
+        version: 0.8.0(@zarrita/storage@https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0#path:packages/@zarrita-storage)(ome-zarr.js@0.0.20)(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))(zarrita@0.7.5)
       papaparse:
         specifier: ^5.5.4
         version: 5.6.0
@@ -4812,6 +4815,15 @@ packages:
       {
         integrity: sha512-855ZXqtnds7spnT8vNvD+MXa3QExP1m2GqShe8yt7uZXHnQLgJHgkpVwFjE1B0KDDRO0ki09hmk6OboTaIfPsQ==,
       }
+
+  "@zarrita/storage@https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0#path:packages/@zarrita-storage":
+    resolution:
+      {
+        gitHosted: true,
+        path: packages/@zarrita-storage,
+        tarball: https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0,
+      }
+    version: 0.2.0
 
   accepts@1.3.8:
     resolution:
@@ -9527,11 +9539,12 @@ packages:
         integrity: sha512-CvKZykEKILCXjtBYFwTiddw6eS2l2T1CA3nHH1QLure/HbBBD6e2uN/nJSMNP9m661EWWHNPKr8ggaDBxLDvzw==,
       }
 
-  omezarr-tilesource@0.7.1:
+  omezarr-tilesource@0.8.0:
     resolution:
       {
-        integrity: sha512-TR3obBcnY1dF1z+V0+LRGZSEKYR7pIDLX6Ni5eICwJy2erfzCugPPW5cjT1QYNMr2vk24nsetgx4lV98erH97Q==,
+        integrity: sha512-/Na+c+tSbKB9FL6Z7sxG53IpUFNo6VfBeMhPIBU55n9A9qj9MHBr2acOxkftoSIUWHb2sPIq4wu8Rl9jxHzTig==,
       }
+    version: 0.8.0
     engines: { node: ">=22.22.1" }
     peerDependencies:
       "@zarrita/storage": ^0.2.0
@@ -12172,6 +12185,13 @@ packages:
     resolution:
       {
         integrity: sha512-DVeVIWUZCAQPNzm5sB0hpsG1GygTTdBnzNtYYEpInkttx5evkyqRgZi6rTczoySqp8hO5jHVKzrH0f23X8FZLg==,
+      }
+    engines: { node: ">=18" }
+
+  unzipit@2.0.1:
+    resolution:
+      {
+        integrity: sha512-o+2dK2LsJCNL99OafsvPGM/z7NpkxOvV+UFE69h7cw+h31tArfX5yP/bPhaBempz6H5swGRdN8m3BSFtz/83Gw==,
       }
     engines: { node: ">=18" }
 
@@ -16679,6 +16699,11 @@ snapshots:
       reference-spec-reader: 0.2.0
       unzipit: 2.0.0
 
+  "@zarrita/storage@https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0#path:packages/@zarrita-storage":
+    dependencies:
+      reference-spec-reader: 0.2.0
+      unzipit: 2.0.1
+
   accepts@1.3.8:
     dependencies:
       mime-types: 2.1.35
@@ -19737,9 +19762,9 @@ snapshots:
     dependencies:
       zarrita: 0.7.5
 
-  omezarr-tilesource@0.7.1(@zarrita/storage@0.2.0)(ome-zarr.js@0.0.20)(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))(zarrita@0.7.5):
+  omezarr-tilesource@0.8.0(@zarrita/storage@https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0#path:packages/@zarrita-storage)(ome-zarr.js@0.0.20)(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))(zarrita@0.7.5):
     dependencies:
-      "@zarrita/storage": 0.2.0
+      "@zarrita/storage": https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0#path:packages/@zarrita-storage
       ome-zarr.js: 0.0.20
       openseadragon: 6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)
       zarrita: 0.7.5
@@ -21426,6 +21451,8 @@ snapshots:
       webpack-virtual-modules: 0.6.2
 
   unzipit@2.0.0: {}
+
+  unzipit@2.0.1: {}
 
   update-browserslist-db@1.3.1(browserslist@4.28.8):
     dependencies:
