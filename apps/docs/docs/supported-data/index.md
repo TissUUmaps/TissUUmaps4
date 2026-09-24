@@ -12,5 +12,6 @@ The following table lists capabilities of built-in data providers:
 | [CSV](./csv)                     |                 |                 |                 |                 | CSV source     |
 | [Parquet](./parquet)             |                 |                 |                 | Parquet source  | Parquet source |
 | [HDF5](./hdf5)                   |                 |                 |                 |                 | HDF5 source    |
+| [Zarr](./zarr)                   |                 |                 |                 |                 | Zarr source    |
 
 Additional data formats may be supported by third-party data providers.

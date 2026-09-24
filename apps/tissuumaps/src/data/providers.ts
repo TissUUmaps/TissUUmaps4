@@ -10,6 +10,7 @@ import {
   TIFFImageDataProvider,
   TIFFLabelsDataProvider,
   TablePointsDataProvider,
+  ZarrTableDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
   hdf5TableDataSourceType,
@@ -21,6 +22,7 @@ import {
   tablePointsDataSourceType,
   tiffImageDataSourceType,
   tiffLabelsDataSourceType,
+  zarrTableDataSourceType,
 } from "@tissuumaps/storage";
 
 import { appStore } from "@/stores/app";
@@ -83,5 +85,9 @@ export function enableBuiltInDataProviders(): void {
   appStoreState.registerTableDataProvider(
     hdf5TableDataSourceType,
     new HDF5TableDataProvider(),
+  );
+  appStoreState.registerTableDataProvider(
+    zarrTableDataSourceType,
+    new ZarrTableDataProvider(),
   );
 }

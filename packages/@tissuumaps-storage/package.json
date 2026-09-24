@@ -61,6 +61,12 @@
       "types": "./dist/tiff.d.ts",
       "import": "./dist/tiff.js",
       "default": "./dist/tiff.js"
+    },
+    "./zarr": {
+      "tissuumaps-development": "./src/hierarchical-tables/zarr/index.ts",
+      "types": "./dist/zarr.d.ts",
+      "import": "./dist/zarr.js",
+      "default": "./dist/zarr.js"
     }
   },
   "scripts": {
@@ -73,7 +79,8 @@
     "geotiff": "^3.0.5",
     "geotiff-tilesource": "github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28",
     "omezarr-tilesource": "^0.8.0",
-    "papaparse": "^5.5.4"
+    "papaparse": "^5.5.4",
+    "zarrita": "^0.7.5"
   },
   "devDependencies": {
     "@tissuumaps/core": "workspace:^",
