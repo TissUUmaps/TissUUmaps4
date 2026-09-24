@@ -13,26 +13,19 @@ import type {
  * Loaded OME-Zarr label image data
  *
  * Provides a single tile source whose tiles hold label IDs as signed or
- * unsigned integers (see {@link OMEZarrLabelsData.getTileData}). Label IDs are not
- * enumerated up front: they are read per tile, so that arbitrarily large label
- * images can be opened without scanning them.
- *
- * Owns the object URL created for label images loaded from a workspace file
- * (see `openOMEZarr`), and revokes it on {@link OMEZarrLabelsData.close}.
+ * unsigned integers (see {@link OMEZarrLabelsData.getTileData}). Label IDs are
+ * not enumerated up front: they are read per tile, so that arbitrarily large
+ * label images can be opened without scanning them.
  */
 export class OMEZarrLabelsData implements LabelsData {
   private readonly _tileSource: OMEZarrTileSource;
-  private readonly _objectUrl: string | undefined;
 
   /**
    * @param tileSource - The ready tile source of the label image, rendering a
    * single channel
-   * @param objectUrl - The object URL created for the workspace file the label
-   * image was loaded from, if any; revoked on {@link OMEZarrLabelsData.close}
    */
-  constructor(tileSource: OMEZarrTileSource, objectUrl?: string) {
+  constructor(tileSource: OMEZarrTileSource) {
     this._tileSource = tileSource;
-    this._objectUrl = objectUrl;
   }
 
   /** Returns the tile source of the label image */
@@ -45,11 +38,12 @@ export class OMEZarrLabelsData implements LabelsData {
    *
    * The tile has to belong to an `OMEZarrTileSource` rendering a single
    * channel, whose tile data (`chunks`) holds exactly one two-dimensional
-   * (height x width) tile read from the zarr array (with the channel, z-slice
-   * and timepoint already selected) instead of a rendered image. Only integer
-   * tiles of up to 32 bits (signed or unsigned) are accepted, as label IDs
-   * have to be integers and the renderer resolves them as such; 64-bit
-   * integers cannot be represented without loss.
+   * (height x width) tile read from the Zarr array (with the channel, z-slice
+   * and timepoint already selected) instead of a rendered image.
+   *
+   * Only integer tiles of up to 32 bits (signed or unsigned) are accepted, as
+   * label IDs have to be integers and the renderer resolves them as such;
+   * 64-bit integers cannot be represented without loss.
    *
    * @param event - The tile invalidation event
    * @returns The label IDs of the invalidated tile, one per raster pixel in
@@ -82,10 +76,5 @@ export class OMEZarrLabelsData implements LabelsData {
     throw new Error(`Unsupported data type: ${tile.data.constructor.name}`);
   }
 
-  /** Revokes the object URL of the workspace file this label image was loaded from, if any */
-  close(): void {
-    if (this._objectUrl !== undefined) {
-      URL.revokeObjectURL(this._objectUrl);
-    }
-  }
+  close(): void {}
 }

@@ -78,7 +78,7 @@ export class ParquetTableDataProvider implements TableDataProvider<
   ): Promise<ParquetTableData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-    const resolvedSource = await SourceUtils.resolveSource(
+    const resolvedSource = await SourceUtils.resolveSourceFile(
       normalizedDataSource.source,
       workspace,
       { signal },

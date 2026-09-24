@@ -61,12 +61,13 @@ const pointsFile = makeFile("points.csv");
 const colonFile = makeFile("s:c.tif");
 const yFile = makeFile("y.csv");
 const xFile = makeFile("x.csv");
+const subDir = makeDir("sub", { "y.csv": yFile });
 const workspace = makeDir("", {
   proj: makeDir("proj", {
     "project.json": makeFile("project.json"),
     "points.csv": pointsFile,
     "s:c.tif": colonFile,
-    sub: makeDir("sub", { "y.csv": yFile }),
+    sub: subDir,
   }),
   shared: makeDir("shared", { "x.csv": xFile }),
 }) as unknown as FileSystemDirectoryHandle;
@@ -266,12 +267,12 @@ describe("SourceUtils", () => {
       it("throws if the path names the workspace root", () => {
         expect(() =>
           SourceUtils.normalizeSource("/", workspace, null, { baseUrl }),
-        ).toThrow("does not name a file");
+        ).toThrow("Not a workspace file or directory: /");
         expect(() =>
           SourceUtils.normalizeSource("/./a/..", workspace, null, {
             baseUrl,
           }),
-        ).toThrow("does not name a file");
+        ).toThrow("Not a workspace file or directory: /./a/..");
       });
 
       it("falls back to being app-relative without a workspace", () => {
@@ -485,10 +486,13 @@ describe("SourceUtils", () => {
       ).rejects.toMatchObject({ name: "NotFoundError" });
     });
 
-    it("rejects if a segment names an entry of the wrong kind", async () => {
+    it("opens a directory", async () => {
       await expect(
         SourceUtils.resolveSource("/proj/sub", workspace),
-      ).rejects.toMatchObject({ name: "TypeMismatchError" });
+      ).resolves.toBe(subDir);
+    });
+
+    it("rejects if a segment other than the last names a file", async () => {
       await expect(
         SourceUtils.resolveSource("/proj/points.csv/x.csv", workspace),
       ).rejects.toMatchObject({ name: "TypeMismatchError" });
@@ -499,7 +503,7 @@ describe("SourceUtils", () => {
         SourceUtils.resolveSource("/../x.csv", workspace),
       ).rejects.toThrow("Path escapes workspace");
       await expect(SourceUtils.resolveSource("/", workspace)).rejects.toThrow(
-        "Cannot resolve workspace-relative path that does not name a file: /",
+        "Not a workspace file or directory: /",
       );
     });
 
@@ -527,6 +531,20 @@ describe("SourceUtils", () => {
       ).rejects.toMatchObject({ name: "AbortError" });
     });
 
+    it("rejects with the abort reason if aborted while opening a directory entry", async () => {
+      const controller = new AbortController();
+      const abortingWorkspace = makeDir(
+        "",
+        { sub: makeDir("sub", {}) },
+        { onOpen: () => controller.abort() },
+      ) as unknown as FileSystemDirectoryHandle;
+      await expect(
+        SourceUtils.resolveSource("/sub", abortingWorkspace, {
+          signal: controller.signal,
+        }),
+      ).rejects.toMatchObject({ name: "AbortError" });
+    });
+
     it("never throws synchronously", () => {
       const controller = new AbortController();
       controller.abort();
@@ -541,6 +559,67 @@ describe("SourceUtils", () => {
         expect(promise).toBeInstanceOf(Promise);
         promise.catch(() => {});
       }
+    });
+  });
+
+  describe("resolveSourceFile", () => {
+    it("returns URLs as is", async () => {
+      await expect(
+        SourceUtils.resolveSourceFile("https://x.example/f.csv", workspace),
+      ).resolves.toBe("https://x.example/f.csv");
+    });
+
+    it("opens a file", async () => {
+      await expect(
+        SourceUtils.resolveSourceFile("/proj/sub/y.csv", workspace),
+      ).resolves.toBe(yFile);
+    });
+
+    it("rejects a directory", async () => {
+      await expect(
+        SourceUtils.resolveSourceFile("/proj/sub", workspace),
+      ).rejects.toMatchObject({
+        name: "TypeMismatchError",
+        message: "Not a workspace file: /proj/sub",
+      });
+    });
+
+    it("rejects like resolveSource", async () => {
+      await expect(
+        SourceUtils.resolveSourceFile("/proj/missing.csv", workspace),
+      ).rejects.toMatchObject({ name: "NotFoundError" });
+    });
+  });
+
+  describe("resolveSourceDirectory", () => {
+    it("returns URLs as is", async () => {
+      await expect(
+        SourceUtils.resolveSourceDirectory(
+          "https://x.example/d.zarr",
+          workspace,
+        ),
+      ).resolves.toBe("https://x.example/d.zarr");
+    });
+
+    it("opens a directory", async () => {
+      await expect(
+        SourceUtils.resolveSourceDirectory("/proj/sub", workspace),
+      ).resolves.toBe(subDir);
+    });
+
+    it("rejects a file", async () => {
+      await expect(
+        SourceUtils.resolveSourceDirectory("/proj/points.csv", workspace),
+      ).rejects.toMatchObject({
+        name: "TypeMismatchError",
+        message: "Not a workspace directory: /proj/points.csv",
+      });
+    });
+
+    it("rejects like resolveSource", async () => {
+      await expect(
+        SourceUtils.resolveSourceDirectory("/proj/missing", workspace),
+      ).rejects.toMatchObject({ name: "NotFoundError" });
     });
   });
 });

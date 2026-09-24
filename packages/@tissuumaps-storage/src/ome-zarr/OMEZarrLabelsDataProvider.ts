@@ -106,18 +106,17 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
   }
 
   /**
-   * Opens an OME-Zarr labels data source and returns the loaded label image
-   * data
+   * Opens an OME-Zarr labels data source and returns the loaded labels data
    *
    * The OME-Zarr label image and its arrays are loaded with
-   * {@link openOMEZarr} and a tile source rendering its first channel is
-   * opened for them, with the `z` and `t` of the data source selecting the
-   * plane to open.
+   * {@link openOMEZarr}, and a single tile source rendering its first channel
+   * is opened for them. The `z` and `t` of the data source select the plane to
+   * open.
    *
    * @param normalizedDataSource - The normalized data source to open
    * @param options - See `DataProviderLoadOptions`; `workspace` is required
    * for workspace-relative sources
-   * @returns A promise that resolves to the loaded label image data
+   * @returns A promise that resolves to the loaded labels data
    * @throws Error if the source is workspace-relative while no workspace is
    * open
    */
@@ -127,24 +126,16 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
   ): Promise<OMEZarrLabelsData> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { loaded, url, zip, objectUrl } = await openOMEZarr(
+    const { loaded, url, zip } = await openOMEZarr(
       normalizedDataSource.source,
       options,
     );
-    try {
-      const { t, z } = normalizedDataSource;
-      const tileSource = await OMEZarrTileSource.open(
-        { url, zip, t, z, c: 0 },
-        loaded,
-        { signal },
-      );
-      return new OMEZarrLabelsData(tileSource, objectUrl);
-    } catch (error) {
-      // the label image data owns the object URL only once it has been created
-      if (objectUrl !== undefined) {
-        URL.revokeObjectURL(objectUrl);
-      }
-      throw error;
-    }
+    const { t, z } = normalizedDataSource;
+    const tileSource = await OMEZarrTileSource.open(
+      { url, zip, t, z, c: 0 },
+      loaded,
+      { signal },
+    );
+    return new OMEZarrLabelsData(tileSource);
   }
 }

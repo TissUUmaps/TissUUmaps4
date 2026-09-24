@@ -18,7 +18,7 @@ OME-Zarr data sources have the `type` `"ome-zarr"` and accept the following fiel
 | `t`      | `integer` | Timepoint to open (0-based), for images with a `t` axis. Defaults to the `defaultT` of the image's `omero` metadata, or to the middle of the axis if there is none. |
 | `table`  | `string`  | _Labels only._ ID of the table annotating the labels (see [Data model](../concepts/data-model.md)).                                                                 |
 
-A URL `source` refers to a remote OME-Zarr store, or to a remote zipped OME-Zarr file if it ends in `.ozx`. A `source` that resolves to a file in the open workspace has to be a zipped OME-Zarr file.
+A URL `source` refers to a remote OME-Zarr store, or to a remote zipped OME-Zarr file if it ends in `.ozx`. A `source` that resolves to a directory in the open workspace is opened as an OME-Zarr store, and one that resolves to a file as a zipped OME-Zarr file.
 
 The `source` has to point to a **multiscales image**, i.e. the Zarr group holding the `multiscales` metadata. Plate (HCS) groups and `bioformats2raw.layout` groups are not opened directly; point to one of the images they contain instead.
 
@@ -111,7 +111,7 @@ Both the image and the labels are OME-Zarr images served next to the project fil
 ## Limitations
 
 - 64-bit integer image arrays and 64-bit or floating-point label arrays are not supported. Convert them to a narrower integer type when writing the OME-Zarr.
-- Workspace files have to be zipped OME-Zarr files, and need an open workspace.
+- Workspace sources need an open workspace, and workspace files have to be zipped OME-Zarr files.
 - Plate and `bioformats2raw.layout` groups have to be referenced by one of their contained images.
 - `image-label` metadata is not read.
 

@@ -1,6 +1,6 @@
 /**
  * Utility methods for resolving the `source` of data sources to URLs or file
- * handles
+ * system handles
  *
  * A source is one of the following, tried in this order:
  *
@@ -8,9 +8,9 @@
  *    normalized and returned as is.
  * 2. An app-relative path, prefixed with `//`, resolved against the base URL
  *    of the application (e.g. `//data/points.csv`).
- * 3. A workspace-relative path, prefixed with `/`, resolved to a file handle
- *    within the open workspace (e.g. `/data/points.csv`). Without an open
- *    workspace it falls back to being app-relative.
+ * 3. A workspace-relative path, prefixed with `/`, resolved to a file or
+ *    directory within the open workspace (e.g. `/data/points.csv`). Without an
+ *    open workspace it falls back to being app-relative.
  * 4. A project-relative path, without prefix, resolved against where the
  *    project was loaded from: a URL, or a workspace-relative path (e.g.
  *    `points.csv`, `./points.csv`, `../shared/points.csv`). Without a project
@@ -26,9 +26,11 @@
  *    system. The result is either an absolute URL or a workspace-relative
  *    path. Sources referring to the same data normalize to the same string,
  *    and normalizing a normalized source yields it unchanged.
- * 2. {@link SourceUtils.resolveSource} opens the file a normalized
- *    workspace-relative path refers to. URLs need no such step and are
- *    returned as is.
+ * 2. {@link SourceUtils.resolveSource} opens the file or directory that a
+ *    normalized workspace-relative path refers to;
+ *    {@link SourceUtils.resolveSourceFile} and
+ *    {@link SourceUtils.resolveSourceDirectory} accept only one of the two.
+ *    URLs need no such step and are returned as is.
  *
  * Paths use `/` as separator and may contain `.` and `..` segments. Resolving
  * against a URL follows URL semantics: `..` segments beyond the root of the
@@ -46,7 +48,8 @@ export class SourceUtils {
   private static readonly _urlSchemePattern = /^[a-z][a-z0-9+.-]*:/i;
 
   /**
-   * Returns whether a normalized source refers to a file within the workspace
+   * Returns whether a normalized source refers to a file or directory within
+   * the workspace
    *
    * @param normalizedSource - The normalized source (see
    *   {@link SourceUtils.normalizeSource})
@@ -65,7 +68,7 @@ export class SourceUtils {
    * workspace, as returned by `FileSystemDirectoryHandle.resolve`
    *
    * @param segments - The path segments, from the workspace root down to the
-   *   file
+   *   file or directory
    * @returns The workspace-relative path (with `/` prefix)
    */
   static makeWorkspacePath(segments: string[]): string {
@@ -91,11 +94,10 @@ export class SourceUtils {
    *   back to being app-relative or resolve against a project URL; or the
    *   normalized workspace-relative path (with `/` prefix) for paths within the
    *   open workspace
-   * @throws Error if the source is empty or not a valid URL, or if a
-   *   project-relative path cannot be normalized (see
-   *   {@link SourceUtils._normalizeProjectPath}), a workspace-relative path
-   *   cannot be normalized (see {@link SourceUtils._normalizeWorkspacePath}),
-   *   or an app-relative path cannot be normalized (see
+   * @throws Error if the source is empty or not a valid URL, or if it cannot be
+   *   normalized as a project-relative, workspace-relative or app-relative path
+   *   (see {@link SourceUtils._normalizeProjectPath},
+   *   {@link SourceUtils._normalizeWorkspacePath} and
    *   {@link SourceUtils._normalizeAppPath})
    */
   static normalizeSource(
@@ -128,12 +130,15 @@ export class SourceUtils {
   }
 
   /**
-   * Resolves a normalized source to an absolute URL or a file handle
+   * Resolves a normalized source to an absolute URL, a file handle or a
+   * directory handle
    *
-   * URLs are returned as is, and a workspace-relative path is opened within
-   * the workspace, one directory at a time, with its last segment opened as a
-   * file. No fallbacks apply here: the source has to be normalized with
-   * {@link SourceUtils.normalizeSource} first, using the same workspace.
+   * URLs are returned as is. A workspace-relative path is opened within the
+   * workspace one directory at a time, and its last segment as a file, or as a
+   * directory if it names one. No fallbacks apply here: the source has to be
+   * normalized with {@link SourceUtils.normalizeSource} first, using the same
+   * workspace. Nothing is thrown synchronously: the returned promise rejects
+   * instead.
    *
    * @param normalizedSource - The normalized source to resolve: an absolute URL
    *   or a workspace-relative path (with `/` prefix), as returned by
@@ -141,21 +146,19 @@ export class SourceUtils {
    * @param workspace - The directory handle of the open workspace, if any
    * @param options - Optional abort signal, checked upfront and between file
    *   system calls
-   * @returns A promise that resolves to the absolute URL, or to the file handle
-   *   for sources that refer to a file within the workspace
+   * @returns A promise that resolves to the absolute URL, or to the file or
+   *   directory handle for sources within the workspace
    * @throws Error if a workspace-relative path is given without an open
-   *   workspace, or if the path leaves the workspace or does not name a file;
-   *   never thrown synchronously, the returned promise rejects instead
-   * @throws DOMException if a directory or the file does not exist within the
-   *   workspace (`NotFoundError`), if a segment names an entry of the wrong
-   *   kind (`TypeMismatchError`), or if the operation is aborted
-   *   (`AbortError`); rejected, never thrown synchronously
+   *   workspace, or if the path leaves the workspace or names its root
+   * @throws DOMException if a segment names nothing within the workspace
+   *   (`NotFoundError`), if a segment other than the last names a file
+   *   (`TypeMismatchError`), or if the operation is aborted (`AbortError`)
    */
   static async resolveSource(
     normalizedSource: string,
     workspace: FileSystemDirectoryHandle | null,
     options?: { signal?: AbortSignal },
-  ): Promise<string | FileSystemFileHandle> {
+  ): Promise<string | FileSystemFileHandle | FileSystemDirectoryHandle> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     if (!SourceUtils.isWorkspacePath(normalizedSource)) {
@@ -169,20 +172,100 @@ export class SourceUtils {
     const segments = SourceUtils._collapseSegments(
       normalizedSource.substring(SourceUtils._workspacePathPrefix.length),
     );
-    const fileName = segments.pop();
-    if (fileName === undefined) {
-      throw new Error(
-        `Cannot resolve workspace-relative path that does not name a file: ${normalizedSource}`,
-      );
+    const entryName = segments.pop();
+    if (entryName === undefined) {
+      throw new Error(`Not a workspace file or directory: ${normalizedSource}`);
     }
     let dir = workspace;
     for (const dirName of segments) {
       dir = await dir.getDirectoryHandle(dirName);
       signal?.throwIfAborted();
     }
-    const file = await dir.getFileHandle(fileName);
+    let entry: FileSystemFileHandle | FileSystemDirectoryHandle;
+    try {
+      entry = await dir.getFileHandle(entryName);
+    } catch (error) {
+      const isDirectory =
+        error instanceof DOMException && error.name === "TypeMismatchError";
+      if (!isDirectory) {
+        throw error;
+      }
+      signal?.throwIfAborted();
+      entry = await dir.getDirectoryHandle(entryName);
+    }
     signal?.throwIfAborted();
-    return file;
+    return entry;
+  }
+
+  /**
+   * Resolves a normalized source to an absolute URL or a file handle
+   *
+   * Like {@link SourceUtils.resolveSource}, for sources that have to refer to
+   * a file.
+   *
+   * @param normalizedSource - See {@link SourceUtils.resolveSource}
+   * @param workspace - See {@link SourceUtils.resolveSource}
+   * @param options - See {@link SourceUtils.resolveSource}
+   * @returns A promise that resolves to the absolute URL, or to the file handle
+   *   for sources within the workspace
+   * @throws See {@link SourceUtils.resolveSource}
+   * @throws DOMException if the source refers to a directory within the
+   *   workspace (`TypeMismatchError`)
+   */
+  static async resolveSourceFile(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | FileSystemFileHandle> {
+    const resolvedSource = await SourceUtils.resolveSource(
+      normalizedSource,
+      workspace,
+      options,
+    );
+    if (typeof resolvedSource !== "string" && resolvedSource.kind !== "file") {
+      throw new DOMException(
+        `Not a workspace file: ${normalizedSource}`,
+        "TypeMismatchError",
+      );
+    }
+    return resolvedSource;
+  }
+
+  /**
+   * Resolves a normalized source to an absolute URL or a directory handle
+   *
+   * Like {@link SourceUtils.resolveSource}, for sources that have to refer to
+   * a directory.
+   *
+   * @param normalizedSource - See {@link SourceUtils.resolveSource}
+   * @param workspace - See {@link SourceUtils.resolveSource}
+   * @param options - See {@link SourceUtils.resolveSource}
+   * @returns A promise that resolves to the absolute URL, or to the directory
+   *   handle for sources within the workspace
+   * @throws See {@link SourceUtils.resolveSource}
+   * @throws DOMException if the source refers to a file within the workspace
+   *   (`TypeMismatchError`)
+   */
+  static async resolveSourceDirectory(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | FileSystemDirectoryHandle> {
+    const resolvedSource = await SourceUtils.resolveSource(
+      normalizedSource,
+      workspace,
+      options,
+    );
+    if (
+      typeof resolvedSource !== "string" &&
+      resolvedSource.kind !== "directory"
+    ) {
+      throw new DOMException(
+        `Not a workspace directory: ${normalizedSource}`,
+        "TypeMismatchError",
+      );
+    }
+    return resolvedSource;
   }
 
   /**
@@ -195,18 +278,15 @@ export class SourceUtils {
    * latter go through {@link SourceUtils._normalizeWorkspacePath}, including
    * its fallback for when no workspace is open.
    *
-   * @param projectPath - The path relative to the project, without prefix
+   * @param projectPath - The project-relative path (without prefix)
    * @param workspace - The directory handle of the open workspace, if any
-   * @param projectSource - Where the project was loaded from: its absolute URL,
-   *   the workspace-relative path of the project file (with `/` prefix), or
-   *   `null` for projects that were loaded from neither (e.g. uploaded ones)
-   * @param options - Optional base URL that the path is resolved against when
-   *   falling back to being app-relative (default `document.baseURI`)
+   * @param projectSource - See {@link SourceUtils.normalizeSource}
+   * @param options - Optional base URL for the app-relative fallback (see
+   *   {@link SourceUtils._normalizeAppPath})
    * @returns The absolute URL, or the normalized workspace-relative path
    * @throws Error if the path does not form a valid URL with the project URL,
-   *   if the path leaves the workspace or does not name a file, or if it
-   *   cannot be normalized as a workspace-relative path (see
-   *   {@link SourceUtils._normalizeWorkspacePath})
+   *   if it leaves the workspace, or if it cannot be normalized as a
+   *   workspace-relative path (see {@link SourceUtils._normalizeWorkspacePath})
    */
   private static _normalizeProjectPath(
     projectPath: string,
@@ -249,16 +329,16 @@ export class SourceUtils {
    * path instead (see {@link SourceUtils._normalizeAppPath}), dropping its `/`
    * prefix: `/data/points.csv` then resolves like `//data/points.csv`.
    *
-   * @param workspacePath - The path relative to the workspace root, including
-   *   its `/` prefix
+   * @param workspacePath - The workspace-relative path (with `/` prefix)
    * @param workspace - The directory handle of the open workspace, if any
-   * @param options - Optional base URL that the path is resolved against when
-   *   falling back to being app-relative (default `document.baseURI`)
+   * @param options - Optional base URL for the app-relative fallback (see
+   *   {@link SourceUtils._normalizeAppPath})
    * @returns The normalized workspace-relative path, or the absolute URL if no
    *   workspace is open
-   * @throws Error if the path lacks the `/` prefix, if it leaves the workspace
-   *   or does not name a file, or if it does not form a valid URL with the base
-   *   URL
+   * @throws Error if the path lacks the `/` prefix, or if it leaves the
+   *   workspace or names its root (with an open workspace) or cannot be
+   *   normalized as an app-relative path (without one, see
+   *   {@link SourceUtils._normalizeAppPath})
    */
   private static _normalizeWorkspacePath(
     workspacePath: string,
@@ -274,9 +354,7 @@ export class SourceUtils {
     if (workspace !== null) {
       const segments = SourceUtils._collapseSegments(path);
       if (segments.length === 0) {
-        throw new Error(
-          `Workspace-relative path does not name a file: ${workspacePath}`,
-        );
+        throw new Error(`Not a workspace file or directory: ${workspacePath}`);
       }
       return SourceUtils.makeWorkspacePath(segments);
     }
@@ -293,8 +371,7 @@ export class SourceUtils {
    * segments can lead above the application and a `/` right after the prefix
    * makes the path absolute within the origin.
    *
-   * @param appPath - The path relative to the application, including its `//`
-   *   prefix
+   * @param appPath - The app-relative path (with `//` prefix)
    * @param options - Optional base URL to resolve against (default
    *   `document.baseURI`)
    * @returns The absolute URL

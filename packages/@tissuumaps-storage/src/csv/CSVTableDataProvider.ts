@@ -238,7 +238,7 @@ export class CSVTableDataProvider implements TableDataProvider<
       resolve(columnValues);
     };
 
-    const resolvedSource = await SourceUtils.resolveSource(
+    const resolvedSource = await SourceUtils.resolveSourceFile(
       normalizedDataSource.source,
       workspace,
       { signal },

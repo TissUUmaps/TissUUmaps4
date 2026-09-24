@@ -63,9 +63,10 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@zarrita/storage": "github:TissUUmaps/zarrita.js#9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0&path:packages/@zarrita-storage",
     "geotiff": "^3.0.5",
     "geotiff-tilesource": "github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28",
-    "omezarr-tilesource": "^0.7.1",
+    "omezarr-tilesource": "^0.8.0",
     "papaparse": "^5.5.4"
   },
   "devDependencies": {

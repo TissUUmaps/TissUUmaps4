@@ -48,6 +48,7 @@ export default defineConfig(({ mode }) => ({
     rolldownOptions: {
       external: [
         "@tissuumaps/core",
+        "@zarrita/storage/fs-handle",
         "geotiff",
         "geotiff-tilesource",
         "omezarr-tilesource",

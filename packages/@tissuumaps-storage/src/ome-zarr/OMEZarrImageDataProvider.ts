@@ -138,66 +138,57 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   ): Promise<OMEZarrImageData> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const { loaded, url, zip, objectUrl } = await openOMEZarr(
+    const { loaded, url, zip } = await openOMEZarr(
       normalizedDataSource.source,
       options,
     );
-    try {
-      const { t, z } = normalizedDataSource;
-      const cAxis = loaded.image.getAxesNames().indexOf("c");
-      if (cAxis >= 0) {
-        const sizeC = loaded.arrays[0]!.shape[cAxis]!;
-        const channels = await Promise.all(
-          Array.from({ length: sizeC }, async (_, c) => {
-            const tileSource = await OMEZarrTileSource.open(
-              { url, zip, t, z, c },
-              loaded,
+    const { t, z } = normalizedDataSource;
+    const cAxis = loaded.image.getAxesNames().indexOf("c");
+    if (cAxis >= 0) {
+      const sizeC = loaded.arrays[0]!.shape[cAxis]!;
+      const channels = await Promise.all(
+        Array.from({ length: sizeC }, async (_, c) => {
+          const tileSource = await OMEZarrTileSource.open(
+            { url, zip, t, z, c },
+            loaded,
+            { signal },
+          );
+          let histogram;
+          try {
+            histogram = await OMEZarrImageDataProvider._computeChannelHistogram(
+              tileSource,
               { signal },
             );
-            let histogram;
-            try {
-              histogram =
-                await OMEZarrImageDataProvider._computeChannelHistogram(
-                  tileSource,
-                  { signal },
-                );
-            } catch (error) {
-              if (signal?.aborted) {
-                throw error;
-              }
-              console.warn(
-                `Failed to compute histogram for channel ${c}:`,
-                error,
-              );
+          } catch (error) {
+            if (signal?.aborted) {
+              throw error;
             }
-            return { tileSource, histogram };
-          }),
-        );
-        return new OMEZarrImageData(
-          channels.map((channel) => channel.tileSource),
-          channels.map((channel) => channel.histogram),
-          objectUrl,
-        );
-      }
-      const tileSource = await OMEZarrTileSource.open(
-        // c: 0 selects the only (implicit) channel: single-tile tile data, and no
-        // "active channels" default (which would reject an inactive sole channel)
-        { url, zip, t, z, c: 0 },
-        loaded,
-        { signal },
+            console.warn(
+              `Failed to compute histogram for channel ${c}:`,
+              error,
+            );
+          }
+          return { tileSource, histogram };
+        }),
       );
-      return new OMEZarrImageData(tileSource, undefined, objectUrl);
-    } catch (error) {
-      // the image data owns the object URL only once it has been created
-      if (objectUrl !== undefined) {
-        URL.revokeObjectURL(objectUrl);
-      }
-      throw error;
+      return new OMEZarrImageData(
+        channels.map((channel) => channel.tileSource),
+        channels.map((channel) => channel.histogram),
+      );
     }
+    const tileSource = await OMEZarrTileSource.open(
+      // c: 0 selects the only (implicit) channel: single-tile tile data, and no
+      // "active channels" default (which would reject an inactive sole channel)
+      { url, zip, t, z, c: 0 },
+      loaded,
+      { signal },
+    );
+    return new OMEZarrImageData(tileSource);
   }
 
   /**
-   * Computes the value histogram of a channel from a downsampled resolution level
+   * Computes the value histogram of a channel from a downsampled resolution
+   * level
    *
    * 64-bit integers get no histogram, and no values are read for them, as
    * {@link OMEZarrImageData.getTileData} rejects their tiles anyway. For all

@@ -10,15 +10,17 @@ export const omeZarrLabelsDataSourceDefaults = {};
  * Data source for OME-Zarr label images
  *
  * The `source` refers to a remote OME-Zarr store (a URL), a remote zipped
- * OME-Zarr file (a URL ending in `.ozx`), or a zipped OME-Zarr file in the
- * open workspace (a workspace-relative or project-relative path). It is
- * expected to hold signed or unsigned integers of up to 32 bits; `image-label`
- * metadata is not read (see `LabelsDataSource` for the annotation table
- * reference).
+ * OME-Zarr file (a URL ending in `.ozx`), or an OME-Zarr store (a directory)
+ * or zipped OME-Zarr file in the open workspace (a workspace-relative or
+ * project-relative path).
  *
- * Label images with more than two spatial dimensions are opened as a single
- * plane: `z` and `t` select the plane, and default to the image's `omero`
- * defaults (or the middle of the axis without them).
+ * Label images have to hold signed or unsigned integers of up to 32 bits.
+ * Their `image-label` metadata is not read (see `LabelsDataSource` for the
+ * annotation table reference).
+ *
+ * Label images with a `z` or `t` axis are opened as a single plane: `z` and
+ * `t` select the plane, and default to the image's `omero` defaults (or to the
+ * middle of the axis without them).
  */
 export interface OMEZarrLabelsDataSource extends LabelsDataSource<
   typeof omeZarrLabelsDataSourceType
@@ -34,8 +36,8 @@ export interface OMEZarrLabelsDataSource extends LabelsDataSource<
 }
 
 /**
- * An {@link OMEZarrLabelsDataSource} with {@link omeZarrLabelsDataSourceDefaults}
- * applied and its source normalized
+ * An {@link OMEZarrLabelsDataSource} with
+ * {@link omeZarrLabelsDataSourceDefaults} applied and its source normalized
  */
 export type NormalizedOMEZarrLabelsDataSource = Required<
   Pick<OMEZarrLabelsDataSource, keyof typeof omeZarrLabelsDataSourceDefaults>
