@@ -2,7 +2,7 @@ import { Autocomplete } from "@base-ui/react/autocomplete";
 import { ChevronDownIcon, FolderIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
-import { type ColumnQuerySuggestion, TableColumnUtils } from "@tissuumaps/core";
+import type { ColumnQuerySuggestion } from "@tissuumaps/core";
 
 import { Input } from "@/components/ui/input";
 import { useTableDataLoader } from "@/hooks/useDataLoader";
@@ -13,9 +13,14 @@ export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
   onValueChange: (column: string | null) => void;
-  maxSuggestions?: number;
   className?: string;
 };
+
+const maxSuggestions = 100;
+
+function findQuery(suggestion: string, query: string): number {
+  return suggestion.toLowerCase().indexOf(query.toLowerCase());
+}
 
 type SuggestionTextProps = {
   suggestion: string;
@@ -23,8 +28,7 @@ type SuggestionTextProps = {
 };
 
 function SuggestionText({ suggestion, query }: SuggestionTextProps) {
-  const index =
-    query !== "" ? TableColumnUtils.matchColumnQuery(suggestion, query) : -1;
+  const index = query !== "" ? findQuery(suggestion, query) : -1;
   if (index === -1) {
     return <span className="truncate">{suggestion}</span>;
   }
@@ -43,7 +47,6 @@ export function TableColumnInput({
   tableId,
   value,
   onValueChange,
-  maxSuggestions = 100,
   className,
 }: TableColumnInputProps) {
   const table = useProjectStore(
@@ -201,7 +204,7 @@ export function TableColumnInput({
       return "No columns";
     }
     // matching suggestions are listed first, so the first one decides
-    if (TableColumnUtils.matchColumnQuery(suggestions[0]!.query, text) === -1) {
+    if (findQuery(suggestions[0]!.query, text) === -1) {
       return suggestions.length > maxSuggestions
         ? `No matches for "${text}", showing the first ${maxSuggestions} columns`
         : `No matches for "${text}", showing all columns`;

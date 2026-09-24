@@ -3,7 +3,6 @@ import {
   type GenericArray,
   MathUtils,
   type NumericArray,
-  TableColumnUtils,
   type TableData,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -46,15 +45,32 @@ export class CSVTableData implements TableData {
   }
 
   suggestColumnQueries(currentQuery: string): Promise<ColumnQuerySuggestion[]> {
+    const lowerCaseQuery = currentQuery.toLowerCase();
+    const matches: string[] = [];
+    const others: string[] = [];
+    for (const column of this._columns) {
+      if (column === currentQuery) {
+        matches.unshift(column);
+      } else if (column.toLowerCase().includes(lowerCaseQuery)) {
+        matches.push(column);
+      } else {
+        others.push(column);
+      }
+    }
     return Promise.resolve(
-      TableColumnUtils.suggestColumnQueries(this._columns, currentQuery),
+      [...matches, ...others].map((query) => ({ query, terminal: true })),
     );
   }
 
   resolveColumnQuery(query: string): Promise<string | null> {
-    return Promise.resolve(
-      TableColumnUtils.resolveColumnQuery(this._columns, query),
+    if (this._columns.includes(query)) {
+      return Promise.resolve(query);
+    }
+    const lowerCaseQuery = query.toLowerCase();
+    const matches = this._columns.filter(
+      (column) => column.toLowerCase() === lowerCaseQuery,
     );
+    return Promise.resolve(matches.length === 1 ? matches[0]! : null);
   }
 
   loadValues<T>(column: string): Promise<GenericArray<T>> {
