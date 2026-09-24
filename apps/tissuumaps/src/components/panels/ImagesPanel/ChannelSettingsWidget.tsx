@@ -105,6 +105,16 @@ export function ChannelSettingsWidget({
               updateImage(image.id, { activeChannel: Number(value) });
             }
           }}
+          // Base UI moves the active channel on arrow keys from anything inside
+          // the group but text inputs, so leave them to the rows' number inputs
+          // and sliders
+          onKeyDown={(event) => {
+            if (
+              (event.target as HTMLElement).getAttribute("role") !== "radio"
+            ) {
+              event.preventBaseUIHandler();
+            }
+          }}
         >
           {rows}
         </RadioGroup>
@@ -182,21 +192,19 @@ function ChannelSettingsRow({
           </Button>
         )}
         {image.channelViewMode !== ImageChannelViewMode.grayscale ? (
-          <span onKeyDown={stopRadioGroupKeys}>
-            <SimpleColorPicker
-              color={color}
-              onColorChange={(newColor) => updateChannel({ color: newColor })}
-              // positions the sr-only label, which would otherwise overflow the
-              // panel's scroll container
-              className="relative size-4 p-0 border-input shadow-xs"
-            >
-              <span className="sr-only">Channel color</span>
-              <span
-                className="block size-full rounded-sm"
-                style={{ backgroundColor: ColorUtils.toHex(color) }}
-              />
-            </SimpleColorPicker>
-          </span>
+          <SimpleColorPicker
+            color={color}
+            onColorChange={(newColor) => updateChannel({ color: newColor })}
+            // positions the sr-only label, which would otherwise overflow the
+            // panel's scroll container
+            className="relative size-4 p-0 border-input shadow-xs"
+          >
+            <span className="sr-only">Channel color</span>
+            <span
+              className="block size-full rounded-sm"
+              style={{ backgroundColor: ColorUtils.toHex(color) }}
+            />
+          </SimpleColorPicker>
         ) : null}
         <CollapsibleTrigger className="flex-1 min-w-0 cursor-pointer">
           <span className="truncate" title={name}>
@@ -216,12 +224,11 @@ function ChannelSettingsRow({
             step={0.01}
             value={opacity}
             onValueChange={(value) => updateChannel({ opacity: value })}
-            onKeyDown={stopRadioGroupKeys}
           />
         </span>
       </div>
       {contrastLimits !== undefined ? (
-        <CollapsiblePanel className="pt-1 pl-5" onKeyDown={stopRadioGroupKeys}>
+        <CollapsiblePanel className="pt-1 pl-5">
           <ContrastRangeWidget
             contrastLimits={contrastLimits}
             histogram={data.getChannelHistogram?.(c)}
@@ -239,17 +246,4 @@ function ChannelSettingsRow({
       ) : null}
     </Collapsible>
   );
-}
-
-// Base UI's radio group moves the active channel on these keys from any
-// element inside it but text inputs, which leaves out number inputs and the
-// color picker's sliders
-function stopRadioGroupKeys(event: React.KeyboardEvent) {
-  if (
-    event.key.startsWith("Arrow") ||
-    event.key === "Home" ||
-    event.key === "End"
-  ) {
-    event.stopPropagation();
-  }
 }
