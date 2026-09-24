@@ -188,10 +188,7 @@ export class MarkerResolver {
 
   /**
    * Loads marker data by grouping IDs via a table column and mapping each group
-   * to a marker using a marker map, the default marker palette, or both.
-   *
-   * Groups that the marker map does not contain fall back to the map's default,
-   * then to the default marker palette.
+   * to a marker using either a marker map or the default marker palette.
    *
    * @param ids - Ordered list of item IDs
    * @param config - GroupBy configuration specifying the source column and optional map
@@ -211,29 +208,46 @@ export class MarkerResolver {
   ) {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const { column, map } = config.groupBy;
-    const markerMap = markerMaps.find((markerMap) => markerMap.id === map);
-    if (map !== undefined && markerMap === undefined) {
-      console.warn(`Marker map ${map} not found, using default marker`);
-      return MarkerResolver.createUniformMarkers(ids.length, defaultMarker, {
+    if (config.groupBy.map !== undefined) {
+      const markerMap = markerMaps.find(
+        (markerMap) => markerMap.id === config.groupBy.map,
+      );
+      if (markerMap === undefined) {
+        console.warn(
+          `Marker map ${config.groupBy.map} not found, using default marker`,
+        );
+        return MarkerResolver.createUniformMarkers(ids.length, defaultMarker, {
+          align,
+        });
+      }
+      const data = await loadTable({ signal });
+      const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
         align,
       });
+      const groupMarkers = new Map(Object.entries(markerMap.values));
+      await TableUtils.fillFromTableGroups(
+        packedMarkers,
+        data,
+        ids,
+        config.groupBy.column,
+        markerMap.default ?? defaultMarker,
+        (group) => groupMarkers.get(group),
+        (marker) => MarkerResolver.packMarker(marker),
+        { signal },
+      );
+      return packedMarkers;
     }
     const data = await loadTable({ signal });
     const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
       align,
     });
-    const groupMarkers = new Map(Object.entries(markerMap?.values ?? {}));
     await TableUtils.fillFromTableGroups(
       packedMarkers,
       data,
       ids,
-      column,
-      markerMap?.default ?? defaultMarker,
-      (group) =>
-        groupMarkers.get(group) ??
-        markerMap?.default ??
-        markerPalette[HashUtils.hash(group) % markerPalette.length]!,
+      config.groupBy.column,
+      defaultMarker,
+      (group) => markerPalette[HashUtils.hash(group) % markerPalette.length]!,
       (marker) => MarkerResolver.packMarker(marker),
       { signal },
     );
