@@ -59,6 +59,7 @@ export {
   type RawLayer,
 } from "./model/layer";
 export {
+  ImageChannelViewMode,
   createImage,
   createImageDataSource,
   imageDataSourceDefaults,
@@ -146,7 +147,11 @@ export {
   type ItemsData,
   type RasterData,
 } from "./storage/base";
-export { type ImageData, type ImageDataProvider } from "./storage/image";
+export {
+  type ImageChannelHistogram,
+  type ImageData,
+  type ImageDataProvider,
+} from "./storage/image";
 export { type LabelsData, type LabelsDataProvider } from "./storage/labels";
 export {
   type PointsData,
@@ -200,6 +205,7 @@ export {
 } from "./types/webgl";
 
 export {
+  type ImageChannelPreview,
   type AppStoreState,
   type AppStoreActions,
   type AppStore,

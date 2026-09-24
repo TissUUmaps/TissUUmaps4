@@ -6,6 +6,19 @@ import type {
 } from "../types/openseadragon";
 import type { DataProvider, RasterData } from "./base";
 
+/** The value histogram of a channel, in raw pixel values */
+export type ImageChannelHistogram = {
+  /**
+   * The number of samples per bin, bin `i` of `n` counting the values around
+   * `vmin + i / (n - 1) * (vmax - vmin)` (see
+   * {@link MathUtils.computeHistogram})
+   */
+  hist: number[];
+
+  /** The values the first and the last bin are centered on, as `[vmin, vmax]` */
+  range: [number, number];
+};
+
 /**
  * Loaded image data providing one or more OpenSeadragon-compatible tile sources
  *
@@ -82,9 +95,20 @@ export interface ImageData extends RasterData {
    * @returns The channel's histogram, as bin counts and the value range the
    * bins span, or `undefined` if not available
    */
-  getChannelHistogram?: (
-    c: number,
-  ) => { hist: number[]; range: [number, number] } | undefined;
+  getChannelHistogram?: (c: number) => ImageChannelHistogram | undefined;
+
+  /**
+   * Returns the range the data type of a specific channel can hold, or undefined if not available
+   *
+   * The full range of integer channel data of at most 32 bits, e.g.
+   * `[0, 65535]` for unsigned 16-bit samples. Other channel data has no such
+   * range and returns `undefined`.
+   *
+   * @param c - The channel index (0-based)
+   * @returns The data type range, as `[min, max]`, or `undefined` if not
+   * available
+   */
+  getChannelDataTypeRange?: (c: number) => [number, number] | undefined;
 
   /**
    * Returns the contrast limits of a specific channel, or undefined if not available
@@ -94,11 +118,12 @@ export interface ImageData extends RasterData {
    * color. Channels without contrast limits (neither configured on the image
    * nor returned here) are stretched between quantile-based limits derived
    * from the channel's histogram, if {@link ImageData.getChannelHistogram}
-   * provides one (see {@link ImageUtils.getDefaultContrastLimits}), and otherwise
-   * over the value range that the data type of their channel data can hold, as
-   * returned by {@link ImageUtils.getDataTypeRange} (the full integer range for
-   * integer typed arrays, `[0, 1]` for floating-point typed arrays, `[0, 255]`
-   * for plain arrays).
+   * provides one (see {@link ImageUtils.getDefaultContrastLimits}), then over
+   * the data type range declared by {@link ImageData.getChannelDataTypeRange},
+   * and otherwise over the value range that the data type of their channel data
+   * can hold, as returned by {@link ImageUtils.getDataTypeRange} (the full
+   * integer range for integer typed arrays, `[0, 1]` for floating-point typed
+   * arrays, `[0, 255]` for plain arrays).
    *
    * @param c - The channel index (0-based)
    * @returns The channel's contrast limits, in the channel's value range, or

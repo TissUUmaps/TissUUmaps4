@@ -1,9 +1,126 @@
+import type { Image } from "../model/image";
 import type { Color } from "../model/primitives";
+import type { ImageChannelHistogram, ImageData } from "../storage/image";
 import type { NumericArray } from "../types/arrays";
 import { ColorUtils } from "./ColorUtils";
+import { MathUtils } from "./MathUtils";
 
-/** Utility methods for image channel defaults */
+/** The integer typed arrays, with the bits and signedness of their type */
+const integerArrayTypes = [
+  [Uint8Array, 8, false],
+  [Uint16Array, 16, false],
+  [Uint32Array, 32, false],
+  [Int8Array, 8, true],
+  [Int16Array, 16, true],
+  [Int32Array, 32, true],
+] as const;
+
+/** Utility methods for resolving and defaulting image channel settings */
 export class ImageUtils {
+  /**
+   * Returns the color of a channel
+   *
+   * The color configured on the image wins, then the one its data states, and
+   * the only channel of single-channel image data is white, as a grayscale
+   * image rather than in the red the index-based default would give it (see
+   * {@link ImageUtils.getDefaultChannelColor}).
+   *
+   * @param image - The image
+   * @param data - The image data providing the channel
+   * @param c - The channel index (0-based)
+   * @returns The channel's color
+   */
+  static getChannelColor(image: Image, data: ImageData, c: number): Color {
+    return (
+      image.channels?.[c]?.color ??
+      data.getChannelColor?.(c) ??
+      (data.getSizeC() === 1
+        ? { r: 255, g: 255, b: 255 }
+        : ImageUtils.getDefaultChannelColor(c))
+    );
+  }
+
+  /**
+   * Returns the contrast limits of a channel
+   *
+   * The limits configured on the image win over those its data states.
+   * Channels with neither are stretched between quantile-based limits derived
+   * from their histogram (see {@link ImageUtils.getDefaultContrastLimits}), if
+   * the data provides one, and otherwise over the range the data declares for
+   * their data type.
+   *
+   * @param image - The image
+   * @param data - The image data providing the channel
+   * @param c - The channel index (0-based)
+   * @returns The channel's contrast limits, or `undefined` if the data
+   * provides neither limits, a histogram nor a data type range
+   */
+  static getChannelContrastLimits(
+    image: Image,
+    data: ImageData,
+    c: number,
+  ): [number, number] | undefined {
+    const histogram = data.getChannelHistogram?.(c);
+    return (
+      image.channels?.[c]?.contrastLimits ??
+      data.getChannelContrastLimits?.(c) ??
+      (histogram !== undefined
+        ? ImageUtils.getDefaultContrastLimits(histogram)
+        : undefined) ??
+      data.getChannelDataTypeRange?.(c)
+    );
+  }
+
+  /**
+   * Returns the visibility of a channel
+   *
+   * The visibility configured on the image wins over the one its data states,
+   * and channels with neither are visible.
+   *
+   * @param image - The image
+   * @param data - The image data providing the channel
+   * @param c - The channel index (0-based)
+   * @returns Whether the channel is visible
+   */
+  static getChannelVisibility(
+    image: Image,
+    data: ImageData,
+    c: number,
+  ): boolean {
+    return (
+      image.channels?.[c]?.visibility ?? data.getChannelVisibility?.(c) ?? true
+    );
+  }
+
+  /**
+   * Returns the opacity of a channel
+   *
+   * The opacity configured on the image wins over the one its data states,
+   * and channels with neither are fully opaque.
+   *
+   * @param image - The image
+   * @param data - The image data providing the channel
+   * @param c - The channel index (0-based)
+   * @returns The channel's opacity, in `[0, 1]`
+   */
+  static getChannelOpacity(image: Image, data: ImageData, c: number): number {
+    return image.channels?.[c]?.opacity ?? data.getChannelOpacity?.(c) ?? 1;
+  }
+
+  /**
+   * Returns the channel an image shows in the single-channel view modes
+   *
+   * The image's active channel is bounded to the channels the data has, so
+   * that an image kept from data with more channels still shows one.
+   *
+   * @param image - The image
+   * @param sizeC - The number of channels the image data has
+   * @returns The channel index (0-based)
+   */
+  static getActiveChannel(image: Image, sizeC: number): number {
+    return MathUtils.clamp(image.activeChannel, 0, sizeC - 1);
+  }
+
   /**
    * Returns a default color for a channel, for use when no channel colors are
    * known
@@ -77,7 +194,7 @@ export class ImageUtils {
    * range, with `low < high` unless the range is degenerate
    */
   static getDefaultContrastLimits(
-    histogram: { hist: number[]; range: [number, number] },
+    histogram: ImageChannelHistogram,
     qlow: number = 0.01,
     qhigh: number = 0.999,
   ): [number, number] {
@@ -132,6 +249,19 @@ export class ImageUtils {
   }
 
   /**
+   * Returns the value range that an integer type can hold
+   *
+   * @param bits - The number of bits per value, at most 32
+   * @param signed - Whether the type is signed
+   * @returns The value range, as `[min, max]`
+   */
+  static getIntegerTypeRange(bits: number, signed: boolean): [number, number] {
+    return signed
+      ? [-(2 ** (bits - 1)), 2 ** (bits - 1) - 1]
+      : [0, 2 ** bits - 1];
+  }
+
+  /**
    * Returns the value range that the type of the given array can hold, for use
    * as default contrast limits of image channel data
    *
@@ -143,27 +273,11 @@ export class ImageUtils {
    * @returns The value range, as `[min, max]`
    */
   static getDataTypeRange(values: NumericArray): [number, number] {
-    if (values instanceof Uint8Array) {
-      return [0, 255];
+    for (const [arrayType, bits, signed] of integerArrayTypes) {
+      if (values instanceof arrayType) {
+        return ImageUtils.getIntegerTypeRange(bits, signed);
+      }
     }
-    if (values instanceof Uint16Array) {
-      return [0, 65535];
-    }
-    if (values instanceof Uint32Array) {
-      return [0, 4294967295];
-    }
-    if (values instanceof Int8Array) {
-      return [-128, 127];
-    }
-    if (values instanceof Int16Array) {
-      return [-32768, 32767];
-    }
-    if (values instanceof Int32Array) {
-      return [-2147483648, 2147483647];
-    }
-    if (Array.isArray(values)) {
-      return [0, 255];
-    }
-    return [0, 1];
+    return Array.isArray(values) ? [0, 255] : [0, 1];
   }
 }

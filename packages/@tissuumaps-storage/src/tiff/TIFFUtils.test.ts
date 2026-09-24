@@ -115,4 +115,39 @@ describe("TIFFUtils", () => {
       );
     });
   });
+
+  describe("getIntegerSampleType", () => {
+    function sampleImage(sampleFormat: number, bits: number): GeoTIFFImage {
+      return {
+        getSampleFormat: () => sampleFormat,
+        getBitsPerSample: () => bits,
+      } as unknown as GeoTIFFImage;
+    }
+
+    it.each([
+      [1, 8, { bits: 8, signed: false }],
+      [1, 12, { bits: 12, signed: false }],
+      [2, 32, { bits: 32, signed: true }],
+      [1, 0, { bits: 8, signed: false }],
+    ])(
+      "returns the type of sample format %i with %i bits",
+      (sampleFormat, bits, type) => {
+        expect(
+          TIFFUtils.getIntegerSampleType(sampleImage(sampleFormat, bits)),
+        ).toEqual(type);
+      },
+    );
+
+    it.each([
+      [3, 32],
+      [1, 64],
+    ])(
+      "returns undefined for sample format %i with %i bits",
+      (sampleFormat, bits) => {
+        expect(
+          TIFFUtils.getIntegerSampleType(sampleImage(sampleFormat, bits)),
+        ).toBeUndefined();
+      },
+    );
+  });
 });

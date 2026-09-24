@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/shallow";
 
-import type { Color } from "@tissuumaps/core";
+import { type Color, ImageChannelViewMode } from "@tissuumaps/core";
 import {
   Viewer,
   type ViewerAdapter,
@@ -31,12 +31,29 @@ const viewerBackgroundColor: Color = { r: 0, g: 0, b: 0 };
 
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const interactionMode = useAppStore((state) => state.interactionMode);
+  const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
+
+  const images = useProjectStore((state) => state.images);
+  const previewedImages = useMemo(
+    () =>
+      imageChannelPreview === null
+        ? images
+        : images.map((image) =>
+            image.id === imageChannelPreview.imageId
+              ? {
+                  ...image,
+                  channelViewMode: ImageChannelViewMode.color,
+                  activeChannel: imageChannelPreview.channelIndex,
+                }
+              : image,
+          ),
+    [images, imageChannelPreview],
+  );
 
   const projectState = useProjectStore(
     useShallow((state) => ({
       projectInstanceId: state.instanceId,
       layers: state.layers,
-      images: state.images,
       labels: state.labels,
       points: state.points,
       shapes: state.shapes,
@@ -60,6 +77,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   const viewerAdapter: ViewerAdapter = useMemo(
     () => ({
       ...projectState,
+      images: previewedImages,
       interactionMode,
       loadImage,
       loadLabels,
@@ -69,6 +87,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     }),
     [
       projectState,
+      previewedImages,
       interactionMode,
       loadImage,
       loadLabels,

@@ -5,7 +5,7 @@ import {
   ColorUtils,
   type CustomTileSource,
   type Image,
-  type ImageChannel,
+  ImageChannelViewMode,
   type ImageData,
   ImageUtils,
   MathUtils,
@@ -25,6 +25,15 @@ export type OpenSeadragonImageSyncContext = {
   ) => Promise<ImageData>;
 };
 
+/** The color that channels are colorized with in the grayscale view mode */
+const white: Color = { r: 255, g: 255, b: 255 };
+
+/** The color and contrast limits a channel's tiles are drawn with */
+type ChannelTransferState = {
+  color: Color;
+  contrastLimits: [number, number] | undefined;
+};
+
 /**
  * Renderer for the tiled images of {@link Image} data objects
  *
@@ -32,26 +41,26 @@ export type OpenSeadragonImageSyncContext = {
  * carry the channel's values rather than colors. Each channel is recolored by a
  * data transfer (see {@link OpenSeadragonContext.updateTiledImageDataTransfer})
  * that scales the values between the channel's contrast limits and multiplies
- * them with the channel's color. Color and contrast limits are taken from the
- * image's channel settings, falling back to those reported by the image data
- * (see {@link _getChannelColor} and {@link _getChannelContrastLimits}):
- * channels without a color use a default color for their channel index (see
- * {@link ImageUtils.getDefaultChannelColor}), or white for single-channel
- * image data, and channels without contrast limits use limits derived from
- * their histogram (see {@link ImageUtils.getDefaultContrastLimits}), if the
- * image data provides one, and the value range of their data type otherwise.
+ * them with the channel's color. Color and contrast limits are resolved by
+ * {@link ImageUtils.getChannelColor} and
+ * {@link ImageUtils.getChannelContrastLimits}; channels without contrast
+ * limits are stretched over the value range of each tile's data type. In the
+ * grayscale view mode, every channel is colorized white instead of its color.
  * Channels whose data does not provide values are drawn as they are, as is
  * image data that is not multi-channel. Channel visibility and opacity are not
  * part of the transfer: like layer and image opacity, OpenSeadragon applies
- * them when drawing the tiled image (see {@link getTiledImageOpacity}).
+ * them when drawing the tiled image, which is also where the single-channel
+ * view modes hide all but the image's active channel (see
+ * {@link getTiledImageOpacity}).
  *
- * Channel colors and contrast limits need no synchronization: like visibility
- * and opacity, they are read from the current model whenever the image's tiled
- * images are updated (see {@link resolveTiledImageDataTransfer}), so changing
- * them only requires {@link setModel}. As data transfers are compared by
- * identity, each channel's data transfer is kept until the image's data or the
- * channel's color or contrast limits change, so that tiles are only recolored
- * when needed.
+ * Channel colors, contrast limits and the view mode need no synchronization:
+ * like visibility and opacity, they are read from the current model whenever
+ * the image's tiled images are updated (see
+ * {@link resolveTiledImageDataTransfer}), so changing them only requires
+ * {@link setModel}. As data transfers are compared by identity, each channel's
+ * data transfer is kept until the image's data, or the channel's resolved color
+ * (white in grayscale) or contrast limits change, so that tiles are only
+ * recolored when needed.
  */
 export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   Image,
@@ -63,7 +72,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     {
       data: ImageData;
       channels: {
-        state: Pick<ImageChannel, "color" | "contrastLimits">;
+        state: ChannelTransferState;
         dataTransfer: DataTransfer | undefined;
       }[];
     }
@@ -72,11 +81,12 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   /**
    * Returns the state of an image that a synchronization depends on
    *
-   * Blanks out the name, visibility, opacity, color and contrast limits of
-   * every channel on top of what the base class blanks out: they are applied
-   * from the current model when updating the channel's tiled image (see
-   * {@link getTiledImageOpacity} and {@link resolveTiledImageDataTransfer}),
-   * except for the name, which is cosmetic.
+   * Blanks out the channel view mode and active channel, and the name,
+   * visibility, opacity, color and contrast limits of every channel on top of
+   * what the base class blanks out: they are applied from the current model
+   * when updating the channel's tiled image (see {@link getTiledImageOpacity}
+   * and {@link resolveTiledImageDataTransfer}), except for the name, which is
+   * cosmetic.
    *
    * @param image - The image to return the state of
    * @returns The image without the properties that are applied by
@@ -85,6 +95,8 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
   protected override getObjectSyncState(image: Image): object {
     return {
       ...super.getObjectSyncState(image),
+      channelViewMode: undefined,
+      activeChannel: undefined,
       channels: image.channels?.map((channel) => ({
         ...channel,
         name: undefined,
@@ -156,8 +168,10 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * Multiplies the layer and image opacity computed by the base class with the
    * visibility and opacity of the channel that the tiled image renders. Channels
    * are only applied to multi-channel image data, and channels that the image
-   * does not define are visible at full opacity. Without a channel index, i.e.
-   * for the image's backdrop, the layer and image opacity is returned as is.
+   * does not define are visible at full opacity. In the single-channel view
+   * modes, only the image's active channel is visible (see
+   * {@link ImageUtils.getActiveChannel}). Without a channel index, i.e. for the
+   * image's backdrop, the layer and image opacity is returned as is.
    *
    * @param ref - The image reference for which to compute the opacity
    * @param index - The index of the tiled image (channel), or `null` for the image's backdrop
@@ -168,12 +182,17 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     index: number | null,
   ): number {
     let alpha = super.getTiledImageOpacity(ref, index);
-    if (alpha > 0 && index !== null && ref.data.getSizeC() !== undefined) {
-      const channel = ref.object.channels?.[index];
+    const sizeC = ref.data.getSizeC();
+    if (alpha > 0 && index !== null && sizeC !== undefined) {
       const channelVisibility =
-        channel?.visibility ?? ref.data.getChannelVisibility?.(index) ?? true;
-      const channelOpacity =
-        channel?.opacity ?? ref.data.getChannelOpacity?.(index) ?? 1.0;
+        ref.object.channelViewMode !== ImageChannelViewMode.composite
+          ? index === ImageUtils.getActiveChannel(ref.object, sizeC)
+          : ImageUtils.getChannelVisibility(ref.object, ref.data, index);
+      const channelOpacity = ImageUtils.getChannelOpacity(
+        ref.object,
+        ref.data,
+        index,
+      );
       alpha *= channelVisibility ? channelOpacity : 0;
     }
     return alpha;
@@ -184,10 +203,10 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    *
    * Only the tiled images of the channels of multi-channel image data are
    * recolored, never the backdrop. A channel's color and contrast limits are
-   * resolved from the image's channel settings, falling back to those reported
-   * by the data (see {@link _getChannelColor} and
-   * {@link _getChannelContrastLimits}), and its data transfer is kept as long as
-   * the image's data and the resolved values are unchanged, and is created anew
+   * resolved (see {@link ImageUtils.getChannelColor} and
+   * {@link ImageUtils.getChannelContrastLimits}), with every channel white in
+   * the grayscale view mode. The channel's data transfer is kept as long as the
+   * image's data and the resolved values are unchanged, and is created anew
    * otherwise (see {@link _createDataTransfer}). Channels are resolved
    * independently, so that changing one channel only recolors the tiles of that
    * channel.
@@ -221,19 +240,17 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
         renderedMultichannelImage,
       );
     }
-    const channel = ref.object.channels?.[index];
     const renderedMultichannelImageChannel =
       renderedMultichannelImage.channels[index];
     const newRenderedMultichannelImageChannelState = structuredClone({
-      color: OpenSeadragonImageRenderer._getChannelColor(
+      color:
+        ref.object.channelViewMode === ImageChannelViewMode.grayscale
+          ? white
+          : ImageUtils.getChannelColor(ref.object, ref.data, index),
+      contrastLimits: ImageUtils.getChannelContrastLimits(
+        ref.object,
         ref.data,
         index,
-        channel,
-      ),
-      contrastLimits: OpenSeadragonImageRenderer._getChannelContrastLimits(
-        ref.data,
-        index,
-        channel,
       ),
     });
     if (
@@ -247,7 +264,6 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     }
     const dataTransfer = OpenSeadragonImageRenderer._createDataTransfer(
       ref.data,
-      index,
       newRenderedMultichannelImageChannelState,
     );
     renderedMultichannelImage.channels[index] = {
@@ -261,9 +277,8 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * Creates the data transfer of an image channel
    *
    * The transfer scales each value linearly between the contrast limits,
-   * clamped to `[0, 1]`, and multiplies the result with the channel's color, or
-   * with the default color for the channel index (see
-   * {@link ImageUtils.getDefaultChannelColor}) if the channel has none. Without
+   * clamped to `[0, 1]`, and multiplies the result with the channel's color,
+   * which {@link resolveTiledImageDataTransfer} has already resolved. Without
    * contrast limits, the value range of the data type of each tile's data is
    * used (see {@link ImageUtils.getDataTypeRange}); contrast limits that are not
    * ascending render every value black. The resulting pixels are opaque;
@@ -276,19 +291,16 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * exceeds 255, the ramp holds every color the channel can take.
    *
    * @param data - The image data providing the channel's values
-   * @param index - The index of the tiled image (channel)
-   * @param channel - The color and contrast limits of the channel
+   * @param channel - The resolved color and contrast limits of the channel
    * @returns The data transfer, or `undefined` if the data provides no channel
    * values
    */
   private static _createDataTransfer(
     data: ImageData,
-    index: number,
-    channel: Pick<ImageChannel, "color" | "contrastLimits">,
+    channel: ChannelTransferState,
   ): DataTransfer | undefined {
     if (data.getTileData !== undefined) {
-      const { r, g, b } =
-        channel.color ?? ImageUtils.getDefaultChannelColor(index);
+      const { r, g, b } = channel.color;
       const ramp = new Uint32Array(256);
       for (let i = 0; i < ramp.length; i++) {
         const scale = i / (ramp.length - 1);
@@ -313,78 +325,6 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
           }
         },
       };
-    }
-    return undefined;
-  }
-
-  /**
-   * Resolves the color of an image channel
-   *
-   * The color configured on the image's channel wins over the color reported
-   * by the image data. Single-channel image data without either is colorized
-   * white, so that it renders as a grayscale image rather than in the red that
-   * the index-based default would give its only channel. All other channels
-   * without a color resolve to `undefined`, and are colorized with the default
-   * color for their channel index by {@link _createDataTransfer} (see
-   * {@link ImageUtils.getDefaultChannelColor}).
-   *
-   * @param data - The image data providing the channel
-   * @param index - The index of the channel
-   * @param channel - The image's settings for the channel, if any
-   * @returns The resolved color, or `undefined` to use the index-based default
-   */
-  private static _getChannelColor(
-    data: ImageData,
-    index: number,
-    channel: ImageChannel | undefined,
-  ): Color | undefined {
-    const userColor = channel?.color;
-    if (userColor !== undefined) {
-      return userColor;
-    }
-    const dataColor = data.getChannelColor?.(index);
-    if (dataColor !== undefined) {
-      return dataColor;
-    }
-    if (data.getSizeC() === 1) {
-      return { r: 255, g: 255, b: 255 };
-    }
-    return undefined;
-  }
-
-  /**
-   * Resolves the contrast limits of an image channel
-   *
-   * The contrast limits configured on the image's channel win over those
-   * reported by the image data. Channels without either are stretched between
-   * quantile-based limits derived from the channel's histogram, if the image
-   * data provides one (see {@link ImageUtils.getDefaultContrastLimits}). All
-   * other channels resolve to `undefined`, and are stretched over the value
-   * range of each tile's data type by {@link _createDataTransfer} (see
-   * {@link ImageUtils.getDataTypeRange}).
-   *
-   * @param data - The image data providing the channel
-   * @param index - The index of the channel
-   * @param channel - The image's settings for the channel, if any
-   * @returns The resolved contrast limits, or `undefined` to use the data type
-   * range
-   */
-  private static _getChannelContrastLimits(
-    data: ImageData,
-    index: number,
-    channel: ImageChannel | undefined,
-  ): [number, number] | undefined {
-    const userContrastLimits = channel?.contrastLimits;
-    if (userContrastLimits !== undefined) {
-      return userContrastLimits;
-    }
-    const dataContrastLimits = data.getChannelContrastLimits?.(index);
-    if (dataContrastLimits !== undefined) {
-      return dataContrastLimits;
-    }
-    const histogram = data.getChannelHistogram?.(index);
-    if (histogram !== undefined) {
-      return ImageUtils.getDefaultContrastLimits(histogram);
     }
     return undefined;
   }

@@ -1,10 +1,11 @@
+import type { ImageChannelHistogram } from "../storage/image";
 import type { GenericArray, NumericArray } from "../types/arrays";
 import { AsyncUtils } from "./AsyncUtils";
 import { RandomUtils } from "./RandomUtils";
 
 /**
- * Utility methods for numeric clamping, remapping, alignment, medians,
- * histograms and counts
+ * Utility methods for numeric clamping, remapping, alignment, rounding,
+ * medians, histograms and counts
  */
 export class MathUtils {
   /**
@@ -67,6 +68,26 @@ export class MathUtils {
       return n;
     }
     return Math.ceil(n / m) * m;
+  }
+
+  /**
+   * Rounds a value to the decimal places that a step needs
+   *
+   * Steps of `1` or more round to whole numbers, `0.1` to one decimal place,
+   * `0.05` to two. Stepping through a range adds floating-point noise that this
+   * rounds away, e.g. `0.30000000000000004` becomes `0.3` for a step of `0.1`.
+   *
+   * @param value - The value to round
+   * @param step - The strictly positive step
+   * @returns The rounded value
+   * @throws Error if `step` is not strictly positive
+   */
+  static roundToStepDecimals(value: number, step: number): number {
+    if (step <= 0) {
+      throw new Error("step must be strictly positive");
+    }
+    const decimals = Math.max(0, -Math.floor(Math.log10(step)));
+    return Number(value.toFixed(decimals));
   }
 
   /**
@@ -191,7 +212,7 @@ export class MathUtils {
       sample?: number;
       seed?: number;
     },
-  ): Promise<{ hist: number[]; range: [number, number] }> {
+  ): Promise<ImageChannelHistogram> {
     const { signal, bins = 1024, sample, seed = 0 } = options ?? {};
     signal?.throwIfAborted();
     const [vmin, vmax] = range;
@@ -217,6 +238,43 @@ export class MathUtils {
       { signal },
     );
     return { hist, range };
+  }
+
+  /**
+   * Redistributes the counts of a histogram over equal bins of another range
+   *
+   * The new bins split `range` into `bins` equal intervals, the upper bound
+   * counting in the last one. Each bin of `histogram` is counted in the new bin
+   * that its value falls into (see {@link ImageChannelHistogram.hist}), or
+   * dropped if its value is outside `range`. If `range` is degenerate (upper
+   * bound not above lower bound), all counts fall into bin `0`.
+   *
+   * @param histogram - The histogram to redistribute
+   * @param range - The value range the new bins span, as `[min, max]`
+   * @param bins - The number of new bins, a positive integer
+   * @returns The counts of the new bins
+   */
+  static rebinHistogram(
+    histogram: ImageChannelHistogram,
+    range: [number, number],
+    bins: number,
+  ): number[] {
+    const { hist, range: histogramRange } = histogram;
+    const [min, max] = range;
+    const lastHistogramBin = Math.max(hist.length - 1, 1);
+    const counts = new Array<number>(bins).fill(0);
+    if (min >= max) {
+      counts[0] = hist.reduce((sum, count) => sum + count, 0);
+      return counts;
+    }
+    for (let i = 0; i < hist.length; i++) {
+      const value = MathUtils.remap(i, [0, lastHistogramBin], histogramRange);
+      if (value >= min && value <= max) {
+        const bin = Math.floor(MathUtils.remap(value, range, [0, bins]));
+        counts[Math.min(bin, bins - 1)]! += hist[i]!;
+      }
+    }
+    return counts;
   }
 
   /**

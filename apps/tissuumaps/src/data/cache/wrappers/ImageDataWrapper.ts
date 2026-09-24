@@ -23,6 +23,7 @@ export class ImageDataWrapper
   readonly getChannelOpacity?: ImageData["getChannelOpacity"];
   readonly getChannelColor?: ImageData["getChannelColor"];
   readonly getChannelHistogram?: ImageData["getChannelHistogram"];
+  readonly getChannelDataTypeRange?: ImageData["getChannelDataTypeRange"];
   readonly getChannelContrastLimits?: ImageData["getChannelContrastLimits"];
 
   constructor(data: ImageData) {
@@ -44,6 +45,10 @@ export class ImageDataWrapper
     }
     if (data.getChannelHistogram !== undefined) {
       this.getChannelHistogram = (c) => this.data.getChannelHistogram!(c);
+    }
+    if (data.getChannelDataTypeRange !== undefined) {
+      this.getChannelDataTypeRange = (c) =>
+        this.data.getChannelDataTypeRange!(c);
     }
     if (data.getChannelContrastLimits !== undefined) {
       this.getChannelContrastLimits = (c) =>

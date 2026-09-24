@@ -77,7 +77,7 @@ export function PointSizeViewerControl({
       </InputGroupAddon>
       <Slider
         className="mx-2 w-32"
-        aria-label="Global point size"
+        thumbLabels={["Global point size"]}
         min={-1}
         max={1}
         step={0.01}

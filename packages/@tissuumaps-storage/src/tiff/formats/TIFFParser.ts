@@ -6,12 +6,6 @@ import { OMETIFFParser } from "./OMETIFFParser";
 import { PlainTIFFParser } from "./PlainTIFFParser";
 import { QPTIFFParser } from "./QPTIFFParser";
 
-/** The `SampleFormat` value of unsigned integer samples */
-export const sampleFormatUnsignedInteger = 1;
-
-/** The `SampleFormat` value of signed integer samples */
-export const sampleFormatSignedInteger = 2;
-
 /** What a parser reads about a channel of a multi-channel TIFF file */
 export type TIFFChannelMetadata = {
   name?: string;

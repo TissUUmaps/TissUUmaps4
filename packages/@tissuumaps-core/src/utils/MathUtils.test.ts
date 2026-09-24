@@ -108,6 +108,27 @@ describe("MathUtils", () => {
     });
   });
 
+  describe("roundToStepDecimals", () => {
+    it("rounds to whole numbers for steps of one or more", () => {
+      expect(MathUtils.roundToStepDecimals(12.6, 1)).toBe(13);
+      expect(MathUtils.roundToStepDecimals(12.6, 50)).toBe(13);
+    });
+
+    it("rounds to the decimal places of the step", () => {
+      expect(MathUtils.roundToStepDecimals(0.1 + 0.2, 0.1)).toBe(0.3);
+      expect(MathUtils.roundToStepDecimals(0.123, 0.05)).toBe(0.12);
+    });
+
+    it("throws error when the step is zero or negative", () => {
+      expect(() => MathUtils.roundToStepDecimals(1, 0)).toThrow(
+        "step must be strictly positive",
+      );
+      expect(() => MathUtils.roundToStepDecimals(1, -1)).toThrow(
+        "step must be strictly positive",
+      );
+    });
+  });
+
   describe("computeWeightedMedian", () => {
     it("returns the value at which the cumulative weight reaches half the total", () => {
       expect(
@@ -397,6 +418,40 @@ describe("MathUtils", () => {
           }),
         ).rejects.toThrow("aborted");
       });
+    });
+  });
+
+  describe("rebinHistogram", () => {
+    it("sums the bins that fall into each new bin", () => {
+      expect(
+        MathUtils.rebinHistogram(
+          { hist: [1, 2, 3, 4], range: [0, 3] },
+          [0, 4],
+          2,
+        ),
+      ).toEqual([3, 7]);
+    });
+
+    it("counts the upper bound in the last bin", () => {
+      expect(
+        MathUtils.rebinHistogram({ hist: [1, 2, 3], range: [0, 2] }, [0, 2], 2),
+      ).toEqual([1, 5]);
+    });
+
+    it("drops bins outside the range", () => {
+      expect(
+        MathUtils.rebinHistogram(
+          { hist: [1, 2, 3, 4], range: [0, 3] },
+          [1, 2],
+          2,
+        ),
+      ).toEqual([2, 3]);
+    });
+
+    it("puts all counts into the first bin for a degenerate range", () => {
+      expect(
+        MathUtils.rebinHistogram({ hist: [1, 2, 3], range: [0, 2] }, [5, 5], 3),
+      ).toEqual([6, 0, 0]);
     });
   });
 

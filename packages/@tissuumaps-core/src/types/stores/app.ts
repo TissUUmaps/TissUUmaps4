@@ -12,6 +12,15 @@ import type { ShapesData, ShapesDataProvider } from "../../storage/shapes";
 import type { TableData, TableDataProvider } from "../../storage/table";
 import type { InteractionMode } from "../interaction";
 
+/** A single image channel shown on its own, without touching the project */
+export type ImageChannelPreview = {
+  /** The ID of the previewed image */
+  imageId: string;
+
+  /** The index of the previewed channel (0-based) */
+  channelIndex: number;
+};
+
 /**
  * The state of the app store, holding what is not part of the project
  */
@@ -21,6 +30,9 @@ export type AppStoreState = {
 
   /** How mouse events in the viewer are currently interpreted */
   interactionMode: InteractionMode;
+
+  /** The channel previewed on its own while it is hovered, if any */
+  imageChannelPreview: ImageChannelPreview | null;
 
   /** The registered image data providers, by data source type */
   imageDataProviders: Map<
@@ -85,6 +97,16 @@ export type AppStoreActions = {
    * @param interactionMode - The interaction mode to switch to
    */
   setInteractionMode: (interactionMode: InteractionMode) => void;
+
+  /**
+   * Previews a single image channel on its own, or ends the preview
+   *
+   * @param imageChannelPreview - The image and channel to preview, or `null` to
+   * end the preview
+   */
+  setImageChannelPreview: (
+    imageChannelPreview: ImageChannelPreview | null,
+  ) => void;
 
   /**
    * Registers an image data provider

@@ -9,9 +9,29 @@ import {
 import type { Color } from "./primitives";
 
 /**
+ * How the channels of multi-channel image data are displayed
+ *
+ * - `composite`: all visible channels, blended in their colors
+ * - `grayscale`: the active channel alone, in gray
+ * - `color`: the active channel alone, in its color
+ */
+export const ImageChannelViewMode = {
+  composite: "composite",
+  grayscale: "grayscale",
+  color: "color",
+} as const;
+
+/** One of the channel view modes of the {@link ImageChannelViewMode} object */
+export type ImageChannelViewMode =
+  (typeof ImageChannelViewMode)[keyof typeof ImageChannelViewMode];
+
+/**
  * Default values for {@link RawImage}
  */
-export const imageDefaults = {} as const satisfies Partial<RawImage>;
+export const imageDefaults = {
+  channelViewMode: ImageChannelViewMode.composite,
+  activeChannel: 0,
+} as const satisfies Partial<RawImage>;
 
 /**
  * A channel of a two-dimensional raster image
@@ -84,6 +104,24 @@ export interface RawImage extends RawRenderedRasterDataObject<
    * not multi-channel, use the default values of {@link ImageChannel}.
    */
   channels?: ImageChannel[];
+
+  /**
+   * How the channels are displayed
+   *
+   * In the single-channel modes, only {@link RawImage.activeChannel} is shown,
+   * whatever the visibility of the channels; the channel colors are kept, and
+   * ignored in grayscale.
+   *
+   * @defaultValue {@link imageDefaults.channelViewMode}
+   */
+  channelViewMode?: ImageChannelViewMode;
+
+  /**
+   * The channel shown in the single-channel view modes (0-based)
+   *
+   * @defaultValue {@link imageDefaults.activeChannel}
+   */
+  activeChannel?: number;
 }
 
 /**

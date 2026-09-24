@@ -2,6 +2,12 @@ import { type GeoTIFF, GeoTIFFImage, globals } from "geotiff";
 
 const { WhiteIsZero, RGB, Palette, YCbCr } = globals.photometricInterpretations;
 
+/** The `SampleFormat` value of unsigned integer samples */
+const sampleFormatUnsignedInteger = 1;
+
+/** The `SampleFormat` value of signed integer samples */
+const sampleFormatSignedInteger = 2;
+
 /** Helpers shared by the TIFF parsers */
 export class TIFFUtils {
   /**
@@ -270,5 +276,30 @@ export class TIFFUtils {
         throw new Error(`Channel ${c} is a white-is-zero image.`);
       }
     });
+  }
+
+  /**
+   * Returns the integer type of the first sample of an image
+   *
+   * @param image - The image
+   * @returns The bits and signedness of the samples, 8 bits without a
+   * `BitsPerSample` tag, or `undefined` if they are not integers of at most 32
+   * bits
+   */
+  static getIntegerSampleType(
+    image: GeoTIFFImage,
+  ): { bits: number; signed: boolean } | undefined {
+    const format = image.getSampleFormat(0);
+    // geotiff returns 0 bits without a BitsPerSample tag, and decodes the
+    // samples as bytes
+    const bits = image.getBitsPerSample(0) || 8;
+    if (
+      (format !== sampleFormatUnsignedInteger &&
+        format !== sampleFormatSignedInteger) ||
+      bits > 32
+    ) {
+      return undefined;
+    }
+    return { bits, signed: format === sampleFormatSignedInteger };
   }
 }
