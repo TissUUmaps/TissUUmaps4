@@ -1,13 +1,12 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { ChevronDownIcon, FolderIcon, XIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { TableColumnQuerySuggestion } from "@tissuumaps/core";
 
 import { Input } from "@/components/ui/input";
-import { useTableDataLoader } from "@/hooks/useDataLoader";
+import { useLazyTableData } from "@/hooks/useLazyData";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@/stores/project";
 
 export type TableColumnInputProps = {
   tableId: string | null;
@@ -49,15 +48,7 @@ export function TableColumnInput({
   onValueChange,
   className,
 }: TableColumnInputProps) {
-  const table = useProjectStore(
-    (state) => state.tables.find((table) => table.id === tableId) ?? null,
-  );
-  const loadTable = useTableDataLoader();
-  const loadTableData = useCallback(
-    async (signal?: AbortSignal) =>
-      table !== null ? await loadTable(table, { signal }) : null,
-    [table, loadTable],
-  );
+  const loadTableData = useLazyTableData(tableId);
 
   const [text, setText] = useState(value ?? "");
   const [invalid, setInvalid] = useState(false);
@@ -81,7 +72,9 @@ export function TableColumnInput({
     const abortController = new AbortController();
     startSuggestTransition(async () => {
       try {
-        const tableData = await loadTableData(abortController.signal);
+        const tableData = await loadTableData({
+          signal: abortController.signal,
+        });
         const newSuggestions =
           (await tableData?.suggestColumnQueries(text, {
             signal: abortController.signal,
@@ -120,7 +113,9 @@ export function TableColumnInput({
     commitAbortControllerRef.current = abortController;
     startCommitTransition(async () => {
       try {
-        const tableData = await loadTableData(abortController.signal);
+        const tableData = await loadTableData({
+          signal: abortController.signal,
+        });
         const column =
           (await tableData?.resolveColumnQuery(query, {
             signal: abortController.signal,
