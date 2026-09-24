@@ -48,14 +48,6 @@ function addGeometry(
   console.warn(`Unsupported geometry type: ${geometry.type}`);
 }
 
-/** Why a point geometry column cannot be read as shapes */
-function pointColumnMessage(column: string): string {
-  return (
-    `Geometry column "${column}" holds points, which are read as the ` +
-    `"${column}[x]" and "${column}[y]" columns of a table`
-  );
-}
-
 export type ParquetRequest<TOp extends string = string> = {
   op: TOp;
 };
@@ -509,8 +501,11 @@ async function handleShapesRequest(
         : "Parquet file has no GeoParquet geometry column",
     );
   }
+  const pointColumnMessage =
+    `Geometry column "${geoColumn.name}" holds points, which are read as ` +
+    `the "${geoColumn.name}[x]" and "${geoColumn.name}[y]" columns of a table`;
   if (ParquetMetadataUtils.isPointColumn(geoColumn)) {
-    throw new Error(pointColumnMessage(geoColumn.name));
+    throw new Error(pointColumnMessage);
   }
   // Progress only tracks the geometry, which dwarfs the ID and name columns
   const { ids: rowIds, names: rowNames } = await readIdsAndNames(
@@ -549,7 +544,7 @@ async function handleShapesRequest(
   if (builder.size === 0) {
     throw new Error(
       numPoints > 0
-        ? pointColumnMessage(geoColumn.name)
+        ? pointColumnMessage
         : `No valid geometries found in column "${geoColumn.name}"`,
     );
   }
