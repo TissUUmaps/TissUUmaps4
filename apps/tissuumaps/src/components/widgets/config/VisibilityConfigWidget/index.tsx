@@ -1,8 +1,7 @@
 import { Field, FieldLabel } from "@/components/common/field";
-import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Switch } from "@/components/ui/switch";
-import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
+import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { useProjectStore } from "@/stores/project";
 
 import type { VisibilityConfigWidgetAdapter } from "./adapter";
@@ -81,19 +80,14 @@ function FromVisibilityConfigWidget({
     setCurrentFromColumn: setColumn,
   } = adapter;
 
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(tableId);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
         <FieldLabel>Table column</FieldLabel>
-        <SimpleAsyncCombobox
-          suggestQueries={suggestTableColumnQueries}
-          getItem={resolveTableColumnQuery}
-          itemQuery={(column) => column}
-          selectedItem={column}
-          onSelectedItemChange={setColumn}
+        <TableColumnInput
+          tableId={tableId}
+          value={column}
+          onValueChange={setColumn}
         />
       </Field>
     </div>
@@ -119,19 +113,14 @@ function GroupByVisibilityConfigWidget({
 
   const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
 
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(tableId);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
         <FieldLabel>Source column</FieldLabel>
-        <SimpleAsyncCombobox
-          suggestQueries={suggestTableColumnQueries}
-          getItem={resolveTableColumnQuery}
-          itemQuery={(column) => column}
-          selectedItem={column}
-          onSelectedItemChange={setColumn}
+        <TableColumnInput
+          tableId={tableId}
+          value={column}
+          onValueChange={setColumn}
         />
       </Field>
       <Field>

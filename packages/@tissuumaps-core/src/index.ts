@@ -158,7 +158,11 @@ export {
   type ShapesDataProvider,
   type ShapesGeometry,
 } from "./storage/shapes";
-export { type TableData, type TableDataProvider } from "./storage/table";
+export {
+  type TableColumnQuerySuggestion,
+  type TableData,
+  type TableDataProvider,
+} from "./storage/table";
 
 export {
   type FloatArray,

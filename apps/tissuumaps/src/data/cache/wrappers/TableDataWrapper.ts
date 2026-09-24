@@ -1,6 +1,7 @@
 import type {
   GenericArray,
   ProgressCallback,
+  TableColumnQuerySuggestion,
   TableData,
 } from "@tissuumaps/core";
 
@@ -52,7 +53,7 @@ export class TableDataWrapper
   suggestColumnQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },
-  ): Promise<string[]> {
+  ): Promise<TableColumnQuerySuggestion[]> {
     return this.data.suggestColumnQueries(currentQuery, options);
   }
 

@@ -1,8 +1,7 @@
 import { Field, FieldLabel } from "@/components/common/field";
-import { SimpleAsyncCombobox } from "@/components/common/simple-combobox";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { markers } from "@/components/markers";
-import { useTableColumnSelector } from "@/hooks/useTableColumnSelector";
+import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { useProjectStore } from "@/stores/project";
 
 import type { MarkerConfigWidgetAdapter } from "./adapter";
@@ -84,19 +83,14 @@ function FromMarkerConfigWidget({
     setCurrentFromColumn: setColumn,
   } = adapter;
 
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(tableId);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
         <FieldLabel>Table column</FieldLabel>
-        <SimpleAsyncCombobox
-          suggestQueries={suggestTableColumnQueries}
-          getItem={resolveTableColumnQuery}
-          itemQuery={(column) => column}
-          selectedItem={column}
-          onSelectedItemChange={setColumn}
+        <TableColumnInput
+          tableId={tableId}
+          value={column}
+          onValueChange={setColumn}
         />
       </Field>
     </div>
@@ -122,19 +116,14 @@ function GroupByMarkerConfigWidget({
 
   const markerMaps = useProjectStore((state) => state.markerMaps);
 
-  const { suggestTableColumnQueries, resolveTableColumnQuery } =
-    useTableColumnSelector(tableId);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
         <FieldLabel>Table column</FieldLabel>
-        <SimpleAsyncCombobox
-          suggestQueries={suggestTableColumnQueries}
-          getItem={resolveTableColumnQuery}
-          itemQuery={(column) => column}
-          selectedItem={column}
-          onSelectedItemChange={setColumn}
+        <TableColumnInput
+          tableId={tableId}
+          value={column}
+          onValueChange={setColumn}
         />
       </Field>
       <Field>

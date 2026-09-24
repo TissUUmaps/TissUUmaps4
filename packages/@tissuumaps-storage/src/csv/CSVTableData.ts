@@ -2,6 +2,7 @@ import {
   type GenericArray,
   MathUtils,
   type NumericArray,
+  type TableColumnQuerySuggestion,
   type TableData,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -43,16 +44,33 @@ export class CSVTableData implements TableData {
     return this._names;
   }
 
-  suggestColumnQueries(currentQuery: string): Promise<string[]> {
-    const filteredColumns = this._columns.filter((column) =>
-      column.includes(currentQuery),
-    );
-    return Promise.resolve(filteredColumns);
+  suggestColumnQueries(
+    currentQuery: string,
+  ): Promise<TableColumnQuerySuggestion[]> {
+    const lowerCaseQuery = currentQuery.toLowerCase();
+    const matches: string[] = [];
+    const others: string[] = [];
+    for (const column of this._columns) {
+      if (column === currentQuery) {
+        matches.unshift(column);
+      } else if (column.toLowerCase().includes(lowerCaseQuery)) {
+        matches.push(column);
+      } else {
+        others.push(column);
+      }
+    }
+    return Promise.resolve([...matches, ...others].map((query) => ({ query })));
   }
 
   resolveColumnQuery(query: string): Promise<string | null> {
-    const column = this._columns.includes(query) ? query : null;
-    return Promise.resolve(column);
+    if (this._columns.includes(query)) {
+      return Promise.resolve(query);
+    }
+    const lowerCaseQuery = query.toLowerCase();
+    const matches = this._columns.filter(
+      (column) => column.toLowerCase() === lowerCaseQuery,
+    );
+    return Promise.resolve(matches.length === 1 ? matches[0]! : null);
   }
 
   loadValues<T>(column: string): Promise<GenericArray<T>> {

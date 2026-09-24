@@ -3,6 +3,23 @@ import type { GenericArray } from "../types/arrays";
 import type { ProgressCallback } from "../types/callbacks";
 import type { DataProvider, ItemsData } from "./base";
 
+/** A column query suggested by `TableData.suggestColumnQueries` */
+export type TableColumnQuerySuggestion = {
+  /** The suggested query, in the provider's own format */
+  query: string;
+
+  /**
+   * Whether the query continues into a group of columns
+   *
+   * A group suggestion does not resolve to a column; it continues the query,
+   * e.g. into the columns of a group or a matrix. Other suggestions are
+   * expected to resolve to an exact column name.
+   *
+   * @defaultValue false
+   */
+  group?: boolean;
+};
+
 /**
  * Loaded tabular data providing column-wise access
  *
@@ -12,16 +29,19 @@ import type { DataProvider, ItemsData } from "./base";
  */
 export interface TableData extends ItemsData {
   /**
-   * Returns column name suggestions matching the current query
+   * Returns column query suggestions for the current query
    *
-   * @param currentQuery - The partial column name to autocomplete
+   * The query format is up to the provider. Suggestions matching the current
+   * query come first.
+   *
+   * @param currentQuery - The partial column query to autocomplete
    * @param options - Optional abort signal
-   * @returns A list of suggested column queries matching the current one
+   * @returns A list of suggested column queries
    */
   suggestColumnQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },
-  ): Promise<string[]>;
+  ): Promise<TableColumnQuerySuggestion[]>;
 
   /**
    * Resolves a query to an exact column name
