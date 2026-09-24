@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  isProjectFilePickerSupported,
   isWorkspaceSupported,
   pickProjectFile,
   pickWorkspace,
@@ -42,18 +41,6 @@ describe("workspace", () => {
     it("returns true with the picker", () => {
       stubDirectoryPicker(() => Promise.resolve(directory));
       expect(isWorkspaceSupported()).toBe(true);
-    });
-  });
-
-  describe("isProjectFilePickerSupported", () => {
-    it("returns false without the picker", () => {
-      stubOpenFilePicker(null);
-      expect(isProjectFilePickerSupported()).toBe(false);
-    });
-
-    it("returns true with the picker", () => {
-      stubOpenFilePicker(() => Promise.resolve([projectFile]));
-      expect(isProjectFilePickerSupported()).toBe(true);
     });
   });
 
