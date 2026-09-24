@@ -206,9 +206,10 @@ function ContrastLimitInput({
     }
   };
   return (
-    <InputGroup className={cn("w-28", className)}>
-      <InputGroupAddon>{label}</InputGroupAddon>
+    <InputGroup className={cn("h-7 w-24", className)}>
+      <InputGroupAddon className="text-xs">{label}</InputGroupAddon>
       <InputGroupInput
+        className="h-full text-xs md:text-xs"
         type="number"
         inputMode="decimal"
         aria-label={label}

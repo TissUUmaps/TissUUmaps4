@@ -57,7 +57,7 @@ export function ChannelSettingsWidget({
       multiple
       value={expandedChannels}
       onValueChange={(value) => setExpandedChannels(value as number[])}
-      className="gap-y-2"
+      className="gap-y-1"
     >
       {Array.from({ length: sizeC }, (_, c) => (
         <ChannelSettingsRow
@@ -71,8 +71,9 @@ export function ChannelSettingsWidget({
   );
 
   return (
-    <div className={cn("flex flex-col gap-y-2", className)}>
+    <div className={cn("flex flex-col gap-y-2 text-sm", className)}>
       <ToggleGroup
+        size="sm"
         value={[image.channelViewMode]}
         onValueChange={(value) => {
           if (value.length > 0) {
@@ -153,14 +154,14 @@ function ChannelSettingsRow({
       disabled={contrastLimits === undefined}
       className={className}
     >
-      <AccordionHeader className="gap-x-2">
-        <AccordionTriggerRightDownIcon />
+      <AccordionHeader className="gap-x-1.5">
+        <AccordionTriggerRightDownIcon className="[&_svg]:size-4" />
         {image.channelViewMode !== ImageChannelViewMode.composite ? (
           <RadioGroupItem value={String(c)} aria-label={name} />
         ) : (
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-xs"
             aria-label={visible ? "Hide channel" : "Show channel"}
             onClick={() => {
               updateChannel({ visibility: !visible });
@@ -181,7 +182,7 @@ function ChannelSettingsRow({
               onColorChange={(newColor) => updateChannel({ color: newColor })}
               // positions the sr-only label, which would otherwise overflow the
               // panel's scroll container
-              className="relative size-6 p-0 border-input shadow-xs"
+              className="relative size-4 p-0 border-input shadow-xs"
             >
               <span className="sr-only">Channel color</span>
               <span
@@ -197,11 +198,12 @@ function ChannelSettingsRow({
           </span>
         </AccordionTrigger>
         <span className="flex flex-row items-center gap-x-1">
-          <span className="text-muted-foreground text-sm" aria-hidden>
+          <span className="text-muted-foreground text-xs" aria-hidden>
             &alpha;
           </span>
           <Slider
-            className="w-16"
+            className="w-14"
+            thumbAlignment="edge"
             thumbLabels={["Channel opacity"]}
             min={0}
             max={1}
@@ -213,7 +215,7 @@ function ChannelSettingsRow({
         </span>
       </AccordionHeader>
       {contrastLimits !== undefined ? (
-        <AccordionPanel className="pt-1 pl-8" onKeyDown={stopRadioGroupKeys}>
+        <AccordionPanel className="pt-1 pl-5" onKeyDown={stopRadioGroupKeys}>
           <ContrastRangeWidget
             contrastLimits={contrastLimits}
             histogram={data.getChannelHistogram?.(c)}
