@@ -3,6 +3,7 @@ import OpenSeadragon from "openseadragon";
 
 import {
   type Dims,
+  type Rect,
   type SimilarityTransform,
   type TileSourceConfig,
   TransformUtils,
@@ -13,13 +14,33 @@ import {
  * geometry of OpenSeadragon tiled images
  */
 export class OpenSeadragonUtils {
-  /** A single fully transparent pixel, as a PNG data URL */
-  static readonly transparentPixelUrl =
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR4AQEFAPr/AAAAAAAABQABZHiVOAAAAABJRU5ErkJggg==";
+  private static readonly _relativeBoundsTolerance = 1e-9;
+  private static _transparentBlackPixelUrl: string | undefined;
+  private static _opaqueBlackPixelUrl: string | undefined;
 
-  /** A single opaque black pixel, as a PNG data URL */
-  static readonly blackPixelUrl =
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAcCBlCwAAAABJRU5ErkJggg==";
+  /**
+   * A single transparent pixel, as a PNG data URL
+   *
+   * Created on first access rather than on import, as creating it requires a
+   * DOM with canvas support (see {@link createPixelUrl}).
+   */
+  static get transparentBlackPixelUrl(): string {
+    OpenSeadragonUtils._transparentBlackPixelUrl ??=
+      OpenSeadragonUtils.createPixelUrl(0, 0, 0, 0);
+    return OpenSeadragonUtils._transparentBlackPixelUrl;
+  }
+
+  /**
+   * A single opaque black pixel, as a PNG data URL
+   *
+   * Created on first access rather than on import, as creating it requires a
+   * DOM with canvas support (see {@link createPixelUrl}).
+   */
+  static get opaqueBlackPixelUrl(): string {
+    OpenSeadragonUtils._opaqueBlackPixelUrl ??=
+      OpenSeadragonUtils.createPixelUrl(0, 0, 0, 1);
+    return OpenSeadragonUtils._opaqueBlackPixelUrl;
+  }
 
   /**
    * Creates a tile source that fills the given size with a single tile
@@ -84,5 +105,63 @@ export class OpenSeadragonUtils {
       rotation,
       position: new OpenSeadragon.Point(translation.x, translation.y),
     };
+  }
+
+  /**
+   * Creates a PNG data URL of a single pixel in the given color
+   *
+   * The pixel is drawn onto a 1x1 canvas and exported as PNG, so this requires
+   * a DOM with canvas support. As canvases store premultiplied colors, the
+   * color components of a translucent pixel may not round-trip exactly; fully
+   * transparent and fully opaque pixels do.
+   *
+   * @param r - Red component, between 0 and 255
+   * @param g - Green component, between 0 and 255
+   * @param b - Blue component, between 0 and 255
+   * @param a - Alpha component, between 0 (transparent) and 1 (opaque)
+   * @returns The PNG data URL
+   * @throws Error if no 2D canvas context could be created
+   */
+  static createPixelUrl(r: number, g: number, b: number, a: number): string {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext("2d");
+    if (ctx === null) {
+      throw new Error("Failed to create canvas context");
+    }
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+    ctx.fillRect(0, 0, 1, 1);
+    return canvas.toDataURL("image/png");
+  }
+
+  /**
+   * Returns whether a tiled image has the given bounds
+   *
+   * The bounds are compared with a tolerance relative to the size of `bounds`,
+   * as OpenSeadragon derives the height of a tiled image from its width and
+   * the aspect ratio of its tile source, which can be off by a rounding error.
+   * Callers that resize a tiled image whenever this returns `false` would
+   * otherwise resize it on every call.
+   *
+   * @param tiledImage - The tiled image to check
+   * @param bounds - The bounds to compare against, in world coordinates
+   * @returns Whether the bounds of `tiledImage` equal `bounds`, within the
+   * tolerance
+   */
+  static hasBounds(
+    tiledImage: OpenSeadragon.TiledImage,
+    bounds: Rect,
+  ): boolean {
+    const { x, y, width, height } = tiledImage.getBounds();
+    const tolerance =
+      OpenSeadragonUtils._relativeBoundsTolerance *
+      Math.max(bounds.width, bounds.height);
+    return (
+      Math.abs(x - bounds.x) <= tolerance &&
+      Math.abs(y - bounds.y) <= tolerance &&
+      Math.abs(width - bounds.width) <= tolerance &&
+      Math.abs(height - bounds.height) <= tolerance
+    );
   }
 }

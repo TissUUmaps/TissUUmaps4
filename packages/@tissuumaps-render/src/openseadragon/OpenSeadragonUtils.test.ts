@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
 // OpenSeadragon touches the DOM when imported
 import { vec2 } from "gl-matrix";
+import OpenSeadragon from "openseadragon";
 import { describe, expect, it } from "vitest";
 
-import { type SimilarityTransform, identityTransform } from "@tissuumaps/core";
+import {
+  type Rect,
+  type SimilarityTransform,
+  identityTransform,
+} from "@tissuumaps/core";
 
 import { WebGLUtils } from "../webgl/WebGLUtils";
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
@@ -90,7 +95,61 @@ function webglCorners(
   });
 }
 
+/**
+ * Creates a stand-in for a tiled image that has the given bounds
+ *
+ * {@link OpenSeadragonUtils.hasBounds} only reads the bounds of a tiled image,
+ * so a real one, which needs a viewer, is not required.
+ */
+function tiledImageWithBounds({
+  x,
+  y,
+  width,
+  height,
+}: Rect): OpenSeadragon.TiledImage {
+  return {
+    getBounds: () => new OpenSeadragon.Rect(x, y, width, height),
+  } as unknown as OpenSeadragon.TiledImage;
+}
+
 describe("OpenSeadragonUtils", () => {
+  describe("createPixelTileSource", () => {
+    it("declares a single level holding a single tile of the given size", () => {
+      expect(
+        OpenSeadragonUtils.createPixelTileSource(
+          { width: 300, height: 120 },
+          "pixel-url",
+        ),
+      ).toMatchObject({
+        width: 300,
+        height: 120,
+        tileSize: 300,
+        minLevel: 0,
+        maxLevel: 0,
+      });
+    });
+
+    it("sizes the tile to the larger side", () => {
+      expect(
+        OpenSeadragonUtils.createPixelTileSource(
+          { width: 40, height: 90 },
+          "pixel-url",
+        ),
+      ).toMatchObject({ tileSize: 90 });
+    });
+
+    it("serves the pixel URL for every tile", () => {
+      // TileSourceConfig is an opaque object type, so narrow it to what the
+      // pixel tile source is known to provide
+      const { getTileUrl } = OpenSeadragonUtils.createPixelTileSource(
+        { width: 40, height: 90 },
+        "pixel-url",
+      ) as { getTileUrl: (level: number, x: number, y: number) => string };
+      expect(getTileUrl(0, 0, 0)).toBe("pixel-url");
+      expect(getTileUrl(3, 2, 1)).toBe("pixel-url");
+    });
+  });
+
   describe("getTiledImageTransform", () => {
     it("returns the content size at the origin for identity transforms", () => {
       const geom = OpenSeadragonUtils.getTiledImageTransform(
@@ -137,6 +196,53 @@ describe("OpenSeadragonUtils", () => {
         contentSize,
       );
       expect(geom.flip).toBe(false);
+    });
+  });
+
+  describe("hasBounds", () => {
+    const bounds = { x: 10, y: -20, width: 300, height: 120 };
+
+    it("returns true for a tiled image with exactly the given bounds", () => {
+      expect(
+        OpenSeadragonUtils.hasBounds(tiledImageWithBounds(bounds), bounds),
+      ).toBe(true);
+    });
+
+    it("tolerates a rounding error in the derived height", () => {
+      const tiledImage = tiledImageWithBounds({
+        ...bounds,
+        height: bounds.height * (1 + 1e-14),
+      });
+      expect(OpenSeadragonUtils.hasBounds(tiledImage, bounds)).toBe(true);
+    });
+
+    it.each([
+      ["x", { ...bounds, x: bounds.x + 1 }],
+      ["y", { ...bounds, y: bounds.y - 1 }],
+      ["width", { ...bounds, width: bounds.width + 1 }],
+      ["height", { ...bounds, height: bounds.height - 1 }],
+    ])("returns false if the %s differs", (_, otherBounds) => {
+      expect(
+        OpenSeadragonUtils.hasBounds(tiledImageWithBounds(otherBounds), bounds),
+      ).toBe(false);
+    });
+
+    it("scales the tolerance with the size of the bounds", () => {
+      const offset = 1e-6;
+      const large = { x: 0, y: 0, width: 1e6, height: 1e6 };
+      const small = { x: 0, y: 0, width: 1, height: 1 };
+      expect(
+        OpenSeadragonUtils.hasBounds(
+          tiledImageWithBounds({ ...large, x: offset }),
+          large,
+        ),
+      ).toBe(true);
+      expect(
+        OpenSeadragonUtils.hasBounds(
+          tiledImageWithBounds({ ...small, x: offset }),
+          small,
+        ),
+      ).toBe(false);
     });
   });
 

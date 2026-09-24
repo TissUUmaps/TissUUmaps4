@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import type { Rect } from "@tissuumaps/core";
+import { type Color, ColorUtils, type Rect } from "@tissuumaps/core";
 import {
   OpenSeadragonContext,
   OpenSeadragonImageRenderer,
@@ -16,7 +16,10 @@ type OS = {
   labelsRenderer: OpenSeadragonLabelsRenderer;
 };
 
-export function useOpenSeadragon(adapter: ViewerAdapter) {
+export function useOpenSeadragon(
+  adapter: ViewerAdapter,
+  backgroundColor: Color,
+) {
   const {
     projectInstanceId,
     layers,
@@ -37,117 +40,124 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
   const [osReady, setOSReady] = useState(false);
 
   const osOptionsRef = useRef(osOptions);
+  const backgroundColorHex = ColorUtils.toHex(backgroundColor);
 
   const [syncImages, dispatchSyncImages] = useReducer((x) => x + 1, 0);
   const [syncLabels, dispatchSyncLabels] = useReducer((x) => x + 1, 0);
   const requestedSyncImagesRef = useRef(0);
   const requestedSyncLabelsRef = useRef(0);
 
-  const initOS = useCallback((viewerElementOrNull: HTMLDivElement | null) => {
-    if (viewerElementOrNull === null) {
-      return () => {};
-    }
-    const abortController = new AbortController();
-    const viewerElement = viewerElementOrNull;
-
-    async function startOS() {
-      abortController.signal.throwIfAborted();
-      const context = new OpenSeadragonContext(
-        viewerElement,
-        osOptionsRef.current.viewerOptions,
-      );
-      let imageRenderer: OpenSeadragonImageRenderer | undefined;
-      try {
-        imageRenderer = await new Promise<OpenSeadragonImageRenderer>(
-          (resolve, reject) => {
-            try {
-              const imageRenderer = new OpenSeadragonImageRenderer(
-                context,
-                () => resolve(imageRenderer),
-                reject,
-                { anchorIndex: 0, signal: abortController.signal },
-              );
-            } catch (error) {
-              reject(
-                new Error("Error creating image renderer", { cause: error }),
-              );
-            }
-          },
-        );
-        abortController.signal.throwIfAborted(); // image renderer does not throw on abort
-      } catch (error) {
-        if (imageRenderer !== undefined) {
-          await imageRenderer.destroy();
-        }
-        await context.destroy();
-        throw error;
+  const initOS = useCallback(
+    (viewerElementOrNull: HTMLDivElement | null) => {
+      if (viewerElementOrNull === null) {
+        return () => {};
       }
-      let labelsRenderer: OpenSeadragonLabelsRenderer | undefined;
-      try {
-        labelsRenderer = await new Promise<OpenSeadragonLabelsRenderer>(
-          (resolve, reject) => {
-            try {
-              const labelsRenderer = new OpenSeadragonLabelsRenderer(
-                context,
-                () => resolve(labelsRenderer),
-                reject,
-                { anchorIndex: 1, signal: abortController.signal },
-              );
-            } catch (error) {
-              reject(
-                new Error("Error creating labels renderer", { cause: error }),
-              );
-            }
-          },
+      const abortController = new AbortController();
+      const viewerElement = viewerElementOrNull;
+
+      async function startOS() {
+        abortController.signal.throwIfAborted();
+        const context = new OpenSeadragonContext(
+          viewerElement,
+          ColorUtils.fromHex(backgroundColorHex),
+          osOptionsRef.current.viewerOptions,
         );
-        abortController.signal.throwIfAborted(); // labels renderer does not throw on abort
-      } catch (error) {
-        if (imageRenderer !== undefined) {
-          await imageRenderer.destroy();
+        let imageRenderer: OpenSeadragonImageRenderer | undefined;
+        try {
+          imageRenderer = await new Promise<OpenSeadragonImageRenderer>(
+            (resolve, reject) => {
+              try {
+                const imageRenderer = new OpenSeadragonImageRenderer(
+                  context,
+                  () => resolve(imageRenderer),
+                  reject,
+                  { anchorIndex: 1, signal: abortController.signal },
+                );
+              } catch (error) {
+                reject(
+                  new Error("Error creating image renderer", { cause: error }),
+                );
+              }
+            },
+          );
+          abortController.signal.throwIfAborted(); // image renderer does not throw on abort
+        } catch (error) {
+          if (imageRenderer !== undefined) {
+            await imageRenderer.destroy();
+          }
+          await context.destroy();
+          throw error;
         }
-        if (labelsRenderer !== undefined) {
+        let labelsRenderer: OpenSeadragonLabelsRenderer | undefined;
+        try {
+          labelsRenderer = await new Promise<OpenSeadragonLabelsRenderer>(
+            (resolve, reject) => {
+              try {
+                const labelsRenderer = new OpenSeadragonLabelsRenderer(
+                  context,
+                  () => resolve(labelsRenderer),
+                  reject,
+                  { anchorIndex: 2, signal: abortController.signal },
+                );
+              } catch (error) {
+                reject(
+                  new Error("Error creating labels renderer", { cause: error }),
+                );
+              }
+            },
+          );
+          abortController.signal.throwIfAborted(); // labels renderer does not throw on abort
+        } catch (error) {
+          if (imageRenderer !== undefined) {
+            await imageRenderer.destroy();
+          }
+          if (labelsRenderer !== undefined) {
+            await labelsRenderer.destroy();
+          }
+          await context.destroy();
+          throw error;
+        }
+        const os = { viewerElement, context, imageRenderer, labelsRenderer };
+        osRef.current = os;
+        setOSReady(true);
+        return os;
+      }
+
+      async function stopOS() {
+        const os = osRef.current;
+        setOSReady(false);
+        osRef.current = null;
+        if (os !== null) {
+          const { context, imageRenderer, labelsRenderer } = os;
+          await imageRenderer.destroy();
           await labelsRenderer.destroy();
+          await context.destroy();
         }
-        await context.destroy();
-        throw error;
       }
-      const os = { viewerElement, context, imageRenderer, labelsRenderer };
-      osRef.current = os;
-      setOSReady(true);
-      return os;
-    }
 
-    async function stopOS() {
-      const os = osRef.current;
-      setOSReady(false);
-      osRef.current = null;
-      if (os !== null) {
-        const { context, imageRenderer, labelsRenderer } = os;
-        await imageRenderer.destroy();
-        await labelsRenderer.destroy();
-        await context.destroy();
-      }
-    }
-
-    osPromiseRef.current = osPromiseRef.current.then(startOS).catch((error) => {
-      if (!abortController.signal.aborted) {
-        console.error("Error starting OpenSeadragon", error);
-      }
-      return null;
-    });
-    return () => {
-      abortController.abort();
       osPromiseRef.current = osPromiseRef.current
-        .then(async () => {
-          await stopOS();
-          return null;
-        })
+        .then(startOS)
         .catch((error) => {
-          console.error("Error stopping OpenSeadragon", error);
+          if (!abortController.signal.aborted) {
+            console.error("Error starting OpenSeadragon", error);
+          }
           return null;
         });
-    };
-  }, []);
+      return () => {
+        abortController.abort();
+        osPromiseRef.current = osPromiseRef.current
+          .then(async () => {
+            await stopOS();
+            return null;
+          })
+          .catch((error) => {
+            console.error("Error stopping OpenSeadragon", error);
+            return null;
+          });
+      };
+    },
+    [backgroundColorHex],
+  );
 
   useEffect(() => {
     osOptionsRef.current = osOptions;
@@ -276,28 +286,18 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
     syncLabels,
   ]);
 
-  const updateOSExternalBounds = useCallback(
-    (extraBounds: Rect[]) => {
+  const updateOSContentBounds = useCallback(
+    (contentBounds: Rect[]) => {
       const abortController = new AbortController();
       if (osReady && osRef.current !== null) {
-        osRef.current.imageRenderer.setExtraBounds(extraBounds);
-        osRef.current.labelsRenderer.setExtraBounds(extraBounds);
-        osRef.current.imageRenderer
-          .updateBounds({ signal: abortController.signal })
+        osRef.current.context
+          .setContentBounds(osRef.current, contentBounds, {
+            signal: abortController.signal,
+          })
           .catch((error) => {
             if (!abortController.signal.aborted) {
               console.error(
-                "Error updating OpenSeadragon image world bounds",
-                error,
-              );
-            }
-          });
-        osRef.current.labelsRenderer
-          .updateBounds({ signal: abortController.signal })
-          .catch((error) => {
-            if (!abortController.signal.aborted) {
-              console.error(
-                "Error updating OpenSeadragon labels world bounds",
+                "Error updating OpenSeadragon content bounds",
                 error,
               );
             }
@@ -310,5 +310,5 @@ export function useOpenSeadragon(adapter: ViewerAdapter) {
     [osReady],
   );
 
-  return { initOS, osRef, osReady, updateOSExternalBounds };
+  return { initOS, osRef, osReady, updateOSContentBounds };
 }

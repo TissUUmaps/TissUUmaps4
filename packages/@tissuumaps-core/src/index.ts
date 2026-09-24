@@ -32,6 +32,7 @@ export {
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
+  findGroupByConfigMap,
   isGroupByConfig,
   isRandomConfig,
   type ColorConfig,
