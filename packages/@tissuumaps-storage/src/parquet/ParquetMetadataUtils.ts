@@ -57,9 +57,6 @@ type PandasMetadata = {
   columns?: { field_name?: string; pandas_type?: string }[];
 };
 
-/** Matches the pandas dtype of a column TissUUmaps can key its rows by */
-const integerPandasType = /^u?int(8|16|32|64)?$/i;
-
 /**
  * Helpers for the metadata a Parquet file carries in its footer
  *
@@ -70,6 +67,9 @@ const integerPandasType = /^u?int(8|16|32|64)?$/i;
  * geometries can be used wherever a numeric column is expected.
  */
 export class ParquetMetadataUtils {
+  /** Matches the pandas dtype of a column TissUUmaps can key its rows by */
+  private static readonly _integerPandasType = /^u?int(8|16|32|64)?$/i;
+
   /** Reads the 2D bounds of a `bbox`, which lists Z bounds too for 3D columns */
   private static _readBBox(
     bbox: number[] | undefined,
@@ -194,7 +194,8 @@ export class ParquetMetadataUtils {
     }
     const { pandas_type } =
       columns.find(({ field_name }) => field_name === indexColumn) ?? {};
-    return pandas_type !== undefined && integerPandasType.test(pandas_type)
+    return pandas_type !== undefined &&
+      ParquetMetadataUtils._integerPandasType.test(pandas_type)
       ? indexColumn
       : undefined;
   }
