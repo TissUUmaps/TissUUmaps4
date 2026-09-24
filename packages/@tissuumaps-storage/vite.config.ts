@@ -31,6 +31,10 @@ export default defineConfig(({ mode }) => ({
         index: resolve(import.meta.dirname, "src/index.ts"),
         csv: resolve(import.meta.dirname, "src/csv/index.ts"),
         geojson: resolve(import.meta.dirname, "src/geojson/index.ts"),
+        hdf5: resolve(
+          import.meta.dirname,
+          "src/hierarchical-tables/hdf5/index.ts",
+        ),
         "ome-zarr": resolve(import.meta.dirname, "src/ome-zarr/index.ts"),
         openseadragon: resolve(
           import.meta.dirname,
@@ -42,9 +46,10 @@ export default defineConfig(({ mode }) => ({
       },
       formats: ["es"],
     },
-    // Worker-only deps (hyparquet, hyparquet-compressors) are intentionally NOT
-    // externalized: the workers are imported with `?worker&inline`, so they must
-    // be self-contained and their deps get bundled into the inline worker.
+    // Worker-only deps (hyparquet, hyparquet-compressors, h5wasm) are
+    // intentionally NOT externalized: the workers are imported with
+    // `?worker&inline`, so they must be self-contained and their deps get
+    // bundled into the inline worker.
     rolldownOptions: {
       external: [
         "@tissuumaps/core",

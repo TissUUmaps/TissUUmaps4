@@ -1,0 +1,45 @@
+import { SourceUtils } from "@tissuumaps/core";
+
+import type { HierarchicalTable } from "../HierarchicalTable";
+import { HierarchicalTableDataProviderBase } from "../HierarchicalTableDataProviderBase";
+import { HierarchicalTableWorkerClient } from "../worker/HierarchicalTableWorkerClient";
+import type { HDF5TableDataSource } from "./HDF5TableDataSource";
+import HDF5WorkerScript from "./hdf5.worker?worker&inline";
+
+/**
+ * Reads tables from HDF5 files, including AnnData `.h5ad` files
+ *
+ * h5wasm reads synchronously, so the file is opened in a Web Worker that
+ * lives as long as the table.
+ */
+export class HDF5TableDataProvider extends HierarchicalTableDataProviderBase<HDF5TableDataSource> {
+  readonly name = "HDF5";
+
+  protected async openHierarchicalTable(
+    normalizedSource: string,
+    options: {
+      signal?: AbortSignal;
+      workspace: FileSystemDirectoryHandle | null;
+    },
+  ): Promise<HierarchicalTable> {
+    const { signal, workspace } = options;
+    signal?.throwIfAborted();
+    const resolvedSource = await SourceUtils.resolveSourceFile(
+      normalizedSource,
+      workspace,
+      { signal },
+    );
+    let source;
+    if (typeof resolvedSource === "string") {
+      source = resolvedSource;
+    } else {
+      source = await resolvedSource.getFile();
+      signal?.throwIfAborted(); // getFile() does not throw on abort
+    }
+    return await HierarchicalTableWorkerClient.open(
+      new HDF5WorkerScript(),
+      source,
+      { signal },
+    );
+  }
+}

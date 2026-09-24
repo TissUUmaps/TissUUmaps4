@@ -1,6 +1,7 @@
 import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
+  HDF5TableDataProvider,
   OMEZarrImageDataProvider,
   OMEZarrLabelsDataProvider,
   OpenSeadragonImageDataProvider,
@@ -11,6 +12,7 @@ import {
   TablePointsDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
+  hdf5TableDataSourceType,
   omeZarrImageDataSourceType,
   omeZarrLabelsDataSourceType,
   openSeadragonImageDataSourceType,
@@ -77,5 +79,9 @@ export function enableBuiltInDataProviders(): void {
   appStoreState.registerTableDataProvider(
     parquetTableDataSourceType,
     new ParquetTableDataProvider(),
+  );
+  appStoreState.registerTableDataProvider(
+    hdf5TableDataSourceType,
+    new HDF5TableDataProvider(),
   );
 }

@@ -121,9 +121,9 @@ The package exports only the two contexts, the four renderers and `SVGController
 
 A data provider implementation consists of a concrete `DataSource` type with its `...DataSourceType` constant (the registration key), a concrete `DataProvider`, whose `load()` method takes the normalized data source and returns a concrete `Data` accessor, and that accessor, laid out as `XDataSource.ts`, `XDataProvider.ts` and `XData.ts`.
 
-Each data provider has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files: `ome-zarr` and `openseadragon` (images), `table` (points backed by a table), `geojson` (shapes), `csv` and `parquet` (tables).
+Each data provider has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files: `ome-zarr` and `openseadragon` (images), `table` (points backed by a table), `geojson` (shapes), `csv` and `parquet` (tables). The `hdf5` table provider lives in `hierarchical-tables/`, which holds the code that is not specific to the container format and is not exported itself: a `Store` interface over groups and arrays, the `HierarchicalTableReader` that decodes AnnData on top of it, and the `HierarchicalTableData` accessor the provider returns.
 
-Heavy parsing and decoding runs off the main thread: Parquet and GeoJSON in dedicated web workers (`parquet.worker.ts`, `geojson.worker.ts`, inlined into the bundle), CSV via PapaParse's worker mode.
+Heavy parsing and decoding runs off the main thread: Parquet, GeoJSON and HDF5 in dedicated web workers (`parquet.worker.ts`, `geojson.worker.ts`, `hdf5.worker.ts`, inlined into the bundle), CSV via PapaParse's worker mode. The HDF5 worker lives as long as its table, as h5wasm reads the file synchronously and keeps it open.
 
 Format metadata belongs in the data provider: channel count, names, colors and contrast limits come from the file, not from the viewer. How the provider reads it is up to it. `OMEZarrImageDataProvider` goes through `OMEZarrTileSource`, `TIFFImageDataProvider` parses the IFDs itself.
 
