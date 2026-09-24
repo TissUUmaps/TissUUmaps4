@@ -19,8 +19,9 @@ import {
 import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
 import {
   type CoordinateColumn,
-  ParquetMetadataUtils,
-} from "./ParquetMetadataUtils";
+  GeoParquetMetadataUtils,
+} from "./GeoParquetMetadataUtils";
+import { PandasMetadataUtils } from "./PandasMetadataUtils";
 import type { ParquetSource } from "./types";
 
 /**
@@ -368,13 +369,13 @@ async function handleFileRequest(
   const { ids, names } = await readIdsAndNames(
     buffer,
     metadata,
-    request.idColumn ?? ParquetMetadataUtils.readIndexColumn(metadata),
+    request.idColumn ?? PandasMetadataUtils.readIndexColumn(metadata),
     request.nameColumn,
     onProgress,
   );
-  const geoColumns = ParquetMetadataUtils.readGeoColumns(metadata);
+  const geoColumns = GeoParquetMetadataUtils.readGeoColumns(metadata);
   const coordinateColumns =
-    ParquetMetadataUtils.getCoordinateColumns(geoColumns);
+    GeoParquetMetadataUtils.getCoordinateColumns(geoColumns);
   return {
     response: {
       op: "file",
@@ -489,11 +490,11 @@ async function handleShapesRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  const geoColumns = ParquetMetadataUtils.readGeoColumns(metadata);
+  const geoColumns = GeoParquetMetadataUtils.readGeoColumns(metadata);
   const geoColumn =
     request.geometryColumn !== undefined
       ? geoColumns.find(({ name }) => name === request.geometryColumn)
-      : ParquetMetadataUtils.getPrimaryColumn(geoColumns);
+      : GeoParquetMetadataUtils.getPrimaryColumn(geoColumns);
   if (geoColumn === undefined) {
     throw new Error(
       request.geometryColumn !== undefined
@@ -504,14 +505,14 @@ async function handleShapesRequest(
   const pointColumnMessage =
     `Geometry column "${geoColumn.name}" holds points, which are read as ` +
     `the "${geoColumn.name}[x]" and "${geoColumn.name}[y]" columns of a table`;
-  if (ParquetMetadataUtils.isPointColumn(geoColumn)) {
+  if (GeoParquetMetadataUtils.isPointColumn(geoColumn)) {
     throw new Error(pointColumnMessage);
   }
   // Progress only tracks the geometry, which dwarfs the ID and name columns
   const { ids: rowIds, names: rowNames } = await readIdsAndNames(
     buffer,
     metadata,
-    request.idColumn ?? ParquetMetadataUtils.readIndexColumn(metadata),
+    request.idColumn ?? PandasMetadataUtils.readIndexColumn(metadata),
     request.nameColumn,
     () => {},
   );
@@ -590,7 +591,7 @@ async function handleRangeRequest(
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
   if (request.axis !== undefined) {
-    const { bbox } = ParquetMetadataUtils.readGeoColumns(metadata).find(
+    const { bbox } = GeoParquetMetadataUtils.readGeoColumns(metadata).find(
       ({ name }) => name === request.column,
     ) ?? { bbox: undefined };
     return {

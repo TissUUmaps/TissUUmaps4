@@ -7,7 +7,7 @@ import {
   type TableData,
 } from "@tissuumaps/core";
 
-import type { CoordinateColumn } from "./ParquetMetadataUtils";
+import type { CoordinateColumn } from "./GeoParquetMetadataUtils";
 import { runParquetWorker } from "./runParquetWorker";
 import type { ParquetSource } from "./types";
 
