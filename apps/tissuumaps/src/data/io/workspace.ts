@@ -1,18 +1,3 @@
-/**
- * Access to the File System Access API, through which the user picks the
- * workspace directory and project files within it
- *
- * The pickers are not part of the DOM type definitions yet, so they are
- * declared here, in the one module that calls them. They are also not
- * implemented by every browser, hence the support checks: without them, the
- * application falls back to reading project files through an `<input
- * type="file">`, which yields a `File` that cannot be located within the
- * workspace.
- *
- * Cancelling a picker is not an error: the picker functions resolve to `null`
- * for it, and only reject for failures the caller should report.
- */
-
 /** The picker APIs missing from `lib.dom.d.ts` */
 type FileSystemAccessWindow = Window & {
   showDirectoryPicker?: (options?: {
@@ -40,20 +25,6 @@ const workspacePickerId = "tissuumaps-workspace";
 export function isWorkspaceSupported(): boolean {
   return (
     typeof (window as FileSystemAccessWindow).showDirectoryPicker === "function"
-  );
-}
-
-/**
- * Returns whether the browser can pick a project file as a file handle
- *
- * This is checked separately from {@link isWorkspaceSupported}, as browsers
- * have shipped the two pickers independently.
- *
- * @returns `true` if {@link pickProjectFile} is available
- */
-export function isProjectFilePickerSupported(): boolean {
-  return (
-    typeof (window as FileSystemAccessWindow).showOpenFilePicker === "function"
   );
 }
 

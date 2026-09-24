@@ -22,7 +22,6 @@ import {
   setProjectURLParam,
 } from "@/data/io/project";
 import {
-  isProjectFilePickerSupported,
   isWorkspaceSupported,
   pickProjectFile,
   pickWorkspace,
@@ -83,7 +82,6 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
         if (directory !== null) {
           setWorkspace(directory);
         }
-        // A cancelled picker yields null, and leaves the workspace unchanged
       })
       .catch((error) => {
         console.error("Failed to open workspace", error);
@@ -101,14 +99,9 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
     });
   }, [confirm, setWorkspace]);
 
-  /**
-   * Picks a project file, preferring the file handle picker while a workspace
-   * is open, so that a project file within the workspace is loaded with its
-   * path as the project source. Falls back to the file input otherwise, which
-   * yields a file that cannot be located within the workspace.
-   */
+  // Only a file handle can be located within the workspace
   const loadProjectFile = useCallback(() => {
-    if (workspace === null || !isProjectFilePickerSupported()) {
+    if (workspace === null) {
       loadProjectFileInputRef.current?.click();
       return;
     }
@@ -213,17 +206,17 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
       <div className="grid grid-cols-2">
         <div className="flex items-end">
           {!workspaceSupported ? (
-            <p className="text-xs opacity-75 mx-1">
+            <p className="text-xs text-muted-foreground mx-1">
               Workspaces are not supported by this browser.
             </p>
           ) : (
             <p
               className="text-sm truncate min-w-0"
-              title={workspace ? workspace.name : ""}
+              title={workspace ? workspace.name : undefined}
             >
               {workspace
                 ? `Current workspace: ${workspace.name}`
-                : `No current workspace.`}
+                : "No current workspace."}
             </p>
           )}
         </div>
