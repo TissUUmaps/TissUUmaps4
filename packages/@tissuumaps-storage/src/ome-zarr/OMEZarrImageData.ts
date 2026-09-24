@@ -19,10 +19,10 @@ import type {
  * provide a single tile source that is not addressed by channel, and no
  * per-channel metadata: the channel accessors reject them.
  *
- * Extracts one sample per pixel from the OME-Zarr planes of its tiles, which
- * the renderer contrast-stretches and colorizes. Integer planes of up to 32
- * bits and floating-point planes are passed through as they are; 64-bit
- * integer planes are rejected, as their values cannot be represented in a
+ * Extracts one sample per pixel from the raw OME-Zarr data of its tiles,
+ * which the renderer contrast-stretches and colorizes. Integer tiles of up to
+ * 32 bits and floating-point tiles are passed through as they are; 64-bit
+ * integer tiles are rejected, as their values cannot be represented in a
  * `NumericArray` without loss.
  *
  * Multi-channel image data carries one precomputed value histogram per
@@ -92,40 +92,40 @@ export class OMEZarrImageData implements ImageData {
   }
 
   /**
-   * Extracts the samples of an invalidated tile from its OME-Zarr plane
+   * Extracts the samples of an invalidated tile from its raw OME-Zarr data
    *
    * The tile has to belong to an `OMEZarrTileSource` rendering a single
-   * channel, whose tiles carry exactly one two-dimensional (height x width)
-   * plane read from the zarr array (with the channel, z-slice and timepoint
-   * already selected) instead of a rendered image.
+   * channel, whose tile data (`chunks`) holds exactly one two-dimensional
+   * (height x width) tile read from the zarr array (with the channel, z-slice
+   * and timepoint already selected) instead of a rendered image.
    *
-   * 64-bit integer planes are rejected, as their values cannot be represented
+   * 64-bit integer tiles are rejected, as their values cannot be represented
    * in a `NumericArray` without loss.
    *
    * @param event - The tile invalidation event
    * @returns The samples of the invalidated tile, one per raster pixel in
    * row-major order, along with the width and height of the raster in pixels
-   * @throws Error if the tile does not carry exactly one plane, or if the
-   * plane holds 64-bit integers
+   * @throws Error if the tile data does not hold exactly one tile, or if the
+   * tile holds 64-bit integers
    */
   async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
   ): Promise<{ values: NumericArray; width: number; height: number }> {
     const data = (await event.getData("ome-zarr")) as OMEZarrTileData;
     if (data.chunks.length !== 1) {
-      throw new Error(`Expected a single plane, got ${data.chunks.length}`);
+      throw new Error(`Expected a single tile, got ${data.chunks.length}`);
     }
-    const plane = data.chunks[0]!; // single channel -> first plane only
+    const tile = data.chunks[0]!; // single channel -> first tile only
     if (
-      plane.data instanceof BigInt64Array ||
-      plane.data instanceof BigUint64Array
+      tile.data instanceof BigInt64Array ||
+      tile.data instanceof BigUint64Array
     ) {
       throw new Error("64-bit integer data is not supported");
     }
     return {
-      values: plane.data,
-      width: plane.shape[1]!,
-      height: plane.shape[0]!,
+      values: tile.data,
+      width: tile.shape[1]!,
+      height: tile.shape[0]!,
     };
   }
 

@@ -113,8 +113,8 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * The OME-Zarr image and its arrays are loaded once with {@link openOMEZarr}
    * and shared between the tile sources opened for it: one per channel for
    * images with a channel axis, or a single one for images without one. Every
-   * tile source renders exactly one channel (`c`), so that its tiles carry a
-   * single plane (see {@link OMEZarrImageData.getTileData}) and its resolved
+   * tile source renders exactly one channel (`c`), so that its tile data holds
+   * a single tile (see {@link OMEZarrImageData.getTileData}) and its resolved
    * `omero` metadata is that channel's. The `z` and `t` of the data source
    * select the plane to open.
    *
@@ -180,7 +180,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         );
       }
       const tileSource = await OMEZarrTileSource.open(
-        // c: 0 selects the only (implicit) channel: one plane per tile, and no
+        // c: 0 selects the only (implicit) channel: single-tile tile data, and no
         // "active channels" default (which would reject an inactive sole channel)
         { url, zip, t, z, c: 0 },
         loaded,
@@ -200,7 +200,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
    * Computes the value histogram of a channel from a downsampled resolution level
    *
    * 64-bit integers get no histogram, and no values are read for them, as
-   * {@link OMEZarrImageData.getTileData} rejects their planes anyway. For all
+   * {@link OMEZarrImageData.getTileData} rejects their tiles anyway. For all
    * other data types, loads the plane that the given tile source displays (its
    * channel, z-slice and timepoint, see `OMEZarrTileSource.loadChunks`) from
    * the lowest resolution level that still holds at least
@@ -241,7 +241,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     }
     const planes = await tileSource.loadChunks(level, undefined, { signal });
     if (planes.length !== 1) {
-      throw new Error(`Expected a single channel plane, got ${planes.length}`);
+      throw new Error(`Expected a single plane, got ${planes.length}`);
     }
     const plane = planes[0]!;
     if (
