@@ -29,6 +29,7 @@ export {
   type RenderedRasterDataObject,
 } from "./model/base";
 export {
+  createGroupValueGetter,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -251,4 +252,5 @@ export {
   continuousColorPalettes,
   categoricalColorPalettes,
   colorPalettes,
+  findColorPalette,
 } from "./palettes";

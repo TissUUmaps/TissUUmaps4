@@ -1,3 +1,4 @@
+import { HashUtils } from "../utils/HashUtils";
 import type {
   Color,
   CoordinateSpace,
@@ -154,6 +155,42 @@ export function findGroupByConfigMap<TValue>(
     return maps.find((map) => map.id === config.groupBy.map);
   }
   return undefined;
+}
+
+/**
+ * Creates the function that returns the value a group-by configuration
+ * assigns to a group
+ *
+ * With a map, a group takes its value in the map, else the map's default,
+ * else `defaultValue`; a map that does not exist gives every group
+ * `defaultValue`. Without a map, a group takes the palette value its name
+ * hashes to, or `defaultValue` if there is no palette.
+ *
+ * @param config - The group-by configuration
+ * @param maps - The project-global maps to look the referenced map up in
+ * @param defaultValue - The value of a group that nothing assigns one to
+ * @param palette - The values to pick from by hash if there is no map
+ * @returns The value of a group, by group name (the cell value as a string)
+ */
+export function createGroupValueGetter<TValue>(
+  config: GroupByConfig<false>,
+  maps: GroupValueMap<TValue>[],
+  defaultValue: TValue,
+  palette?: readonly TValue[],
+): (group: string) => TValue {
+  if (config.groupBy.map !== undefined) {
+    const map = maps.find((map) => map.id === config.groupBy.map);
+    if (map === undefined) {
+      return () => defaultValue;
+    }
+    const values = new Map(Object.entries(map.values));
+    const mapDefault = map.default ?? defaultValue;
+    return (group) => values.get(group) ?? mapDefault;
+  }
+  if (palette === undefined || palette.length === 0) {
+    return () => defaultValue;
+  }
+  return (group) => palette[HashUtils.hash(group) % palette.length]!;
 }
 
 /** Configuration to use random values */

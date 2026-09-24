@@ -9,6 +9,7 @@ import {
   type TableData,
   TableUtils,
   type VisibilityConfig,
+  createGroupValueGetter,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -230,14 +231,13 @@ export class VisibilityResolver {
       ids.length,
       { align },
     );
-    const groupVisibilities = new Map(Object.entries(visibilityMap.values));
     await TableUtils.fillFromTableGroups(
       packedVisibilities,
       data,
       ids,
       config.groupBy.column,
       visibilityMap.default ?? defaultVisibility,
-      (group) => groupVisibilities.get(group),
+      createGroupValueGetter(config, visibilityMaps, defaultVisibility),
       (visibility) => VisibilityResolver.packVisibility(visibility),
       { signal },
     );

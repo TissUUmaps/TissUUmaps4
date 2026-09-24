@@ -9,6 +9,7 @@ import {
   type OpacityConfig,
   type TableData,
   TableUtils,
+  createGroupValueGetter,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -224,14 +225,13 @@ export class OpacityResolver {
     const packedOpacities = OpacityResolver.createOpacityBuffer(ids.length, {
       align,
     });
-    const groupOpacities = new Map(Object.entries(opacityMap.values));
     await TableUtils.fillFromTableGroups(
       packedOpacities,
       data,
       ids,
       config.groupBy.column,
       opacityMap.default ?? defaultOpacity,
-      (group) => groupOpacities.get(group),
+      createGroupValueGetter(config, opacityMaps, defaultOpacity),
       (opacity) => OpacityResolver.packOpacity(opacity),
       { signal },
     );

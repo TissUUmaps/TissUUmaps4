@@ -8,6 +8,7 @@ import {
   type SizeConfig,
   type TableData,
   TableUtils,
+  createGroupValueGetter,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -216,14 +217,13 @@ export class SizeResolver {
     }
     const data = await loadTable({ signal });
     const packedSizes = SizeResolver.createSizeBuffer(ids.length, { align });
-    const groupSizes = new Map(Object.entries(sizeMap.values));
     await TableUtils.fillFromTableGroups(
       packedSizes,
       data,
       ids,
       config.groupBy.column,
       sizeMap.default ?? defaultSize,
-      (group) => groupSizes.get(group),
+      createGroupValueGetter(config, sizeMaps, defaultSize),
       (size) => SizeResolver.packSize(size),
       { signal },
     );

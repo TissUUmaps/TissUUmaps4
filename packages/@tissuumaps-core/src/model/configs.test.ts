@@ -1,0 +1,81 @@
+import { describe, expect, it } from "vitest";
+
+import { HashUtils } from "../utils/HashUtils";
+import { type GroupByConfig, createGroupValueGetter } from "./configs";
+import type { GroupValueMap } from "./primitives";
+
+describe("configs", () => {
+  describe("createGroupValueGetter", () => {
+    const maps: GroupValueMap<number>[] = [
+      { id: "map1", name: "Map 1", values: { A: 1 }, default: 9 },
+      { id: "map2", name: "Map 2", values: { A: 1 } },
+    ];
+    const palette = [10, 20, 30];
+
+    it("reads a group's value in the referenced map", () => {
+      const config: GroupByConfig<false> = {
+        groupBy: { column: "cluster", map: "map1" },
+      };
+
+      expect(createGroupValueGetter(config, maps, 0, palette)("A")).toBe(1);
+    });
+
+    it("falls back to the map's default, then to the default value", () => {
+      const getValue = createGroupValueGetter(
+        { groupBy: { column: "cluster", map: "map1" } },
+        maps,
+        0,
+      );
+      const getValueWithoutMapDefault = createGroupValueGetter(
+        { groupBy: { column: "cluster", map: "map2" } },
+        maps,
+        0,
+      );
+
+      expect(getValue("B")).toBe(9);
+      expect(getValueWithoutMapDefault("B")).toBe(0);
+    });
+
+    it("does not read inherited object properties as map values", () => {
+      const getValue = createGroupValueGetter(
+        { groupBy: { column: "cluster", map: "map2" } },
+        maps,
+        0,
+      );
+
+      expect(getValue("constructor")).toBe(0);
+    });
+
+    it("gives every group the default value if the map does not exist", () => {
+      const getValue = createGroupValueGetter(
+        { groupBy: { column: "cluster", map: "missing" } },
+        maps,
+        0,
+        palette,
+      );
+
+      expect(getValue("A")).toBe(0);
+    });
+
+    it("picks a palette value by hash without a map", () => {
+      const getValue = createGroupValueGetter(
+        { groupBy: { column: "cluster", map: undefined } },
+        maps,
+        0,
+        palette,
+      );
+
+      expect(getValue("A")).toBe(palette[HashUtils.hash("A") % palette.length]);
+    });
+
+    it("gives every group the default value without a map or palette", () => {
+      const getValue = createGroupValueGetter(
+        { groupBy: { column: "cluster", map: undefined } },
+        maps,
+        0,
+      );
+
+      expect(getValue("A")).toBe(0);
+    });
+  });
+});
