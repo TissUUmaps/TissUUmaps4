@@ -1,5 +1,5 @@
 import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
   ChannelViewMode,
@@ -10,6 +10,14 @@ import {
   ImageUtils,
 } from "@tissuumaps/core";
 
+import {
+  Accordion,
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+  AccordionTriggerRightDownIcon,
+} from "@/components/common/accordion";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -37,13 +45,28 @@ export function ChannelSettingsWidget({
 }: ChannelSettingsWidgetProps) {
   const updateImage = useProjectStore((state) => state.updateImage);
   const setChannelPreview = useAppStore((state) => state.setChannelPreview);
+  const [expandedChannels, setExpandedChannels] = useState<number[]>([]);
 
   // End the preview when the widget goes away while a channel is hovered
   useEffect(() => () => setChannelPreview(null), [setChannelPreview]);
 
-  const rows = Array.from({ length: sizeC }, (_, c) => (
-    <ChannelSettingsRow key={c} image={image} data={data} channelIndex={c} />
-  ));
+  const rows = (
+    <Accordion
+      multiple
+      value={expandedChannels}
+      onValueChange={(value) => setExpandedChannels(value as number[])}
+      className="gap-y-2"
+    >
+      {Array.from({ length: sizeC }, (_, c) => (
+        <ChannelSettingsRow
+          key={c}
+          image={image}
+          data={data}
+          channelIndex={c}
+        />
+      ))}
+    </Accordion>
+  );
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
@@ -78,12 +101,11 @@ export function ChannelSettingsWidget({
               updateImage(image.id, { activeChannel: Number(value) });
             }
           }}
-          className="flex flex-col gap-y-2"
         >
           {rows}
         </RadioGroup>
       ) : (
-        <div className="flex flex-col gap-y-2">{rows}</div>
+        rows
       )}
     </div>
   );
@@ -122,8 +144,13 @@ function ChannelSettingsRow({
   };
 
   return (
-    <div className={cn("flex flex-col gap-y-1", className)}>
-      <div className="flex flex-row items-center gap-x-2">
+    <AccordionItem
+      value={c}
+      disabled={contrastLimits === undefined}
+      className={className}
+    >
+      <AccordionHeader className="gap-x-2">
+        <AccordionTriggerRightDownIcon />
         {image.channelViewMode !== ChannelViewMode.composite ? (
           <RadioGroupItem value={String(c)} aria-label={name} />
         ) : (
@@ -160,9 +187,11 @@ function ChannelSettingsRow({
             </SimpleColorPicker>
           </span>
         ) : null}
-        <span className="flex-1 truncate" title={name}>
-          {name}
-        </span>
+        <AccordionTrigger className="flex-1 min-w-0 cursor-pointer">
+          <span className="truncate" title={name}>
+            {name}
+          </span>
+        </AccordionTrigger>
         <span className="flex flex-row items-center gap-x-1">
           <span className="text-muted-foreground text-sm" aria-hidden>
             &alpha;
@@ -178,9 +207,9 @@ function ChannelSettingsRow({
             onKeyDown={stopRadioGroupKeys}
           />
         </span>
-      </div>
+      </AccordionHeader>
       {contrastLimits !== undefined ? (
-        <div className="pl-11" onKeyDown={stopRadioGroupKeys}>
+        <AccordionPanel className="pt-1 pl-8" onKeyDown={stopRadioGroupKeys}>
           <ContrastRangeWidget
             contrastLimits={contrastLimits}
             histogram={data.getChannelHistogram?.(c)}
@@ -194,9 +223,9 @@ function ChannelSettingsRow({
                 : undefined
             }
           />
-        </div>
+        </AccordionPanel>
       ) : null}
-    </div>
+    </AccordionItem>
   );
 }
 
