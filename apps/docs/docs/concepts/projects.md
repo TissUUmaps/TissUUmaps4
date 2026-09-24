@@ -10,6 +10,11 @@ The **TissUUmaps project file** (in JSON format, file name ending with `.tmap`) 
 
 The TissUUmaps project file and corresponding data may be stored locally (client-side) or hosted remotely (server-side; together with the TissUUmaps application or elsewhere).
 
+## Workspaces
+
+In chromium-based browsers (e.g. Chrome), a workside can be opened alongside with a project. A workspace is a folder from the user's local directory that TissUUmaps gets read access to which allows resolving file paths within it. Other browsers (e.g. Safari, Firefox) don't allow this feature.
+Workspaces and projects are opened separately from "Open workspace" and "Load project from file".
+
 ## Referencing data
 
 Data sources reference their data by a single `source` string, which is one of the following:
@@ -20,8 +25,8 @@ Data sources reference their data by a single `source` string, which is one of t
 - A **project-relative path**, without prefix (e.g. `images/he.dzi`, `./images/he.dzi` or `../shared/he.dzi`), is resolved **against where the project file itself was loaded from**, so that a project directory can be moved or copied to another host or workspace without touching the project file:
 
   - A project served at `https://example.org/studies/liver/project.tmap` resolves `images/he.dzi` to `https://example.org/studies/liver/images/he.dzi`.
-  - A project opened from a workspace resolves it within the project file's directory: at `/studies/project.tmap`, `he.dzi` becomes `/studies/he.dzi`.
-  - A project opened from a local file through the project panel has no such base; the path is taken as workspace-relative from the workspace root, so `he.dzi` becomes `/he.dzi`.
+  - A project opened from within a workspace resolves it within the project file's directory: at `/studies/project.tmap`, `he.dzi` becomes `/studies/he.dzi` as long as `/studies` is part of the workspace.
+  - A project opened from a local file outside of the workspace through the project panel has no such base; the path is taken as workspace-relative from the workspace root, so `he.dzi` becomes `/he.dzi`.
 
   The latter two yield a workspace-relative path, which, as above, falls back to being app-relative without an open workspace.
 
