@@ -1,4 +1,4 @@
-import { HexColorPicker, RgbaColorPicker } from "react-colorful";
+import { HexColorPicker } from "react-colorful";
 
 import { type Color, ColorUtils } from "@tissuumaps/core";
 
@@ -11,8 +11,7 @@ import {
 
 export type SimpleColorPickerProps = {
   color: Color;
-  onColorChange: (color: Color, opacity: number) => void;
-  opacity?: number;
+  onColorChange: (color: Color) => void;
   children?: React.ReactNode;
   className?: string;
 };
@@ -20,7 +19,6 @@ export type SimpleColorPickerProps = {
 export function SimpleColorPicker({
   color,
   onColorChange,
-  opacity,
   children,
   className,
 }: SimpleColorPickerProps) {
@@ -30,17 +28,10 @@ export function SimpleColorPicker({
         {children}
       </PopoverTrigger>
       <PopoverContent>
-        {opacity !== undefined ? (
-          <RgbaColorPicker
-            color={{ ...color, a: opacity }}
-            onChange={({ r, g, b, a }) => onColorChange({ r, g, b }, a)}
-          />
-        ) : (
-          <HexColorPicker
-            color={ColorUtils.toHex(color)}
-            onChange={(hex) => onColorChange(ColorUtils.fromHex(hex), 1)}
-          />
-        )}
+        <HexColorPicker
+          color={ColorUtils.toHex(color)}
+          onChange={(hex) => onColorChange(ColorUtils.fromHex(hex))}
+        />
       </PopoverContent>
     </Popover>
   );

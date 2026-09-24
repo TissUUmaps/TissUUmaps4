@@ -13,6 +13,7 @@ import {
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
@@ -58,7 +59,13 @@ export function ChannelSettingsWidget({
         className="border rounded"
       >
         {Object.values(ChannelViewMode).map((mode) => (
-          <ToggleGroupItem key={mode} value={mode}>
+          <ToggleGroupItem
+            key={mode}
+            value={mode}
+            className={
+              image.channelViewMode === mode ? "font-medium" : "font-normal"
+            }
+          >
             {channelViewModeLabels[mode]}
           </ToggleGroupItem>
         ))}
@@ -136,31 +143,40 @@ function ChannelSettingsRow({
             {visible ? <EyeIcon /> : <EyeOffIcon />}
           </Button>
         )}
-        <span onKeyDown={stopRadioGroupKeys}>
-          <SimpleColorPicker
-            color={color}
-            opacity={opacity}
-            onColorChange={(newColor, newOpacity) =>
-              updateChannel({ color: newColor, opacity: newOpacity })
-            }
-            className="size-6 p-0 border-input shadow-xs"
-          >
-            <span className="sr-only">Channel color</span>
-            {/* grayscale draws every channel white, but keeps its opacity */}
-            <span
-              className="block size-full rounded-sm"
-              style={{
-                backgroundColor:
-                  image.channelViewMode === ChannelViewMode.grayscale
-                    ? "#ffffff"
-                    : ColorUtils.toHex(color),
-                opacity,
-              }}
-            />
-          </SimpleColorPicker>
-        </span>
+        {image.channelViewMode !== ChannelViewMode.grayscale ? (
+          <span onKeyDown={stopRadioGroupKeys}>
+            <SimpleColorPicker
+              color={color}
+              onColorChange={(newColor) => updateChannel({ color: newColor })}
+              // positions the sr-only label, which would otherwise overflow the
+              // panel's scroll container
+              className="relative size-6 p-0 border-input shadow-xs"
+            >
+              <span className="sr-only">Channel color</span>
+              <span
+                className="block size-full rounded-sm"
+                style={{ backgroundColor: ColorUtils.toHex(color) }}
+              />
+            </SimpleColorPicker>
+          </span>
+        ) : null}
         <span className="flex-1 truncate" title={name}>
           {name}
+        </span>
+        <span className="flex flex-row items-center gap-x-1">
+          <span className="text-muted-foreground text-sm" aria-hidden>
+            &alpha;
+          </span>
+          <Slider
+            className="w-16"
+            thumbLabels={["Channel opacity"]}
+            min={0}
+            max={1}
+            step={0.01}
+            value={opacity}
+            onValueChange={(value) => updateChannel({ opacity: value })}
+            onKeyDown={stopRadioGroupKeys}
+          />
         </span>
       </div>
       {contrastLimits !== undefined ? (
