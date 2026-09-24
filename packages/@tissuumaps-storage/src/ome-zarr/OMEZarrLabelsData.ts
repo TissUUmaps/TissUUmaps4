@@ -12,7 +12,7 @@ import type {
 /**
  * Loaded OME-Zarr label image data
  *
- * Provides a single tile source whose chunks hold label IDs as signed or
+ * Provides a single tile source whose tiles hold label IDs as signed or
  * unsigned integers (see {@link OMEZarrLabelsData.getTileData}). Label IDs are not
  * enumerated up front: they are read per tile, so that arbitrarily large label
  * images can be opened without scanning them.
@@ -41,45 +41,45 @@ export class OMEZarrLabelsData implements LabelsData {
   }
 
   /**
-   * Extracts the label IDs of an invalidated tile from its OME-Zarr chunk
+   * Extracts the label IDs of an invalidated tile from its raw OME-Zarr data
    *
    * The tile has to belong to an `OMEZarrTileSource` rendering a single
-   * channel, whose tiles carry exactly one two-dimensional (height x width)
-   * chunk read from the zarr array (with the channel, z-slice and timepoint
-   * already selected) instead of a rendered image. Only integer chunks of up
-   * to 32 bits (signed or unsigned) are accepted, as label IDs have to be
-   * integers and the renderer resolves them as such; 64-bit integers cannot be
-   * represented without loss.
+   * channel, whose tile data (`chunks`) holds exactly one two-dimensional
+   * (height x width) tile read from the zarr array (with the channel, z-slice
+   * and timepoint already selected) instead of a rendered image. Only integer
+   * tiles of up to 32 bits (signed or unsigned) are accepted, as label IDs
+   * have to be integers and the renderer resolves them as such; 64-bit
+   * integers cannot be represented without loss.
    *
    * @param event - The tile invalidation event
    * @returns The label IDs of the invalidated tile, one per raster pixel in
    * row-major order, along with the width and height of the raster in pixels
-   * @throws Error if the tile does not carry exactly one chunk, or if the
-   * chunk is not an 8-, 16- or 32-bit integer array
+   * @throws Error if the tile data does not hold exactly one tile, or if the
+   * tile is not an 8-, 16- or 32-bit integer array
    */
   async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
   ): Promise<{ values: IntArray | UintArray; width: number; height: number }> {
-    const { chunks } = (await event.getData("ome-zarr")) as OMEZarrTileData;
-    if (chunks.length !== 1) {
-      throw new Error(`Expected a single chunk, got ${chunks.length}`);
+    const data = (await event.getData("ome-zarr")) as OMEZarrTileData;
+    if (data.chunks.length !== 1) {
+      throw new Error(`Expected a single tile, got ${data.chunks.length}`);
     }
-    const chunk = chunks[0]!;
+    const tile = data.chunks[0]!;
     if (
-      chunk.data instanceof Int8Array ||
-      chunk.data instanceof Int16Array ||
-      chunk.data instanceof Int32Array ||
-      chunk.data instanceof Uint8Array ||
-      chunk.data instanceof Uint16Array ||
-      chunk.data instanceof Uint32Array
+      tile.data instanceof Int8Array ||
+      tile.data instanceof Int16Array ||
+      tile.data instanceof Int32Array ||
+      tile.data instanceof Uint8Array ||
+      tile.data instanceof Uint16Array ||
+      tile.data instanceof Uint32Array
     ) {
       return {
-        values: chunk.data,
-        width: chunk.shape[1]!,
-        height: chunk.shape[0]!,
+        values: tile.data,
+        width: tile.shape[1]!,
+        height: tile.shape[0]!,
       };
     }
-    throw new Error(`Unsupported data type: ${chunk.data.constructor.name}`);
+    throw new Error(`Unsupported data type: ${tile.data.constructor.name}`);
   }
 
   /** Revokes the object URL of the workspace file this label image was loaded from, if any */
