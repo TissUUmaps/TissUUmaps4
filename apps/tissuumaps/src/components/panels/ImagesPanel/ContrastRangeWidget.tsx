@@ -46,57 +46,67 @@ export function ContrastRangeWidget({
   className,
 }: ContrastRangeWidgetProps) {
   const [min, max] = contrastLimits;
-  // a span derived from the current limits would shrink with every drag
+  // a range derived from the current limits would shrink with every drag
   const [initialContrastLimits] = useState(contrastLimits);
-  const valuesRange =
-    histogram?.range ?? dataTypeRange ?? initialContrastLimits;
-  const canExpand =
+  const imageRange = histogram?.range ?? dataTypeRange ?? initialContrastLimits;
+  const canWiden =
     dataTypeRange !== undefined &&
-    (dataTypeRange[0] < valuesRange[0] || dataTypeRange[1] > valuesRange[1]);
-  const [expanded, setExpanded] = useState(
-    () => canExpand && (min < valuesRange[0] || max > valuesRange[1]),
+    (dataTypeRange[0] < imageRange[0] || dataTypeRange[1] > imageRange[1]);
+  // a widen request only applies while the data type range is wider than the
+  // image's, which can change when the histogram loads
+  const [widenRequested, setWidenRequested] = useState(
+    () => canWiden && (min < imageRange[0] || max > imageRange[1]),
   );
-  const isExpanded = expanded && canExpand;
-  const [spanMin, spanMax] = isExpanded ? dataTypeRange : valuesRange;
-  const rangeMin = Math.min(min, spanMin);
-  const rangeMax = Math.max(max, spanMax);
-  const step = getStep(rangeMin, rangeMax);
-  const expandLabel = isExpanded
+  const widened = widenRequested && canWiden;
+  const baseRange = widened ? dataTypeRange : imageRange;
+  const sliderMin = Math.min(min, baseRange[0]);
+  const sliderMax = Math.max(max, baseRange[1]);
+  const step = getStep(sliderMin, sliderMax);
+  const round = (value: number) => MathUtils.roundToStepDecimals(value, step);
+  const widenLabel = widened
     ? "Narrow the slider to the values in the image"
     : "Widen the slider to the range of the data type";
 
-  const commitContrastLimits = (a: number, b: number) => {
+  const commitContrastLimits = (limit: number, otherLimit: number) => {
     const clamp = (value: number) =>
       dataTypeRange !== undefined
         ? MathUtils.clamp(value, dataTypeRange[0], dataTypeRange[1])
         : value;
-    const newMin = clamp(Math.min(a, b));
-    const newMax = clamp(Math.max(a, b));
-    if (canExpand && (newMin < valuesRange[0] || newMax > valuesRange[1])) {
-      setExpanded(true);
+    const newMin = clamp(Math.min(limit, otherLimit));
+    const newMax = clamp(Math.max(limit, otherLimit));
+    if (canWiden && (newMin < imageRange[0] || newMax > imageRange[1])) {
+      setWidenRequested(true);
     }
     onContrastLimitsChange([newMin, newMax]);
   };
 
-  const bars = useMemo(
+  const barHeights = useMemo(
     () =>
       histogram !== undefined
-        ? binHistogram(histogram, rangeMin, rangeMax)
+        ? getBarHeights(histogram, [sliderMin, sliderMax])
         : undefined,
-    [histogram, rangeMin, rangeMax],
+    [histogram, sliderMin, sliderMax],
   );
+  // the bars between the contrast limits, in fractional bar positions
+  const [selectedBarsStart, selectedBarsEnd] =
+    sliderMin < sliderMax
+      ? [
+          MathUtils.remap(min, [sliderMin, sliderMax], [0, histogramBarCount]),
+          MathUtils.remap(max, [sliderMin, sliderMax], [0, histogramBarCount]),
+        ]
+      : [0, 0];
 
   return (
     <div className={cn("flex flex-col gap-y-1", className)}>
       <div className="grid grid-cols-[1fr_auto] items-center gap-x-1">
-        {bars !== undefined ? (
+        {barHeights !== undefined ? (
           <svg
             className="text-muted-foreground/60 col-start-1 block h-10 w-full"
             viewBox={`0 0 ${histogramBarCount} ${histogramHeight}`}
             preserveAspectRatio="none"
             aria-hidden
           >
-            {bars.map((height, i) => (
+            {barHeights.map((height, i) => (
               <rect
                 key={i}
                 x={i}
@@ -104,7 +114,7 @@ export function ContrastRangeWidget({
                 width={1}
                 height={height}
                 className={
-                  isBarSelected(i, rangeMin, rangeMax, min, max)
+                  i + 1 > selectedBarsStart && i < selectedBarsEnd
                     ? "fill-primary/70"
                     : "fill-current"
                 }
@@ -115,18 +125,15 @@ export function ContrastRangeWidget({
         <Slider
           className="col-start-1"
           value={[min, max]}
-          min={rangeMin}
-          max={rangeMax > rangeMin ? rangeMax : rangeMin + 1}
+          min={sliderMin}
+          max={sliderMax > sliderMin ? sliderMax : sliderMin + 1}
           step={step}
           thumbCollisionBehavior="none"
           thumbLabels={["Minimum", "Maximum"]}
           onValueChange={(value) => {
             const [newMin, newMax] = value;
             if (newMin !== undefined && newMax !== undefined) {
-              onContrastLimitsChange([
-                roundToStepDecimals(newMin, step),
-                roundToStepDecimals(newMax, step),
-              ]);
+              onContrastLimitsChange([round(newMin), round(newMax)]);
             }
           }}
         />
@@ -134,27 +141,27 @@ export function ContrastRangeWidget({
           variant="ghost"
           size="icon-xs"
           className="col-start-2"
-          aria-label={expandLabel}
-          title={expandLabel}
-          disabled={!canExpand}
-          onClick={() => setExpanded(!isExpanded)}
+          aria-label={widenLabel}
+          title={widenLabel}
+          disabled={!canWiden}
+          onClick={() => setWidenRequested(!widened)}
         >
-          {isExpanded ? <ChevronsRightLeftIcon /> : <ChevronsLeftRightIcon />}
+          {widened ? <ChevronsRightLeftIcon /> : <ChevronsLeftRightIcon />}
         </Button>
         <div className="text-muted-foreground col-start-1 flex flex-row justify-between text-[10px] leading-3">
-          <span>{roundToStepDecimals(rangeMin, step)}</span>
-          <span>{roundToStepDecimals(rangeMax, step)}</span>
+          <span>{round(sliderMin)}</span>
+          <span>{round(sliderMax)}</span>
         </div>
       </div>
       <div className="flex flex-row items-center gap-x-2">
         <ContrastLimitInput
           label="min"
-          value={roundToStepDecimals(min, step)}
+          value={round(min)}
           onValueChange={(newMin) => commitContrastLimits(newMin, max)}
         />
         <ContrastLimitInput
           label="max"
-          value={roundToStepDecimals(max, step)}
+          value={round(max)}
           onValueChange={(newMax) => commitContrastLimits(min, newMax)}
         />
         <Button
@@ -220,12 +227,13 @@ function ContrastLimitInput({
 
 // Integer pixel values stay whole over a wide integer range; a narrow range is
 // stepped finely even between whole bounds, as float channels usually span [0, 1]
-function getStep(rangeMin: number, rangeMax: number): number {
-  const span = rangeMax - rangeMin;
+function getStep(sliderMin: number, sliderMax: number): number {
+  const span = sliderMax - sliderMin;
   if (!(span > 0)) {
     return 1;
   }
-  const wholeBounds = Number.isInteger(rangeMin) && Number.isInteger(rangeMax);
+  const wholeBounds =
+    Number.isInteger(sliderMin) && Number.isInteger(sliderMax);
   if (wholeBounds && span >= minWholeSpan) {
     return Math.max(1, Math.round(span / sliderStepCount));
   }
@@ -235,55 +243,15 @@ function getStep(rangeMin: number, rangeMax: number): number {
 // The bars span the slider's range rather than the histogram's, so that a bar
 // and the slider position above it hold the same value; the square-root scale
 // keeps sparse tails visible next to a dominant background peak
-function binHistogram(
+function getBarHeights(
   histogram: ImageChannelHistogram,
-  rangeMin: number,
-  rangeMax: number,
+  sliderRange: [number, number],
 ): number[] {
-  const {
-    hist: counts,
-    range: [vmin, vmax],
-  } = histogram;
-  const bars = new Array<number>(histogramBarCount).fill(0);
-  for (let i = 0; i < counts.length; i++) {
-    const value = vmin + (i / Math.max(counts.length - 1, 1)) * (vmax - vmin);
-    // the upper bound lands on the bar past the last one; it belongs to the last
-    const bar = Math.min(
-      Math.floor(barPosition(value, rangeMin, rangeMax)),
-      histogramBarCount - 1,
-    );
-    if (bar >= 0) {
-      bars[bar]! += counts[i]!;
-    }
-  }
-  const peak = Math.sqrt(Math.max(...bars, 1));
-  return bars.map((count) => (Math.sqrt(count) / peak) * histogramHeight);
-}
-
-function barPosition(
-  value: number,
-  rangeMin: number,
-  rangeMax: number,
-): number {
-  const span = rangeMax - rangeMin;
-  return span > 0 ? ((value - rangeMin) / span) * histogramBarCount : 0;
-}
-
-function isBarSelected(
-  bar: number,
-  rangeMin: number,
-  rangeMax: number,
-  min: number,
-  max: number,
-): boolean {
-  return (
-    bar + 1 > barPosition(min, rangeMin, rangeMax) &&
-    bar < barPosition(max, rangeMin, rangeMax)
+  const counts = MathUtils.rebinHistogram(
+    histogram,
+    sliderRange,
+    histogramBarCount,
   );
-}
-
-// Dragging would otherwise store floating-point noise
-function roundToStepDecimals(value: number, step: number): number {
-  const decimals = Math.max(0, -Math.floor(Math.log10(step)));
-  return Number(value.toFixed(decimals));
+  const peak = Math.sqrt(Math.max(...counts, 1));
+  return counts.map((count) => (Math.sqrt(count) / peak) * histogramHeight);
 }
