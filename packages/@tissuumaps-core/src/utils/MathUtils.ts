@@ -1,4 +1,4 @@
-import type { ChannelHistogram } from "../storage/image";
+import type { ImageChannelHistogram } from "../storage/image";
 import type { GenericArray, NumericArray } from "../types/arrays";
 import { AsyncUtils } from "./AsyncUtils";
 import { RandomUtils } from "./RandomUtils";
@@ -192,7 +192,7 @@ export class MathUtils {
       sample?: number;
       seed?: number;
     },
-  ): Promise<ChannelHistogram> {
+  ): Promise<ImageChannelHistogram> {
     const { signal, bins = 1024, sample, seed = 0 } = options ?? {};
     signal?.throwIfAborted();
     const [vmin, vmax] = range;

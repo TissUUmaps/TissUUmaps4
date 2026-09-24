@@ -13,7 +13,7 @@ import type { TableData, TableDataProvider } from "../../storage/table";
 import type { InteractionMode } from "../interaction";
 
 /** A single image channel shown on its own, without touching the project */
-export type ChannelPreview = {
+export type ImageChannelPreview = {
   /** The ID of the previewed image */
   imageId: string;
 
@@ -32,7 +32,7 @@ export type AppStoreState = {
   interactionMode: InteractionMode;
 
   /** The channel previewed on its own while it is hovered, if any */
-  channelPreview: ChannelPreview | null;
+  imageChannelPreview: ImageChannelPreview | null;
 
   /** The registered image data providers, by data source type */
   imageDataProviders: Map<
@@ -101,10 +101,12 @@ export type AppStoreActions = {
   /**
    * Previews a single image channel on its own, or ends the preview
    *
-   * @param channelPreview - The image and channel to preview, or `null` to
+   * @param imageChannelPreview - The image and channel to preview, or `null` to
    * end the preview
    */
-  setChannelPreview: (channelPreview: ChannelPreview | null) => void;
+  setImageChannelPreview: (
+    imageChannelPreview: ImageChannelPreview | null,
+  ) => void;
 
   /**
    * Registers an image data provider

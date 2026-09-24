@@ -59,7 +59,7 @@ export {
   type RawLayer,
 } from "./model/layer";
 export {
-  ChannelViewMode,
+  ImageChannelViewMode,
   createImage,
   createImageDataSource,
   imageDataSourceDefaults,
@@ -148,7 +148,7 @@ export {
   type RasterData,
 } from "./storage/base";
 export {
-  type ChannelHistogram,
+  type ImageChannelHistogram,
   type ImageData,
   type ImageDataProvider,
 } from "./storage/image";
@@ -205,7 +205,7 @@ export {
 } from "./types/webgl";
 
 export {
-  type ChannelPreview,
+  type ImageChannelPreview,
   type AppStoreState,
   type AppStoreActions,
   type AppStore,

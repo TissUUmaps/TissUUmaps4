@@ -1,8 +1,8 @@
 import type { GeoTIFFImage, Pool } from "geotiff";
 
 import {
-  type ChannelHistogram,
   type DataProviderLoadOptions,
+  type ImageChannelHistogram,
   type ImageDataProvider,
   ImageUtils,
   MathUtils,
@@ -148,7 +148,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
       // the histograms only seed the contrast limits, which the renderer can
       // fall back to the data type range for, so a file whose pixels cannot be
       // decoded still opens
-      let histograms: (ChannelHistogram | undefined)[] = [];
+      let histograms: (ImageChannelHistogram | undefined)[] = [];
       try {
         histograms = await TIFFImageDataProvider._computeChannelHistograms(
           pyramids,
@@ -202,10 +202,10 @@ export class TIFFImageDataProvider implements ImageDataProvider<
       concurrency?: number;
       signal?: AbortSignal;
     },
-  ): Promise<(ChannelHistogram | undefined)[]> {
+  ): Promise<(ImageChannelHistogram | undefined)[]> {
     const { pool = null, concurrency = 1, signal } = options ?? {};
     signal?.throwIfAborted();
-    const histograms: (ChannelHistogram | undefined)[] = [];
+    const histograms: (ImageChannelHistogram | undefined)[] = [];
     let next = 0;
     await Promise.all(
       Array.from(
@@ -246,7 +246,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
   private static async _computeChannelHistogram(
     pyramid: GeoTIFFImage[],
     options?: { pool?: Pool | null; signal?: AbortSignal },
-  ): Promise<ChannelHistogram | undefined> {
+  ): Promise<ImageChannelHistogram | undefined> {
     const { pool = null, signal } = options ?? {};
     signal?.throwIfAborted();
     if (pyramid.length === 0) {

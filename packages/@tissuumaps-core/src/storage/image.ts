@@ -7,7 +7,7 @@ import type {
 import type { DataProvider, RasterData } from "./base";
 
 /** The value histogram of a channel, in raw pixel values */
-export type ChannelHistogram = {
+export type ImageChannelHistogram = {
   /**
    * The number of samples per bin, bin `i` of `n` counting the values around
    * `vmin + i / (n - 1) * (vmax - vmin)` (see
@@ -95,7 +95,7 @@ export interface ImageData extends RasterData {
    * @returns The channel's histogram, as bin counts and the value range the
    * bins span, or `undefined` if not available
    */
-  getChannelHistogram?: (c: number) => ChannelHistogram | undefined;
+  getChannelHistogram?: (c: number) => ImageChannelHistogram | undefined;
 
   /**
    * Returns the range the data type of a specific channel can hold, or undefined if not available

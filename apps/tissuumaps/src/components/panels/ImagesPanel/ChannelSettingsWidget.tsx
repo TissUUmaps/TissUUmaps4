@@ -2,10 +2,10 @@ import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
-  ChannelViewMode,
   ColorUtils,
   type Image,
   type ImageChannel,
+  ImageChannelViewMode,
   type ImageData,
   ImageUtils,
 } from "@tissuumaps/core";
@@ -44,11 +44,13 @@ export function ChannelSettingsWidget({
   className,
 }: ChannelSettingsWidgetProps) {
   const updateImage = useProjectStore((state) => state.updateImage);
-  const setChannelPreview = useAppStore((state) => state.setChannelPreview);
+  const setImageChannelPreview = useAppStore(
+    (state) => state.setImageChannelPreview,
+  );
   const [expandedChannels, setExpandedChannels] = useState<number[]>([]);
 
   // End the preview when the widget goes away while a channel is hovered
-  useEffect(() => () => setChannelPreview(null), [setChannelPreview]);
+  useEffect(() => () => setImageChannelPreview(null), [setImageChannelPreview]);
 
   const rows = (
     <Accordion
@@ -75,13 +77,13 @@ export function ChannelSettingsWidget({
         onValueChange={(value) => {
           if (value.length > 0) {
             updateImage(image.id, {
-              channelViewMode: value[0] as ChannelViewMode,
+              channelViewMode: value[0] as ImageChannelViewMode,
             });
           }
         }}
         className="border rounded"
       >
-        {Object.values(ChannelViewMode).map((mode) => (
+        {Object.values(ImageChannelViewMode).map((mode) => (
           <ToggleGroupItem
             key={mode}
             value={mode}
@@ -93,7 +95,7 @@ export function ChannelSettingsWidget({
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      {image.channelViewMode !== ChannelViewMode.composite ? (
+      {image.channelViewMode !== ImageChannelViewMode.composite ? (
         <RadioGroup
           value={String(ImageUtils.getActiveChannel(image, sizeC))}
           onValueChange={(value) => {
@@ -125,7 +127,9 @@ function ChannelSettingsRow({
   className,
 }: ChannelSettingsRowProps) {
   const updateImage = useProjectStore((state) => state.updateImage);
-  const setChannelPreview = useAppStore((state) => state.setChannelPreview);
+  const setImageChannelPreview = useAppStore(
+    (state) => state.setImageChannelPreview,
+  );
 
   const channel = image.channels?.[c];
   const name = channel?.name ?? data.getChannelName?.(c) ?? `Channel ${c}`;
@@ -151,7 +155,7 @@ function ChannelSettingsRow({
     >
       <AccordionHeader className="gap-x-2">
         <AccordionTriggerRightDownIcon />
-        {image.channelViewMode !== ChannelViewMode.composite ? (
+        {image.channelViewMode !== ImageChannelViewMode.composite ? (
           <RadioGroupItem value={String(c)} aria-label={name} />
         ) : (
           <Button
@@ -160,17 +164,17 @@ function ChannelSettingsRow({
             aria-label={visible ? "Hide channel" : "Show channel"}
             onClick={() => {
               updateChannel({ visibility: !visible });
-              setChannelPreview(null);
+              setImageChannelPreview(null);
             }}
             onPointerEnter={() =>
-              setChannelPreview({ imageId: image.id, channelIndex: c })
+              setImageChannelPreview({ imageId: image.id, channelIndex: c })
             }
-            onPointerLeave={() => setChannelPreview(null)}
+            onPointerLeave={() => setImageChannelPreview(null)}
           >
             {visible ? <EyeIcon /> : <EyeOffIcon />}
           </Button>
         )}
-        {image.channelViewMode !== ChannelViewMode.grayscale ? (
+        {image.channelViewMode !== ImageChannelViewMode.grayscale ? (
           <span onKeyDown={stopRadioGroupKeys}>
             <SimpleColorPicker
               color={color}

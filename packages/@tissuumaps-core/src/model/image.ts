@@ -15,21 +15,21 @@ import type { Color } from "./primitives";
  * - `grayscale`: the active channel alone, in gray
  * - `color`: the active channel alone, in its color
  */
-export const ChannelViewMode = {
+export const ImageChannelViewMode = {
   composite: "composite",
   grayscale: "grayscale",
   color: "color",
 } as const;
 
-/** One of the channel view modes of the {@link ChannelViewMode} object */
-export type ChannelViewMode =
-  (typeof ChannelViewMode)[keyof typeof ChannelViewMode];
+/** One of the channel view modes of the {@link ImageChannelViewMode} object */
+export type ImageChannelViewMode =
+  (typeof ImageChannelViewMode)[keyof typeof ImageChannelViewMode];
 
 /**
  * Default values for {@link RawImage}
  */
 export const imageDefaults = {
-  channelViewMode: ChannelViewMode.composite,
+  channelViewMode: ImageChannelViewMode.composite,
   activeChannel: 0,
 } as const satisfies Partial<RawImage>;
 
@@ -114,7 +114,7 @@ export interface RawImage extends RawRenderedRasterDataObject<
    *
    * @defaultValue {@link imageDefaults.channelViewMode}
    */
-  channelViewMode?: ChannelViewMode;
+  channelViewMode?: ImageChannelViewMode;
 
   /**
    * The channel shown in the single-channel view modes (0-based)

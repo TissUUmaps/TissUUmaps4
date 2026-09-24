@@ -1,6 +1,6 @@
 import type { Image } from "../model/image";
 import type { Color } from "../model/primitives";
-import type { ChannelHistogram, ImageData } from "../storage/image";
+import type { ImageChannelHistogram, ImageData } from "../storage/image";
 import type { NumericArray } from "../types/arrays";
 import { ColorUtils } from "./ColorUtils";
 import { MathUtils } from "./MathUtils";
@@ -194,7 +194,7 @@ export class ImageUtils {
    * range, with `low < high` unless the range is degenerate
    */
   static getDefaultContrastLimits(
-    histogram: ChannelHistogram,
+    histogram: ImageChannelHistogram,
     qlow: number = 0.01,
     qhigh: number = 0.999,
   ): [number, number] {

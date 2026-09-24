@@ -2,9 +2,9 @@ import type { OMEZarrTileData, OMEZarrTileSource } from "omezarr-tilesource";
 import type OpenSeadragon from "openseadragon";
 
 import {
-  type ChannelHistogram,
   type Color,
   type CustomTileSource,
+  type ImageChannelHistogram,
   type ImageData,
   ImageUtils,
   type NumericArray,
@@ -36,7 +36,8 @@ import {
  */
 export class OMEZarrImageData implements ImageData {
   private readonly _tileSources: OMEZarrTileSource | OMEZarrTileSource[];
-  private readonly _histograms: (ChannelHistogram | undefined)[] | undefined;
+  private readonly _histograms:
+    (ImageChannelHistogram | undefined)[] | undefined;
 
   /**
    * @param tileSources - One ready tile source per channel, in channel order,
@@ -48,7 +49,7 @@ export class OMEZarrImageData implements ImageData {
    */
   constructor(
     tileSources: OMEZarrTileSource | OMEZarrTileSource[],
-    histograms?: (ChannelHistogram | undefined)[],
+    histograms?: (ImageChannelHistogram | undefined)[],
   ) {
     this._tileSources = tileSources;
     this._histograms = histograms;
@@ -184,7 +185,7 @@ export class OMEZarrImageData implements ImageData {
    * planes with fewer than two distinct finite values)
    * @throws Error if the image has no channel axis, or if `c` is out of bounds
    */
-  getChannelHistogram(c: number): ChannelHistogram | undefined {
+  getChannelHistogram(c: number): ImageChannelHistogram | undefined {
     this._getChannelTileSource(c); // check channel index
     return this._histograms?.[c];
   }
@@ -203,7 +204,9 @@ export class OMEZarrImageData implements ImageData {
     if (match === null) {
       return undefined;
     }
-    return ImageUtils.getIntegerTypeRange(Number(match[2]), match[1] === "");
+    const [, unsignedPrefix, bits] = match;
+    const signed = unsignedPrefix === "";
+    return ImageUtils.getIntegerTypeRange(Number(bits), signed);
   }
 
   /**

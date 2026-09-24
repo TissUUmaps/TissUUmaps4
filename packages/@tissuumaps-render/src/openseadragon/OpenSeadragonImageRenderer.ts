@@ -1,11 +1,11 @@
 import { deepEqual } from "fast-equals";
 
 import {
-  ChannelViewMode,
   type Color,
   ColorUtils,
   type CustomTileSource,
   type Image,
+  ImageChannelViewMode,
   type ImageData,
   ImageUtils,
   MathUtils,
@@ -29,7 +29,7 @@ export type OpenSeadragonImageSyncContext = {
 const white: Color = { r: 255, g: 255, b: 255 };
 
 /** The color and contrast limits a channel's tiles are drawn with */
-type ResolvedChannelState = {
+type ChannelTransferState = {
   color: Color;
   contrastLimits: [number, number] | undefined;
 };
@@ -72,7 +72,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     {
       data: ImageData;
       channels: {
-        state: ResolvedChannelState;
+        state: ChannelTransferState;
         dataTransfer: DataTransfer | undefined;
       }[];
     }
@@ -185,7 +185,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
     const sizeC = ref.data.getSizeC();
     if (alpha > 0 && index !== null && sizeC !== undefined) {
       const channelVisibility =
-        ref.object.channelViewMode !== ChannelViewMode.composite
+        ref.object.channelViewMode !== ImageChannelViewMode.composite
           ? index === ImageUtils.getActiveChannel(ref.object, sizeC)
           : ImageUtils.getChannelVisibility(ref.object, ref.data, index);
       const channelOpacity = ImageUtils.getChannelOpacity(
@@ -244,7 +244,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
       renderedMultichannelImage.channels[index];
     const newRenderedMultichannelImageChannelState = structuredClone({
       color:
-        ref.object.channelViewMode === ChannelViewMode.grayscale
+        ref.object.channelViewMode === ImageChannelViewMode.grayscale
           ? white
           : ImageUtils.getChannelColor(ref.object, ref.data, index),
       contrastLimits: ImageUtils.getChannelContrastLimits(
@@ -297,7 +297,7 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    */
   private static _createDataTransfer(
     data: ImageData,
-    channel: ResolvedChannelState,
+    channel: ChannelTransferState,
   ): DataTransfer | undefined {
     if (data.getTileData !== undefined) {
       const { r, g, b } = channel.color;

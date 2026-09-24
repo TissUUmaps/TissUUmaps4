@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { type ChannelHistogram, MathUtils } from "@tissuumaps/core";
+import { type ImageChannelHistogram, MathUtils } from "@tissuumaps/core";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,7 @@ export type ContrastRangeWidgetProps = {
   contrastLimits: [number, number];
   onContrastLimitsChange: (contrastLimits: [number, number]) => void;
   onReset?: () => void;
-  histogram?: ChannelHistogram;
+  histogram?: ImageChannelHistogram;
   dataTypeRange?: [number, number];
   className?: string;
 };
@@ -236,7 +236,7 @@ function getStep(rangeMin: number, rangeMax: number): number {
 // and the slider position above it hold the same value; the square-root scale
 // keeps sparse tails visible next to a dominant background peak
 function binHistogram(
-  histogram: ChannelHistogram,
+  histogram: ImageChannelHistogram,
   rangeMin: number,
   rangeMax: number,
 ): number[] {

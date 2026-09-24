@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { type Image, type RawImage, createImage } from "../model/image";
 import type { Color } from "../model/primitives";
-import type { ChannelHistogram, ImageData } from "../storage/image";
+import type { ImageChannelHistogram, ImageData } from "../storage/image";
 import { ImageUtils } from "./ImageUtils";
 import { MathUtils } from "./MathUtils";
 
@@ -10,7 +10,7 @@ function createImageData(
   channels: {
     color?: Color;
     contrastLimits?: [number, number];
-    histogram?: ChannelHistogram;
+    histogram?: ImageChannelHistogram;
     dataTypeRange?: [number, number];
     visibility?: boolean;
     opacity?: number;
@@ -93,7 +93,7 @@ describe("ImageUtils", () => {
     });
 
     it("derives limits from the histogram before the data type range", () => {
-      const histogram: ChannelHistogram = {
+      const histogram: ImageChannelHistogram = {
         hist: [100, 10, 10, 10, 100],
         range: [0, 4],
       };

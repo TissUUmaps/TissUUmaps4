@@ -1,7 +1,7 @@
-import { ChannelViewMode } from "@tissuumaps/core";
+import { ImageChannelViewMode } from "@tissuumaps/core";
 
-export const channelViewModeLabels: Record<ChannelViewMode, string> = {
-  [ChannelViewMode.composite]: "Composite",
-  [ChannelViewMode.grayscale]: "Grayscale",
-  [ChannelViewMode.color]: "Color",
+export const channelViewModeLabels: Record<ImageChannelViewMode, string> = {
+  [ImageChannelViewMode.composite]: "Composite",
+  [ImageChannelViewMode.grayscale]: "Grayscale",
+  [ImageChannelViewMode.color]: "Color",
 };

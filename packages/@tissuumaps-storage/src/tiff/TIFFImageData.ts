@@ -2,9 +2,9 @@ import type { TiffRaster } from "geotiff-tilesource";
 import type OpenSeadragon from "openseadragon";
 
 import type {
-  ChannelHistogram,
   Color,
   CustomTileSource,
+  ImageChannelHistogram,
   ImageData,
   TileSourceConfig,
   TypedArray,
@@ -15,7 +15,7 @@ import { tiffRasterType } from "./installTIFFTileSource";
 
 /** A channel of a loaded multi-channel TIFF file */
 export type TIFFChannel = TIFFChannelMetadata & {
-  histogram?: ChannelHistogram;
+  histogram?: ImageChannelHistogram;
   dataTypeRange?: [number, number];
   contrastLimits?: [number, number];
 };
@@ -143,7 +143,7 @@ export class TIFFImageData implements ImageData {
    * fewer than two distinct values
    * @throws Error if `c` is out of bounds
    */
-  getChannelHistogram(c: number): ChannelHistogram | undefined {
+  getChannelHistogram(c: number): ImageChannelHistogram | undefined {
     return this._getChannel(c).histogram;
   }
 
