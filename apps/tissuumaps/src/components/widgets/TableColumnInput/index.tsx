@@ -1,5 +1,5 @@
-import { Autocomplete } from "@base-ui/react/autocomplete";
-import { ChevronDownIcon, FolderIcon, XIcon } from "lucide-react";
+import type { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete";
+import { FolderIcon } from "lucide-react";
 import {
   useEffect,
   useEffectEvent,
@@ -10,9 +10,19 @@ import {
 
 import type { TableColumnQuerySuggestion } from "@tissuumaps/core";
 
-import { Input } from "@/components/ui/input";
+import {
+  Autocomplete,
+  AutocompleteClear,
+  AutocompleteInput,
+  AutocompleteInputGroup,
+  AutocompleteItem,
+  AutocompleteList,
+  AutocompletePopup,
+  AutocompleteStatus,
+  AutocompleteTrigger,
+} from "@/components/common/autocomplete";
+import { InputGroupAddon } from "@/components/ui/input-group";
 import { useLazyTableData } from "@/hooks/useLazyData";
-import { cn } from "@/lib/utils";
 
 export type TableColumnInputProps = {
   tableId: string | null;
@@ -34,16 +44,21 @@ type SuggestionTextProps = {
 
 function SuggestionText({ suggestion, query }: SuggestionTextProps) {
   const index = query !== "" ? findQuery(suggestion, query) : -1;
-  if (index === -1) {
-    return <span className="truncate">{suggestion}</span>;
-  }
+  // right-to-left truncates long queries at the start; the inner span keeps
+  // their characters in left-to-right order
   return (
-    <span className="truncate">
-      {suggestion.slice(0, index)}
-      <span className="font-semibold">
-        {suggestion.slice(index, index + query.length)}
-      </span>
-      {suggestion.slice(index + query.length)}
+    <span className="truncate [direction:rtl] text-left">
+      {index === -1 ? (
+        <span dir="ltr">{suggestion}</span>
+      ) : (
+        <span dir="ltr">
+          {suggestion.slice(0, index)}
+          <span className="font-semibold">
+            {suggestion.slice(index, index + query.length)}
+          </span>
+          {suggestion.slice(index + query.length)}
+        </span>
+      )}
     </span>
   );
 }
@@ -162,7 +177,7 @@ export function TableColumnInput({
 
   function handleTextChange(
     newText: string,
-    details: Autocomplete.Root.ChangeEventDetails,
+    details: AutocompletePrimitive.Root.ChangeEventDetails,
   ) {
     // base-ui clears the input on Escape when the popup is closed
     if (details.reason === "escape-key") {
@@ -223,7 +238,7 @@ export function TableColumnInput({
   }
 
   return (
-    <Autocomplete.Root
+    <Autocomplete
       value={text}
       onValueChange={handleTextChange}
       mode="none"
@@ -237,10 +252,8 @@ export function TableColumnInput({
         highlightedSuggestionRef.current = suggestion;
       }}
     >
-      <div className={cn("relative w-full", className)}>
-        <Autocomplete.Input
-          render={<Input />}
-          className="pr-14"
+      <AutocompleteInputGroup className={className}>
+        <AutocompleteInput
           aria-invalid={invalid || undefined}
           aria-busy={pendingQuery !== null || undefined}
           onKeyDown={(event) => {
@@ -253,47 +266,24 @@ export function TableColumnInput({
           }}
           onBlur={() => commit(text)}
         />
-        <div className="absolute inset-y-0 right-1 flex items-center text-muted-foreground">
-          <Autocomplete.Clear
-            title="Clear"
-            className="flex size-6 items-center justify-center rounded hover:text-foreground"
-          >
-            <XIcon className="size-4" />
-          </Autocomplete.Clear>
-          <Autocomplete.Trigger
-            title="Show columns"
-            className="flex size-6 items-center justify-center rounded hover:text-foreground"
-          >
-            <ChevronDownIcon className="size-4" />
-          </Autocomplete.Trigger>
-        </div>
-      </div>
-      <Autocomplete.Portal>
-        <Autocomplete.Positioner
-          className="isolate z-50 outline-none"
-          sideOffset={4}
-        >
-          <Autocomplete.Popup className="box-border w-(--anchor-width) max-h-[min(var(--available-height),23rem)] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto overscroll-contain rounded-md border bg-popover py-1 text-popover-foreground shadow-md transition-[transform,scale,opacity] data-ending-style:transition-none data-starting-style:scale-95 data-starting-style:opacity-0">
-            <Autocomplete.Status className="px-3 py-1.5 text-xs text-muted-foreground empty:hidden">
-              {getStatusMessage()}
-            </Autocomplete.Status>
-            <Autocomplete.List>
-              {shownSuggestions?.map((suggestion) => (
-                <Autocomplete.Item
-                  key={suggestion.query}
-                  value={suggestion}
-                  className="flex cursor-default select-none items-center gap-2 px-3 py-1.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
-                >
-                  {suggestion.group && (
-                    <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                  )}
-                  <SuggestionText suggestion={suggestion.query} query={text} />
-                </Autocomplete.Item>
-              ))}
-            </Autocomplete.List>
-          </Autocomplete.Popup>
-        </Autocomplete.Positioner>
-      </Autocomplete.Portal>
-    </Autocomplete.Root>
+        <InputGroupAddon align="inline-end">
+          <AutocompleteClear />
+          <AutocompleteTrigger aria-label="Show columns" title="Show columns" />
+        </InputGroupAddon>
+      </AutocompleteInputGroup>
+      <AutocompletePopup>
+        <AutocompleteStatus>{getStatusMessage()}</AutocompleteStatus>
+        <AutocompleteList>
+          {shownSuggestions?.map((suggestion) => (
+            <AutocompleteItem key={suggestion.query} value={suggestion}>
+              {suggestion.group && (
+                <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              )}
+              <SuggestionText suggestion={suggestion.query} query={text} />
+            </AutocompleteItem>
+          ))}
+        </AutocompleteList>
+      </AutocompletePopup>
+    </Autocomplete>
   );
 }
