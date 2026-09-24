@@ -2,7 +2,7 @@ import { Autocomplete } from "@base-ui/react/autocomplete";
 import { ChevronDownIcon, FolderIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
-import type { ColumnQuerySuggestion } from "@tissuumaps/core";
+import type { TableColumnQuerySuggestion } from "@tissuumaps/core";
 
 import { Input } from "@/components/ui/input";
 import { useTableDataLoader } from "@/hooks/useDataLoader";
@@ -62,7 +62,7 @@ export function TableColumnInput({
   const [text, setText] = useState(value ?? "");
   const [invalid, setInvalid] = useState(false);
   const [suggestions, setSuggestions] = useState<
-    ColumnQuerySuggestion[] | null
+    TableColumnQuerySuggestion[] | null
   >(null);
   const [open, setOpen] = useState(false);
 
@@ -144,12 +144,12 @@ export function TableColumnInput({
     });
   }
 
-  const highlightedSuggestionRef = useRef<ColumnQuerySuggestion | undefined>(
-    undefined,
-  );
+  const highlightedSuggestionRef = useRef<
+    TableColumnQuerySuggestion | undefined
+  >(undefined);
   // base-ui closes the popup after any item press and only resets the
   // highlighted index on unmount, so cancelling the close would leave a stale
-  // highlight on the children; a pressed non-terminal suggestion reopens the
+  // highlight on the children; a pressed group suggestion reopens the
   // popup instead
   const reopenRef = useRef(false);
 
@@ -167,7 +167,7 @@ export function TableColumnInput({
     setInvalid(false);
     if (details.reason === "item-press") {
       const pressed = suggestions?.find((s) => s.query === newText);
-      if (pressed?.terminal === false) {
+      if (pressed?.group) {
         reopenRef.current = true;
       } else {
         commit(newText);
@@ -277,7 +277,7 @@ export function TableColumnInput({
                   value={suggestion}
                   className="flex cursor-default select-none items-center gap-2 px-3 py-1.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                 >
-                  {!suggestion.terminal && (
+                  {suggestion.group && (
                     <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
                   )}
                   <SuggestionText suggestion={suggestion.query} query={text} />

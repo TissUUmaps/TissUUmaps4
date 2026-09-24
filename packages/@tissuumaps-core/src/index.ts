@@ -159,7 +159,7 @@ export {
   type ShapesGeometry,
 } from "./storage/shapes";
 export {
-  type ColumnQuerySuggestion,
+  type TableColumnQuerySuggestion,
   type TableData,
   type TableDataProvider,
 } from "./storage/table";

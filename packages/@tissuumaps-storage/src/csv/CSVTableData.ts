@@ -1,8 +1,8 @@
 import {
-  type ColumnQuerySuggestion,
   type GenericArray,
   MathUtils,
   type NumericArray,
+  type TableColumnQuerySuggestion,
   type TableData,
   type TypedArray,
 } from "@tissuumaps/core";
@@ -44,7 +44,9 @@ export class CSVTableData implements TableData {
     return this._names;
   }
 
-  suggestColumnQueries(currentQuery: string): Promise<ColumnQuerySuggestion[]> {
+  suggestColumnQueries(
+    currentQuery: string,
+  ): Promise<TableColumnQuerySuggestion[]> {
     const lowerCaseQuery = currentQuery.toLowerCase();
     const matches: string[] = [];
     const others: string[] = [];
@@ -57,9 +59,7 @@ export class CSVTableData implements TableData {
         others.push(column);
       }
     }
-    return Promise.resolve(
-      [...matches, ...others].map((query) => ({ query, terminal: true })),
-    );
+    return Promise.resolve([...matches, ...others].map((query) => ({ query })));
   }
 
   resolveColumnQuery(query: string): Promise<string | null> {

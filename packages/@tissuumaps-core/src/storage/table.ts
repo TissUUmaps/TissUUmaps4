@@ -4,16 +4,20 @@ import type { ProgressCallback } from "../types/callbacks";
 import type { DataProvider, ItemsData } from "./base";
 
 /** A column query suggested by `TableData.suggestColumnQueries` */
-export type ColumnQuerySuggestion = {
+export type TableColumnQuerySuggestion = {
   /** The suggested query, in the provider's own format */
   query: string;
+
   /**
-   * Whether the query resolves to a column
+   * Whether the query continues into a group of columns
    *
-   * A non-terminal suggestion continues the query, e.g. into a group of
-   * columns.
+   * A group suggestion does not resolve to a column; it continues the query,
+   * e.g. into the columns of a group or a matrix. Other suggestions are
+   * expected to resolve to an exact column name.
+   *
+   * @defaultValue false
    */
-  terminal: boolean;
+  group?: boolean;
 };
 
 /**
@@ -37,7 +41,7 @@ export interface TableData extends ItemsData {
   suggestColumnQueries(
     currentQuery: string,
     options?: { signal?: AbortSignal },
-  ): Promise<ColumnQuerySuggestion[]>;
+  ): Promise<TableColumnQuerySuggestion[]>;
 
   /**
    * Resolves a query to an exact column name

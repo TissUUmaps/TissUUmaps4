@@ -7,8 +7,8 @@ describe("CSVTableData", () => {
     return new CSVTableData(0, undefined, undefined, columns, new Map());
   }
 
-  function terminal(...queries: string[]) {
-    return queries.map((query) => ({ query, terminal: true }));
+  function suggestions(...queries: string[]) {
+    return queries.map((query) => ({ query }));
   }
 
   describe("suggestColumnQueries", () => {
@@ -22,25 +22,25 @@ describe("CSVTableData", () => {
 
     it("lists all columns for an empty query", async () => {
       await expect(tableData.suggestColumnQueries("")).resolves.toEqual(
-        terminal("area", "Area_um2", "cell_type", "x", "y"),
+        suggestions("area", "Area_um2", "cell_type", "x", "y"),
       );
     });
 
     it("lists case-insensitive matches first", async () => {
       await expect(tableData.suggestColumnQueries("TYPE")).resolves.toEqual(
-        terminal("cell_type", "area", "Area_um2", "x", "y"),
+        suggestions("cell_type", "area", "Area_um2", "x", "y"),
       );
     });
 
     it("lists an exact match first", async () => {
       await expect(
         createTableData(["Area_um2", "area"]).suggestColumnQueries("area"),
-      ).resolves.toEqual(terminal("area", "Area_um2"));
+      ).resolves.toEqual(suggestions("area", "Area_um2"));
     });
 
     it("lists all columns in table order when nothing matches", async () => {
       await expect(tableData.suggestColumnQueries("z")).resolves.toEqual(
-        terminal("area", "Area_um2", "cell_type", "x", "y"),
+        suggestions("area", "Area_um2", "cell_type", "x", "y"),
       );
     });
   });
