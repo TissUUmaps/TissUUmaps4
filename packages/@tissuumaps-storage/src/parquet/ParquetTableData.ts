@@ -99,13 +99,13 @@ export class ParquetTableData implements TableData {
   ): Promise<GenericArray<T>> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
-    const coordinates = this._coordinateColumns.get(column);
-    if (coordinates !== undefined) {
+    const coordinateColumn = this._coordinateColumns.get(column);
+    if (coordinateColumn !== undefined) {
       const { x, y } = await AsyncUtils.raceSignal(
-        this._loadCoordinates(coordinates.geometryColumn, { onProgress }),
+        this._loadCoordinates(coordinateColumn.geometryColumn, { onProgress }),
         { signal },
       );
-      return (coordinates.axis === "x" ? x : y) as GenericArray<T>;
+      return (coordinateColumn.axis === "x" ? x : y) as GenericArray<T>;
     }
     const { data } = await runParquetWorker(
       { op: "column", source: this._source, column },
@@ -150,13 +150,13 @@ export class ParquetTableData implements TableData {
   ): Promise<[number, number] | undefined> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
-    const coordinates = this._coordinateColumns.get(column);
+    const coordinateColumn = this._coordinateColumns.get(column);
     const { range } = await runParquetWorker(
       {
         op: "range",
         source: this._source,
-        column: coordinates?.geometryColumn ?? column,
-        axis: coordinates?.axis,
+        column: coordinateColumn?.geometryColumn ?? column,
+        axis: coordinateColumn?.axis,
       },
       { signal, onProgress },
     );
