@@ -24,7 +24,7 @@ import {
  * Extracts one sample per pixel from the raw OME-Zarr data of its tiles,
  * which the renderer contrast-stretches and colorizes. Integer tiles of up to
  * 32 bits and floating-point tiles are passed through as they are; 64-bit
- * integer tiles are rejected, as they are not converted.
+ * integer tiles are rejected.
  *
  * Multi-channel image data carries one precomputed value histogram per
  * channel, computed at load time from a downsampled resolution level (see

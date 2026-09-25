@@ -4,6 +4,7 @@ type Float16Array = typeof globalThis extends {
 }
   ? TFloat16ArrayPrototype
   : never;
+
 /** Union of all natively supported signed integer typed arrays */
 export type IntArray = Int8Array | Int16Array | Int32Array;
 
@@ -37,5 +38,5 @@ export type IDArray = IntOrUintArray | Float64Array | string[];
 export type TypedArrayOrArray<T> = [T] extends [number]
   ? TypedArray
   : unknown extends T
-    ? T[] | TypedArray
+    ? TypedArray | T[]
     : T[];

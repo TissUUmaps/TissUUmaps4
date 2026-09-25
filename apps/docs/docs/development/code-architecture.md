@@ -125,7 +125,7 @@ A data provider implementation consists of a concrete `DataSource` type with its
 
 Each data provider has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files: `ome-zarr` and `tiff` (images and labels), `openseadragon` (images), `table` (points backed by a table), `geojson` and `parquet` (shapes), `csv` and `parquet` (tables).
 
-Data providers convert what a file holds to the array types of the storage API (see [Storage](#storage)): 64-bit integers are read as 64-bit floats, and a value beyond the safe integer range fails the load rather than losing precision; numeric columns with missing values are read as floating-point typed arrays with `NaN` for a missing value; ID columns have to hold integers or strings without missing values, which fail the load, and position columns are read as 32-bit floats. `ArrayUtils` in `@tissuumaps/core` holds the shared conversions.
+Data providers convert what a file holds to the array types of the storage API (see [Storage](#storage)): 64-bit integers are read as 64-bit floats, and a value beyond the safe integer range fails the load rather than losing precision; numeric columns with missing values are read as floating-point typed arrays with `NaN` for a missing value; ID columns have to hold integers or strings without missing values, which fail the load (see `ArrayUtils.toIDArray` in `@tissuumaps/core`), and position columns are read as 32-bit floats.
 
 Heavy parsing and decoding runs off the main thread: Parquet and GeoJSON in dedicated web workers (`parquet.worker.ts`, `geojson.worker.ts`, inlined into the bundle), CSV via PapaParse's worker mode.
 

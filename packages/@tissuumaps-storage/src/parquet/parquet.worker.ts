@@ -323,8 +323,8 @@ function isNullable(
  * The array is allocated from the column's schema (see
  * {@link getColumnArrayType}) before reading, and the chunks are written into
  * it as they arrive. A missing value is `NaN` in a float array and `null` in a
- * plain array, so an integer column is read as 64-bit floats unless the file
- * states that it has no nulls.
+ * plain array, so an integer column is read as 64-bit floats unless its schema
+ * requires a value or its statistics count no nulls.
  */
 async function readParquetColumn(
   buffer: AsyncBuffer,
@@ -345,7 +345,10 @@ async function readParquetColumn(
     result = new Array<unknown>(numRows).fill(null);
   } else if (arrayType === Float32Array || arrayType === Float64Array) {
     result = new arrayType(numRows).fill(NaN);
-  } else if (isNullable(metadata, column) === false) {
+  } else if (
+    element.repetition_type === "REQUIRED" ||
+    isNullable(metadata, column) === false
+  ) {
     result = new arrayType(numRows);
   } else {
     result = new Float64Array(numRows).fill(NaN);
