@@ -1,6 +1,6 @@
 import {
+  ArrayUtils,
   type DataProviderLoadOptions,
-  NumberUtils,
   SourceUtils,
   type TableDataProvider,
 } from "@tissuumaps/core";
@@ -101,9 +101,7 @@ export abstract class HierarchicalTableDataProviderBase<
           : undefined,
       ]);
       const ids =
-        idData !== undefined
-          ? Array.from(idData, (id) => NumberUtils.parseSafeInt(id))
-          : undefined;
+        idData !== undefined ? ArrayUtils.toIDArray(idData) : undefined;
       const names =
         nameData !== undefined ? Array.from(nameData, String) : undefined;
       const numRows = ids?.length ?? names?.length ?? table.numRows;

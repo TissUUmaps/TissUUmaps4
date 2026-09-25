@@ -1,4 +1,4 @@
-import type { GenericArray } from "@tissuumaps/core";
+import type { TypedArrayOrArray } from "@tissuumaps/core";
 
 import type {
   HierarchicalTable,
@@ -68,7 +68,7 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
   async readColumn(
     query: string,
     options?: { numRows?: number; signal?: AbortSignal },
-  ): Promise<GenericArray<unknown>> {
+  ): Promise<TypedArrayOrArray<unknown>> {
     const { numRows, signal } = options ?? {};
     signal?.throwIfAborted();
     const { data } = (await this._channel.request(

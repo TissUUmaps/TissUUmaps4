@@ -1,4 +1,4 @@
-import type { GenericArray } from "@tissuumaps/core";
+import type { TypedArrayOrArray } from "@tissuumaps/core";
 
 /** Data types of a {@link HierarchicalStoreArray}, as far as the reader tells them apart */
 export type HierarchicalStoreDataType =
@@ -9,7 +9,7 @@ export type HierarchicalStoreDataType =
  * `BigInt64Array`/`BigUint64Array`
  */
 export type HierarchicalStoreValues =
-  GenericArray<unknown> | BigInt64Array | BigUint64Array;
+  TypedArrayOrArray<unknown> | BigInt64Array | BigUint64Array;
 
 /** A named container of other nodes */
 export interface HierarchicalStoreGroup {

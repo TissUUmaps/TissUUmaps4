@@ -1,9 +1,10 @@
 import {
-  type GenericArray,
+  type IDArray,
   MathUtils,
   type ProgressCallback,
   type TableColumnQuerySuggestion,
   type TableData,
+  type TypedArrayOrArray,
 } from "@tissuumaps/core";
 
 import { ColumnQueryUtils } from "./ColumnQueryUtils";
@@ -13,13 +14,13 @@ import type { HierarchicalTable } from "./HierarchicalTable";
 export class HierarchicalTableData implements TableData {
   private readonly _table: HierarchicalTable;
   private readonly _numRows: number;
-  private _ids: number[] | undefined;
+  private _ids: IDArray | undefined;
   private readonly _names: string[] | undefined;
 
   constructor(
     table: HierarchicalTable,
     numRows: number,
-    ids: number[] | undefined,
+    ids: IDArray | undefined,
     names: string[] | undefined,
   ) {
     this._table = table;
@@ -28,10 +29,10 @@ export class HierarchicalTableData implements TableData {
     this._names = names;
   }
 
-  getIds(): number[] {
+  getIds(): IDArray {
     if (this._ids === undefined) {
       console.warn("No ID column specified, using sequential IDs instead");
-      this._ids = Array.from({ length: this.getSize() }, (_, i) => i);
+      this._ids = Uint32Array.from({ length: this.getSize() }, (_, i) => i);
     }
     return this._ids;
   }
@@ -74,14 +75,14 @@ export class HierarchicalTableData implements TableData {
   async loadValues<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<GenericArray<T>> {
+  ): Promise<TypedArrayOrArray<T>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const data = await this._table.readColumn(column, {
       numRows: this._numRows,
       signal,
     });
-    return data as GenericArray<T>;
+    return data as TypedArrayOrArray<T>;
   }
 
   async loadUniqueValueCounts<T>(

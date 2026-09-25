@@ -1,4 +1,4 @@
-import type { GenericArray } from "@tissuumaps/core";
+import type { TypedArrayOrArray } from "@tissuumaps/core";
 
 import type { HierarchicalTableColumn } from "../HierarchicalTable";
 
@@ -23,7 +23,7 @@ export type HierarchicalTableColumnRequest = {
 
 /** The values of a column */
 export type HierarchicalTableColumnResponse = {
-  data: GenericArray<unknown>;
+  data: TypedArrayOrArray<unknown>;
 };
 
 /** Reads the value range of a column, see {@link HierarchicalTable.readRange} */

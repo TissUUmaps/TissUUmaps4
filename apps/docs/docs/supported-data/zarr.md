@@ -16,7 +16,7 @@ Zarr data sources have the `type` `"zarr"` and accept the following fields:
 | ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `type`       | `string` | Always `"zarr"`.                                                                                                                |
 | `source`     | `string` | URL of the store, or path of its directory in the workspace (see [Referencing data](../concepts/projects.md#referencing-data)). |
-| `idColumn`   | `string` | Column of the row IDs, which must be integers. Sequential IDs are used if omitted.                                              |
+| `idColumn`   | `string` | Column of the row IDs, integers or strings without missing values. Sequential IDs are used if omitted.                          |
 | `nameColumn` | `string` | Column of the row names.                                                                                                        |
 
 The source may point at the store itself, or at a group inside it. A SpatialData table is a group of the store, so both of these work if the store holds one table:

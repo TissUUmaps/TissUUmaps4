@@ -1,8 +1,8 @@
 import {
-  type GenericArray,
   MathUtils,
   NumberUtils,
-  type NumericArray,
+  type TypedArray,
+  type TypedArrayOrArray,
 } from "@tissuumaps/core";
 
 import { ColumnQueryUtils } from "./ColumnQueryUtils";
@@ -118,7 +118,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
   async readColumn(
     query: string,
     options?: { numRows?: number; signal?: AbortSignal },
-  ): Promise<GenericArray<unknown>> {
+  ): Promise<TypedArrayOrArray<unknown>> {
     const { numRows, signal } = options ?? {};
     signal?.throwIfAborted();
     const resolved = ColumnQueryUtils.resolveColumn(this.columns, query);
@@ -156,7 +156,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
     if (typeof values[0] !== "number") {
       return undefined;
     }
-    const [vmin, vmax] = await MathUtils.computeRange(values as NumericArray, {
+    const [vmin, vmax] = await MathUtils.computeRange(values as TypedArray, {
       signal,
     });
     return vmin < vmax ? [vmin, vmax] : undefined;
@@ -304,7 +304,7 @@ async function readColumnValues(
   path: string,
   index: number | undefined,
   options?: { signal?: AbortSignal },
-): Promise<GenericArray<unknown>> {
+): Promise<TypedArrayOrArray<unknown>> {
   const { signal } = options ?? {};
   signal?.throwIfAborted();
   const node = await store.get(path, { signal });
@@ -346,7 +346,7 @@ async function readColumnValues(
  */
 function toNumbersIfInt64(
   values: HierarchicalStoreValues,
-): GenericArray<unknown> {
+): TypedArrayOrArray<unknown> {
   if (values instanceof BigInt64Array || values instanceof BigUint64Array) {
     return Float64Array.from(values, (v) => NumberUtils.parseSafeInt(v));
   }
@@ -526,7 +526,7 @@ async function readChildArray(
   path: string,
   name: string,
   options?: { signal?: AbortSignal },
-): Promise<GenericArray<unknown>> {
+): Promise<TypedArrayOrArray<unknown>> {
   const { signal } = options ?? {};
   signal?.throwIfAborted();
   const child = await getChildArray(store, path, name, { signal });

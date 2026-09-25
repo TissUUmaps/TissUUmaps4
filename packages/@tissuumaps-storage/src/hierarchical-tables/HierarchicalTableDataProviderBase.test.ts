@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { GenericArray } from "@tissuumaps/core";
+import type { TypedArrayOrArray } from "@tissuumaps/core";
 
 import type { HierarchicalTable } from "./HierarchicalTable";
 import { HierarchicalTableDataProviderBase } from "./HierarchicalTableDataProviderBase";
@@ -8,8 +8,8 @@ import type { HierarchicalTableDataSource } from "./HierarchicalTableDataSource"
 
 /** A table of 5 rows, with 3 IDs and 2 names */
 function createTable() {
-  const values: Record<string, GenericArray<unknown>> = {
-    "obs/id": [1, 2, 3],
+  const values: Record<string, TypedArrayOrArray<unknown>> = {
+    "obs/id": new Int32Array([1, 2, 3]),
     "obs/name": ["a", "b"],
   };
   return {
@@ -61,7 +61,7 @@ describe("HierarchicalTableDataProviderBase", () => {
     it("takes the row count from the ID column, then the name column, then the table", async () => {
       const ids = await load(createTable(), { idColumn: "obs/id" });
       expect(ids.getSize()).toBe(3);
-      expect(ids.getIds()).toEqual([1, 2, 3]);
+      expect(ids.getIds()).toEqual(new Int32Array([1, 2, 3]));
       const names = await load(createTable(), { nameColumn: "obs/name" });
       expect(names.getSize()).toBe(2);
       expect(names.getNames()).toEqual(["a", "b"]);

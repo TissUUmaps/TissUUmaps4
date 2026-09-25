@@ -12,12 +12,12 @@ An [AnnData object](#anndata-files) is recognized by its `encoding-type` attribu
 
 HDF5 data sources have the `type` `"hdf5"` and accept the following fields:
 
-| Field        | Type     | Description                                                                                      |
-| ------------ | -------- | ------------------------------------------------------------------------------------------------ |
-| `type`       | `string` | Always `"hdf5"`.                                                                                 |
-| `source`     | `string` | URL or path of the HDF5 file (see [Referencing data](../concepts/projects.md#referencing-data)). |
-| `idColumn`   | `string` | Column of the row IDs, which must be integers. Sequential IDs are used if omitted.               |
-| `nameColumn` | `string` | Column of the row names.                                                                         |
+| Field        | Type     | Description                                                                                            |
+| ------------ | -------- | ------------------------------------------------------------------------------------------------------ |
+| `type`       | `string` | Always `"hdf5"`.                                                                                       |
+| `source`     | `string` | URL or path of the HDF5 file (see [Referencing data](../concepts/projects.md#referencing-data)).       |
+| `idColumn`   | `string` | Column of the row IDs, integers or strings without missing values. Sequential IDs are used if omitted. |
+| `nameColumn` | `string` | Column of the row names.                                                                               |
 
 ## Columns
 

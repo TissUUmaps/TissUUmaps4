@@ -1,4 +1,4 @@
-import type { GenericArray } from "@tissuumaps/core";
+import type { TypedArrayOrArray } from "@tissuumaps/core";
 
 /**
  * One column that can be addressed by a column query
@@ -41,7 +41,7 @@ export interface HierarchicalTable {
   readColumn(
     query: string,
     options?: { numRows?: number; signal?: AbortSignal },
-  ): Promise<GenericArray<unknown>>;
+  ): Promise<TypedArrayOrArray<unknown>>;
 
   /**
    * Reads the minimum and maximum value of a numeric column
