@@ -16,6 +16,7 @@ import {
   CollapsibleTrigger,
   CollapsibleTriggerRightDownIcon,
 } from "@/components/common/collapsible";
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -53,7 +54,7 @@ export function ChannelSettingsWidget({
   // Base UI's accordion would take the radios from the radio group, which then
   // no longer moves the active channel on arrow keys
   const rows = (
-    <div className="flex flex-col gap-y-1">
+    <div className="flex flex-col gap-y-1 text-sm">
       {Array.from({ length: sizeC }, (_, c) => (
         <ChannelSettingsRow
           key={c}
@@ -72,7 +73,12 @@ export function ChannelSettingsWidget({
   );
 
   return (
-    <div className={cn("flex flex-col gap-y-2 text-sm", className)}>
+    <Fieldset
+      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
+    >
+      <FieldsetLegend className="font-medium text-foreground">
+        Channels
+      </FieldsetLegend>
       <ToggleGroup
         size="sm"
         value={[image.channelViewMode]}
@@ -121,7 +127,7 @@ export function ChannelSettingsWidget({
       ) : (
         rows
       )}
-    </div>
+    </Fieldset>
   );
 }
 
