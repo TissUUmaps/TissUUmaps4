@@ -1,5 +1,5 @@
 import type { TableDataSource } from "../model/table";
-import type { GenericArray } from "../types/arrays";
+import type { TypedArrayOrArray } from "../types/arrays";
 import type { ProgressCallback } from "../types/callbacks";
 import type { DataProvider, ItemsData } from "./base";
 
@@ -56,7 +56,10 @@ export interface TableData extends ItemsData {
   ): Promise<string | null>;
 
   /**
-   * Loads a column's values as a typed array-like
+   * Loads a column's values
+   *
+   * Numeric columns are loaded as numeric typed arrays, all other columns as
+   * plain arrays (see `TypedArrayOrArray`).
    *
    * @typeParam T - Element type of the returned array
    * @param column - The column name
@@ -66,7 +69,7 @@ export interface TableData extends ItemsData {
   loadValues<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<GenericArray<T>>;
+  ): Promise<TypedArrayOrArray<T>>;
 
   /**
    * Loads the number of rows per unique value of a column

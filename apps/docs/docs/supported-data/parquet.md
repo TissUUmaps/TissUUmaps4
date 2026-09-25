@@ -42,7 +42,7 @@ Any Parquet file can be read as a table. Its rows are keyed by row number unless
 
 Parquet has no index. [pandas](https://pandas.pydata.org/docs/development/developer.html) writes the DataFrame index as a column and names it in the `pandas` metadata of the file. pandas does not write a `RangeIndex` at all.
 
-TissUUmaps uses the index column as the default `idColumn`. Item IDs are numbers, so only a single-level integer index is used. A string or multi-level index, or an index column missing from the file, leaves the default at row numbers.
+TissUUmaps uses the index column as the default `idColumn`. Item IDs are integers or strings, so an index whose values are not all integers or all strings (e.g. floats, dates, or missing values) is ignored with a warning, and rows are keyed by row numbers. A multi-level index, or an index column missing from the file, also leaves the default at row numbers.
 
 IDs must be unique. An ID column with duplicate values is ignored with a warning, and rows are keyed by row numbers.
 
@@ -108,9 +108,13 @@ A project showing the circles and the polygons of a [SpatialData](#spatialdata) 
 }
 ```
 
+## Column types
+
+Numeric columns are read as typed arrays. Columns of 64-bit integers and numeric columns with nulls are read as doubles, with `NaN` for a null. String columns are read as they are. An `idColumn` has to hold integers or strings without nulls.
+
 ## Limitations
 
-- Columns of 64-bit integers are read as numbers, so their values have to be below 2^53. A column with a larger value fails to load rather than losing precision.
+- Columns of 64-bit integers are read as doubles, so their values have to be below 2^53. A column with a larger value fails to load rather than losing precision, except for a pandas index used as the default `idColumn`, which is ignored with a warning when exceeding that range (see [Pandas](#pandas)).
 - Geometries are read from WKB columns only. Other GeoParquet encodings are read as their raw values.
 - The primary geometry column is the primary one of the WKB columns: a file whose primary column is in another encoding falls back to its first WKB column.
 - A geometry column that declares no geometry types is offered as coordinate columns; reading them fails if a row is not a point.

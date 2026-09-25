@@ -4,6 +4,7 @@ import {
   type GroupByConfig,
   type GroupValueMap,
   HashUtils,
+  type IDArray,
   type Marker,
   type MarkerConfig,
   MathUtils,
@@ -35,7 +36,7 @@ export class MarkerResolver {
    * @returns A `Uint8Array` of packed marker values, one per ID
    */
   static async resolveMarkers(
-    ids: number[],
+    ids: IDArray,
     config: MarkerConfig,
     markerMaps: GroupValueMap<Marker>[],
     defaultMarker: Marker,
@@ -119,7 +120,7 @@ export class MarkerResolver {
    * @returns The packed marker index
    */
   static resolveMarkerWithoutTable(
-    _id: number,
+    _id: number | string,
     config: MarkerConfig,
     defaultMarker: Marker,
   ): number {
@@ -138,7 +139,7 @@ export class MarkerResolver {
    * @returns A `Uint8Array` filled with the packed constant marker
    */
   static resolveUniformMarkers(
-    ids: number[],
+    ids: IDArray,
     config: Extract<MarkerConfig, ConstantConfig<Marker>>,
     options?: { align?: number },
   ): Uint8Array {
@@ -161,7 +162,7 @@ export class MarkerResolver {
    * @returns A `Uint8Array` of packed marker values
    */
   static async resolveMarkersFromTableValues(
-    ids: number[],
+    ids: IDArray,
     config: Extract<MarkerConfig, FromConfig>,
     defaultMarker: Marker,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
@@ -199,7 +200,7 @@ export class MarkerResolver {
    * @returns A `Uint8Array` of packed marker values
    */
   static async resolveMarkersFromTableGroups(
-    ids: number[],
+    ids: IDArray,
     config: Extract<MarkerConfig, GroupByConfig<false>>,
     markerMaps: GroupValueMap<Marker>[],
     defaultMarker: Marker,

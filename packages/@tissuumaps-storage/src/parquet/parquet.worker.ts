@@ -10,10 +10,13 @@ import {
 import { compressors } from "hyparquet-compressors";
 
 import {
-  type GenericArray,
+  ArrayUtils,
+  type BigIntArray,
+  type IDArray,
   NumberUtils,
   type ShapesGeometry,
   type TypedArray,
+  type TypedArrayOrArray,
 } from "@tissuumaps/core";
 
 import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
@@ -22,6 +25,7 @@ import {
   GeoParquetMetadataUtils,
 } from "./GeoParquetMetadataUtils";
 import { PandasMetadataUtils } from "./PandasMetadataUtils";
+import { ParquetColumnUtils } from "./ParquetColumnUtils";
 import type { ParquetSource } from "./types";
 
 /**
@@ -35,7 +39,7 @@ import type { ParquetSource } from "./types";
 function addGeometry(
   builder: ShapesGeometryBuilder,
   geometry: Geometry,
-  id: number,
+  id: number | string,
   name?: string,
 ): void {
   if (geometry.type === "Polygon") {
@@ -67,7 +71,7 @@ export type ParquetFileResponse = ParquetResponse<ParquetFileRequest> & {
   numRows: number;
   columns: string[];
   coordinateColumns: CoordinateColumn[];
-  ids: number[] | undefined;
+  ids: IDArray | undefined;
   names: string[] | undefined;
 };
 
@@ -77,7 +81,7 @@ export type ParquetColumnRequest = ParquetRequest<"column"> & {
 };
 
 export type ParquetColumnResponse = ParquetResponse<ParquetColumnRequest> & {
-  data: GenericArray<unknown>;
+  data: TypedArrayOrArray<unknown>;
 };
 
 export type ParquetCoordinatesRequest = ParquetRequest<"coordinates"> & {
@@ -100,7 +104,7 @@ export type ParquetShapesRequest = ParquetRequest<"shapes"> & {
 
 export type ParquetShapesResponse = ParquetResponse<ParquetShapesRequest> & {
   geometry: ShapesGeometry;
-  ids: number[];
+  ids: IDArray;
   names: string[] | undefined;
 };
 
@@ -250,42 +254,24 @@ async function readParquetColumn(
   metadata: FileMetaData,
   column: string,
   onProgress: (progress: number, total: number) => void,
-): Promise<GenericArray<unknown>> {
-  let result: GenericArray<unknown> | undefined;
+): Promise<TypedArrayOrArray<unknown>> {
+  const chunks: Parameters<typeof ParquetColumnUtils.assembleColumn>[0] = [];
   await readColumnChunks(
     buffer,
     metadata,
     column,
     (columnData, rowStart) => {
-      if (ArrayBuffer.isView(columnData)) {
-        const chunk = columnData as TypedArray;
-        if (result === undefined) {
-          // @ts-expect-error typedArrayConstructor is a constructor
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          result = new chunk.constructor(getNumRows(metadata)) as TypedArray;
-        }
-        const out = result as TypedArray;
-        out.set(chunk, rowStart);
-      } else {
-        const chunk = columnData as unknown[];
-        if (result === undefined) {
-          result = new Array(getNumRows(metadata)) as unknown[];
-        }
-        const out = result as unknown[];
-        for (let i = 0; i < chunk.length; i++) {
-          out[rowStart + i] = chunk[i];
-        }
-      }
+      chunks.push({
+        data: columnData as unknown[] | TypedArray | BigIntArray,
+        rowStart,
+      });
     },
     onProgress,
   );
-  if (result === undefined) {
+  if (chunks.length === 0) {
     throw new Error(`Column "${column}" not found in Parquet file`);
   }
-  if (result instanceof BigInt64Array || result instanceof BigUint64Array) {
-    return Float64Array.from(result, (v) => NumberUtils.parseSafeInt(v));
-  }
-  return result;
+  return ParquetColumnUtils.assembleColumn(chunks, getNumRows(metadata));
 }
 
 function readGeometryColumn(
@@ -316,19 +302,40 @@ async function readIdsAndNames(
   idColumn: string | undefined,
   nameColumn: string | undefined,
   onProgress: (progress: number, total: number) => void,
-): Promise<{ ids: number[] | undefined; names: string[] | undefined }> {
+): Promise<{ ids: IDArray | undefined; names: string[] | undefined }> {
+  // Without an ID column, rows are keyed by the pandas index, if there is one
+  const indexColumn =
+    idColumn === undefined
+      ? PandasMetadataUtils.readIndexColumn(metadata)
+      : undefined;
+  const keyColumn = idColumn ?? indexColumn;
   let idTotal = 0,
     nameTotal = 0,
     idProgress = 0,
     nameProgress = 0;
-  const idDataPromise =
-    idColumn !== undefined
-      ? readParquetColumn(buffer, metadata, idColumn, (progress, total) => {
-          idTotal = total;
-          idProgress = progress;
-          onProgress(idProgress + nameProgress, idTotal + nameTotal);
-        })
-      : undefined;
+  let idsPromise: Promise<IDArray | undefined> | undefined;
+  if (keyColumn !== undefined) {
+    idsPromise = readParquetColumn(
+      buffer,
+      metadata,
+      keyColumn,
+      (progress, total) => {
+        idTotal = total;
+        idProgress = progress;
+        onProgress(idProgress + nameProgress, idTotal + nameTotal);
+      },
+    ).then((idData) => ArrayUtils.toIDArray(idData));
+    if (indexColumn !== undefined) {
+      // the pandas index was not asked for, so it must not fail the read
+      idsPromise = idsPromise.catch((error: unknown) => {
+        console.warn(
+          `Index column "${indexColumn}" does not hold item IDs, keying rows by row number instead:`,
+          error,
+        );
+        return undefined;
+      });
+    }
+  }
   const nameDataPromise =
     nameColumn !== undefined
       ? readParquetColumn(buffer, metadata, nameColumn, (progress, total) => {
@@ -337,23 +344,16 @@ async function readIdsAndNames(
           onProgress(idProgress + nameProgress, idTotal + nameTotal);
         })
       : undefined;
-  const [idData, nameData] = await Promise.all([
-    idDataPromise,
-    nameDataPromise,
-  ]);
-  let ids =
-    idData !== undefined
-      ? Array.from(idData, (id) => NumberUtils.parseSafeInt(id))
-      : undefined;
-  // e.g. the partition-local index that Dask writes; items are looked up by ID
-  if (ids !== undefined && new Set(ids).size !== ids.length) {
-    console.warn(
-      `ID column "${idColumn}" has duplicate values, keying rows by row number instead`,
-    );
-    ids = undefined;
-  }
+  const [ids, nameData] = await Promise.all([idsPromise, nameDataPromise]);
   const names =
     nameData !== undefined ? Array.from(nameData, String) : undefined;
+  // e.g. the partition-local index that Dask writes; items are looked up by ID
+  if (ids !== undefined && new Set<unknown>(ids).size !== ids.length) {
+    console.warn(
+      `ID column "${keyColumn}" has duplicate values, keying rows by row number instead`,
+    );
+    return { ids: undefined, names };
+  }
   return { ids, names };
 }
 
@@ -369,7 +369,7 @@ async function handleFileRequest(
   const { ids, names } = await readIdsAndNames(
     buffer,
     metadata,
-    request.idColumn ?? PandasMetadataUtils.readIndexColumn(metadata),
+    request.idColumn,
     request.nameColumn,
     onProgress,
   );
@@ -390,6 +390,10 @@ async function handleFileRequest(
       ids,
       names,
     },
+    transfer:
+      ArrayBuffer.isView(ids) && ids.buffer instanceof ArrayBuffer
+        ? [ids.buffer]
+        : undefined,
   };
 }
 
@@ -512,7 +516,7 @@ async function handleShapesRequest(
   const { ids: rowIds, names: rowNames } = await readIdsAndNames(
     buffer,
     metadata,
-    request.idColumn ?? PandasMetadataUtils.readIndexColumn(metadata),
+    request.idColumn,
     request.nameColumn,
     () => {},
   );
@@ -568,6 +572,9 @@ async function handleShapesRequest(
       geometry.polygonRingOffsets.buffer,
       geometry.ringVertexOffsets.buffer,
       geometry.coords.buffer,
+      ...(ArrayBuffer.isView(ids) && ids.buffer instanceof ArrayBuffer
+        ? [ids.buffer]
+        : []),
     ],
   };
 }

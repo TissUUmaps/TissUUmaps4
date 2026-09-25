@@ -1,5 +1,5 @@
 import type { TableData } from "../storage/table";
-import type { TypedArray } from "../types/arrays";
+import type { IDArray, TypedArray } from "../types/arrays";
 import { AsyncUtils } from "./AsyncUtils";
 
 /**
@@ -39,8 +39,8 @@ export class TableUtils {
    * so that concurrent lookups share it.
    */
   private static readonly _rowIndicesCache = new WeakMap<
-    number[],
-    Promise<ReadonlyMap<number, number>>
+    IDArray,
+    Promise<ReadonlyMap<number | string, number>>
   >();
 
   /**
@@ -65,7 +65,7 @@ export class TableUtils {
   static async fillFromTableValues<TValue>(
     packedValues: TypedArray,
     tableData: TableData,
-    ids: number[],
+    ids: IDArray,
     column: string,
     defaultValue: TValue,
     parseTableValue: (value: unknown) => TValue | undefined,
@@ -129,7 +129,7 @@ export class TableUtils {
   static async fillFromTableGroups<TValue>(
     packedValues: TypedArray,
     tableData: TableData,
-    ids: number[],
+    ids: IDArray,
     column: string,
     defaultValue: TValue,
     mapGroupToValue: (group: string) => TValue | undefined,
@@ -193,7 +193,7 @@ export class TableUtils {
    * @param options - Optional abort signal
    */
   static async forEachRow(
-    ids: number[],
+    ids: IDArray,
     tableData: TableData,
     callback: (rowIndex: number | undefined, i: number) => void,
     options?: { signal?: AbortSignal },
@@ -201,13 +201,17 @@ export class TableUtils {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     if (ids === tableData.getIds()) {
-      await AsyncUtils.forEach(ids, (_, i) => callback(i, i), { signal });
+      await AsyncUtils.forEach<number | string>(ids, (_, i) => callback(i, i), {
+        signal,
+      });
       return;
     }
     const rowIndices = await TableUtils.getRowIndices(tableData, { signal });
-    await AsyncUtils.forEach(ids, (id, i) => callback(rowIndices.get(id), i), {
-      signal,
-    });
+    await AsyncUtils.forEach<number | string>(
+      ids,
+      (id, i) => callback(rowIndices.get(id), i),
+      { signal },
+    );
   }
 
   /**
@@ -225,7 +229,7 @@ export class TableUtils {
   static getRowIndices(
     tableData: TableData,
     options?: { signal?: AbortSignal },
-  ): Promise<ReadonlyMap<number, number>> {
+  ): Promise<ReadonlyMap<number | string, number>> {
     const tableIds = tableData.getIds();
     let rowIndicesPromise = TableUtils._rowIndicesCache.get(tableIds);
     if (rowIndicesPromise === undefined) {
@@ -239,10 +243,10 @@ export class TableUtils {
    * Builds the row indices by item ID for the given table IDs
    */
   private static async _buildRowIndices(
-    tableIds: number[],
-  ): Promise<ReadonlyMap<number, number>> {
-    const rowIndices = new Map<number, number>();
-    await AsyncUtils.forEach(tableIds, (id, i) => {
+    tableIds: IDArray,
+  ): Promise<ReadonlyMap<number | string, number>> {
+    const rowIndices = new Map<number | string, number>();
+    await AsyncUtils.forEach<number | string>(tableIds, (id, i) => {
       rowIndices.set(id, i);
     });
     if (rowIndices.size !== tableIds.length) {
