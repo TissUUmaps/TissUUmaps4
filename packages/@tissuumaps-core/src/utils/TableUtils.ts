@@ -111,18 +111,18 @@ export class TableUtils {
    *
    * For each ID in `ids`, the corresponding row is looked up in the table by ID
    * (see {@link forEachRow}). The raw cell value is converted to a string to
-   * form the group key, which `mapGroupToValue` maps to a value; if that
-   * fails, or if the table does not contain the ID, `defaultValue` is used
-   * instead. Groups are resolved once per distinct cell value, i.e.
+   * form the group key, which `mapGroupToValue` maps to a value; if the table
+   * does not contain the ID, `defaultValue` is used instead. Groups are
+   * resolved once per distinct cell value, i.e.
    * `mapGroupToValue` is not called per item.
    *
    * @param packedValues - Output typed array to fill, in the order of `ids`
    * @param tableData - The table to look up group keys in
    * @param ids - Ordered list of item IDs
    * @param column - Name of the table column to load group keys from
-   * @param defaultValue - Value used when the ID is missing or the group is unmapped
+   * @param defaultValue - Value used when the ID is missing
    * @param mapGroupToValue - Maps a group key (the cell value as a string) to
-   * `TValue`, or to `undefined`
+   * `TValue`
    * @param packValue - Converts `TValue` to the numeric representation stored
    * in `packedValues`
    * @param options - Optional abort signal
@@ -133,7 +133,7 @@ export class TableUtils {
     ids: number[],
     column: string,
     defaultValue: TValue,
-    mapGroupToValue: (group: string) => TValue | undefined,
+    mapGroupToValue: (group: string) => TValue,
     packValue: (value: TValue) => number,
     options?: { signal?: AbortSignal },
   ): Promise<void> {
@@ -141,7 +141,6 @@ export class TableUtils {
     signal?.throwIfAborted();
     const tableGroups = await tableData.loadValues(column, { signal });
     let numMissingIds = 0;
-    let numUnmappedGroups = 0;
     const packedValueByTableGroup = new Map<unknown, number>();
     await TableUtils.forEachRow(
       ids,
@@ -151,12 +150,7 @@ export class TableUtils {
           const tableGroup = tableGroups[rowIndex];
           let packedValue = packedValueByTableGroup.get(tableGroup);
           if (packedValue === undefined) {
-            const group = String(tableGroup);
-            const value = mapGroupToValue(group);
-            if (value === undefined) {
-              numUnmappedGroups++;
-            }
-            packedValue = packValue(value ?? defaultValue);
+            packedValue = packValue(mapGroupToValue(String(tableGroup)));
             packedValueByTableGroup.set(tableGroup, packedValue);
           }
           packedValues[i] = packedValue;
@@ -170,11 +164,6 @@ export class TableUtils {
     if (numMissingIds > 0) {
       console.warn(
         `${numMissingIds} IDs missing in column ${column}, using default value`,
-      );
-    }
-    if (numUnmappedGroups > 0) {
-      console.warn(
-        `Failed to map ${numUnmappedGroups} groups from column ${column}, using default value`,
       );
     }
   }

@@ -333,12 +333,8 @@ describe("TableUtils", () => {
       const { data } = createMockTableData([1, 2, 3], ["A", "B", "A"]);
       const buffer = new Uint8Array(3);
       const mapGroupToValue = vi
-        .fn<(group: string) => number | undefined>()
-        .mockImplementation((group) => {
-          if (group === "A") return 10;
-          if (group === "B") return 20;
-          return undefined;
-        });
+        .fn<(group: string) => number>()
+        .mockImplementation((group) => (group === "A" ? 10 : 20));
 
       await TableUtils.fillFromTableGroups(
         buffer,
@@ -396,26 +392,6 @@ describe("TableUtils", () => {
       expect(loadValues).toHaveBeenCalledWith("col1", {
         signal: controller.signal,
       });
-    });
-
-    it("uses defaultValue when mapGroupToValue returns undefined", async () => {
-      const { data } = createMockTableData([1], ["unknown"]);
-      const buffer = new Uint8Array(1);
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      await TableUtils.fillFromTableGroups(
-        buffer,
-        data,
-        [1],
-        "col1",
-        42,
-        () => undefined,
-        (value) => value,
-      );
-
-      expect(buffer[0]).toBe(42);
-      expect(warn).toHaveBeenCalledOnce();
-      warn.mockRestore();
     });
 
     it("uses defaultValue when the ID is missing from the table data", async () => {
@@ -482,7 +458,7 @@ describe("TableUtils", () => {
       const { data } = createMockTableData([1], [42]);
       const buffer = new Uint8Array(1);
       const mapGroupToValue = vi
-        .fn<(group: string) => number | undefined>()
+        .fn<(group: string) => number>()
         .mockReturnValue(1);
 
       await TableUtils.fillFromTableGroups(
@@ -503,7 +479,7 @@ describe("TableUtils", () => {
       const { data } = createMockTableData([1, 2, 3], ["A", "A", "B"]);
       const buffer = new Uint8Array(3);
       const mapGroupToValue = vi
-        .fn<(group: string) => number | undefined>()
+        .fn<(group: string) => number>()
         .mockImplementation((group) => (group === "A" ? 10 : 20));
 
       await TableUtils.fillFromTableGroups(
