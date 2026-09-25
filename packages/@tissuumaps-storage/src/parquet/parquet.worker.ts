@@ -25,7 +25,7 @@ import {
   GeoParquetMetadataUtils,
 } from "./GeoParquetMetadataUtils";
 import { PandasMetadataUtils } from "./PandasMetadataUtils";
-import { ParquetColumnUtils } from "./ParquetColumnUtils";
+import { ParquetColumnBuilder } from "./ParquetColumnBuilder";
 import type { ParquetSource } from "./types";
 
 /**
@@ -255,23 +255,25 @@ async function readParquetColumn(
   column: string,
   onProgress: (progress: number, total: number) => void,
 ): Promise<TypedArrayOrArray<unknown>> {
-  const chunks: Parameters<typeof ParquetColumnUtils.assembleColumn>[0] = [];
+  const builder = new ParquetColumnBuilder(getNumRows(metadata));
+  let numChunks = 0;
   await readColumnChunks(
     buffer,
     metadata,
     column,
     (columnData, rowStart) => {
-      chunks.push({
-        data: columnData as unknown[] | TypedArray | BigIntArray,
+      builder.addChunk(
+        columnData as unknown[] | TypedArray | BigIntArray,
         rowStart,
-      });
+      );
+      numChunks++;
     },
     onProgress,
   );
-  if (chunks.length === 0) {
+  if (numChunks === 0) {
     throw new Error(`Column "${column}" not found in Parquet file`);
   }
-  return ParquetColumnUtils.assembleColumn(chunks, getNumRows(metadata));
+  return builder.build();
 }
 
 function readGeometryColumn(
