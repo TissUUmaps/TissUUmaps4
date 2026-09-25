@@ -117,37 +117,60 @@ export async function loadProjectFromFile(
 }
 
 /**
- * Reads a project from a file within the open workspace and loads it into the
- * project store
+ * Determines where a project file is, for resolving its project-relative data
+ * sources
+ *
+ * @param projectFile - The handle of the project file
+ * @param workspace - The directory handle of the open workspace, if any
+ * @param options - Optional abort signal
+ * @returns The workspace-relative path of the file (with `/` prefix) if it
+ * lies within the open workspace, or `null` if it does not, or if no workspace
+ * is open
+ */
+export async function resolveProjectSource(
+  projectFile: FileSystemFileHandle,
+  workspace: FileSystemDirectoryHandle | null,
+  options?: { signal?: AbortSignal },
+): Promise<string | null> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  if (workspace === null) {
+    return null;
+  }
+  const segments = await workspace.resolve(projectFile);
+  signal?.throwIfAborted(); // resolve() does not throw on abort
+  return segments !== null ? SourceUtils.makeWorkspacePath(segments) : null;
+}
+
+/**
+ * Reads a project from a file handle and loads it into the project store
  *
  * The project is loaded with the workspace-relative path of the file as its
- * source, so that its project-relative data sources are resolved within the
- * file's directory.
+ * source if the file lies within the open workspace, so that its
+ * project-relative data sources are resolved within the file's directory.
+ * Otherwise it is loaded without a source, like an uploaded file, and its
+ * project-relative data sources fall back to being workspace-relative and then
+ * app-relative (see `SourceUtils`).
  *
  * @param projectFile - The handle of the file to read the project from
- * @param workspace - The directory handle of the open workspace
+ * @param workspace - The directory handle of the open workspace, if any
  * @param options - Optional abort signal
- * @throws Error if the file is not within the workspace, or if the project
- * cannot be read or parsed
+ * @throws Error if the project cannot be read or parsed
  */
-export async function loadProjectFromWorkspace(
+export async function loadProjectFromFileHandle(
   projectFile: FileSystemFileHandle,
-  workspace: FileSystemDirectoryHandle,
+  workspace: FileSystemDirectoryHandle | null,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
   const { signal } = options ?? {};
-  signal?.throwIfAborted();
-  const segments = await workspace.resolve(projectFile);
-  signal?.throwIfAborted(); // resolve() does not throw on abort
-  if (segments === null) {
-    throw new Error(`Project file not in workspace: ${projectFile.name}`);
-  }
+  const projectSource = await resolveProjectSource(
+    projectFile,
+    workspace,
+    options,
+  );
   const file = await projectFile.getFile();
   signal?.throwIfAborted(); // getFile() does not throw on abort
-  loadProject(
-    await readProjectFile(file, options),
-    SourceUtils.makeWorkspacePath(segments),
-  );
+  loadProject(await readProjectFile(file, options), projectSource);
 }
 
 /**

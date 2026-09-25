@@ -16,10 +16,17 @@ import { Input } from "@/components/ui/input";
 import {
   clearProjectURLParam,
   loadProjectFromFile,
+  loadProjectFromFileHandle,
   loadProjectFromURL,
   saveAndDownloadProjectToJSON,
   setProjectURLParam,
 } from "@/data/io/project";
+import {
+  isWorkspaceSupported,
+  pickProjectFile,
+  pickWorkspace,
+} from "@/data/io/workspace";
+import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
 import { LayersWidget } from "./LayersWidget";
@@ -35,8 +42,11 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
   const name = useProjectStore((state) => state.name);
   const setName = useProjectStore((state) => state.setName);
   const clearProject = useProjectStore((state) => state.clear);
+  const workspace = useAppStore((state) => state.workspace);
+  const setWorkspace = useAppStore((state) => state.setWorkspace);
   const confirm = useConfirmDialog();
   const prompt = usePromptDialog();
+  const workspaceSupported = isWorkspaceSupported();
 
   const promptLoadProjectFromURL = useCallback(() => {
     void prompt({ title: "Enter project URL to load" }).then((value) => {
@@ -65,6 +75,48 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
       }
     });
   }, [clearProject, confirm]);
+
+  const openWorkspace = useCallback(() => {
+    void pickWorkspace()
+      .then((directory) => {
+        if (directory !== null) {
+          setWorkspace(directory);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to open workspace", error);
+      });
+  }, [setWorkspace]);
+
+  const confirmCloseWorkspace = useCallback(() => {
+    void confirm({
+      title: "Close workspace",
+      body: "Are you sure you want to close the workspace? Data loaded from it will no longer be available until you open it again.",
+    }).then((confirmed) => {
+      if (confirmed) {
+        setWorkspace(null);
+      }
+    });
+  }, [confirm, setWorkspace]);
+
+  // Only a file handle can be located within the workspace
+  const loadProjectFile = useCallback(() => {
+    if (workspace === null) {
+      loadProjectFileInputRef.current?.click();
+      return;
+    }
+    void pickProjectFile()
+      .then(async (projectFile) => {
+        if (projectFile === null) {
+          return;
+        }
+        await loadProjectFromFileHandle(projectFile, workspace);
+        clearProjectURLParam();
+      })
+      .catch((error) => {
+        console.error("Failed to load project from file", error);
+      });
+  }, [workspace]);
 
   return (
     <div className={className}>
@@ -95,6 +147,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
           </Dialog>
         </Field>
       </div>
+
       <div className="grid grid-cols-2">
         <Field>
           <Input
@@ -117,14 +170,7 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
           />
           <FieldControl
             render={
-              <Button
-                onClick={() => {
-                  const loadProjectFileInput = loadProjectFileInputRef.current;
-                  if (loadProjectFileInput !== null) {
-                    loadProjectFileInput.click();
-                  }
-                }}
-              >
+              <Button onClick={() => loadProjectFile()}>
                 Load project from file
               </Button>
             }
@@ -153,6 +199,39 @@ export function ProjectPanel({ className }: ProjectPanelProps) {
             render={
               <Button onClick={() => confirmClearProject()}>
                 Clear project
+              </Button>
+            }
+          />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2">
+        <div className="flex items-end">
+          {!workspaceSupported ? (
+            <p className="text-xs text-muted-foreground mx-1">
+              Workspaces are not supported by this browser.
+            </p>
+          ) : (
+            <p
+              className="text-sm truncate min-w-0"
+              title={workspace ? workspace.name : undefined}
+            >
+              {workspace
+                ? `Current workspace: ${workspace.name}`
+                : "No current workspace."}
+            </p>
+          )}
+        </div>
+
+        <Field>
+          <FieldControl
+            render={
+              <Button
+                disabled={!workspaceSupported}
+                onClick={() =>
+                  workspace ? confirmCloseWorkspace() : openWorkspace()
+                }
+              >
+                {workspace ? "Close workspace" : "Open workspace"}
               </Button>
             }
           />
