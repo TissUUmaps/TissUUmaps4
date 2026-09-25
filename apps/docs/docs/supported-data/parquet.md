@@ -110,7 +110,7 @@ A project showing the circles and the polygons of a [SpatialData](#spatialdata) 
 
 ## Column types
 
-Numeric columns are read as typed arrays. Columns of 64-bit integers and numeric columns with nulls are read as doubles, with `NaN` for a null. String columns are read as they are. An `idColumn` has to hold integers or strings without nulls.
+Numeric columns are read as typed arrays, with `NaN` for a null. Columns of 64-bit integers are read as doubles, and so are integer columns with nulls, or whose row groups lack null statistics; float columns keep their precision. String columns are read as they are. An `idColumn` has to hold integers or strings without nulls.
 
 ## Limitations
 
