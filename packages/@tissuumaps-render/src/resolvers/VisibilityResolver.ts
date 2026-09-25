@@ -213,9 +213,7 @@ export class VisibilityResolver {
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const visibilityMap = visibilityMaps.find(
-      (visibilityMap) => visibilityMap.id === config.groupBy.map,
-    );
+    const visibilityMap = ConfigUtils.findGroupByMap(config, visibilityMaps);
     if (visibilityMap === undefined) {
       console.warn(
         `Visibility map ${config.groupBy.map} not found, using default visibility`,

@@ -208,9 +208,7 @@ export class OpacityResolver {
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const opacityMap = opacityMaps.find(
-      (opacityMap) => opacityMap.id === config.groupBy.map,
-    );
+    const opacityMap = ConfigUtils.findGroupByMap(config, opacityMaps);
     if (opacityMap === undefined) {
       console.warn(
         `Opacity map ${config.groupBy.map} not found, using default opacity`,

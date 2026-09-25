@@ -204,9 +204,7 @@ export class SizeResolver {
   ): Promise<Float32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const sizeMap = sizeMaps.find(
-      (sizeMap) => sizeMap.id === config.groupBy.map,
-    );
+    const sizeMap = ConfigUtils.findGroupByMap(config, sizeMaps);
     if (sizeMap === undefined) {
       console.warn(
         `Size map ${config.groupBy.map} not found, using default size`,
