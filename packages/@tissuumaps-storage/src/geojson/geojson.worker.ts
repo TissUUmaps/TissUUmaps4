@@ -1,6 +1,11 @@
-import type { GeoJSON, Geometry, Position } from "geojson";
+import type { Feature, GeoJSON, Geometry } from "geojson";
 
 import type { ShapesGeometry } from "@tissuumaps/core";
+
+import {
+  ShapesGeometryBuilder,
+  type ShapesPolygon,
+} from "../common/ShapesGeometryBuilder";
 
 export type GeoJSONRequest<TOp extends string = string> = {
   op: TOp;
@@ -19,7 +24,7 @@ export type GeoJSONFileRequest = GeoJSONRequest<"file"> & {
 
 export type GeoJSONFileResponse = GeoJSONResponse<GeoJSONFileRequest> & {
   geometry: ShapesGeometry;
-  ids: number[] | undefined;
+  ids: number[];
   names: string[] | undefined;
 };
 
@@ -33,13 +38,6 @@ export type GeoJSONWorkerResponseFor<
 
 export type GeoJSONWorkerMessage =
   GeoJSONWorkerResponse | { progress: number; total: number };
-
-type ShapesGeometryAccumulator = {
-  shapePolygonOffsets: number[];
-  polygonRingOffsets: number[];
-  ringVertexOffsets: number[];
-  coords: number[];
-};
 
 const ctx = self as unknown as {
   onmessage: ((event: MessageEvent<GeoJSONWorkerRequest>) => void) | null;
@@ -176,13 +174,75 @@ async function handleFileRequest(
   return { response: { op: "file", geometry, ids, names } };
 }
 
+/**
+ * Reads the polygons of a GeoJSON geometry
+ *
+ * @param geometry - The geometry to read
+ * @returns The polygons of the geometry, or `undefined` if it holds none
+ */
+function toPolygons(geometry: Geometry): readonly ShapesPolygon[] | undefined {
+  if (geometry.type === "Polygon") {
+    return [geometry.coordinates];
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates;
+  }
+  console.warn(`Unsupported geometry type: ${geometry.type}`);
+  return undefined;
+}
+
+/**
+ * Adds the polygons of a GeoJSON geometry as one shape, if it holds any
+ *
+ * @param builder - The builder of the shapes geometry under construction
+ * @param geometry - The geometry to add
+ * @param id - The ID of the shape
+ */
+function addPolygons(
+  builder: ShapesGeometryBuilder,
+  geometry: Geometry,
+  id: number,
+): void {
+  const polygons = toPolygons(geometry);
+  if (polygons !== undefined) {
+    builder.addShape(polygons, id);
+  }
+}
+
+function readFeatureId(
+  feature: Feature<Geometry | null>,
+  idProperty: string,
+): number {
+  const id = feature.properties?.[idProperty] as unknown;
+  if (id === undefined || id === "") {
+    throw new Error(`Feature is missing ID '${idProperty}'`);
+  }
+  const numericId = Number(id);
+  if (!Number.isSafeInteger(numericId)) {
+    throw new Error(`Feature has invalid ID '${idProperty}'`);
+  }
+  return numericId;
+}
+
+function readFeatureName(
+  feature: Feature<Geometry | null>,
+  nameProperty: string,
+): string {
+  const name = feature.properties?.[nameProperty] as unknown;
+  if (name === undefined) {
+    throw new Error(`Feature is missing name '${nameProperty}'.`);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
+  return String(name);
+}
+
 function parseGeoJSON(
   geo: GeoJSON<Geometry | null>,
   idProperty: string | undefined,
   nameProperty: string | undefined,
   onProgress: (progress: number, total: number) => void,
 ): {
-  ids: number[] | undefined;
+  ids: number[];
   names: string[] | undefined;
   geometry: ShapesGeometry;
 } {
@@ -200,16 +260,7 @@ function parseGeoJSON(
     );
   }
 
-  const ids: number[] = [];
-  const names: string[] = [];
-  const accumulator: ShapesGeometryAccumulator = {
-    shapePolygonOffsets: [0],
-    polygonRingOffsets: [0],
-    ringVertexOffsets: [0],
-    coords: [],
-  };
-
-  let valid = false;
+  const builder = new ShapesGeometryBuilder();
   switch (geo.type) {
     case "FeatureCollection":
       for (let i = 0; i < geo.features.length; i++) {
@@ -218,108 +269,38 @@ function parseGeoJSON(
           console.warn("Skipping feature with null geometry.");
           continue;
         }
-        const shapeAppended = parseGeometry(feature.geometry, accumulator);
-        if (shapeAppended && idProperty !== undefined) {
-          const id = feature.properties?.[idProperty] as unknown;
-          if (id === undefined || id === "") {
-            throw new Error(`Feature is missing ID '${idProperty}'`);
-          }
-          const numericId = Number(id);
-          if (!Number.isSafeInteger(numericId)) {
-            throw new Error(`Feature has invalid ID '${idProperty}'`);
-          }
-          ids.push(numericId);
+        const polygons = toPolygons(feature.geometry);
+        if (polygons !== undefined) {
+          builder.addShape(
+            polygons,
+            idProperty !== undefined ? readFeatureId(feature, idProperty) : i,
+            nameProperty !== undefined
+              ? readFeatureName(feature, nameProperty)
+              : undefined,
+          );
         }
-        if (shapeAppended && nameProperty !== undefined) {
-          const name = feature.properties?.[nameProperty] as unknown;
-          if (name === undefined) {
-            throw new Error(`Feature is missing name '${nameProperty}'.`);
-          }
-          // eslint-disable-next-line @typescript-eslint/no-base-to-string
-          names.push(String(name));
-        }
-        valid ||= shapeAppended;
         onProgress(i + 1, geo.features.length);
       }
       break;
     case "Feature":
       if (geo.geometry !== null) {
-        valid = parseGeometry(geo.geometry, accumulator);
+        addPolygons(builder, geo.geometry, 0);
       }
       break;
     case "GeometryCollection":
       for (let i = 0; i < geo.geometries.length; i++) {
-        const geometry = geo.geometries[i]!;
-        const shapeAppended = parseGeometry(geometry, accumulator);
-        valid ||= shapeAppended;
+        addPolygons(builder, geo.geometries[i]!, i);
         onProgress(i + 1, geo.geometries.length);
       }
       break;
     default:
-      valid = parseGeometry(geo, accumulator);
+      addPolygons(builder, geo, 0);
       break;
   }
-  if (!valid) {
+  if (builder.size === 0) {
     throw new Error("No valid geometries found in GeoJSON data.");
   }
 
-  return {
-    ids: idProperty !== undefined ? ids : undefined,
-    names: nameProperty !== undefined ? names : undefined,
-    geometry: {
-      shapePolygonOffsets: new Uint32Array(accumulator.shapePolygonOffsets),
-      polygonRingOffsets: new Uint32Array(accumulator.polygonRingOffsets),
-      ringVertexOffsets: new Uint32Array(accumulator.ringVertexOffsets),
-      coords: new Float32Array(accumulator.coords),
-    },
-  };
-}
-
-function parseGeometry(
-  geometry: Geometry,
-  accumulator: ShapesGeometryAccumulator,
-): boolean {
-  let polygons: Position[][][];
-  if (geometry.type === "Polygon") {
-    polygons = [geometry.coordinates];
-  } else if (geometry.type === "MultiPolygon") {
-    polygons = geometry.coordinates;
-  } else {
-    console.warn(`Unsupported GeoJSON geometry type: ${geometry.type}`);
-    return false;
-  }
-  let polygonsAdded = false;
-  for (const rings of polygons) {
-    if (rings.length === 0 || rings[0]!.length < 3) {
-      console.warn("Skipping polygon without a valid shell.");
-      continue;
-    }
-    let ringsAdded = false;
-    for (const ring of rings) {
-      if (ring.length < 3) {
-        console.warn("Skipping invalid ring with fewer than three vertices.");
-        continue;
-      }
-      for (const pos of ring) {
-        accumulator.coords.push(pos[0]!, pos[1]!);
-      }
-      accumulator.ringVertexOffsets.push(accumulator.coords.length / 2);
-      ringsAdded = true;
-    }
-    if (!ringsAdded) {
-      console.warn("Skipping polygon without valid rings.");
-      continue;
-    }
-    accumulator.polygonRingOffsets.push(
-      accumulator.ringVertexOffsets.length - 1,
-    );
-    polygonsAdded = true;
-  }
-  if (!polygonsAdded) {
-    return false;
-  }
-  accumulator.shapePolygonOffsets.push(
-    accumulator.polygonRingOffsets.length - 1,
-  );
-  return true;
+  const { geometry, ids, names } = builder.build();
+  return { ids, names, geometry };
 }

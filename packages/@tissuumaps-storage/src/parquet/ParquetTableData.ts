@@ -1,4 +1,5 @@
 import {
+  AsyncUtils,
   type GenericArray,
   MathUtils,
   type ProgressCallback,
@@ -6,6 +7,7 @@ import {
   type TableData,
 } from "@tissuumaps/core";
 
+import type { CoordinateColumn } from "./GeoParquetMetadataUtils";
 import { runParquetWorker } from "./runParquetWorker";
 import type { ParquetSource } from "./types";
 
@@ -13,19 +15,35 @@ export class ParquetTableData implements TableData {
   private readonly _source: ParquetSource;
   private readonly _numRows: number;
   private readonly _columns: string[];
+  // The coordinate columns of the file, by name: a column is derived only if
+  // the reader said so, never because its name looks derived.
+  private readonly _coordinateColumns: Map<string, CoordinateColumn>;
   private _ids: number[] | undefined;
   private readonly _names: string[] | undefined;
+  // Both axes of a point geometry column are decoded in one pass, so the
+  // second axis a point cloud reads does not decode the column again.
+  private readonly _coordinates = new Map<
+    string,
+    Promise<{ x: Float32Array; y: Float32Array }>
+  >();
 
   constructor(
     source: ParquetSource,
     numRows: number,
     columns: string[],
+    coordinateColumns: CoordinateColumn[],
     ids: number[] | undefined,
     names: string[] | undefined,
   ) {
     this._source = source;
     this._numRows = numRows;
     this._columns = columns;
+    this._coordinateColumns = new Map(
+      coordinateColumns.map((coordinateColumn) => [
+        coordinateColumn.column,
+        coordinateColumn,
+      ]),
+    );
     this._ids = ids;
     this._names = names;
   }
@@ -81,11 +99,39 @@ export class ParquetTableData implements TableData {
   ): Promise<GenericArray<T>> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
+    const coordinateColumn = this._coordinateColumns.get(column);
+    if (coordinateColumn !== undefined) {
+      const { x, y } = await AsyncUtils.raceSignal(
+        this._loadCoordinates(coordinateColumn.geometryColumn, { onProgress }),
+        { signal },
+      );
+      return (coordinateColumn.axis === "x" ? x : y) as GenericArray<T>;
+    }
     const { data } = await runParquetWorker(
       { op: "column", source: this._source, column },
       { signal, onProgress },
     );
     return data as GenericArray<T>;
+  }
+
+  // No signal option: the read is shared by both axes, so one caller must not
+  // be able to abort it for the other. Callers race it against their own
+  // signal instead, and the progress goes to whoever starts the read.
+  private _loadCoordinates(
+    geometryColumn: string,
+    options?: { onProgress?: ProgressCallback },
+  ): Promise<{ x: Float32Array; y: Float32Array }> {
+    const { onProgress } = options ?? {};
+    let coordinates = this._coordinates.get(geometryColumn);
+    if (coordinates === undefined) {
+      coordinates = runParquetWorker(
+        { op: "coordinates", source: this._source, geometryColumn },
+        { onProgress },
+      ).then(({ x, y }) => ({ x, y }));
+      coordinates.catch(() => this._coordinates.delete(geometryColumn));
+      this._coordinates.set(geometryColumn, coordinates);
+    }
+    return coordinates;
   }
 
   async loadUniqueValueCounts<T>(
@@ -104,12 +150,20 @@ export class ParquetTableData implements TableData {
   ): Promise<[number, number] | undefined> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
+    const coordinateColumn = this._coordinateColumns.get(column);
     const { range } = await runParquetWorker(
-      { op: "range", source: this._source, column },
+      {
+        op: "range",
+        source: this._source,
+        column: coordinateColumn?.geometryColumn ?? column,
+        axis: coordinateColumn?.axis,
+      },
       { signal, onProgress },
     );
     return range;
   }
 
-  close(): void {}
+  close(): void {
+    this._coordinates.clear();
+  }
 }

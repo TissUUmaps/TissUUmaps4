@@ -1,21 +1,21 @@
 import {
   type DataProviderLoadOptions,
+  type ShapesDataProvider,
   SourceUtils,
-  type TableDataProvider,
 } from "@tissuumaps/core";
 
-import { ParquetTableData } from "./ParquetTableData";
+import { ParquetShapesData } from "./ParquetShapesData";
 import {
-  type NormalizedParquetTableDataSource,
-  type ParquetTableDataSource,
-  parquetTableDataSourceDefaults,
-} from "./ParquetTableDataSource";
+  type NormalizedParquetShapesDataSource,
+  type ParquetShapesDataSource,
+  parquetShapesDataSourceDefaults,
+} from "./ParquetShapesDataSource";
 import { runParquetWorker } from "./runParquetWorker";
 
-export class ParquetTableDataProvider implements TableDataProvider<
-  ParquetTableDataSource,
-  ParquetTableData,
-  NormalizedParquetTableDataSource
+export class ParquetShapesDataProvider implements ShapesDataProvider<
+  ParquetShapesDataSource,
+  ParquetShapesData,
+  NormalizedParquetShapesDataSource
 > {
   readonly name = "Parquet";
 
@@ -25,10 +25,16 @@ export class ParquetTableDataProvider implements TableDataProvider<
       source: {
         type: "string",
       },
+      geometryColumn: {
+        type: "string",
+      },
       idColumn: {
         type: "string",
       },
       nameColumn: {
+        type: "string",
+      },
+      table: {
         type: "string",
       },
       requestHeaders: {
@@ -49,6 +55,11 @@ export class ParquetTableDataProvider implements TableDataProvider<
       },
       {
         type: "Control",
+        scope: "#/properties/geometryColumn",
+        label: "Geometry Column",
+      },
+      {
+        type: "Control",
         scope: "#/properties/idColumn",
         label: "ID Column",
       },
@@ -57,16 +68,21 @@ export class ParquetTableDataProvider implements TableDataProvider<
         scope: "#/properties/nameColumn",
         label: "Name Column",
       },
+      {
+        type: "Control",
+        scope: "#/properties/table",
+        label: "Table",
+      },
     ],
   };
 
   normalize(
-    dataSource: ParquetTableDataSource,
+    dataSource: ParquetShapesDataSource,
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,
-  ): NormalizedParquetTableDataSource {
+  ): NormalizedParquetShapesDataSource {
     return {
-      ...parquetTableDataSourceDefaults,
+      ...parquetShapesDataSourceDefaults,
       ...dataSource,
       source: SourceUtils.normalizeSource(
         dataSource.source,
@@ -77,9 +93,9 @@ export class ParquetTableDataProvider implements TableDataProvider<
   }
 
   async load(
-    normalizedDataSource: NormalizedParquetTableDataSource,
+    normalizedDataSource: NormalizedParquetShapesDataSource,
     options?: DataProviderLoadOptions,
-  ): Promise<ParquetTableData> {
+  ): Promise<ParquetShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
     const resolvedSource = await SourceUtils.resolveSourceFile(
@@ -96,19 +112,17 @@ export class ParquetTableDataProvider implements TableDataProvider<
       signal?.throwIfAborted(); // getFile() does not throw on abort
     }
     const parquetSource = { file, url, headers };
-    const { idColumn, nameColumn } = normalizedDataSource;
-    const { numRows, columns, coordinateColumns, ids, names } =
-      await runParquetWorker(
-        { op: "file", source: parquetSource, idColumn, nameColumn },
-        { signal, onProgress },
-      );
-    return new ParquetTableData(
-      parquetSource,
-      numRows,
-      columns,
-      coordinateColumns,
-      ids,
-      names,
+    const { geometryColumn, idColumn, nameColumn } = normalizedDataSource;
+    const { geometry, ids, names } = await runParquetWorker(
+      {
+        op: "shapes",
+        source: parquetSource,
+        geometryColumn,
+        idColumn,
+        nameColumn,
+      },
+      { signal, onProgress },
     );
+    return new ParquetShapesData(geometry, ids, names);
   }
 }

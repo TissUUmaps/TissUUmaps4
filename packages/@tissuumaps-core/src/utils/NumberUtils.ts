@@ -7,6 +7,9 @@
  * methods by throwing.
  */
 export class NumberUtils {
+  private static readonly _minSafeBigInt = BigInt(Number.MIN_SAFE_INTEGER);
+  private static readonly _maxSafeBigInt = BigInt(Number.MAX_SAFE_INTEGER);
+
   /**
    * Parses a value as a finite number
    *
@@ -58,8 +61,8 @@ export class NumberUtils {
       v = value;
     } else if (typeof value === "bigint") {
       if (
-        value < BigInt(Number.MIN_SAFE_INTEGER) ||
-        value > BigInt(Number.MAX_SAFE_INTEGER)
+        value < NumberUtils._minSafeBigInt ||
+        value > NumberUtils._maxSafeBigInt
       ) {
         if (options?.requireSafeBigInt) {
           return undefined;

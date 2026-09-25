@@ -10,6 +10,6 @@ The following table lists capabilities of built-in data providers:
 | [Table](./table)                 |                 |                 | Table reference | Table reference |                |
 | [GeoJSON](./geojson)             |                 |                 |                 | GeoJSON source  |                |
 | [CSV](./csv)                     |                 |                 |                 |                 | CSV source     |
-| [Parquet](./parquet)             |                 |                 |                 |                 | Parquet source |
+| [Parquet](./parquet)             |                 |                 |                 | Parquet source  | Parquet source |
 
 Additional data formats may be supported by third-party data providers.
