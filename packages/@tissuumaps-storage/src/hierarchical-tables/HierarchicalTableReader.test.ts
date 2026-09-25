@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import type {
+  HierarchicalStore,
+  HierarchicalStoreDataType,
+  HierarchicalStoreNode,
+  HierarchicalStoreValues,
+} from "./HierarchicalStore";
 import { HierarchicalTableReader } from "./HierarchicalTableReader";
-import type { Store, StoreDataType, StoreNode, StoreValues } from "./Store";
 
 type MemoryNode =
   | {
@@ -11,9 +16,9 @@ type MemoryNode =
     }
   | {
       kind: "array";
-      values: StoreValues;
+      values: HierarchicalStoreValues;
       shape: number[];
-      dataType: StoreDataType;
+      dataType: HierarchicalStoreDataType;
     };
 
 function group(
@@ -24,11 +29,11 @@ function group(
 }
 
 function array(
-  values: StoreValues,
+  values: HierarchicalStoreValues,
   shape: number[] = [values.length],
-  dataType?: StoreDataType,
+  dataType?: HierarchicalStoreDataType,
 ): MemoryNode {
-  let inferredDataType: StoreDataType = "integer";
+  let inferredDataType: HierarchicalStoreDataType = "integer";
   if (values instanceof Float32Array || values instanceof Float64Array) {
     inferredDataType = "float";
   } else if (typeof values[0] === "string") {
@@ -51,7 +56,10 @@ function dataFrame(
   return group(columns, { "encoding-type": "dataframe", _index: index });
 }
 
-function categorical(codes: StoreValues, categories: StoreValues): MemoryNode {
+function categorical(
+  codes: HierarchicalStoreValues,
+  categories: HierarchicalStoreValues,
+): MemoryNode {
   return group(
     { codes: array(codes), categories: array(categories) },
     { "encoding-type": "categorical" },
@@ -61,9 +69,9 @@ function categorical(codes: StoreValues, categories: StoreValues): MemoryNode {
 function sparse(
   encodingType: "csc_matrix" | "csr_matrix",
   shape: [number, number],
-  data: StoreValues,
-  indices: StoreValues,
-  indptr: StoreValues,
+  data: HierarchicalStoreValues,
+  indices: HierarchicalStoreValues,
+  indptr: HierarchicalStoreValues,
 ): MemoryNode {
   return group(
     { data: array(data), indices: array(indices), indptr: array(indptr) },
@@ -71,8 +79,8 @@ function sparse(
   );
 }
 
-/** A {@link Store} over nested objects, with row-major 2-D arrays */
-class MemoryStore implements Store {
+/** A {@link HierarchicalStore} over nested objects, with row-major 2-D arrays */
+class MemoryStore implements HierarchicalStore {
   closed = false;
   private readonly _root: MemoryNode;
 
@@ -83,7 +91,7 @@ class MemoryStore implements Store {
   get(
     path: string,
     options?: { signal?: AbortSignal },
-  ): Promise<StoreNode | null> {
+  ): Promise<HierarchicalStoreNode | null> {
     if (options?.signal?.aborted) {
       return Promise.reject(options.signal.reason as Error);
     }
@@ -200,6 +208,7 @@ describe("HierarchicalTableReader", () => {
             scalar: array(new Float32Array(1), []),
             compound: array([{}, {}], [2], "other"),
             __categories: group({ labels: array(["x", "y"]) }),
+            "bracketed[0]": array(new Int32Array(2)),
           }),
           csc: sparse("csc_matrix", [2, 3], [], [], [0, 0, 0, 0]),
           noShape: group({}, { "encoding-type": "csc_matrix" }),
@@ -243,6 +252,30 @@ describe("HierarchicalTableReader", () => {
         group({ b: array(new Int32Array(2)), a: array(new Int32Array(4)) }),
       );
       expect(reader.numRows).toBe(4);
+    });
+
+    it("rejects stores with more than one AnnData object", async () => {
+      const store = new MemoryStore(
+        group({ tables: group({ a: annData({}), b: annData({}) }) }),
+      );
+      await expect(HierarchicalTableReader.open(store)).rejects.toThrow(
+        '2 AnnData objects ("/tables/a", "/tables/b")',
+      );
+      expect(store.closed).toBe(true);
+    });
+
+    it("rejects an obs index that is not a column", async () => {
+      await expect(
+        openReader(
+          group(
+            {
+              obs: dataFrame("_index", { _index: group({}) }),
+              a: array(new Int32Array(2)),
+            },
+            { "encoding-type": "anndata" },
+          ),
+        ),
+      ).rejects.toThrow('"obs/_index" is a group, not a column');
     });
 
     it("rejects stores without columns and closes them", async () => {

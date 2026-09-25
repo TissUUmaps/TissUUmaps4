@@ -1,19 +1,19 @@
 import * as zarr from "zarrita";
 
 import type {
-  Store,
-  StoreArray,
-  StoreDataType,
-  StoreGroup,
-  StoreNode,
-  StoreValues,
-} from "../Store";
+  HierarchicalStore,
+  HierarchicalStoreArray,
+  HierarchicalStoreDataType,
+  HierarchicalStoreGroup,
+  HierarchicalStoreNode,
+  HierarchicalStoreValues,
+} from "../HierarchicalStore";
 
 /** A Zarr store whose nodes can be listed */
 type ListableStore = zarr.Listable<zarr.AsyncReadable>;
 
 /** Zarr data types; object arrays hold strings */
-const dataTypes: Record<string, StoreDataType> = {
+const dataTypes: Record<string, HierarchicalStoreDataType> = {
   int8: "integer",
   int16: "integer",
   int32: "integer",
@@ -31,14 +31,14 @@ const dataTypes: Record<string, StoreDataType> = {
 };
 
 /**
- * A {@link Store} over a Zarr store, such as the `tables` of a SpatialData
+ * A {@link HierarchicalStore} over a Zarr store, such as the `tables` of a SpatialData
  * store
  *
  * Reads are asynchronous fetches, so unlike HDF5 this store does not need a
  * Web Worker. Listing the nodes requires consolidated metadata, as a Zarr
  * store is a key-value store.
  */
-export class ZarrStore implements Store {
+export class ZarrStore implements HierarchicalStore {
   private readonly _store: ListableStore;
   /** The path of the group the table is read from, "" for the store itself */
   private readonly _group: string;
@@ -129,7 +129,7 @@ export class ZarrStore implements Store {
   async get(
     path: string,
     options?: { signal?: AbortSignal },
-  ): Promise<StoreNode | null> {
+  ): Promise<HierarchicalStoreNode | null> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const kind = this._kinds.get(path);
@@ -146,10 +146,16 @@ export class ZarrStore implements Store {
             : await zarr.open.v2(location, { kind: "group", signal });
         return new ZarrGroup(group.attrs, this._children.get(path) ?? []);
       }
+      // no attrs: a HierarchicalStoreArray has none, and zarr-python leaves empty ones out
+      // of the consolidated metadata, so each open would fetch a missing file
       const array =
         this._version === "v3"
           ? await zarr.open.v3(location, { kind: "array", signal })
-          : await zarr.open.v2(location, { kind: "array", signal });
+          : await zarr.open.v2(location, {
+              kind: "array",
+              attrs: false,
+              signal,
+            });
       return new ZarrArray(array);
     } catch {
       signal?.throwIfAborted();
@@ -192,7 +198,7 @@ async function openConsolidated(
   return "contents" in undottedStore ? undottedStore : null;
 }
 
-class ZarrGroup implements StoreGroup {
+class ZarrGroup implements HierarchicalStoreGroup {
   readonly kind = "group";
   readonly attrs: Record<string, unknown>;
   readonly keys: string[];
@@ -203,10 +209,10 @@ class ZarrGroup implements StoreGroup {
   }
 }
 
-class ZarrArray implements StoreArray {
+class ZarrArray implements HierarchicalStoreArray {
   readonly kind = "array";
   readonly shape: number[];
-  readonly dataType: StoreDataType;
+  readonly dataType: HierarchicalStoreDataType;
   private readonly _array: zarr.Array<zarr.DataType, zarr.Readable>;
 
   constructor(array: zarr.Array<zarr.DataType, zarr.Readable>) {
@@ -217,7 +223,9 @@ class ZarrArray implements StoreArray {
       (isFixedWidthStringType(array.dtype) ? "string" : "other");
   }
 
-  async read(options?: { signal?: AbortSignal }): Promise<StoreValues> {
+  async read(options?: {
+    signal?: AbortSignal;
+  }): Promise<HierarchicalStoreValues> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const chunk = await zarr.get(this._array, null, { signal });
@@ -227,7 +235,7 @@ class ZarrArray implements StoreArray {
   async slice(
     ranges: ([number, number] | null)[],
     options?: { signal?: AbortSignal },
-  ): Promise<StoreValues> {
+  ): Promise<HierarchicalStoreValues> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     if (ranges.some((range) => range !== null && range[0] >= range[1])) {
@@ -257,12 +265,12 @@ function isFixedWidthStringType(dtype: string): boolean {
  * Booleans become the 0/1 bytes they are stored as, which is also how h5py
  * writes them to HDF5.
  */
-function toStoreValues(data: unknown): StoreValues {
+function toStoreValues(data: unknown): HierarchicalStoreValues {
   if (data instanceof zarr.BoolArray) {
     return new Uint8Array(data.buffer, data.byteOffset, data.length);
   }
   if (Array.isArray(data) || ArrayBuffer.isView(data)) {
-    return data as StoreValues;
+    return data as HierarchicalStoreValues;
   }
   return Array.from(data as Iterable<unknown>);
 }

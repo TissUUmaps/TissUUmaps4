@@ -5,18 +5,26 @@ import {
   type NumericArray,
 } from "@tissuumaps/core";
 
-import { ColumnUtils } from "./ColumnUtils";
+import { ColumnQueryUtils } from "./ColumnQueryUtils";
+import type {
+  HierarchicalStore,
+  HierarchicalStoreArray,
+  HierarchicalStoreGroup,
+  HierarchicalStoreValues,
+} from "./HierarchicalStore";
 import type {
   HierarchicalTable,
   HierarchicalTableColumn,
 } from "./HierarchicalTable";
-import type { Store, StoreArray, StoreGroup, StoreValues } from "./Store";
 
 /** Data types whose values can be used as a column */
 const readableDataTypes = new Set(["integer", "float", "string", "boolean"]);
 
 /** Category labels of an AnnData file (anndata < 0.8), never a column */
 const legacyCategoriesGroupName = "__categories";
+
+/** Brackets, which a column query cannot address in a path */
+const bracketPattern = /[[\]]/;
 
 /**
  * Paths of the matrices named by the `var` index of their AnnData object,
@@ -25,21 +33,21 @@ const legacyCategoriesGroupName = "__categories";
 const variableMatrixPattern = /^(raw\/)?(X|layers\/[^/]+)$/;
 
 /**
- * Reads columns from a {@link Store}, understanding the AnnData on-disk
+ * Reads columns from a {@link HierarchicalStore}, understanding the AnnData on-disk
  * encoding (`encoding-type` attributes) where present
  *
- * Any 1-D array is a column and any 2-D array is a matrix. AnnData decoding
- * applies to groups carrying an `encoding-type` attribute. A group encoded as
- * `anndata` additionally gives its object the row count of its `obs` index
- * and the column selectors of its expression matrices.
+ * Any 1-D array is a column and any 2-D array is a matrix. Groups carrying an
+ * AnnData `encoding-type` attribute are decoded wherever they are. The
+ * AnnData object of the store, if any, also gives the row count of its `obs`
+ * index and the column selectors of its expression matrices.
  */
 export class HierarchicalTableReader implements HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   readonly numRows: number;
-  private readonly _store: Store;
+  private readonly _store: HierarchicalStore;
 
   private constructor(
-    store: Store,
+    store: HierarchicalStore,
     columns: HierarchicalTableColumn[],
     numRows: number,
   ) {
@@ -51,22 +59,22 @@ export class HierarchicalTableReader implements HierarchicalTable {
   /**
    * Lists the columns of a store and infers its row count
    *
-   * Groups are walked recursively, except AnnData-encoded groups, which are
-   * columns themselves. Scalars, arrays of more than two dimensions and
-   * arrays of non-scalar types are skipped.
+   * Groups are walked recursively, except groups encoded as a column or a
+   * matrix. Scalars, arrays of more than two dimensions, arrays of non-scalar
+   * types and nodes whose name contains a bracket are skipped.
    *
-   * The row count is the length of the `obs` index of the first AnnData
-   * object, otherwise the first column's.
+   * The row count is the length of the `obs` index of the AnnData object,
+   * otherwise the first column's.
    *
    * @param store - The store to read from; closed by
    * {@link HierarchicalTable.close}, or here if this method rejects
    * @param options - Optional abort signal
    * @returns The reader
-   * @throws Error if the store has no root group or no columns, or if the
-   * column that gives the row count is missing a dataset of its encoding
+   * @throws Error if the store has no root group, no columns or more than one
+   * AnnData object, or if the node that gives the row count is not a column
    */
   static async open(
-    store: Store,
+    store: HierarchicalStore,
     options?: { signal?: AbortSignal },
   ): Promise<HierarchicalTableReader> {
     const { signal } = options ?? {};
@@ -79,10 +87,16 @@ export class HierarchicalTableReader implements HierarchicalTable {
       const columns: HierarchicalTableColumn[] = [];
       const annDataPaths = getEncodingType(root) === "anndata" ? [""] : [];
       await collectColumns(store, root, "", columns, annDataPaths, { signal });
-      const numRows = await inferNumRows(store, columns, annDataPaths, {
+      if (annDataPaths.length > 1) {
+        throw new Error(
+          `The store holds ${annDataPaths.length} AnnData objects (${annDataPaths.map((path) => `"/${path}"`).join(", ")}); point the source at one of them.`,
+        );
+      }
+      const annDataPath = annDataPaths[0];
+      const numRows = await inferNumRows(store, columns, annDataPath, {
         signal,
       });
-      await readMatrixSelectors(store, columns, annDataPaths, { signal });
+      await readMatrixSelectors(store, columns, annDataPath, { signal });
       return new HierarchicalTableReader(store, columns, numRows);
     } catch (error) {
       store.close();
@@ -95,7 +109,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
    *
    * 64-bit integers are converted to numbers.
    *
-   * @param query - The column query (see {@link ColumnUtils})
+   * @param query - The column query (see {@link ColumnQueryUtils})
    * @param options - The number of table rows, checked against the column
    * length, and an abort signal
    * @returns The column values
@@ -110,7 +124,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
   ): Promise<GenericArray<unknown>> {
     const { numRows, signal } = options ?? {};
     signal?.throwIfAborted();
-    const resolved = ColumnUtils.resolveColumn(this.columns, query);
+    const resolved = ColumnQueryUtils.resolveColumn(this.columns, query);
     if (resolved === null) {
       throw new Error(`Column query "${query}" addresses no column`);
     }
@@ -129,7 +143,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
   /**
    * Reads the minimum and maximum value of a numeric column
    *
-   * @param query - The column query (see {@link ColumnUtils})
+   * @param query - The column query (see {@link ColumnQueryUtils})
    * @param options - See {@link HierarchicalTableReader.readColumn}
    * @returns The [min, max] range, or `undefined` if the column is not numeric
    * or holds no two distinct finite values
@@ -158,8 +172,8 @@ export class HierarchicalTableReader implements HierarchicalTable {
 }
 
 async function collectColumns(
-  store: Store,
-  group: StoreGroup,
+  store: HierarchicalStore,
+  group: HierarchicalStoreGroup,
   prefix: string,
   columns: HierarchicalTableColumn[],
   annDataPaths: string[],
@@ -169,7 +183,7 @@ async function collectColumns(
   signal?.throwIfAborted();
   // sorted, as a store may list its nodes in write order
   for (const name of group.keys.toSorted()) {
-    if (name === legacyCategoriesGroupName) {
+    if (name === legacyCategoriesGroupName || bracketPattern.test(name)) {
       continue;
     }
     const path = `${prefix}${name}`;
@@ -178,7 +192,8 @@ async function collectColumns(
       continue;
     }
     if (node.kind === "group") {
-      switch (getEncodingType(node)) {
+      const encodingType = getEncodingType(node);
+      switch (encodingType) {
         case "categorical":
         case "nullable-integer":
         case "nullable-boolean":
@@ -193,13 +208,10 @@ async function collectColumns(
           }
           break;
         }
-        case "anndata":
-          annDataPaths.push(path);
-          await collectColumns(store, node, `${path}/`, columns, annDataPaths, {
-            signal,
-          });
-          break;
         default:
+          if (encodingType === "anndata") {
+            annDataPaths.push(path);
+          }
           await collectColumns(store, node, `${path}/`, columns, annDataPaths, {
             signal,
           });
@@ -219,14 +231,13 @@ async function collectColumns(
 }
 
 async function inferNumRows(
-  store: Store,
+  store: HierarchicalStore,
   columns: HierarchicalTableColumn[],
-  annDataPaths: string[],
+  annDataPath: string | undefined,
   options?: { signal?: AbortSignal },
 ): Promise<number> {
   const { signal } = options ?? {};
   signal?.throwIfAborted();
-  const annDataPath = annDataPaths[0];
   if (annDataPath !== undefined) {
     const indexPath = await getDataFrameIndexPath(
       store,
@@ -245,7 +256,7 @@ async function inferNumRows(
 }
 
 async function getNumRows(
-  store: Store,
+  store: HierarchicalStore,
   path: string,
   options?: { signal?: AbortSignal },
 ): Promise<number> {
@@ -265,8 +276,13 @@ async function getNumRows(
     case "nullable-boolean":
     case "nullable-string-array":
       return (await getChildArray(store, path, "values", { signal })).shape[0]!;
-    default:
-      return getShapeAttribute(node)![0]!;
+    default: {
+      const shape = getShapeAttribute(node);
+      if (shape === undefined) {
+        throw new Error(`"${path}" is a group, not a column`);
+      }
+      return shape[0]!;
+    }
   }
 }
 
@@ -284,7 +300,7 @@ async function getNumRows(
  * integer is outside the safe integer range
  */
 async function readColumnValues(
-  store: Store,
+  store: HierarchicalStore,
   path: string,
   index: number | undefined,
   options?: { signal?: AbortSignal },
@@ -328,14 +344,16 @@ async function readColumnValues(
  * @returns The values, as numbers if they were 64-bit integers
  * @throws Error if a 64-bit integer is outside the safe integer range
  */
-function toNumbersIfInt64(values: StoreValues): GenericArray<unknown> {
+function toNumbersIfInt64(
+  values: HierarchicalStoreValues,
+): GenericArray<unknown> {
   if (values instanceof BigInt64Array || values instanceof BigUint64Array) {
     return Float64Array.from(values, (v) => NumberUtils.parseSafeInt(v));
   }
   return values;
 }
 
-function getEncodingType(group: StoreGroup): string | undefined {
+function getEncodingType(group: HierarchicalStoreGroup): string | undefined {
   const value = group.attrs["encoding-type"];
   return typeof value === "string" ? value : undefined;
 }
@@ -350,18 +368,18 @@ function getEncodingType(group: StoreGroup): string | undefined {
  *
  * @param store - The store to read from
  * @param columns - The columns to name, modified in place
- * @param annDataPaths - The paths of the AnnData objects of the store
+ * @param annDataPath - The path of the AnnData object of the store, if any
  * @param options - Optional abort signal
  */
 async function readMatrixSelectors(
-  store: Store,
+  store: HierarchicalStore,
   columns: HierarchicalTableColumn[],
-  annDataPaths: string[],
+  annDataPath: string | undefined,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
   const { signal } = options ?? {};
   signal?.throwIfAborted();
-  if (annDataPaths.length === 0) {
+  if (annDataPath === undefined) {
     return;
   }
   const selectorsByPath = new Map<string, string[] | undefined>();
@@ -369,7 +387,7 @@ async function readMatrixSelectors(
     if (column.kind !== "matrix") {
       continue;
     }
-    const varPath = getVariableDataFramePath(column.path, annDataPaths);
+    const varPath = getVariableDataFramePath(column.path, annDataPath);
     if (varPath === undefined) {
       continue;
     }
@@ -377,7 +395,9 @@ async function readMatrixSelectors(
       const names = await readDataFrameIndex(store, varPath, { signal });
       selectorsByPath.set(
         varPath,
-        names !== undefined ? ColumnUtils.getMatrixSelectors(names) : undefined,
+        names !== undefined
+          ? ColumnQueryUtils.getMatrixSelectors(names)
+          : undefined,
       );
     }
     const selectors = selectorsByPath.get(varPath);
@@ -389,21 +409,15 @@ async function readMatrixSelectors(
 
 /**
  * @param path - The path of a matrix column
- * @param annDataPaths - The paths of the AnnData objects of the store
+ * @param annDataPath - The path of the AnnData object of the store
  * @returns The path of the `var` dataframe naming the columns of the matrix,
- * or `undefined` if the matrix is not one of an AnnData object
+ * or `undefined` if the matrix is not an expression matrix of the object
  */
 function getVariableDataFramePath(
   path: string,
-  annDataPaths: string[],
+  annDataPath: string,
 ): string | undefined {
-  // the innermost object owns the matrix, as AnnData objects can be nested
-  const annDataPath = annDataPaths
-    .filter(
-      (annDataPath) => annDataPath === "" || path.startsWith(`${annDataPath}/`),
-    )
-    .at(-1);
-  if (annDataPath === undefined) {
+  if (annDataPath !== "" && !path.startsWith(`${annDataPath}/`)) {
     return undefined;
   }
   const match = variableMatrixPattern.exec(
@@ -424,7 +438,7 @@ function getVariableDataFramePath(
  * its index cannot be read
  */
 async function readDataFrameIndex(
-  store: Store,
+  store: HierarchicalStore,
   path: string,
   options?: { signal?: AbortSignal },
 ): Promise<string[] | undefined> {
@@ -454,7 +468,7 @@ async function readDataFrameIndex(
  * group is no dataframe or names no index
  */
 async function getDataFrameIndexPath(
-  store: Store,
+  store: HierarchicalStore,
   path: string,
   options?: { signal?: AbortSignal },
 ): Promise<string | undefined> {
@@ -481,7 +495,9 @@ function joinPath(prefix: string, name: string): string {
   return prefix !== "" ? `${prefix}/${name}` : name;
 }
 
-function getShapeAttribute(group: StoreGroup): number[] | undefined {
+function getShapeAttribute(
+  group: HierarchicalStoreGroup,
+): number[] | undefined {
   const value = group.attrs["shape"];
   if (value === undefined || value === null || typeof value !== "object") {
     return undefined;
@@ -491,11 +507,11 @@ function getShapeAttribute(group: StoreGroup): number[] | undefined {
 }
 
 async function getChildArray(
-  store: Store,
+  store: HierarchicalStore,
   path: string,
   name: string,
   options?: { signal?: AbortSignal },
-): Promise<StoreArray> {
+): Promise<HierarchicalStoreArray> {
   const { signal } = options ?? {};
   signal?.throwIfAborted();
   const child = await store.get(`${path}/${name}`, { signal });
@@ -506,7 +522,7 @@ async function getChildArray(
 }
 
 async function readChildArray(
-  store: Store,
+  store: HierarchicalStore,
   path: string,
   name: string,
   options?: { signal?: AbortSignal },
@@ -518,7 +534,7 @@ async function readChildArray(
 }
 
 async function readCategorical(
-  store: Store,
+  store: HierarchicalStore,
   path: string,
   options?: { signal?: AbortSignal },
 ): Promise<string[] | Float64Array> {
@@ -541,7 +557,7 @@ async function readCategorical(
 }
 
 /**
- * Reads a nullable string column, which anndata 0.13 writes an index as
+ * Reads a nullable string column
  *
  * @param store - The store to read from
  * @param path - The path of the column group
@@ -549,7 +565,7 @@ async function readCategorical(
  * @returns The values, with the masked ones as empty strings
  */
 async function readNullableStrings(
-  store: Store,
+  store: HierarchicalStore,
   path: string,
   options?: { signal?: AbortSignal },
 ): Promise<string[]> {
@@ -565,7 +581,7 @@ async function readNullableStrings(
 }
 
 async function readNullable(
-  store: Store,
+  store: HierarchicalStore,
   path: string,
   options?: { signal?: AbortSignal },
 ): Promise<Float64Array> {
@@ -583,8 +599,8 @@ async function readNullable(
 }
 
 async function readSparseColumn(
-  store: Store,
-  group: StoreGroup,
+  store: HierarchicalStore,
+  group: HierarchicalStoreGroup,
   path: string,
   index: number,
   options?: { signal?: AbortSignal },

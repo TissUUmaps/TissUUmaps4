@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type * as zarr from "zarrita";
 
+import type {
+  HierarchicalStoreArray,
+  HierarchicalStoreGroup,
+} from "../HierarchicalStore";
 import { HierarchicalTableReader } from "../HierarchicalTableReader";
-import type { StoreArray, StoreGroup } from "../Store";
 import { ZarrStore } from "./ZarrStore";
 
 /** An in-memory Zarr store and the node metadata to consolidate */
@@ -285,7 +288,10 @@ function openFixture(
   return ZarrStore.open(toAsyncStore(map), group);
 }
 
-async function getArray(store: ZarrStore, path: string): Promise<StoreArray> {
+async function getArray(
+  store: ZarrStore,
+  path: string,
+): Promise<HierarchicalStoreArray> {
   const node = await store.get(path);
   if (node?.kind !== "array") {
     throw new Error(`"${path}" is not an array`);
@@ -293,7 +299,10 @@ async function getArray(store: ZarrStore, path: string): Promise<StoreArray> {
   return node;
 }
 
-async function getGroup(store: ZarrStore, path: string): Promise<StoreGroup> {
+async function getGroup(
+  store: ZarrStore,
+  path: string,
+): Promise<HierarchicalStoreGroup> {
   const node = await store.get(path);
   if (node?.kind !== "group") {
     throw new Error(`"${path}" is not a group`);
@@ -354,11 +363,12 @@ describe("ZarrStore", () => {
     });
 
     it("rejects an aborted signal", async () => {
+      const reason = new Error("aborted");
       await expect(
         ZarrStore.open(toAsyncStore(writeV2Fixture()), "", {
-          signal: AbortSignal.abort(),
+          signal: AbortSignal.abort(reason),
         }),
-      ).rejects.toThrow();
+      ).rejects.toBe(reason);
     });
   });
 
@@ -417,6 +427,22 @@ describe("ZarrStore", () => {
       expect(await store.get("obs/missing")).toBeNull();
     });
 
+    it("fetches no attributes for v2 arrays", async () => {
+      const map = writeV2Fixture();
+      const keys: string[] = [];
+      const store = await ZarrStore.open(
+        {
+          get: (key) => {
+            keys.push(key);
+            return Promise.resolve(map.get(key));
+          },
+        },
+        "",
+      );
+      await getArray(store, "obs/int32");
+      expect(keys).not.toContain("/obs/int32/.zattrs");
+    });
+
     it("returns null for a node zarrita cannot parse", async () => {
       const store = await openFixture(writeV2Fixture());
       expect(await store.get("uns/structured")).toBeNull();
@@ -427,10 +453,11 @@ describe("ZarrStore", () => {
     });
 
     it("rejects an aborted signal", async () => {
+      const reason = new Error("aborted");
       const store = await openFixture(writeV2Fixture());
       await expect(
-        store.get("obs", { signal: AbortSignal.abort() }),
-      ).rejects.toThrow();
+        store.get("obs", { signal: AbortSignal.abort(reason) }),
+      ).rejects.toBe(reason);
     });
   });
 
@@ -459,11 +486,12 @@ describe("ZarrStore", () => {
     });
 
     it("rejects an aborted signal", async () => {
+      const reason = new Error("aborted");
       const store = await openFixture(writeV2Fixture());
       const array = await getArray(store, "obs/int32");
       await expect(
-        array.read({ signal: AbortSignal.abort() }),
-      ).rejects.toThrow();
+        array.read({ signal: AbortSignal.abort(reason) }),
+      ).rejects.toBe(reason);
     });
   });
 
@@ -492,11 +520,12 @@ describe("ZarrStore", () => {
     });
 
     it("rejects an aborted signal", async () => {
+      const reason = new Error("aborted");
       const store = await openFixture(writeV2Fixture());
       const array = await getArray(store, "obs/int32");
       await expect(
-        array.slice([[0, 1]], { signal: AbortSignal.abort() }),
-      ).rejects.toThrow();
+        array.slice([[0, 1]], { signal: AbortSignal.abort(reason) }),
+      ).rejects.toBe(reason);
     });
   });
 });

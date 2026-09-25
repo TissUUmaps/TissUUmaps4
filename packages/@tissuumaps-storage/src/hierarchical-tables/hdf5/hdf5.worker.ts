@@ -1,4 +1,4 @@
 import { serveHierarchicalTable } from "../worker/serveHierarchicalTable";
-import { H5wasmStore } from "./H5wasmStore";
+import { HDF5Store } from "./HDF5Store";
 
-serveHierarchicalTable((source) => H5wasmStore.open(source));
+serveHierarchicalTable((source) => HDF5Store.open(source));

@@ -16,23 +16,55 @@ Zarr data sources have the `type` `"zarr"` and accept the following fields:
 | ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `type`       | `string` | Always `"zarr"`.                                                                                                                |
 | `source`     | `string` | URL of the store, or path of its directory in the workspace (see [Referencing data](../concepts/projects.md#referencing-data)). |
-| `idColumn`   | `string` | Column of the row IDs. Sequential IDs are used if omitted.                                                                      |
+| `idColumn`   | `string` | Column of the row IDs, which must be integers. Sequential IDs are used if omitted.                                              |
 | `nameColumn` | `string` | Column of the row names.                                                                                                        |
 
-## The source
-
-The source may point at the store itself, or at a group inside it. A SpatialData table is a group of the store, so both of these work:
+The source may point at the store itself, or at a group inside it. A SpatialData table is a group of the store, so both of these work if the store holds one table:
 
 - `https://example.org/visium.zarr/tables/adata`, whose columns are `obs/area`, `obsm/spatial[0]`, and so on.
 - `https://example.org/visium.zarr`, whose columns are `tables/adata/obs/area`, and so on.
 
-Consolidated metadata is written at the root of a store, so it is looked up at the source and then at each of its ancestors. The same holds for a directory in the workspace.
+A store holding several tables must be opened at one of them. Consolidated metadata is written at the root of a store, so it is looked up at the source and then at each of its ancestors.
+
+## Example
+
+A project showing the spots of the table of a SpatialData store as points, placed by their spatial coordinates and colored by cluster:
+
+```json title="project.tmap"
+{
+  "layers": [{ "id": "layer", "name": "Visium" }],
+  "tables": [
+    {
+      "id": "spots-table",
+      "name": "Spots",
+      "dataSource": { "type": "zarr", "source": "visium.zarr/tables/adata" }
+    }
+  ],
+  "points": [
+    {
+      "id": "spots",
+      "name": "Spots",
+      "layer": "layer",
+      "dataSource": {
+        "type": "table",
+        "table": "spots-table",
+        "x": "obsm/spatial[0]",
+        "y": "obsm/spatial[1]"
+      },
+      "pointColor": { "groupBy": { "column": "obs/cluster" } }
+    }
+  ]
+}
+```
+
+The source points at the table inside the store; its consolidated metadata is found at `visium.zarr`.
 
 ## Limitations
 
-- The store must have consolidated metadata (`.zmetadata`). A Zarr store is a key-value store, so without it the columns cannot be listed. SpatialData writes consolidated metadata.
+- The store must have consolidated metadata (Zarr v2 `.zmetadata` or Zarr v3 `zarr.json`). A Zarr store is a key-value store, so without it the columns cannot be listed. SpatialData writes consolidated metadata.
 - Nodes whose metadata cannot be read are skipped instead of failing the store. AnnData writes a few of them under `uns`.
-- Sparse matrices must be stored in CSC format, as for HDF5. AnnData writes `X` as CSR by default.
+- Zipped stores are not supported.
+- The [HDF5 limitations](./hdf5#limitations) on sparse matrices, 64-bit integers, row counts, variable names and column lengths apply as well. AnnData writes `X` as CSR by default.
 
 ## API
 

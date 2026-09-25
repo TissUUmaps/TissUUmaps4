@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { StoreArray } from "../Store";
+import type { HierarchicalStoreArray } from "../HierarchicalStore";
 import type { ZarrStore } from "./ZarrStore";
 import { openZarrStore } from "./openZarrStore";
 
@@ -150,7 +150,7 @@ async function expectTable(store: ZarrStore): Promise<void> {
     attrs: tableAttrs,
     keys: ["x"],
   });
-  const array = (await store.get("x")) as StoreArray;
+  const array = (await store.get("x")) as HierarchicalStoreArray;
   expect(array.kind).toBe("array");
   expect(await array.read()).toEqual(new Int32Array([1, 2, 3]));
 }

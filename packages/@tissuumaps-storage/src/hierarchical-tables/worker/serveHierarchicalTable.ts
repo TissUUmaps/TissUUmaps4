@@ -1,6 +1,6 @@
+import type { HierarchicalStore } from "../HierarchicalStore";
 import type { HierarchicalTable } from "../HierarchicalTable";
 import { HierarchicalTableReader } from "../HierarchicalTableReader";
-import type { Store } from "../Store";
 import type {
   HierarchicalTableWorkerRequestMessage,
   HierarchicalTableWorkerResponseMessage,
@@ -16,7 +16,7 @@ import type {
  * @param openStore - Opens the store of a file or URL
  */
 export function serveHierarchicalTable(
-  openStore: (source: File | string) => Promise<Store>,
+  openStore: (source: File | string) => Promise<HierarchicalStore>,
 ): void {
   const ctx = self as unknown as {
     onmessage:

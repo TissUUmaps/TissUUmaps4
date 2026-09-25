@@ -1,18 +1,18 @@
 import type { GenericArray } from "@tissuumaps/core";
 
-/** Data types of a {@link StoreArray}, as far as the reader tells them apart */
-export type StoreDataType =
+/** Data types of a {@link HierarchicalStoreArray}, as far as the reader tells them apart */
+export type HierarchicalStoreDataType =
   "integer" | "float" | "string" | "boolean" | "other";
 
 /**
- * The values of a {@link StoreArray}; 64-bit integers read as
+ * The values of a {@link HierarchicalStoreArray}; 64-bit integers read as
  * `BigInt64Array`/`BigUint64Array`
  */
-export type StoreValues =
+export type HierarchicalStoreValues =
   GenericArray<unknown> | BigInt64Array | BigUint64Array;
 
 /** A named container of other nodes */
-export interface StoreGroup {
+export interface HierarchicalStoreGroup {
   readonly kind: "group";
   /** Attribute values by name */
   readonly attrs: Readonly<Record<string, unknown>>;
@@ -21,17 +21,18 @@ export interface StoreGroup {
 }
 
 /** An n-dimensional array of values */
-export interface StoreArray {
+export interface HierarchicalStoreArray {
   readonly kind: "array";
   /** The dimensions; empty for a scalar */
   readonly shape: number[];
-  readonly dataType: StoreDataType;
+  /** The type of the values */
+  readonly dataType: HierarchicalStoreDataType;
 
   /**
    * @param options - Optional abort signal
    * @returns All values
    */
-  read(options?: { signal?: AbortSignal }): Promise<StoreValues>;
+  read(options?: { signal?: AbortSignal }): Promise<HierarchicalStoreValues>;
 
   /**
    * @param ranges - One `[start, end)` range per dimension, or `null` for the
@@ -43,10 +44,12 @@ export interface StoreArray {
   slice(
     ranges: ([number, number] | null)[],
     options?: { signal?: AbortSignal },
-  ): Promise<StoreValues>;
+  ): Promise<HierarchicalStoreValues>;
 }
 
-export type StoreNode = StoreGroup | StoreArray;
+/** A node of a {@link HierarchicalStore} */
+export type HierarchicalStoreNode =
+  HierarchicalStoreGroup | HierarchicalStoreArray;
 
 /**
  * A hierarchical container of groups and arrays, such as an HDF5 file or a
@@ -55,7 +58,7 @@ export type StoreNode = StoreGroup | StoreArray;
  * Paths are slash-separated without a leading slash; the empty path is the
  * root group.
  */
-export interface Store {
+export interface HierarchicalStore {
   /**
    * @param path - The path of the node
    * @param options - Optional abort signal
@@ -64,7 +67,7 @@ export interface Store {
   get(
     path: string,
     options?: { signal?: AbortSignal },
-  ): Promise<StoreNode | null>;
+  ): Promise<HierarchicalStoreNode | null>;
 
   /** Closes the store */
   close(): void;

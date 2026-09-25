@@ -21,7 +21,7 @@ import { ZarrStore } from "./ZarrStore";
  * @param normalizedSource - The normalized source of the data source to open
  * @param options - `signal` aborts the load; `workspace` is the directory
  * handle of the open workspace, required for workspace-relative sources
- * @returns A promise that resolves to the opened store
+ * @returns The store, rooted at the group the source points to
  * @throws Error if neither the source nor any of its ancestors opens as a
  * Zarr store with consolidated metadata; the last failure is the cause
  */

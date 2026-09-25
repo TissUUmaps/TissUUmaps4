@@ -6,7 +6,7 @@ import {
   type TableData,
 } from "@tissuumaps/core";
 
-import { ColumnUtils } from "./ColumnUtils";
+import { ColumnQueryUtils } from "./ColumnQueryUtils";
 import type { HierarchicalTable } from "./HierarchicalTable";
 
 /** The {@link TableData} of a hierarchical table; owns the table and closes it */
@@ -53,7 +53,7 @@ export class HierarchicalTableData implements TableData {
       return Promise.reject(signal.reason as Error);
     }
     return Promise.resolve(
-      ColumnUtils.suggestColumnQueries(this._table.columns, currentQuery),
+      ColumnQueryUtils.suggestColumnQueries(this._table.columns, currentQuery),
     );
   }
 
@@ -66,7 +66,7 @@ export class HierarchicalTableData implements TableData {
       return Promise.reject(signal.reason as Error);
     }
     return Promise.resolve(
-      ColumnUtils.resolveColumnQuery(this._table.columns, query),
+      ColumnQueryUtils.resolveColumnQuery(this._table.columns, query),
     );
   }
 

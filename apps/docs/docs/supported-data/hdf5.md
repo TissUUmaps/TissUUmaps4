@@ -16,7 +16,7 @@ HDF5 data sources have the `type` `"hdf5"` and accept the following fields:
 | ------------ | -------- | ------------------------------------------------------------------------------------------------ |
 | `type`       | `string` | Always `"hdf5"`.                                                                                 |
 | `source`     | `string` | URL or path of the HDF5 file (see [Referencing data](../concepts/projects.md#referencing-data)). |
-| `idColumn`   | `string` | Column of the row IDs. Sequential IDs are used if omitted.                                       |
+| `idColumn`   | `string` | Column of the row IDs, which must be integers. Sequential IDs are used if omitted.               |
 | `nameColumn` | `string` | Column of the row names.                                                                         |
 
 ## Columns
@@ -28,23 +28,57 @@ A column is addressed by the path of a dataset within the file, for example `obs
 
 ## AnnData files
 
-A group whose `encoding-type` attribute is `anndata` is an AnnData object, and its columns are decoded:
+Groups with an AnnData `encoding-type` attribute are decoded wherever they are in the file:
 
 - Sparse matrices expose one column per matrix column, as two-dimensional datasets do.
-- `X`, the `layers` and their `raw` counterparts are addressed by variable name as well as by index, for example `X[CD3]` besides `X[12]`. The names are the index of the `var` dataframe of the object, and `raw/var` for `raw/X`. Names are matched exactly, or ignoring case if that matches a single name. A number between the brackets is always an index, so numeric and duplicate names are addressed by index.
-- `categorical` groups are columns of the category type; missing values are empty strings for string categories and `NaN` for numeric ones.
+- `categorical` groups are columns of their category labels; missing values are empty strings for string categories and `NaN` for numeric ones.
 - `nullable-integer` and `nullable-boolean` groups are numeric columns; missing values are `NaN`.
 - `nullable-string-array` groups are string columns; missing values are empty strings.
-- The number of rows is the length of the `obs` index.
+
+A group whose `encoding-type` is `anndata` is an AnnData object. A file may hold only one. Its `obs` index gives the number of rows. Its `X`, `layers` and their `raw` counterparts are addressed by variable name as well as by index, for example `X[CD3]` besides `X[12]`. The names are the index of the `var` dataframe of the object, and `raw/var` for `raw/X`. Names are matched exactly, or ignoring case if that matches a single name. A number between the brackets is always an index, so numeric, duplicate and empty names are addressed by index.
+
+## Example
+
+A project showing the cells of an AnnData file as points, placed by their spatial coordinates and colored by cell type:
+
+```json title="project.tmap"
+{
+  "layers": [{ "id": "layer", "name": "Sample" }],
+  "tables": [
+    {
+      "id": "cells-table",
+      "name": "Cells",
+      "dataSource": { "type": "hdf5", "source": "cells.h5ad" }
+    }
+  ],
+  "points": [
+    {
+      "id": "cells",
+      "name": "Cells",
+      "layer": "layer",
+      "dataSource": {
+        "type": "table",
+        "table": "cells-table",
+        "x": "obsm/spatial[0]",
+        "y": "obsm/spatial[1]"
+      },
+      "pointColor": { "groupBy": { "column": "obs/cell_type" } }
+    }
+  ]
+}
+```
+
+The table has one row per cell, as the `obs` index gives the number of rows. Any other column, such as `X[CD3]`, can be used the same way.
 
 ## Limitations
 
-- Sparse matrices must be stored in CSC format (`csc_matrix`). Reading one column of a CSR matrix would require the whole matrix, so CSR matrices are rejected.
+- Sparse matrices must be stored in CSC format (`csc_matrix`). Reading one column of a CSR matrix would require the whole matrix, so CSR matrices are listed but cannot be read.
 - 64-bit integer columns are read as numbers; a value beyond ±2⁵³ is rejected rather than rounded.
 - HDF5 files do not store a row count. The number of rows is taken from the ID column if given, otherwise from the name column, otherwise from the AnnData `obs` index, otherwise from the first column of the file.
 - Variable names are only read for AnnData objects. A `var` dataframe whose index is as long as the matrix is required; otherwise the matrix keeps its column indices.
-- Remote files are read through HTTP range requests. The server must send `Accept-Ranges: bytes` and, for cross-origin requests, expose it via `Access-Control-Expose-Headers`; otherwise the whole file is downloaded before the first read.
+- Remote files are read through HTTP range requests. The server must send `Accept-Ranges: bytes` and, for cross-origin requests, expose it via `Access-Control-Expose-Headers`; otherwise the whole file is downloaded before the first read. The parts of the file read so far stay in memory while the table is open.
 - A column must have as many rows as the table.
+- Scalars, arrays of more than two dimensions, compound datasets and nodes whose name contains a bracket are skipped.
 
 ## API
 

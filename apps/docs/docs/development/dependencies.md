@@ -83,5 +83,5 @@ run `pnpm install`.
 ## Web APIs (selection)
 
 - File System (local data access)
-- Web Workers (Parquet/GeoJSON/HDF5 parsing)
+- Web Workers (TIFF decoding, Parquet/GeoJSON/HDF5 parsing)
 - WebGL 2 (points and shapes rendering)

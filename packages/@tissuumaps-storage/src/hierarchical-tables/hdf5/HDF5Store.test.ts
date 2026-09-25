@@ -1,9 +1,12 @@
 import h5wasm from "h5wasm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import type {
+  HierarchicalStoreArray,
+  HierarchicalStoreGroup,
+} from "../HierarchicalStore";
 import { HierarchicalTableReader } from "../HierarchicalTableReader";
-import type { StoreArray, StoreGroup } from "../Store";
-import { H5wasmStore } from "./H5wasmStore";
+import { HDF5Store } from "./HDF5Store";
 
 const storeFixturePath = "/store.h5";
 const annDataFixturePath = "/fixture.h5ad";
@@ -67,18 +70,18 @@ beforeAll(async () => {
   writeAnnDataFixture();
 });
 
-describe("H5wasmStore", () => {
-  let store: H5wasmStore;
+describe("HDF5Store", () => {
+  let store: HDF5Store;
 
   beforeAll(() => {
-    store = new H5wasmStore(new h5wasm.File(storeFixturePath, "r"));
+    store = new HDF5Store(new h5wasm.File(storeFixturePath, "r"));
   });
 
   afterAll(() => {
     store.close();
   });
 
-  async function getArray(path: string): Promise<StoreArray> {
+  async function getArray(path: string): Promise<HierarchicalStoreArray> {
     const node = await store.get(path);
     if (node?.kind !== "array") {
       throw new Error(`"${path}" is not an array`);
@@ -86,7 +89,7 @@ describe("H5wasmStore", () => {
     return node;
   }
 
-  async function getGroup(path: string): Promise<StoreGroup> {
+  async function getGroup(path: string): Promise<HierarchicalStoreGroup> {
     const node = await store.get(path);
     if (node?.kind !== "group") {
       throw new Error(`"${path}" is not a group`);
@@ -193,10 +196,10 @@ describe("H5wasmStore", () => {
   });
 });
 
-describe("HierarchicalTableReader over H5wasmStore", () => {
+describe("HierarchicalTableReader over HDF5Store", () => {
   it("reads an AnnData file", async () => {
     const reader = await HierarchicalTableReader.open(
-      new H5wasmStore(new h5wasm.File(annDataFixturePath, "r")),
+      new HDF5Store(new h5wasm.File(annDataFixturePath, "r")),
     );
     expect(reader.numRows).toBe(3);
     expect(reader.columns).toContainEqual({

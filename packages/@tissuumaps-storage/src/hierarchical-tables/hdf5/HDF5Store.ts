@@ -1,16 +1,16 @@
 import h5wasm, { type Dataset, type Group, type File as H5File } from "h5wasm";
 
 import type {
-  Store,
-  StoreArray,
-  StoreDataType,
-  StoreGroup,
-  StoreNode,
-  StoreValues,
-} from "../Store";
+  HierarchicalStore,
+  HierarchicalStoreArray,
+  HierarchicalStoreDataType,
+  HierarchicalStoreGroup,
+  HierarchicalStoreNode,
+  HierarchicalStoreValues,
+} from "../HierarchicalStore";
 
 /** HDF5 datatype classes (H5T_class_t); enums read as their integer codes */
-const dataTypes: Record<number, StoreDataType> = {
+const dataTypes: Record<number, HierarchicalStoreDataType> = {
   0: "integer", // H5T_INTEGER
   1: "float", // H5T_FLOAT
   3: "string", // H5T_STRING
@@ -18,12 +18,12 @@ const dataTypes: Record<number, StoreDataType> = {
 };
 
 /**
- * A {@link Store} over an HDF5 file opened with h5wasm
+ * A {@link HierarchicalStore} over an HDF5 file opened with h5wasm
  *
  * h5wasm reads synchronously through the Emscripten file system, so an
  * instance must live in a Web Worker when the file is a lazily fetched URL.
  */
-export class H5wasmStore implements Store {
+export class HDF5Store implements HierarchicalStore {
   private readonly _file: H5File;
 
   /**
@@ -43,11 +43,12 @@ export class H5wasmStore implements Store {
    * @param source - The file or URL to open
    * @param options - Optional abort signal
    * @returns A store for the opened file
+   * @throws Error if the source is not an HDF5 file
    */
   static async open(
     source: File | string,
     options?: { signal?: AbortSignal },
-  ): Promise<H5wasmStore> {
+  ): Promise<HDF5Store> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const { FS } = await h5wasm.ready;
@@ -64,23 +65,28 @@ export class H5wasmStore implements Store {
       FS.mount(WORKERFS, { files: [source] }, "/work");
       path = `/work/${source.name}`;
     }
-    return new H5wasmStore(new h5wasm.File(path, "r"));
+    const file = new h5wasm.File(path, "r");
+    // h5wasm reports a file it cannot open with an invalid id, not an error
+    if (file.file_id < 0n) {
+      throw new Error("The source is not an HDF5 file.");
+    }
+    return new HDF5Store(file);
   }
 
   get(
     path: string,
     options?: { signal?: AbortSignal },
-  ): Promise<StoreNode | null> {
+  ): Promise<HierarchicalStoreNode | null> {
     const { signal } = options ?? {};
     if (signal?.aborted) {
       return Promise.reject(signal.reason as Error);
     }
     const entity = path === "" ? this._file : this._file.get(path);
     if (entity instanceof h5wasm.Group) {
-      return Promise.resolve(new H5wasmGroup(entity));
+      return Promise.resolve(new HDF5Group(entity));
     }
     if (entity instanceof h5wasm.Dataset) {
-      return Promise.resolve(new H5wasmArray(entity));
+      return Promise.resolve(new HDF5Array(entity));
     }
     return Promise.resolve(null);
   }
@@ -90,7 +96,7 @@ export class H5wasmStore implements Store {
   }
 }
 
-class H5wasmGroup implements StoreGroup {
+class HDF5Group implements HierarchicalStoreGroup {
   readonly kind = "group";
   private readonly _group: Group;
   private _attrs: Record<string, unknown> | undefined;
@@ -113,10 +119,10 @@ class H5wasmGroup implements StoreGroup {
   }
 }
 
-class H5wasmArray implements StoreArray {
+class HDF5Array implements HierarchicalStoreArray {
   readonly kind = "array";
   readonly shape: number[];
-  readonly dataType: StoreDataType;
+  readonly dataType: HierarchicalStoreDataType;
   private readonly _dataset: Dataset;
 
   constructor(dataset: Dataset) {
@@ -126,24 +132,26 @@ class H5wasmArray implements StoreArray {
     this.dataType = dataTypes[metadata.type] ?? "other";
   }
 
-  read(options?: { signal?: AbortSignal }): Promise<StoreValues> {
+  read(options?: { signal?: AbortSignal }): Promise<HierarchicalStoreValues> {
     const { signal } = options ?? {};
     if (signal?.aborted) {
       return Promise.reject(signal.reason as Error);
     }
-    return Promise.resolve(this._dataset.value as StoreValues);
+    return Promise.resolve(this._dataset.value as HierarchicalStoreValues);
   }
 
   slice(
     ranges: ([number, number] | null)[],
     options?: { signal?: AbortSignal },
-  ): Promise<StoreValues> {
+  ): Promise<HierarchicalStoreValues> {
     const { signal } = options ?? {};
     if (signal?.aborted) {
       return Promise.reject(signal.reason as Error);
     }
     return Promise.resolve(
-      this._dataset.slice(ranges.map((range) => range ?? [])) as StoreValues,
+      this._dataset.slice(
+        ranges.map((range) => range ?? []),
+      ) as HierarchicalStoreValues,
     );
   }
 }

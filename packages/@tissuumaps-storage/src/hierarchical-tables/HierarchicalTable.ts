@@ -7,7 +7,7 @@ import type { GenericArray } from "@tissuumaps/core";
  * `nullable-integer`, `nullable-boolean` or `nullable-string-array` group,
  * addressed by its path. A `matrix` column is a 2-D array or an AnnData
  * `csc_matrix`/`csr_matrix` group, whose columns are addressed as
- * `path[selector]` (see {@link ColumnUtils}).
+ * `path[selector]` (see {@link ColumnQueryUtils}).
  */
 export type HierarchicalTableColumn =
   | { kind: "dataset"; path: string }
@@ -18,27 +18,22 @@ export type HierarchicalTableColumn =
       /**
        * The selector of each matrix column, for expression matrices named by
        * an AnnData `var` index: the variable name, or the column index where
-       * {@link ColumnUtils.getMatrixSelectors} cannot use the name
+       * {@link ColumnQueryUtils.getMatrixSelectors} cannot use the name
        */
       selectors?: string[];
     };
 
-/**
- * An open hierarchical table: the columns of a store and a way to read them
- *
- * Implemented directly by {@link HierarchicalTableReader} and, across a Web
- * Worker, by {@link HierarchicalTableWorkerClient}.
- */
+/** An open hierarchical table: the columns of a store and a way to read them */
 export interface HierarchicalTable {
   /** The columns, in path order */
   readonly columns: HierarchicalTableColumn[];
-  /** The row count inferred from the store, see {@link HierarchicalTableReader.open} */
+  /** The row count inferred from the store */
   readonly numRows: number;
 
   /**
    * Reads the values of a column
    *
-   * @param query - The column query (see {@link ColumnUtils})
+   * @param query - The column query (see {@link ColumnQueryUtils})
    * @param options - The number of table rows, checked against the column
    * length, and an abort signal
    * @returns The column values
@@ -51,7 +46,7 @@ export interface HierarchicalTable {
   /**
    * Reads the minimum and maximum value of a numeric column
    *
-   * @param query - The column query (see {@link ColumnUtils})
+   * @param query - The column query (see {@link ColumnQueryUtils})
    * @param options - See {@link HierarchicalTable.readColumn}
    * @returns The [min, max] range, or `undefined` if the column is not numeric
    * or holds no two distinct finite values
