@@ -42,7 +42,7 @@ Any Parquet file can be read as a table. Its rows are keyed by row number unless
 
 Parquet has no index. [pandas](https://pandas.pydata.org/docs/development/developer.html) writes the DataFrame index as a column and names it in the `pandas` metadata of the file. pandas does not write a `RangeIndex` at all.
 
-TissUUmaps uses the index column as the default `idColumn`. Item IDs are numbers, so only a single-level integer index is used. A string or multi-level index leaves the default at row numbers.
+TissUUmaps uses the index column as the default `idColumn`. Item IDs are numbers, so only a single-level integer index is used. A string or multi-level index, or an index column missing from the file, leaves the default at row numbers.
 
 IDs must be unique. An ID column with duplicate values is ignored with a warning, and rows are keyed by row numbers.
 
