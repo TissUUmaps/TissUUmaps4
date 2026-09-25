@@ -1,11 +1,11 @@
-import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useMemo } from "react";
 
 import type { VisibilityConfig } from "@tissuumaps/core";
 
 import { useProjectStore } from "@/stores/project";
 
-import type { GroupValuesAdapter } from "./adapter";
+import { type GroupValuesAdapter, groupColumnSize } from "./adapter";
+import { GroupVisibilityCell } from "./cells/GroupVisibilityCell";
 
 /** Returns the group table adapter of the visibility maps */
 export function useVisibilityGroupValues(): GroupValuesAdapter<
@@ -13,11 +13,24 @@ export function useVisibilityGroupValues(): GroupValuesAdapter<
   VisibilityConfig
 > {
   const maps = useProjectStore((state) => state.visibilityMaps);
+  const addMap = useProjectStore((state) => state.addVisibilityMap);
+  const updateMap = useProjectStore((state) => state.updateVisibilityMap);
   return useMemo(
     () => ({
       maps,
-      renderValue: (visible) => (visible ? <EyeIcon /> : <EyeOffIcon />),
+      addMap,
+      updateMap,
+      cell: {
+        size: groupColumnSize,
+        getSortValue: (visible) => Number(visible),
+        render: (visible, onVisibleChange) => (
+          <GroupVisibilityCell
+            visible={visible}
+            onVisibleChange={onVisibleChange}
+          />
+        ),
+      },
     }),
-    [maps],
+    [maps, addMap, updateMap],
   );
 }
