@@ -22,6 +22,7 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
       setInteractionMode: (interactionMode) => set({ interactionMode }),
       setImageChannelPreview: (imageChannelPreview) =>
         set({ imageChannelPreview }),
+      setHighlightedGroup: (highlightedGroup) => set({ highlightedGroup }),
       registerImageDataProvider: (type, dataProvider) =>
         set((draft) => {
           draft.imageDataProviders.set(type, dataProvider);
@@ -66,6 +67,7 @@ function createInitialAppStoreState(): AppStoreState {
     workspace: null,
     interactionMode: "pan",
     imageChannelPreview: null,
+    highlightedGroup: null,
     imageDataProviders: new Map(),
     labelsDataProviders: new Map(),
     pointsDataProviders: new Map(),

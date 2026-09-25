@@ -21,6 +21,18 @@ export type ImageChannelPreview = {
   channelIndex: number;
 };
 
+/** A group of a categorical table column that is highlighted in the viewer */
+export type HighlightedGroup = {
+  /** ID of the table */
+  tableId: string;
+
+  /** Name of the categorical table column */
+  column: string;
+
+  /** The group, i.e. the cell value as a string */
+  group: string;
+};
+
 /**
  * The state of the app store, holding what is not part of the project
  */
@@ -33,6 +45,12 @@ export type AppStoreState = {
 
   /** The channel previewed on its own while it is hovered, if any */
   imageChannelPreview: ImageChannelPreview | null;
+
+  /**
+   * The table group shown alone in the viewer, hiding every other item of the
+   * same table, or `null` for none
+   */
+  highlightedGroup: HighlightedGroup | null;
 
   /** The registered image data providers, by data source type */
   imageDataProviders: Map<
@@ -107,6 +125,14 @@ export type AppStoreActions = {
   setImageChannelPreview: (
     imageChannelPreview: ImageChannelPreview | null,
   ) => void;
+
+  /**
+   * Highlights a table group in the viewer
+   *
+   * @param highlightedGroup - The group to highlight, or `null` to highlight
+   * none
+   */
+  setHighlightedGroup: (highlightedGroup: HighlightedGroup | null) => void;
 
   /**
    * Registers an image data provider

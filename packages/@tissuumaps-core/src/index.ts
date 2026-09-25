@@ -212,6 +212,7 @@ export {
   type AppStoreActions,
   type AppStore,
   type AppStoreApi,
+  type HighlightedGroup,
 } from "./types/stores/app";
 export {
   type DataRef,
