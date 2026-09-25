@@ -10,6 +10,7 @@ import {
   type GroupByConfig,
   type GroupValueMap,
   HashUtils,
+  type IDArray,
   MathUtils,
   NumberUtils,
   type RandomConfig,
@@ -46,7 +47,7 @@ export class ColorResolver {
    * @returns A `Uint32Array` of packed RGB color values, one per ID
    */
   static async resolveColors(
-    ids: number[],
+    ids: IDArray,
     config: ColorConfig,
     colorMaps: GroupValueMap<Color>[],
     defaultColor: Color,
@@ -141,7 +142,7 @@ export class ColorResolver {
    * @returns The packed RGB color value, without alpha
    */
   static resolveColorWithoutTable(
-    id: number,
+    id: number | string,
     config: ColorConfig,
     defaultColor: Color,
   ): number {
@@ -172,7 +173,7 @@ export class ColorResolver {
    * @returns A `Uint32Array` filled with the packed constant color, without alpha
    */
   static resolveUniformColors(
-    ids: number[],
+    ids: IDArray,
     config: Extract<ColorConfig, ConstantConfig<Color>>,
     options?: { align?: number },
   ): Uint32Array {
@@ -196,7 +197,7 @@ export class ColorResolver {
    * @returns A `Uint32Array` of packed color values
    */
   static async resolveColorsFromTableValues(
-    ids: number[],
+    ids: IDArray,
     config: Extract<ColorConfig, FromConfig>,
     defaultColor: Color,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
@@ -244,7 +245,7 @@ export class ColorResolver {
    * @returns A `Uint32Array` of packed color values
    */
   static async resolveColorsFromTableGroups(
-    ids: number[],
+    ids: IDArray,
     config: Extract<ColorConfig, GroupByConfig<false>>,
     colorMaps: GroupValueMap<Color>[],
     defaultColor: Color,
@@ -308,7 +309,7 @@ export class ColorResolver {
    * @returns A `Uint32Array` of packed random color values
    */
   static async resolveRandomColors(
-    ids: number[],
+    ids: IDArray,
     config: Extract<ColorConfig, RandomConfig<unknown>>,
     defaultColor: Color,
     options?: { signal?: AbortSignal; align?: number },
@@ -325,7 +326,7 @@ export class ColorResolver {
       });
     }
     const packedColors = ColorResolver.createColorBuffer(ids.length, { align });
-    await AsyncUtils.forEach(
+    await AsyncUtils.forEach<number | string>(
       ids,
       (id, i) => {
         const color = ColorResolver.pickRandomColor(
@@ -343,8 +344,9 @@ export class ColorResolver {
   /**
    * Deterministically picks a random color for an item from a palette
    *
-   * The pick is a seeded hash of the ID, so it is stable across resolutions
-   * and scatters consecutive IDs over the palette.
+   * The pick is a seeded hash of the ID (see {@link HashUtils.mix} for
+   * integer IDs and {@link HashUtils.hash} for string IDs), so it is stable
+   * across resolutions and scatters consecutive IDs over the palette.
    *
    * @param id - The item ID
    * @param seed - The seed of the random configuration
@@ -352,13 +354,15 @@ export class ColorResolver {
    * @returns The picked {@link Color}
    */
   static pickRandomColor(
-    id: number,
+    id: number | string,
     seed: number,
     colorPalette: ColorPalette,
   ): Color {
-    return colorPalette.colors[
-      HashUtils.mix(id, seed) % colorPalette.colors.length
-    ]!;
+    const hash =
+      typeof id === "string"
+        ? HashUtils.hash(id, seed)
+        : HashUtils.mix(id, seed);
+    return colorPalette.colors[hash % colorPalette.colors.length]!;
   }
 
   /**

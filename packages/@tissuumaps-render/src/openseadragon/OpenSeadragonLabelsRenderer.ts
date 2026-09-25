@@ -233,6 +233,9 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
         try {
           const tableData = await context.loadTable(table, { signal });
           const labelIds = tableData.getIds();
+          if (Array.isArray(labelIds)) {
+            throw new Error("String IDs cannot address label values");
+          }
           const loadTable = () => Promise.resolve(tableData);
           const [
             packedLabelColors,
