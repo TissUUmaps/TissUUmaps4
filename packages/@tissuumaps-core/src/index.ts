@@ -171,10 +171,11 @@ export {
 
 export {
   type FloatArray,
-  type GenericArray,
+  type IDArray,
   type IntArray,
-  type NumericArray,
+  type IntOrUintArray,
   type TypedArray,
+  type TypedArrayOrArray,
   type UintArray,
 } from "./types/arrays";
 export { type ProgressCallback } from "./types/callbacks";
@@ -231,6 +232,7 @@ export {
   type SettingsStoreApi,
 } from "./types/stores/settings";
 
+export { ArrayUtils } from "./utils/ArrayUtils";
 export { AsyncUtils } from "./utils/AsyncUtils";
 export { BitUtils } from "./utils/BitUtils";
 export { ColorUtils } from "./utils/ColorUtils";

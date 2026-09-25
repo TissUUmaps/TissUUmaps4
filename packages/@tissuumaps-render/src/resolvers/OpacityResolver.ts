@@ -4,6 +4,7 @@ import {
   type FromConfig,
   type GroupByConfig,
   type GroupValueMap,
+  type IDArray,
   MathUtils,
   NumberUtils,
   type OpacityConfig,
@@ -33,7 +34,7 @@ export class OpacityResolver {
    * @returns A `Uint8Array` of packed opacity values (0–255), one per ID
    */
   static async resolveOpacities(
-    ids: number[],
+    ids: IDArray,
     config: OpacityConfig,
     opacityMaps: GroupValueMap<number>[],
     defaultOpacity: number,
@@ -118,7 +119,7 @@ export class OpacityResolver {
    * @returns The packed opacity as an integer in the range [0, 255]
    */
   static resolveOpacityWithoutTable(
-    _id: number,
+    _id: number | string,
     config: OpacityConfig,
     defaultOpacity: number,
   ): number {
@@ -137,7 +138,7 @@ export class OpacityResolver {
    * @returns A `Uint8Array` filled with the packed constant opacity
    */
   static resolveUniformOpacities(
-    ids: number[],
+    ids: IDArray,
     config: Extract<OpacityConfig, ConstantConfig<number>>,
     options?: { align?: number },
   ): Uint8Array {
@@ -160,7 +161,7 @@ export class OpacityResolver {
    * @returns A `Uint8Array` of packed opacity values
    */
   static async resolveOpacitiesFromTableValues(
-    ids: number[],
+    ids: IDArray,
     config: Extract<OpacityConfig, FromConfig>,
     defaultOpacity: number,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
@@ -198,7 +199,7 @@ export class OpacityResolver {
    * @returns A `Uint8Array` of packed opacity values
    */
   static async resolveOpacitiesFromTableGroups(
-    ids: number[],
+    ids: IDArray,
     config: Extract<OpacityConfig, GroupByConfig<true>>,
     opacityMaps: GroupValueMap<number>[],
     defaultOpacity: number,
