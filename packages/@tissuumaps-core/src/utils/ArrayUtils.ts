@@ -1,4 +1,5 @@
 import type { BigIntArray, IDArray, IntOrUintArray } from "../types/arrays";
+import { NumberUtils } from "./NumberUtils";
 
 /**
  * Utility methods for converting arrays to the types the storage API holds
@@ -9,22 +10,15 @@ import type { BigIntArray, IDArray, IntOrUintArray } from "../types/arrays";
  */
 export class ArrayUtils {
   /**
-   * Converts 64-bit integers to 64-bit floats
+   * Converts 64-bit integers to 64-bit floats (see
+   * {@link NumberUtils.parseSafeInt})
    *
    * @param values - The values to convert
    * @returns The values as 64-bit floats
    * @throws Error if a value is not a safe integer
    */
   static fromBigIntArray(values: BigIntArray): Float64Array {
-    const result = new Float64Array(values.length);
-    for (let i = 0; i < values.length; i++) {
-      const v = values[i]!;
-      result[i] = Number(v);
-      if (!Number.isSafeInteger(result[i])) {
-        throw new Error(`Value is not a safe integer: ${v}`);
-      }
-    }
-    return result;
+    return Float64Array.from(values, (v) => NumberUtils.parseSafeInt(v));
   }
 
   /**
