@@ -5,13 +5,13 @@ import {
   type Color,
   type ColorConfig,
   type Config,
+  ConfigUtils,
   type GroupByConfig,
   type Marker,
   type MarkerConfig,
   type OpacityConfig,
   type SizeConfig,
   type VisibilityConfig,
-  createGroupValueGetter,
   findColorPalette,
   getActiveConfigSource,
   isGroupByConfig,
@@ -105,7 +105,7 @@ export function useAnnotationsWidget(
           if (!isGroupedByColumn(property.config, column)) {
             continue;
           }
-          const getMarker = createGroupValueGetter(
+          const getMarker = ConfigUtils.createGroupValueGetter(
             property.config,
             markerMaps,
             property.default,
@@ -119,7 +119,7 @@ export function useAnnotationsWidget(
           if (!isGroupedByColumn(property.config, column)) {
             continue;
           }
-          renderGroup = createGroupValueGetter(
+          renderGroup = ConfigUtils.createGroupValueGetter(
             property.config,
             sizeMaps,
             property.default,
@@ -130,7 +130,7 @@ export function useAnnotationsWidget(
           if (!isGroupedByColumn(property.config, column)) {
             continue;
           }
-          const getColor = createGroupValueGetter(
+          const getColor = ConfigUtils.createGroupValueGetter(
             property.config,
             colorMaps,
             property.default,
@@ -151,7 +151,7 @@ export function useAnnotationsWidget(
           if (!isGroupedByColumn(property.config, column)) {
             continue;
           }
-          const isVisible = createGroupValueGetter(
+          const isVisible = ConfigUtils.createGroupValueGetter(
             property.config,
             visibilityMaps,
             property.default,
@@ -164,7 +164,7 @@ export function useAnnotationsWidget(
           if (!isGroupedByColumn(property.config, column)) {
             continue;
           }
-          renderGroup = createGroupValueGetter(
+          renderGroup = ConfigUtils.createGroupValueGetter(
             property.config,
             opacityMaps,
             property.default,
