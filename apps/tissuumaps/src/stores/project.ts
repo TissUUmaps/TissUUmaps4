@@ -4,6 +4,8 @@ import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
 import {
+  type GroupValueMap,
+  type GroupValueMapKind,
   type ProjectStore,
   type ProjectStoreApi,
   type ProjectStoreState,
@@ -49,6 +51,10 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set((draft) => {
           addCollectionItem(draft.tables, table, index);
         }),
+      addMap: (kind, map) =>
+        set((draft) => {
+          addCollectionItem(getMaps(draft, kind), map);
+        }),
       updateLayer: (layerId, updates) =>
         set((draft) => {
           updateCollectionItem(draft.layers, layerId, updates);
@@ -72,6 +78,10 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
       updateTable: (tableId, updates) =>
         set((draft) => {
           updateCollectionItem(draft.tables, tableId, updates);
+        }),
+      updateMap: (kind, mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(getMaps(draft, kind), mapId, updates);
         }),
       moveLayer: (layerId, newIndex) =>
         set((draft) => {
@@ -121,6 +131,10 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set((draft) => {
           deleteCollectionItem(draft.tables, tableId);
         }),
+      deleteMap: (kind, mapId) =>
+        set((draft) => {
+          deleteCollectionItem(getMaps(draft, kind), mapId);
+        }),
       clearLayers: () => set({ layers: [] }),
       clearImages: () => set({ images: [] }),
       clearLabels: () => set({ labels: [] }),
@@ -162,6 +176,20 @@ function createInitialProjectStoreState(): ProjectStoreState {
     source: null,
     instanceId: crypto.randomUUID(),
   };
+}
+
+/**
+ * Returns the project's maps of a kind
+ *
+ * @param draft - The project store state
+ * @param kind - The kind of the maps
+ * @returns The maps of the kind
+ */
+function getMaps(
+  draft: Draft<ProjectStoreState>,
+  kind: GroupValueMapKind,
+): Draft<GroupValueMap<unknown>>[] {
+  return draft[`${kind}Maps`];
 }
 
 /**
