@@ -1,11 +1,10 @@
 import type { CoordinateSpace } from "@tissuumaps/core";
 
 import { Field, FieldItem, FieldLabel } from "@/components/common/field";
-import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
-import { useProjectStore } from "@/stores/project";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 
 import type { SizeConfigWidgetAdapter } from "./adapter";
 
@@ -164,8 +163,6 @@ function GroupBySizeConfigWidget({
     setCurrentGroupByUnit: setUnit,
   } = adapter;
 
-  const sizeMaps = useProjectStore((state) => state.sizeMaps);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
@@ -178,14 +175,7 @@ function GroupBySizeConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Size map</FieldLabel>
-        <SimpleSelect
-          items={sizeMaps}
-          itemLabel={(sizeMap) => sizeMap.name}
-          itemValue={(sizeMap) => sizeMap.id}
-          value={map}
-          onValueChange={setMap}
-          nullable
-        />
+        <GroupValueMapSelect kind="size" value={map} onValueChange={setMap} />
       </Field>
       <Field>
         <FieldLabel>Size unit</FieldLabel>

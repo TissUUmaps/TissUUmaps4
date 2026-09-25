@@ -50,6 +50,7 @@ export {
 } from "./model/configs";
 export {
   createProject,
+  getReferencedMapIds,
   projectDefaults,
   type Project,
   type RawProject,

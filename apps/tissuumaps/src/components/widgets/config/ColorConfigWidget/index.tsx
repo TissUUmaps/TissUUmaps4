@@ -10,7 +10,6 @@ import {
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
-import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -19,7 +18,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
-import { useProjectStore } from "@/stores/project";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 
 import { ColorPaletteSelect } from "./ColorPaletteSelect";
 import type { ColorConfigWidgetAdapter } from "./adapter";
@@ -246,8 +245,6 @@ function GroupByColorConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
-  const colorMaps = useProjectStore((state) => state.colorMaps);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
@@ -268,14 +265,7 @@ function GroupByColorConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Color map</FieldLabel>
-        <SimpleSelect
-          items={colorMaps}
-          itemLabel={(colorMap) => colorMap.name}
-          itemValue={(colorMap) => colorMap.id}
-          value={map}
-          onValueChange={setMap}
-          nullable
-        />
+        <GroupValueMapSelect kind="color" value={map} onValueChange={setMap} />
       </Field>
     </div>
   );

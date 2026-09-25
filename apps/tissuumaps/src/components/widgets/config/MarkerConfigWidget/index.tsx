@@ -2,7 +2,7 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { markers } from "@/components/markers";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
-import { useProjectStore } from "@/stores/project";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 
 import type { MarkerConfigWidgetAdapter } from "./adapter";
 
@@ -114,8 +114,6 @@ function GroupByMarkerConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
-  const markerMaps = useProjectStore((state) => state.markerMaps);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
@@ -128,14 +126,7 @@ function GroupByMarkerConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Marker map</FieldLabel>
-        <SimpleSelect
-          items={markerMaps}
-          itemLabel={(markerMap) => markerMap.name}
-          itemValue={(markerMap) => markerMap.id}
-          value={map}
-          onValueChange={setMap}
-          nullable
-        />
+        <GroupValueMapSelect kind="marker" value={map} onValueChange={setMap} />
       </Field>
     </div>
   );

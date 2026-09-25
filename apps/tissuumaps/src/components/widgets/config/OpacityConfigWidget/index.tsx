@@ -1,10 +1,9 @@
 import { MathUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
-import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
-import { useProjectStore } from "@/stores/project";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
 
@@ -117,8 +116,6 @@ function GroupByOpacityConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
-  const opacityMaps = useProjectStore((state) => state.opacityMaps);
-
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
@@ -131,13 +128,10 @@ function GroupByOpacityConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Opacity map</FieldLabel>
-        <SimpleSelect
-          items={opacityMaps}
-          itemLabel={(opacityMap) => opacityMap.name}
-          itemValue={(opacityMap) => opacityMap.id}
+        <GroupValueMapSelect
+          kind="opacity"
           value={map}
           onValueChange={setMap}
-          nullable
         />
       </Field>
     </div>
