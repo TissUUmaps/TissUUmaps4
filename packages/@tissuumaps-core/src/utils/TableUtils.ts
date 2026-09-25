@@ -113,8 +113,8 @@ export class TableUtils {
    * (see {@link forEachRow}). The raw cell value is converted to a string to
    * form the group key, which `mapGroupToValue` maps to a value; if the table
    * does not contain the ID, `defaultValue` is used instead. Groups are
-   * resolved once per distinct cell value, i.e.
-   * `mapGroupToValue` is not called per item.
+   * resolved once per distinct cell value, i.e. `mapGroupToValue` is not
+   * called per item.
    *
    * @param packedValues - Output typed array to fill, in the order of `ids`
    * @param tableData - The table to look up group keys in
