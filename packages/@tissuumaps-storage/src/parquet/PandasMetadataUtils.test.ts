@@ -8,7 +8,10 @@ function fakePandasMetadata(
   columnNames: string[] = [],
 ): FileMetaData {
   return {
-    schema: [{ name: "schema" }, ...columnNames.map((name) => ({ name }))],
+    schema: [
+      { name: "schema", num_children: columnNames.length },
+      ...columnNames.map((name) => ({ name })),
+    ],
     key_value_metadata:
       pandas !== undefined ? [{ key: "pandas", value: pandas }] : [],
   } as unknown as FileMetaData;
@@ -77,6 +80,7 @@ describe("PandasMetadataUtils", () => {
             },
           ],
         }),
+        ["__index_level_0__"],
       );
       expect(PandasMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
     });
@@ -97,6 +101,7 @@ describe("PandasMetadataUtils", () => {
     it("reads no column for an index missing from the column metadata", () => {
       const metadata = fakePandasMetadata(
         JSON.stringify({ index_columns: ["cell_id"] }),
+        ["cell_id"],
       );
       expect(PandasMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
     });

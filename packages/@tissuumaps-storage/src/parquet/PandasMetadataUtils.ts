@@ -1,4 +1,4 @@
-import type { FileMetaData } from "hyparquet";
+import { type FileMetaData, parquetSchema } from "hyparquet";
 
 /**
  * The `pandas` metadata of a Parquet file written by pandas
@@ -50,7 +50,10 @@ export class PandasMetadataUtils {
       return undefined;
     }
     // e.g. Dask lists __null_dask_index__ without writing it
-    if (!metadata.schema.some(({ name }) => name === indexColumn)) {
+    const isWritten = parquetSchema(metadata).children.some(
+      ({ element }) => element.name === indexColumn,
+    );
+    if (!isWritten) {
       return undefined;
     }
     const { pandas_type } =
