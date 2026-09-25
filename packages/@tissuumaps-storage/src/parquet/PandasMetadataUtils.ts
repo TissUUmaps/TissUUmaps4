@@ -31,8 +31,8 @@ export class PandasMetadataUtils {
    *
    * @param metadata - The file metadata
    * @returns The name of the index column, or `undefined` for files without
-   * pandas metadata, for files whose index was not written, and for files
-   * whose index is not a single integer level
+   * pandas metadata, for files whose index was not written or is missing
+   * from the file, and for files whose index is not a single integer level
    */
   static readIndexColumn(metadata: FileMetaData): string | undefined {
     const pandas = metadata.key_value_metadata?.find(
@@ -47,6 +47,10 @@ export class PandasMetadataUtils {
     // A multi-level index has no single column to key by
     const [indexColumn, ...moreLevels] = index_columns;
     if (typeof indexColumn !== "string" || moreLevels.length > 0) {
+      return undefined;
+    }
+    // e.g. Dask lists __null_dask_index__ without writing it
+    if (!metadata.schema.some(({ name }) => name === indexColumn)) {
       return undefined;
     }
     const { pandas_type } =
