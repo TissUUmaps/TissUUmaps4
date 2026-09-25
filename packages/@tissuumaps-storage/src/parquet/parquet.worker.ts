@@ -2,6 +2,7 @@ import type { Geometry } from "geojson";
 import {
   type AsyncBuffer,
   type FileMetaData,
+  type SchemaElement,
   asyncBufferFromUrl,
   parquetMetadataAsync,
   parquetRead,
@@ -10,10 +11,12 @@ import {
 import { compressors } from "hyparquet-compressors";
 
 import {
-  type GenericArray,
+  ArrayUtils,
+  type IDArray,
   NumberUtils,
   type ShapesGeometry,
   type TypedArray,
+  type TypedArrayOrArray,
 } from "@tissuumaps/core";
 
 import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
@@ -35,7 +38,7 @@ import type { ParquetSource } from "./types";
 function addGeometry(
   builder: ShapesGeometryBuilder,
   geometry: Geometry,
-  id: number,
+  id: number | string,
   name?: string,
 ): void {
   if (geometry.type === "Polygon") {
@@ -67,7 +70,7 @@ export type ParquetFileResponse = ParquetResponse<ParquetFileRequest> & {
   numRows: number;
   columns: string[];
   coordinateColumns: CoordinateColumn[];
-  ids: number[] | undefined;
+  ids: IDArray | undefined;
   names: string[] | undefined;
 };
 
@@ -77,7 +80,7 @@ export type ParquetColumnRequest = ParquetRequest<"column"> & {
 };
 
 export type ParquetColumnResponse = ParquetResponse<ParquetColumnRequest> & {
-  data: GenericArray<unknown>;
+  data: TypedArrayOrArray<unknown>;
 };
 
 export type ParquetCoordinatesRequest = ParquetRequest<"coordinates"> & {
@@ -100,7 +103,7 @@ export type ParquetShapesRequest = ParquetRequest<"shapes"> & {
 
 export type ParquetShapesResponse = ParquetResponse<ParquetShapesRequest> & {
   geometry: ShapesGeometry;
-  ids: number[];
+  ids: IDArray;
   names: string[] | undefined;
 };
 
@@ -245,46 +248,145 @@ function readColumnChunks(
   });
 }
 
+/**
+ * Returns the typed array type a column is read as, or `undefined` for a
+ * column read as a plain array
+ *
+ * 32-bit integers and floats keep their type, 64-bit integers and decimals
+ * are read as 64-bit floats holding safe integers, half floats as 32-bit
+ * floats; strings, dates, times, booleans, nested data and the like are read
+ * as plain arrays.
+ */
+function getColumnArrayType(
+  element: SchemaElement,
+):
+  | Int32ArrayConstructor
+  | Uint32ArrayConstructor
+  | Float32ArrayConstructor
+  | Float64ArrayConstructor
+  | undefined {
+  const { type, converted_type: converted, logical_type: logical } = element;
+  const annotation = converted ?? logical?.type;
+  if (annotation === "DECIMAL") {
+    return Float64Array;
+  }
+  if (annotation === "FLOAT16") {
+    return Float32Array;
+  }
+  if (
+    annotation !== undefined &&
+    annotation !== "INTEGER" &&
+    !/^U?INT_(8|16|32|64)$/.test(annotation)
+  ) {
+    return undefined;
+  }
+  const unsigned =
+    converted === "UINT_32" ||
+    (logical?.type === "INTEGER" && !logical.isSigned);
+  switch (type) {
+    case "INT32":
+      return unsigned ? Uint32Array : Int32Array;
+    case "INT64":
+    case "DOUBLE":
+      return Float64Array;
+    case "FLOAT":
+      return Float32Array;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Tells whether a column has missing values, from the null counts in its row
+ * group statistics; `undefined` if a row group lacks the statistic
+ */
+function isNullable(
+  metadata: FileMetaData,
+  column: string,
+): boolean | undefined {
+  let numNulls = 0;
+  for (const rowGroup of metadata.row_groups) {
+    const nullCount = rowGroup.columns.find(
+      ({ meta_data }) => meta_data?.path_in_schema.join(".") === column,
+    )?.meta_data?.statistics?.null_count;
+    if (nullCount === undefined) {
+      return undefined;
+    }
+    numNulls += Number(nullCount);
+  }
+  return numNulls > 0;
+}
+
+/**
+ * Reads a column into the array the storage API holds
+ *
+ * The array is allocated from the column's schema (see
+ * {@link getColumnArrayType}) before reading, and the chunks are written into
+ * it as they arrive. A missing value is `NaN` in a float array and `null` in a
+ * plain array, so an integer column is read as 64-bit floats unless its schema
+ * requires a value or its statistics count no nulls.
+ */
 async function readParquetColumn(
   buffer: AsyncBuffer,
   metadata: FileMetaData,
   column: string,
   onProgress: (progress: number, total: number) => void,
-): Promise<GenericArray<unknown>> {
-  let result: GenericArray<unknown> | undefined;
+): Promise<TypedArrayOrArray<unknown>> {
+  const element = parquetSchema(metadata).children.find(
+    (columnMetadata) => columnMetadata.element.name === column,
+  )?.element;
+  if (element === undefined) {
+    throw new Error(`Column "${column}" not found in Parquet file`);
+  }
+  const numRows = getNumRows(metadata);
+  const arrayType = getColumnArrayType(element);
+  let result: TypedArray | unknown[];
+  if (arrayType === undefined) {
+    result = new Array<unknown>(numRows).fill(null);
+  } else if (arrayType === Float32Array || arrayType === Float64Array) {
+    result = new arrayType(numRows).fill(NaN);
+  } else if (
+    element.repetition_type === "REQUIRED" ||
+    isNullable(metadata, column) === false
+  ) {
+    result = new arrayType(numRows);
+  } else {
+    result = new Float64Array(numRows).fill(NaN);
+  }
   await readColumnChunks(
     buffer,
     metadata,
     column,
     (columnData, rowStart) => {
-      if (ArrayBuffer.isView(columnData)) {
-        const chunk = columnData as TypedArray;
-        if (result === undefined) {
-          // @ts-expect-error typedArrayConstructor is a constructor
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          result = new chunk.constructor(getNumRows(metadata)) as TypedArray;
-        }
-        const out = result as TypedArray;
-        out.set(chunk, rowStart);
-      } else {
-        const chunk = columnData as unknown[];
-        if (result === undefined) {
-          result = new Array(getNumRows(metadata)) as unknown[];
-        }
-        const out = result as unknown[];
+      const chunk = columnData as
+        unknown[] | TypedArray | BigInt64Array | BigUint64Array;
+      if (Array.isArray(result)) {
         for (let i = 0; i < chunk.length; i++) {
-          out[rowStart + i] = chunk[i];
+          result[rowStart + i] = chunk[i];
+        }
+      } else if (
+        chunk instanceof BigInt64Array ||
+        chunk instanceof BigUint64Array
+      ) {
+        for (let i = 0; i < chunk.length; i++) {
+          result[rowStart + i] = NumberUtils.parseSafeInt(chunk[i]);
+        }
+      } else if (ArrayBuffer.isView(chunk)) {
+        result.set(chunk, rowStart);
+      } else {
+        for (let i = 0; i < chunk.length; i++) {
+          const v = chunk[i] as number | bigint | null;
+          result[rowStart + i] =
+            v === null
+              ? NaN
+              : typeof v === "bigint"
+                ? NumberUtils.parseSafeInt(v)
+                : v;
         }
       }
     },
     onProgress,
   );
-  if (result === undefined) {
-    throw new Error(`Column "${column}" not found in Parquet file`);
-  }
-  if (result instanceof BigInt64Array || result instanceof BigUint64Array) {
-    return Float64Array.from(result, (v) => NumberUtils.parseSafeInt(v));
-  }
   return result;
 }
 
@@ -316,19 +418,45 @@ async function readIdsAndNames(
   idColumn: string | undefined,
   nameColumn: string | undefined,
   onProgress: (progress: number, total: number) => void,
-): Promise<{ ids: number[] | undefined; names: string[] | undefined }> {
+): Promise<{ ids: IDArray | undefined; names: string[] | undefined }> {
+  // Without an ID column, rows are keyed by the pandas index, if there is one
+  const indexColumn =
+    idColumn === undefined
+      ? PandasMetadataUtils.readIndexColumn(metadata)
+      : undefined;
+  const keyColumn = idColumn ?? indexColumn;
   let idTotal = 0,
     nameTotal = 0,
     idProgress = 0,
     nameProgress = 0;
-  const idDataPromise =
-    idColumn !== undefined
-      ? readParquetColumn(buffer, metadata, idColumn, (progress, total) => {
-          idTotal = total;
-          idProgress = progress;
-          onProgress(idProgress + nameProgress, idTotal + nameTotal);
-        })
-      : undefined;
+  let idsPromise: Promise<IDArray | undefined> | undefined;
+  if (keyColumn !== undefined) {
+    idsPromise = readParquetColumn(
+      buffer,
+      metadata,
+      keyColumn,
+      (progress, total) => {
+        idTotal = total;
+        idProgress = progress;
+        onProgress(idProgress + nameProgress, idTotal + nameTotal);
+      },
+    ).then((idData) => {
+      try {
+        return ArrayUtils.toIDArray(idData);
+      } catch (error) {
+        throw new Error(`ID column "${keyColumn}" does not hold item IDs`, {
+          cause: error,
+        });
+      }
+    });
+    if (indexColumn !== undefined) {
+      // the pandas index was not asked for, so it must not fail the read
+      idsPromise = idsPromise.catch((error: unknown) => {
+        console.warn("Keying rows by row number instead:", error);
+        return undefined;
+      });
+    }
+  }
   const nameDataPromise =
     nameColumn !== undefined
       ? readParquetColumn(buffer, metadata, nameColumn, (progress, total) => {
@@ -337,23 +465,16 @@ async function readIdsAndNames(
           onProgress(idProgress + nameProgress, idTotal + nameTotal);
         })
       : undefined;
-  const [idData, nameData] = await Promise.all([
-    idDataPromise,
-    nameDataPromise,
-  ]);
-  let ids =
-    idData !== undefined
-      ? Array.from(idData, (id) => NumberUtils.parseSafeInt(id))
-      : undefined;
-  // e.g. the partition-local index that Dask writes; items are looked up by ID
-  if (ids !== undefined && new Set(ids).size !== ids.length) {
-    console.warn(
-      `ID column "${idColumn}" has duplicate values, keying rows by row number instead`,
-    );
-    ids = undefined;
-  }
+  const [ids, nameData] = await Promise.all([idsPromise, nameDataPromise]);
   const names =
     nameData !== undefined ? Array.from(nameData, String) : undefined;
+  // e.g. the partition-local index that Dask writes; items are looked up by ID
+  if (ids !== undefined && new Set<unknown>(ids).size !== ids.length) {
+    console.warn(
+      `ID column "${keyColumn}" has duplicate values, keying rows by row number instead`,
+    );
+    return { ids: undefined, names };
+  }
   return { ids, names };
 }
 
@@ -369,7 +490,7 @@ async function handleFileRequest(
   const { ids, names } = await readIdsAndNames(
     buffer,
     metadata,
-    request.idColumn ?? PandasMetadataUtils.readIndexColumn(metadata),
+    request.idColumn,
     request.nameColumn,
     onProgress,
   );
@@ -390,6 +511,10 @@ async function handleFileRequest(
       ids,
       names,
     },
+    transfer:
+      ArrayBuffer.isView(ids) && ids.buffer instanceof ArrayBuffer
+        ? [ids.buffer]
+        : undefined,
   };
 }
 
@@ -512,7 +637,7 @@ async function handleShapesRequest(
   const { ids: rowIds, names: rowNames } = await readIdsAndNames(
     buffer,
     metadata,
-    request.idColumn ?? PandasMetadataUtils.readIndexColumn(metadata),
+    request.idColumn,
     request.nameColumn,
     () => {},
   );
@@ -568,6 +693,9 @@ async function handleShapesRequest(
       geometry.polygonRingOffsets.buffer,
       geometry.ringVertexOffsets.buffer,
       geometry.coords.buffer,
+      ...(ArrayBuffer.isView(ids) && ids.buffer instanceof ArrayBuffer
+        ? [ids.buffer]
+        : []),
     ],
   };
 }

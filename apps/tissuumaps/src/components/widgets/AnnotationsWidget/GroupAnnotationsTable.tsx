@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { GenericArray, TableData } from "@tissuumaps/core";
+import type { TableData, TypedArrayOrArray } from "@tissuumaps/core";
 
 import {
   VirtualTable,
@@ -26,7 +26,7 @@ export type GroupAnnotationsTableProps = {
 type LoadedGroups = {
   tableData: TableData;
   groupByColumn: string;
-  groups: GenericArray<string>;
+  groups: TypedArrayOrArray<string>;
 };
 
 export function GroupAnnotationsTable({

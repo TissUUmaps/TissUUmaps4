@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 
-import type { ItemsData } from "@tissuumaps/core";
+import type { IDArray, ItemsData } from "@tissuumaps/core";
 
 import {
   VirtualTable,
@@ -9,7 +9,7 @@ import {
 import { useTableData } from "@/hooks/useData";
 
 export type ItemAnnotationsTableRowData = {
-  id: number;
+  id: number | string;
   name?: string;
   annotated?: boolean;
 };
@@ -37,9 +37,9 @@ export function ItemAnnotationsTable({
   // the ids and the per-index accessors the rows are built from, so that only
   // the rows within the visible range have to be materialized
   const { ids, getName, isAnnotated } = useMemo(() => {
-    let ids: number[] = [];
+    let ids: IDArray = [];
     let getName: ((index: number) => string | undefined) | undefined;
-    let isAnnotated: ((id: number) => boolean) | undefined;
+    let isAnnotated: ((id: number | string) => boolean) | undefined;
     if (data !== undefined) {
       ids = data.getIds();
       if (table !== null) {
@@ -48,25 +48,26 @@ export function ItemAnnotationsTable({
         // different column for a moment and then be replaced
         if (tableData !== null) {
           const tableIds = tableData.getIds();
+          const tableNames = tableData.getNames?.();
           // table-backed items hand out the table's own ids array, so every
-          // item has a row in the table and no lookup structure is needed
+          // item has a row in the table, aligned by index, and no lookup
+          // structure is needed
           if (tableIds === ids) {
             isAnnotated = () => true;
-          } else {
-            const annotatedIds = new Set(tableIds);
-            isAnnotated = (id) => annotatedIds.has(id);
-          }
-          const tableNames = tableData.getNames?.();
-          if (tableNames !== undefined) {
-            // the shared ids array aligns the names by index; only other item
-            // types need the id lookup
-            if (tableIds === ids) {
+            if (tableNames !== undefined) {
               getName = (index) => tableNames[index];
-            } else {
-              const tableNamesById = new Map(
-                tableIds.map((id, i) => [id, tableNames[i]!]),
-              );
-              getName = (index) => tableNamesById.get(ids[index]!);
+            }
+          } else {
+            const tableRowsById = new Map<number | string, number>();
+            for (let i = 0; i < tableIds.length; i++) {
+              tableRowsById.set(tableIds[i]!, i);
+            }
+            isAnnotated = (id) => tableRowsById.has(id);
+            if (tableNames !== undefined) {
+              getName = (index) => {
+                const row = tableRowsById.get(ids[index]!);
+                return row !== undefined ? tableNames[row] : undefined;
+              };
             }
           }
         }
