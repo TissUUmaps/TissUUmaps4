@@ -1,4 +1,5 @@
 import {
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
@@ -9,8 +10,6 @@ import {
   NumberUtils,
   type TableData,
   TableUtils,
-  createGroupValueGetter,
-  findGroupByConfigMap,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -209,7 +208,7 @@ export class MarkerResolver {
   ) {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const markerMap = findGroupByConfigMap(config, markerMaps);
+    const markerMap = ConfigUtils.findGroupByMap(config, markerMaps);
     if (config.groupBy.map !== undefined && markerMap === undefined) {
       console.warn(
         `Marker map ${config.groupBy.map} not found, using default marker`,
@@ -228,7 +227,12 @@ export class MarkerResolver {
       ids,
       config.groupBy.column,
       markerMap?.default ?? defaultMarker,
-      createGroupValueGetter(config, markerMaps, defaultMarker, markerPalette),
+      ConfigUtils.createGroupValueGetter(
+        config,
+        markerMaps,
+        defaultMarker,
+        markerPalette,
+      ),
       (marker) => MarkerResolver.packMarker(marker),
       { signal },
     );

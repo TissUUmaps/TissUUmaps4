@@ -29,11 +29,9 @@ export {
   type RenderedRasterDataObject,
 } from "./model/base";
 export {
-  createGroupValueGetter,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
-  findGroupByConfigMap,
   isGroupByConfig,
   isRandomConfig,
   type ColorConfig,
@@ -235,6 +233,7 @@ export {
 export { AsyncUtils } from "./utils/AsyncUtils";
 export { BitUtils } from "./utils/BitUtils";
 export { ColorUtils } from "./utils/ColorUtils";
+export { ConfigUtils } from "./utils/ConfigUtils";
 export { GeometryUtils } from "./utils/GeometryUtils";
 export { type Fmix32Config, HashUtils } from "./utils/HashUtils";
 export { ImageUtils } from "./utils/ImageUtils";

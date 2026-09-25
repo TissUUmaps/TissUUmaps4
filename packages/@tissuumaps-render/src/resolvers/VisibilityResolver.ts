@@ -1,5 +1,6 @@
 import {
   ColorUtils,
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
@@ -9,7 +10,6 @@ import {
   type TableData,
   TableUtils,
   type VisibilityConfig,
-  createGroupValueGetter,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -237,7 +237,11 @@ export class VisibilityResolver {
       ids,
       config.groupBy.column,
       visibilityMap.default ?? defaultVisibility,
-      createGroupValueGetter(config, visibilityMaps, defaultVisibility),
+      ConfigUtils.createGroupValueGetter(
+        config,
+        visibilityMaps,
+        defaultVisibility,
+      ),
       (visibility) => VisibilityResolver.packVisibility(visibility),
       { signal },
     );

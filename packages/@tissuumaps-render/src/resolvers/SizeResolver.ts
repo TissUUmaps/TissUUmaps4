@@ -1,4 +1,5 @@
 import {
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
@@ -8,7 +9,6 @@ import {
   type SizeConfig,
   type TableData,
   TableUtils,
-  createGroupValueGetter,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -223,7 +223,7 @@ export class SizeResolver {
       ids,
       config.groupBy.column,
       sizeMap.default ?? defaultSize,
-      createGroupValueGetter(config, sizeMaps, defaultSize),
+      ConfigUtils.createGroupValueGetter(config, sizeMaps, defaultSize),
       (size) => SizeResolver.packSize(size),
       { signal },
     );

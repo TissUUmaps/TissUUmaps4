@@ -1,5 +1,6 @@
 import {
   ColorUtils,
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
@@ -9,7 +10,6 @@ import {
   type OpacityConfig,
   type TableData,
   TableUtils,
-  createGroupValueGetter,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -231,7 +231,7 @@ export class OpacityResolver {
       ids,
       config.groupBy.column,
       opacityMap.default ?? defaultOpacity,
-      createGroupValueGetter(config, opacityMaps, defaultOpacity),
+      ConfigUtils.createGroupValueGetter(config, opacityMaps, defaultOpacity),
       (opacity) => OpacityResolver.packOpacity(opacity),
       { signal },
     );

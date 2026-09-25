@@ -5,6 +5,7 @@ import {
   AsyncUtils,
   type Color,
   ColorUtils,
+  ConfigUtils,
   GeometryUtils,
   type GroupValueMap,
   type Rect,
@@ -21,7 +22,6 @@ import {
   defaultShapeStrokeColor,
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
-  findGroupByConfigMap,
   projectDefaults,
 } from "@tissuumaps/core";
 
@@ -857,7 +857,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Every property the change predicates read has to be captured here: the
    * item-level configurations, and the maps they resolve their values from,
    * looked up now so that the predicates compare maps rather than map IDs (see
-   * {@link findGroupByConfigMap}).
+   * {@link ConfigUtils.findGroupByMap}).
    *
    * @param newRef - The object to capture the snapshot of
    * @param syncContext - The inputs of the current synchronization, holding the maps
@@ -874,27 +874,27 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       shapeStrokeColor: newRef.object.shapeStrokeColor,
       shapeStrokeVisibility: newRef.object.shapeStrokeVisibility,
       shapeStrokeOpacity: newRef.object.shapeStrokeOpacity,
-      shapeFillColorMap: findGroupByConfigMap(
+      shapeFillColorMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeFillColor,
         syncContext.colorMaps,
       ),
-      shapeFillVisibilityMap: findGroupByConfigMap(
+      shapeFillVisibilityMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeFillVisibility,
         syncContext.visibilityMaps,
       ),
-      shapeFillOpacityMap: findGroupByConfigMap(
+      shapeFillOpacityMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeFillOpacity,
         syncContext.opacityMaps,
       ),
-      shapeStrokeColorMap: findGroupByConfigMap(
+      shapeStrokeColorMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeStrokeColor,
         syncContext.colorMaps,
       ),
-      shapeStrokeVisibilityMap: findGroupByConfigMap(
+      shapeStrokeVisibilityMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeStrokeVisibility,
         syncContext.visibilityMaps,
       ),
-      shapeStrokeOpacityMap: findGroupByConfigMap(
+      shapeStrokeOpacityMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeStrokeOpacity,
         syncContext.opacityMaps,
       ),

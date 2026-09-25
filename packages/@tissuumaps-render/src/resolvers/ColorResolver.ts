@@ -4,6 +4,7 @@ import {
   type ColorConfig,
   type ColorPalette,
   ColorUtils,
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
@@ -14,10 +15,8 @@ import {
   type RandomConfig,
   type TableData,
   TableUtils,
-  createGroupValueGetter,
   defaultRandomSeed,
   findColorPalette,
-  findGroupByConfigMap,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -254,7 +253,7 @@ export class ColorResolver {
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const colorMap = findGroupByConfigMap(config, colorMaps);
+    const colorMap = ConfigUtils.findGroupByMap(config, colorMaps);
     const colorPalette = findColorPalette(config.groupBy.palette);
     if (config.groupBy.map !== undefined && colorMap === undefined) {
       console.warn(
@@ -284,7 +283,7 @@ export class ColorResolver {
       ids,
       config.groupBy.column,
       colorMap?.default ?? defaultColor,
-      createGroupValueGetter(
+      ConfigUtils.createGroupValueGetter(
         config,
         colorMaps,
         defaultColor,

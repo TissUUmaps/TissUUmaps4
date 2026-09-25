@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { HashUtils } from "../utils/HashUtils";
-import { type GroupByConfig, createGroupValueGetter } from "./configs";
-import type { GroupValueMap } from "./primitives";
+import type { GroupByConfig } from "../model/configs";
+import type { GroupValueMap } from "../model/primitives";
+import { ConfigUtils } from "./ConfigUtils";
+import { HashUtils } from "./HashUtils";
 
-describe("configs", () => {
+describe("ConfigUtils", () => {
   describe("createGroupValueGetter", () => {
     const maps: GroupValueMap<number>[] = [
       { id: "map1", name: "Map 1", values: { A: 1 }, default: 9 },
@@ -17,16 +18,18 @@ describe("configs", () => {
         groupBy: { column: "cluster", map: "map1" },
       };
 
-      expect(createGroupValueGetter(config, maps, 0, palette)("A")).toBe(1);
+      expect(
+        ConfigUtils.createGroupValueGetter(config, maps, 0, palette)("A"),
+      ).toBe(1);
     });
 
     it("falls back to the map's default, then to the default value", () => {
-      const getValue = createGroupValueGetter(
+      const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: "map1" } },
         maps,
         0,
       );
-      const getValueWithoutMapDefault = createGroupValueGetter(
+      const getValueWithoutMapDefault = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: "map2" } },
         maps,
         0,
@@ -37,7 +40,7 @@ describe("configs", () => {
     });
 
     it("does not read inherited object properties as map values", () => {
-      const getValue = createGroupValueGetter(
+      const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: "map2" } },
         maps,
         0,
@@ -47,7 +50,7 @@ describe("configs", () => {
     });
 
     it("gives every group the default value if the map does not exist", () => {
-      const getValue = createGroupValueGetter(
+      const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: "missing" } },
         maps,
         0,
@@ -58,7 +61,7 @@ describe("configs", () => {
     });
 
     it("picks a palette value by hash without a map", () => {
-      const getValue = createGroupValueGetter(
+      const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: undefined } },
         maps,
         0,
@@ -69,7 +72,7 @@ describe("configs", () => {
     });
 
     it("gives every group the default value without a map or palette", () => {
-      const getValue = createGroupValueGetter(
+      const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: undefined } },
         maps,
         0,

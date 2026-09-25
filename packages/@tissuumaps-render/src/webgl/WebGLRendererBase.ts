@@ -37,9 +37,9 @@ type ItemsInfo = { itemIds: number[]; itemsMask: Uint8Array };
  * so the loaders have to return immutable data that keeps its identity for as
  * long as its content is unchanged. Likewise, the renderers detect an edit to
  * a group-to-value map by comparing the maps that their objects' configurations
- * resolve from by identity (see `findGroupByConfigMap`), so the maps passed
- * to a synchronization have to keep their identity for as long as they are
- * unchanged.
+ * resolve from by identity (see `ConfigUtils.findGroupByMap`), so the maps
+ * passed to a synchronization have to keep their identity for as long as they
+ * are unchanged.
  */
 export abstract class WebGLRendererBase<
   TObject extends Points | Shapes,
