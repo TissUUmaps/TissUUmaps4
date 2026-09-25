@@ -27,7 +27,7 @@ export const defaultLabelColor = {
 } as const satisfies Color;
 
 /** ID of the default color palette for random label colors */
-export const defaultLabelColorPalette = "batlowS";
+export const defaultLabelColorPalette = "distinct";
 
 /** Default label visibility */
 export const defaultLabelVisibility = true;
