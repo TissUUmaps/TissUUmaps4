@@ -35,6 +35,20 @@ export class ColumnQueryUtils {
   /** A selector that is a column index rather than a column name */
   private static readonly _indexSelectorPattern = /^\d+$/;
 
+  /** Brackets, which delimit the selector of a column query */
+  private static readonly _bracketPattern = /[[\]]/;
+
+  /**
+   * Whether a name can be part of a column query, as a path segment or as a
+   * selector
+   *
+   * @param name - The name of a node or of a matrix column
+   * @returns Whether the name contains no bracket
+   */
+  static isQueryableName(name: string): boolean {
+    return !ColumnQueryUtils._bracketPattern.test(name);
+  }
+
   /**
    * Derives the selectors of the columns of a matrix from their names
    *
@@ -53,7 +67,7 @@ export class ColumnQueryUtils {
     return names.map((name, i) =>
       name === "" ||
       ColumnQueryUtils._indexSelectorPattern.test(name) ||
-      /[[\]]/.test(name) ||
+      !ColumnQueryUtils.isQueryableName(name) ||
       counts.get(name)! > 1
         ? String(i)
         : name,

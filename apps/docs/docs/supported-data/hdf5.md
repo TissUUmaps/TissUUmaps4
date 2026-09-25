@@ -68,7 +68,7 @@ A project showing the cells of an AnnData file as points, placed by their spatia
 }
 ```
 
-The table has one row per cell, as the `obs` index gives the number of rows. Any other column, such as `X[CD3]`, can be used the same way.
+The table has one row per cell, as the `obs` index gives the number of rows. Any other column can be used the same way, such as `obs/total_counts`, or `X[CD3]` if `X` is stored dense or as CSC.
 
 ## Limitations
 

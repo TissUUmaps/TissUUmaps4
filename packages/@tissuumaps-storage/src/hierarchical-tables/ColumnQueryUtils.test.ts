@@ -16,6 +16,14 @@ const columns: HierarchicalTableColumn[] = [
 ];
 
 describe("ColumnQueryUtils", () => {
+  describe("isQueryableName", () => {
+    it("rejects names with brackets", () => {
+      expect(ColumnQueryUtils.isQueryableName("obs/area")).toBe(true);
+      expect(ColumnQueryUtils.isQueryableName("a[1]")).toBe(false);
+      expect(ColumnQueryUtils.isQueryableName("a]")).toBe(false);
+    });
+  });
+
   describe("getMatrixSelectors", () => {
     it("uses unique names as selectors", () => {
       expect(ColumnQueryUtils.getMatrixSelectors(genes)).toEqual(genes);

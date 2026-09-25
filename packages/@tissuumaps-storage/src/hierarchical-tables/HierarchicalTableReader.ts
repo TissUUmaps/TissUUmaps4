@@ -23,9 +23,6 @@ const readableDataTypes = new Set(["integer", "float", "string", "boolean"]);
 /** Category labels of an AnnData file (anndata < 0.8), never a column */
 const legacyCategoriesGroupName = "__categories";
 
-/** Brackets, which a column query cannot address in a path */
-const bracketPattern = /[[\]]/;
-
 /**
  * Paths of the matrices named by the `var` index of their AnnData object,
  * relative to that object
@@ -183,7 +180,10 @@ async function collectColumns(
   signal?.throwIfAborted();
   // sorted, as a store may list its nodes in write order
   for (const name of group.keys.toSorted()) {
-    if (name === legacyCategoriesGroupName || bracketPattern.test(name)) {
+    if (
+      name === legacyCategoriesGroupName ||
+      !ColumnQueryUtils.isQueryableName(name)
+    ) {
       continue;
     }
     const path = `${prefix}${name}`;

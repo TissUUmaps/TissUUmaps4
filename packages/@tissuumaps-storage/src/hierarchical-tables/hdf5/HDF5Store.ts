@@ -20,8 +20,9 @@ const dataTypes: Record<number, HierarchicalStoreDataType> = {
 /**
  * A {@link HierarchicalStore} over an HDF5 file opened with h5wasm
  *
- * h5wasm reads synchronously through the Emscripten file system, so an
- * instance must live in a Web Worker when the file is a lazily fetched URL.
+ * h5wasm reads synchronously through the Emscripten file system.
+ * {@link HDF5Store.open} mounts the source with file systems that only work
+ * in a Web Worker.
  */
 export class HDF5Store implements HierarchicalStore {
   private readonly _file: H5File;
