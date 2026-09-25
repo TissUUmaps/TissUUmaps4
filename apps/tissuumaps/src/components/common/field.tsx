@@ -5,7 +5,12 @@ export function Field(props: FieldPrimitive.Root.Props) {
 }
 
 export function FieldLabel(props: FieldPrimitive.Label.Props) {
-  return <FieldPrimitive.Label {...props} className="text-foreground" />;
+  return (
+    <FieldPrimitive.Label
+      {...props}
+      className="text-foreground data-disabled:opacity-50"
+    />
+  );
 }
 
 export function FieldControl(props: FieldPrimitive.Control.Props) {
