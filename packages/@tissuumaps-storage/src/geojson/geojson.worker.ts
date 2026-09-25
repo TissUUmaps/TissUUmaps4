@@ -178,7 +178,9 @@ async function handleFileRequest(
       geometry.polygonRingOffsets.buffer,
       geometry.ringVertexOffsets.buffer,
       geometry.coords.buffer,
-      ...(Array.isArray(ids) ? [] : [ids.buffer]),
+      ...(ArrayBuffer.isView(ids) && ids.buffer instanceof ArrayBuffer
+        ? [ids.buffer]
+        : []),
     ],
   };
 }

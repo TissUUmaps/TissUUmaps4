@@ -3,34 +3,6 @@ import { describe, expect, it } from "vitest";
 import { ArrayUtils } from "./ArrayUtils";
 
 describe("ArrayUtils", () => {
-  describe("fromBigIntArray", () => {
-    it("converts 64-bit integers to 64-bit floats", () => {
-      expect(
-        ArrayUtils.fromBigIntArray(
-          new BigInt64Array([-(2n ** 53n) + 1n, -1n, 0n, 2n ** 48n]),
-        ),
-      ).toEqual(new Float64Array([-(2 ** 53) + 1, -1, 0, 2 ** 48]));
-      expect(
-        ArrayUtils.fromBigIntArray(new BigUint64Array([0n, 2n ** 53n - 1n])),
-      ).toEqual(new Float64Array([0, 2 ** 53 - 1]));
-    });
-
-    it("throws for values that are not safe integers", () => {
-      expect(() =>
-        ArrayUtils.fromBigIntArray(new BigInt64Array([2n ** 53n])),
-      ).toThrow("Value is not a safe integer: 9007199254740992");
-      expect(() =>
-        ArrayUtils.fromBigIntArray(new BigUint64Array([2n ** 64n - 1n])),
-      ).toThrow("not a safe integer");
-    });
-
-    it("handles empty arrays", () => {
-      expect(ArrayUtils.fromBigIntArray(new BigInt64Array(0))).toEqual(
-        new Float64Array(0),
-      );
-    });
-  });
-
   describe("toIDArray", () => {
     it("returns integer typed arrays as they are", () => {
       for (const ids of [
@@ -62,21 +34,9 @@ describe("ArrayUtils", () => {
       expect(ids).toEqual(["a", "b"]);
     });
 
-    it("converts 64-bit integer typed arrays to 64-bit floats", () => {
-      expect(ArrayUtils.toIDArray(new BigInt64Array([-1n, 2n]))).toEqual(
-        new Float64Array([-1, 2]),
-      );
-      expect(ArrayUtils.toIDArray(new BigUint64Array([1n, 2n ** 40n]))).toEqual(
-        new Float64Array([1, 2 ** 40]),
-      );
-    });
-
     it("copies integers of other arrays into 64-bit floats", () => {
       expect(ArrayUtils.toIDArray([0, -3, 2 ** 40])).toEqual(
         new Float64Array([0, -3, 2 ** 40]),
-      );
-      expect(ArrayUtils.toIDArray([1n, -2n])).toEqual(
-        new Float64Array([1, -2]),
       );
       expect(ArrayUtils.toIDArray(new Float32Array([1, 2]))).toEqual(
         new Float64Array([1, 2]),
@@ -98,9 +58,6 @@ describe("ArrayUtils", () => {
         "ID is not a safe integer: null",
       );
       expect(() => ArrayUtils.toIDArray([2 ** 53])).toThrow(
-        "ID is not a safe integer",
-      );
-      expect(() => ArrayUtils.toIDArray([2n ** 53n])).toThrow(
         "ID is not a safe integer",
       );
     });

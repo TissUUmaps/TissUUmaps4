@@ -170,7 +170,6 @@ export {
 } from "./storage/table";
 
 export {
-  type BigIntArray,
   type FloatArray,
   type IDArray,
   type IntArray,

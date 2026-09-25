@@ -12,7 +12,6 @@ import { compressors } from "hyparquet-compressors";
 
 import {
   ArrayUtils,
-  type BigIntArray,
   type IDArray,
   NumberUtils,
   type ShapesGeometry,
@@ -356,7 +355,8 @@ async function readParquetColumn(
     metadata,
     column,
     (columnData, rowStart) => {
-      const chunk = columnData as unknown[] | TypedArray | BigIntArray;
+      const chunk = columnData as
+        unknown[] | TypedArray | BigInt64Array | BigUint64Array;
       if (Array.isArray(result)) {
         for (let i = 0; i < chunk.length; i++) {
           result[rowStart + i] = chunk[i];
@@ -437,14 +437,19 @@ async function readIdsAndNames(
         idProgress = progress;
         onProgress(idProgress + nameProgress, idTotal + nameTotal);
       },
-    ).then((idData) => ArrayUtils.toIDArray(idData));
+    ).then((idData) => {
+      try {
+        return ArrayUtils.toIDArray(idData);
+      } catch (error) {
+        throw new Error(`ID column "${keyColumn}" does not hold item IDs`, {
+          cause: error,
+        });
+      }
+    });
     if (indexColumn !== undefined) {
       // the pandas index was not asked for, so it must not fail the read
       idsPromise = idsPromise.catch((error: unknown) => {
-        console.warn(
-          `Index column "${indexColumn}" does not hold item IDs, keying rows by row number instead:`,
-          error,
-        );
+        console.warn("Keying rows by row number instead:", error);
         return undefined;
       });
     }
