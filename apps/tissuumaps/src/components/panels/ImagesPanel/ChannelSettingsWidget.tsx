@@ -76,33 +76,33 @@ export function ChannelSettingsWidget({
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="font-medium text-foreground">
+      <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
         Channels
-      </FieldsetLegend>
-      <ToggleGroup
-        size="sm"
-        value={[image.channelViewMode]}
-        onValueChange={(value) => {
-          if (value.length > 0) {
-            updateImage(image.id, {
-              channelViewMode: value[0] as ImageChannelViewMode,
-            });
-          }
-        }}
-        className="border rounded"
-      >
-        {Object.values(ImageChannelViewMode).map((mode) => (
-          <ToggleGroupItem
-            key={mode}
-            value={mode}
-            className={
-              image.channelViewMode === mode ? "font-medium" : "font-normal"
+        <ToggleGroup
+          size="sm"
+          value={[image.channelViewMode]}
+          onValueChange={(value) => {
+            if (value.length > 0) {
+              updateImage(image.id, {
+                channelViewMode: value[0] as ImageChannelViewMode,
+              });
             }
-          >
-            {channelViewModeLabels[mode]}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
+          }}
+          className="ml-auto border rounded"
+        >
+          {Object.values(ImageChannelViewMode).map((mode) => (
+            <ToggleGroupItem
+              key={mode}
+              value={mode}
+              className={
+                image.channelViewMode === mode ? "font-medium" : "font-normal"
+              }
+            >
+              {channelViewModeLabels[mode]}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </FieldsetLegend>
       {image.channelViewMode !== ImageChannelViewMode.composite ? (
         <RadioGroup
           value={String(ImageUtils.getActiveChannel(image, sizeC))}
