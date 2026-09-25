@@ -225,9 +225,35 @@ describe("ColumnQueryUtils", () => {
       ).toEqual(complete("layers/counts[CD4]"));
     });
 
-    it("caps the number of suggested matrix columns", () => {
+    it("lists every column of a large matrix", () => {
       expect(ColumnQueryUtils.suggestColumnQueries(columns, "X")).toHaveLength(
-        100,
+        250,
+      );
+    });
+
+    it("lists names equal to, then starting with, then containing the partial name", () => {
+      const obs: HierarchicalTableColumn[] = [
+        { kind: "dataset", path: "obs/cell_type" },
+        { kind: "dataset", path: "obs/total_counts" },
+        { kind: "dataset", path: "obs/type" },
+      ];
+      expect(ColumnQueryUtils.suggestColumnQueries(obs, "obs/t")).toEqual(
+        complete("obs/total_counts", "obs/type", "obs/cell_type"),
+      );
+      expect(ColumnQueryUtils.suggestColumnQueries(obs, "obs/TYPE")).toEqual(
+        complete("obs/type", "obs/cell_type"),
+      );
+    });
+
+    it("ranks matrix selectors like names", () => {
+      const matrix: HierarchicalTableColumn = {
+        kind: "matrix",
+        path: "X",
+        numColumns: 5,
+        selectors: ["ANPEP", "DPEP1", "EP300", "EPCAM", "HEPACAM2"],
+      };
+      expect(ColumnQueryUtils.suggestColumnQueries([matrix], "X[ep")).toEqual(
+        complete("X[EP300]", "X[EPCAM]", "X[ANPEP]", "X[DPEP1]", "X[HEPACAM2]"),
       );
     });
 

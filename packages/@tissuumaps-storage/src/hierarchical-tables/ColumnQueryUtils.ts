@@ -19,13 +19,6 @@ type MatrixColumn = Extract<HierarchicalTableColumn, { kind: "matrix" }>;
  */
 export class ColumnQueryUtils {
   /**
-   * Maximum number of `path[selector]` queries suggested for one matrix column
-   *
-   * An AnnData expression matrix has tens of thousands of columns.
-   */
-  private static readonly _maxSuggestedMatrixColumns = 100;
-
-  /**
    * A path, optionally with a leading slash and followed by a bracketed
    * selector
    */
@@ -146,9 +139,12 @@ export class ColumnQueryUtils {
    * suggestions: a group continues into its children, a matrix column into
    * its bracket.
    *
+   * Names equal to the partial name come first, then names starting with it,
+   * then names containing it, each in path order.
+   *
    * @param columns - The columns of the table
    * @param currentQuery - The partial column query
-   * @returns The suggested column queries, in path order
+   * @returns The suggested column queries
    */
   static suggestColumnQueries(
     columns: HierarchicalTableColumn[],
@@ -165,7 +161,8 @@ export class ColumnQueryUtils {
     const prefix = path.slice(0, lastSlash + 1).toLowerCase();
     const partialName = path.slice(lastSlash + 1).toLowerCase();
 
-    const suggestions: TableColumnQuerySuggestion[] = [];
+    // by the rank of their name, see `_rankMatch`
+    const rankedSuggestions: TableColumnQuerySuggestion[][] = [[], [], []];
     const seenNames = new Set<string>();
     for (const column of columns) {
       if (!column.path.toLowerCase().startsWith(prefix)) {
@@ -178,33 +175,46 @@ export class ColumnQueryUtils {
       if (seenNames.has(name)) {
         continue;
       }
-      const nameMatches =
-        partialSelector === undefined &&
-        name.toLowerCase().includes(partialName);
-      if (slash >= 0) {
-        if (nameMatches) {
-          seenNames.add(name);
-          suggestions.push({ query: `${columnPrefix}${name}/`, group: true });
-        }
-      } else if (
-        column.kind === "matrix" &&
-        name.toLowerCase() === partialName
-      ) {
+      const rank = ColumnQueryUtils._rankMatch(name, partialName);
+      if (slash < 0 && column.kind === "matrix" && rank === 0) {
         seenNames.add(name);
-        suggestions.push(
-          ...ColumnQueryUtils._suggestMatrixColumns(column, partialSelector),
+        // concatenated rather than spread, as a matrix can have more columns
+        // than a call takes arguments
+        rankedSuggestions[0] = rankedSuggestions[0]!.concat(
+          ColumnQueryUtils._suggestMatrixColumns(column, partialSelector),
         );
-      } else if (nameMatches) {
+      } else if (partialSelector === undefined && rank >= 0) {
         seenNames.add(name);
         // a matrix column only addresses a column with a bracketed selector
-        suggestions.push(
-          column.kind === "matrix"
-            ? { query: column.path, group: true }
-            : { query: column.path },
+        rankedSuggestions[rank]!.push(
+          slash >= 0
+            ? { query: `${columnPrefix}${name}/`, group: true }
+            : column.kind === "matrix"
+              ? { query: column.path, group: true }
+              : { query: column.path },
         );
       }
     }
-    return suggestions;
+    return rankedSuggestions.flat();
+  }
+
+  /**
+   * Ranks how well a name matches a partial name, ignoring case
+   *
+   * @param name - The name of a node or the selector of a matrix column
+   * @param partialName - The partially typed name, in lower case
+   * @returns 0 if the name equals the partial name, 1 if it starts with it, 2
+   * if it contains it, or -1 if it does not match
+   */
+  private static _rankMatch(name: string, partialName: string): number {
+    const lowerCaseName = name.toLowerCase();
+    if (lowerCaseName === partialName) {
+      return 0;
+    }
+    if (lowerCaseName.startsWith(partialName)) {
+      return 1;
+    }
+    return lowerCaseName.includes(partialName) ? 2 : -1;
   }
 
   /**
@@ -260,37 +270,35 @@ export class ColumnQueryUtils {
   /**
    * Suggests the columns of a matrix
    *
-   * Columns with selectors are matched by their selector, ignoring case, the
-   * others by the digits of their index, so that a partial name narrows the tens
-   * of thousands of columns of an expression matrix.
+   * Columns with selectors are matched by their selector, ignoring case, and
+   * ranked like names (see `_rankMatch`). The others are matched by the digits
+   * of their index, in index order.
    *
    * @param column - The matrix column
    * @param partialSelector - The partially typed selector, or `undefined` if
    * the query has no brackets yet
-   * @returns At most {@link ColumnQueryUtils._maxSuggestedMatrixColumns} queries
+   * @returns The suggested `path[selector]` queries
    */
   private static _suggestMatrixColumns(
     column: MatrixColumn,
     partialSelector: string | undefined,
   ): TableColumnQuerySuggestion[] {
-    const suggestions: TableColumnQuerySuggestion[] = [];
     const { selectors } = column;
     if (selectors !== undefined) {
-      const partial = partialSelector?.toLowerCase();
+      const partial = (partialSelector ?? "").toLowerCase();
+      const rankedSelectors: string[][] = [[], [], []];
       for (const selector of selectors) {
-        if (suggestions.length >= ColumnQueryUtils._maxSuggestedMatrixColumns) {
-          break;
-        }
-        if (partial === undefined || selector.toLowerCase().includes(partial)) {
-          suggestions.push({ query: `${column.path}[${selector}]` });
+        const rank = ColumnQueryUtils._rankMatch(selector, partial);
+        if (rank >= 0) {
+          rankedSelectors[rank]!.push(selector);
         }
       }
-      return suggestions;
+      return rankedSelectors
+        .flat()
+        .map((selector) => ({ query: `${column.path}[${selector}]` }));
     }
+    const suggestions: TableColumnQuerySuggestion[] = [];
     for (let i = 0; i < column.numColumns; i++) {
-      if (suggestions.length >= ColumnQueryUtils._maxSuggestedMatrixColumns) {
-        break;
-      }
       if (
         partialSelector === undefined ||
         String(i).startsWith(partialSelector)
