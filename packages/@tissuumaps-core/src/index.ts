@@ -30,13 +30,10 @@ export {
 } from "./model/base";
 export {
   getActiveConfigSource,
-  getConfigUnit,
-  getGroupByColumn,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
   isRandomConfig,
-  withGroupByMap,
   type ColorConfig,
   type Config,
   type ConstantConfig,

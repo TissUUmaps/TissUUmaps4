@@ -123,61 +123,6 @@ export function isGroupByConfig<
   );
 }
 
-/**
- * Returns the table column a configuration groups by
- *
- * @param config - The configuration
- * @returns The column, or `undefined` if `groupBy` is not the active source
- */
-export function getGroupByColumn(config: Config<string>): string | undefined {
-  return getActiveConfigSource(config) === "groupBy" && isGroupByConfig(config)
-    ? config.groupBy.column
-    : undefined;
-}
-
-/**
- * Points a configuration at a map, grouping by a column
- *
- * The configuration keeps its other sources and the extra fields of its
- * `groupBy` specification (e.g. a palette), so that switching back to them
- * restores them. The unit of the active source, which only sizes have, is
- * carried over, so that the values keep their scale. A configuration that
- * already groups by the column with the map is returned as is, so that
- * updating an object with it changes nothing.
- *
- * @param config - The configuration
- * @param column - Name of the categorical table column to group by
- * @param mapId - ID of the project-global map to take the group values from
- * @returns The configuration, with `groupBy` as its active source
- */
-export function withGroupByMap(
-  config: Config<string>,
-  column: string,
-  mapId: string,
-): GroupByConfig<true> {
-  if (
-    getGroupByColumn(config) === column &&
-    isGroupByConfig<true>(config) &&
-    config.groupBy.map === mapId
-  ) {
-    return config;
-  }
-  const groupBy = isGroupByConfig<false, { unit?: CoordinateSpace }>(config)
-    ? config.groupBy
-    : undefined;
-  const unit = getConfigUnit(config);
-  return {
-    ...config,
-    source: "groupBy",
-    groupBy: {
-      ...groupBy,
-      ...((unit !== undefined || groupBy?.unit !== undefined) && { unit }),
-      column,
-      map: mapId,
-    },
-  };
-}
-
 /** Configuration to use random values */
 export type RandomConfig<TRandomExtra = unknown> = Config<"random"> & {
   /** Specification of random value generation */
@@ -240,32 +185,6 @@ export type SizeConfig =
         unit?: CoordinateSpace;
       }
     >;
-
-/**
- * Returns the unit of the active source of a configuration
- *
- * @param config - The configuration, of which only sizes have a unit
- * @returns The unit, or `undefined` if the active source has none
- */
-export function getConfigUnit(
-  config: Config<string>,
-): CoordinateSpace | undefined {
-  type Unit = { unit?: CoordinateSpace };
-  switch (getActiveConfigSource(config)) {
-    case "constant":
-      return isConstantConfig<unknown, Unit>(config)
-        ? config.constant.unit
-        : undefined;
-    case "from":
-      return isFromConfig<Unit>(config) ? config.from.unit : undefined;
-    case "groupBy":
-      return isGroupByConfig<false, Unit>(config)
-        ? config.groupBy.unit
-        : undefined;
-    default:
-      return undefined;
-  }
-}
 
 /**
  * Color configuration
