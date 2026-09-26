@@ -17,10 +17,11 @@ export type GroupProperty<TValue, TConfig extends Config<string>> = {
   /** The value of a group that nothing assigns one to */
   default: NoInfer<TValue>;
 
+  /** The configuration of the property */
   config: NoInfer<TConfig>;
 
   /** The adapter of the property's value type, which also sets `TValue` */
-  values: GroupValuesAdapter<TValue, TConfig>;
+  adapter: GroupValuesAdapter<TValue, TConfig>;
 };
 
 function isGroupedByColumn<TConfig extends Config<string>>(
@@ -33,17 +34,17 @@ function isGroupedByColumn<TConfig extends Config<string>>(
 /**
  * Returns the group table column of a property, showing the value of each group
  *
- * @param table - The column that the group table groups by
+ * @param groupTable - The state of the group table
  * @param property - The property
  * @returns The column, or `undefined` while the property does not group by the
  * table's column
  */
 export function useGroupColumn<TValue, TConfig extends Config<string>>(
-  table: GroupTable,
+  groupTable: GroupTable,
   property: GroupProperty<TValue, TConfig>,
 ): GroupAnnotationsTableColumnDef | undefined {
-  const { name, default: defaultValue, config, values } = property;
-  const { column } = table;
+  const { name, default: defaultValue, config, adapter } = property;
+  const { column } = groupTable;
 
   return useMemo(() => {
     if (column === null || !isGroupedByColumn(config, column)) {
@@ -51,16 +52,16 @@ export function useGroupColumn<TValue, TConfig extends Config<string>>(
     }
     const getValue = ConfigUtils.createGroupValueGetter(
       config,
-      ConfigUtils.findGroupByMap(config, values.maps),
+      ConfigUtils.findGroupByMap(config, adapter.maps),
       defaultValue,
-      values.getPalette?.(config),
+      adapter.getPalette?.(config),
     );
     const columnDef: GroupAnnotationsTableColumnDef = {
       id: name,
       size: groupColumnSize,
       header: name,
-      cell: ({ row }) => values.renderValue(getValue(row.getValue("group"))),
+      cell: ({ row }) => adapter.renderValue(getValue(row.original.group)),
     };
     return columnDef;
-  }, [column, name, defaultValue, config, values]);
+  }, [column, name, defaultValue, config, adapter]);
 }

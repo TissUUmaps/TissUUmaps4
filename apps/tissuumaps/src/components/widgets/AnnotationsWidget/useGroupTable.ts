@@ -7,12 +7,15 @@ export type GroupTableSetting = {
   /** The settings category of the setting */
   category: string;
 
+  /** The configuration of the setting */
   config: Config<string>;
 };
 
-/** The table column that the group table groups by */
+/** The state of the group table: the table column it groups by */
 export type GroupTable = {
+  /** The table column that the group table groups by, if any */
   column: string | null;
+
   setColumn: (column: string | null) => void;
 };
 
@@ -25,7 +28,8 @@ export type GroupTable = {
  * @param tableId - The ID of the annotated object's table
  * @param settings - The settings of the annotated object
  * @param activeSettingsCategory - The open settings category, if any
- * @returns The column, shared by the columns of the group table
+ * @returns The group-by column and its setter, shared by the columns of the
+ * group table
  */
 export function useGroupTable(
   tableId: string | null,

@@ -28,7 +28,7 @@ export function LabelsAnnotationsWidget({
   className,
 }: LabelsAnnotationsWidgetProps) {
   const tableId = labels.dataSource.table ?? null;
-  const table = useGroupTable(
+  const groupTable = useGroupTable(
     tableId,
     [
       {
@@ -47,27 +47,27 @@ export function LabelsAnnotationsWidget({
     activeSettingsCategory,
   );
 
-  const colorValues = useColorGroupValues();
-  const visibilityValues = useVisibilityGroupValues();
-  const opacityValues = useOpacityGroupValues();
+  const colorAdapter = useColorGroupValues();
+  const visibilityAdapter = useVisibilityGroupValues();
+  const opacityAdapter = useOpacityGroupValues();
 
-  const colorColumn = useGroupColumn(table, {
+  const colorColumn = useGroupColumn(groupTable, {
     name: "color",
     default: defaultLabelColor,
     config: labels.labelColor,
-    values: colorValues,
+    adapter: colorAdapter,
   });
-  const visibilityColumn = useGroupColumn(table, {
+  const visibilityColumn = useGroupColumn(groupTable, {
     name: "visibility",
     default: defaultLabelVisibility,
     config: labels.labelVisibility,
-    values: visibilityValues,
+    adapter: visibilityAdapter,
   });
-  const opacityColumn = useGroupColumn(table, {
+  const opacityColumn = useGroupColumn(groupTable, {
     name: "opacity",
     default: defaultLabelOpacity,
     config: labels.labelOpacity,
-    values: opacityValues,
+    adapter: opacityAdapter,
   });
 
   const groupColumnDefs = useMemo(
@@ -82,8 +82,8 @@ export function LabelsAnnotationsWidget({
     <AnnotationsWidget
       tableHeight={200}
       table={tableId}
-      selectedGroupByColumn={table.column}
-      onSelectedGroupByColumnChange={table.setColumn}
+      selectedGroupByColumn={groupTable.column}
+      onSelectedGroupByColumnChange={groupTable.setColumn}
       extraGroupColumnDefs={groupColumnDefs}
       className={className}
     />

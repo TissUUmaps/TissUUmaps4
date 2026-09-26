@@ -34,7 +34,7 @@ export function ShapesAnnotationsWidget({
   className,
 }: ShapesAnnotationsWidgetProps) {
   const tableId = shapes.dataSource.table ?? null;
-  const table = useGroupTable(
+  const groupTable = useGroupTable(
     tableId,
     [
       {
@@ -65,45 +65,45 @@ export function ShapesAnnotationsWidget({
     activeSettingsCategory,
   );
 
-  const colorValues = useColorGroupValues();
-  const visibilityValues = useVisibilityGroupValues();
-  const opacityValues = useOpacityGroupValues();
+  const colorAdapter = useColorGroupValues();
+  const visibilityAdapter = useVisibilityGroupValues();
+  const opacityAdapter = useOpacityGroupValues();
 
-  const fillColorColumn = useGroupColumn(table, {
+  const fillColorColumn = useGroupColumn(groupTable, {
     name: "fill color",
     default: defaultShapeFillColor,
     config: shapes.shapeFillColor,
-    values: colorValues,
+    adapter: colorAdapter,
   });
-  const fillVisibilityColumn = useGroupColumn(table, {
+  const fillVisibilityColumn = useGroupColumn(groupTable, {
     name: "fill visibility",
     default: defaultShapeFillVisibility,
     config: shapes.shapeFillVisibility,
-    values: visibilityValues,
+    adapter: visibilityAdapter,
   });
-  const fillOpacityColumn = useGroupColumn(table, {
+  const fillOpacityColumn = useGroupColumn(groupTable, {
     name: "fill opacity",
     default: defaultShapeFillOpacity,
     config: shapes.shapeFillOpacity,
-    values: opacityValues,
+    adapter: opacityAdapter,
   });
-  const strokeColorColumn = useGroupColumn(table, {
+  const strokeColorColumn = useGroupColumn(groupTable, {
     name: "outline color",
     default: defaultShapeStrokeColor,
     config: shapes.shapeStrokeColor,
-    values: colorValues,
+    adapter: colorAdapter,
   });
-  const strokeVisibilityColumn = useGroupColumn(table, {
+  const strokeVisibilityColumn = useGroupColumn(groupTable, {
     name: "outline visibility",
     default: defaultShapeStrokeVisibility,
     config: shapes.shapeStrokeVisibility,
-    values: visibilityValues,
+    adapter: visibilityAdapter,
   });
-  const strokeOpacityColumn = useGroupColumn(table, {
+  const strokeOpacityColumn = useGroupColumn(groupTable, {
     name: "outline opacity",
     default: defaultShapeStrokeOpacity,
     config: shapes.shapeStrokeOpacity,
-    values: opacityValues,
+    adapter: opacityAdapter,
   });
 
   const groupColumnDefs = useMemo(
@@ -131,8 +131,8 @@ export function ShapesAnnotationsWidget({
       data={data}
       tableHeight={200}
       table={tableId}
-      selectedGroupByColumn={table.column}
-      onSelectedGroupByColumnChange={table.setColumn}
+      selectedGroupByColumn={groupTable.column}
+      onSelectedGroupByColumnChange={groupTable.setColumn}
       extraGroupColumnDefs={groupColumnDefs}
       className={className}
     />

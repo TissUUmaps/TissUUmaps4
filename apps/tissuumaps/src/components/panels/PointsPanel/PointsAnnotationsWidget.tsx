@@ -35,7 +35,7 @@ export function PointsAnnotationsWidget({
   className,
 }: PointsAnnotationsWidgetProps) {
   const tableId = points.dataSource.table ?? null;
-  const table = useGroupTable(
+  const groupTable = useGroupTable(
     tableId,
     [
       {
@@ -62,41 +62,41 @@ export function PointsAnnotationsWidget({
     activeSettingsCategory,
   );
 
-  const markerValues = useMarkerGroupValues();
-  const sizeValues = useSizeGroupValues();
-  const colorValues = useColorGroupValues();
-  const visibilityValues = useVisibilityGroupValues();
-  const opacityValues = useOpacityGroupValues();
+  const markerAdapter = useMarkerGroupValues();
+  const sizeAdapter = useSizeGroupValues();
+  const colorAdapter = useColorGroupValues();
+  const visibilityAdapter = useVisibilityGroupValues();
+  const opacityAdapter = useOpacityGroupValues();
 
-  const markerColumn = useGroupColumn(table, {
+  const markerColumn = useGroupColumn(groupTable, {
     name: "marker",
     default: defaultPointMarker,
     config: points.pointMarker,
-    values: markerValues,
+    adapter: markerAdapter,
   });
-  const sizeColumn = useGroupColumn(table, {
+  const sizeColumn = useGroupColumn(groupTable, {
     name: "size",
     default: defaultPointSize,
     config: points.pointSize,
-    values: sizeValues,
+    adapter: sizeAdapter,
   });
-  const colorColumn = useGroupColumn(table, {
+  const colorColumn = useGroupColumn(groupTable, {
     name: "color",
     default: defaultPointColor,
     config: points.pointColor,
-    values: colorValues,
+    adapter: colorAdapter,
   });
-  const visibilityColumn = useGroupColumn(table, {
+  const visibilityColumn = useGroupColumn(groupTable, {
     name: "visibility",
     default: defaultPointVisibility,
     config: points.pointVisibility,
-    values: visibilityValues,
+    adapter: visibilityAdapter,
   });
-  const opacityColumn = useGroupColumn(table, {
+  const opacityColumn = useGroupColumn(groupTable, {
     name: "opacity",
     default: defaultPointOpacity,
     config: points.pointOpacity,
-    values: opacityValues,
+    adapter: opacityAdapter,
   });
 
   const groupColumnDefs = useMemo(
@@ -116,8 +116,8 @@ export function PointsAnnotationsWidget({
       data={data}
       tableHeight={200}
       table={tableId}
-      selectedGroupByColumn={table.column}
-      onSelectedGroupByColumnChange={table.setColumn}
+      selectedGroupByColumn={groupTable.column}
+      onSelectedGroupByColumnChange={groupTable.setColumn}
       extraGroupColumnDefs={groupColumnDefs}
       className={className}
     />
