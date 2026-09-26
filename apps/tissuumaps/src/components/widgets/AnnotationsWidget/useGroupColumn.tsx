@@ -8,7 +8,7 @@ import type { GroupAnnotationsTableColumnDef } from "./GroupAnnotationsTable";
 import type { GroupValuesAdapter } from "./adapter";
 import { InactiveCell } from "./cells/InactiveCell";
 import { createGroupValues } from "./createGroupValues";
-import type { GroupTable } from "./useGroupTable";
+import type { GroupTableState } from "./useGroupTable";
 
 /** A property of an annotated object that can take a value per group */
 export type GroupProperty<TValue, TConfig extends Config<string>> = {
@@ -43,7 +43,7 @@ export type GroupProperty<TValue, TConfig extends Config<string>> = {
  * @returns The column, or `undefined` while the table has no column or groups
  */
 export function useGroupColumn<TValue, TConfig extends Config<string>>(
-  groupTable: GroupTable,
+  groupTable: GroupTableState,
   property: GroupProperty<TValue, TConfig>,
 ): GroupAnnotationsTableColumnDef | undefined {
   const {

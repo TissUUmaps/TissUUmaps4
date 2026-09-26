@@ -7,7 +7,7 @@ import {
 } from "@tissuumaps/core";
 
 import type { GroupProperty } from "./useGroupColumn";
-import type { GroupTable } from "./useGroupTable";
+import type { GroupTableState } from "./useGroupTable";
 
 /** The value of every group of a property, and how to set them */
 export type GroupValues<TValue> = {
@@ -38,7 +38,7 @@ function isGroupedByColumn<TConfig extends Config<string>>(
  * @returns The values, or `undefined` while the table has no column or groups
  */
 export function createGroupValues<TValue, TConfig extends Config<string>>(
-  groupTable: GroupTable,
+  groupTable: GroupTableState,
   property: GroupProperty<TValue, TConfig>,
 ): GroupValues<TValue> | undefined {
   const { objectName, column, groupCounts } = groupTable;

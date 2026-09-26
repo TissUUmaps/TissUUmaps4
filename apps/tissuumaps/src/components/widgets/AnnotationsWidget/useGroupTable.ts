@@ -16,7 +16,7 @@ export type GroupTableSetting = {
 };
 
 /** The state of the group table: the table column it groups by, and its groups */
-export type GroupTable = {
+export type GroupTableState = {
   /** The name of the annotated object, which new maps are named after */
   objectName: string;
 
@@ -48,7 +48,7 @@ export function useGroupTable(
   tableId: string | null,
   settings: GroupTableSetting[],
   activeSettingsCategory: string | null,
-): GroupTable {
+): GroupTableState {
   const activeConfig = settings.find(
     (setting) => setting.category === activeSettingsCategory,
   )?.config;

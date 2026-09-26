@@ -7,7 +7,7 @@ import { useLatestCallback } from "@/hooks/useLatestCallback";
 import type { GroupVisibility } from "./GroupAnnotationsTable";
 import { createGroupValues } from "./createGroupValues";
 import type { GroupProperty } from "./useGroupColumn";
-import type { GroupTable } from "./useGroupTable";
+import type { GroupTableState } from "./useGroupTable";
 
 /**
  * Returns the eye column of the group table, showing and toggling a visibility
@@ -19,7 +19,7 @@ import type { GroupTable } from "./useGroupTable";
  * groups
  */
 export function useGroupVisibility(
-  groupTable: GroupTable,
+  groupTable: GroupTableState,
   property: GroupProperty<boolean, VisibilityConfig>,
 ): GroupVisibility | undefined {
   const { name, default: defaultValue, config, adapter } = property;

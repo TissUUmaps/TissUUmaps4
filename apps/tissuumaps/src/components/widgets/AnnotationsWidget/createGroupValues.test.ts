@@ -9,11 +9,11 @@ import type {
 
 import type { GroupValuesAdapter } from "./adapter";
 import { createGroupValues } from "./createGroupValues";
-import type { GroupTable } from "./useGroupTable";
+import type { GroupTableState } from "./useGroupTable";
 
 type NumberConfig = ConstantConfig<number> | FromConfig | GroupByConfig<false>;
 
-const groupTable: GroupTable = {
+const groupTable: GroupTableState = {
   objectName: "cells",
   column: "cluster",
   setColumn: () => {},
