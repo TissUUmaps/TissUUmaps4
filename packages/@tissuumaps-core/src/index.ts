@@ -131,9 +131,11 @@ export {
   defaultShapeFillColor,
   defaultShapeFillOpacity,
   defaultShapeFillVisibility,
+  defaultShapeOpacity,
   defaultShapeStrokeColor,
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
+  defaultShapeVisibility,
   identityTransform,
 } from "./model/constants";
 
