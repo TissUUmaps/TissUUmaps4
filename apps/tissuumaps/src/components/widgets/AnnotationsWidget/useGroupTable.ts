@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 
-import { type Config, ConfigUtils } from "@tissuumaps/core";
+import {
+  type Config,
+  ConfigUtils,
+  type TableColumnRef,
+} from "@tissuumaps/core";
 
 import { useItemGroupCounts } from "@/hooks/useItemGroupCounts";
 
@@ -20,14 +24,26 @@ export type GroupTableState = {
   /** The name of the annotated object, which new maps are named after */
   objectName: string;
 
-  /** The table column that the group table groups by, if any */
-  column: string | null;
+  /** The ID of the annotated object's table, which columns naming none are of */
+  tableId: string | null;
 
-  setColumn: (column: string | null) => void;
+  /** The table column that the group table groups by, if any */
+  column: TableColumnRef | null;
+
+  setColumn: (column: TableColumnRef | null) => void;
 
   /** The row count of every group, or `null` while there is none */
   groupCounts: Map<string, number> | null;
 };
+
+function isSameGroupByColumn(
+  column: TableColumnRef | null,
+  otherColumn: TableColumnRef | null,
+): boolean {
+  return column === null || otherColumn === null
+    ? column === otherColumn
+    : ConfigUtils.isSameTableColumn(column, otherColumn);
+}
 
 /**
  * Chooses the table column that the group table groups by, and counts its
@@ -60,10 +76,15 @@ export function useGroupTable(
   const defaultGroupByColumn =
     tableId !== null
       ? (activeGroupByColumn ??
-        getDominantGroupByColumn(settings.map((setting) => setting.config)))
+        getDominantGroupByColumn(
+          settings.map((setting) => setting.config),
+          tableId,
+        ))
       : null;
 
-  const [column, setColumn] = useState(defaultGroupByColumn);
+  const [column, setColumn] = useState<TableColumnRef | null>(
+    defaultGroupByColumn,
+  );
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevTableId, setPrevTableId] = useState(tableId);
@@ -74,17 +95,20 @@ export function useGroupTable(
 
   const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
     useState(activeGroupByColumn);
-  if (activeGroupByColumn !== prevActiveGroupByColumn) {
+  if (!isSameGroupByColumn(activeGroupByColumn, prevActiveGroupByColumn)) {
     setPrevActiveGroupByColumn(activeGroupByColumn);
     if (activeGroupByColumn !== null) {
       setColumn(activeGroupByColumn);
     }
   }
 
-  const groupCounts = useItemGroupCounts(tableId, column);
+  const groupCounts = useItemGroupCounts(
+    column?.table ?? tableId,
+    column?.column ?? null,
+  );
 
   return useMemo(
-    () => ({ objectName, column, setColumn, groupCounts }),
-    [objectName, column, groupCounts],
+    () => ({ objectName, tableId, column, setColumn, groupCounts }),
+    [objectName, tableId, column, groupCounts],
   );
 }

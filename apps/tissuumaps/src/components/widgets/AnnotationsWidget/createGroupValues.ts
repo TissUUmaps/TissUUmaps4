@@ -18,11 +18,27 @@ export type GroupValues<TValue> = {
   isInactive: boolean;
 };
 
-function isGroupedByColumn<TConfig extends Config<string>>(
+/**
+ * Determines whether a configuration groups by the column of the group table
+ *
+ * @param config - The configuration
+ * @param groupTable - The state of the group table
+ * @returns Whether `groupBy` is the active source and groups by that column
+ */
+export function isGroupedByColumn<TConfig extends Config<string>>(
   config: TConfig,
-  column: string,
+  groupTable: GroupTableState,
 ): config is Extract<TConfig, GroupByConfig<false>> {
-  return ConfigUtils.getGroupByColumn(config) === column;
+  const groupByColumn = ConfigUtils.getGroupByColumn(config);
+  return (
+    groupTable.column !== null &&
+    groupByColumn !== undefined &&
+    ConfigUtils.isSameTableColumn(
+      groupByColumn,
+      groupTable.column,
+      groupTable.tableId ?? undefined,
+    )
+  );
 }
 
 /**
@@ -46,7 +62,7 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
     return undefined;
   }
   const { name, config, default: defaultValue, adapter } = property;
-  const isGrouped = isGroupedByColumn(config, column);
+  const isGrouped = isGroupedByColumn(config, groupTable);
   const map = isGrouped
     ? ConfigUtils.findGroupByMap(config, adapter.maps)
     : undefined;
@@ -82,7 +98,7 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
       mapId = crypto.randomUUID();
       adapter.addMap({
         id: mapId,
-        name: `${objectName} ${column} ${name}`,
+        name: `${objectName} ${column.column} ${name}`,
         values: {
           ...Object.fromEntries(
             Array.from(groupCounts.keys(), (group) => [group, getValue(group)]),

@@ -924,16 +924,20 @@ export abstract class WebGLRendererBase<
   }
 
   /**
-   * Creates the loader for the table that an object resolves its properties
-   * from
+   * Creates the getter for the loaders of the tables that an object resolves
+   * its properties from
+   *
+   * A configuration may name a table other than the object's, in which case its
+   * values are resolved by the item IDs of the object's own table.
    *
    * @param ref - The object reference
    * @param syncContext - The inputs of the current synchronization: the tables to
-   * look the object's table up in, and the loader for table data
-   * @returns The loader, or `undefined` if the object has no table, or its
-   * table was not found (which is logged)
+   * look the configured table up in, and the loader for table data
+   * @returns The getter, taking the ID of a table, or `undefined` for the
+   * object's own table; it returns `undefined` if the object has no table, or
+   * the table was not found (which is logged)
    */
-  protected static createObjectTableLoader(
+  protected static createTableLoaderGetter(
     ref: ObjectRef<Points | Shapes, PointsData | ShapesData>,
     syncContext: {
       tables: Table[];
@@ -942,19 +946,24 @@ export abstract class WebGLRendererBase<
         options?: { signal?: AbortSignal },
       ) => Promise<TableData>;
     },
-  ): ((options?: { signal?: AbortSignal }) => Promise<TableData>) | undefined {
-    if (ref.object.dataSource.table === undefined) {
-      return undefined;
-    }
-    const table = syncContext.tables.find(
-      (table) => table.id === ref.object.dataSource.table,
-    );
-    if (table === undefined) {
-      console.warn(`Table with ID '${ref.object.dataSource.table}' not found`);
-      return undefined;
-    }
-    return (options?: { signal?: AbortSignal }) =>
-      syncContext.loadTable(table, options);
+  ): (
+    tableId: string | undefined,
+  ) =>
+    ((options?: { signal?: AbortSignal }) => Promise<TableData>) | undefined {
+    return (tableId) => {
+      const configTableId = tableId ?? ref.object.dataSource.table;
+      if (configTableId === undefined) {
+        return undefined;
+      }
+      const table = syncContext.tables.find(
+        (table) => table.id === configTableId,
+      );
+      if (table === undefined) {
+        console.warn(`Table with ID '${configTableId}' not found`);
+        return undefined;
+      }
+      return (options) => syncContext.loadTable(table, options);
+    };
   }
 
   /**

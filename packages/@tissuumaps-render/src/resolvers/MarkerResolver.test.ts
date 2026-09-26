@@ -298,7 +298,7 @@ describe("MarkerResolver", () => {
       expect(Array.from(packedMarkers)).toEqual([Marker.Disc, Marker.Disc]);
     });
 
-    it("dispatches to from config when loadTable is given", async () => {
+    it("dispatches to from config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), [Marker.Star]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
@@ -308,14 +308,14 @@ describe("MarkerResolver", () => {
         config,
         [],
         Marker.Cross,
-        { loadTable },
+        { getTableLoader: () => loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
       expect(packedMarkers[0]).toBe(Marker.Star);
     });
 
-    it("dispatches to groupBy config when loadTable is given", async () => {
+    it("dispatches to groupBy config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const markerMap: GroupValueMap<Marker> = {
@@ -332,7 +332,7 @@ describe("MarkerResolver", () => {
         config,
         [markerMap],
         Marker.Cross,
-        { loadTable },
+        { getTableLoader: () => loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -350,7 +350,7 @@ describe("MarkerResolver", () => {
       expect(Array.from(packedMarkers)).toEqual([Marker.Ring, Marker.Ring]);
     });
 
-    it("falls back to the default marker for a from config without loadTable", async () => {
+    it("falls back to the default marker for a from config without a table loader", async () => {
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
 
       const packedMarkers = await MarkerResolver.resolveMarkers(
@@ -363,7 +363,7 @@ describe("MarkerResolver", () => {
       expect(packedMarkers[0]).toBe(Marker.Ring);
     });
 
-    it("falls back to the default marker for a groupBy config without loadTable", async () => {
+    it("falls back to the default marker for a groupBy config without a table loader", async () => {
       const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",

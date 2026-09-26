@@ -27,11 +27,15 @@ export class VisibilityResolver {
    * Dispatches to the appropriate loader (constant, from, or groupBy) depending on which
    * configuration source is active.
    *
+   * If the table cannot be loaded, or the configuration cannot be resolved
+   * from it, the failure is logged and the default is used for every item.
+   *
    * @param ids - Ordered list of item IDs
    * @param config - Visibility configuration specifying the data source
    * @param visibilityMaps - Available visibility maps for groupBy lookups
    * @param defaultVisibility - Fallback visibility when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and table loader
+   * @param options - Optional abort signal, buffer alignment, and a getter for
+   * the loader of a table by ID, which returns `undefined` for a missing table
    * @returns A `Uint8Array` of packed visibility values (0 or 1), one per ID
    */
   static async resolveVisibilities(
@@ -42,10 +46,14 @@ export class VisibilityResolver {
     options?: {
       signal?: AbortSignal;
       align?: number;
-      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
+      getTableLoader?: (
+        tableId: string | undefined,
+      ) =>
+        | ((options?: { signal?: AbortSignal }) => Promise<TableData>)
+        | undefined;
     },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, loadTable } = options ?? {};
+    const { signal, align = 1, getTableLoader } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
@@ -53,31 +61,42 @@ export class VisibilityResolver {
         align,
       });
     }
-    if (
-      activeConfigSource === "from" &&
-      isFromConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return VisibilityResolver.resolveVisibilitiesFromTableValues(
-        ids,
-        config,
-        defaultVisibility,
-        loadTable,
-        { signal, align },
+    try {
+      if (activeConfigSource === "from" && isFromConfig(config)) {
+        const loadTable = getTableLoader?.(config.from.table);
+        if (loadTable !== undefined) {
+          return await VisibilityResolver.resolveVisibilitiesFromTableValues(
+            ids,
+            config,
+            defaultVisibility,
+            loadTable,
+            { signal, align },
+          );
+        }
+      }
+      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
+        const loadTable = getTableLoader?.(config.groupBy.table);
+        if (loadTable !== undefined) {
+          return await VisibilityResolver.resolveVisibilitiesFromTableGroups(
+            ids,
+            config,
+            visibilityMaps,
+            defaultVisibility,
+            loadTable,
+            { signal, align },
+          );
+        }
+      }
+    } catch (error) {
+      signal?.throwIfAborted();
+      console.warn(
+        "Failed to resolve visibilities from the table, using default visibility",
+        error,
       );
-    }
-    if (
-      activeConfigSource === "groupBy" &&
-      isGroupByConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return VisibilityResolver.resolveVisibilitiesFromTableGroups(
-        ids,
-        config,
-        visibilityMaps,
+      return VisibilityResolver.createUniformVisibilities(
+        ids.length,
         defaultVisibility,
-        loadTable,
-        { signal, align },
+        { align },
       );
     }
     console.warn("No valid visibility config found, using default visibility");

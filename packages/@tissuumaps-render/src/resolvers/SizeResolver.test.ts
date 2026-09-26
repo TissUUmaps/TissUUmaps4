@@ -244,7 +244,7 @@ describe("SizeResolver", () => {
       expect(Array.from(packedSizes)).toEqual([8, 8]);
     });
 
-    it("dispatches to from config when loadTable is given", async () => {
+    it("dispatches to from config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), [3]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies SizeConfig;
@@ -254,16 +254,14 @@ describe("SizeResolver", () => {
         config,
         [],
         1,
-        {
-          loadTable,
-        },
+        { getTableLoader: () => loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
       expect(packedSizes[0]).toBe(3);
     });
 
-    it("dispatches to groupBy config when loadTable is given", async () => {
+    it("dispatches to groupBy config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const sizeMap: GroupValueMap<number> = {
@@ -280,7 +278,7 @@ describe("SizeResolver", () => {
         config,
         [sizeMap],
         1,
-        { loadTable },
+        { getTableLoader: () => loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -298,7 +296,7 @@ describe("SizeResolver", () => {
       expect(Array.from(packedSizes)).toEqual([3, 3]);
     });
 
-    it("falls back to the default size for a from config without loadTable", async () => {
+    it("falls back to the default size for a from config without a table loader", async () => {
       const config = { from: { column: "col1" } } satisfies SizeConfig;
 
       const packedSizes = await SizeResolver.resolveSizes(
@@ -311,7 +309,7 @@ describe("SizeResolver", () => {
       expect(packedSizes[0]).toBe(3);
     });
 
-    it("falls back to the default size for a groupBy config without loadTable", async () => {
+    it("falls back to the default size for a groupBy config without a table loader", async () => {
       const sizeMap: GroupValueMap<number> = {
         id: "sm1",
         name: "Size Map",

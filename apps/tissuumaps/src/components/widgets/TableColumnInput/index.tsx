@@ -1,6 +1,7 @@
 import type { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete";
 import { FolderIcon } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useEffectEvent,
   useRef,
@@ -8,7 +9,10 @@ import {
   useTransition,
 } from "react";
 
-import type { TableColumnQuerySuggestion } from "@tissuumaps/core";
+import type {
+  TableColumnQuerySuggestion,
+  TableColumnRef,
+} from "@tissuumaps/core";
 
 import {
   Autocomplete,
@@ -22,12 +26,15 @@ import {
   AutocompleteTrigger,
 } from "@/components/common/autocomplete";
 import { InputGroupAddon } from "@/components/ui/input-group";
-import { useLazyTableData } from "@/hooks/useLazyData";
+import { useTableDataLoader } from "@/hooks/useDataLoader";
+import { useProjectStore } from "@/stores/project";
+
+import { formatTableColumnQuery, splitColumnQuery } from "./columnQuery";
 
 export type TableColumnInputProps = {
   tableId: string | null;
-  value: string | null;
-  onValueChange: (column: string | null) => void;
+  value: TableColumnRef | null;
+  onValueChange: (value: TableColumnRef | null) => void;
   className?: string;
 };
 
@@ -63,15 +70,48 @@ function SuggestionText({ suggestion, query }: SuggestionTextProps) {
   );
 }
 
+/**
+ * Loads the data of the table queried by a column query on demand
+ *
+ * @param tableId - The ID of the table queried by unprefixed column queries
+ * @returns A callback yielding the queried table and its data, or `null` if the
+ * query does not identify a table of the current project, together with the
+ * query's table prefix and the unprefixed column query
+ */
+function useLoadQueriedTableData(tableId: string | null) {
+  const tables = useProjectStore((state) => state.tables);
+  const loadTable = useTableDataLoader();
+  return useCallback(
+    async (query: string, options?: { signal?: AbortSignal }) => {
+      const { table, tablePrefix, columnQuery } = splitColumnQuery(
+        query,
+        tableId,
+        tables,
+      );
+      return {
+        table,
+        tableData: table !== null ? await loadTable(table, options) : null,
+        tablePrefix,
+        columnQuery,
+      };
+    },
+    [tables, tableId, loadTable],
+  );
+}
+
 export function TableColumnInput({
   tableId,
   value,
   onValueChange,
   className,
 }: TableColumnInputProps) {
-  const loadTableData = useLazyTableData(tableId);
+  const tables = useProjectStore((state) => state.tables);
 
-  const [text, setText] = useState(value ?? "");
+  const loadQueriedTableData = useLoadQueriedTableData(tableId);
+
+  const query = value !== null ? formatTableColumnQuery(value, tables) : "";
+
+  const [text, setText] = useState(query);
   const [invalid, setInvalid] = useState(false);
   const [suggestions, setSuggestions] = useState<
     TableColumnQuerySuggestion[] | null
@@ -80,10 +120,10 @@ export function TableColumnInput({
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const [prevValue, setPrevValue] = useState(value);
-  if (value !== prevValue) {
-    setPrevValue(value);
-    setText(value ?? "");
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    setText(query);
     setInvalid(false);
     setPendingQuery(null);
   }
@@ -96,13 +136,16 @@ export function TableColumnInput({
     const abortController = new AbortController();
     startSuggestTransition(async () => {
       try {
-        const tableData = await loadTableData({
-          signal: abortController.signal,
-        });
-        const newSuggestions =
-          (await tableData?.suggestColumnQueries(text, {
+        const { tableData, tablePrefix, columnQuery } =
+          await loadQueriedTableData(text, { signal: abortController.signal });
+        const columnQueries =
+          (await tableData?.suggestColumnQueries(columnQuery, {
             signal: abortController.signal,
           })) ?? [];
+        const newSuggestions = columnQueries.map((suggestion) => ({
+          ...suggestion,
+          query: tablePrefix + suggestion.query,
+        }));
         if (!abortController.signal.aborted) {
           startSuggestTransition(() => setSuggestions(newSuggestions));
         }
@@ -113,32 +156,37 @@ export function TableColumnInput({
       }
     });
     return () => abortController.abort();
-  }, [open, text, loadTableData, startSuggestTransition]);
+  }, [open, text, loadQueriedTableData, startSuggestTransition]);
 
-  const handleCommitResolved = useEffectEvent((column: string | null) => {
-    setPendingQuery(null);
-    if (column !== null) {
-      setText(column);
-      setInvalid(false);
-      onValueChange(column);
-    } else {
-      setInvalid(true);
-    }
-  });
+  const handleCommitResolved = useEffectEvent(
+    (tableColumnRef: TableColumnRef | null) => {
+      setPendingQuery(null);
+      if (tableColumnRef !== null) {
+        setText(formatTableColumnQuery(tableColumnRef, tables));
+        setInvalid(false);
+        onValueChange(tableColumnRef);
+      } else {
+        setInvalid(true);
+      }
+    },
+  );
   useEffect(() => {
     if (pendingQuery === null) {
       return;
     }
     const abortController = new AbortController();
     const { signal } = abortController;
-    loadTableData({ signal })
-      .then(
-        (tableData) =>
-          tableData?.resolveColumnQuery(pendingQuery, { signal }) ?? null,
-      )
-      .then((column) => {
+    loadQueriedTableData(pendingQuery, { signal })
+      .then(async ({ table, tableData, tablePrefix, columnQuery }) => {
+        const column =
+          (await tableData?.resolveColumnQuery(columnQuery, { signal })) ??
+          null;
         if (!signal.aborted) {
-          handleCommitResolved(column);
+          handleCommitResolved(
+            column !== null
+              ? { table: tablePrefix !== "" ? table?.id : undefined, column }
+              : null,
+          );
         }
       })
       .catch((error) => {
@@ -148,22 +196,22 @@ export function TableColumnInput({
         }
       });
     return () => abortController.abort();
-  }, [pendingQuery, loadTableData]);
+  }, [pendingQuery, loadQueriedTableData]);
 
-  function commit(query: string) {
-    if (query === (value ?? "")) {
+  function commit(newQuery: string) {
+    if (newQuery === query) {
       setPendingQuery(null);
       setInvalid(false);
       return;
     }
-    if (query.trim() === "") {
+    if (newQuery.trim() === "") {
       setPendingQuery(null);
       setText("");
       setInvalid(false);
       onValueChange(null);
       return;
     }
-    setPendingQuery(query);
+    setPendingQuery(newQuery);
   }
 
   const highlightedSuggestionRef = useRef<

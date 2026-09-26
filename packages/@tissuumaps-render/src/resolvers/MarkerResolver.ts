@@ -28,11 +28,15 @@ export class MarkerResolver {
    * Dispatches to the appropriate loader (constant, from, or groupBy) depending on which
    * configuration source is active.
    *
+   * If the table cannot be loaded, or the configuration cannot be resolved
+   * from it, the failure is logged and the default is used for every item.
+   *
    * @param ids - Ordered list of item IDs
    * @param config - Marker configuration specifying the data source
    * @param markerMaps - Available marker maps for groupBy lookups
    * @param defaultMarker - Fallback marker when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and table loader
+   * @param options - Optional abort signal, buffer alignment, and a getter for
+   * the loader of a table by ID, which returns `undefined` for a missing table
    * @returns A `Uint8Array` of packed marker values, one per ID
    */
   static async resolveMarkers(
@@ -43,41 +47,54 @@ export class MarkerResolver {
     options?: {
       signal?: AbortSignal;
       align?: number;
-      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
+      getTableLoader?: (
+        tableId: string | undefined,
+      ) =>
+        | ((options?: { signal?: AbortSignal }) => Promise<TableData>)
+        | undefined;
     },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, loadTable } = options ?? {};
+    const { signal, align = 1, getTableLoader } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
       return MarkerResolver.resolveUniformMarkers(ids, config, { align });
     }
-    if (
-      activeConfigSource === "from" &&
-      isFromConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return MarkerResolver.resolveMarkersFromTableValues(
-        ids,
-        config,
-        defaultMarker,
-        loadTable,
-        { signal, align },
+    try {
+      if (activeConfigSource === "from" && isFromConfig(config)) {
+        const loadTable = getTableLoader?.(config.from.table);
+        if (loadTable !== undefined) {
+          return await MarkerResolver.resolveMarkersFromTableValues(
+            ids,
+            config,
+            defaultMarker,
+            loadTable,
+            { signal, align },
+          );
+        }
+      }
+      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
+        const loadTable = getTableLoader?.(config.groupBy.table);
+        if (loadTable !== undefined) {
+          return await MarkerResolver.resolveMarkersFromTableGroups(
+            ids,
+            config,
+            markerMaps,
+            defaultMarker,
+            loadTable,
+            { signal, align },
+          );
+        }
+      }
+    } catch (error) {
+      signal?.throwIfAborted();
+      console.warn(
+        "Failed to resolve markers from the table, using default marker",
+        error,
       );
-    }
-    if (
-      activeConfigSource === "groupBy" &&
-      isGroupByConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return MarkerResolver.resolveMarkersFromTableGroups(
-        ids,
-        config,
-        markerMaps,
-        defaultMarker,
-        loadTable,
-        { signal, align },
-      );
+      return MarkerResolver.createUniformMarkers(ids.length, defaultMarker, {
+        align,
+      });
     }
     console.warn("No valid marker config found, using default marker");
     return MarkerResolver.createUniformMarkers(ids.length, defaultMarker, {

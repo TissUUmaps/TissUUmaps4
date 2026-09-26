@@ -44,9 +44,9 @@ export function highlightItemGroup(
   if (highlightedItemGroup === null) {
     return state;
   }
-  const { annotatedObject, column, group } = highlightedItemGroup;
+  const { annotatedObject, groupBy, group } = highlightedItemGroup;
   const opacityConfig: OpacityConfig = {
-    groupBy: { column, map: highlightOpacityMapId },
+    groupBy: { ...groupBy, map: highlightOpacityMapId },
   };
   const visibilityConfig: VisibilityConfig = { constant: { value: true } };
   return {

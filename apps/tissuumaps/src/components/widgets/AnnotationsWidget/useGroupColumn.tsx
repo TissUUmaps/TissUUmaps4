@@ -1,13 +1,13 @@
 import { useMemo } from "react";
 
-import { type Config, ConfigUtils, type GroupByConfig } from "@tissuumaps/core";
+import type { Config, GroupByConfig } from "@tissuumaps/core";
 
 import { useLatestCallback } from "@/hooks/useLatestCallback";
 
 import type { GroupAnnotationsTableColumnDef } from "./GroupAnnotationsTable";
 import type { GroupValuesAdapter } from "./adapter";
 import { InactiveCell } from "./cells/InactiveCell";
-import { createGroupValues } from "./createGroupValues";
+import { createGroupValues, isGroupedByColumn } from "./createGroupValues";
 import type { GroupTableState } from "./useGroupTable";
 
 /** A property of an annotated object that can take a value per group */
@@ -74,8 +74,7 @@ export function useGroupColumn<TValue, TConfig extends Config<string>>(
       size: adapter.columnSize,
       meta: {
         isShownByDefault:
-          isShownByDefault === true ||
-          ConfigUtils.getGroupByColumn(config) === groupTable.column,
+          isShownByDefault === true || isGroupedByColumn(config, groupTable),
       },
       ...(getSortValue !== undefined && {
         accessorFn: (row) => getSortValue(getValue(row.group)),

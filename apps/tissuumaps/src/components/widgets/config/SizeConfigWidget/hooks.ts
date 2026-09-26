@@ -1,8 +1,10 @@
 import { useMemo } from "react";
 
 import {
+  ConfigUtils,
   type CoordinateSpace,
   type SizeConfig,
+  type TableColumnRef,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -16,9 +18,9 @@ type SizeConfigWidgetState = {
   currentSource: SizeConfigSource;
   currentConstantValue: number;
   currentConstantUnit: CoordinateSpace;
-  currentFromColumn: string | null;
+  currentFromTableColumn: TableColumnRef | null;
   currentFromUnit: CoordinateSpace;
-  currentGroupByColumn: string | null;
+  currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
   currentGroupByUnit: CoordinateSpace;
 };
@@ -45,13 +47,15 @@ function configToState(
       isConstantConfig(config) && config.constant.unit !== undefined
         ? config.constant.unit
         : defaultSizeUnit,
-    currentFromColumn: isFromConfig(config) ? config.from.column : null,
+    currentFromTableColumn: isFromConfig(config)
+      ? ConfigUtils.getTableColumnRef(config.from)
+      : null,
     currentFromUnit:
       isFromConfig(config) && config.from.unit !== undefined
         ? config.from.unit
         : defaultSizeUnit,
-    currentGroupByColumn: isGroupByConfig(config)
-      ? config.groupBy.column
+    currentGroupByTableColumn: isGroupByConfig(config)
+      ? ConfigUtils.getTableColumnRef(config.groupBy)
       : null,
     currentGroupByMap:
       isGroupByConfig(config) && config.groupBy.map !== undefined
@@ -87,20 +91,20 @@ function stateToConfig(
         },
       };
     case "from":
-      if (state.currentFromColumn === null) {
+      if (state.currentFromTableColumn === null) {
         return null;
       }
       return {
         ...config,
         source: "from",
         from: {
-          column: state.currentFromColumn,
+          ...state.currentFromTableColumn,
           unit: state.currentFromUnit,
         },
       };
     case "groupBy":
       if (
-        state.currentGroupByColumn === null ||
+        state.currentGroupByTableColumn === null ||
         state.currentGroupByMap === null
       ) {
         return null;
@@ -109,7 +113,7 @@ function stateToConfig(
         ...config,
         source: "groupBy",
         groupBy: {
-          column: state.currentGroupByColumn,
+          ...state.currentGroupByTableColumn,
           map: state.currentGroupByMap,
           unit: state.currentGroupByUnit,
         },
@@ -140,12 +144,14 @@ export function useSizeConfigWidget(
         setState((state) => ({ ...state, currentConstantValue })),
       setCurrentConstantUnit: (currentConstantUnit: CoordinateSpace) =>
         setState((state) => ({ ...state, currentConstantUnit })),
-      setCurrentFromColumn: (currentFromColumn: string | null) =>
-        setState((state) => ({ ...state, currentFromColumn })),
+      setCurrentFromTableColumn: (
+        currentFromTableColumn: TableColumnRef | null,
+      ) => setState((state) => ({ ...state, currentFromTableColumn })),
       setCurrentFromUnit: (currentFromUnit: CoordinateSpace) =>
         setState((state) => ({ ...state, currentFromUnit })),
-      setCurrentGroupByColumn: (currentGroupByColumn: string | null) =>
-        setState((state) => ({ ...state, currentGroupByColumn })),
+      setCurrentGroupByTableColumn: (
+        currentGroupByTableColumn: TableColumnRef | null,
+      ) => setState((state) => ({ ...state, currentGroupByTableColumn })),
       setCurrentGroupByMap: (currentGroupByMap: string | null) =>
         setState((state) => ({ ...state, currentGroupByMap })),
       setCurrentGroupByUnit: (currentGroupByUnit: CoordinateSpace) =>

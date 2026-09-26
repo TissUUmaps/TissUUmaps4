@@ -15,7 +15,8 @@ type NumberConfig = ConstantConfig<number> | FromConfig | GroupByConfig<false>;
 
 const groupTable: GroupTableState = {
   objectName: "cells",
-  column: "cluster",
+  tableId: "cells",
+  column: { column: "cluster" },
   setColumn: () => {},
   groupCounts: new Map([
     ["A", 2],

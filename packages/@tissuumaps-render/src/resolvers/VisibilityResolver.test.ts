@@ -278,7 +278,7 @@ describe("VisibilityResolver", () => {
       expect(Array.from(packedVisibilities)).toEqual([0, 0]);
     });
 
-    it("dispatches to from config when loadTable is given", async () => {
+    it("dispatches to from config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), [1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
@@ -288,14 +288,14 @@ describe("VisibilityResolver", () => {
         config,
         [],
         false,
-        { loadTable },
+        { getTableLoader: () => loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
       expect(packedVisibilities[0]).toBe(1);
     });
 
-    it("dispatches to groupBy config when loadTable is given", async () => {
+    it("dispatches to groupBy config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const visibilityMap: GroupValueMap<boolean> = {
@@ -312,7 +312,7 @@ describe("VisibilityResolver", () => {
         config,
         [visibilityMap],
         false,
-        { loadTable },
+        { getTableLoader: () => loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -330,7 +330,7 @@ describe("VisibilityResolver", () => {
       expect(Array.from(packedVisibilities)).toEqual([1, 1]);
     });
 
-    it("falls back to the default visibility for a from config without loadTable", async () => {
+    it("falls back to the default visibility for a from config without a table loader", async () => {
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
 
       const packedVisibilities = await VisibilityResolver.resolveVisibilities(
@@ -343,7 +343,7 @@ describe("VisibilityResolver", () => {
       expect(packedVisibilities[0]).toBe(1);
     });
 
-    it("falls back to the default visibility for a groupBy config without loadTable", async () => {
+    it("falls back to the default visibility for a groupBy config without a table loader", async () => {
       const visibilityMap: GroupValueMap<boolean> = {
         id: "vm1",
         name: "Visibility Map",

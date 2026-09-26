@@ -39,11 +39,15 @@ export class ColorResolver {
    * The returned colors carry no alpha; the caller folds the separately
    * resolved visibilities and opacities into it.
    *
+   * If the table cannot be loaded, or the configuration cannot be resolved
+   * from it, the failure is logged and the default is used for every item.
+   *
    * @param ids - Ordered list of item IDs
    * @param config - Color configuration specifying the data source
    * @param colorMaps - Available color maps for groupBy lookups
    * @param defaultColor - Fallback color when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and table loader
+   * @param options - Optional abort signal, buffer alignment, and a getter for
+   * the loader of a table by ID, which returns `undefined` for a missing table
    * @returns A `Uint32Array` of packed RGB color values, one per ID
    */
   static async resolveColors(
@@ -54,58 +58,65 @@ export class ColorResolver {
     options?: {
       signal?: AbortSignal;
       align?: number;
-      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
+      getTableLoader?: (
+        tableId: string | undefined,
+      ) =>
+        | ((options?: { signal?: AbortSignal }) => Promise<TableData>)
+        | undefined;
     },
   ): Promise<Uint32Array> {
-    const { signal, align = 1, loadTable } = options ?? {};
+    const { signal, align = 1, getTableLoader } = options ?? {};
     signal?.throwIfAborted();
-    let packedColors: Uint32Array;
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      packedColors = ColorResolver.resolveUniformColors(ids, config, { align });
-    } else if (
-      activeConfigSource === "from" &&
-      isFromConfig(config) &&
-      loadTable !== undefined
-    ) {
-      packedColors = await ColorResolver.resolveColorsFromTableValues(
-        ids,
-        config,
-        defaultColor,
-        loadTable,
-        { signal, align },
-      );
-    } else if (
-      activeConfigSource === "groupBy" &&
-      isGroupByConfig(config) &&
-      loadTable !== undefined
-    ) {
-      packedColors = await ColorResolver.resolveColorsFromTableGroups(
-        ids,
-        config,
-        colorMaps,
-        defaultColor,
-        loadTable,
-        { signal, align },
-      );
-    } else if (activeConfigSource === "random" && isRandomConfig(config)) {
-      packedColors = await ColorResolver.resolveRandomColors(
-        ids,
-        config,
-        defaultColor,
-        { signal, align },
-      );
-    } else {
-      console.warn("No valid color config found, using default color");
-      packedColors = ColorResolver.createUniformColors(
-        ids.length,
-        defaultColor,
-        {
-          align,
-        },
-      );
+      return ColorResolver.resolveUniformColors(ids, config, { align });
     }
-    return packedColors;
+    try {
+      if (activeConfigSource === "from" && isFromConfig(config)) {
+        const loadTable = getTableLoader?.(config.from.table);
+        if (loadTable !== undefined) {
+          return await ColorResolver.resolveColorsFromTableValues(
+            ids,
+            config,
+            defaultColor,
+            loadTable,
+            { signal, align },
+          );
+        }
+      }
+      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
+        const loadTable = getTableLoader?.(config.groupBy.table);
+        if (loadTable !== undefined) {
+          return await ColorResolver.resolveColorsFromTableGroups(
+            ids,
+            config,
+            colorMaps,
+            defaultColor,
+            loadTable,
+            { signal, align },
+          );
+        }
+      }
+    } catch (error) {
+      signal?.throwIfAborted();
+      console.warn(
+        "Failed to resolve colors from the table, using default color",
+        error,
+      );
+      return ColorResolver.createUniformColors(ids.length, defaultColor, {
+        align,
+      });
+    }
+    if (activeConfigSource === "random" && isRandomConfig(config)) {
+      return ColorResolver.resolveRandomColors(ids, config, defaultColor, {
+        signal,
+        align,
+      });
+    }
+    console.warn("No valid color config found, using default color");
+    return ColorResolver.createUniformColors(ids.length, defaultColor, {
+      align,
+    });
   }
 
   /**

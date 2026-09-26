@@ -16,7 +16,7 @@ describe("getDominantGroupByColumn", () => {
       { groupBy: { column: "gene", map: undefined } },
     ];
 
-    expect(getDominantGroupByColumn(configs)).toBe("gene");
+    expect(getDominantGroupByColumn(configs)).toEqual({ column: "gene" });
   });
 
   it("picks the first configuration's column on a tie", () => {
@@ -25,7 +25,7 @@ describe("getDominantGroupByColumn", () => {
       { groupBy: { column: "gene", map: undefined } },
     ];
 
-    expect(getDominantGroupByColumn(configs)).toBe("cluster");
+    expect(getDominantGroupByColumn(configs)).toEqual({ column: "cluster" });
   });
 
   it("ignores configurations that do not group", () => {
@@ -37,7 +37,33 @@ describe("getDominantGroupByColumn", () => {
       { groupBy: { column: "cluster", map: undefined } },
     ];
 
-    expect(getDominantGroupByColumn(configs)).toBe("cluster");
+    expect(getDominantGroupByColumn(configs)).toEqual({ column: "cluster" });
+  });
+
+  it("keeps the columns of different tables apart", () => {
+    const configs: GroupByConfig<false>[] = [
+      { groupBy: { column: "gene", map: undefined } },
+      { groupBy: { table: "other", column: "gene", map: undefined } },
+      { groupBy: { table: "other", column: "gene", map: undefined } },
+    ];
+
+    expect(getDominantGroupByColumn(configs, "own")).toEqual({
+      table: "other",
+      column: "gene",
+    });
+  });
+
+  it("keeps apart table and column names that contain a slash", () => {
+    const configs: GroupByConfig<false>[] = [
+      { groupBy: { table: "a", column: "b/c", map: undefined } },
+      { groupBy: { table: "a/b", column: "c", map: undefined } },
+      { groupBy: { table: "a/b", column: "c", map: undefined } },
+    ];
+
+    expect(getDominantGroupByColumn(configs)).toEqual({
+      table: "a/b",
+      column: "c",
+    });
   });
 
   it("returns null without any grouping configuration", () => {
