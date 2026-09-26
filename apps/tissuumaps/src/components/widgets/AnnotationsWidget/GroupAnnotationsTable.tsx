@@ -66,11 +66,14 @@ type Sorting = {
   descending: boolean;
 };
 
-/** The group rows are listed alphabetically until a column is sorted by */
+/** The group rows are listed by name until a column is sorted by */
 const defaultSorting: Sorting = { id: "group", descending: false };
 
+/** Compares text with its numbers by value, so that `2` sorts before `10` */
+const textCollator = new Intl.Collator(undefined, { numeric: true });
+
 /**
- * Compares two sort values, numbers numerically and strings alphabetically
+ * Compares two sort values, numbers numerically and strings as text
  *
  * @param a - The first sort value
  * @param b - The second sort value
@@ -80,7 +83,7 @@ function compareSortValues(a: number | string, b: number | string): number {
   if (typeof a === "number" && typeof b === "number") {
     return a - b;
   }
-  return String(a).localeCompare(String(b));
+  return textCollator.compare(String(a), String(b));
 }
 
 export type GroupAnnotationsTableProps = {
@@ -169,10 +172,9 @@ export function GroupAnnotationsTable({
     groupRows.sort(
       (a, b) =>
         order *
-        (getSortValue !== undefined
-          ? compareSortValues(getSortValue(a.group), getSortValue(b.group)) ||
-            a.group.localeCompare(b.group)
-          : a.group.localeCompare(b.group)),
+        ((getSortValue !== undefined
+          ? compareSortValues(getSortValue(a.group), getSortValue(b.group))
+          : 0) || textCollator.compare(a.group, b.group)),
     );
     return groupRows;
   }, [groupCounts, activeSorting, groupColumns]);
