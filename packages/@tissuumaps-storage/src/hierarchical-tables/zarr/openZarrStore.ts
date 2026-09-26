@@ -34,32 +34,11 @@ export async function openZarrStore(
 ): Promise<ZarrStore> {
   const { signal, workspace = null } = options ?? {};
   signal?.throwIfAborted();
-  const isWorkspacePath = SourceUtils.isWorkspacePath(normalizedSource);
-  const url = isWorkspacePath ? undefined : new URL(normalizedSource);
-  const segments = (url?.pathname ?? normalizedSource)
-    .split("/")
-    .filter((segment) => segment !== "");
-  // a URL's store may be served at the host root; the workspace root is no
-  // source
-  const minRootLength = url !== undefined ? 0 : 1;
+  let rootSource = normalizedSource;
+  const groupSegments: string[] = [];
   let lastError: unknown;
-  for (let i = segments.length; i >= minRootLength; i--) {
-    const rootSegments = segments.slice(0, i);
-    const groupSegments = segments.slice(i);
-    let rootSource;
-    if (url !== undefined) {
-      const rootUrl = new URL(url);
-      rootUrl.pathname = rootSegments.join("/");
-      rootSource = rootUrl.href;
-    } else {
-      rootSource = SourceUtils.makeWorkspacePath(rootSegments);
-    }
+  for (;;) {
     try {
-      const group = (
-        url !== undefined
-          ? groupSegments.map(decodeURIComponent)
-          : groupSegments
-      ).join("/");
       const resolvedRootSource = await SourceUtils.resolveSourceDirectory(
         rootSource,
         workspace,
@@ -69,11 +48,17 @@ export async function openZarrStore(
         typeof resolvedRootSource === "string"
           ? new zarr.FetchStore(resolvedRootSource)
           : new FileSystemHandleStore(resolvedRootSource);
-      return await ZarrStore.open(store, group, { signal });
+      return await ZarrStore.open(store, groupSegments.join("/"), { signal });
     } catch (error) {
       signal?.throwIfAborted();
       lastError = error;
     }
+    const parent = SourceUtils.getParentSource(rootSource);
+    if (parent === null) {
+      break;
+    }
+    rootSource = parent.parentSource;
+    groupSegments.unshift(parent.name);
   }
   throw new Error(
     `No Zarr store with consolidated metadata found at "${normalizedSource}" or above it.`,
