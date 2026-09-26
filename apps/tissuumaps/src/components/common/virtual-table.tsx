@@ -11,8 +11,10 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -30,8 +32,9 @@ import { cn } from "@/lib/utils";
  * A table only has the APIs of the features registered here. Column sizing
  * gives every cell the width of its column, which the user can resize, and
  * columns can be hidden. The table only holds the visible rows, so it cannot
- * sort them: sorting is manual, the table keeps the sort state and its header
- * toggles while the caller sorts all rows.
+ * sort them: sorting is manual, the table keeps the sort state and toggles it
+ * from the headers of the columns with an accessor, while the caller sorts all
+ * rows.
  */
 const features = tableFeatures({
   columnSizingFeature,
@@ -92,7 +95,10 @@ export type VirtualTableProps<TRowData extends RowData> = {
   /** Shown in the top right corner of the header, whatever the scroll */
   headerAction?: ReactNode;
 
-  /** The column the rows are sorted by, which the caller sorts them by */
+  /**
+   * The column the rows are sorted by, which the caller sorts them by; the
+   * columns are not sortable without
+   */
   sorting?: SortingState;
 
   onSortingChange?: (sorting: SortingState) => void;
@@ -155,6 +161,7 @@ export function VirtualTable<TRowData extends RowData>({
       }
     },
     manualSorting: true,
+    enableSorting: sorting !== undefined,
     enableMultiSort: false,
     enableSortingRemoval: false,
     sortDescFirst: false,
@@ -186,10 +193,31 @@ export function VirtualTable<TRowData extends RowData>({
                   colSpan={header.colSpan}
                 >
                   {!header.isPlaceholder &&
-                    renderTemplate(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    )}
+                    (header.column.getCanSort() ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-full w-full justify-start rounded-none px-0 pr-2 text-xs font-medium text-inherit hover:bg-transparent hover:text-foreground"
+                        title={`Sort by ${header.column.id}`}
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {renderTemplate(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                        {header.column.getIsSorted() === "desc" && (
+                          <ArrowDownIcon className="size-3.5" />
+                        )}
+                        {header.column.getIsSorted() === "asc" && (
+                          <ArrowUpIcon className="size-3.5" />
+                        )}
+                      </Button>
+                    ) : (
+                      renderTemplate(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )
+                    ))}
                   {header.column.getCanResize() && (
                     <div
                       className={cn(

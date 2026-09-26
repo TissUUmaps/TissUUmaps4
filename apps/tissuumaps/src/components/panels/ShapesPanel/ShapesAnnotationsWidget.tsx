@@ -101,7 +101,7 @@ export function ShapesAnnotationsWidget({
   });
   const fillColorColumn = useGroupColumn(groupTable, {
     name: "fill color",
-    shownByDefault: true,
+    isShownByDefault: true,
     default: defaultShapeFillColor,
     config: shapes.shapeFillColor,
     onConfigChange: (shapeFillColor) =>
@@ -149,7 +149,7 @@ export function ShapesAnnotationsWidget({
     adapter: opacityAdapter,
   });
 
-  const groupColumns = useMemo(
+  const groupColumnDefs = useMemo(
     () =>
       [
         opacityColumn,
@@ -159,7 +159,7 @@ export function ShapesAnnotationsWidget({
         strokeColorColumn,
         strokeVisibilityColumn,
         strokeOpacityColumn,
-      ].filter((column) => column !== undefined),
+      ].filter((columnDef) => columnDef !== undefined),
     [
       opacityColumn,
       fillColorColumn,
@@ -180,7 +180,7 @@ export function ShapesAnnotationsWidget({
       onSelectedGroupByColumnChange={groupTable.setColumn}
       groupCounts={groupTable.groupCounts}
       groupVisibility={groupVisibility}
-      groupColumns={groupColumns}
+      groupColumnDefs={groupColumnDefs}
       className={className}
     />
   );

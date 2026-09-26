@@ -80,7 +80,7 @@ export function PointsAnnotationsWidget({
   });
   const markerColumn = useGroupColumn(groupTable, {
     name: "marker",
-    shownByDefault: true,
+    isShownByDefault: true,
     default: defaultPointMarker,
     config: points.pointMarker,
     onConfigChange: (pointMarker) => updatePoints(points.id, { pointMarker }),
@@ -95,7 +95,7 @@ export function PointsAnnotationsWidget({
   });
   const colorColumn = useGroupColumn(groupTable, {
     name: "color",
-    shownByDefault: true,
+    isShownByDefault: true,
     default: defaultPointColor,
     config: points.pointColor,
     onConfigChange: (pointColor) => updatePoints(points.id, { pointColor }),
@@ -109,10 +109,10 @@ export function PointsAnnotationsWidget({
     adapter: opacityAdapter,
   });
 
-  const groupColumns = useMemo(
+  const groupColumnDefs = useMemo(
     () =>
       [markerColumn, sizeColumn, colorColumn, opacityColumn].filter(
-        (column) => column !== undefined,
+        (columnDef) => columnDef !== undefined,
       ),
     [markerColumn, sizeColumn, colorColumn, opacityColumn],
   );
@@ -126,7 +126,7 @@ export function PointsAnnotationsWidget({
       onSelectedGroupByColumnChange={groupTable.setColumn}
       groupCounts={groupTable.groupCounts}
       groupVisibility={groupVisibility}
-      groupColumns={groupColumns}
+      groupColumnDefs={groupColumnDefs}
       className={className}
     />
   );

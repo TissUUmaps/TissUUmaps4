@@ -4,8 +4,9 @@ import { type Config, ConfigUtils, type GroupByConfig } from "@tissuumaps/core";
 
 import { useLatestCallback } from "@/hooks/useLatestCallback";
 
-import type { GroupColumn } from "./GroupAnnotationsTable";
+import type { GroupAnnotationsTableColumnDef } from "./GroupAnnotationsTable";
 import type { GroupValuesAdapter } from "./adapter";
+import { InactiveCell } from "./cells/InactiveCell";
 import { createGroupValues } from "./createGroupValues";
 import type { GroupTable } from "./useGroupTable";
 
@@ -14,8 +15,11 @@ export type GroupProperty<TValue, TConfig extends Config<string>> = {
   /** The name of the property, as a column header and in map names */
   name: string;
 
-  /** Whether the column is shown while the property is not grouped by it */
-  shownByDefault?: boolean;
+  /**
+   * Whether the column is shown by default even while the property is not
+   * grouped by the table's column
+   */
+  isShownByDefault?: boolean;
 
   /** The value of a group that nothing assigns one to */
   default: NoInfer<TValue>;
@@ -41,10 +45,10 @@ export type GroupProperty<TValue, TConfig extends Config<string>> = {
 export function useGroupColumn<TValue, TConfig extends Config<string>>(
   groupTable: GroupTable,
   property: GroupProperty<TValue, TConfig>,
-): GroupColumn | undefined {
+): GroupAnnotationsTableColumnDef | undefined {
   const {
     name,
-    shownByDefault,
+    isShownByDefault,
     default: defaultValue,
     config,
     adapter,
@@ -68,23 +72,26 @@ export function useGroupColumn<TValue, TConfig extends Config<string>>(
       id: name,
       header: name.charAt(0).toUpperCase() + name.slice(1),
       size: adapter.columnSize,
-      isInactive,
-      isShownByDefault:
-        shownByDefault === true ||
-        ConfigUtils.getGroupByColumn(config) === groupTable.column,
-      getSortValue:
-        getSortValue !== undefined
-          ? (group) => getSortValue(getValue(group))
-          : undefined,
-      renderCell: (group) =>
-        adapter.renderCell(getValue(group), (value) =>
-          setValues({ [group]: value }),
-        ),
+      meta: {
+        isShownByDefault:
+          isShownByDefault === true ||
+          ConfigUtils.getGroupByColumn(config) === groupTable.column,
+      },
+      ...(getSortValue !== undefined && {
+        accessorFn: (row) => getSortValue(getValue(row.group)),
+      }),
+      cell: ({ row }) => (
+        <InactiveCell isInactive={isInactive}>
+          {adapter.renderCell(getValue(row.original.group), (value) =>
+            setValues({ [row.original.group]: value }),
+          )}
+        </InactiveCell>
+      ),
     };
   }, [
     groupTable,
     name,
-    shownByDefault,
+    isShownByDefault,
     defaultValue,
     config,
     onConfigChange,

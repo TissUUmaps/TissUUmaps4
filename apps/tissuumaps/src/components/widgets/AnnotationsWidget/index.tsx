@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 import {
   GroupAnnotationsTable,
-  type GroupColumn,
+  type GroupAnnotationsTableColumnDef,
   type GroupVisibility,
 } from "./GroupAnnotationsTable";
 import { ItemAnnotationsTable } from "./ItemAnnotationsTable";
@@ -49,7 +49,7 @@ export type AnnotationsWidgetProps = {
   onSelectedGroupByColumnChange: (column: string | null) => void;
   groupCounts: Map<string, number> | null;
   groupVisibility?: GroupVisibility;
-  groupColumns?: GroupColumn[];
+  groupColumnDefs?: GroupAnnotationsTableColumnDef[];
   className?: string;
 };
 
@@ -61,7 +61,7 @@ export function AnnotationsWidget({
   onSelectedGroupByColumnChange,
   groupCounts,
   groupVisibility,
-  groupColumns,
+  groupColumnDefs,
   className,
 }: AnnotationsWidgetProps) {
   const [groupFilter, setGroupFilter] = useState("");
@@ -132,7 +132,7 @@ export function AnnotationsWidget({
           groupByColumn={selectedGroupByColumn}
           groupCounts={filteredGroupCounts}
           groupVisibility={groupVisibility}
-          groupColumns={groupColumns}
+          groupColumnDefs={groupColumnDefs}
         />
       ) : (
         <ItemAnnotationsTable

@@ -66,7 +66,7 @@ export function LabelsAnnotationsWidget({
   });
   const colorColumn = useGroupColumn(groupTable, {
     name: "color",
-    shownByDefault: true,
+    isShownByDefault: true,
     default: defaultLabelColor,
     config: labels.labelColor,
     onConfigChange: (labelColor) => updateLabels(labels.id, { labelColor }),
@@ -80,8 +80,11 @@ export function LabelsAnnotationsWidget({
     adapter: opacityAdapter,
   });
 
-  const groupColumns = useMemo(
-    () => [colorColumn, opacityColumn].filter((column) => column !== undefined),
+  const groupColumnDefs = useMemo(
+    () =>
+      [colorColumn, opacityColumn].filter(
+        (columnDef) => columnDef !== undefined,
+      ),
     [colorColumn, opacityColumn],
   );
 
@@ -93,7 +96,7 @@ export function LabelsAnnotationsWidget({
       onSelectedGroupByColumnChange={groupTable.setColumn}
       groupCounts={groupTable.groupCounts}
       groupVisibility={groupVisibility}
-      groupColumns={groupColumns}
+      groupColumnDefs={groupColumnDefs}
       className={className}
     />
   );
