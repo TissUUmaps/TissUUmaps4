@@ -34,7 +34,7 @@ sidebar_position: 5
 
 - Hyparquet + hyparquet-compressors (Parquet tables; bundled into the Parquet worker)
 - h5wasm (HDF5 and AnnData tables; bundled into the HDF5 worker)
-- zarrita (Zarr and AnnData tables)
+- zarrita.js (Zarr and AnnData tables)
 - PapaParse (CSV tables)
 - omezarr-tilesource (OME-Zarr images/labels)
 - geotiff.js + geotiff-tilesource (TIFF images, see below)
