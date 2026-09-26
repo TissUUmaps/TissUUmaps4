@@ -286,7 +286,7 @@ export class ColorResolver {
       colorMap?.default ?? defaultColor,
       ConfigUtils.createGroupValueGetter(
         config,
-        colorMaps,
+        colorMap,
         defaultColor,
         colorPalette?.colors,
       ),

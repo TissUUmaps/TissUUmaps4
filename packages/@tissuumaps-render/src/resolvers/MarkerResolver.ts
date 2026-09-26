@@ -230,7 +230,7 @@ export class MarkerResolver {
       markerMap?.default ?? defaultMarker,
       ConfigUtils.createGroupValueGetter(
         config,
-        markerMaps,
+        markerMap,
         defaultMarker,
         markerPalette,
       ),

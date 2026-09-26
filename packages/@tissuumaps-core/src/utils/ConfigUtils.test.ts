@@ -7,10 +7,17 @@ import { HashUtils } from "./HashUtils";
 
 describe("ConfigUtils", () => {
   describe("createGroupValueGetter", () => {
-    const maps: GroupValueMap<number>[] = [
-      { id: "map1", name: "Map 1", values: { A: 1 }, default: 9 },
-      { id: "map2", name: "Map 2", values: { A: 1 } },
-    ];
+    const map1: GroupValueMap<number> = {
+      id: "map1",
+      name: "Map 1",
+      values: { A: 1 },
+      default: 9,
+    };
+    const map2: GroupValueMap<number> = {
+      id: "map2",
+      name: "Map 2",
+      values: { A: 1 },
+    };
     const palette = [10, 20, 30];
 
     it("reads a group's value in the referenced map", () => {
@@ -19,19 +26,19 @@ describe("ConfigUtils", () => {
       };
 
       expect(
-        ConfigUtils.createGroupValueGetter(config, maps, 0, palette)("A"),
+        ConfigUtils.createGroupValueGetter(config, map1, 0, palette)("A"),
       ).toBe(1);
     });
 
     it("falls back to the map's default, then to the default value", () => {
       const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: "map1" } },
-        maps,
+        map1,
         0,
       );
       const getValueWithoutMapDefault = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: "map2" } },
-        maps,
+        map2,
         0,
       );
 
@@ -42,7 +49,7 @@ describe("ConfigUtils", () => {
     it("does not read inherited object properties as map values", () => {
       const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: "map2" } },
-        maps,
+        map2,
         0,
       );
 
@@ -52,7 +59,7 @@ describe("ConfigUtils", () => {
     it("gives every group the default value if the map does not exist", () => {
       const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: "missing" } },
-        maps,
+        undefined,
         0,
         palette,
       );
@@ -63,7 +70,7 @@ describe("ConfigUtils", () => {
     it("picks a palette value by hash without a map", () => {
       const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: undefined } },
-        maps,
+        undefined,
         0,
         palette,
       );
@@ -74,7 +81,7 @@ describe("ConfigUtils", () => {
     it("gives every group the default value without a map or palette", () => {
       const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: undefined } },
-        maps,
+        undefined,
         0,
       );
 

@@ -230,7 +230,7 @@ export class OpacityResolver {
       ids,
       config.groupBy.column,
       opacityMap.default ?? defaultOpacity,
-      ConfigUtils.createGroupValueGetter(config, opacityMaps, defaultOpacity),
+      ConfigUtils.createGroupValueGetter(config, opacityMap, defaultOpacity),
       (opacity) => OpacityResolver.packOpacity(opacity),
       { signal },
     );

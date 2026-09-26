@@ -238,7 +238,7 @@ export class VisibilityResolver {
       visibilityMap.default ?? defaultVisibility,
       ConfigUtils.createGroupValueGetter(
         config,
-        visibilityMaps,
+        visibilityMap,
         defaultVisibility,
       ),
       (visibility) => VisibilityResolver.packVisibility(visibility),

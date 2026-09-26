@@ -47,19 +47,20 @@ export class ConfigUtils {
    * hashes to, or `defaultValue` if there is no palette.
    *
    * @param config - The group-by configuration
-   * @param maps - The project-global maps to look the referenced map up in
+   * @param map - The map the configuration refers to (see
+   * {@link findGroupByMap}), or `undefined` if it refers to none or the map
+   * does not exist
    * @param defaultValue - The value of a group that nothing assigns one to
    * @param palette - The values to pick from by hash if there is no map
    * @returns The value of a group, by group name (the cell value as a string)
    */
   static createGroupValueGetter<TValue>(
     config: GroupByConfig<false>,
-    maps: GroupValueMap<TValue>[],
+    map: GroupValueMap<TValue> | undefined,
     defaultValue: TValue,
     palette?: readonly TValue[],
   ): (group: string) => TValue {
     if (config.groupBy.map !== undefined) {
-      const map = maps.find((map) => map.id === config.groupBy.map);
       if (map === undefined) {
         return () => defaultValue;
       }

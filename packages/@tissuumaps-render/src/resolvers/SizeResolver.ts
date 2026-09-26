@@ -222,7 +222,7 @@ export class SizeResolver {
       ids,
       config.groupBy.column,
       sizeMap.default ?? defaultSize,
-      ConfigUtils.createGroupValueGetter(config, sizeMaps, defaultSize),
+      ConfigUtils.createGroupValueGetter(config, sizeMap, defaultSize),
       (size) => SizeResolver.packSize(size),
       { signal },
     );
