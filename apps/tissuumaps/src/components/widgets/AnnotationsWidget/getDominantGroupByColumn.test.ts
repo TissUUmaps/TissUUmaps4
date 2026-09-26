@@ -6,9 +6,9 @@ import type {
   GroupByConfig,
 } from "@tissuumaps/core";
 
-import { pickDefaultGroupByColumn } from "./pickDefaultGroupByColumn";
+import { getDominantGroupByColumn } from "./getDominantGroupByColumn";
 
-describe("pickDefaultGroupByColumn", () => {
+describe("getDominantGroupByColumn", () => {
   it("picks the column that most configurations group by", () => {
     const configs: GroupByConfig<false>[] = [
       { groupBy: { column: "cluster", map: undefined } },
@@ -16,7 +16,7 @@ describe("pickDefaultGroupByColumn", () => {
       { groupBy: { column: "gene", map: undefined } },
     ];
 
-    expect(pickDefaultGroupByColumn(configs)).toBe("gene");
+    expect(getDominantGroupByColumn(configs)).toBe("gene");
   });
 
   it("picks the first configuration's column on a tie", () => {
@@ -25,7 +25,7 @@ describe("pickDefaultGroupByColumn", () => {
       { groupBy: { column: "gene", map: undefined } },
     ];
 
-    expect(pickDefaultGroupByColumn(configs)).toBe("cluster");
+    expect(getDominantGroupByColumn(configs)).toBe("cluster");
   });
 
   it("ignores configurations that do not group", () => {
@@ -37,12 +37,12 @@ describe("pickDefaultGroupByColumn", () => {
       { groupBy: { column: "cluster", map: undefined } },
     ];
 
-    expect(pickDefaultGroupByColumn(configs)).toBe("cluster");
+    expect(getDominantGroupByColumn(configs)).toBe("cluster");
   });
 
   it("returns null without any grouping configuration", () => {
-    expect(pickDefaultGroupByColumn([])).toBeNull();
+    expect(getDominantGroupByColumn([])).toBeNull();
     const constantConfig: ConstantConfig<number> = { constant: { value: 1 } };
-    expect(pickDefaultGroupByColumn([constantConfig])).toBeNull();
+    expect(getDominantGroupByColumn([constantConfig])).toBeNull();
   });
 });

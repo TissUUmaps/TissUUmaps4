@@ -4,7 +4,7 @@ import { type Config, ConfigUtils } from "@tissuumaps/core";
 
 import { useGroupCounts } from "@/hooks/useGroupCounts";
 
-import { pickDefaultGroupByColumn } from "./pickDefaultGroupByColumn";
+import { getDominantGroupByColumn } from "./getDominantGroupByColumn";
 
 /** A setting of an annotated object and its configuration */
 export type GroupTableSetting = {
@@ -60,7 +60,7 @@ export function useGroupTable(
   const defaultGroupByColumn =
     tableId !== null
       ? (activeGroupByColumn ??
-        pickDefaultGroupByColumn(settings.map((setting) => setting.config)))
+        getDominantGroupByColumn(settings.map((setting) => setting.config)))
       : null;
 
   const [column, setColumn] = useState(defaultGroupByColumn);

@@ -1,12 +1,12 @@
 import { type Config, ConfigUtils } from "@tissuumaps/core";
 
 /**
- * Picks the table column that most of the given configurations group by
+ * Returns the table column that most of the given configurations group by
  *
  * @param configs - Property configurations, in order of priority
  * @returns The column, or `null` if no configuration groups by one
  */
-export function pickDefaultGroupByColumn(
+export function getDominantGroupByColumn(
   configs: Config<string>[],
 ): string | null {
   const counts = new Map<string, number>();
