@@ -12,7 +12,7 @@ export type GroupTableSetting = {
 };
 
 /** The state of the group table: the table column it groups by */
-export type GroupTable = {
+export type GroupTableState = {
   /** The table column that the group table groups by, if any */
   column: string | null;
 
@@ -35,7 +35,7 @@ export function useGroupTable(
   tableId: string | null,
   settings: GroupTableSetting[],
   activeSettingsCategory: string | null,
-): GroupTable {
+): GroupTableState {
   const activeConfig = settings.find(
     (setting) => setting.category === activeSettingsCategory,
   )?.config;

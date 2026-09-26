@@ -4,7 +4,7 @@ import { type Config, ConfigUtils, type GroupByConfig } from "@tissuumaps/core";
 
 import type { GroupAnnotationsTableColumnDef } from "./GroupAnnotationsTable";
 import type { GroupValuesAdapter } from "./adapter";
-import type { GroupTable } from "./useGroupTable";
+import type { GroupTableState } from "./useGroupTable";
 
 /** Width of a group column, in pixels */
 const groupColumnSize = 60;
@@ -40,7 +40,7 @@ function isGroupedByColumn<TConfig extends Config<string>>(
  * table's column
  */
 export function useGroupColumn<TValue, TConfig extends Config<string>>(
-  groupTable: GroupTable,
+  groupTable: GroupTableState,
   property: GroupProperty<TValue, TConfig>,
 ): GroupAnnotationsTableColumnDef | undefined {
   const { name, default: defaultValue, config, adapter } = property;
