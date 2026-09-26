@@ -38,25 +38,29 @@ describe("highlightGroup", () => {
       }),
     ],
     opacityMaps: [
-      { id: "highlightedGroup", name: "Project map", values: { A: 0 } },
+      { id: "highlightedItemGroup", name: "Project map", values: { A: 0 } },
     ],
   };
-  const highlightedGroup = { tableId: "cells", column: "cluster", group: "A" };
+  const highlightedItemGroup = {
+    tableId: "cells",
+    column: "cluster",
+    group: "A",
+  };
 
   it("returns the state itself without a highlighted group", () => {
     expect(highlightGroup(state, null)).toBe(state);
   });
 
   it("shows only the highlighted group of the objects on its table", () => {
-    const highlightedState = highlightGroup(state, highlightedGroup);
+    const highlightedState = highlightGroup(state, highlightedItemGroup);
 
     const opacityConfig = {
-      groupBy: { column: "cluster", map: "highlightedGroup" },
+      groupBy: { column: "cluster", map: "highlightedItemGroup" },
     };
     expect(highlightedState.points[0]!.pointOpacity).toEqual(opacityConfig);
     expect(highlightedState.shapes[0]!.shapeOpacity).toEqual(opacityConfig);
     expect(highlightedState.opacityMaps[0]).toEqual({
-      id: "highlightedGroup",
+      id: "highlightedItemGroup",
       name: "Highlighted group",
       values: { A: 1 },
       default: 0,
@@ -64,7 +68,7 @@ describe("highlightGroup", () => {
   });
 
   it("puts its map before the project maps, which it keeps", () => {
-    const highlightedState = highlightGroup(state, highlightedGroup);
+    const highlightedState = highlightGroup(state, highlightedItemGroup);
 
     expect(highlightedState.opacityMaps.slice(1)).toEqual(state.opacityMaps);
   });
@@ -79,11 +83,11 @@ describe("highlightGroup", () => {
 
     const highlightedState = highlightGroup(
       { ...state, labels: [labels] },
-      highlightedGroup,
+      highlightedItemGroup,
     );
 
     expect(highlightedState.labels[0]!.labelOpacity).toEqual({
-      groupBy: { column: "cluster", map: "highlightedGroup" },
+      groupBy: { column: "cluster", map: "highlightedItemGroup" },
     });
     expect(highlightedState.labels[0]!.labelVisibility).toEqual({
       constant: { value: true },
@@ -91,7 +95,7 @@ describe("highlightGroup", () => {
   });
 
   it("shows the highlighted group even if it is hidden", () => {
-    const highlightedState = highlightGroup(state, highlightedGroup);
+    const highlightedState = highlightGroup(state, highlightedItemGroup);
 
     const visibilityConfig = { constant: { value: true } };
     expect(highlightedState.points[0]!.pointVisibility).toEqual(
@@ -103,7 +107,7 @@ describe("highlightGroup", () => {
   });
 
   it("keeps the fill and stroke settings of shapes", () => {
-    const highlightedState = highlightGroup(state, highlightedGroup);
+    const highlightedState = highlightGroup(state, highlightedItemGroup);
 
     expect(highlightedState.shapes[0]!.shapeStrokeVisibility).toEqual({
       constant: { value: false },
@@ -114,13 +118,13 @@ describe("highlightGroup", () => {
   });
 
   it("leaves the objects on other tables untouched", () => {
-    const highlightedState = highlightGroup(state, highlightedGroup);
+    const highlightedState = highlightGroup(state, highlightedItemGroup);
 
     expect(highlightedState.points[1]).toBe(state.points[1]);
   });
 
   it("keeps a collection without an object on the table as is", () => {
-    const highlightedState = highlightGroup(state, highlightedGroup);
+    const highlightedState = highlightGroup(state, highlightedItemGroup);
 
     expect(highlightedState.labels).toBe(state.labels);
   });

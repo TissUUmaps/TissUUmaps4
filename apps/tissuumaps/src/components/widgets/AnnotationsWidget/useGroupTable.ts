@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import { type Config, ConfigUtils } from "@tissuumaps/core";
 
-import { useGroupCounts } from "@/hooks/useGroupCounts";
+import { useItemGroupCounts } from "@/hooks/useItemGroupCounts";
 
 import { getDominantGroupByColumn } from "./getDominantGroupByColumn";
 
@@ -81,7 +81,7 @@ export function useGroupTable(
     }
   }
 
-  const groupCounts = useGroupCounts(tableId, column);
+  const groupCounts = useItemGroupCounts(tableId, column);
 
   return useMemo(
     () => ({ objectName, column, setColumn, groupCounts }),

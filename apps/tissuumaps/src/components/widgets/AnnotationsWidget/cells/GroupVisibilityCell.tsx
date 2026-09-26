@@ -1,7 +1,7 @@
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import type { HighlightedGroup } from "@tissuumaps/core";
+import type { HighlightedItemGroup } from "@tissuumaps/core";
 
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/stores/app";
@@ -11,19 +11,21 @@ export type GroupVisibilityCellProps = {
   onVisibleChange: (visible: boolean) => void;
 
   /** The group to show alone in the viewer while the button is hovered */
-  highlightedGroup?: HighlightedGroup;
+  highlightedItemGroup?: HighlightedItemGroup;
 };
 
 export function GroupVisibilityCell({
   visible,
   onVisibleChange,
-  highlightedGroup,
+  highlightedItemGroup,
 }: GroupVisibilityCellProps) {
-  const setHighlightedGroup = useAppStore((state) => state.setHighlightedGroup);
+  const setHighlightedItemGroup = useAppStore(
+    (state) => state.setHighlightedItemGroup,
+  );
 
   const [hovered, setHovered] = useState(false);
 
-  const { tableId, column, group } = highlightedGroup ?? {};
+  const { tableId, column, group } = highlightedItemGroup ?? {};
 
   // a row that is scrolled out or filtered away unmounts without a mouse leave
   useEffect(() => {
@@ -35,11 +37,11 @@ export function GroupVisibilityCell({
     ) {
       return;
     }
-    setHighlightedGroup({ tableId, column, group });
+    setHighlightedItemGroup({ tableId, column, group });
     return () => {
-      setHighlightedGroup(null);
+      setHighlightedItemGroup(null);
     };
-  }, [hovered, tableId, column, group, setHighlightedGroup]);
+  }, [hovered, tableId, column, group, setHighlightedItemGroup]);
 
   return (
     <Button

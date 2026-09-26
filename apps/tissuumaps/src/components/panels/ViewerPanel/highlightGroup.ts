@@ -1,5 +1,5 @@
 import type {
-  HighlightedGroup,
+  HighlightedItemGroup,
   Labels,
   OpacityConfig,
   Points,
@@ -9,7 +9,7 @@ import type {
 import type { ViewerAdapter } from "@tissuumaps/viewer";
 
 /** ID of the transient opacity map that shows only the highlighted group */
-const highlightOpacityMapId = "highlightedGroup";
+const highlightOpacityMapId = "highlightedItemGroup";
 
 export type HighlightableState = Pick<
   ViewerAdapter,
@@ -33,17 +33,17 @@ export type HighlightableState = Pick<
  * as is, so that its renderer is not woken up for a change it does not see.
  *
  * @param state - Objects and opacity maps of the project
- * @param highlightedGroup - The highlighted group, or `null` for none
+ * @param highlightedItemGroup - The highlighted group, or `null` for none
  * @returns The state to render
  */
 export function highlightGroup(
   state: HighlightableState,
-  highlightedGroup: HighlightedGroup | null,
+  highlightedItemGroup: HighlightedItemGroup | null,
 ): HighlightableState {
-  if (highlightedGroup === null) {
+  if (highlightedItemGroup === null) {
     return state;
   }
-  const { tableId, column, group } = highlightedGroup;
+  const { tableId, column, group } = highlightedItemGroup;
   const opacityConfig: OpacityConfig = {
     groupBy: { column, map: highlightOpacityMapId },
   };

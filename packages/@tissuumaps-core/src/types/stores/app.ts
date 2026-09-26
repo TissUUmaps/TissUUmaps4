@@ -21,8 +21,8 @@ export type ImageChannelPreview = {
   channelIndex: number;
 };
 
-/** A group of a categorical table column that is highlighted in the viewer */
-export type HighlightedGroup = {
+/** The items of one group of a table column, highlighted in the viewer */
+export type HighlightedItemGroup = {
   /** ID of the table */
   tableId: string;
 
@@ -50,7 +50,7 @@ export type AppStoreState = {
    * The table group shown alone in the viewer, hiding every other item of the
    * same table, or `null` for none
    */
-  highlightedGroup: HighlightedGroup | null;
+  highlightedItemGroup: HighlightedItemGroup | null;
 
   /** The registered image data providers, by data source type */
   imageDataProviders: Map<
@@ -129,10 +129,12 @@ export type AppStoreActions = {
   /**
    * Highlights a table group in the viewer
    *
-   * @param highlightedGroup - The group to highlight, or `null` to highlight
+   * @param highlightedItemGroup - The group to highlight, or `null` to highlight
    * none
    */
-  setHighlightedGroup: (highlightedGroup: HighlightedGroup | null) => void;
+  setHighlightedItemGroup: (
+    highlightedItemGroup: HighlightedItemGroup | null,
+  ) => void;
 
   /**
    * Registers an image data provider

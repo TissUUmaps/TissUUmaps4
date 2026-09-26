@@ -21,7 +21,7 @@ type LoadedGroupCounts = {
  * @returns The row count of every group, or `null` without a table or column,
  * while loading, or if loading failed
  */
-export function useGroupCounts(
+export function useItemGroupCounts(
   tableId: string | null,
   column: string | null,
 ): Map<string, number> | null {

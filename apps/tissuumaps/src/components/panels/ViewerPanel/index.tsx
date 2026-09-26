@@ -51,7 +51,9 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     [images, imageChannelPreview],
   );
 
-  const highlightedGroup = useAppStore((state) => state.highlightedGroup);
+  const highlightedItemGroup = useAppStore(
+    (state) => state.highlightedItemGroup,
+  );
 
   const projectState = useProjectStore(
     useShallow((state) => ({
@@ -81,8 +83,8 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   // identity, so rebuilding it for an unrelated change of the adapter would
   // re-resolve and re-upload the colors of every highlighted object.
   const highlightedState = useMemo(
-    () => highlightGroup(projectState, highlightedGroup),
-    [projectState, highlightedGroup],
+    () => highlightGroup(projectState, highlightedItemGroup),
+    [projectState, highlightedItemGroup],
   );
 
   const viewerAdapter: ViewerAdapter = useMemo(

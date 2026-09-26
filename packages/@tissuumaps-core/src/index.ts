@@ -212,7 +212,7 @@ export {
   type AppStoreActions,
   type AppStore,
   type AppStoreApi,
-  type HighlightedGroup,
+  type HighlightedItemGroup,
 } from "./types/stores/app";
 export {
   type DataRef,
