@@ -6,6 +6,34 @@ import { ConfigUtils } from "./ConfigUtils";
 import { HashUtils } from "./HashUtils";
 
 describe("ConfigUtils", () => {
+  describe("findGroupByMap", () => {
+    const maps: GroupValueMap<number>[] = [
+      { id: "map1", name: "Map 1", values: { A: 1 } },
+    ];
+
+    it("returns the map of an active group-by source as it is", () => {
+      const config = { groupBy: { column: "cluster", map: "map1" } };
+
+      expect(ConfigUtils.findGroupByMap(config, maps)).toBe(maps[0]);
+    });
+
+    it("returns undefined if group-by is not the active source", () => {
+      const config = {
+        source: "constant",
+        constant: { value: 1 },
+        groupBy: { column: "cluster", map: "map1" },
+      };
+
+      expect(ConfigUtils.findGroupByMap(config, maps)).toBeUndefined();
+    });
+
+    it("returns undefined if the map does not exist", () => {
+      const config = { groupBy: { column: "cluster", map: "missing" } };
+
+      expect(ConfigUtils.findGroupByMap(config, maps)).toBeUndefined();
+    });
+  });
+
   describe("createGroupValueGetter", () => {
     const map1: GroupValueMap<number> = {
       id: "map1",
