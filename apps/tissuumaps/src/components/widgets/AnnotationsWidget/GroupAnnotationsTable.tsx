@@ -1,3 +1,4 @@
+import type { ColumnSort, ColumnVisibilityState } from "@tanstack/react-table";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 
@@ -60,14 +61,8 @@ function inactiveCell(isInactive: boolean, cell: ReactNode): ReactNode {
   );
 }
 
-/** The column the rows are sorted by, and in which direction */
-type Sorting = {
-  id: string;
-  descending: boolean;
-};
-
 /** The group rows are listed by name until a column is sorted by */
-const defaultSorting: Sorting = { id: "group", descending: false };
+const defaultSorting: ColumnSort = { id: "group", desc: false };
 
 /** Compares text with its numbers by value, so that `2` sorts before `10` */
 const textCollator = new Intl.Collator(undefined, { numeric: true });
@@ -105,10 +100,8 @@ export function GroupAnnotationsTable({
   groupVisibility,
   groupColumns,
 }: GroupAnnotationsTableProps) {
-  const [sorting, setSorting] = useState<Sorting>(defaultSorting);
-  const [shownColumns, setShownColumns] = useState<{ [id: string]: boolean }>(
-    {},
-  );
+  const [sorting, setSorting] = useState<ColumnSort>(defaultSorting);
+  const [shownColumns, setShownColumns] = useState<ColumnVisibilityState>({});
 
   const pickableColumns = useMemo(() => {
     const pickableColumns: GroupColumnPickerProps["columns"] = [];
@@ -168,7 +161,7 @@ export function GroupAnnotationsTable({
         : groupColumns?.find(
             (groupColumn) => groupColumn.id === activeSorting.id,
           )?.getSortValue;
-    const order = activeSorting.descending ? -1 : 1;
+    const order = activeSorting.desc ? -1 : 1;
     groupRows.sort(
       (a, b) =>
         order *
@@ -195,13 +188,13 @@ export function GroupAnnotationsTable({
         onClick={() => {
           setSorting({
             id,
-            descending: activeSorting.id === id && !activeSorting.descending,
+            desc: activeSorting.id === id && !activeSorting.desc,
           });
         }}
       >
         <span className="truncate">{title}</span>
         {activeSorting.id === id &&
-          (activeSorting.descending ? (
+          (activeSorting.desc ? (
             <ArrowDownIcon className="size-3.5" />
           ) : (
             <ArrowUpIcon className="size-3.5" />
