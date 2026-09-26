@@ -11,13 +11,13 @@ export type GroupVisibilityCellProps = {
   onVisibleChange: (visible: boolean) => void;
 
   /** The group to show alone in the viewer while the button is hovered */
-  highlightedItemGroup?: HighlightedItemGroup;
+  itemGroup?: HighlightedItemGroup;
 };
 
 export function GroupVisibilityCell({
   visible,
   onVisibleChange,
-  highlightedItemGroup,
+  itemGroup,
 }: GroupVisibilityCellProps) {
   const setHighlightedItemGroup = useAppStore(
     (state) => state.setHighlightedItemGroup,
@@ -25,9 +25,9 @@ export function GroupVisibilityCell({
 
   const [hovered, setHovered] = useState(false);
 
-  const { tableId, column, group } = highlightedItemGroup ?? {};
+  const { tableId, column, group } = itemGroup ?? {};
 
-  // a row that is scrolled out or filtered away unmounts without a mouse leave
+  // a row that is scrolled out or filtered away unmounts without a pointer leave
   useEffect(() => {
     if (
       !hovered ||
@@ -53,10 +53,10 @@ export function GroupVisibilityCell({
         setHovered(false);
         onVisibleChange(!visible);
       }}
-      onMouseEnter={() => {
+      onPointerEnter={() => {
         setHovered(true);
       }}
-      onMouseLeave={() => {
+      onPointerLeave={() => {
         setHovered(false);
       }}
     >

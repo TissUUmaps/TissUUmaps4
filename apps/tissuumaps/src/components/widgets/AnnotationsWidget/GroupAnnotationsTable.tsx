@@ -225,7 +225,7 @@ export function GroupAnnotationsTable({
               onVisibleChange={(visible) => {
                 onVisibleChange([row.original.group], visible);
               }}
-              highlightedItemGroup={{
+              itemGroup={{
                 tableId,
                 column: groupByColumn,
                 group: row.original.group,
