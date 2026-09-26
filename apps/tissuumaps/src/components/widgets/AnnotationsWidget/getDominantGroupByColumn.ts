@@ -19,7 +19,10 @@ export function getDominantGroupByColumn(
   for (const config of configs) {
     const column = ConfigUtils.getGroupByColumn(config);
     if (column !== undefined) {
-      const key = `${column.table ?? defaultTable ?? ""}/${column.column}`;
+      const key = JSON.stringify([
+        column.table ?? defaultTable ?? null,
+        column.column,
+      ]);
       counts.set(key, { column, count: (counts.get(key)?.count ?? 0) + 1 });
     }
   }
