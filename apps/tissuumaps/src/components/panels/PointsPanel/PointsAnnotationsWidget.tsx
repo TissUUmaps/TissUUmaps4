@@ -39,6 +39,7 @@ export function PointsAnnotationsWidget({
   const updatePoints = useProjectStore((state) => state.updatePoints);
 
   const tableId = points.dataSource.table ?? null;
+  const annotatedObject = useMemo(() => ({ pointsId: points.id }), [points.id]);
   const groupTable = useGroupTable(
     points.name,
     tableId,
@@ -122,6 +123,7 @@ export function PointsAnnotationsWidget({
       data={data}
       tableHeight={300}
       tableId={tableId}
+      annotatedObject={annotatedObject}
       selectedGroupByColumn={groupTable.column}
       onSelectedGroupByColumnChange={groupTable.setColumn}
       groupCounts={groupTable.groupCounts}

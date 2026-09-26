@@ -40,6 +40,7 @@ export function ShapesAnnotationsWidget({
   const updateShapes = useProjectStore((state) => state.updateShapes);
 
   const tableId = shapes.dataSource.table ?? null;
+  const annotatedObject = useMemo(() => ({ shapesId: shapes.id }), [shapes.id]);
   const groupTable = useGroupTable(
     shapes.name,
     tableId,
@@ -176,6 +177,7 @@ export function ShapesAnnotationsWidget({
       data={data}
       tableHeight={300}
       tableId={tableId}
+      annotatedObject={annotatedObject}
       selectedGroupByColumn={groupTable.column}
       onSelectedGroupByColumnChange={groupTable.setColumn}
       groupCounts={groupTable.groupCounts}

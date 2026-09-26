@@ -8,6 +8,8 @@ import type {
 } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 
+import type { HighlightedItemGroup } from "@tissuumaps/core";
+
 import {
   VirtualTable,
   type VirtualTableColumnDef,
@@ -82,7 +84,10 @@ function compareSortValues(a: unknown, b: unknown): number {
 export type GroupAnnotationsTableProps = {
   height: number;
   rowHeight: number;
-  tableId: string;
+
+  /** The object whose items are grouped, which the eye buttons highlight */
+  annotatedObject: HighlightedItemGroup["annotatedObject"];
+
   groupByColumn: string;
   groupCounts: Map<string, number> | null;
   groupVisibility?: GroupVisibility;
@@ -92,7 +97,7 @@ export type GroupAnnotationsTableProps = {
 export function GroupAnnotationsTable({
   height,
   rowHeight,
-  tableId,
+  annotatedObject,
   groupByColumn,
   groupCounts,
   groupVisibility,
@@ -227,7 +232,7 @@ export function GroupAnnotationsTable({
               onVisibleChange([row.original.group], visible);
             }}
             itemGroup={{
-              tableId,
+              annotatedObject,
               column: groupByColumn,
               group: row.original.group,
             }}
@@ -236,7 +241,13 @@ export function GroupAnnotationsTable({
       ),
     };
     return [visibleColumnDef, ...sortableColumnDefs];
-  }, [groupVisibility, groupRows, tableId, groupByColumn, sortableColumnDefs]);
+  }, [
+    groupVisibility,
+    groupRows,
+    annotatedObject,
+    groupByColumn,
+    sortableColumnDefs,
+  ]);
 
   return (
     <VirtualTable

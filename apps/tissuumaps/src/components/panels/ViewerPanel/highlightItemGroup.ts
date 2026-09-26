@@ -17,20 +17,21 @@ export type HighlightableState = Pick<
 >;
 
 /**
- * Overrides the opacity configurations of every object annotated by the
- * highlighted group's table so that only the highlighted group is shown
+ * Overrides the opacity configuration of the highlighted group's object so that
+ * only the highlighted group is shown
  *
- * The visibility configurations are overridden as well, so that a hidden group
+ * The visibility configuration is overridden as well, so that a hidden group
  * is shown while it is highlighted; the other groups are hidden by their
- * opacity.
+ * opacity. Other objects, even those annotated by the same table, are left as
+ * they are.
  *
  * The project itself is left untouched; the returned state is only handed to
  * the viewer.
  *
  * A new opacity map is built on every call, and the renderers compare maps by
  * identity, so callers memoize the result on the state and the highlighted
- * group. A collection without an object on the highlighted table is returned
- * as is, so that its renderer is not woken up for a change it does not see.
+ * group. The collections without the object are returned as is, so that their
+ * renderers are not woken up for a change they do not see.
  *
  * @param state - Objects and opacity maps of the project
  * @param highlightedItemGroup - The highlighted group, or `null` for none
@@ -43,27 +44,36 @@ export function highlightItemGroup(
   if (highlightedItemGroup === null) {
     return state;
   }
-  const { tableId, column, group } = highlightedItemGroup;
+  const { annotatedObject, column, group } = highlightedItemGroup;
   const opacityConfig: OpacityConfig = {
     groupBy: { column, map: highlightOpacityMapId },
   };
   const visibilityConfig: VisibilityConfig = { constant: { value: true } };
   return {
-    labels: overrideOnTable(state.labels, tableId, (labels) => ({
-      ...labels,
-      labelVisibility: visibilityConfig,
-      labelOpacity: opacityConfig,
-    })),
-    points: overrideOnTable(state.points, tableId, (points) => ({
-      ...points,
-      pointVisibility: visibilityConfig,
-      pointOpacity: opacityConfig,
-    })),
-    shapes: overrideOnTable(state.shapes, tableId, (shapes) => ({
-      ...shapes,
-      shapeVisibility: visibilityConfig,
-      shapeOpacity: opacityConfig,
-    })),
+    labels:
+      "labelsId" in annotatedObject
+        ? overrideObject(state.labels, annotatedObject.labelsId, (labels) => ({
+            ...labels,
+            labelVisibility: visibilityConfig,
+            labelOpacity: opacityConfig,
+          }))
+        : state.labels,
+    points:
+      "pointsId" in annotatedObject
+        ? overrideObject(state.points, annotatedObject.pointsId, (points) => ({
+            ...points,
+            pointVisibility: visibilityConfig,
+            pointOpacity: opacityConfig,
+          }))
+        : state.points,
+    shapes:
+      "shapesId" in annotatedObject
+        ? overrideObject(state.shapes, annotatedObject.shapesId, (shapes) => ({
+            ...shapes,
+            shapeVisibility: visibilityConfig,
+            shapeOpacity: opacityConfig,
+          }))
+        : state.shapes,
     // maps are looked up by their first match, so that a project map with the
     // same ID does not win
     opacityMaps: [
@@ -79,22 +89,19 @@ export function highlightItemGroup(
 }
 
 /**
- * Overrides the objects annotated by a table, keeping the array when there are none
+ * Overrides one object of a collection
  *
  * @param objects - The objects of one collection
- * @param table - ID of the highlighted group's table
- * @param override - Returns the object with its opacity overridden
- * @returns The collection with its objects on the table overridden, or the
- * very same array if none of them is
+ * @param id - ID of the object to override
+ * @param override - Returns the object with its configurations overridden
+ * @returns The collection with the object overridden
  */
-function overrideOnTable<TObject extends Labels | Points | Shapes>(
+function overrideObject<TObject extends Labels | Points | Shapes>(
   objects: TObject[],
-  tableId: string,
+  id: string,
   override: (object: TObject) => TObject,
 ): TObject[] {
-  return objects.some((object) => object.dataSource.table === tableId)
-    ? objects.map((object) =>
-        object.dataSource.table === tableId ? override(object) : object,
-      )
-    : objects;
+  return objects.map((object) =>
+    object.id === id ? override(object) : object,
+  );
 }

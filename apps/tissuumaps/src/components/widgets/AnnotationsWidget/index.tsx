@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import type { ItemsData } from "@tissuumaps/core";
+import type { HighlightedItemGroup, ItemsData } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
@@ -45,6 +45,13 @@ export type AnnotationsWidgetProps = {
   data?: ItemsData;
   tableHeight: number;
   tableId: string | null;
+
+  /**
+   * The object whose items are annotated, which the eye buttons highlight; its
+   * identity must be stable, as the highlight follows it
+   */
+  annotatedObject: HighlightedItemGroup["annotatedObject"];
+
   selectedGroupByColumn: string | null;
   onSelectedGroupByColumnChange: (column: string | null) => void;
   groupCounts: Map<string, number> | null;
@@ -57,6 +64,7 @@ export function AnnotationsWidget({
   data,
   tableHeight,
   tableId,
+  annotatedObject,
   selectedGroupByColumn,
   onSelectedGroupByColumnChange,
   groupCounts,
@@ -128,7 +136,7 @@ export function AnnotationsWidget({
         <GroupAnnotationsTable
           height={tableHeight}
           rowHeight={tableRowHeight}
-          tableId={tableId}
+          annotatedObject={annotatedObject}
           groupByColumn={selectedGroupByColumn}
           groupCounts={filteredGroupCounts}
           groupVisibility={groupVisibility}

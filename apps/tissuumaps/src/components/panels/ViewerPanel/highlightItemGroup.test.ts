@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { createLabels, createPoints, createShapes } from "@tissuumaps/core";
+import {
+  type HighlightedItemGroup,
+  createLabels,
+  createPoints,
+  createShapes,
+} from "@tissuumaps/core";
 
 import {
   type HighlightableState,
@@ -8,13 +13,14 @@ import {
 } from "./highlightItemGroup";
 
 describe("highlightItemGroup", () => {
+  // the labels and the shapes share their ID and their table
   const state: HighlightableState = {
     labels: [
       createLabels({
-        id: "labels",
+        id: "cells",
         name: "Labels",
         layer: "layer",
-        dataSource: { type: "tiff", table: "other" },
+        dataSource: { type: "tiff", table: "cells" },
       }),
     ],
     points: [
@@ -25,15 +31,15 @@ describe("highlightItemGroup", () => {
         dataSource: { type: "csv", table: "cells" },
       }),
       createPoints({
-        id: "unannotated",
-        name: "Unannotated",
+        id: "other",
+        name: "Other points",
         layer: "layer",
-        dataSource: { type: "csv" },
+        dataSource: { type: "csv", table: "cells" },
       }),
     ],
     shapes: [
       createShapes({
-        id: "shapes",
+        id: "cells",
         name: "Shapes",
         layer: "layer",
         dataSource: { type: "geojson", table: "cells" },
@@ -44,23 +50,23 @@ describe("highlightItemGroup", () => {
       { id: "highlightedItemGroup", name: "Project map", values: { A: 0 } },
     ],
   };
-  const highlightedItemGroup = {
-    tableId: "cells",
+  const highlightedShapesGroup: HighlightedItemGroup = {
+    annotatedObject: { shapesId: "cells" },
     column: "cluster",
     group: "A",
   };
+  const opacityConfig = {
+    groupBy: { column: "cluster", map: "highlightedItemGroup" },
+  };
+  const visibilityConfig = { constant: { value: true } };
 
   it("returns the state itself without a highlighted group", () => {
     expect(highlightItemGroup(state, null)).toBe(state);
   });
 
-  it("shows only the highlighted group of the objects on its table", () => {
-    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
+  it("shows only the highlighted group of its object", () => {
+    const highlightedState = highlightItemGroup(state, highlightedShapesGroup);
 
-    const opacityConfig = {
-      groupBy: { column: "cluster", map: "highlightedItemGroup" },
-    };
-    expect(highlightedState.points[0]!.pointOpacity).toEqual(opacityConfig);
     expect(highlightedState.shapes[0]!.shapeOpacity).toEqual(opacityConfig);
     expect(highlightedState.opacityMaps[0]).toEqual({
       id: "highlightedItemGroup",
@@ -70,47 +76,52 @@ describe("highlightItemGroup", () => {
     });
   });
 
+  it("leaves the other objects on the same table untouched", () => {
+    const highlightedState = highlightItemGroup(state, highlightedShapesGroup);
+
+    expect(highlightedState.labels).toBe(state.labels);
+    expect(highlightedState.points).toBe(state.points);
+  });
+
+  it("leaves the other objects of its collection untouched", () => {
+    const highlightedState = highlightItemGroup(state, {
+      ...highlightedShapesGroup,
+      annotatedObject: { pointsId: "points" },
+    });
+
+    expect(highlightedState.points[0]!.pointOpacity).toEqual(opacityConfig);
+    expect(highlightedState.points[1]).toBe(state.points[1]);
+  });
+
+  it("overrides labels", () => {
+    const highlightedState = highlightItemGroup(state, {
+      ...highlightedShapesGroup,
+      annotatedObject: { labelsId: "cells" },
+    });
+
+    expect(highlightedState.labels[0]!.labelOpacity).toEqual(opacityConfig);
+    expect(highlightedState.labels[0]!.labelVisibility).toEqual(
+      visibilityConfig,
+    );
+    expect(highlightedState.shapes).toBe(state.shapes);
+  });
+
   it("puts its map before the project maps, which it keeps", () => {
-    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
+    const highlightedState = highlightItemGroup(state, highlightedShapesGroup);
 
     expect(highlightedState.opacityMaps.slice(1)).toEqual(state.opacityMaps);
   });
 
-  it("overrides the labels on its table", () => {
-    const labels = createLabels({
-      id: "labels",
-      name: "Labels",
-      layer: "layer",
-      dataSource: { type: "tiff", table: "cells" },
-    });
-
-    const highlightedState = highlightItemGroup(
-      { ...state, labels: [labels] },
-      highlightedItemGroup,
-    );
-
-    expect(highlightedState.labels[0]!.labelOpacity).toEqual({
-      groupBy: { column: "cluster", map: "highlightedItemGroup" },
-    });
-    expect(highlightedState.labels[0]!.labelVisibility).toEqual({
-      constant: { value: true },
-    });
-  });
-
   it("shows the highlighted group even if it is hidden", () => {
-    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
+    const highlightedState = highlightItemGroup(state, highlightedShapesGroup);
 
-    const visibilityConfig = { constant: { value: true } };
-    expect(highlightedState.points[0]!.pointVisibility).toEqual(
-      visibilityConfig,
-    );
     expect(highlightedState.shapes[0]!.shapeVisibility).toEqual(
       visibilityConfig,
     );
   });
 
   it("keeps the fill and stroke settings of shapes", () => {
-    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
+    const highlightedState = highlightItemGroup(state, highlightedShapesGroup);
 
     expect(highlightedState.shapes[0]!.shapeStrokeVisibility).toEqual({
       constant: { value: false },
@@ -118,17 +129,5 @@ describe("highlightItemGroup", () => {
     expect(highlightedState.shapes[0]!.shapeFillOpacity).toEqual(
       state.shapes[0]!.shapeFillOpacity,
     );
-  });
-
-  it("leaves the objects on other tables untouched", () => {
-    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
-
-    expect(highlightedState.points[1]).toBe(state.points[1]);
-  });
-
-  it("keeps a collection without an object on the table as is", () => {
-    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
-
-    expect(highlightedState.labels).toBe(state.labels);
   });
 });

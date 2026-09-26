@@ -21,12 +21,16 @@ export type ImageChannelPreview = {
   channelIndex: number;
 };
 
-/** The items of one group of a table column, highlighted in the viewer */
+/** The items of one group of a labels, points or shapes object, highlighted in the viewer */
 export type HighlightedItemGroup = {
-  /** ID of the table */
-  tableId: string;
+  /**
+   * The object whose items are grouped, by the ID of its labels, points or
+   * shapes; IDs are only unique within each of these lists
+   */
+  annotatedObject:
+    { labelsId: string } | { pointsId: string } | { shapesId: string };
 
-  /** Name of the categorical table column */
+  /** Name of the categorical column of the object's table */
   column: string;
 
   /** The group, i.e. the cell value as a string */
@@ -47,8 +51,8 @@ export type AppStoreState = {
   imageChannelPreview: ImageChannelPreview | null;
 
   /**
-   * The table group shown alone in the viewer, hiding every other item of the
-   * same table, or `null` for none
+   * The group shown alone in the viewer, hiding every other item of its
+   * object, or `null` for none
    */
   highlightedItemGroup: HighlightedItemGroup | null;
 
@@ -127,7 +131,7 @@ export type AppStoreActions = {
   ) => void;
 
   /**
-   * Highlights a table group in the viewer
+   * Highlights a group of an object in the viewer
    *
    * @param highlightedItemGroup - The group to highlight, or `null` to highlight
    * none

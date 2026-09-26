@@ -32,6 +32,7 @@ export function LabelsAnnotationsWidget({
   const updateLabels = useProjectStore((state) => state.updateLabels);
 
   const tableId = labels.dataSource.table ?? null;
+  const annotatedObject = useMemo(() => ({ labelsId: labels.id }), [labels.id]);
   const groupTable = useGroupTable(
     labels.name,
     tableId,
@@ -92,6 +93,7 @@ export function LabelsAnnotationsWidget({
     <AnnotationsWidget
       tableHeight={300}
       tableId={tableId}
+      annotatedObject={annotatedObject}
       selectedGroupByColumn={groupTable.column}
       onSelectedGroupByColumnChange={groupTable.setColumn}
       groupCounts={groupTable.groupCounts}

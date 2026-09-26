@@ -25,23 +25,23 @@ export function GroupVisibilityCell({
 
   const [hovered, setHovered] = useState(false);
 
-  const { tableId, column, group } = itemGroup ?? {};
+  const { annotatedObject, column, group } = itemGroup ?? {};
 
   // a row that is scrolled out or filtered away unmounts without a pointer leave
   useEffect(() => {
     if (
       !hovered ||
-      tableId === undefined ||
+      annotatedObject === undefined ||
       column === undefined ||
       group === undefined
     ) {
       return;
     }
-    setHighlightedItemGroup({ tableId, column, group });
+    setHighlightedItemGroup({ annotatedObject, column, group });
     return () => {
       setHighlightedItemGroup(null);
     };
-  }, [hovered, tableId, column, group, setHighlightedItemGroup]);
+  }, [hovered, annotatedObject, column, group, setHighlightedItemGroup]);
 
   return (
     <Button
