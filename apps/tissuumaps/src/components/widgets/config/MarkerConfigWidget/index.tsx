@@ -1,14 +1,11 @@
-import type { MarkerConfig } from "@tissuumaps/core";
+import { ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { markers } from "@/components/markers";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
-import {
-  type MapReferencingObjects,
-  useReferencedMapIds,
-} from "@/hooks/useReferencedMapIds";
+import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { MarkerConfigWidgetAdapter } from "./adapter";
@@ -104,11 +101,6 @@ function FromMarkerConfigWidget({
   );
 }
 
-/** Returns the configurations that can refer to a marker map */
-function getMarkerConfigs(objects: MapReferencingObjects): MarkerConfig[] {
-  return objects.points.map((points) => points.pointMarker);
-}
-
 type GroupByMarkerConfigWidgetProps = {
   adapter: MarkerConfigWidgetAdapter;
   className?: string;
@@ -128,7 +120,9 @@ function GroupByMarkerConfigWidget({
 
   const markerMaps = useProjectStore((state) => state.markerMaps);
   const deleteMarkerMap = useProjectStore((state) => state.deleteMarkerMap);
-  const referencedMapIds = useReferencedMapIds(getMarkerConfigs);
+  const referencedMapIds = useReferencedMapIds((project) =>
+    ProjectUtils.getMarkerConfigs(project),
+  );
 
   return (
     <div className={className}>

@@ -1,13 +1,10 @@
-import { MathUtils, type OpacityConfig } from "@tissuumaps/core";
+import { MathUtils, ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Input } from "@/components/ui/input";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
-import {
-  type MapReferencingObjects,
-  useReferencedMapIds,
-} from "@/hooks/useReferencedMapIds";
+import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
@@ -104,19 +101,6 @@ function FromOpacityConfigWidget({
   );
 }
 
-/** Returns the configurations that can refer to an opacity map */
-function getOpacityConfigs(objects: MapReferencingObjects): OpacityConfig[] {
-  return [
-    ...objects.labels.map((labels) => labels.labelOpacity),
-    ...objects.points.map((points) => points.pointOpacity),
-    ...objects.shapes.flatMap((shapes) => [
-      shapes.shapeOpacity,
-      shapes.shapeFillOpacity,
-      shapes.shapeStrokeOpacity,
-    ]),
-  ];
-}
-
 type GroupByOpacityConfigWidgetProps = {
   adapter: OpacityConfigWidgetAdapter;
   className?: string;
@@ -136,7 +120,9 @@ function GroupByOpacityConfigWidget({
 
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
   const deleteOpacityMap = useProjectStore((state) => state.deleteOpacityMap);
-  const referencedMapIds = useReferencedMapIds(getOpacityConfigs);
+  const referencedMapIds = useReferencedMapIds((project) =>
+    ProjectUtils.getOpacityConfigs(project),
+  );
 
   return (
     <div className={className}>

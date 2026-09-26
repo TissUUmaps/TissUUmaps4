@@ -1,8 +1,8 @@
 import { RefreshCwIcon, Square } from "lucide-react";
 
 import {
-  type ColorConfig,
   MathUtils,
+  ProjectUtils,
   RandomUtils,
   categoricalColorPalettes,
   continuousColorPalettes,
@@ -20,10 +20,7 @@ import {
 } from "@/components/ui/input-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
-import {
-  type MapReferencingObjects,
-  useReferencedMapIds,
-} from "@/hooks/useReferencedMapIds";
+import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import { ColorPaletteSelect } from "./ColorPaletteSelect";
@@ -232,18 +229,6 @@ function FromColorConfigWidget({
   );
 }
 
-/** Returns the configurations that can refer to a color map */
-function getColorConfigs(objects: MapReferencingObjects): ColorConfig[] {
-  return [
-    ...objects.labels.map((labels) => labels.labelColor),
-    ...objects.points.map((points) => points.pointColor),
-    ...objects.shapes.flatMap((shapes) => [
-      shapes.shapeFillColor,
-      shapes.shapeStrokeColor,
-    ]),
-  ];
-}
-
 type GroupByColorConfigWidgetProps = {
   adapter: ColorConfigWidgetAdapter;
   className?: string;
@@ -265,7 +250,9 @@ function GroupByColorConfigWidget({
 
   const colorMaps = useProjectStore((state) => state.colorMaps);
   const deleteColorMap = useProjectStore((state) => state.deleteColorMap);
-  const referencedMapIds = useReferencedMapIds(getColorConfigs);
+  const referencedMapIds = useReferencedMapIds((project) =>
+    ProjectUtils.getColorConfigs(project),
+  );
 
   return (
     <div className={className}>

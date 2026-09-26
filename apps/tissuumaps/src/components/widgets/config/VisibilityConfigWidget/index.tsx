@@ -1,13 +1,10 @@
-import type { VisibilityConfig } from "@tissuumaps/core";
+import { ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Switch } from "@/components/ui/switch";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
-import {
-  type MapReferencingObjects,
-  useReferencedMapIds,
-} from "@/hooks/useReferencedMapIds";
+import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { VisibilityConfigWidgetAdapter } from "./adapter";
@@ -100,21 +97,6 @@ function FromVisibilityConfigWidget({
   );
 }
 
-/** Returns the configurations that can refer to a visibility map */
-function getVisibilityConfigs(
-  objects: MapReferencingObjects,
-): VisibilityConfig[] {
-  return [
-    ...objects.labels.map((labels) => labels.labelVisibility),
-    ...objects.points.map((points) => points.pointVisibility),
-    ...objects.shapes.flatMap((shapes) => [
-      shapes.shapeVisibility,
-      shapes.shapeFillVisibility,
-      shapes.shapeStrokeVisibility,
-    ]),
-  ];
-}
-
 type GroupByVisibilityConfigWidgetProps = {
   adapter: VisibilityConfigWidgetAdapter;
   className?: string;
@@ -136,7 +118,9 @@ function GroupByVisibilityConfigWidget({
   const deleteVisibilityMap = useProjectStore(
     (state) => state.deleteVisibilityMap,
   );
-  const referencedMapIds = useReferencedMapIds(getVisibilityConfigs);
+  const referencedMapIds = useReferencedMapIds((project) =>
+    ProjectUtils.getVisibilityConfigs(project),
+  );
 
   return (
     <div className={className}>

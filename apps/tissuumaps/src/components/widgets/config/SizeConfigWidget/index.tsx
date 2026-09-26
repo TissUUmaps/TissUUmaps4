@@ -1,14 +1,11 @@
-import type { CoordinateSpace, SizeConfig } from "@tissuumaps/core";
+import { type CoordinateSpace, ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldItem, FieldLabel } from "@/components/common/field";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
-import {
-  type MapReferencingObjects,
-  useReferencedMapIds,
-} from "@/hooks/useReferencedMapIds";
+import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { SizeConfigWidgetAdapter } from "./adapter";
@@ -149,11 +146,6 @@ function FromSizeConfigWidget({
   );
 }
 
-/** Returns the configurations that can refer to a size map */
-function getSizeConfigs(objects: MapReferencingObjects): SizeConfig[] {
-  return objects.points.map((points) => points.pointSize);
-}
-
 type GroupBySizeConfigWidgetProps = {
   adapter: SizeConfigWidgetAdapter;
   className?: string;
@@ -175,7 +167,9 @@ function GroupBySizeConfigWidget({
 
   const sizeMaps = useProjectStore((state) => state.sizeMaps);
   const deleteSizeMap = useProjectStore((state) => state.deleteSizeMap);
-  const referencedMapIds = useReferencedMapIds(getSizeConfigs);
+  const referencedMapIds = useReferencedMapIds((project) =>
+    ProjectUtils.getSizeConfigs(project),
+  );
 
   return (
     <div className={className}>
