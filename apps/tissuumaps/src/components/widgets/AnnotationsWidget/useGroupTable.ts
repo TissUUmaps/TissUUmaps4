@@ -44,7 +44,7 @@ export function useGroupTable(
       ? (ConfigUtils.getGroupByColumn(activeConfig) ?? null)
       : null;
 
-  const [column, setColumn] = useState<string | null>(null);
+  const [column, setColumn] = useState(activeGroupByColumn);
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
