@@ -20,39 +20,54 @@ function toJson(value: unknown): Uint8Array<ArrayBuffer> {
 }
 
 /**
- * Writes a Zarr v2 store with consolidated metadata, holding an int32 array
- * `x` in the given group
+ * Writes a Zarr v3 store with its metadata consolidated in the root
+ * `zarr.json`, holding an int32 array `x` in the given group
  *
  * @returns The files of the store, by path below the store root
  */
 function writeStore(group: string): Map<string, Uint8Array<ArrayBuffer>> {
   const files = new Map<string, Uint8Array<ArrayBuffer>>();
   const metadata: Record<string, unknown> = {};
-  const writeMetadata = (key: string, value: unknown) => {
-    metadata[key] = value;
-    files.set(`/${key}`, toJson(value));
+  const writeNode = (path: string, node: unknown) => {
+    metadata[path] = node;
+    files.set(`/${path}/zarr.json`, toJson(node));
   };
   const parts = group.split("/");
-  for (let i = 0; i <= parts.length; i++) {
-    const prefix = parts.slice(0, i).map((part) => `${part}/`);
-    writeMetadata(`${prefix.join("")}.zgroup`, { zarr_format: 2 });
-    writeMetadata(
-      `${prefix.join("")}.zattrs`,
-      i === parts.length ? tableAttrs : {},
-    );
+  for (let i = 1; i <= parts.length; i++) {
+    writeNode(parts.slice(0, i).join("/"), {
+      zarr_format: 3,
+      node_type: "group",
+      attributes: i === parts.length ? tableAttrs : {},
+    });
   }
-  writeMetadata(`${group}/x/.zarray`, {
-    zarr_format: 2,
+  writeNode(`${group}/x`, {
+    zarr_format: 3,
+    node_type: "array",
     shape: [3],
-    chunks: [3],
-    dtype: "<i4",
-    compressor: null,
-    fill_value: null,
-    filters: null,
-    order: "C",
+    data_type: "int32",
+    chunk_grid: { name: "regular", configuration: { chunk_shape: [3] } },
+    chunk_key_encoding: { name: "default", configuration: { separator: "/" } },
+    fill_value: 0,
+    codecs: [{ name: "bytes", configuration: { endian: "little" } }],
+    attributes: {},
   });
-  files.set(`/${group}/x/0`, new Uint8Array(new Int32Array([1, 2, 3]).buffer));
-  files.set("/.zmetadata", toJson({ zarr_consolidated_format: 1, metadata }));
+  files.set(
+    `/${group}/x/c/0`,
+    new Uint8Array(new Int32Array([1, 2, 3]).buffer),
+  );
+  files.set(
+    "/zarr.json",
+    toJson({
+      zarr_format: 3,
+      node_type: "group",
+      attributes: {},
+      consolidated_metadata: {
+        kind: "inline",
+        must_understand: false,
+        metadata,
+      },
+    }),
+  );
   return files;
 }
 
@@ -184,14 +199,14 @@ describe("openZarrStore", () => {
     );
     expect(fetchMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "https://example.org/my%20data/sdata.zarr/.zmetadata",
+        url: "https://example.org/my%20data/sdata.zarr/zarr.json",
       }),
     );
   });
 
   it("walks past failures other than missing files", async () => {
     serveStore("/data/sdata.zarr", writeStore("tables/adata"), (path) =>
-      path.endsWith("zmetadata") ? 403 : 404,
+      path.startsWith("/data/sdata.zarr/tables/") ? 403 : 404,
     );
     await expectTable(
       await openZarrStore("https://example.org/data/sdata.zarr/tables/adata"),
@@ -200,7 +215,10 @@ describe("openZarrStore", () => {
 
   it("rejects if no store has consolidated metadata", async () => {
     const files = writeStore("tables/adata");
-    files.delete("/.zmetadata");
+    files.set(
+      "/zarr.json",
+      toJson({ zarr_format: 3, node_type: "group", attributes: {} }),
+    );
     serveStore("/data/sdata.zarr", files);
     const promise = openZarrStore(
       "https://example.org/data/sdata.zarr/tables/adata",
