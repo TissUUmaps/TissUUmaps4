@@ -1,4 +1,8 @@
-import type { ColumnSort, ColumnVisibilityState } from "@tanstack/react-table";
+import type {
+  ColumnSort,
+  ColumnVisibilityState,
+  SortingState,
+} from "@tanstack/react-table";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 
@@ -100,50 +104,33 @@ export function GroupAnnotationsTable({
   groupVisibility,
   groupColumns,
 }: GroupAnnotationsTableProps) {
-  const [sorting, setSorting] = useState<ColumnSort>(defaultSorting);
+  const [sorting, setSorting] = useState<SortingState>([defaultSorting]);
   const [shownColumns, setShownColumns] = useState<ColumnVisibilityState>({});
 
-  const pickableColumns = useMemo(() => {
-    const pickableColumns: GroupColumnPickerProps["columns"] = [];
-    const pickColumn = (
-      id: string,
-      header: string,
-      isShownByDefault: boolean,
-    ) => {
-      pickableColumns.push({
-        id,
-        header,
-        isShown: shownColumns[id] ?? isShownByDefault,
-      });
-    };
-    if (groupVisibility !== undefined) {
-      pickColumn("visible", "Visibility", true);
-    }
-    pickColumn("count", "Count", true);
+  const columnVisibility = useMemo(() => {
+    const columnVisibility: ColumnVisibilityState = { count: true };
     for (const groupColumn of groupColumns ?? []) {
-      pickColumn(
-        groupColumn.id,
-        groupColumn.header,
-        groupColumn.isShownByDefault,
-      );
+      columnVisibility[groupColumn.id] = groupColumn.isShownByDefault;
     }
-    return pickableColumns;
-  }, [shownColumns, groupVisibility, groupColumns]);
+    return { ...columnVisibility, ...shownColumns };
+  }, [groupColumns, shownColumns]);
 
-  const shownColumnIds = useMemo(
-    () =>
-      new Set(
-        pickableColumns
-          .filter((pickableColumn) => pickableColumn.isShown)
-          .map((pickableColumn) => pickableColumn.id),
-      ),
-    [pickableColumns],
-  );
-
+  const [sortedColumn = defaultSorting] = sorting;
   const activeSorting =
-    sorting.id === "group" || shownColumnIds.has(sorting.id)
-      ? sorting
+    sortedColumn.id === "group" || columnVisibility[sortedColumn.id] === true
+      ? sortedColumn
       : defaultSorting;
+
+  const pickableColumns: GroupColumnPickerProps["columns"] = [
+    ...(groupVisibility !== undefined
+      ? [{ id: "visible", header: "Visibility" }]
+      : []),
+    { id: "count", header: "Count" },
+    ...(groupColumns ?? []).map(({ id, header }) => ({ id, header })),
+  ].map((column) => ({
+    ...column,
+    isShown: columnVisibility[column.id] ?? true,
+  }));
 
   // one row is materialized per group, not per item: a column whose values are
   // all distinct belongs in the item table, which windows its rows
@@ -179,31 +166,30 @@ export function GroupAnnotationsTable({
   );
 
   const columnDefs = useMemo(() => {
-    const sortableHeader = (id: string, title: string) => () => (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-full w-full justify-start rounded-none px-1 pr-2 text-xs font-medium text-inherit hover:bg-transparent hover:text-foreground"
-        title={`Sort by ${title}`}
-        onClick={() => {
-          setSorting({
-            id,
-            desc: activeSorting.id === id && !activeSorting.desc,
-          });
-        }}
-      >
-        <span className="truncate">{title}</span>
-        {activeSorting.id === id &&
-          (activeSorting.desc ? (
+    const sortableHeader =
+      (
+        title: string,
+      ): VirtualTableColumnDef<GroupAnnotationsTableRowData>["header"] =>
+      ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-full w-full justify-start rounded-none px-1 pr-2 text-xs font-medium text-inherit hover:bg-transparent hover:text-foreground"
+          title={`Sort by ${title}`}
+          onClick={column.getToggleSortingHandler()}
+        >
+          <span className="truncate">{title}</span>
+          {column.getIsSorted() === "desc" && (
             <ArrowDownIcon className="size-3.5" />
-          ) : (
+          )}
+          {column.getIsSorted() === "asc" && (
             <ArrowUpIcon className="size-3.5" />
-          ))}
-      </Button>
-    );
+          )}
+        </Button>
+      );
     const columnDefs: VirtualTableColumnDef<GroupAnnotationsTableRowData>[] =
       [];
-    if (groupVisibility !== undefined && shownColumnIds.has("visible")) {
+    if (groupVisibility !== undefined) {
       const { isVisible, isInactive, onVisibleChange } = groupVisibility;
       const groups = groupRows.map((groupRow) => groupRow.group);
       const numVisibleGroups = groups.filter(isVisible).length;
@@ -211,6 +197,7 @@ export function GroupAnnotationsTable({
         id: "visible",
         size: 36,
         enableResizing: false,
+        enableSorting: false,
         header: () =>
           inactiveCell(
             isInactive,
@@ -249,28 +236,25 @@ export function GroupAnnotationsTable({
     }
     columnDefs.push({
       id: "group",
-      header: sortableHeader("group", groupByColumn),
+      header: sortableHeader(groupByColumn),
+      enableHiding: false,
       size: 110,
       cell: ({ row }) => <span className="truncate">{row.original.group}</span>,
     });
-    if (shownColumnIds.has("count")) {
-      columnDefs.push({
-        id: "count",
-        header: sortableHeader("count", "Count"),
-        cell: ({ row }) => row.original.count.toLocaleString(),
-        size: 70,
-      });
-    }
+    columnDefs.push({
+      id: "count",
+      header: sortableHeader("Count"),
+      cell: ({ row }) => row.original.count.toLocaleString(),
+      size: 70,
+    });
     for (const groupColumn of groupColumns ?? []) {
-      if (!shownColumnIds.has(groupColumn.id)) {
-        continue;
-      }
+      const isSortable = groupColumn.getSortValue !== undefined;
       columnDefs.push({
         id: groupColumn.id,
-        header:
-          groupColumn.getSortValue !== undefined
-            ? sortableHeader(groupColumn.id, groupColumn.header)
-            : groupColumn.header,
+        header: isSortable
+          ? sortableHeader(groupColumn.header)
+          : groupColumn.header,
+        enableSorting: isSortable,
         size: groupColumn.size,
         cell: ({ row }) =>
           inactiveCell(
@@ -280,15 +264,7 @@ export function GroupAnnotationsTable({
       });
     }
     return columnDefs;
-  }, [
-    activeSorting,
-    shownColumnIds,
-    groupVisibility,
-    groupRows,
-    tableId,
-    groupByColumn,
-    groupColumns,
-  ]);
+  }, [groupVisibility, groupRows, tableId, groupByColumn, groupColumns]);
 
   return (
     <VirtualTable
@@ -298,6 +274,9 @@ export function GroupAnnotationsTable({
       columnDefs={columnDefs}
       rowHeight={rowHeight}
       height={height}
+      sorting={[activeSorting]}
+      onSortingChange={setSorting}
+      columnVisibility={columnVisibility}
       headerAction={
         <GroupColumnPicker
           columns={pickableColumns}

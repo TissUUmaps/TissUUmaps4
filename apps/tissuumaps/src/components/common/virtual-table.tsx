@@ -1,8 +1,13 @@
 import {
   type ColumnDef,
+  type ColumnVisibilityState,
   type RowData,
+  type SortingState,
   columnResizingFeature,
   columnSizingFeature,
+  columnVisibilityFeature,
+  functionalUpdate,
+  rowSortingFeature,
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
@@ -23,11 +28,17 @@ import { cn } from "@/lib/utils";
  * The table features a virtual table uses
  *
  * A table only has the APIs of the features registered here. Column sizing
- * gives every cell the width of its column, which the user can resize;
- * nothing else is needed, as the rows are windowed and the columns are
- * neither sorted, filtered nor hidden.
+ * gives every cell the width of its column, which the user can resize, and
+ * columns can be hidden. The table only holds the visible rows, so it cannot
+ * sort them: sorting is manual, the table keeps the sort state and its header
+ * toggles while the caller sorts all rows.
  */
-const features = tableFeatures({ columnSizingFeature, columnResizingFeature });
+const features = tableFeatures({
+  columnSizingFeature,
+  columnResizingFeature,
+  columnVisibilityFeature,
+  rowSortingFeature,
+});
 
 /**
  * Renders a header or cell template without turning it into a component
@@ -81,6 +92,14 @@ export type VirtualTableProps<TRowData extends RowData> = {
   /** Shown in the top right corner of the header, whatever the scroll */
   headerAction?: ReactNode;
 
+  /** The column the rows are sorted by, which the caller sorts them by */
+  sorting?: SortingState;
+
+  onSortingChange?: (sorting: SortingState) => void;
+
+  /** Which columns are shown, by column ID; columns are shown by default */
+  columnVisibility?: ColumnVisibilityState;
+
   className?: string;
 };
 
@@ -94,6 +113,9 @@ export function VirtualTable<TRowData extends RowData>({
   overscan = 2,
   rowClassName,
   headerAction,
+  sorting,
+  onSortingChange,
+  columnVisibility,
   className,
 }: VirtualTableProps<TRowData>) {
   const {
@@ -123,6 +145,19 @@ export function VirtualTable<TRowData extends RowData>({
     columns: columnDefs,
     getRowId,
     columnResizeMode: "onChange",
+    state: {
+      ...(sorting !== undefined && { sorting }),
+      ...(columnVisibility !== undefined && { columnVisibility }),
+    },
+    onSortingChange: (updater) => {
+      if (sorting !== undefined) {
+        onSortingChange?.(functionalUpdate(updater, sorting));
+      }
+    },
+    manualSorting: true,
+    enableMultiSort: false,
+    enableSortingRemoval: false,
+    sortDescFirst: false,
   });
 
   const tableRows = table.getRowModel().rows;
@@ -192,7 +227,7 @@ export function VirtualTable<TRowData extends RowData>({
                 transform: `translateY(${(firstIndex + index) * rowHeight - rowShift}px)`,
               }}
             >
-              {row.getAllCells().map((cell) => (
+              {row.getVisibleCells().map((cell) => (
                 <TableCell
                   key={cell.id}
                   className="flex items-center px-1"
