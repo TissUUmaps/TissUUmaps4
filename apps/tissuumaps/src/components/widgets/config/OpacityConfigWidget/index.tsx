@@ -3,10 +3,11 @@ import { MathUtils, type OpacityConfig } from "@tissuumaps/core";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Input } from "@/components/ui/input";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import {
-  GroupValueMapSelect,
   type MapReferencingObjects,
-} from "@/components/widgets/config/GroupValueMapSelect";
+  useReferencedMapIds,
+} from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
@@ -135,6 +136,7 @@ function GroupByOpacityConfigWidget({
 
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
   const deleteOpacityMap = useProjectStore((state) => state.deleteOpacityMap);
+  const referencedMapIds = useReferencedMapIds(getOpacityConfigs);
 
   return (
     <div className={className}>
@@ -150,7 +152,7 @@ function GroupByOpacityConfigWidget({
         <FieldLabel>Opacity map</FieldLabel>
         <GroupValueMapSelect
           maps={opacityMaps}
-          getConfigs={getOpacityConfigs}
+          isMapDeletable={(map) => !referencedMapIds.has(map.id)}
           value={map}
           onValueChange={setMap}
           onMapDelete={deleteOpacityMap}

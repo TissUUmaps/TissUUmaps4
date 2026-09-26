@@ -4,10 +4,11 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { markers } from "@/components/markers";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import {
-  GroupValueMapSelect,
   type MapReferencingObjects,
-} from "@/components/widgets/config/GroupValueMapSelect";
+  useReferencedMapIds,
+} from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { MarkerConfigWidgetAdapter } from "./adapter";
@@ -127,6 +128,7 @@ function GroupByMarkerConfigWidget({
 
   const markerMaps = useProjectStore((state) => state.markerMaps);
   const deleteMarkerMap = useProjectStore((state) => state.deleteMarkerMap);
+  const referencedMapIds = useReferencedMapIds(getMarkerConfigs);
 
   return (
     <div className={className}>
@@ -142,7 +144,7 @@ function GroupByMarkerConfigWidget({
         <FieldLabel>Marker map</FieldLabel>
         <GroupValueMapSelect
           maps={markerMaps}
-          getConfigs={getMarkerConfigs}
+          isMapDeletable={(map) => !referencedMapIds.has(map.id)}
           value={map}
           onValueChange={setMap}
           onMapDelete={deleteMarkerMap}

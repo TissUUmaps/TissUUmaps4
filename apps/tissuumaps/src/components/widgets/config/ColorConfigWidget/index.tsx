@@ -19,10 +19,11 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import {
-  GroupValueMapSelect,
   type MapReferencingObjects,
-} from "@/components/widgets/config/GroupValueMapSelect";
+  useReferencedMapIds,
+} from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import { ColorPaletteSelect } from "./ColorPaletteSelect";
@@ -264,6 +265,7 @@ function GroupByColorConfigWidget({
 
   const colorMaps = useProjectStore((state) => state.colorMaps);
   const deleteColorMap = useProjectStore((state) => state.deleteColorMap);
+  const referencedMapIds = useReferencedMapIds(getColorConfigs);
 
   return (
     <div className={className}>
@@ -287,7 +289,7 @@ function GroupByColorConfigWidget({
         <FieldLabel>Color map</FieldLabel>
         <GroupValueMapSelect
           maps={colorMaps}
-          getConfigs={getColorConfigs}
+          isMapDeletable={(map) => !referencedMapIds.has(map.id)}
           value={map}
           onValueChange={setMap}
           onMapDelete={deleteColorMap}

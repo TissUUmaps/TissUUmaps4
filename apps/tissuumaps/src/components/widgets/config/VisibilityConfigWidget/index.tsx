@@ -3,10 +3,11 @@ import type { VisibilityConfig } from "@tissuumaps/core";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Switch } from "@/components/ui/switch";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import {
-  GroupValueMapSelect,
   type MapReferencingObjects,
-} from "@/components/widgets/config/GroupValueMapSelect";
+  useReferencedMapIds,
+} from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { VisibilityConfigWidgetAdapter } from "./adapter";
@@ -135,6 +136,7 @@ function GroupByVisibilityConfigWidget({
   const deleteVisibilityMap = useProjectStore(
     (state) => state.deleteVisibilityMap,
   );
+  const referencedMapIds = useReferencedMapIds(getVisibilityConfigs);
 
   return (
     <div className={className}>
@@ -150,7 +152,7 @@ function GroupByVisibilityConfigWidget({
         <FieldLabel>Visibility map</FieldLabel>
         <GroupValueMapSelect
           maps={visibilityMaps}
-          getConfigs={getVisibilityConfigs}
+          isMapDeletable={(map) => !referencedMapIds.has(map.id)}
           value={map}
           onValueChange={setMap}
           onMapDelete={deleteVisibilityMap}

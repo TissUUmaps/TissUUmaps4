@@ -4,10 +4,11 @@ import { Field, FieldItem, FieldLabel } from "@/components/common/field";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import {
-  GroupValueMapSelect,
   type MapReferencingObjects,
-} from "@/components/widgets/config/GroupValueMapSelect";
+  useReferencedMapIds,
+} from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { SizeConfigWidgetAdapter } from "./adapter";
@@ -174,6 +175,7 @@ function GroupBySizeConfigWidget({
 
   const sizeMaps = useProjectStore((state) => state.sizeMaps);
   const deleteSizeMap = useProjectStore((state) => state.deleteSizeMap);
+  const referencedMapIds = useReferencedMapIds(getSizeConfigs);
 
   return (
     <div className={className}>
@@ -189,7 +191,7 @@ function GroupBySizeConfigWidget({
         <FieldLabel>Size map</FieldLabel>
         <GroupValueMapSelect
           maps={sizeMaps}
-          getConfigs={getSizeConfigs}
+          isMapDeletable={(map) => !referencedMapIds.has(map.id)}
           value={map}
           onValueChange={setMap}
           onMapDelete={deleteSizeMap}

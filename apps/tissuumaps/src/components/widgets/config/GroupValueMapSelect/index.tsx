@@ -1,33 +1,11 @@
-import { useMemo } from "react";
-
-import {
-  type Config,
-  ConfigUtils,
-  type GroupValueMap,
-  type Project,
-} from "@tissuumaps/core";
+import type { GroupValueMap } from "@tissuumaps/core";
 
 import { SimpleSelect } from "@/components/common/simple-select";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
-import { useProjectStore } from "@/stores/project";
-
-/**
- * The data objects whose configurations can refer to a map
- *
- * Only these three lists, so that the map select does not re-render on every
- * other project change.
- */
-export type MapReferencingObjects = Pick<
-  Project,
-  "labels" | "points" | "shapes"
->;
 
 export type GroupValueMapSelectProps = {
   maps: GroupValueMap<unknown>[];
-
-  /** Returns the configurations that can refer to one of the maps */
-  getConfigs: (objects: MapReferencingObjects) => Config<string>[];
-
+  isMapDeletable?: (map: GroupValueMap<unknown>) => boolean;
   value: string | null;
   onValueChange: (mapId: string | null) => void;
   onMapDelete: (mapId: string) => void;
@@ -35,20 +13,12 @@ export type GroupValueMapSelectProps = {
 
 export function GroupValueMapSelect({
   maps,
-  getConfigs,
+  isMapDeletable,
   value,
   onValueChange,
   onMapDelete,
 }: GroupValueMapSelectProps) {
-  const labels = useProjectStore((state) => state.labels);
-  const points = useProjectStore((state) => state.points);
-  const shapes = useProjectStore((state) => state.shapes);
   const confirm = useConfirmDialog();
-
-  const referencedMapIds = useMemo(
-    () => ConfigUtils.getGroupByMapIds(getConfigs({ labels, points, shapes })),
-    [getConfigs, labels, points, shapes],
-  );
 
   return (
     <SimpleSelect
@@ -58,7 +28,7 @@ export function GroupValueMapSelect({
       value={value}
       onValueChange={onValueChange}
       nullable
-      isItemDeletable={(map) => !referencedMapIds.has(map.id)}
+      isItemDeletable={isMapDeletable}
       onItemDelete={(map) => {
         void confirm({
           title: "Delete map",
