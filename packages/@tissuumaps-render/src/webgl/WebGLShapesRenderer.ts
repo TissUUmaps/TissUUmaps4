@@ -959,38 +959,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Returns whether the shape visibilities or opacities of an object changed
-   *
-   * They are folded into both the fill and the stroke colors. Configurations
-   * are compared by value, maps by identity (see
-   * {@link _createRenderConfigSnapshot}).
-   */
-  private static _checkShapeAlphaChanged(
-    renderedShapes: RenderedShapes,
-    newSnapshot: RenderedShapes["renderConfigSnapshot"],
-  ): boolean {
-    return (
-      !deepEqual(
-        renderedShapes.renderConfigSnapshot.shapeVisibility,
-        newSnapshot.shapeVisibility,
-      ) ||
-      renderedShapes.renderConfigSnapshot.shapeVisibilityMap !==
-        newSnapshot.shapeVisibilityMap ||
-      !deepEqual(
-        renderedShapes.renderConfigSnapshot.shapeOpacity,
-        newSnapshot.shapeOpacity,
-      ) ||
-      renderedShapes.renderConfigSnapshot.shapeOpacityMap !==
-        newSnapshot.shapeOpacityMap
-    );
-  }
-
-  /**
    * Returns whether the fill colors of an object have to be resolved again
    *
    * Colors carry the resolved shape and fill visibilities and opacities in
-   * their alpha channel, so they also depend on those configurations. The layer- and
-   * object-level visibility and opacity are shader uniforms (see
+   * their alpha channel, so they also depend on those configurations. The
+   * layer- and object-level visibility and opacity are shader uniforms (see
    * {@link WebGLRendererBase.computeOpacityFactor}) and do not matter here.
    * Also true for an object that has not been rendered yet, like the other
    * predicate. Configurations are compared by value, maps by identity (see
@@ -1002,10 +975,18 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedShapes === undefined ||
-      WebGLShapesRenderer._checkShapeAlphaChanged(
-        renderedShapes,
-        newSnapshot,
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeVisibility,
+        newSnapshot.shapeVisibility,
       ) ||
+      renderedShapes.renderConfigSnapshot.shapeVisibilityMap !==
+        newSnapshot.shapeVisibilityMap ||
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeOpacity,
+        newSnapshot.shapeOpacity,
+      ) ||
+      renderedShapes.renderConfigSnapshot.shapeOpacityMap !==
+        newSnapshot.shapeOpacityMap ||
       !deepEqual(
         renderedShapes.renderConfigSnapshot.shapeFillColor,
         newSnapshot.shapeFillColor,
@@ -1038,10 +1019,18 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedShapes === undefined ||
-      WebGLShapesRenderer._checkShapeAlphaChanged(
-        renderedShapes,
-        newSnapshot,
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeVisibility,
+        newSnapshot.shapeVisibility,
       ) ||
+      renderedShapes.renderConfigSnapshot.shapeVisibilityMap !==
+        newSnapshot.shapeVisibilityMap ||
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeOpacity,
+        newSnapshot.shapeOpacity,
+      ) ||
+      renderedShapes.renderConfigSnapshot.shapeOpacityMap !==
+        newSnapshot.shapeOpacityMap ||
       !deepEqual(
         renderedShapes.renderConfigSnapshot.shapeStrokeColor,
         newSnapshot.shapeStrokeColor,
