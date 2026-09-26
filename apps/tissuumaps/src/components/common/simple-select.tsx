@@ -1,5 +1,5 @@
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { CheckIcon, ChevronsUpDownIcon, XIcon } from "lucide-react";
+import { CheckIcon, ChevronsUpDownIcon, Trash2Icon } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -123,7 +123,7 @@ function ItemDeleteButton({ isDeletable, onDelete }: ItemDeleteButtonProps) {
         }
       }}
     >
-      <XIcon />
+      <Trash2Icon />
     </Button>
   );
 }
