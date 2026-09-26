@@ -161,14 +161,15 @@ export function useColorConfigWidget(
 
   const tableData = useTableData(tableId);
 
-  const [currentFromColumnValueRange, setCurrentFromColumnValueRange] =
-    useState<[number, number] | null>(null);
+  const [fromColumnValueRange, setFromColumnValueRange] = useState<
+    [number, number] | null
+  >(null);
 
   useEffect(() => {
     // clear the previous column's range synchronously, so that the placeholder
     // does not show a stale range while the new one is still loading
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCurrentFromColumnValueRange(null);
+    setFromColumnValueRange(null);
     if (
       state.currentSource === "from" &&
       state.currentFromColumn !== null &&
@@ -181,7 +182,7 @@ export function useColorConfigWidget(
         })
         .then((valueRange) => {
           if (!abortController.signal.aborted) {
-            setCurrentFromColumnValueRange(valueRange ?? null);
+            setFromColumnValueRange(valueRange ?? null);
           }
         })
         .catch((error) => {
@@ -226,8 +227,8 @@ export function useColorConfigWidget(
     defaultColor,
     tableId,
     activeSource,
+    fromColumnValueRange,
     ...state,
-    currentFromColumnValueRange,
     ...setters,
   };
 }

@@ -146,10 +146,10 @@ function FromColorConfigWidget({
 }: FromColorConfigWidgetProps) {
   const {
     tableId,
+    fromColumnValueRange: columnValueRange,
     currentFromColumn: column,
     currentFromRangeMin: rangeMin,
     currentFromRangeMax: rangeMax,
-    currentFromColumnValueRange: columnValueRange,
     currentFromPalette: palette,
     setCurrentFromColumn: setColumn,
     setCurrentFromRangeMin: setRangeMin,
