@@ -8,10 +8,11 @@ import {
 } from "@tissuumaps/core";
 
 import { AnnotationsWidget } from "@/components/widgets/AnnotationsWidget";
-import {
-  type GroupProperty,
-  useAnnotationsWidget,
-} from "@/components/widgets/AnnotationsWidget/useAnnotationsWidget";
+import { useColorGroupValues } from "@/components/widgets/AnnotationsWidget/useColorGroupValues";
+import { useGroupColumn } from "@/components/widgets/AnnotationsWidget/useGroupColumn";
+import { useGroupTable } from "@/components/widgets/AnnotationsWidget/useGroupTable";
+import { useOpacityGroupValues } from "@/components/widgets/AnnotationsWidget/useOpacityGroupValues";
+import { useVisibilityGroupValues } from "@/components/widgets/AnnotationsWidget/useVisibilityGroupValues";
 
 import { LabelsSettingsCategory } from "./category";
 
@@ -26,50 +27,64 @@ export function LabelsAnnotationsWidget({
   activeSettingsCategory,
   className,
 }: LabelsAnnotationsWidgetProps) {
-  const groupProperties = useMemo<GroupProperty[]>(
-    () => [
+  const tableId = labels.dataSource.table ?? null;
+  const table = useGroupTable(
+    tableId,
+    [
       {
-        kind: "color",
         category: LabelsSettingsCategory.labelColor,
-        name: "color",
-        default: defaultLabelColor,
         config: labels.labelColor,
       },
       {
-        kind: "visibility",
         category: LabelsSettingsCategory.labelVisibility,
-        name: "visibility",
-        default: defaultLabelVisibility,
         config: labels.labelVisibility,
       },
       {
-        kind: "opacity",
         category: LabelsSettingsCategory.labelOpacity,
-        name: "opacity",
-        default: defaultLabelOpacity,
         config: labels.labelOpacity,
       },
     ],
-    [labels],
+    activeSettingsCategory,
   );
 
-  const {
-    selectedGroupByColumn,
-    setSelectedGroupByColumn,
-    extraGroupColumnDefs,
-  } = useAnnotationsWidget(
-    labels.dataSource.table ?? null,
-    groupProperties,
-    activeSettingsCategory,
+  const colorValues = useColorGroupValues();
+  const visibilityValues = useVisibilityGroupValues();
+  const opacityValues = useOpacityGroupValues();
+
+  const colorColumn = useGroupColumn(table, {
+    name: "color",
+    default: defaultLabelColor,
+    config: labels.labelColor,
+    values: colorValues,
+  });
+  const visibilityColumn = useGroupColumn(table, {
+    name: "visibility",
+    default: defaultLabelVisibility,
+    config: labels.labelVisibility,
+    values: visibilityValues,
+  });
+  const opacityColumn = useGroupColumn(table, {
+    name: "opacity",
+    default: defaultLabelOpacity,
+    config: labels.labelOpacity,
+    values: opacityValues,
+  });
+
+  const groupColumnDefs = useMemo(
+    () =>
+      [colorColumn, visibilityColumn, opacityColumn].filter(
+        (columnDef) => columnDef !== undefined,
+      ),
+    [colorColumn, visibilityColumn, opacityColumn],
   );
 
   return (
     <AnnotationsWidget
       tableHeight={200}
-      table={labels.dataSource.table ?? null}
-      selectedGroupByColumn={selectedGroupByColumn}
-      onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-      extraGroupColumnDefs={extraGroupColumnDefs}
+      table={tableId}
+      selectedGroupByColumn={table.column}
+      onSelectedGroupByColumnChange={table.setColumn}
+      extraGroupColumnDefs={groupColumnDefs}
       className={className}
     />
   );

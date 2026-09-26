@@ -12,10 +12,11 @@ import {
 } from "@tissuumaps/core";
 
 import { AnnotationsWidget } from "@/components/widgets/AnnotationsWidget";
-import {
-  type GroupProperty,
-  useAnnotationsWidget,
-} from "@/components/widgets/AnnotationsWidget/useAnnotationsWidget";
+import { useColorGroupValues } from "@/components/widgets/AnnotationsWidget/useColorGroupValues";
+import { useGroupColumn } from "@/components/widgets/AnnotationsWidget/useGroupColumn";
+import { useGroupTable } from "@/components/widgets/AnnotationsWidget/useGroupTable";
+import { useOpacityGroupValues } from "@/components/widgets/AnnotationsWidget/useOpacityGroupValues";
+import { useVisibilityGroupValues } from "@/components/widgets/AnnotationsWidget/useVisibilityGroupValues";
 
 import { ShapesSettingsCategory } from "./category";
 
@@ -32,72 +33,107 @@ export function ShapesAnnotationsWidget({
   activeSettingsCategory,
   className,
 }: ShapesAnnotationsWidgetProps) {
-  const groupProperties = useMemo<GroupProperty[]>(
-    () => [
+  const tableId = shapes.dataSource.table ?? null;
+  const table = useGroupTable(
+    tableId,
+    [
       {
-        kind: "color",
         category: ShapesSettingsCategory.shapeFillColor,
-        name: "fill color",
-        default: defaultShapeFillColor,
         config: shapes.shapeFillColor,
       },
       {
-        kind: "visibility",
         category: ShapesSettingsCategory.shapeFillVisibility,
-        name: "fill visibility",
-        default: defaultShapeFillVisibility,
         config: shapes.shapeFillVisibility,
       },
       {
-        kind: "opacity",
         category: ShapesSettingsCategory.shapeFillOpacity,
-        name: "fill opacity",
-        default: defaultShapeFillOpacity,
         config: shapes.shapeFillOpacity,
       },
       {
-        kind: "color",
         category: ShapesSettingsCategory.shapeStrokeColor,
-        name: "outline color",
-        default: defaultShapeStrokeColor,
         config: shapes.shapeStrokeColor,
       },
       {
-        kind: "visibility",
         category: ShapesSettingsCategory.shapeStrokeVisibility,
-        name: "outline visibility",
-        default: defaultShapeStrokeVisibility,
         config: shapes.shapeStrokeVisibility,
       },
       {
-        kind: "opacity",
         category: ShapesSettingsCategory.shapeStrokeOpacity,
-        name: "outline opacity",
-        default: defaultShapeStrokeOpacity,
         config: shapes.shapeStrokeOpacity,
       },
     ],
-    [shapes],
+    activeSettingsCategory,
   );
 
-  const {
-    selectedGroupByColumn,
-    setSelectedGroupByColumn,
-    extraGroupColumnDefs,
-  } = useAnnotationsWidget(
-    shapes.dataSource.table ?? null,
-    groupProperties,
-    activeSettingsCategory,
+  const colorValues = useColorGroupValues();
+  const visibilityValues = useVisibilityGroupValues();
+  const opacityValues = useOpacityGroupValues();
+
+  const fillColorColumn = useGroupColumn(table, {
+    name: "fill color",
+    default: defaultShapeFillColor,
+    config: shapes.shapeFillColor,
+    values: colorValues,
+  });
+  const fillVisibilityColumn = useGroupColumn(table, {
+    name: "fill visibility",
+    default: defaultShapeFillVisibility,
+    config: shapes.shapeFillVisibility,
+    values: visibilityValues,
+  });
+  const fillOpacityColumn = useGroupColumn(table, {
+    name: "fill opacity",
+    default: defaultShapeFillOpacity,
+    config: shapes.shapeFillOpacity,
+    values: opacityValues,
+  });
+  const strokeColorColumn = useGroupColumn(table, {
+    name: "outline color",
+    default: defaultShapeStrokeColor,
+    config: shapes.shapeStrokeColor,
+    values: colorValues,
+  });
+  const strokeVisibilityColumn = useGroupColumn(table, {
+    name: "outline visibility",
+    default: defaultShapeStrokeVisibility,
+    config: shapes.shapeStrokeVisibility,
+    values: visibilityValues,
+  });
+  const strokeOpacityColumn = useGroupColumn(table, {
+    name: "outline opacity",
+    default: defaultShapeStrokeOpacity,
+    config: shapes.shapeStrokeOpacity,
+    values: opacityValues,
+  });
+
+  const groupColumnDefs = useMemo(
+    () =>
+      [
+        fillColorColumn,
+        fillVisibilityColumn,
+        fillOpacityColumn,
+        strokeColorColumn,
+        strokeVisibilityColumn,
+        strokeOpacityColumn,
+      ].filter((columnDef) => columnDef !== undefined),
+    [
+      fillColorColumn,
+      fillVisibilityColumn,
+      fillOpacityColumn,
+      strokeColorColumn,
+      strokeVisibilityColumn,
+      strokeOpacityColumn,
+    ],
   );
 
   return (
     <AnnotationsWidget
       data={data}
       tableHeight={200}
-      table={shapes.dataSource.table ?? null}
-      selectedGroupByColumn={selectedGroupByColumn}
-      onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-      extraGroupColumnDefs={extraGroupColumnDefs}
+      table={tableId}
+      selectedGroupByColumn={table.column}
+      onSelectedGroupByColumnChange={table.setColumn}
+      extraGroupColumnDefs={groupColumnDefs}
       className={className}
     />
   );
