@@ -16,7 +16,7 @@ import {
 import { ItemAnnotationsTable } from "./ItemAnnotationsTable";
 
 // rows have a fixed height, so that the visible range follows from the scroll
-// offset alone; cells of extra columns must fit within it
+// offset alone; cells must fit within it
 const tableRowHeight = 28;
 
 /**

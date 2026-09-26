@@ -20,7 +20,7 @@ type GroupAnnotationsTableRowData = {
   count: number;
 };
 
-/** An extra column of the group table, showing a value of every group */
+/** A column of the group table, showing a value of every group */
 export type GroupColumn = {
   id: string;
   header: string;

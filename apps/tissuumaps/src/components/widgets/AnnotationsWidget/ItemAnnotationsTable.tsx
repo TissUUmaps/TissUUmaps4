@@ -14,7 +14,7 @@ export type ItemAnnotationsTableRowData = {
   annotated?: boolean;
 };
 
-export type ItemAnnotationsTableColumnDef =
+type ItemAnnotationsTableColumnDef =
   VirtualTableColumnDef<ItemAnnotationsTableRowData>;
 
 export type ItemAnnotationsTableProps = {
