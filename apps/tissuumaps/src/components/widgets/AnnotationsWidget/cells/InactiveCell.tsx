@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+
 export type InactiveCellProps = {
   /** Whether the cell is grayed out, as editing it changes the property source */
   isInactive: boolean;
@@ -7,14 +9,14 @@ export type InactiveCellProps = {
 };
 
 export function InactiveCell({ isInactive, children }: InactiveCellProps) {
-  return isInactive ? (
+  // the wrapper stays when the cell turns active, so that the input or picker
+  // that turned it active is not remounted
+  return (
     <div
-      className="flex w-full opacity-50"
-      title="Edit to group by this column"
+      className={cn("flex w-full", isInactive && "opacity-50")}
+      title={isInactive ? "Edit to group by this column" : undefined}
     >
       {children}
     </div>
-  ) : (
-    children
   );
 }
