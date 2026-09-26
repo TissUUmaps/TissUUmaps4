@@ -1,12 +1,20 @@
 import {
   type ColumnDef,
+  type ColumnVisibilityState,
   type RowData,
+  type SortingState,
+  columnResizingFeature,
   columnSizingFeature,
+  columnVisibilityFeature,
+  functionalUpdate,
+  rowSortingFeature,
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -22,10 +30,18 @@ import { cn } from "@/lib/utils";
  * The table features a virtual table uses
  *
  * A table only has the APIs of the features registered here. Column sizing
- * gives every cell the width of its column; nothing else is needed, as the
- * rows are windowed and the columns are neither sorted, filtered nor hidden.
+ * gives every cell the width of its column, which the user can resize, and
+ * columns can be hidden. The table only holds the visible rows, so it cannot
+ * sort them: sorting is manual, the table keeps the sort state and toggles it
+ * from the headers of the columns with an accessor, while the caller sorts all
+ * rows.
  */
-const features = tableFeatures({ columnSizingFeature });
+const features = tableFeatures({
+  columnSizingFeature,
+  columnResizingFeature,
+  columnVisibilityFeature,
+  rowSortingFeature,
+});
 
 /**
  * Renders a header or cell template without turning it into a component
@@ -42,7 +58,9 @@ function renderTemplate<TContext>(
     // the column definition types a template's return value as `any`
     return template(context) as ReactNode;
   }
-  return template;
+  return template !== undefined ? (
+    <span className="truncate px-1">{template}</span>
+  ) : undefined;
 }
 
 /**
@@ -73,6 +91,21 @@ export type VirtualTableProps<TRowData extends RowData> = {
    */
   overscan?: number;
   rowClassName?: (row: TRowData) => string | undefined;
+
+  /** Shown in the top right corner of the header, whatever the scroll */
+  headerAction?: ReactNode;
+
+  /**
+   * The column the rows are sorted by, which the caller sorts them by; the
+   * columns are not sortable without
+   */
+  sorting?: SortingState;
+
+  onSortingChange?: (sorting: SortingState) => void;
+
+  /** Which columns are shown, by column ID; columns are shown by default */
+  columnVisibility?: ColumnVisibilityState;
+
   className?: string;
 };
 
@@ -85,6 +118,10 @@ export function VirtualTable<TRowData extends RowData>({
   height,
   overscan = 2,
   rowClassName,
+  headerAction,
+  sorting,
+  onSortingChange,
+  columnVisibility,
   className,
 }: VirtualTableProps<TRowData>) {
   const {
@@ -113,6 +150,21 @@ export function VirtualTable<TRowData extends RowData>({
     data: rows,
     columns: columnDefs,
     getRowId,
+    columnResizeMode: "onChange",
+    state: {
+      ...(sorting !== undefined && { sorting }),
+      ...(columnVisibility !== undefined && { columnVisibility }),
+    },
+    onSortingChange: (updater) => {
+      if (sorting !== undefined) {
+        onSortingChange?.(functionalUpdate(updater, sorting));
+      }
+    },
+    manualSorting: true,
+    enableSorting: sorting !== undefined,
+    enableMultiSort: false,
+    enableSortingRemoval: false,
+    sortDescFirst: false,
   });
 
   const tableRows = table.getRowModel().rows;
@@ -123,27 +175,67 @@ export function VirtualTable<TRowData extends RowData>({
       className={cn("overflow-auto relative", className)}
       style={{ height: `${height}px` }}
     >
-      <Table className="grid w-max min-w-full">
+      <Table className="grid w-max min-w-full text-xs">
         <TableHeader
           ref={headerRef}
-          className="grid sticky top-0 z-10 bg-background"
+          className="grid sticky top-0 z-10 bg-muted text-xs text-muted-foreground"
         >
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="flex w-full">
+            <TableRow
+              key={headerGroup.id}
+              className="flex w-full hover:bg-transparent"
+            >
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className="flex h-auto p-0"
+                  className="relative flex h-8 items-center p-0 text-inherit"
                   style={{ width: `${header.getSize()}px` }}
                   colSpan={header.colSpan}
                 >
                   {!header.isPlaceholder &&
-                    renderTemplate(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    )}
+                    (header.column.getCanSort() ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-full w-full justify-start rounded-none px-0 pr-2 text-xs font-medium text-inherit hover:bg-transparent hover:text-foreground"
+                        title={`Sort by ${header.column.id}`}
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {renderTemplate(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                        {header.column.getIsSorted() === "desc" && (
+                          <ArrowDownIcon className="size-3.5" />
+                        )}
+                        {header.column.getIsSorted() === "asc" && (
+                          <ArrowUpIcon className="size-3.5" />
+                        )}
+                      </Button>
+                    ) : (
+                      renderTemplate(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )
+                    ))}
+                  {header.column.getCanResize() && (
+                    <div
+                      className={cn(
+                        "absolute top-0 right-0 h-full w-1.5 cursor-col-resize touch-none select-none border-r hover:bg-primary/30",
+                        header.column.getIsResizing() && "bg-primary/50",
+                      )}
+                      onMouseDown={header.getResizeHandler()}
+                      onTouchStart={header.getResizeHandler()}
+                      onDoubleClick={() => header.column.resetSize()}
+                    />
+                  )}
                 </TableHead>
               ))}
+              {headerAction !== undefined && (
+                <TableHead className="sticky right-0 ml-auto flex h-8 w-9 shrink-0 items-center justify-center bg-muted p-0">
+                  {headerAction}
+                </TableHead>
+              )}
             </TableRow>
           ))}
         </TableHeader>
@@ -163,10 +255,10 @@ export function VirtualTable<TRowData extends RowData>({
                 transform: `translateY(${(firstIndex + index) * rowHeight - rowShift}px)`,
               }}
             >
-              {row.getAllCells().map((cell) => (
+              {row.getVisibleCells().map((cell) => (
                 <TableCell
                   key={cell.id}
-                  className="flex p-0 pt-1"
+                  className="flex items-center px-1"
                   style={{ width: `${cell.column.getSize()}px` }}
                 >
                   {renderTemplate(

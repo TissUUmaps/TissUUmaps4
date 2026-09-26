@@ -1,119 +1,276 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+  CellData,
+  ColumnSort,
+  ColumnVisibilityState,
+  RowData,
+  SortingState,
+  TableFeatures,
+} from "@tanstack/react-table";
+import { useCallback, useMemo, useState } from "react";
 
-import type { TableData, TypedArrayOrArray } from "@tissuumaps/core";
+import type { HighlightedItemGroup } from "@tissuumaps/core";
 
 import {
   VirtualTable,
   type VirtualTableColumnDef,
 } from "@/components/common/virtual-table";
-import { useTableData } from "@/hooks/useData";
+import { Checkbox } from "@/components/ui/checkbox";
+
+import {
+  GroupColumnPicker,
+  type GroupColumnPickerProps,
+} from "./GroupColumnPicker";
+import { GroupVisibilityCell } from "./cells/GroupVisibilityCell";
+import { InactiveCell } from "./cells/InactiveCell";
+
+declare module "@tanstack/react-table" {
+  /* eslint-disable @typescript-eslint/no-unused-vars -- the type parameters
+     must match the declaration that this one merges into */
+  interface ColumnMeta<
+    in out TFeatures extends TableFeatures,
+    in out TData extends RowData,
+    TValue extends CellData = CellData,
+  > {
+    /** Whether a group table column is shown until the user picks the columns */
+    isShownByDefault?: boolean;
+  }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+}
 
 export type GroupAnnotationsTableRowData = {
   group: string;
+  count: number;
 };
 
+/**
+ * A column of the group table
+ *
+ * The rows sort by the column's `accessorFn`; a column without one is not
+ * sortable.
+ */
 export type GroupAnnotationsTableColumnDef =
   VirtualTableColumnDef<GroupAnnotationsTableRowData>;
+
+/** How the group table shows and toggles the visibility of a group */
+export type GroupVisibility = {
+  isVisible: (group: string) => boolean;
+
+  /** Whether the eye buttons are grayed out, as toggling them changes the property source */
+  isInactive: boolean;
+
+  onVisibleChange: (groups: string[], visible: boolean) => void;
+};
+
+/** The group rows are listed by name until a column is sorted by */
+const defaultSorting: ColumnSort = { id: "group", desc: false };
+
+/** Compares text with its numbers by value, so that `2` sorts before `10` */
+const textCollator = new Intl.Collator(undefined, { numeric: true });
+
+/**
+ * Compares two sort values, numbers numerically and anything else as text
+ *
+ * @param a - The first sort value
+ * @param b - The second sort value
+ * @returns A negative number if `a` sorts first, a positive one if `b` does
+ */
+function compareSortValues(a: unknown, b: unknown): number {
+  if (typeof a === "number" && typeof b === "number") {
+    return a - b;
+  }
+  return textCollator.compare(String(a), String(b));
+}
 
 export type GroupAnnotationsTableProps = {
   height: number;
   rowHeight: number;
-  table: string;
-  groupByColumn: string;
-  extraGroupColumnDefs?: GroupAnnotationsTableColumnDef[];
-};
 
-type LoadedGroups = {
-  tableData: TableData;
+  /** The object whose items are grouped, which the eye buttons highlight */
+  annotatedObject: HighlightedItemGroup["annotatedObject"];
+
   groupByColumn: string;
-  groups: TypedArrayOrArray<string>;
+  groupCounts: Map<string, number> | null;
+  groupVisibility?: GroupVisibility;
+  groupColumnDefs?: GroupAnnotationsTableColumnDef[];
 };
 
 export function GroupAnnotationsTable({
   height,
   rowHeight,
-  table,
+  annotatedObject,
   groupByColumn,
-  extraGroupColumnDefs,
+  groupCounts,
+  groupVisibility,
+  groupColumnDefs,
 }: GroupAnnotationsTableProps) {
-  // the groups are kept with what they were loaded from, so that the ones of
-  // a previous table or column are not shown as the current ones
-  const [loadedGroups, setLoadedGroups] = useState<LoadedGroups | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([defaultSorting]);
+  const [shownColumns, setShownColumns] = useState<ColumnVisibilityState>({});
 
-  const tableData = useTableData(table);
+  // the columns the rows can sort by, which do not depend on the rows
+  const sortableColumnDefs = useMemo(
+    (): GroupAnnotationsTableColumnDef[] => [
+      {
+        id: "group",
+        header: groupByColumn,
+        accessorFn: (row) => row.group,
+        enableHiding: false,
+        size: 110,
+        cell: ({ row }) => (
+          <span className="truncate">{row.original.group}</span>
+        ),
+      },
+      {
+        id: "count",
+        header: "Count",
+        accessorFn: (row) => row.count,
+        size: 70,
+        cell: ({ row }) => row.original.count.toLocaleString(),
+      },
+      ...(groupColumnDefs ?? []),
+    ],
+    [groupByColumn, groupColumnDefs],
+  );
 
-  const groups =
-    loadedGroups?.tableData === tableData &&
-    loadedGroups.groupByColumn === groupByColumn
-      ? loadedGroups.groups
-      : null;
-
-  useEffect(() => {
-    const abortController = new AbortController();
-    if (tableData !== null) {
-      tableData
-        .loadUniqueValueCounts<string>(groupByColumn, {
-          signal: abortController.signal,
-        })
-        .then((uniqueValueCounts) => {
-          if (!abortController.signal.aborted) {
-            setLoadedGroups({
-              tableData,
-              groupByColumn,
-              groups: Array.from(uniqueValueCounts.keys()),
-            });
-          }
-        })
-        .catch((error) => {
-          if (!abortController.signal.aborted) {
-            console.error("Error loading table unique value counts", error);
-          }
-        });
+  const columnVisibility = useMemo(() => {
+    const columnVisibility: ColumnVisibilityState = {};
+    for (const columnDef of sortableColumnDefs) {
+      columnVisibility[columnDef.id!] =
+        columnDef.meta?.isShownByDefault ?? true;
     }
-    return () => {
-      abortController.abort();
-    };
-  }, [tableData, groupByColumn]);
+    return { ...columnVisibility, ...shownColumns };
+  }, [sortableColumnDefs, shownColumns]);
 
-  // the groups are sorted as the plain values they are loaded as; a row object
-  // per group would cost as much as one per item for a column of unique values
-  const sortedGroups = useMemo(() => {
-    if (groups === null) {
-      return null;
+  const [sortedColumn = defaultSorting] = sorting;
+  const activeSorting =
+    columnVisibility[sortedColumn.id] === true ? sortedColumn : defaultSorting;
+
+  const pickableColumns: GroupColumnPickerProps["columns"] = [
+    ...(groupVisibility !== undefined
+      ? [{ id: "visible", header: "Visibility" }]
+      : []),
+    ...sortableColumnDefs
+      .filter((columnDef) => columnDef.enableHiding !== false)
+      .map((columnDef) => ({
+        id: columnDef.id!,
+        header:
+          typeof columnDef.header === "string"
+            ? columnDef.header
+            : columnDef.id!,
+      })),
+  ].map((column) => ({
+    ...column,
+    isShown: columnVisibility[column.id] ?? true,
+  }));
+
+  // one row is materialized per group, not per item: a column whose values are
+  // all distinct belongs in the item table, which windows its rows
+  const groupRows = useMemo(() => {
+    if (groupCounts === null) {
+      return [];
     }
-    const sortedGroups = Array.from(groups, String);
-    sortedGroups.sort((a, b) => a.localeCompare(b));
-    return sortedGroups;
-  }, [groups]);
+    const groupRows = Array.from(groupCounts, ([group, count]) => ({
+      group,
+      count,
+    }));
+    const sortedColumnDef = sortableColumnDefs.find(
+      (columnDef) => columnDef.id === activeSorting.id,
+    );
+    const getSortValue =
+      sortedColumnDef !== undefined && "accessorFn" in sortedColumnDef
+        ? sortedColumnDef.accessorFn
+        : undefined;
+    const order = activeSorting.desc ? -1 : 1;
+    groupRows.sort(
+      (a, b) =>
+        order *
+        ((getSortValue !== undefined
+          ? compareSortValues(getSortValue(a, 0), getSortValue(b, 0))
+          : 0) || textCollator.compare(a.group, b.group)),
+    );
+    return groupRows;
+  }, [groupCounts, activeSorting, sortableColumnDefs]);
 
   const getRows = useCallback(
     (startIndex: number, endIndex: number): GroupAnnotationsTableRowData[] =>
-      sortedGroups?.slice(startIndex, endIndex).map((group) => ({ group })) ??
-      [],
-    [sortedGroups],
+      groupRows.slice(startIndex, endIndex),
+    [groupRows],
   );
 
   const columnDefs = useMemo(() => {
-    if (sortedGroups === null) {
-      return [];
+    if (groupVisibility === undefined) {
+      return sortableColumnDefs;
     }
-    const columnDefs: GroupAnnotationsTableColumnDef[] = [
-      { id: "group", header: groupByColumn, accessorKey: "group" },
-    ];
-    if (extraGroupColumnDefs !== undefined) {
-      columnDefs.push(...extraGroupColumnDefs);
-    }
-    return columnDefs;
-  }, [sortedGroups, groupByColumn, extraGroupColumnDefs]);
+    const { isVisible, isInactive, onVisibleChange } = groupVisibility;
+    const groups = groupRows.map((groupRow) => groupRow.group);
+    const numVisibleGroups = groups.filter(isVisible).length;
+    const visibleColumnDef: GroupAnnotationsTableColumnDef = {
+      id: "visible",
+      size: 36,
+      enableResizing: false,
+      header: () => (
+        <InactiveCell isInactive={isInactive}>
+          <span className="flex h-6 w-full items-center px-1">
+            <Checkbox
+              checked={groups.length > 0 && numVisibleGroups === groups.length}
+              indeterminate={
+                numVisibleGroups > 0 && numVisibleGroups < groups.length
+              }
+              onCheckedChange={(checked) => {
+                onVisibleChange(groups, checked);
+              }}
+              title="Show listed groups"
+              aria-label="Show listed groups"
+            />
+          </span>
+        </InactiveCell>
+      ),
+      cell: ({ row }) => (
+        <InactiveCell isInactive={isInactive}>
+          <GroupVisibilityCell
+            visible={isVisible(row.original.group)}
+            onVisibleChange={(visible) => {
+              onVisibleChange([row.original.group], visible);
+            }}
+            itemGroup={{
+              annotatedObject,
+              column: groupByColumn,
+              group: row.original.group,
+            }}
+          />
+        </InactiveCell>
+      ),
+    };
+    return [visibleColumnDef, ...sortableColumnDefs];
+  }, [
+    groupVisibility,
+    groupRows,
+    annotatedObject,
+    groupByColumn,
+    sortableColumnDefs,
+  ]);
 
   return (
     <VirtualTable
-      rowCount={sortedGroups?.length ?? 0}
+      rowCount={groupRows.length}
       getRows={getRows}
       getRowId={(row) => row.group}
       columnDefs={columnDefs}
       rowHeight={rowHeight}
       height={height}
+      sorting={[activeSorting]}
+      onSortingChange={setSorting}
+      columnVisibility={columnVisibility}
+      headerAction={
+        <GroupColumnPicker
+          columns={pickableColumns}
+          onShownChange={(id, isShown) => {
+            setShownColumns((shownColumns) => ({
+              ...shownColumns,
+              [id]: isShown,
+            }));
+          }}
+        />
+      }
     />
   );
 }
