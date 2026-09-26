@@ -46,7 +46,7 @@ export function SimpleSelect<
   // - set trigger width to w-full
   return (
     <SelectPrimitive.Root items={memoizedItems} {...props}>
-      <SelectPrimitive.Trigger className="flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border border-input pr-3 pl-3.5 bg-[canvas] select-none hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 data-popup-open:bg-gray-100 dark:bg-input/30 text-foreground">
+      <SelectPrimitive.Trigger className="flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border border-input pr-3 pl-3.5 bg-[canvas] select-none hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 data-popup-open:bg-gray-100 data-disabled:pointer-events-none data-disabled:opacity-50 dark:bg-input/30 text-foreground">
         <SelectPrimitive.Value className="data-placeholder:opacity-60 flex flex-row items-center gap-2" />
         <SelectPrimitive.Icon className="flex">
           <ChevronsUpDownIcon />

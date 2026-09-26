@@ -2,11 +2,10 @@ import {
   type ColumnDef,
   type RowData,
   columnSizingFeature,
-  flexRender,
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 
 import {
   Table,
@@ -28,6 +27,31 @@ import { cn } from "@/lib/utils";
  */
 const features = tableFeatures({ columnSizingFeature });
 
+/**
+ * Renders a header or cell template without turning it into a component
+ *
+ * `flexRender` would do the latter, so that a column definition rebuilt on a
+ * state change remounts every header and cell, losing the focus and the open
+ * popovers of the interactive ones.
+ */
+function renderTemplate<TContext>(
+  template: string | ((context: TContext) => unknown) | undefined,
+  context: TContext,
+): ReactNode {
+  if (typeof template === "function") {
+    // the column definition types a template's return value as `any`
+    return template(context) as ReactNode;
+  }
+  return template;
+}
+
+/**
+ * A column definition of a virtual table
+ *
+ * Header and cell templates are called as plain functions while the table
+ * renders, so they must not call hooks; they may return elements of
+ * components that do.
+ */
 export type VirtualTableColumnDef<TRowData extends RowData> = ColumnDef<
   typeof features,
   TRowData
@@ -114,7 +138,7 @@ export function VirtualTable<TRowData extends RowData>({
                   colSpan={header.colSpan}
                 >
                   {!header.isPlaceholder &&
-                    flexRender(
+                    renderTemplate(
                       header.column.columnDef.header,
                       header.getContext(),
                     )}
@@ -145,7 +169,10 @@ export function VirtualTable<TRowData extends RowData>({
                   className="flex p-0 pt-1"
                   style={{ width: `${cell.column.getSize()}px` }}
                 >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  {renderTemplate(
+                    cell.column.columnDef.cell,
+                    cell.getContext(),
+                  )}
                 </TableCell>
               ))}
             </TableRow>
