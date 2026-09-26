@@ -203,3 +203,17 @@ export const colorPalettes: ColorPalette[] = [
   ...continuousColorPalettes,
   ...categoricalColorPalettes,
 ];
+
+/**
+ * Looks up a color palette by ID
+ *
+ * @param colorPaletteId - The ID of the color palette
+ * @returns The color palette, or `undefined` if no palette has the ID
+ */
+export function findColorPalette(
+  colorPaletteId: string | undefined,
+): ColorPalette | undefined {
+  return colorPalettes.find(
+    (colorPalette) => colorPalette.id === colorPaletteId,
+  );
+}

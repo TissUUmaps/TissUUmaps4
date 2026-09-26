@@ -5,6 +5,7 @@ import {
   type Color,
   type ColorConfig,
   ColorUtils,
+  ConfigUtils,
   type CoordinateSpace,
   type GroupValueMap,
   type Layer,
@@ -27,7 +28,6 @@ import {
   defaultPointSize,
   defaultPointSizeUnit,
   defaultPointVisibility,
-  findGroupByConfigMap,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -836,7 +836,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * Every property the change predicates read has to be captured here: the
    * item-level configurations, and the maps they resolve their values from,
    * looked up now so that the predicates compare maps rather than map IDs (see
-   * {@link findGroupByConfigMap}).
+   * {@link ConfigUtils.findGroupByMap}).
    *
    * @param newRef - The object to capture the snapshot of
    * @param syncContext - The inputs of the current synchronization, holding the maps
@@ -852,23 +852,23 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       pointColor: newRef.object.pointColor,
       pointVisibility: newRef.object.pointVisibility,
       pointOpacity: newRef.object.pointOpacity,
-      pointMarkerMap: findGroupByConfigMap(
+      pointMarkerMap: ConfigUtils.findGroupByMap(
         newRef.object.pointMarker,
         syncContext.markerMaps,
       ),
-      pointSizeMap: findGroupByConfigMap(
+      pointSizeMap: ConfigUtils.findGroupByMap(
         newRef.object.pointSize,
         syncContext.sizeMaps,
       ),
-      pointColorMap: findGroupByConfigMap(
+      pointColorMap: ConfigUtils.findGroupByMap(
         newRef.object.pointColor,
         syncContext.colorMaps,
       ),
-      pointVisibilityMap: findGroupByConfigMap(
+      pointVisibilityMap: ConfigUtils.findGroupByMap(
         newRef.object.pointVisibility,
         syncContext.visibilityMaps,
       ),
-      pointOpacityMap: findGroupByConfigMap(
+      pointOpacityMap: ConfigUtils.findGroupByMap(
         newRef.object.pointOpacity,
         syncContext.opacityMaps,
       ),

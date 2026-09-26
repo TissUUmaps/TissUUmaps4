@@ -1,4 +1,5 @@
 import {
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
@@ -204,9 +205,7 @@ export class SizeResolver {
   ): Promise<Float32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const sizeMap = sizeMaps.find(
-      (sizeMap) => sizeMap.id === config.groupBy.map,
-    );
+    const sizeMap = ConfigUtils.findGroupByMap(config, sizeMaps);
     if (sizeMap === undefined) {
       console.warn(
         `Size map ${config.groupBy.map} not found, using default size`,
@@ -217,14 +216,13 @@ export class SizeResolver {
     }
     const data = await loadTable({ signal });
     const packedSizes = SizeResolver.createSizeBuffer(ids.length, { align });
-    const groupSizes = new Map(Object.entries(sizeMap.values));
     await TableUtils.fillFromTableGroups(
       packedSizes,
       data,
       ids,
       config.groupBy.column,
       sizeMap.default ?? defaultSize,
-      (group) => groupSizes.get(group),
+      ConfigUtils.createGroupValueGetter(config, sizeMap, defaultSize),
       (size) => SizeResolver.packSize(size),
       { signal },
     );

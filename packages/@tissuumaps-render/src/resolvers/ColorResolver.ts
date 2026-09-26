@@ -4,6 +4,7 @@ import {
   type ColorConfig,
   type ColorPalette,
   ColorUtils,
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
@@ -15,8 +16,8 @@ import {
   type RandomConfig,
   type TableData,
   TableUtils,
-  colorPalettes,
   defaultRandomSeed,
+  findColorPalette,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -150,9 +151,7 @@ export class ColorResolver {
       return constantColor;
     }
     if (getActiveConfigSource(config) === "random" && isRandomConfig(config)) {
-      const colorPalette = colorPalettes.find(
-        (colorPalette) => colorPalette.id === config.random.palette,
-      );
+      const colorPalette = findColorPalette(config.random.palette);
       if (colorPalette !== undefined) {
         const color = ColorResolver.pickRandomColor(
           id,
@@ -206,9 +205,7 @@ export class ColorResolver {
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const colorPalette = colorPalettes.find(
-      (colorPalette) => colorPalette.id === config.from.palette,
-    );
+    const colorPalette = findColorPalette(config.from.palette);
     if (colorPalette === undefined) {
       console.warn(
         `Color palette ${config.from.palette} not found, using default color`,
@@ -257,72 +254,46 @@ export class ColorResolver {
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    if (config.groupBy.map !== undefined) {
-      const colorMap = colorMaps.find(
-        (colorMap) => colorMap.id === config.groupBy.map,
+    const colorMap = ConfigUtils.findGroupByMap(config, colorMaps);
+    const colorPalette = findColorPalette(config.groupBy.palette);
+    if (config.groupBy.map !== undefined && colorMap === undefined) {
+      console.warn(
+        `Color map ${config.groupBy.map} not found, using default color`,
       );
-      if (colorMap === undefined) {
-        console.warn(
-          `Color map ${config.groupBy.map} not found, using default color`,
-        );
-        return ColorResolver.createUniformColors(ids.length, defaultColor, {
-          align,
-        });
-      }
-      const data = await loadTable({ signal });
-      const packedColors = ColorResolver.createColorBuffer(ids.length, {
+      return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
       });
-      const groupColors = new Map(Object.entries(colorMap.values));
-      await TableUtils.fillFromTableGroups(
-        packedColors,
-        data,
-        ids,
-        config.groupBy.column,
-        colorMap.default ?? defaultColor,
-        (group) => groupColors.get(group),
-        (color) => ColorResolver.packColor(color),
-        { signal },
-      );
-      return packedColors;
     }
-    if (config.groupBy.palette !== undefined) {
-      const colorPalette = colorPalettes.find(
-        (colorPalette) => colorPalette.id === config.groupBy.palette,
+    if (config.groupBy.map === undefined && colorPalette === undefined) {
+      console.warn(
+        config.groupBy.palette !== undefined
+          ? `Color palette ${config.groupBy.palette} not found, using default color`
+          : `No color map or color palette specified, using default color`,
       );
-      if (colorPalette === undefined) {
-        console.warn(
-          `Color palette ${config.groupBy.palette} not found, using default color`,
-        );
-        return ColorResolver.createUniformColors(ids.length, defaultColor, {
-          align,
-        });
-      }
-      const data = await loadTable({ signal });
-      const packedColors = ColorResolver.createColorBuffer(ids.length, {
+      return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
       });
-      await TableUtils.fillFromTableGroups(
-        packedColors,
-        data,
-        ids,
-        config.groupBy.column,
-        defaultColor,
-        (group) =>
-          colorPalette.colors[
-            HashUtils.hash(group) % colorPalette.colors.length
-          ]!,
-        (color) => ColorResolver.packColor(color),
-        { signal },
-      );
-      return packedColors;
     }
-    console.warn(
-      `No color map or color palette specified, using default color`,
-    );
-    return ColorResolver.createUniformColors(ids.length, defaultColor, {
+    const data = await loadTable({ signal });
+    const packedColors = ColorResolver.createColorBuffer(ids.length, {
       align,
     });
+    await TableUtils.fillFromTableGroups(
+      packedColors,
+      data,
+      ids,
+      config.groupBy.column,
+      colorMap?.default ?? defaultColor,
+      ConfigUtils.createGroupValueGetter(
+        config,
+        colorMap,
+        defaultColor,
+        colorPalette?.colors,
+      ),
+      (color) => ColorResolver.packColor(color),
+      { signal },
+    );
+    return packedColors;
   }
 
   /**
@@ -345,9 +316,7 @@ export class ColorResolver {
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const colorPalette = colorPalettes.find(
-      (colorPalette) => colorPalette.id === config.random.palette,
-    );
+    const colorPalette = findColorPalette(config.random.palette);
     if (colorPalette === undefined) {
       console.warn(
         `Color palette ${config.random.palette} not found, using default color`,
