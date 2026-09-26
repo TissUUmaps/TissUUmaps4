@@ -50,8 +50,8 @@ export type ProjectStoreState = Project & {
  * part of the project, or passing an index outside of a collection's bounds is
  * an error.
  *
- * The project-global maps have no order, so each list of maps only has `add*`,
- * `update*` and `delete*` actions.
+ * The lists of maps are neither reordered nor cleared, so each only has
+ * `add*`, `update*` and `delete*` actions.
  */
 export type ProjectStoreActions = {
   /**
@@ -144,7 +144,7 @@ export type ProjectStoreActions = {
   addVisibilityMap: (map: GroupValueMap<boolean>) => void;
 
   /**
-   * Adds a opacity map to the project
+   * Adds an opacity map to the project
    *
    * @param map - The map to add
    */
@@ -252,7 +252,7 @@ export type ProjectStoreActions = {
   ) => void;
 
   /**
-   * Applies updates to a opacity map of the project
+   * Applies updates to an opacity map of the project
    *
    * @param mapId - The ID of the map to update
    * @param updates - The properties to overwrite on the map
@@ -381,7 +381,7 @@ export type ProjectStoreActions = {
   deleteVisibilityMap: (mapId: string) => void;
 
   /**
-   * Removes a opacity map from the project
+   * Removes an opacity map from the project
    *
    * @param mapId - The ID of the map to remove
    */

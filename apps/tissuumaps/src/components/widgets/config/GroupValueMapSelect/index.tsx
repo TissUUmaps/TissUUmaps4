@@ -11,14 +11,19 @@ import { SimpleSelect } from "@/components/common/simple-select";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useProjectStore } from "@/stores/project";
 
-/** The data objects whose configurations can refer to a map */
+/**
+ * The data objects whose configurations can refer to a map
+ *
+ * Only these three lists, so that the map select does not re-render on every
+ * other project change.
+ */
 export type MapReferencingObjects = Pick<
   Project,
   "labels" | "points" | "shapes"
 >;
 
-export type GroupValueMapSelectProps<TValue> = {
-  maps: GroupValueMap<TValue>[];
+export type GroupValueMapSelectProps = {
+  maps: GroupValueMap<unknown>[];
 
   /** Returns the configurations that can refer to one of the maps */
   getConfigs: (objects: MapReferencingObjects) => Config<string>[];
@@ -28,13 +33,13 @@ export type GroupValueMapSelectProps<TValue> = {
   onMapDelete: (mapId: string) => void;
 };
 
-export function GroupValueMapSelect<TValue>({
+export function GroupValueMapSelect({
   maps,
   getConfigs,
   value,
   onValueChange,
   onMapDelete,
-}: GroupValueMapSelectProps<TValue>) {
+}: GroupValueMapSelectProps) {
   const labels = useProjectStore((state) => state.labels);
   const points = useProjectStore((state) => state.points);
   const shapes = useProjectStore((state) => state.shapes);

@@ -35,7 +35,7 @@ describe("ConfigUtils", () => {
   });
 
   describe("getGroupByMapIds", () => {
-    it("returns the maps of the group-by configurations, whatever their source", () => {
+    it("returns the map IDs of the group-by configurations, whatever their active source", () => {
       expect(
         ConfigUtils.getGroupByMapIds([
           { groupBy: { column: "cluster", map: "colorMap" } },

@@ -9,7 +9,7 @@ import {
 import type { CoordinateSpace, GroupValueMap } from "../model/primitives";
 import { HashUtils } from "./HashUtils";
 
-/** Utility methods for resolving the values of property configurations */
+/** Utility methods for property configurations */
 export class ConfigUtils {
   /**
    * Returns the group-to-value map that a configuration resolves its values
