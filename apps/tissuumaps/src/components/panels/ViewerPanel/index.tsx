@@ -21,7 +21,7 @@ import { useProjectStore } from "@/stores/project";
 
 import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
 import { PointSizeViewerControl } from "./PointSizeViewerControl";
-import { highlightGroup } from "./highlightGroup";
+import { highlightItemGroup } from "./highlightItemGroup";
 
 export type ViewerPanelProps = {
   className?: string;
@@ -83,7 +83,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   // identity, so rebuilding it for an unrelated change of the adapter would
   // re-resolve and re-upload the colors of every highlighted object.
   const highlightedState = useMemo(
-    () => highlightGroup(projectState, highlightedItemGroup),
+    () => highlightItemGroup(projectState, highlightedItemGroup),
     [projectState, highlightedItemGroup],
   );
 

@@ -36,7 +36,7 @@ export type HighlightableState = Pick<
  * @param highlightedItemGroup - The highlighted group, or `null` for none
  * @returns The state to render
  */
-export function highlightGroup(
+export function highlightItemGroup(
   state: HighlightableState,
   highlightedItemGroup: HighlightedItemGroup | null,
 ): HighlightableState {

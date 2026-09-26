@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { createLabels, createPoints, createShapes } from "@tissuumaps/core";
 
-import { type HighlightableState, highlightGroup } from "./highlightGroup";
+import {
+  type HighlightableState,
+  highlightItemGroup,
+} from "./highlightItemGroup";
 
-describe("highlightGroup", () => {
+describe("highlightItemGroup", () => {
   const state: HighlightableState = {
     labels: [
       createLabels({
@@ -48,11 +51,11 @@ describe("highlightGroup", () => {
   };
 
   it("returns the state itself without a highlighted group", () => {
-    expect(highlightGroup(state, null)).toBe(state);
+    expect(highlightItemGroup(state, null)).toBe(state);
   });
 
   it("shows only the highlighted group of the objects on its table", () => {
-    const highlightedState = highlightGroup(state, highlightedItemGroup);
+    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
 
     const opacityConfig = {
       groupBy: { column: "cluster", map: "highlightedItemGroup" },
@@ -68,7 +71,7 @@ describe("highlightGroup", () => {
   });
 
   it("puts its map before the project maps, which it keeps", () => {
-    const highlightedState = highlightGroup(state, highlightedItemGroup);
+    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
 
     expect(highlightedState.opacityMaps.slice(1)).toEqual(state.opacityMaps);
   });
@@ -81,7 +84,7 @@ describe("highlightGroup", () => {
       dataSource: { type: "tiff", table: "cells" },
     });
 
-    const highlightedState = highlightGroup(
+    const highlightedState = highlightItemGroup(
       { ...state, labels: [labels] },
       highlightedItemGroup,
     );
@@ -95,7 +98,7 @@ describe("highlightGroup", () => {
   });
 
   it("shows the highlighted group even if it is hidden", () => {
-    const highlightedState = highlightGroup(state, highlightedItemGroup);
+    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
 
     const visibilityConfig = { constant: { value: true } };
     expect(highlightedState.points[0]!.pointVisibility).toEqual(
@@ -107,7 +110,7 @@ describe("highlightGroup", () => {
   });
 
   it("keeps the fill and stroke settings of shapes", () => {
-    const highlightedState = highlightGroup(state, highlightedItemGroup);
+    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
 
     expect(highlightedState.shapes[0]!.shapeStrokeVisibility).toEqual({
       constant: { value: false },
@@ -118,13 +121,13 @@ describe("highlightGroup", () => {
   });
 
   it("leaves the objects on other tables untouched", () => {
-    const highlightedState = highlightGroup(state, highlightedItemGroup);
+    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
 
     expect(highlightedState.points[1]).toBe(state.points[1]);
   });
 
   it("keeps a collection without an object on the table as is", () => {
-    const highlightedState = highlightGroup(state, highlightedItemGroup);
+    const highlightedState = highlightItemGroup(state, highlightedItemGroup);
 
     expect(highlightedState.labels).toBe(state.labels);
   });
