@@ -34,6 +34,23 @@ describe("ConfigUtils", () => {
     });
   });
 
+  describe("getGroupByMapIds", () => {
+    it("returns the maps of the group-by configurations, whatever their source", () => {
+      expect(
+        ConfigUtils.getGroupByMapIds([
+          { groupBy: { column: "cluster", map: "colorMap" } },
+          {
+            source: "constant",
+            constant: { value: 1 },
+            groupBy: { column: "cluster", map: "opacityMap" },
+          },
+          { groupBy: { column: "cluster", map: undefined } },
+          { constant: { value: 1 } },
+        ]),
+      ).toEqual(new Set(["colorMap", "opacityMap"]));
+    });
+  });
+
   describe("createGroupValueGetter", () => {
     const map1: GroupValueMap<number> = {
       id: "map1",

@@ -38,6 +38,25 @@ export class ConfigUtils {
   }
 
   /**
+   * Returns the IDs of the maps that configurations refer to
+   *
+   * A configuration refers to its map whatever its active source, as switching
+   * back to `groupBy` uses the map again.
+   *
+   * @param configs - The configurations
+   * @returns The IDs of the referenced maps
+   */
+  static getGroupByMapIds(configs: Config<string>[]): Set<string> {
+    const mapIds = new Set<string>();
+    for (const config of configs) {
+      if (isGroupByConfig<false>(config) && config.groupBy.map !== undefined) {
+        mapIds.add(config.groupBy.map);
+      }
+    }
+    return mapIds;
+  }
+
+  /**
    * Creates the function that returns the value a group-by configuration
    * assigns to a group
    *

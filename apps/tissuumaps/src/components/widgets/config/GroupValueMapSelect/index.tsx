@@ -1,13 +1,28 @@
 import { useMemo } from "react";
 
-import { type GroupValueMap, getReferencedMapIds } from "@tissuumaps/core";
+import {
+  type Config,
+  ConfigUtils,
+  type GroupValueMap,
+  type Project,
+} from "@tissuumaps/core";
 
 import { SimpleSelect } from "@/components/common/simple-select";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useProjectStore } from "@/stores/project";
 
+/** The data objects whose configurations can refer to a map */
+export type MapReferencingObjects = Pick<
+  Project,
+  "labels" | "points" | "shapes"
+>;
+
 export type GroupValueMapSelectProps<TValue> = {
   maps: GroupValueMap<TValue>[];
+
+  /** Returns the configurations that can refer to one of the maps */
+  getConfigs: (objects: MapReferencingObjects) => Config<string>[];
+
   value: string | null;
   onValueChange: (mapId: string | null) => void;
   onMapDelete: (mapId: string) => void;
@@ -15,6 +30,7 @@ export type GroupValueMapSelectProps<TValue> = {
 
 export function GroupValueMapSelect<TValue>({
   maps,
+  getConfigs,
   value,
   onValueChange,
   onMapDelete,
@@ -25,8 +41,8 @@ export function GroupValueMapSelect<TValue>({
   const confirm = useConfirmDialog();
 
   const referencedMapIds = useMemo(
-    () => getReferencedMapIds({ labels, points, shapes }),
-    [labels, points, shapes],
+    () => ConfigUtils.getGroupByMapIds(getConfigs({ labels, points, shapes })),
+    [getConfigs, labels, points, shapes],
   );
 
   return (

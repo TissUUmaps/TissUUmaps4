@@ -1,7 +1,6 @@
 import type { OpenSeadragonOptions } from "../types/openseadragon";
 import type { WebGLOptions } from "../types/webgl";
 import { type Model, type RawModel, createModel } from "./base";
-import { type Config, isGroupByConfig } from "./configs";
 import { type Image, type RawImage, createImage } from "./image";
 import { type Labels, type RawLabels, createLabels } from "./labels";
 import { type Layer, type RawLayer, createLayer } from "./layer";
@@ -220,50 +219,4 @@ export function createProject(rawProject: RawProject): Project {
     shapes: rawProject.shapes?.map(createShapes) ?? [],
     tables: rawProject.tables?.map(createTable) ?? [],
   };
-}
-
-/**
- * Returns the IDs of the maps that the configurations of a project's data
- * objects refer to
- *
- * A configuration refers to its map whatever its active source, as switching
- * back to group-by uses the map again.
- *
- * @param project - The project, or its data objects
- * @returns The IDs of the referenced maps
- */
-export function getReferencedMapIds(
-  project: Pick<Project, "labels" | "points" | "shapes">,
-): Set<string> {
-  const configs: Config<string>[] = [
-    ...project.labels.flatMap((labels) => [
-      labels.labelColor,
-      labels.labelVisibility,
-      labels.labelOpacity,
-    ]),
-    ...project.points.flatMap((points) => [
-      points.pointMarker,
-      points.pointSize,
-      points.pointColor,
-      points.pointVisibility,
-      points.pointOpacity,
-    ]),
-    ...project.shapes.flatMap((shapes) => [
-      shapes.shapeVisibility,
-      shapes.shapeOpacity,
-      shapes.shapeFillColor,
-      shapes.shapeFillVisibility,
-      shapes.shapeFillOpacity,
-      shapes.shapeStrokeColor,
-      shapes.shapeStrokeVisibility,
-      shapes.shapeStrokeOpacity,
-    ]),
-  ];
-  const mapIds = new Set<string>();
-  for (const config of configs) {
-    if (isGroupByConfig<false>(config) && config.groupBy.map !== undefined) {
-      mapIds.add(config.groupBy.map);
-    }
-  }
-  return mapIds;
 }

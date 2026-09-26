@@ -1,7 +1,12 @@
+import type { VisibilityConfig } from "@tissuumaps/core";
+
 import { Field, FieldLabel } from "@/components/common/field";
 import { Switch } from "@/components/ui/switch";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
-import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import {
+  GroupValueMapSelect,
+  type MapReferencingObjects,
+} from "@/components/widgets/config/GroupValueMapSelect";
 import { useProjectStore } from "@/stores/project";
 
 import type { VisibilityConfigWidgetAdapter } from "./adapter";
@@ -94,6 +99,21 @@ function FromVisibilityConfigWidget({
   );
 }
 
+/** Returns the configurations that can refer to a visibility map */
+function getVisibilityConfigs(
+  objects: MapReferencingObjects,
+): VisibilityConfig[] {
+  return [
+    ...objects.labels.map((labels) => labels.labelVisibility),
+    ...objects.points.map((points) => points.pointVisibility),
+    ...objects.shapes.flatMap((shapes) => [
+      shapes.shapeVisibility,
+      shapes.shapeFillVisibility,
+      shapes.shapeStrokeVisibility,
+    ]),
+  ];
+}
+
 type GroupByVisibilityConfigWidgetProps = {
   adapter: VisibilityConfigWidgetAdapter;
   className?: string;
@@ -130,6 +150,7 @@ function GroupByVisibilityConfigWidget({
         <FieldLabel>Visibility map</FieldLabel>
         <GroupValueMapSelect
           maps={visibilityMaps}
+          getConfigs={getVisibilityConfigs}
           value={map}
           onValueChange={setMap}
           onMapDelete={deleteVisibilityMap}

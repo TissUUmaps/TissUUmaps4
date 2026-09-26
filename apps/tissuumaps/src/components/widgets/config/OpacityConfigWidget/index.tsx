@@ -1,9 +1,12 @@
-import { MathUtils } from "@tissuumaps/core";
+import { MathUtils, type OpacityConfig } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Input } from "@/components/ui/input";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
-import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import {
+  GroupValueMapSelect,
+  type MapReferencingObjects,
+} from "@/components/widgets/config/GroupValueMapSelect";
 import { useProjectStore } from "@/stores/project";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
@@ -100,6 +103,19 @@ function FromOpacityConfigWidget({
   );
 }
 
+/** Returns the configurations that can refer to an opacity map */
+function getOpacityConfigs(objects: MapReferencingObjects): OpacityConfig[] {
+  return [
+    ...objects.labels.map((labels) => labels.labelOpacity),
+    ...objects.points.map((points) => points.pointOpacity),
+    ...objects.shapes.flatMap((shapes) => [
+      shapes.shapeOpacity,
+      shapes.shapeFillOpacity,
+      shapes.shapeStrokeOpacity,
+    ]),
+  ];
+}
+
 type GroupByOpacityConfigWidgetProps = {
   adapter: OpacityConfigWidgetAdapter;
   className?: string;
@@ -134,6 +150,7 @@ function GroupByOpacityConfigWidget({
         <FieldLabel>Opacity map</FieldLabel>
         <GroupValueMapSelect
           maps={opacityMaps}
+          getConfigs={getOpacityConfigs}
           value={map}
           onValueChange={setMap}
           onMapDelete={deleteOpacityMap}

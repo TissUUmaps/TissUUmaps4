@@ -1,6 +1,7 @@
 import { RefreshCwIcon, Square } from "lucide-react";
 
 import {
+  type ColorConfig,
   MathUtils,
   RandomUtils,
   categoricalColorPalettes,
@@ -18,7 +19,10 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
-import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import {
+  GroupValueMapSelect,
+  type MapReferencingObjects,
+} from "@/components/widgets/config/GroupValueMapSelect";
 import { useProjectStore } from "@/stores/project";
 
 import { ColorPaletteSelect } from "./ColorPaletteSelect";
@@ -227,6 +231,18 @@ function FromColorConfigWidget({
   );
 }
 
+/** Returns the configurations that can refer to a color map */
+function getColorConfigs(objects: MapReferencingObjects): ColorConfig[] {
+  return [
+    ...objects.labels.map((labels) => labels.labelColor),
+    ...objects.points.map((points) => points.pointColor),
+    ...objects.shapes.flatMap((shapes) => [
+      shapes.shapeFillColor,
+      shapes.shapeStrokeColor,
+    ]),
+  ];
+}
+
 type GroupByColorConfigWidgetProps = {
   adapter: ColorConfigWidgetAdapter;
   className?: string;
@@ -271,6 +287,7 @@ function GroupByColorConfigWidget({
         <FieldLabel>Color map</FieldLabel>
         <GroupValueMapSelect
           maps={colorMaps}
+          getConfigs={getColorConfigs}
           value={map}
           onValueChange={setMap}
           onMapDelete={deleteColorMap}
