@@ -50,8 +50,7 @@ export type ProjectStoreState = Project & {
  * part of the project, or passing an index outside of a collection's bounds is
  * an error.
  *
- * The lists of maps are neither reordered nor cleared, so each only has
- * `add*`, `update*` and `delete*` actions.
+ * The lists of maps are not reordered, so they have no `move*` actions.
  */
 export type ProjectStoreActions = {
   /**
@@ -416,6 +415,31 @@ export type ProjectStoreActions = {
    * Removes all tables from the project
    */
   clearTables: () => void;
+
+  /**
+   * Removes all marker maps from the project
+   */
+  clearMarkerMaps: () => void;
+
+  /**
+   * Removes all size maps from the project
+   */
+  clearSizeMaps: () => void;
+
+  /**
+   * Removes all color maps from the project
+   */
+  clearColorMaps: () => void;
+
+  /**
+   * Removes all visibility maps from the project
+   */
+  clearVisibilityMaps: () => void;
+
+  /**
+   * Removes all opacity maps from the project
+   */
+  clearOpacityMaps: () => void;
 
   /**
    * Sets the project's OpenSeadragon viewer options
