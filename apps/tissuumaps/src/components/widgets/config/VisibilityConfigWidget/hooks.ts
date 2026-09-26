@@ -8,8 +8,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
-
+import { useConfigWidgetState } from "../useConfigWidgetState";
 import type {
   VisibilityConfigSource,
   VisibilityConfigWidgetAdapter,

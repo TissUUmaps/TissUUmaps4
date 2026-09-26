@@ -9,8 +9,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
-
+import { useConfigWidgetState } from "../useConfigWidgetState";
 import type { SizeConfigSource, SizeConfigWidgetAdapter } from "./adapter";
 
 type SizeConfigWidgetState = {
