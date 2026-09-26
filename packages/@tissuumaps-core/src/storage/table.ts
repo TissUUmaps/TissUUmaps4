@@ -18,6 +18,16 @@ export type TableColumnQuerySuggestion = {
    * @defaultValue false
    */
   group?: boolean;
+
+  /**
+   * Whether the suggestion does not match the query
+   *
+   * A provider can list other columns after the matching ones, e.g. all
+   * columns when none match.
+   *
+   * @defaultValue false
+   */
+  fallback?: boolean;
 };
 
 /**
@@ -32,7 +42,8 @@ export interface TableData extends ItemsData {
    * Returns column query suggestions for the current query
    *
    * The query format is up to the provider. Suggestions matching the current
-   * query come first.
+   * query come first, best matches first, followed by any fallback
+   * suggestions. The list is not capped.
    *
    * @param currentQuery - The partial column query to autocomplete
    * @param options - Optional abort signal
