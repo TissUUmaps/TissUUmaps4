@@ -4,11 +4,7 @@ import type { Image } from "../../model/image";
 import type { Labels } from "../../model/labels";
 import type { Layer } from "../../model/layer";
 import type { Points } from "../../model/points";
-import type {
-  GroupValueMap,
-  GroupValueMapKind,
-  GroupValueMapValues,
-} from "../../model/primitives";
+import type { Color, GroupValueMap, Marker } from "../../model/primitives";
 import type { Project } from "../../model/project";
 import type { Shapes } from "../../model/shapes";
 import type { Table } from "../../model/table";
@@ -54,8 +50,8 @@ export type ProjectStoreState = Project & {
  * part of the project, or passing an index outside of a collection's bounds is
  * an error.
  *
- * The project-global maps are added, updated and deleted the same way, by
- * kind; they have no order.
+ * The project-global maps have no order, so each list of maps only has `add*`,
+ * `update*` and `delete*` actions.
  */
 export type ProjectStoreActions = {
   /**
@@ -120,15 +116,39 @@ export type ProjectStoreActions = {
   addTable: (table: Table, index?: number) => void;
 
   /**
-   * Adds a map to the project
+   * Adds a marker map to the project
    *
-   * @param kind - The kind of the map
    * @param map - The map to add
    */
-  addMap: <TKind extends GroupValueMapKind>(
-    kind: TKind,
-    map: GroupValueMap<GroupValueMapValues[TKind]>,
-  ) => void;
+  addMarkerMap: (map: GroupValueMap<Marker>) => void;
+
+  /**
+   * Adds a size map to the project
+   *
+   * @param map - The map to add
+   */
+  addSizeMap: (map: GroupValueMap<number>) => void;
+
+  /**
+   * Adds a color map to the project
+   *
+   * @param map - The map to add
+   */
+  addColorMap: (map: GroupValueMap<Color>) => void;
+
+  /**
+   * Adds a visibility map to the project
+   *
+   * @param map - The map to add
+   */
+  addVisibilityMap: (map: GroupValueMap<boolean>) => void;
+
+  /**
+   * Adds a opacity map to the project
+   *
+   * @param map - The map to add
+   */
+  addOpacityMap: (map: GroupValueMap<number>) => void;
 
   /**
    * Applies updates to a layer of the project
@@ -188,16 +208,58 @@ export type ProjectStoreActions = {
   updateTable: (tableId: string, updates: Partial<Omit<Table, "id">>) => void;
 
   /**
-   * Applies updates to a map of the project
+   * Applies updates to a marker map of the project
    *
-   * @param kind - The kind of the map
    * @param mapId - The ID of the map to update
    * @param updates - The properties to overwrite on the map
    */
-  updateMap: <TKind extends GroupValueMapKind>(
-    kind: TKind,
+  updateMarkerMap: (
     mapId: string,
-    updates: Partial<Omit<GroupValueMap<GroupValueMapValues[TKind]>, "id">>,
+    updates: Partial<Omit<GroupValueMap<Marker>, "id">>,
+  ) => void;
+
+  /**
+   * Applies updates to a size map of the project
+   *
+   * @param mapId - The ID of the map to update
+   * @param updates - The properties to overwrite on the map
+   */
+  updateSizeMap: (
+    mapId: string,
+    updates: Partial<Omit<GroupValueMap<number>, "id">>,
+  ) => void;
+
+  /**
+   * Applies updates to a color map of the project
+   *
+   * @param mapId - The ID of the map to update
+   * @param updates - The properties to overwrite on the map
+   */
+  updateColorMap: (
+    mapId: string,
+    updates: Partial<Omit<GroupValueMap<Color>, "id">>,
+  ) => void;
+
+  /**
+   * Applies updates to a visibility map of the project
+   *
+   * @param mapId - The ID of the map to update
+   * @param updates - The properties to overwrite on the map
+   */
+  updateVisibilityMap: (
+    mapId: string,
+    updates: Partial<Omit<GroupValueMap<boolean>, "id">>,
+  ) => void;
+
+  /**
+   * Applies updates to a opacity map of the project
+   *
+   * @param mapId - The ID of the map to update
+   * @param updates - The properties to overwrite on the map
+   */
+  updateOpacityMap: (
+    mapId: string,
+    updates: Partial<Omit<GroupValueMap<number>, "id">>,
   ) => void;
 
   /**
@@ -291,12 +353,39 @@ export type ProjectStoreActions = {
   deleteTable: (tableId: string) => void;
 
   /**
-   * Removes a map from the project
+   * Removes a marker map from the project
    *
-   * @param kind - The kind of the map
    * @param mapId - The ID of the map to remove
    */
-  deleteMap: (kind: GroupValueMapKind, mapId: string) => void;
+  deleteMarkerMap: (mapId: string) => void;
+
+  /**
+   * Removes a size map from the project
+   *
+   * @param mapId - The ID of the map to remove
+   */
+  deleteSizeMap: (mapId: string) => void;
+
+  /**
+   * Removes a color map from the project
+   *
+   * @param mapId - The ID of the map to remove
+   */
+  deleteColorMap: (mapId: string) => void;
+
+  /**
+   * Removes a visibility map from the project
+   *
+   * @param mapId - The ID of the map to remove
+   */
+  deleteVisibilityMap: (mapId: string) => void;
+
+  /**
+   * Removes a opacity map from the project
+   *
+   * @param mapId - The ID of the map to remove
+   */
+  deleteOpacityMap: (mapId: string) => void;
 
   /**
    * Removes all layers from the project

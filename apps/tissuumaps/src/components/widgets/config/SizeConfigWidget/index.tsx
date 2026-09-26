@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import { useProjectStore } from "@/stores/project";
 
 import type { SizeConfigWidgetAdapter } from "./adapter";
 
@@ -163,6 +164,9 @@ function GroupBySizeConfigWidget({
     setCurrentGroupByUnit: setUnit,
   } = adapter;
 
+  const sizeMaps = useProjectStore((state) => state.sizeMaps);
+  const deleteSizeMap = useProjectStore((state) => state.deleteSizeMap);
+
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
@@ -175,7 +179,12 @@ function GroupBySizeConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Size map</FieldLabel>
-        <GroupValueMapSelect kind="size" value={map} onValueChange={setMap} />
+        <GroupValueMapSelect
+          maps={sizeMaps}
+          value={map}
+          onValueChange={setMap}
+          onMapDelete={deleteSizeMap}
+        />
       </Field>
       <Field>
         <FieldLabel>Size unit</FieldLabel>

@@ -2,6 +2,7 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Switch } from "@/components/ui/switch";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import { useProjectStore } from "@/stores/project";
 
 import type { VisibilityConfigWidgetAdapter } from "./adapter";
 
@@ -110,6 +111,11 @@ function GroupByVisibilityConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
+  const visibilityMaps = useProjectStore((state) => state.visibilityMaps);
+  const deleteVisibilityMap = useProjectStore(
+    (state) => state.deleteVisibilityMap,
+  );
+
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
@@ -123,9 +129,10 @@ function GroupByVisibilityConfigWidget({
       <Field>
         <FieldLabel>Visibility map</FieldLabel>
         <GroupValueMapSelect
-          kind="visibility"
+          maps={visibilityMaps}
           value={map}
           onValueChange={setMap}
+          onMapDelete={deleteVisibilityMap}
         />
       </Field>
     </div>

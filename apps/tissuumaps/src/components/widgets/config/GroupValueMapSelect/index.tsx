@@ -1,33 +1,27 @@
 import { useMemo } from "react";
 
-import {
-  type GroupValueMap,
-  type GroupValueMapKind,
-  getReferencedMapIds,
-} from "@tissuumaps/core";
+import { type GroupValueMap, getReferencedMapIds } from "@tissuumaps/core";
 
 import { SimpleSelect } from "@/components/common/simple-select";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useProjectStore } from "@/stores/project";
 
-export type GroupValueMapSelectProps = {
-  kind: GroupValueMapKind;
+export type GroupValueMapSelectProps<TValue> = {
+  maps: GroupValueMap<TValue>[];
   value: string | null;
   onValueChange: (mapId: string | null) => void;
+  onMapDelete: (mapId: string) => void;
 };
 
-export function GroupValueMapSelect({
-  kind,
+export function GroupValueMapSelect<TValue>({
+  maps,
   value,
   onValueChange,
-}: GroupValueMapSelectProps) {
-  const maps: GroupValueMap<unknown>[] = useProjectStore(
-    (state) => state[`${kind}Maps`],
-  );
+  onMapDelete,
+}: GroupValueMapSelectProps<TValue>) {
   const labels = useProjectStore((state) => state.labels);
   const points = useProjectStore((state) => state.points);
   const shapes = useProjectStore((state) => state.shapes);
-  const deleteMap = useProjectStore((state) => state.deleteMap);
   const confirm = useConfirmDialog();
 
   const referencedMapIds = useMemo(
@@ -53,7 +47,7 @@ export function GroupValueMapSelect({
             if (map.id === value) {
               onValueChange(null);
             }
-            deleteMap(kind, map.id);
+            onMapDelete(map.id);
           }
         });
       }}

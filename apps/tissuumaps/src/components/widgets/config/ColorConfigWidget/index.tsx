@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/input-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import { useProjectStore } from "@/stores/project";
 
 import { ColorPaletteSelect } from "./ColorPaletteSelect";
 import type { ColorConfigWidgetAdapter } from "./adapter";
@@ -245,6 +246,9 @@ function GroupByColorConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
+  const colorMaps = useProjectStore((state) => state.colorMaps);
+  const deleteColorMap = useProjectStore((state) => state.deleteColorMap);
+
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
@@ -265,7 +269,12 @@ function GroupByColorConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Color map</FieldLabel>
-        <GroupValueMapSelect kind="color" value={map} onValueChange={setMap} />
+        <GroupValueMapSelect
+          maps={colorMaps}
+          value={map}
+          onValueChange={setMap}
+          onMapDelete={deleteColorMap}
+        />
       </Field>
     </div>
   );

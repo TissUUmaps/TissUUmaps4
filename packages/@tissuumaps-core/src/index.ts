@@ -118,8 +118,6 @@ export {
   type Color,
   type CoordinateSpace,
   type GroupValueMap,
-  type GroupValueMapKind,
-  type GroupValueMapValues,
   type SimilarityTransform,
 } from "./model/primitives";
 export {

@@ -4,6 +4,7 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Input } from "@/components/ui/input";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import { useProjectStore } from "@/stores/project";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
 
@@ -116,6 +117,9 @@ function GroupByOpacityConfigWidget({
     setCurrentGroupByMap: setMap,
   } = adapter;
 
+  const opacityMaps = useProjectStore((state) => state.opacityMaps);
+  const deleteOpacityMap = useProjectStore((state) => state.deleteOpacityMap);
+
   return (
     <div className={className}>
       <Field disabled={tableId === null}>
@@ -129,9 +133,10 @@ function GroupByOpacityConfigWidget({
       <Field>
         <FieldLabel>Opacity map</FieldLabel>
         <GroupValueMapSelect
-          kind="opacity"
+          maps={opacityMaps}
           value={map}
           onValueChange={setMap}
+          onMapDelete={deleteOpacityMap}
         />
       </Field>
     </div>

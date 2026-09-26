@@ -18,18 +18,6 @@ export type GroupValueMap<TValue> = {
   default?: TValue;
 };
 
-/** The value type of the project-global maps, by map kind */
-export type GroupValueMapValues = {
-  marker: Marker;
-  size: number;
-  color: Color;
-  visibility: boolean;
-  opacity: number;
-};
-
-/** A kind of project-global map, named after the property it assigns */
-export type GroupValueMapKind = keyof GroupValueMapValues;
-
 /** Coordinate space */
 export type CoordinateSpace =
   /** Data (e.g. pixel) space */

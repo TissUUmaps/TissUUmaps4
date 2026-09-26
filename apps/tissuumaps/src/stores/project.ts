@@ -4,8 +4,6 @@ import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
 import {
-  type GroupValueMap,
-  type GroupValueMapKind,
   type ProjectStore,
   type ProjectStoreApi,
   type ProjectStoreState,
@@ -51,9 +49,25 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set((draft) => {
           addCollectionItem(draft.tables, table, index);
         }),
-      addMap: (kind, map) =>
+      addMarkerMap: (map) =>
         set((draft) => {
-          addCollectionItem(getMaps(draft, kind), map);
+          addCollectionItem(draft.markerMaps, map);
+        }),
+      addSizeMap: (map) =>
+        set((draft) => {
+          addCollectionItem(draft.sizeMaps, map);
+        }),
+      addColorMap: (map) =>
+        set((draft) => {
+          addCollectionItem(draft.colorMaps, map);
+        }),
+      addVisibilityMap: (map) =>
+        set((draft) => {
+          addCollectionItem(draft.visibilityMaps, map);
+        }),
+      addOpacityMap: (map) =>
+        set((draft) => {
+          addCollectionItem(draft.opacityMaps, map);
         }),
       updateLayer: (layerId, updates) =>
         set((draft) => {
@@ -79,9 +93,25 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set((draft) => {
           updateCollectionItem(draft.tables, tableId, updates);
         }),
-      updateMap: (kind, mapId, updates) =>
+      updateMarkerMap: (mapId, updates) =>
         set((draft) => {
-          updateCollectionItem(getMaps(draft, kind), mapId, updates);
+          updateCollectionItem(draft.markerMaps, mapId, updates);
+        }),
+      updateSizeMap: (mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(draft.sizeMaps, mapId, updates);
+        }),
+      updateColorMap: (mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(draft.colorMaps, mapId, updates);
+        }),
+      updateVisibilityMap: (mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(draft.visibilityMaps, mapId, updates);
+        }),
+      updateOpacityMap: (mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(draft.opacityMaps, mapId, updates);
         }),
       moveLayer: (layerId, newIndex) =>
         set((draft) => {
@@ -131,9 +161,25 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set((draft) => {
           deleteCollectionItem(draft.tables, tableId);
         }),
-      deleteMap: (kind, mapId) =>
+      deleteMarkerMap: (mapId) =>
         set((draft) => {
-          deleteCollectionItem(getMaps(draft, kind), mapId);
+          deleteCollectionItem(draft.markerMaps, mapId);
+        }),
+      deleteSizeMap: (mapId) =>
+        set((draft) => {
+          deleteCollectionItem(draft.sizeMaps, mapId);
+        }),
+      deleteColorMap: (mapId) =>
+        set((draft) => {
+          deleteCollectionItem(draft.colorMaps, mapId);
+        }),
+      deleteVisibilityMap: (mapId) =>
+        set((draft) => {
+          deleteCollectionItem(draft.visibilityMaps, mapId);
+        }),
+      deleteOpacityMap: (mapId) =>
+        set((draft) => {
+          deleteCollectionItem(draft.opacityMaps, mapId);
         }),
       clearLayers: () => set({ layers: [] }),
       clearImages: () => set({ images: [] }),
@@ -176,20 +222,6 @@ function createInitialProjectStoreState(): ProjectStoreState {
     source: null,
     instanceId: crypto.randomUUID(),
   };
-}
-
-/**
- * Returns the project's maps of a kind
- *
- * @param draft - The project store state
- * @param kind - The kind of the maps
- * @returns The maps of the kind
- */
-function getMaps(
-  draft: Draft<ProjectStoreState>,
-  kind: GroupValueMapKind,
-): Draft<GroupValueMap<unknown>>[] {
-  return draft[`${kind}Maps`];
 }
 
 /**
