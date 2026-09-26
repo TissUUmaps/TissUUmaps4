@@ -32,7 +32,6 @@ export {
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
-  findGroupByConfigMap,
   isGroupByConfig,
   isRandomConfig,
   type ColorConfig,
@@ -132,9 +131,11 @@ export {
   defaultShapeFillColor,
   defaultShapeFillOpacity,
   defaultShapeFillVisibility,
+  defaultShapeOpacity,
   defaultShapeStrokeColor,
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
+  defaultShapeVisibility,
   identityTransform,
 } from "./model/constants";
 
@@ -236,6 +237,7 @@ export { ArrayUtils } from "./utils/ArrayUtils";
 export { AsyncUtils } from "./utils/AsyncUtils";
 export { BitUtils } from "./utils/BitUtils";
 export { ColorUtils } from "./utils/ColorUtils";
+export { ConfigUtils } from "./utils/ConfigUtils";
 export { GeometryUtils } from "./utils/GeometryUtils";
 export { type Fmix32Config, HashUtils } from "./utils/HashUtils";
 export { ImageUtils } from "./utils/ImageUtils";
@@ -253,4 +255,5 @@ export {
   continuousColorPalettes,
   categoricalColorPalettes,
   colorPalettes,
+  findColorPalette,
 } from "./palettes";

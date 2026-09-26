@@ -155,8 +155,8 @@ describe("OpacityResolver", () => {
         id: "om1",
         name: "Opacity Map",
         values: {
-          [JSON.stringify("A")]: 1,
-          [JSON.stringify("B")]: 0.5,
+          A: 1,
+          B: 0.5,
         },
       };
       const config = {
@@ -290,7 +290,7 @@ describe("OpacityResolver", () => {
       const opacityMap: GroupValueMap<number> = {
         id: "om1",
         name: "Opacity Map",
-        values: { [JSON.stringify("A")]: 1 },
+        values: { A: 1 },
       };
       const config = {
         groupBy: { column: "col1", map: "om1" },
@@ -336,7 +336,7 @@ describe("OpacityResolver", () => {
       const opacityMap: GroupValueMap<number> = {
         id: "om1",
         name: "Opacity Map",
-        values: { [JSON.stringify("A")]: 0.5 },
+        values: { A: 0.5 },
       };
       const config = {
         groupBy: { column: "col1", map: "om1" },

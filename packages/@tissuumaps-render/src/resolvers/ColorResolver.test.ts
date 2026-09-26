@@ -296,8 +296,8 @@ describe("ColorResolver", () => {
         id: "cm1",
         name: "Color Map 1",
         values: {
-          [JSON.stringify("cat-a")]: red,
-          [JSON.stringify("cat-b")]: green,
+          "cat-a": red,
+          "cat-b": green,
         },
       };
       const config = {
@@ -382,16 +382,14 @@ describe("ColorResolver", () => {
       expect(packedColors[0]).toBe(
         ColorResolver.packColor(
           builtInPalette.colors[
-            HashUtils.hash(JSON.stringify("groupA")) %
-              builtInPalette.colors.length
+            HashUtils.hash("groupA") % builtInPalette.colors.length
           ]!,
         ),
       );
       expect(packedColors[1]).toBe(
         ColorResolver.packColor(
           builtInPalette.colors[
-            HashUtils.hash(JSON.stringify("groupB")) %
-              builtInPalette.colors.length
+            HashUtils.hash("groupB") % builtInPalette.colors.length
           ]!,
         ),
       );
@@ -582,7 +580,7 @@ describe("ColorResolver", () => {
       const colorMap: GroupValueMap<Color> = {
         id: "cm1",
         name: "CM",
-        values: { [JSON.stringify("cat-a")]: red },
+        values: { "cat-a": red },
       };
       const config = {
         groupBy: { column: "col1", map: "cm1" },
@@ -653,7 +651,7 @@ describe("ColorResolver", () => {
       const colorMap: GroupValueMap<Color> = {
         id: "cm1",
         name: "CM",
-        values: { [JSON.stringify("cat-a")]: green },
+        values: { "cat-a": green },
       };
       const config = {
         groupBy: { column: "col1", map: "cm1" },

@@ -1,5 +1,6 @@
 import {
   ColorUtils,
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
@@ -213,9 +214,7 @@ export class VisibilityResolver {
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const visibilityMap = visibilityMaps.find(
-      (visibilityMap) => visibilityMap.id === config.groupBy.map,
-    );
+    const visibilityMap = ConfigUtils.findGroupByMap(config, visibilityMaps);
     if (visibilityMap === undefined) {
       console.warn(
         `Visibility map ${config.groupBy.map} not found, using default visibility`,
@@ -231,14 +230,17 @@ export class VisibilityResolver {
       ids.length,
       { align },
     );
-    const groupVisibilities = new Map(Object.entries(visibilityMap.values));
     await TableUtils.fillFromTableGroups(
       packedVisibilities,
       data,
       ids,
       config.groupBy.column,
       visibilityMap.default ?? defaultVisibility,
-      (group) => groupVisibilities.get(group),
+      ConfigUtils.createGroupValueGetter(
+        config,
+        visibilityMap,
+        defaultVisibility,
+      ),
       (visibility) => VisibilityResolver.packVisibility(visibility),
       { signal },
     );

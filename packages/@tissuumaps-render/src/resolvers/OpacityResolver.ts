@@ -1,5 +1,6 @@
 import {
   ColorUtils,
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
@@ -208,9 +209,7 @@ export class OpacityResolver {
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const opacityMap = opacityMaps.find(
-      (opacityMap) => opacityMap.id === config.groupBy.map,
-    );
+    const opacityMap = ConfigUtils.findGroupByMap(config, opacityMaps);
     if (opacityMap === undefined) {
       console.warn(
         `Opacity map ${config.groupBy.map} not found, using default opacity`,
@@ -225,14 +224,13 @@ export class OpacityResolver {
     const packedOpacities = OpacityResolver.createOpacityBuffer(ids.length, {
       align,
     });
-    const groupOpacities = new Map(Object.entries(opacityMap.values));
     await TableUtils.fillFromTableGroups(
       packedOpacities,
       data,
       ids,
       config.groupBy.column,
       opacityMap.default ?? defaultOpacity,
-      (group) => groupOpacities.get(group),
+      ConfigUtils.createGroupValueGetter(config, opacityMap, defaultOpacity),
       (opacity) => OpacityResolver.packOpacity(opacity),
       { signal },
     );

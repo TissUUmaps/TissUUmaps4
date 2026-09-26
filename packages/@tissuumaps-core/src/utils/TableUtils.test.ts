@@ -371,12 +371,8 @@ describe("TableUtils", () => {
       ]);
       const buffer = new Uint8Array(3);
       const mapGroupToValue = vi
-        .fn<(group: string) => number | undefined>()
-        .mockImplementation((group) => {
-          if (group === JSON.stringify("A")) return 10;
-          if (group === JSON.stringify("B")) return 20;
-          return undefined;
-        });
+        .fn<(group: string) => number>()
+        .mockImplementation((group) => (group === "A" ? 10 : 20));
 
       await TableUtils.fillFromTableGroups(
         buffer,
@@ -438,26 +434,6 @@ describe("TableUtils", () => {
       });
     });
 
-    it("uses defaultValue when mapGroupToValue returns undefined", async () => {
-      const { data } = createMockTableData(new Uint32Array([1]), ["unknown"]);
-      const buffer = new Uint8Array(1);
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      await TableUtils.fillFromTableGroups(
-        buffer,
-        data,
-        new Uint32Array([1]),
-        "col1",
-        42,
-        () => undefined,
-        (value) => value,
-      );
-
-      expect(buffer[0]).toBe(42);
-      expect(warn).toHaveBeenCalledOnce();
-      warn.mockRestore();
-    });
-
     it("uses defaultValue when the ID is missing from the table data", async () => {
       const ids = new Uint32Array([1, 2]);
       const { data } = createMockTableData(new Uint32Array([1]), ["A"]);
@@ -515,18 +491,18 @@ describe("TableUtils", () => {
         new Uint32Array([1, 2, 3]),
         "col1",
         0,
-        (group) => group.length, // JSON.stringify adds the quotes
+        (group) => group.length,
         (value) => value,
       );
 
-      expect(Array.from(buffer)).toEqual([3, 3, 3]);
+      expect(Array.from(buffer)).toEqual([1, 1, 1]);
     });
 
-    it("JSON-stringifies group values before mapping", async () => {
+    it("converts group values to strings before mapping", async () => {
       const { data } = createMockTableData(new Uint32Array([1]), [42]);
       const buffer = new Uint8Array(1);
       const mapGroupToValue = vi
-        .fn<(group: string) => number | undefined>()
+        .fn<(group: string) => number>()
         .mockReturnValue(1);
 
       await TableUtils.fillFromTableGroups(
@@ -539,7 +515,6 @@ describe("TableUtils", () => {
         (value) => value,
       );
 
-      // numeric 42 becomes "42" after JSON.stringify
       expect(mapGroupToValue).toHaveBeenCalledWith("42");
     });
 
@@ -552,10 +527,8 @@ describe("TableUtils", () => {
       ]);
       const buffer = new Uint8Array(3);
       const mapGroupToValue = vi
-        .fn<(group: string) => number | undefined>()
-        .mockImplementation((group) =>
-          group === JSON.stringify("A") ? 10 : 20,
-        );
+        .fn<(group: string) => number>()
+        .mockImplementation((group) => (group === "A" ? 10 : 20));
 
       await TableUtils.fillFromTableGroups(
         buffer,

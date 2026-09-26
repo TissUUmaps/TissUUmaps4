@@ -57,6 +57,12 @@ export const defaultPointVisibility = true;
 /** Default point opacity */
 export const defaultPointOpacity = 1;
 
+/** Default shape visibility */
+export const defaultShapeVisibility = true;
+
+/** Default shape opacity */
+export const defaultShapeOpacity = 1;
+
 /** Default shape fill color */
 export const defaultShapeFillColor = {
   r: 255,
