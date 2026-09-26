@@ -20,16 +20,14 @@ export function useVisibilityGroupValues(): GroupValuesAdapter<
       maps,
       addMap,
       updateMap,
-      cell: {
-        size: groupColumnSize,
-        getSortValue: (visible) => Number(visible),
-        render: (visible, onVisibleChange) => (
-          <GroupVisibilityCell
-            visible={visible}
-            onVisibleChange={onVisibleChange}
-          />
-        ),
-      },
+      columnSize: groupColumnSize,
+      getSortValue: (visible) => Number(visible),
+      renderCell: (visible, onVisibleChange) => (
+        <GroupVisibilityCell
+          visible={visible}
+          onVisibleChange={onVisibleChange}
+        />
+      ),
     }),
     [maps, addMap, updateMap],
   );

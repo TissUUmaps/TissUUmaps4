@@ -24,13 +24,11 @@ export function useMarkerGroupValues(): GroupValuesAdapter<
       maps,
       addMap,
       updateMap,
-      cell: {
-        size: groupColumnSize,
-        getSortValue: (marker) => marker,
-        render: (marker, onMarkerChange) => (
-          <GroupMarkerCell marker={marker} onMarkerChange={onMarkerChange} />
-        ),
-      },
+      columnSize: groupColumnSize,
+      getSortValue: (marker) => marker,
+      renderCell: (marker, onMarkerChange) => (
+        <GroupMarkerCell marker={marker} onMarkerChange={onMarkerChange} />
+      ),
       getPalette: () => markerPalette,
     }),
     [maps, addMap, updateMap],

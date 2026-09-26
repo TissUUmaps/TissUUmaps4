@@ -85,7 +85,6 @@ export function ShapesAnnotationsWidget({
   const opacityAdapter = useOpacityGroupValues();
 
   const groupVisibility = useGroupVisibility(groupTable, {
-    category: ShapesSettingsCategory.shapeVisibility,
     name: "visibility",
     default: defaultShapeVisibility,
     config: shapes.shapeVisibility,
@@ -94,7 +93,6 @@ export function ShapesAnnotationsWidget({
     adapter: visibilityAdapter,
   });
   const opacityColumn = useGroupColumn(groupTable, {
-    category: ShapesSettingsCategory.shapeOpacity,
     name: "opacity",
     default: defaultShapeOpacity,
     config: shapes.shapeOpacity,
@@ -102,7 +100,6 @@ export function ShapesAnnotationsWidget({
     adapter: opacityAdapter,
   });
   const fillColorColumn = useGroupColumn(groupTable, {
-    category: ShapesSettingsCategory.shapeFillColor,
     name: "fill color",
     shownByDefault: true,
     default: defaultShapeFillColor,
@@ -112,7 +109,6 @@ export function ShapesAnnotationsWidget({
     adapter: colorAdapter,
   });
   const fillVisibilityColumn = useGroupColumn(groupTable, {
-    category: ShapesSettingsCategory.shapeFillVisibility,
     name: "fill visibility",
     default: defaultShapeFillVisibility,
     config: shapes.shapeFillVisibility,
@@ -121,7 +117,6 @@ export function ShapesAnnotationsWidget({
     adapter: visibilityAdapter,
   });
   const fillOpacityColumn = useGroupColumn(groupTable, {
-    category: ShapesSettingsCategory.shapeFillOpacity,
     name: "fill opacity",
     default: defaultShapeFillOpacity,
     config: shapes.shapeFillOpacity,
@@ -130,7 +125,6 @@ export function ShapesAnnotationsWidget({
     adapter: opacityAdapter,
   });
   const strokeColorColumn = useGroupColumn(groupTable, {
-    category: ShapesSettingsCategory.shapeStrokeColor,
     name: "stroke color",
     default: defaultShapeStrokeColor,
     config: shapes.shapeStrokeColor,
@@ -139,7 +133,6 @@ export function ShapesAnnotationsWidget({
     adapter: colorAdapter,
   });
   const strokeVisibilityColumn = useGroupColumn(groupTable, {
-    category: ShapesSettingsCategory.shapeStrokeVisibility,
     name: "stroke visibility",
     default: defaultShapeStrokeVisibility,
     config: shapes.shapeStrokeVisibility,
@@ -148,7 +141,6 @@ export function ShapesAnnotationsWidget({
     adapter: visibilityAdapter,
   });
   const strokeOpacityColumn = useGroupColumn(groupTable, {
-    category: ShapesSettingsCategory.shapeStrokeOpacity,
     name: "stroke opacity",
     default: defaultShapeStrokeOpacity,
     config: shapes.shapeStrokeOpacity,

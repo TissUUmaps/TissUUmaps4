@@ -21,12 +21,10 @@ export function useColorGroupValues(): GroupValuesAdapter<Color, ColorConfig> {
       maps,
       addMap,
       updateMap,
-      cell: {
-        size: groupColumnSize,
-        render: (color, onColorChange) => (
-          <GroupColorCell color={color} onColorChange={onColorChange} />
-        ),
-      },
+      columnSize: groupColumnSize,
+      renderCell: (color, onColorChange) => (
+        <GroupColorCell color={color} onColorChange={onColorChange} />
+      ),
       getPalette: (config) => findColorPalette(config.groupBy.palette)?.colors,
     }),
     [maps, addMap, updateMap],

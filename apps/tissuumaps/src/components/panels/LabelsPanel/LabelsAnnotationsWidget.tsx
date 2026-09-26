@@ -57,7 +57,6 @@ export function LabelsAnnotationsWidget({
   const opacityAdapter = useOpacityGroupValues();
 
   const groupVisibility = useGroupVisibility(groupTable, {
-    category: LabelsSettingsCategory.labelVisibility,
     name: "visibility",
     default: defaultLabelVisibility,
     config: labels.labelVisibility,
@@ -66,7 +65,6 @@ export function LabelsAnnotationsWidget({
     adapter: visibilityAdapter,
   });
   const colorColumn = useGroupColumn(groupTable, {
-    category: LabelsSettingsCategory.labelColor,
     name: "color",
     shownByDefault: true,
     default: defaultLabelColor,
@@ -75,7 +73,6 @@ export function LabelsAnnotationsWidget({
     adapter: colorAdapter,
   });
   const opacityColumn = useGroupColumn(groupTable, {
-    category: LabelsSettingsCategory.labelOpacity,
     name: "opacity",
     default: defaultLabelOpacity,
     config: labels.labelOpacity,

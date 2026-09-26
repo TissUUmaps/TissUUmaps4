@@ -2,6 +2,8 @@ import { useMemo } from "react";
 
 import type { VisibilityConfig } from "@tissuumaps/core";
 
+import { useLatestCallback } from "@/hooks/useLatestCallback";
+
 import type { GroupVisibility } from "./GroupAnnotationsTable";
 import { createGroupValues } from "./createGroupValues";
 import type { GroupProperty } from "./useGroupColumn";
@@ -20,18 +22,11 @@ export function useGroupVisibility(
   groupTable: GroupTable,
   property: GroupProperty<boolean, VisibilityConfig>,
 ): GroupVisibility | undefined {
-  const {
-    category,
-    name,
-    default: defaultValue,
-    config,
-    onConfigChange,
-    adapter,
-  } = property;
+  const { name, default: defaultValue, config, adapter } = property;
+  const onConfigChange = useLatestCallback(property.onConfigChange);
 
   return useMemo(() => {
     const groupValues = createGroupValues(groupTable, {
-      category,
       name,
       default: defaultValue,
       config,
@@ -48,13 +43,5 @@ export function useGroupVisibility(
       onVisibleChange: (groups, visible) =>
         setValues(Object.fromEntries(groups.map((group) => [group, visible]))),
     };
-  }, [
-    groupTable,
-    category,
-    name,
-    defaultValue,
-    config,
-    onConfigChange,
-    adapter,
-  ]);
+  }, [groupTable, name, defaultValue, config, onConfigChange, adapter]);
 }

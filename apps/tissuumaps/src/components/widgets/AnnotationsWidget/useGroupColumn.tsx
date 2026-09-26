@@ -2,6 +2,8 @@ import { useMemo } from "react";
 
 import { type Config, ConfigUtils, type GroupByConfig } from "@tissuumaps/core";
 
+import { useLatestCallback } from "@/hooks/useLatestCallback";
+
 import type { GroupColumn } from "./GroupAnnotationsTable";
 import type { GroupValuesAdapter } from "./adapter";
 import { createGroupValues } from "./createGroupValues";
@@ -9,9 +11,6 @@ import type { GroupTable } from "./useGroupTable";
 
 /** A property of an annotated object that can take a value per group */
 export type GroupProperty<TValue, TConfig extends Config<string>> = {
-  /** The settings category of the property, which identifies its column */
-  category: string;
-
   /** The name of the property, as a column header and in map names */
   name: string;
 
@@ -44,18 +43,16 @@ export function useGroupColumn<TValue, TConfig extends Config<string>>(
   property: GroupProperty<TValue, TConfig>,
 ): GroupColumn | undefined {
   const {
-    category,
     name,
     shownByDefault,
     default: defaultValue,
     config,
-    onConfigChange,
     adapter,
   } = property;
+  const onConfigChange = useLatestCallback(property.onConfigChange);
 
   return useMemo(() => {
     const groupValues = createGroupValues(groupTable, {
-      category,
       name,
       default: defaultValue,
       config,
@@ -66,12 +63,11 @@ export function useGroupColumn<TValue, TConfig extends Config<string>>(
       return undefined;
     }
     const { getValue, setValues, isInactive } = groupValues;
-    const { cell } = adapter;
-    const { getSortValue } = cell;
+    const { getSortValue } = adapter;
     return {
-      id: category,
+      id: name,
       header: name.charAt(0).toUpperCase() + name.slice(1),
-      size: cell.size,
+      size: adapter.columnSize,
       isInactive,
       isShownByDefault:
         shownByDefault === true ||
@@ -81,11 +77,12 @@ export function useGroupColumn<TValue, TConfig extends Config<string>>(
           ? (group) => getSortValue(getValue(group))
           : undefined,
       renderCell: (group) =>
-        cell.render(getValue(group), (value) => setValues({ [group]: value })),
+        adapter.renderCell(getValue(group), (value) =>
+          setValues({ [group]: value }),
+        ),
     };
   }, [
     groupTable,
-    category,
     name,
     shownByDefault,
     defaultValue,

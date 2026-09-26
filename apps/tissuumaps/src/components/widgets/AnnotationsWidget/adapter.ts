@@ -8,17 +8,6 @@ export const groupColumnSize = 60;
 /** Width of a column of number inputs, in pixels */
 export const numericGroupColumnSize = 90;
 
-/** How the group table shows, edits and sorts the values of one type */
-export type GroupCell<TValue> = {
-  /** Width of the column, in pixels */
-  size: number;
-
-  /** The value that the rows sort by; the column is not sortable without */
-  getSortValue?: (value: TValue) => number | string;
-
-  render: (value: TValue, onValueChange: (value: TValue) => void) => ReactNode;
-};
-
 /**
  * What the group table needs to know about one type of group value
  *
@@ -37,7 +26,16 @@ export type GroupValuesAdapter<TValue, TConfig extends Config<string>> = {
     updates: Partial<Omit<GroupValueMap<TValue>, "id">>,
   ) => void;
 
-  cell: GroupCell<TValue>;
+  /** Width of the value's column, in pixels */
+  columnSize: number;
+
+  /** The value that the rows sort by; the column is not sortable without */
+  getSortValue?: (value: TValue) => number | string;
+
+  renderCell: (
+    value: TValue,
+    onValueChange: (value: TValue) => void,
+  ) => ReactNode;
 
   /** Returns the values that a configuration without a map picks from */
   getPalette?: (

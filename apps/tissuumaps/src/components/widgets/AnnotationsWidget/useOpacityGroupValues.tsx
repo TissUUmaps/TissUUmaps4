@@ -20,16 +20,11 @@ export function useOpacityGroupValues(): GroupValuesAdapter<
       maps,
       addMap,
       updateMap,
-      cell: {
-        size: numericGroupColumnSize,
-        getSortValue: (opacity) => opacity,
-        render: (opacity, onOpacityChange) => (
-          <GroupOpacityCell
-            opacity={opacity}
-            onOpacityChange={onOpacityChange}
-          />
-        ),
-      },
+      columnSize: numericGroupColumnSize,
+      getSortValue: (opacity) => opacity,
+      renderCell: (opacity, onOpacityChange) => (
+        <GroupOpacityCell opacity={opacity} onOpacityChange={onOpacityChange} />
+      ),
     }),
     [maps, addMap, updateMap],
   );

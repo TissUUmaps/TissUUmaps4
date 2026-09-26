@@ -17,13 +17,11 @@ export function useSizeGroupValues(): GroupValuesAdapter<number, SizeConfig> {
       maps,
       addMap,
       updateMap,
-      cell: {
-        size: numericGroupColumnSize,
-        getSortValue: (size) => size,
-        render: (size, onSizeChange) => (
-          <GroupSizeCell size={size} onSizeChange={onSizeChange} />
-        ),
-      },
+      columnSize: numericGroupColumnSize,
+      getSortValue: (size) => size,
+      renderCell: (size, onSizeChange) => (
+        <GroupSizeCell size={size} onSizeChange={onSizeChange} />
+      ),
     }),
     [maps, addMap, updateMap],
   );

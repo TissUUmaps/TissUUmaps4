@@ -71,7 +71,6 @@ export function PointsAnnotationsWidget({
   const opacityAdapter = useOpacityGroupValues();
 
   const groupVisibility = useGroupVisibility(groupTable, {
-    category: PointsSettingsCategory.pointVisibility,
     name: "visibility",
     default: defaultPointVisibility,
     config: points.pointVisibility,
@@ -80,7 +79,6 @@ export function PointsAnnotationsWidget({
     adapter: visibilityAdapter,
   });
   const markerColumn = useGroupColumn(groupTable, {
-    category: PointsSettingsCategory.pointMarker,
     name: "marker",
     shownByDefault: true,
     default: defaultPointMarker,
@@ -89,7 +87,6 @@ export function PointsAnnotationsWidget({
     adapter: markerAdapter,
   });
   const sizeColumn = useGroupColumn(groupTable, {
-    category: PointsSettingsCategory.pointSize,
     name: "size",
     default: defaultPointSize,
     config: points.pointSize,
@@ -97,7 +94,6 @@ export function PointsAnnotationsWidget({
     adapter: sizeAdapter,
   });
   const colorColumn = useGroupColumn(groupTable, {
-    category: PointsSettingsCategory.pointColor,
     name: "color",
     shownByDefault: true,
     default: defaultPointColor,
@@ -106,7 +102,6 @@ export function PointsAnnotationsWidget({
     adapter: colorAdapter,
   });
   const opacityColumn = useGroupColumn(groupTable, {
-    category: PointsSettingsCategory.pointOpacity,
     name: "opacity",
     default: defaultPointOpacity,
     config: points.pointOpacity,
