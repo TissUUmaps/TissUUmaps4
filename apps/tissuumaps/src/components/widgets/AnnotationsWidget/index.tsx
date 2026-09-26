@@ -13,10 +13,7 @@ import {
   type GroupColumn,
   type GroupVisibility,
 } from "./GroupAnnotationsTable";
-import {
-  ItemAnnotationsTable,
-  type ItemAnnotationsTableColumnDef,
-} from "./ItemAnnotationsTable";
+import { ItemAnnotationsTable } from "./ItemAnnotationsTable";
 
 // rows have a fixed height, so that the visible range follows from the scroll
 // offset alone; cells of extra columns must fit within it
@@ -52,7 +49,6 @@ export type AnnotationsWidgetProps = {
   onSelectedGroupByColumnChange: (column: string | null) => void;
   groupCounts: Map<string, number> | null;
   groupVisibility?: GroupVisibility;
-  extraItemColumnDefs?: ItemAnnotationsTableColumnDef[];
   groupColumns?: GroupColumn[];
   className?: string;
 };
@@ -65,7 +61,6 @@ export function AnnotationsWidget({
   onSelectedGroupByColumnChange,
   groupCounts,
   groupVisibility,
-  extraItemColumnDefs,
   groupColumns,
   className,
 }: AnnotationsWidgetProps) {
@@ -145,7 +140,6 @@ export function AnnotationsWidget({
           height={tableHeight}
           rowHeight={tableRowHeight}
           tableId={tableId}
-          extraColumnDefs={extraItemColumnDefs}
         />
       )}
     </Fieldset>

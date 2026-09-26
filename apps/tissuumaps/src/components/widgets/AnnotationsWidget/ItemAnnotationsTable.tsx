@@ -22,7 +22,6 @@ export type ItemAnnotationsTableProps = {
   height: number;
   rowHeight: number;
   tableId: string | null;
-  extraColumnDefs?: ItemAnnotationsTableColumnDef[];
 };
 
 export function ItemAnnotationsTable({
@@ -30,7 +29,6 @@ export function ItemAnnotationsTable({
   height,
   rowHeight,
   tableId,
-  extraColumnDefs,
 }: ItemAnnotationsTableProps) {
   const tableData = useTableData(tableId);
 
@@ -110,11 +108,8 @@ export function ItemAnnotationsTable({
     if (getName !== undefined) {
       columnDefs.push({ id: "name", header: "Name", accessorKey: "name" });
     }
-    if (extraColumnDefs !== undefined) {
-      columnDefs.push(...extraColumnDefs);
-    }
     return columnDefs;
-  }, [getName, extraColumnDefs]);
+  }, [getName]);
 
   return (
     <VirtualTable
